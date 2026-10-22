@@ -1,12 +1,12 @@
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { Question } from "../../../../api/papers";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
 import { FrozenQuestionReference, QuestionReferenceContent, referenceText } from "./FrozenQuestionReference";
 
-vi.mock("antd", () => ({ Alert: ({ message, description }: any) => <p>{message}{description}</p>, Tabs: ({ items }: any) => <>{items.map((item: any) => <section key={item.key}>{item.label}{item.children}</section>)}</> }));
-vi.mock("../../../../components/MathMarkdown", () => ({ MathMarkdown: ({ children }: any) => <p>{children}</p> }));
+vi.mock("antd", () => ({ Alert: ({ message, description }: { message?: ReactNode; description?: ReactNode }) => <p>{message}{description}</p>, Tabs: ({ items }: { items: { key: string; label?: ReactNode; children?: ReactNode }[] }) => <>{items.map((item) => <section key={item.key}>{item.label}{item.children}</section>)}</> }));
+vi.mock("../../../../components/MathMarkdown", () => ({ MathMarkdown: ({ children }: { children?: ReactNode }) => <p>{children}</p> }));
 const question = { id: "q", options: ["选项一", "选项二"], stem: "冻结题干",
   answer_key: { answer_version: "答案v1", standard_answer: { value: 2 }, equivalent_answers: ["二"], tolerance: 0.01 },
   solution: { solution_version: "解答v1", raw_text: "解答全文", steps: [{ text: "独立步骤" }] },

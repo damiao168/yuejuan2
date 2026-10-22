@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, App, Button, Checkbox, Modal, Space, Table } from "antd";
+import { Alert, App, Button, Checkbox, Modal, Space } from "antd";
 import { ArrowRight, ClipboardCheck, RefreshCw, Save } from "lucide-react";
 import { ApiClientError, getSafeUserText, getUserErrorMessage } from "../api/client";
 import { confirmExamReadiness, getExamReadiness, type ExamReadiness } from "../api/configuration";
@@ -7,12 +7,10 @@ import { getExam, refreshExamCandidates, updateExam, type Exam } from "../api/ex
 import { listClasses, listGrades, type Grade, type SchoolClass } from "../api/org";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { preparationSteps } from "../features/exams/preparation/preparationSteps";
-import { listExamRoster, type RosterEntry, type RosterReport } from "../api/scores";
-import { listQuestions } from "../api/papers";
-import { getQuestionAssessmentProfile } from "../api/assessment";
 import { ExamScoringPreparation } from "../components/features/assessment/ExamScoringPreparation";
 
 export function readinessCheckRoute(examId: string, section: string) {
+  if (section === "exam") return "/exams";
   const routeSection = preparationSteps.find((step) => step.key === section)?.route ?? "settings";
   return `/exams/${encodeURIComponent(examId)}/${routeSection}`;
 }
@@ -45,24 +43,22 @@ const questionTypeLabels: Record<string, string> = {
   coding: "编程题"
 };
 
-const preparationScoringLabels: Record<string, string> = {
-  RULE_AUTO: "规则自动评分", AI_ASSIST: "AI 建议，教师逐题确认", AI_FAST_CONFIRM: "AI 建议，教师快速确认",
-  HUMAN_PRIMARY: "人工主评", DUAL_HUMAN: "两名教师独立评分", MANUAL_ONLY: "仅人工评分"
-};
-
 interface PreparationFreezeReview {
   examId: string;
   version: number;
   configurationHash: string;
-  roster: RosterReport;
-  scoring: Array<{ questionId: string; questionNo: string; mode: string }>;
 }
 
-function hasVerifiedScoringMode(mode: string) {
-  return Object.prototype.hasOwnProperty.call(preparationScoringLabels, mode);
+function hasReadinessConfirmation(readiness?: ExamReadiness) {
+  // 后续阅卷阶段 confirmed 可能为 false；服务端只返回仍匹配当前配置的已通过快照。
+  return Boolean(readiness?.confirmed || (readiness?.snapshot_id && readiness.confirmed_at));
 }
 
-const unverifiedScoringMessage = "请先在小题与分值中保存每道题的评分配置，再回来重新核对。未保存或无法识别的策略不能作为冻结确认内容。";
+function assertFreezeReady(readiness: ExamReadiness) {
+  if (!readiness.ready || readiness.checks.some(check => !check.passed) || readiness.scoring_preview?.some(item => item.blocking_reason) || hasReadinessConfirmation(readiness)) {
+    throw new Error("准备状态已变化，请重新检查后再确认");
+  }
+}
 
 export function ExamStudentScopePage({ examId, canManage, onExamChanged }: Readonly<{ examId: string; canManage: boolean; onExamChanged?: () => void }>) {
   const { message } = App.useApp();
@@ -153,25 +149,52 @@ export function ExamStudentScopePage({ examId, canManage, onExamChanged }: Reado
   );
 }
 
-function buildReadinessDisplay({ readiness, exam, examId, canManage, loading, reviewLoading, freezeError, freezeReview, reviewBeforeFreeze, onNavigate }: {
+function readinessStatusDisplay(confirmed: boolean, editable: boolean, failedCount: number, ready: boolean) {
+  if (confirmed) return { label: "考试准备已完成", className: "is-complete" };
+  const className = failedCount > 0 ? "is-pending" : "is-neutral";
+  if (!editable) return { label: "准备配置只读", className };
+  if (failedCount > 0) return { label: `待处理 ${failedCount} 项`, className };
+  return { label: ready ? "待确认冻结" : "待重新检查", className };
+}
+
+function readinessActionHint(canManage: boolean, editable: boolean, loading: boolean, failedCount: number, ready: boolean) {
+  if (!canManage) return "当前账号没有准备确认权限，请联系考试负责人。";
+  if (!editable) return "本场已进入后续考试阶段，不能重新冻结考试准备。";
+  if (loading) return "正在读取准备状态，请等待检查完成。";
+  if (failedCount > 0) return "请先完成待处理项目，再重新检查。";
+  if (!ready) return "准备检查尚未通过，请重新检查。";
+  return "评分方案已匹配，可以确认准备完成。";
+}
+
+function buildReadinessDisplay({ readiness, exam, examId, canManage, loading, working, reviewLoading, freezeError, freezeReview, reviewBeforeFreeze, onNavigate }: {
   readiness: ExamReadiness;
   exam: Exam;
   examId: string;
   canManage: boolean;
   loading: boolean;
+  working: boolean;
   reviewLoading: boolean;
   freezeError: string;
   freezeReview: PreparationFreezeReview | null;
   reviewBeforeFreeze: () => Promise<void>;
   onNavigate: (path: string) => void;
 }) {
+  const confirmed = hasReadinessConfirmation(readiness);
+  // 这里统计准备检查项目；评分区另按题目统计，二者不能相加作为待处理数量。
+  const failedCount = readiness.checks.filter((check) => !check.passed).length;
+  const scoringBlocked = readiness.scoring_preview?.some(item => item.blocking_reason);
+  const editable = ["draft", "configured"].includes(exam.status);
+  const status = readinessStatusDisplay(confirmed, editable, failedCount, readiness.ready);
+  const actionHint = readinessActionHint(canManage, editable, loading, failedCount, readiness.ready);
   return {
-    freezeAction: readiness.ready && !readiness.confirmed && ["draft", "configured"].includes(exam.status) ? <div className="exam-setup-actions"><Button type="primary" icon={<ClipboardCheck size={16} />} disabled={!canManage || loading} loading={reviewLoading} onClick={() => void reviewBeforeFreeze()}>核对并冻结考试准备</Button></div> : null,
-    reviewFailure: freezeError && !freezeReview ? <Alert type="error" showIcon message="暂时无法完成冻结核对" description={freezeError} /> : null,
-    captureAction: readiness.confirmed && ["ready", "collecting"].includes(exam.status) ? <div className="exam-setup-actions"><Button type="primary" icon={<ArrowRight size={16} />} onClick={() => onNavigate(`/exams/${encodeURIComponent(examId)}/capture`)}>前往答卷导入</Button></div> : null,
-    unconfirmedNotice: readiness.ready && !readiness.confirmed ? <Alert type="info" showIcon message="已满足准备确认条件" description="请先核对学生名单和逐题评分方式。确认会冻结本场学生名单、试题、答案、评分细则与答题区域；之后不能直接修改这些考试事实。" /> : null,
-    confirmedNotice: readiness.confirmed && exam.status === "ready" ? <Alert type="success" showIcon message="准备已确认" description="可以开始导入学生答卷。" /> : null,
-    collectingNotice: exam.status === "collecting" ? <Alert type="success" showIcon message="考试已进入答卷导入阶段" description="后续答卷导入与页面处理将在答卷导入工作区完成。" /> : null
+    status: <span className={`readiness-status ${status.className}`} role="status">{status.label}</span>,
+    actionHint: !confirmed ? actionHint : "",
+    freezeAction: !confirmed ? <Button type="primary" icon={<ClipboardCheck size={16} />} disabled={!canManage || loading || working || !readiness.ready || failedCount > 0 || scoringBlocked || !editable} loading={reviewLoading} onClick={() => void reviewBeforeFreeze()}>确认准备完成</Button> : null,
+    reviewFailure: freezeError && !freezeReview ? <Alert type="error" showIcon message={confirmed ? "准备已确认，状态刷新未完成" : "暂时无法完成冻结核对"} description={freezeError} /> : null,
+    captureAction: confirmed && ["ready", "collecting"].includes(exam.status) ? <div className="exam-setup-actions"><Button type="primary" icon={<ArrowRight size={16} />} onClick={() => onNavigate(`/exams/${encodeURIComponent(examId)}/capture`)}>前往答卷导入</Button></div> : null,
+    confirmedNotice: confirmed ? <p className="readiness-state-note">准备已确认，当前配置有匹配的确认记录；准备配置只读。</p> : null,
+    frozenNotice: !confirmed && !editable ? <p className="readiness-state-note">当前没有匹配的准备确认记录，请联系考试负责人核对。</p> : null,
+    collectingNotice: exam.status === "collecting" ? <p className="readiness-state-note">考试已进入答卷导入阶段，后续处理请前往答卷导入工作区。</p> : null
   };
 }
 
@@ -187,6 +210,8 @@ export function ExamReadinessPage({ examId, canManage, canManageAssessment = fal
   const [error, setError] = useState<string>();
   const currentExamId = useRef(examId);
   currentExamId.current = examId;
+  const latestFreezeAccess = useRef({ examId, canManage, exam, readiness });
+  latestFreezeAccess.current = { examId, canManage, exam, readiness };
   const loadVersion = useRef(0);
   // 关闭窗口、重新核对或切换考试后，旧读取及旧窗口回调不能恢复已经丢弃的核对内容。
   const freezeVersion = useRef(0);
@@ -200,10 +225,17 @@ export function ExamReadinessPage({ examId, canManage, canManageAssessment = fal
     setError(undefined);
     try {
       const [examResponse, readinessResponse] = await Promise.all([getExam(examId), getExamReadiness(examId)]);
-      if (version !== loadVersion.current || currentExamId.current !== examId) return;
+      if (version !== loadVersion.current || currentExamId.current !== examId) return false;
       setExam(examResponse.exam);
       setReadiness(readinessResponse.readiness);
-    } catch (loadError) { if (version === loadVersion.current && currentExamId.current === examId) setError(formatError(loadError)); }
+      setFreezeError("");
+      return true;
+    } catch (loadError) {
+      if (version === loadVersion.current && currentExamId.current === examId) {
+        setError(formatError(loadError));
+      }
+      return false;
+    }
     finally { if (version === loadVersion.current && currentExamId.current === examId) setLoading(false); }
   }, [examId]);
 
@@ -215,7 +247,14 @@ export function ExamReadinessPage({ examId, canManage, canManageAssessment = fal
   }, [load]);
 
   const failedChecks = readiness?.checks.filter((check) => !check.passed) ?? [];
-  const hasUnverifiedScoring = Boolean(freezeReview && (!freezeReview.scoring.length || freezeReview.scoring.some((item) => !hasVerifiedScoringMode(item.mode))));
+
+  function canFreezeCurrent() {
+    const current = latestFreezeAccess.current;
+    return current.examId === examId && current.canManage && current.exam?.id === examId
+      && ["draft", "configured"].includes(current.exam.status) && Boolean(current.readiness?.ready)
+      && !current.readiness?.checks.some((check) => !check.passed) && !current.readiness?.scoring_preview?.some(item => item.blocking_reason)
+      && !hasReadinessConfirmation(current.readiness);
+  }
 
   function closeFreezeReview() {
     if (freezeWorking.current) return;
@@ -228,52 +267,26 @@ export function ExamReadinessPage({ examId, canManage, canManageAssessment = fal
 
   async function reviewBeforeFreeze() {
     // 冻结后名单同步已关闭；后续阶段即使准备记录缺失，也不能再次发起这套准备复核。
-    if (!canManage || !["draft", "configured"].includes(exam?.status ?? "") || freezeWorking.current || freezeReviewLoading.current) return;
+    if (!canFreezeCurrent() || freezeWorking.current || freezeReviewLoading.current) return;
     const requestExamId = examId;
     const version = ++freezeVersion.current;
     const isCurrentReview = () => currentExamId.current === requestExamId && version === freezeVersion.current;
     freezeReviewLoading.current = true;
     setReviewLoading(true); setFreezeError("");
     try {
-      // 名单同步与各题策略不是同一次读取；前后核对准备版本，拒绝把旧名单与新配置组合成确认内容。
-      const before = await getExamReadiness(requestExamId);
-      if (!isCurrentReview()) return;
-      if (!before.readiness.ready || before.readiness.confirmed) throw new Error("准备状态已变化，请重新检查后再确认");
-      await refreshExamCandidates(requestExamId);
-      if (!isCurrentReview()) return;
-      const [rosterResponse, questionsResponse] = await Promise.all([
-        listExamRoster(requestExamId), listQuestions(requestExamId)
-      ]);
-      if (!isCurrentReview()) return;
-      const scoring = await Promise.all(questionsResponse.questions.map(async (question) => {
-        try {
-          const response = await getQuestionAssessmentProfile(requestExamId, question.id);
-          return { questionId: question.id, questionNo: question.question_no, mode: response.assessment_profile.scoring_policy.mode };
-        } catch (profileError) {
-          // 缺失的落库配置可以由准备检查使用默认值补齐，但不属于管理员已经看到并核实的逐题事实。
-          if (profileError instanceof ApiClientError && profileError.status === 404) return { questionId: question.id, questionNo: question.question_no, mode: "UNCONFIGURED" };
-          throw profileError;
-        }
-      }));
-      if (!isCurrentReview()) return;
-      const after = await getExamReadiness(requestExamId);
-      if (!isCurrentReview()) return;
-      if (!after.readiness.ready || after.readiness.confirmed || after.readiness.configuration_hash !== before.readiness.configuration_hash) throw new Error("读取期间考试准备内容发生变化，请重新核对名单和评分方式");
-      setReadiness(after.readiness);
-      setFreezeReview({ examId: requestExamId, version, configurationHash: after.readiness.configuration_hash, roster: rosterResponse.roster, scoring });
+      // 有效评分方案和版本由同次准备检查给出；最终名单在服务端确认事务中生成，不在打开窗口时另做同步。
+      const response = await getExamReadiness(requestExamId);
+      if (!isCurrentReview() || !canFreezeCurrent()) return;
+      setReadiness(response.readiness);
+      assertFreezeReady(response.readiness);
+      setFreezeReview({ examId: requestExamId, version, configurationHash: response.readiness.configuration_hash });
     } catch (reviewError) {
       if (isCurrentReview()) setFreezeError(formatError(reviewError));
     } finally { if (isCurrentReview()) { freezeReviewLoading.current = false; setReviewLoading(false); } }
   }
 
   async function confirm() {
-    if (!canManage || freezeWorking.current || exam?.id !== currentExamId.current || freezeReview?.examId !== examId || freezeReview.version !== freezeVersion.current) return;
-    // 后台准备检查可接受默认策略；本窗口只确认已保存且可识别的逐题事实，不能通过回调绕过按钮限制。
-    if (!freezeReview.scoring.length || freezeReview.scoring.some((item) => !hasVerifiedScoringMode(item.mode))) {
-      setFreezeError(unverifiedScoringMessage);
-      message.error(unverifiedScoringMessage);
-      return;
-    }
+    if (!canFreezeCurrent() || freezeWorking.current || exam?.id !== currentExamId.current || freezeReview?.examId !== examId || freezeReview.version !== freezeVersion.current) return;
     const requestExamId = examId;
     const version = freezeReview.version;
     const isCurrentReview = () => currentExamId.current === requestExamId && version === freezeVersion.current;
@@ -283,18 +296,26 @@ export function ExamReadinessPage({ examId, canManage, canManageAssessment = fal
     setFreezeError("");
     try {
       const latest = await getExamReadiness(examId);
-      if (!isCurrentReview()) return;
-      if (!latest.readiness.ready || latest.readiness.confirmed || latest.readiness.configuration_hash !== freezeReview.configurationHash) throw new Error("考试准备内容已变化，请关闭确认窗口并重新核对名单和评分方式");
+      // 权限或状态可能在预读期间改变；旧窗口的 canManage 闭包不能继续发出冻结写请求。
+      if (!isCurrentReview() || !canFreezeCurrent()) return;
+      if (!latest.readiness.ready || latest.readiness.checks.some((check) => !check.passed) || latest.readiness.scoring_preview?.some(item => item.blocking_reason) || hasReadinessConfirmation(latest.readiness) || latest.readiness.configuration_hash !== freezeReview.configurationHash) {
+        setReadiness(latest.readiness);
+        throw new Error("考试准备内容已变化，请关闭确认窗口并重新检查");
+      }
       // 服务端在考试锁内比较这个复核版本，覆盖本次预读结束到 POST 到达之间的变化。
       const response = await confirmExamReadiness(examId, freezeReview.configurationHash);
       if (!isCurrentReview()) return;
       setReadiness(response.readiness);
       setFreezeReview(null);
-      await load();
+      const refreshed = await load();
       if (!isCurrentReview()) return;
       completed = true;
       onExamChanged?.();
-      message.success("开考准备已确认");
+      if (refreshed) message.success("考试准备已确认完成");
+      else {
+        setFreezeError("考试准备已确认，但页面状态暂未重新读取。请点击“重新检查”读取结果，无需再次确认。");
+        message.error("考试准备已确认，状态刷新未完成；请重新检查，无需再次确认。");
+      }
     } catch (confirmError) { if (isCurrentReview()) { setFreezeError(formatError(confirmError)); message.error(formatError(confirmError)); } }
     finally { if (isCurrentReview()) { freezeWorking.current = false; setWorking(false); if (completed) freezeVersion.current++; } }
   }
@@ -303,19 +324,23 @@ export function ExamReadinessPage({ examId, canManage, canManageAssessment = fal
   if (error && !readiness) return <ErrorState message={error} onRetry={() => void load()} />;
   if (!readiness || !exam) return null;
 
-  const display = buildReadinessDisplay({ readiness, exam, examId, canManage, loading, reviewLoading, freezeError, freezeReview, reviewBeforeFreeze, onNavigate });
+  const display = buildReadinessDisplay({ readiness, exam, examId, canManage, loading, working, reviewLoading, freezeError, freezeReview, reviewBeforeFreeze, onNavigate });
 
   return (
     <div className="preparation-page readiness-page exam-setup-form-page">
-      <section className="preparation-heading"><div><h2>准备检查与确认</h2><p>检查当前考试的准备情况；需要处理的项目可以直接跳转到对应任务。</p></div><Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>重新检查</Button></section>
-      <ExamScoringPreparation key={exam.id} exam={exam} canManage={canManageAssessment} onNavigate={onNavigate} onChanged={() => { void load(); onExamChanged?.(); }} />
-      {failedChecks.length ? <ul className="exam-setup-inline-issues exam-readiness-issues">{failedChecks.map((check) => <li key={check.code}>
+      <section className="preparation-heading readiness-heading">
+        <div><div className="readiness-heading-title"><h2>确认准备完成</h2>{display.status}</div><p>确认后冻结学生名单、题目、答案、评分配置和答题区域，之后不能直接修改。</p></div>
+        <div className="readiness-heading-actions"><Space wrap>{display.freezeAction}<Button icon={<RefreshCw size={16} />} disabled={working || reviewLoading} loading={loading} onClick={() => void load()}>重新检查</Button></Space>{display.actionHint ? <p className="readiness-action-hint">{display.actionHint}</p> : null}</div>
+      </section>
+      {display.confirmedNotice}
+      {display.frozenNotice}
+      {error ? <Alert type="error" showIcon message="准备状态读取失败" description={error} /> : null}
+      {display.reviewFailure}
+      {failedChecks.length ? <ul className="exam-setup-inline-issues exam-readiness-issues" aria-label="待处理准备检查">{failedChecks.map((check) => <li key={check.code}>
         <div><strong>{getSafeUserText(check.label, "需要完善")}</strong><span>{getSafeUserText(check.message, "请完成相关设置")}</span></div>
         <Button type="link" onClick={() => onNavigate(readinessCheckRoute(examId, check.section))}>去处理 <ArrowRight size={15} /></Button>
       </li>)}</ul> : null}
-
-      {display.freezeAction}
-      {display.reviewFailure}
+      <ExamScoringPreparation key={exam.id} exam={exam} preview={readiness.scoring_preview} canManage={canManageAssessment} onNavigate={onNavigate} />
       {display.captureAction}
 
       {(readiness.advisories ?? []).map((advisory) => (
@@ -341,26 +366,25 @@ export function ExamReadinessPage({ examId, canManage, canManageAssessment = fal
         />
       ))}
 
-      {display.unconfirmedNotice}
-      {display.confirmedNotice}
       {display.collectingNotice}
-      <Modal title="核对名单与评分方式后冻结" width={820} open={Boolean(freezeReview)} confirmLoading={working} okButtonProps={{ disabled: hasUnverifiedScoring }} maskClosable={!working} closable={!working} okText="确认冻结并完成准备" cancelText="返回修改" onCancel={closeFreezeReview} onOk={() => void confirm()}>
+      <PreparationFreezeModal freezeReview={freezeReview} working={working} disabled={!canFreezeCurrent() || loading}
+        freezeError={freezeError} onCancel={closeFreezeReview} onConfirm={confirm} />
+    </div>
+  );
+}
+
+function PreparationFreezeModal({ freezeReview, working, disabled, freezeError, onCancel, onConfirm }: Readonly<{
+  freezeReview: PreparationFreezeReview | null; working: boolean; disabled: boolean;
+  freezeError: string; onCancel: () => void;
+  onConfirm: () => Promise<void>;
+}>) {
+  return (
+      <Modal title="确认准备完成" width={560} open={Boolean(freezeReview)} confirmLoading={working} okButtonProps={{ disabled: disabled }} maskClosable={!working} closable={!working} okText="确认冻结并完成准备" cancelText="返回修改" onCancel={onCancel} onOk={() => void onConfirm()}>
         {freezeReview ? <>
-          <Alert type="warning" showIcon message={`将冻结 ${freezeReview.roster.summary.expected} 名学生的考试准备`} description="冻结后不能直接修改学生范围、题目、答案、评分细则和答题区域。若有漏人或内容错误，请返回相应准备页面处理后重新核对。服务端确认时仍会再次检查最新准备情况。" />
-          {hasUnverifiedScoring ? <Alert type="error" showIcon message="逐题评分方式尚未核实，暂不能冻结" description={unverifiedScoringMessage} action={<Button disabled={working} onClick={() => { closeFreezeReview(); onNavigate(readinessCheckRoute(examId, "questions")); }}>前往题目配置</Button>} /> : null}
-          {freezeError ? <Alert type="error" showIcon message="冻结未完成，核对内容已保留" description={freezeError} /> : null}
-          <h3>本次同步的学生名单</h3>
-          <Table<RosterEntry> rowKey="key" size="small" pagination={{ pageSize: 10 }} scroll={{ y: 260, x: 460 }} dataSource={freezeReview.roster.entries.filter((entry) => Boolean(entry.student_id))} columns={[
-            { title: "姓名", dataIndex: "student_name", render: (value?: string) => value || "身份信息未提供" },
-            { title: "学号", dataIndex: "student_no" }, { title: "班级", dataIndex: "class_name" }
-          ]} />
-          <h3>逐题评分方式</h3>
-          <p>只有每道题的评分配置已保存且策略可识别时，才能确认冻结；AI 建议仍需教师确认。未保存或无法识别的策略请先回题目配置处理。</p>
-          <Table rowKey="questionId" size="small" pagination={{ pageSize: 8 }} dataSource={freezeReview.scoring} columns={[
-            { title: "题号", dataIndex: "questionNo", width: 100 }, { title: "评分方式", dataIndex: "mode", render: (mode: string) => hasVerifiedScoringMode(mode) ? preparationScoringLabels[mode] : "未配置可核实策略，请返回题目页核对" }
-          ]} />
+          <Alert type="warning" showIcon message="确认后将冻结本场考试准备" description="系统将按当前在读学籍生成最终学生名单，并冻结题目、答案、评分方案、评分细则和答题区域，之后不能直接修改。" />
+          <p>确认准备完成后，可前往答卷导入；阅卷与成绩请从各自入口进入。</p>
+          {freezeError ? <Alert type="error" showIcon message="冻结未完成，可重新检查或重试" description={freezeError} /> : null}
         </> : null}
       </Modal>
-    </div>
   );
 }

@@ -59,14 +59,16 @@ export function clearAllReviewDraftFallbacks() {
 }
 
 function purgeLegacyPersistentDrafts() {
-  if (typeof window === "undefined" || !window.localStorage) return;
+  if (typeof window === "undefined") return;
   try {
+    // 浏览器可以在读取storage属性时就拒绝访问；旧持久数据清理不能中断内存草稿或登录。
+    const storage = window.localStorage;
     const keys: string[] = [];
-    for (let index = 0; index < window.localStorage.length; index += 1) {
-      const key = window.localStorage.key(index);
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
       if (key?.startsWith(storagePrefix)) keys.push(key);
     }
-    for (const key of keys) window.localStorage.removeItem(key);
+    for (const key of keys) storage.removeItem(key);
   } catch {
     // 存储可能被禁用；仅使用内存的操作仍然安全。
   }

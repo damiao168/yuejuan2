@@ -43,9 +43,9 @@ for (const viewport of desktopViewports) {
     await expect(page.locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content")).toHaveText(["考试准备", "答卷导入", "阅卷", "成绩"]);
     await stages.press("Escape");
     await expect(page.getByRole("navigation", { name: "考试准备" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "准备检查与确认" })).toBeVisible();
-    await expect(page.getByText("已核实 1 / 1 题。先核对谁来判分，再冻结本场考试。", { exact: true })).toBeVisible();
-    await expect(page.getByRole("row", { name: "第 1 题 系统建议分数，教师逐题确认 已保存", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "确认准备完成" })).toBeVisible();
+    await expect(page.getByText("已核实 1 / 1 题", { exact: true })).toBeVisible();
+    await expect(page.getByRole("row", { name: "第 1 题 系统建议分数，教师逐题确认 已保存，可核实", exact: true })).toBeVisible();
     await expect(page.getByText("请求的内容不存在或已被删除。", { exact: true })).toHaveCount(0);
     await page.evaluate(async () => document.fonts.ready);
     // 异步评分表格变高可能触发浏览器滚动锚定；展示基线固定首屏，并验证考试页头完整可见。

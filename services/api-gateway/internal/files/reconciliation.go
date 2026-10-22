@@ -337,6 +337,13 @@ func (r *Reconciler) inspectVerifiedAsset(ctx context.Context, asset FileAsset, 
 		}
 	case LifecyclePendingDelete, LifecycleDeleteFailed:
 		repaired := false
+		var referencePinned bool
+		if err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM question_reference_manifest_item i JOIN file_asset f ON f.tenant_id=i.tenant_id AND f.id IN(i.source_file_asset_id,i.page_file_asset_id,i.derived_file_asset_id) WHERE f.storage_bucket=$1 AND f.storage_key=$2)`, asset.StorageBucket, asset.StorageKey).Scan(&referencePinned); err != nil {
+			return err
+		}
+		if referencePinned {
+			return add("reference_material_pinned", map[string]any{}, false)
+		}
 		if options.Repair && !asset.LegalHold && (asset.RetentionUntil == nil || !asset.RetentionUntil.After(time.Now().UTC())) {
 			// 远端删除成功后才标记 deleted；SQL 版本检查失败不会恢复已删除的对象。
 			if removeErr := r.objects.Remove(ctx, asset.StorageBucket, asset.StorageKey); removeErr == nil {

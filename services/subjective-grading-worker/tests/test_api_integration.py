@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import json
 import threading
+from http import client as http_client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import ClassVar
 from unittest.mock import patch
+from urllib import error
+
+import pytest
 
 from subjective_grading_worker.__main__ import run_cycle
-from subjective_grading_worker.api import EduGradeClient
+from subjective_grading_worker.api import APIError, EduGradeClient
 from subjective_grading_worker.config import Settings
 from subjective_grading_worker.runner import Runner
 
@@ -33,6 +37,29 @@ def test_execute_uses_the_long_running_request_budget() -> None:
         client.execute("run-1", "task-1", "lease-1")
 
     assert urlopen.call_args.kwargs["timeout"] == 810
+
+
+class _BrokenErrorBody:
+    def read(self, _amount=-1) -> bytes:
+        raise http_client.IncompleteRead(b"{", 2)
+
+    def close(self) -> None:
+        return
+
+
+def test_execute_converts_truncated_http_error_body_to_api_error() -> None:
+    client = EduGradeClient("http://127.0.0.1:8080", "demo", "worker", "secret")
+    response_error = error.HTTPError(
+        "http://127.0.0.1:8080/api/v1/internal/subjective-grading/runs/run-1/execute",
+        502,
+        "bad gateway",
+        {},
+        _BrokenErrorBody(),
+    )
+    with patch("subjective_grading_worker.api._open_request", side_effect=response_error):
+        with pytest.raises(APIError) as caught:
+            client.execute("run-1", "task-1", "lease-1")
+    assert caught.value.status_code == 502
 
 
 class _Handler(BaseHTTPRequestHandler):

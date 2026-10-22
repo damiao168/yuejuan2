@@ -131,7 +131,13 @@ test("OpenAPI debt ratchet rejects growth and new public commands even when tota
   assert.deepEqual(findRouteDebtFailures(budget, current), []);
 
   const increased = structuredClone(current);
-  increased.routes.push({ method: "GET", path: "/api/v1/new-read", coverage: "registered-gap", interface_category: "legacy-public-read" });
+  const gaps = current.routes.filter((route) => route.coverage === "registered-gap");
+  const readGapCount = gaps.filter((route) => route.interface_category === "legacy-public-read").length;
+  // 补齐 OpenAPI 后可能有剩余预算；测试数据需同时越过总量和读接口预算，不能假定新增一条就超限。
+  const addedGapCount = Math.max(0, budget.max_registered_gaps - gaps.length, budget.max_legacy_public_read - readGapCount) + 1;
+  for (let index = 0; index < addedGapCount; index++) {
+    increased.routes.push({ method: "GET", path: `/api/v1/new-read-${index}`, coverage: "registered-gap", interface_category: "legacy-public-read" });
+  }
   assert.ok(findRouteDebtFailures(budget, increased).some((failure) => failure.includes("registered gaps increased")));
   assert.ok(findRouteDebtFailures(budget, increased).some((failure) => failure.includes("legacy public read gaps increased")));
 

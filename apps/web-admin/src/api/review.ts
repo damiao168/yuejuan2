@@ -258,6 +258,8 @@ export interface ScoringRunItem {
   question_id: string;
   question_no: string;
   question_type: string;
+  /** 服务端将本次评分运行冻结的题目快照标识带回，试改只能绑定该快照。 */
+  assessment_snapshot_id?: string;
   anonymous_code: string;
   normalized_bbox: {
     x: number;
@@ -282,6 +284,17 @@ export interface ScoringRunItem {
   review_status?: string;
   reason_code?: string;
   error_code?: string;
+  input_version_id?: string;
+  route?: string;
+  stage?: string;
+  processing_status?: string;
+  decision_status?: string;
+  next_action?: string;
+  revision?: number;
+  model_invoked?: boolean;
+  recognition_completed?: boolean;
+  retryable?: boolean;
+  artifact_ids?: string[];
 }
 
 export interface ScoringRunDetail {
@@ -502,6 +515,10 @@ export async function cancelScoringRun(runId: string) {
 
 export async function retryFailedScoringRun(runId: string) {
   return generatedApi.retryFailedScoringRun({ path: { runId } });
+}
+
+export async function resumeScoringRun(runId: string) {
+  return generatedApi.resumeScoringRun({ path: { runId } });
 }
 
 export async function reprocessSegmentScore(segmentId: string, idempotencyKey: string) {

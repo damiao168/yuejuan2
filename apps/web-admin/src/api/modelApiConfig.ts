@@ -24,6 +24,11 @@ export interface ManagedModelAPIConfig {
   last_tested_at?: string;
   last_successful_tested_at?: string;
   last_probe_mode?: ManagedAPIProbeMode;
+  last_text_status?: ManagedAPIProbeStatus;
+  last_text_message?: string;
+  last_text_tested_at?: string;
+  last_text_usage?: ManagedAPIProbeUsage;
+  last_text_diagnostic?: ManagedAPIProbeDiagnostic;
   last_capability_status?: ManagedAPIProbeStatus;
   last_capability_message?: string;
   last_capability_tested_at?: string;
@@ -36,7 +41,8 @@ export interface ManagedModelAPIConfig {
   updated_at: string;
 }
 
-export type ManagedAPIProbeMode = "quick" | "capability";
+// capability 保留为旧客户端兼容别名；新结构化检测统一使用 structured。
+export type ManagedAPIProbeMode = "quick" | "text" | "structured" | "capability";
 
 export interface ManagedAPIProbeUsage {
   input_tokens: number;
@@ -55,6 +61,62 @@ export interface ManagedAPIProbeDiagnostic {
 }
 
 export type PanelAgentRole = "primary_a" | "primary_b" | "arbiter";
+
+export interface DocumentModelSelection {
+  revision: string;
+  mode: "follow_chat" | "model";
+  model_config_id?: string;
+}
+
+export interface AnswerSheetModelSelection {
+  revision: string;
+  mode: "unconfigured" | "model";
+  model_config_id?: string;
+}
+
+export interface ModelApplications {
+  document_selection: DocumentModelSelection;
+  answer_sheet_selection?: AnswerSheetModelSelection;
+  grading_selection?: AnswerSheetModelSelection;
+  grading_model_ids: string[];
+  grading_uses?: GradingModelUse[];
+}
+
+export interface GradingModelUse {
+  model_config_id: string;
+  education_stage: PanelEducationStage;
+  subject_code: string;
+  archetype_code: string;
+  agent_role: PanelAgentRole;
+}
+
+export function getModelApplications(tenantId: string) {
+  return apiClient.request<ModelApplications>(`/api/v1/platform/model-applications${tenantQuery(tenantId)}`);
+}
+
+export function saveDocumentModelSelection(tenantId: string, input: Omit<DocumentModelSelection, "revision"> & { expected_revision: string }) {
+  return apiClient.request<{ selection: DocumentModelSelection }>("/api/v1/platform/document-model-selection", {
+    method: "PUT", body: JSON.stringify({ tenant_id: tenantId, ...input })
+  });
+}
+
+export function saveAnswerSheetModelSelection(tenantId: string, input: Omit<AnswerSheetModelSelection, "revision"> & { expected_revision: string }) {
+  return apiClient.request<{ selection: AnswerSheetModelSelection }>("/api/v1/platform/answer-sheet-model-selection", {
+    method: "PUT", body: JSON.stringify({ tenant_id: tenantId, ...input })
+  });
+}
+
+export function saveGradingModelSelection(tenantId: string, input: Omit<AnswerSheetModelSelection, "revision"> & { expected_revision: string }) {
+  return apiClient.request<{ selection: AnswerSheetModelSelection }>("/api/v1/platform/grading-model-selection", {
+    method: "PUT", body: JSON.stringify({ tenant_id: tenantId, ...input })
+  });
+}
+
+export function probeGradingModelSelection(tenantId: string) {
+  return apiClient.request<{ capability: { visual_supported: boolean; model_version: string } }>("/api/v1/platform/grading-model-selection/probe", {
+    method: "POST", body: JSON.stringify({ tenant_id: tenantId, request_id: `vision-probe-${crypto.randomUUID()}` })
+  });
+}
 export type PanelEducationStage = "junior" | "senior";
 
 export interface PanelModelRoleBinding {
@@ -108,6 +170,7 @@ export interface ManagedAPIProbeResult {
   error_code?: string;
   credential_check: ManagedAPICheckResult;
   model_check: ManagedAPICheckResult;
+  text_check: ManagedAPICheckResult;
   capability_check: ManagedAPICheckResult;
   usage: ManagedAPIProbeUsage;
   diagnostic: ManagedAPIProbeDiagnostic;
@@ -179,11 +242,17 @@ export function validateManagedModelAPIConfig(input: AutoManagedModelAPIConfigIn
   });
 }
 
-export function listAvailableManagedModels(input: ManagedModelDiscoveryInput) {
-  return apiClient.request<{ provider: ProviderDefinition; models: string[]; latency_ms: number }>("/api/v1/platform/model-api-configs/models", {
+export async function listAvailableManagedModels(input: ManagedModelDiscoveryInput) {
+  const response = await apiClient.request<{ provider: ProviderDefinition; models: string[] | null; latency_ms: number }>("/api/v1/platform/model-api-configs/models", {
     method: "POST",
     body: JSON.stringify(input)
   });
+  // 旧服务把空切片编码成 null；先转为空数组，避免进入表单后读取 length 或 map 时崩溃。
+  const models = response.models === null ? [] : response.models;
+  if (!Array.isArray(models) || models.some((model) => typeof model !== "string")) {
+    throw new ApiClientError(502, "provider_invalid_response", "模型列表格式异常");
+  }
+  return { ...response, models };
 }
 
 export function managedModelDiscoveryErrorMessage(error: unknown, reusingCredential: boolean) {

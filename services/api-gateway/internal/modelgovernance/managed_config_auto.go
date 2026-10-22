@@ -134,7 +134,7 @@ func (s *AutoManagedAPIConfigService) Create(ctx context.Context, tenantID, acto
 	return item, resolved, result, err
 }
 
-// 已保存凭据只能在同一学校、原提供方端点内复用；不得将解密后的密钥转发到新 URL。
+// 已保存凭据只能在同一学校、原供应商及同一 HTTPS 域名和端口内复用；路径可以调整。
 func (s *AutoManagedAPIConfigService) resolveCredential(ctx context.Context, tenantID string, input AutoManagedAPIConfigInput, resolved ResolvedManagedProvider) (string, error) {
 	sourceID := strings.TrimSpace(input.CredentialSourceID)
 	if sourceID == "" {
@@ -150,9 +150,15 @@ func (s *AutoManagedAPIConfigService) resolveCredential(ctx context.Context, ten
 	if err != nil {
 		return "", err
 	}
-	if source.Config.Status != "active" || source.Config.ProviderKey != resolved.Provider.Key ||
-		source.Config.AdapterType != resolved.Provider.AdapterType || source.Config.BaseURL != resolved.Provider.BaseURL {
+	if source.Config.ProviderKey != resolved.Provider.Key || source.Config.AdapterType != resolved.Provider.AdapterType {
 		return "", ErrInvalidManagedConfig
+	}
+	if !sameManagedAPIOrigin(source.Config.BaseURL, resolved.Provider.BaseURL) {
+		return "", ErrManagedCredentialOriginChanged
+	}
+	// 停用只阻止在发现或新建流程中复用密钥；单独返回状态冲突，避免被误报为地址不安全。
+	if source.Config.Status != "active" {
+		return "", ErrManagedCredentialSourceDisabled
 	}
 	return source.APIKey, nil
 }

@@ -143,7 +143,12 @@ func TestManagedOpenAIProbeUsagePreservesTokenBreakdown(t *testing.T) {
 }
 
 func TestManagedProbeClassifiesStructuredOutputPrecisely(t *testing.T) {
-	for _, value := range []string{`{"question_no":"1","max_score":2}`, "```json\n{\"question_no\":\"1\",\"max_score\":2}\n```"} {
+	for _, value := range []string{
+		`{"question_no":"1","max_score":2}`,
+		`{"question_no":"第1题","max_score":2}`,
+		`{"question_no":"2","max_score":3.5}`,
+		"```json\n{\"question_no\":\"1\",\"max_score\":2}\n```",
+	} {
 		if code, message := validateManagedCapabilityJSON(value, "stop"); code != "" {
 			t.Fatalf("valid structured payload rejected: %q code=%s message=%s", value, code, message)
 		}
@@ -153,7 +158,10 @@ func TestManagedProbeClassifiesStructuredOutputPrecisely(t *testing.T) {
 		{`{"question_no":"1",`, "length", "output_truncated"},
 		{`not json`, "stop", "invalid_json"},
 		{`{"question_no":1,"max_score":2}`, "stop", "schema_mismatch"},
-		{`{"question_no":"2","max_score":2}`, "stop", "semantic_mismatch"},
+		{`{"question_no":"1","max_score":"2"}`, "stop", "schema_mismatch"},
+		{`{"question_no":"1"}`, "stop", "schema_mismatch"},
+		{`{"question_no":"1","max_score":1e9999}`, "stop", "schema_mismatch"},
+		{`{"question_no":"1","max_score":2} extra`, "stop", "invalid_json"},
 		{`{"question_no":"1","max_score":2}`, "content_filter", "content_filtered"},
 	}
 	for _, test := range tests {

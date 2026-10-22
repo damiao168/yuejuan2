@@ -26,12 +26,13 @@ type ScanTemplateRegion struct {
 	Height float64 `json:"height"`
 }
 type ScanTemplatePage struct {
-	PageNo            int                  `json:"page_no"`
-	Width             int                  `json:"width"`
-	Height            int                  `json:"height"`
-	RegistrationMarks []ScanTemplateRegion `json:"registration_marks"`
-	IdentityRegions   []ScanTemplateRegion `json:"identity_regions"`
-	QuestionRegions   []ScanTemplateRegion `json:"question_regions"`
+	PageNo            int                          `json:"page_no"`
+	Width             int                          `json:"width"`
+	Height            int                          `json:"height"`
+	RegistrationMarks []ScanTemplateRegion         `json:"registration_marks"`
+	IdentityRegions   []ScanTemplateRegion         `json:"identity_regions"`
+	QuestionRegions   []ScanTemplateRegion         `json:"question_regions"`
+	GradingGroups     []paper.TemplateGradingGroup `json:"grading_groups,omitempty"`
 }
 type ScanTemplate struct {
 	ID              string `json:"id"`
@@ -160,7 +161,7 @@ func projectScanTemplate(template paper.AnswerSheetTemplate, binding paper.ExamT
 		if page.Width <= 0 || page.Height <= 0 {
 			return nil, "template_layout_invalid"
 		}
-		projected.Layout.Pages = append(projected.Layout.Pages, ScanTemplatePage{PageNo: page.PageNo, Width: page.Width, Height: page.Height, RegistrationMarks: scanRegions(page.RegistrationMarks), IdentityRegions: scanRegions(page.IdentityRegions), QuestionRegions: scanRegions(page.QuestionRegions)})
+		projected.Layout.Pages = append(projected.Layout.Pages, ScanTemplatePage{PageNo: page.PageNo, Width: page.Width, Height: page.Height, RegistrationMarks: scanRegions(page.RegistrationMarks), IdentityRegions: scanRegions(page.IdentityRegions), QuestionRegions: scanRegions(page.QuestionRegions), GradingGroups: page.GradingGroups})
 	}
 	return projected, ""
 }

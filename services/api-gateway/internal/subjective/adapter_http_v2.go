@@ -11,10 +11,17 @@ import (
 	"time"
 )
 
-type HTTPAdapterV2 struct{ base *HTTPAdapter }
+type HTTPAdapterV2 struct {
+	base      *HTTPAdapter
+	materials *MaterialReceiptStore
+}
 
 func NewHTTPAdapterV2(cfg HTTPAdapterConfig) *HTTPAdapterV2 {
 	return &HTTPAdapterV2{base: NewHTTPAdapter(cfg)}
+}
+func (a *HTTPAdapterV2) WithMaterialReceipts(s *MaterialReceiptStore) *HTTPAdapterV2 {
+	a.materials = s
+	return a
 }
 
 func (a *HTTPAdapterV2) Name() string                 { return "governed_math_grading_agent_http_v2" }
@@ -37,6 +44,9 @@ type gradingAgentV2Response struct {
 	CapabilityProfile            string                    `json:"capability_profile"`
 	Mock                         bool                      `json:"mock"`
 	Telemetry                    gradingAgentTelemetry     `json:"telemetry"`
+	AcceptedFeatures             []string                  `json:"accepted_features"`
+	ManifestHash                 string                    `json:"manifest_hash"`
+	RequestBindingHash           string                    `json:"request_binding_hash"`
 }
 
 type gradingAgentV2Candidate struct {
@@ -59,6 +69,10 @@ func (a *HTTPAdapterV2) Grade(ctx context.Context, input AdapterInput) (result A
 		requestID = newAdapterRequestID()
 	}
 	input.RequestID = requestID
+	if input.ReferenceManifest != nil && (a.materials == nil || a.base.adapterType == "dashscope_native") {
+		err := &GradingAgentError{Code: "reference_material_capability_unavailable"}
+		return a.base.failureOutput(requestID, err), err
+	}
 	if input.ActiveCrop == nil {
 		err := &GradingAgentError{Code: "math_active_crop_unavailable"}
 		return a.base.failureOutput(requestID, err), err
@@ -68,6 +82,31 @@ func (a *HTTPAdapterV2) Grade(ctx context.Context, input AdapterInput) (result A
 		return a.base.failureOutput(requestID, err), err
 	}
 	defer built.Clear()
+	if input.ReferenceManifest != nil {
+		wrapper, err := a.materialCapability(ctx)
+		if err != nil {
+			return a.base.failureOutput(requestID, err), err
+		}
+		binding := computeMaterialRequestBindingHash(requestID, input.Question.ID, input.SegmentID, input.ReferenceManifest, *input.ActiveCrop, input.ReferenceMedia)
+		permit, err := a.materials.Prepare(ctx, input.Question.TenantID, requestID, binding, wrapper, input.ReferenceMedia)
+		if err != nil {
+			return a.base.failureOutput(requestID, err), err
+		}
+		var envelope map[string]json.RawMessage
+		if err = json.Unmarshal(built.Body, &envelope); err != nil {
+			return AdapterOutput{}, err
+		}
+		envelope["execution_permit"], _ = json.Marshal(permit)
+		envelope["math_wrapper_hash"], _ = json.Marshal(wrapper)
+		clear(built.Body)
+		built.Body, err = json.Marshal(envelope)
+		if err != nil {
+			return AdapterOutput{}, err
+		}
+		if len(built.Body) > maxGradingAgentV2RequestBytes {
+			return AdapterOutput{}, &GradingAgentError{Code: "grading_v2_request_too_large"}
+		}
+	}
 	var lastErr error
 	for attempt := 0; attempt <= a.base.maxRetries; attempt++ {
 		attempted = true
@@ -75,12 +114,13 @@ func (a *HTTPAdapterV2) Grade(ctx context.Context, input AdapterInput) (result A
 		if requestErr == nil {
 			output, mapErr := a.mapResponse(input, response)
 			if mapErr != nil {
+				mapErr = attachResponseDiagnostics(mapErr, response.Telemetry)
 				return a.base.failureOutput(requestID, mapErr), mapErr
 			}
 			return output, nil
 		}
 		lastErr = requestErr
-		if attempt >= a.base.maxRetries || !agentErrorRetryable(requestErr) {
+		if input.ReferenceManifest != nil || attempt >= a.base.maxRetries || !agentErrorRetryable(requestErr) {
 			break
 		}
 		timer := time.NewTimer(100 * time.Millisecond)
@@ -115,14 +155,11 @@ func (a *HTTPAdapterV2) request(ctx context.Context, requestID string, body []by
 	if readErr != nil {
 		return gradingAgentV2Response{}, &GradingAgentError{Code: "agent_response_read_failed", Retryable: true, cause: readErr}
 	}
+	if int64(len(responseBody)) > maxGradingAgentResponseBytes {
+		return gradingAgentV2Response{}, &GradingAgentError{Code: "agent_response_too_large"}
+	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		var remote gradingAgentErrorResponse
-		_ = json.Unmarshal(responseBody, &remote)
-		code := strings.TrimSpace(remote.Error.Code)
-		if code == "" {
-			code = "agent_http_error"
-		}
-		return gradingAgentV2Response{}, &GradingAgentError{Code: code, Status: resp.StatusCode, Retryable: remote.Error.Retryable || resp.StatusCode >= 500}
+		return gradingAgentV2Response{}, parseAgentError(responseBody, resp.StatusCode, gradingAgentV2BuilderSchemaVersion, requestID)
 	}
 	if int64(len(responseBody)) > maxGradingAgentResponseBytes {
 		return gradingAgentV2Response{}, &GradingAgentError{Code: "agent_response_too_large"}
@@ -178,11 +215,21 @@ func mathV2RequiredObject(raw []byte, names ...string) (map[string]json.RawMessa
 }
 
 func (a *HTTPAdapterV2) mapResponse(input AdapterInput, response gradingAgentV2Response) (AdapterOutput, error) {
+	if err := validateSuccessDiagnostics(response.Telemetry); err != nil {
+		return AdapterOutput{}, err
+	}
 	if input.MathEvidence == nil || response.SchemaVersion != gradingAgentV2BuilderSchemaVersion || response.RequestID != input.RequestID ||
 		response.Status != "candidate_mapping" || response.Delivery != "teacher_suggestion" || !response.NeedsHumanReview || response.Mock ||
 		response.ModelVersion != a.base.policy.ModelVersion || response.PromptVersion != a.base.policy.PromptVersion ||
 		response.RubricVersion != input.Rubric.Version || response.CapabilityProfile != a.base.capabilityProfile {
 		return AdapterOutput{}, &GradingAgentError{Code: "agent_response_contract_mismatch"}
+	}
+	if input.ReferenceManifest != nil {
+		if response.ManifestHash != input.ReferenceManifest.ManifestHash || response.RequestBindingHash == "" || response.RequestBindingHash != computeMaterialRequestBindingHash(input.RequestID, input.Question.ID, input.SegmentID, input.ReferenceManifest, *input.ActiveCrop, input.ReferenceMedia) || !containsString(response.AcceptedFeatures, materialInputFeature) {
+			return AdapterOutput{}, &GradingAgentError{Code: "agent_material_contract_mismatch"}
+		}
+	} else if len(response.AcceptedFeatures) != 0 || response.ManifestHash != "" || response.RequestBindingHash != "" {
+		return AdapterOutput{}, &GradingAgentError{Code: "agent_material_contract_mismatch"}
 	}
 	if response.Telemetry.Adapter != a.base.adapterType || response.Telemetry.Provider != a.base.providerKey ||
 		response.Telemetry.Deployment != a.base.deploymentKey || response.Telemetry.Region != a.base.deploymentRegion ||
@@ -205,7 +252,7 @@ func (a *HTTPAdapterV2) mapResponse(input AdapterInput, response gradingAgentV2R
 	if err := validateMathV2Risks(response.RiskFlags, response.AlternativeSolutionCandidate); err != nil {
 		return AdapterOutput{}, err
 	}
-	telemetry := AdapterTelemetry{Adapter: response.Telemetry.Adapter, Provider: response.Telemetry.Provider, Deployment: response.Telemetry.Deployment, Region: response.Telemetry.Region, Attempts: response.Telemetry.Attempts, RepairAttempted: response.Telemetry.RepairAttempted, PriorErrorCodes: nonNilStrings(response.Telemetry.PriorErrorCodes), ElapsedMS: response.Telemetry.ElapsedMS, Usage: response.Telemetry.Usage}
+	telemetry := AdapterTelemetry{Adapter: response.Telemetry.Adapter, Provider: response.Telemetry.Provider, Deployment: response.Telemetry.Deployment, Region: response.Telemetry.Region, Attempts: response.Telemetry.Attempts, RepairAttempted: response.Telemetry.RepairAttempted, PriorErrorCodes: nonNilStrings(response.Telemetry.PriorErrorCodes), ElapsedMS: response.Telemetry.ElapsedMS, Usage: response.Telemetry.Usage, ExecutionDiagnostics: cloneExecutionDiagnostics(response.Telemetry.ExecutionDiagnostics)}
 	return AdapterOutput{SchemaVersion: response.SchemaVersion, RequestID: response.RequestID, Confidence: confidence, RiskFlags: nonNilStrings(response.RiskFlags), NeedsHumanReview: true,
 		StudentFeedback: "数学评分建议须由教师确认。", TeacherNote: "模型只提供语义候选映射；分值由服务器依据冻结评分规则计算。",
 		ModelVersion: response.ModelVersion, PromptVersion: response.PromptVersion, RubricVersion: response.RubricVersion, DeliveryMode: response.Delivery,

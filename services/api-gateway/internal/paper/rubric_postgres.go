@@ -9,6 +9,9 @@ import (
 )
 
 func (s *PostgresStore) CreateRubric(ctx context.Context, tenantID string, questionID string, userID string, input RubricInput) (Rubric, error) {
+	if !ValidRubricPointIdentities(input.Points) {
+		return Rubric{}, ErrInvalidInput
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Rubric{}, err

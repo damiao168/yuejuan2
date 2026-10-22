@@ -43,13 +43,11 @@
   position: relative;
   min-height: 680px;
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 304px;
+  grid-template-columns: 200px minmax(0, 1fr);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
 }
-.template-question-toggle { display: none; }
-
 .template-question-pane,
 .template-inspector {
   min-width: 0;
@@ -128,16 +126,13 @@
   border-bottom: 1px solid #d8dde5;
 }
 
-/* 二级考试导航会压缩工作区，模板按实际容器宽度收起题号栏，而不是按窗口宽度猜测。 */
+/* 题目列表保持可见；模板设置按需打开，不再为属性保留常驻网格列。 */
 @container template-editor (max-width: 1135px) {
-  .template-workbench { grid-template-columns: minmax(0, 1fr) 304px; }
-  .template-question-toggle { display: inline-flex; }
-  .template-question-pane { display: none; }
-  .template-question-pane.is-open { position: absolute; z-index: 8; top: 0; bottom: 0; left: 0; display: block; width: min(280px, 90%); overflow-y: auto; border-right: 1px solid var(--border); box-shadow: 8px 0 24px rgba(31, 35, 41, .12); }
+  .template-workbench { grid-template-columns: 160px minmax(0, 1fr); }
 }
-@container template-editor (max-width: 919px) {
+@container template-editor (max-width: 600px) {
   .template-workbench { grid-template-columns: minmax(0, 1fr); }
-  .template-inspector { grid-column: 1; border-left: 0; border-top: 1px solid var(--border); }
+  .template-question-pane .ant-list { max-height: 180px; }
 }
 
 .template-canvas-toolbar span {
@@ -148,8 +143,19 @@
 
 .template-canvas-scroll {
   flex: 1;
+  min-height: 360px;
+  /* 放大后在答题卡视口内滚动，避免纸张高度把整页工作区持续撑大。 */
+  max-height: clamp(420px, 72vh, 900px);
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 24px;
+}
+
+.template-canvas-zoom-hint {
+  padding: 4px 14px;
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+  background: #f8fafc;
 }
 
 .template-canvas {
@@ -166,6 +172,16 @@
 
 .template-canvas.readonly {
   cursor: default;
+}
+
+.template-canvas-scroll.is-pan .template-canvas,
+.template-canvas-scroll.is-pan .template-region {
+  cursor: grab;
+}
+
+.template-canvas-scroll.is-panning .template-canvas,
+.template-canvas-scroll.is-panning .template-region {
+  cursor: grabbing;
 }
 
 /* 页面图像必须铺满已确定比例的画布；contain 留白会改变显示矩形，使归一化题框坐标看起来偏移。 */
@@ -199,15 +215,41 @@
   position: absolute;
   min-width: 8px;
   min-height: 8px;
-  border: 2px solid #1677ff;
-  background: rgba(22, 119, 255, 0.12);
+  border: 1px solid #4086dc;
+  background: transparent;
   cursor: move;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .template-region.selected {
-  border-color: #c2334d;
-  background: rgba(194, 51, 77, 0.13);
+  border: 2px solid #1677ff;
+  background: rgba(22, 119, 255, 0.035);
+  z-index: 2;
 }
+.template-region:hover { border-color: #1554ad; background: rgba(22, 119, 255, .025); }
+.template-canvas.is-select { cursor: default; }
+.template-unassigned-region { border-style: dashed; border-color: #b58a41; }
+/* 候选标签始终可见，避免与印刷边框重叠时只能靠悬停发现识别结果。 */
+.template-region.template-unassigned-region > span {
+  opacity: 1;
+  max-width: none;
+  padding: 2px 6px;
+  background: #8c4100;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  box-shadow: 0 0 0 1px #fff;
+  pointer-events: none;
+}
+.template-region.template-unassigned-region.selected > span { background: #5f2900; }
+.template-region.template-objective-group {
+  padding: 0;
+  border: 2px solid #1677ff;
+  border-radius: 0;
+  cursor: pointer;
+}
+.template-region.template-objective-group:disabled { cursor: default; }
+.template-region.template-objective-group:focus-visible { outline: 2px solid #093d87; outline-offset: 2px; }
 
 .template-region.drawing {
   border-style: dashed;
@@ -220,8 +262,8 @@
   min-width: 8px;
   min-height: 8px;
   place-items: center;
-  border: 2px solid #16845b;
-  background: rgba(22, 132, 91, 0.2);
+  border: 1px solid rgba(22, 119, 255, .5);
+  background: transparent;
   font-size: var(--eg-font-caption);
   font-style: normal;
   font-weight: 700;
@@ -241,7 +283,9 @@
   background: #093d2d;
   text-overflow: ellipsis;
   white-space: nowrap;
+  visibility: hidden;
 }
+.template-region.selected .template-option-region > span { visibility: visible; }
 
 .template-option-editor {
   display: flex;
@@ -277,12 +321,12 @@
   top: 0;
   left: 0;
   max-width: 100%;
-  padding: 2px 5px;
+  padding: 0 3px;
   overflow: hidden;
   color: #fff;
   background: #1554ad;
-  font-size: var(--eg-font-caption);
-  line-height: 1.4;
+  font-size: 10px;
+  line-height: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -296,9 +340,19 @@
   padding: 0;
   border: 2px solid #fff;
   border-radius: 2px;
-  background: #c2334d;
+  background: #1677ff;
   cursor: nwse-resize;
+  z-index: 3;
 }
+.template-resize-handle::before { position: absolute; inset: -5px; content: ""; }
+.template-resize-handle.handle-nw { left: -6px; top: -6px; right: auto; bottom: auto; }
+.template-resize-handle.handle-n { left: calc(50% - 6px); top: -6px; right: auto; bottom: auto; cursor: ns-resize; }
+.template-resize-handle.handle-ne { right: -6px; top: -6px; bottom: auto; cursor: nesw-resize; }
+.template-resize-handle.handle-e { right: -6px; top: calc(50% - 6px); bottom: auto; cursor: ew-resize; }
+.template-resize-handle.handle-se { right: -6px; bottom: -6px; }
+.template-resize-handle.handle-s { left: calc(50% - 6px); bottom: -6px; right: auto; cursor: ns-resize; }
+.template-resize-handle.handle-sw { left: -6px; bottom: -6px; right: auto; cursor: nesw-resize; }
+.template-resize-handle.handle-w { left: -6px; top: calc(50% - 6px); right: auto; bottom: auto; cursor: ew-resize; }
 
 .template-inspector label {
   display: flex;
@@ -334,6 +388,27 @@
 .template-summary strong {
   color: var(--text);
 }
+
+.template-title-status { display: flex; align-items: center; gap: 10px; }
+.template-title-status h2 { margin: 0; white-space: nowrap; }
+.template-save-state { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+.template-save-state.is-dirty { padding: 2px 7px; color: #9b5a17; border-radius: 4px; background: #fff3e3; }
+.template-compact-toolbar { flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.template-recognition-status { flex-basis: 100%; max-height: 110px; overflow: auto; color: var(--text-muted); font-size: 12px; }
+.template-recognition-status .ant-alert { padding: 7px 12px; }
+.template-source-controls { padding-bottom: 12px; }
+.template-region-facts { display: grid; gap: 6px; }
+.template-region-facts > span:nth-child(odd) { margin-top: 8px; color: var(--text-muted); font-size: 12px; }
+.template-region-facts > strong { font-weight: 500; }
+.template-inspector-empty { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.template-inspector-settings > summary,
+.template-advanced-geometry > summary,
+.template-advanced-options > summary { padding: 8px 0; cursor: pointer; color: var(--text-muted); font-size: 13px; }
+.template-inspector-settings[open] { display: flex; flex-direction: column; gap: 16px; }
+.template-advanced-options[open] { overflow-x: auto; }
+.template-advanced-options .template-option-row { min-width: 330px; margin-top: 10px; }
+.template-candidate-actions { padding: 7px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: #795722; background: #fffaf0; }
+
 
 .readiness-advisory .ant-alert-message small {
   margin-left: 8px;

@@ -4,7 +4,7 @@
 
 主项目通过受治理的内部 `grading-agent` 获取主观题评分建议。建议不会直接写入 `final_grade`，不会自动发布，也不会对学生直接可见。当前 `local-pilot-v1` 全部要求教师复核；作文和论述题仅允许影子记录。
 
-浏览器 API 保持不变：
+单片段评分接口：
 
 ```text
 POST /api/v1/answer-segments/{id}/subjective-ai-grade
@@ -82,6 +82,25 @@ POST /api/v1/answer-segments/{id}/subjective-ai-grade
 `GET /api/v1/scoring-runs/{runId}/ai-batches` 返回本轮批次，前端据此在刷新或换浏览器后恢复进度。`POST /api/v1/subjective-grading-batches/{batchId}/enqueue` 对已取消批次返回 `409 subjective_grading_batch_cancelled`。取消评分轮次时，关联的活跃 AI worker task 一起取消，批次变为 `cancelled`；数据库禁止取消开始后新建该轮次的 AI worker task。
 
 批次的 `completed` 只表示建议生成结束。教师仍须在人工任务中审阅原答题证据和 Rubric，明确提交分数。详细交互见 [评分轮次与 AI 辅助阅卷方案](../architecture/scoring-run-ai-assisted-workflow-2026-09-25.md)。
+
+## 评分轮次中的同题试改
+
+以下接口都要求 `grading:manage`，同时检查登录主体的租户与评分轮次资源边界；路径中的 `trialId` 必须属于 `runId`。
+
+| 接口 | 正常返回 | 用途 |
+| --- | --- | --- |
+| `GET /api/v1/scoring-runs/{runId}/ai-trials` | `200 {trials: [...]}` | 刷新后恢复服务端试改记录与当前结果 |
+| `POST /api/v1/scoring-runs/{runId}/ai-trials` | `201 {trial: ...}` | 保存人工基准并创建样本批次 |
+| `POST /api/v1/scoring-runs/{runId}/ai-trials/{trialId}/enqueue` | `200 {batch, tasks, enqueue_result}` | 无请求体，恢复实际样本或扩大批次的入队 |
+| `POST /api/v1/scoring-runs/{runId}/ai-trials/{trialId}/decision` | `200 {trial: ...}` | 保存停止或扩大决定 |
+
+创建请求为 `{command_id, question_id, samples: [{segment_id, human_score, roles}]}`。选择同一题的 5–10 个不同片段，人工分数必须是有限的非负数且不超过服务端读取的本题满分。`roles` 可为空数组，但整组必须覆盖 `representative`、`boundary`、`incomplete_evidence`；这些是人工标注的用途，不能证明样本具有统计代表性。`command_id` 去掉首尾空白后非空，最多 128 个 UTF-8 字节；同一创建者重试必须保持完整输入一致。
+
+`trial` 保存独立人工基准、`sample_batch_id`、服务端 `fingerprint` 和 `revision`。样本 `result` 只投影该样本批次的任务与建议，不借用历史建议或正式成绩；尚无有效建议时省略 `suggested_score`，调用方不能补成零分。`latency_ms`、`total_tokens` 只有观测存在时才返回，缺省不代表零成本。
+
+决定请求为 `{decision: "stop" | "expand", reason, expected_revision}`。理由去掉首尾空白后非空，最多 500 个 Unicode 码点；`expected_revision` 使用最近读取的值。样本任务必须结束，服务端还会复核当前冻结上下文。状态、版本或指纹冲突返回 `409`，应重新读取；不能在旧页面结果上直接扩大。`expand` 保存同题剩余片段的实际批次，返回 `expansion_batch_id`，再调用本试改的 `enqueue`；刷新或部分入队重试沿用该批次。
+
+样本结果与扩大决定均不提交人工成绩、不发布成绩。少量人工选择的试改样本不能证明实测准确率或全卷质量，仍须按现有人工复核流程处理建议。
 
 ## 三智能体 Panel 影子能力
 

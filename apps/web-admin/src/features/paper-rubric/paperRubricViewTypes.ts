@@ -6,7 +6,8 @@ import type { usePaperImportWorkflow } from "../paper-import/usePaperImportWorkf
 import type { useScoringRules } from "../paper-import/useScoringRules";
 import type { useQuestionEditor } from "./hooks/useQuestionEditor";
 import type { useRubricEditor } from "./hooks/useRubricEditor";
-import type { QuestionFilter, questionEditingAccess } from "./paperQuestionPresentation";
+import type { useGroupedQuestionScores } from "./hooks/useGroupedQuestionScores";
+import type { QuestionFilter, QuestionIssueTarget, questionEditingAccess } from "./paperQuestionPresentation";
 
 export interface PaperRubricPageProps {
   canManage: boolean;
@@ -35,6 +36,7 @@ export interface PaperRubricViewContext {
   questionWorkflow: ReturnType<typeof useQuestionEditor>;
   rubricWorkflow: ReturnType<typeof useRubricEditor>;
   scoringRuleWorkflow: ReturnType<typeof useScoringRules>;
+  groupedScores: ReturnType<typeof useGroupedQuestionScores>;
   selectedExam: Exam | undefined;
   selectedQuestion: Question | null;
   latestPaperImport: PaperImportJob | undefined;
@@ -66,13 +68,14 @@ export interface PaperRubricViewContext {
     setIndexOpen: Dispatch<SetStateAction<boolean>>;
     markQuestionDirty: () => void;
     openQuestion: (question: Question) => void;
+    openQuestionIssue: (question: Question, target: QuestionIssueTarget) => void;
     createQuestion: () => void;
     openCandidate: (index: number) => void;
     saveQuestion: () => void;
     saveAllQuestionChanges: () => void;
     rereadSavedResult: () => void;
     discardActiveDraft: () => void;
-    saveRubric: () => void;
+    saveRubric: (status?: "draft" | "locked") => void;
     saveScoringRule: (publish: boolean) => void;
     runValidation: () => void;
     onBankCopied: () => Promise<void>;

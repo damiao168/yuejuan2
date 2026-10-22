@@ -46,13 +46,39 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
             if not line:
                 continue
             try:
-                record = json.loads(line)
-            except json.JSONDecodeError as exc:
+                record = json.loads(line, parse_constant=reject_json_constant)
+            except (json.JSONDecodeError, ValueError) as exc:
                 raise ValueError(f"{path}:{line_no} is not valid JSON: {exc}") from exc
             if not isinstance(record, dict):
                 raise ValueError(f"{path}:{line_no} must be a JSON object")
             records.append(record)
     return records
+
+
+def reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-standard JSON numeric constant: {value}")
+
+
+def finite_number(value: Any, name: str) -> float:
+    # bool 是 Python 的 int 子类，但不是评分数值；字符串NaN/Infinity也不能参与指标或路由。
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be a finite number")
+    try:
+        number = float(value)
+    except OverflowError as exc:
+        raise ValueError(f"{name} must be a finite number") from exc
+    if not math.isfinite(number):
+        raise ValueError(f"{name} must be a finite number")
+    return number
+
+
+def validate_metric_config(low_confidence_threshold: float, adjacent_tolerance: float, exact_tolerance: float) -> None:
+    threshold = finite_number(low_confidence_threshold, "low_confidence_threshold")
+    if not 0 <= threshold <= 1:
+        raise ValueError("low_confidence_threshold must be in [0, 1]")
+    for name, value in (("adjacent_tolerance", adjacent_tolerance), ("exact_tolerance", exact_tolerance)):
+        if finite_number(value, name) < 0:
+            raise ValueError(f"{name} must be >= 0")
 
 
 def validate_samples(samples: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -66,8 +92,10 @@ def validate_samples(samples: list[dict[str, Any]]) -> dict[str, dict[str, Any]]
         sample_id = str(record["sample_id"])
         if sample_id in by_id:
             raise ValueError(f"duplicate sample_id: {sample_id}")
-        human_score = float(record["human_score"])
-        max_score = float(record["question"]["max_score"])
+        human_score = finite_number(record["human_score"], f"sample {sample_id} human_score")
+        max_score = finite_number(record["question"]["max_score"], f"sample {sample_id} max_score")
+        if max_score < 0:
+            raise ValueError(f"sample {sample_id} max_score must be >= 0")
         if human_score < 0 or human_score > max_score:
             raise ValueError(f"sample {sample_id} has human_score outside [0, max_score]")
         by_id[sample_id] = record
@@ -84,10 +112,10 @@ def validate_predictions(predictions: list[dict[str, Any]], samples_by_id: dict[
         sample_id = str(record["sample_id"])
         if sample_id not in samples_by_id:
             raise ValueError(f"prediction references unknown sample_id: {sample_id}")
-        confidence = float(record["confidence"])
+        confidence = finite_number(record["confidence"], f"prediction {sample_id} confidence")
         if confidence < 0 or confidence > 1:
             raise ValueError(f"prediction for {sample_id} has confidence outside [0, 1]")
-        suggested_score = float(record["suggested_score"])
+        suggested_score = finite_number(record["suggested_score"], f"prediction {sample_id} suggested_score")
         max_score = float(samples_by_id[sample_id]["question"]["max_score"])
         if suggested_score < 0 or suggested_score > max_score:
             raise ValueError(f"prediction for {sample_id} has suggested_score outside [0, max_score]")
@@ -120,6 +148,7 @@ def compute_metrics(
     adjacent_tolerance: float,
     exact_tolerance: float,
 ) -> dict[str, Any]:
+    validate_metric_config(low_confidence_threshold, adjacent_tolerance, exact_tolerance)
     count = len(rows)
     if count == 0:
         return empty_metrics()
@@ -247,10 +276,12 @@ def build_report(
 
 
 def write_reports(report: dict[str, Any], out_dir: Path) -> tuple[Path, Path]:
+    # 指标溢出或调用方绕过校验时先拒绝序列化；不能覆盖已有报告后才报告失败。
+    serialized = json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
     out_dir.mkdir(parents=True, exist_ok=True)
     json_path = out_dir / "ai_evaluation_report.json"
     md_path = out_dir / "ai_evaluation_report.md"
-    json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    json_path.write_text(serialized, encoding="utf-8")
     md_path.write_text(render_markdown(report), encoding="utf-8")
     return json_path, md_path
 
@@ -371,7 +402,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--low-confidence-threshold", type=float, default=0.8)
     parser.add_argument("--adjacent-tolerance", type=float, default=1.0)
     parser.add_argument("--exact-tolerance", type=float, default=1e-9)
-    return parser.parse_args()
+    arguments = parser.parse_args()
+    try:
+        validate_metric_config(arguments.low_confidence_threshold, arguments.adjacent_tolerance, arguments.exact_tolerance)
+    except ValueError as exc:
+        parser.error(str(exc))
+    return arguments
 
 
 def main() -> int:

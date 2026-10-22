@@ -1,10 +1,10 @@
-import type { ReactElement } from "react";
+import type { MouseEvent, ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { TableProps } from "antd";
 import type { ColumnType } from "antd/es/table";
 import { describe, expect, it, vi } from "vitest";
 import type { Exam, ManagementExam } from "../../../api/exams";
-import { ManagementSubjectTable } from "./ManagementExamDetails";
+import { ManagementExamDetails, ManagementSubjectTable } from "./ManagementExamDetails";
 
 function subject(status: string): Exam {
   return {
@@ -32,46 +32,55 @@ function column(target: ReactElement<TableProps<Exam>>, title: string) {
 }
 
 describe("考试学科表展示边界", () => {
-  it("准备情况保留草稿、后续阶段与未知状态的原文字", () => {
+  it("只保留当前阶段，删除重复准备情况和操作列", () => {
     const cases = [
-      ["draft", "尚未确认准备完成"], ["configured", "尚未确认准备完成"],
-      ...["ready", "collecting", "grading", "reviewing", "finalized", "published"].map((status) => [status, "已进入准备完成或后续阶段"]),
-      ["unknown", "暂无法获取"],
+      ["draft", "草稿"], ["configured", "配置中"], ["ready", "准备完成"], ["grading", "阅卷中"],
+      ["published", "已发布"], ["archived", "已归档"], ["unknown", "暂无法获取进度"],
     ];
     const record = exam(cases.map(([status]) => subject(status)));
-    const preparation = column(table(record), "准备情况");
+    expect(table(record, vi.fn()).props.columns?.map(item => item.title)).toEqual(["学科", "满分", "参考班级", "当前阶段"]);
+    const stage = column(table(record), "当前阶段");
     for (const [status, label] of cases) {
-      expect(preparation.render!(undefined, subject(status), 0)).toBe(label);
+      expect(renderToStaticMarkup(stage.render!(undefined, subject(status), 0) as ReactElement)).toContain(label);
     }
-    const html = renderToStaticMarkup(<ManagementSubjectTable exam={record} />);
-    expect(html).toContain("尚未确认准备完成");
-    expect(html).toContain("已进入准备完成或后续阶段");
-    expect(html).toContain("暂无法获取");
   });
 
-  it("事实不可用时历史归档优先，其余学科不能推断准备完成", () => {
-    const record = exam([subject("archived"), subject("ready")], false);
-    const preparation = column(table(record), "准备情况");
-    expect(preparation.render!(undefined, record.exams[0], 0)).toBe("历史归档，原阶段未知");
-    expect(preparation.render!(undefined, record.exams[1], 1)).toBe("准备状态暂不可用");
-    const html = renderToStaticMarkup(<ManagementSubjectTable exam={record} />);
-    expect(html).toContain("历史归档，原阶段未知");
-    expect(html).toContain("准备状态暂不可用");
-    expect(html).not.toContain("已进入准备完成或后续阶段");
+  it("考试信息移除学校，保留年级和归档事实", () => {
+    const record = { ...exam([subject("archived")], false), archived_at: "2026-10-05T00:00:00Z", archive_reason: "学年结束" };
+    const html = renderToStaticMarkup(<ManagementExamDetails exam={record} layout="columns" gradeName="高一年级" />);
+    expect(html).not.toContain(">学校<");
+    expect(html).toContain("高一年级");
+    expect(html).toContain("归档时间");
+    expect(html).toContain("学年结束");
+    expect(html).toContain("业务内容只读");
   });
 
   it.each([
-    ["draft", true, "查看学科"], ["archived", false, "查看学科"],
-    ["configured", false, "准备配置"], ["ready", false, "导入与核对答题卡"], ["grading", false, "继续阅卷"], ["published", false, "查看成绩"],
-  ] as const)("%s 学科的归档标记 %s 保留按钮文字与原对象回调", (status, archived, label) => {
+    ["draft", true], ["archived", false], ["configured", false], ["ready", false], ["grading", false], ["published", false],
+  ] as const)("%s 学科的归档标记 %s 下整行和名称都传递原学科对象", (status, archived) => {
     const target = subject(status);
     const record = exam([target]);
     if (archived) record.archived_at = "2026-10-05T00:00:00Z";
     const open = vi.fn();
-    const button = column(table(record, open), "操作").render!(undefined, target, 0) as ReactElement<{ onClick: () => void }>;
-    expect(renderToStaticMarkup(button)).toContain(label);
+    const element = table(record, open);
+    const button = column(element, "学科").render!(target.subject, target, 0) as ReactElement<{ onClick: (event: MouseEvent<HTMLButtonElement>) => void }>;
+    expect(button.type).toBe("button");
+    expect(renderToStaticMarkup(button)).toContain("数学");
     expect(open).not.toHaveBeenCalled();
-    button.props.onClick();
+    element.props.onRow?.(target, 0).onClick?.({} as MouseEvent<HTMLTableRowElement>);
+    const stopPropagation = vi.fn();
+    button.props.onClick({ stopPropagation } as unknown as MouseEvent<HTMLButtonElement>);
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(open).toHaveBeenCalledTimes(2);
     expect(open.mock.calls[0][0]).toBe(target);
+    expect(open.mock.calls[1][0]).toBe(target);
+  });
+
+  it("没有学科导航回调的详情保持只读表格", () => {
+    const target = subject("draft");
+    const element = table(exam([target]));
+    expect(element.props.onRow).toBeUndefined();
+    expect(element.props.rowClassName).toBeUndefined();
+    expect(column(element, "学科").render!(target.subject, target, 0)).toBe("数学");
   });
 });

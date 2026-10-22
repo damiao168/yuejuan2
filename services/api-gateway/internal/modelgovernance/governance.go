@@ -2,7 +2,6 @@ package modelgovernance
 
 import (
 	"errors"
-	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -404,23 +403,16 @@ func sortedManagedRouteConfigs(configs []ManagedAPIConfig) []ManagedAPIConfig {
 
 func managedConfigEligibleForRoute(config ManagedAPIConfig, tenantID string, allowed map[string]bool, modality string) bool {
 	return config.TenantID == tenantID && allowed[config.ID] &&
-		config.Status == "active" && config.LastTestStatus == "success" &&
+		// 临时故障保留既有能力资格；确定的连接失败仍由运行时拒绝，避免继续选用失效凭据。
+		config.Status == "active" && config.LastTestStatus != "failed" &&
 		config.LastCapabilityStatus == "success" &&
-		config.LastCapabilityVersion == "structured-json-v3" &&
+		config.LastCapabilityVersion == "structured-json-v4" &&
 		contains(config.Modalities, modality)
 }
 
 func validCredentialReference(value string) bool {
-	parsed, err := url.Parse(value)
-	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return false
-	}
-	switch parsed.Scheme {
-	case "env", "docker_secret", "vault", "aws_secrets_manager", "azure_key_vault", "gcp_secret_manager":
-		return true
-	default:
-		return false
-	}
+	_, err := parseCredentialReference(value)
+	return err == nil
 }
 
 func contains(values []string, expected string) bool {

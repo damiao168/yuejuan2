@@ -43,16 +43,8 @@ func (s *PostgresStore) CompletePaperImportParseTask(ctx context.Context, tenant
 	if err != nil {
 		return PaperImportJob{}, err
 	}
-	var inputHash string
-	if err = tx.QueryRowContext(ctx, `SELECT input_hash FROM paper_import_parse_input
-WHERE tenant_id=$1 AND id=$2::uuid AND paper_import_id=$3::uuid AND run_id=$4::uuid AND generation=$5 AND source_revision=$6 AND protocol_version=2`, tenantID, binding.InputID, binding.ImportID, binding.RunID, binding.Generation, binding.SourceRevision).Scan(&inputHash); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return PaperImportJob{}, ErrConflict
-		}
+	if err = validatePaperImportParseInputTx(ctx, tx, tenantID, binding); err != nil {
 		return PaperImportJob{}, err
-	}
-	if inputHash != binding.InputHash {
-		return PaperImportJob{}, ErrConflict
 	}
 	// 代次已变化时只允许确认历史上相同任务、相同结果的成功回执，不把旧结果写到当前代次。
 	if runID != binding.RunID || generation != binding.Generation || revision != binding.SourceRevision {
@@ -75,13 +67,8 @@ WHERE tenant_id=$1 AND id=$2::uuid AND paper_import_id=$3::uuid AND run_id=$4::u
 		return PaperImportJob{}, err
 	}
 	if jobStatus == "review_required" {
-		var resultTaskID, persistedHash string
-		var resultGeneration sql.NullInt64
-		if err = tx.QueryRowContext(ctx, `SELECT COALESCE(result_task_id::text,''),COALESCE(result_payload_hash,''),result_generation FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, binding.ImportID).Scan(&resultTaskID, &persistedHash, &resultGeneration); err != nil {
+		if err = confirmCurrentPaperImportParseResultTx(ctx, tx, tenantID, taskID, binding, resultHash); err != nil {
 			return PaperImportJob{}, err
-		}
-		if !resultGeneration.Valid || resultGeneration.Int64 != binding.Generation || resultTaskID != taskID || persistedHash != resultHash {
-			return PaperImportJob{}, ErrConflict
 		}
 		if err = tx.Commit(); err != nil {
 			return PaperImportJob{}, err
@@ -144,6 +131,36 @@ WHERE tenant_id=$1 AND id=$2::uuid AND current_generation=$3 AND source_revision
 		return PaperImportJob{}, err
 	}
 	return s.GetPaperImport(ctx, tenantID, binding.ImportID)
+}
+
+// 输入必须来自本导入的同一运行、代次和来源版本；缺失输入与哈希变化都按版本冲突处理。
+func validatePaperImportParseInputTx(ctx context.Context, tx *sql.Tx, tenantID string, binding PaperImportRunBinding) error {
+	var inputHash string
+	err := tx.QueryRowContext(ctx, `SELECT input_hash FROM paper_import_parse_input
+WHERE tenant_id=$1 AND id=$2::uuid AND paper_import_id=$3::uuid AND run_id=$4::uuid AND generation=$5 AND source_revision=$6 AND protocol_version=2`, tenantID, binding.InputID, binding.ImportID, binding.RunID, binding.Generation, binding.SourceRevision).Scan(&inputHash)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrConflict
+	}
+	if err != nil {
+		return err
+	}
+	if inputHash != binding.InputHash {
+		return ErrConflict
+	}
+	return nil
+}
+
+// 当前代次已待核对时只确认相同任务和相同结果，不能用重试覆盖已保存的候选。
+func confirmCurrentPaperImportParseResultTx(ctx context.Context, tx *sql.Tx, tenantID, taskID string, binding PaperImportRunBinding, resultHash string) error {
+	var resultTaskID, persistedHash string
+	var resultGeneration sql.NullInt64
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(result_task_id::text,''),COALESCE(result_payload_hash,''),result_generation FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, binding.ImportID).Scan(&resultTaskID, &persistedHash, &resultGeneration); err != nil {
+		return err
+	}
+	if !resultGeneration.Valid || resultGeneration.Int64 != binding.Generation || resultTaskID != taskID || persistedHash != resultHash {
+		return ErrConflict
+	}
+	return nil
 }
 
 // 历史回执必须同时匹配运行版本、任务和结果；完成输入沿用当前提交的同一租约与 payload。

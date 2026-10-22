@@ -95,6 +95,7 @@ type QualityResult struct {
 }
 
 type ApplyPageQualityInput struct {
+	SourceFileAssetID     string
 	SubmissionID          string
 	PageID                string
 	LatestQualityRunID    string

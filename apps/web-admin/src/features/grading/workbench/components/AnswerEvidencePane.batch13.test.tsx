@@ -34,6 +34,16 @@ function ocrResult(id: string, text: string, bbox: number[]): WorkbenchContext["
 }
 
 describe("AnswerEvidencePane batch13 rendering", () => {
+  it("共区模板显示整区/单题切换并明确当前录入题号", () => {
+    const grouped = renderPane({ viewerMode: "group", context: { ...context, gradingGroupImageUrl: "/shared" }, mathSelection });
+    expect(grouped.textContent).toContain("整区");
+    expect(grouped.textContent).toContain("单题");
+    expect(grouped.textContent).toContain("当前录入第 1 题得分");
+    expect(grouped.querySelector(".math-step-highlight")).toBeNull();
+    const individual = renderPane();
+    expect(individual.textContent).not.toContain("当前录入第");
+    expect(individual.textContent).toContain("答题区域");
+  });
   it("加载优先于无文件，OCR 无文件仍能显示文本", () => {
     const loading = renderPane({ preview: null, previewLoading: true, viewerMode: "ocr" });
     expect(loading.textContent).toContain("正在读取答卷页面");

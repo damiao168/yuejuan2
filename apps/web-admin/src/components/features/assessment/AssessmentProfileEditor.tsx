@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Alert, App, Button, Drawer, Form, Select, Space, Spin, type FormInstance } from "antd";
 import { BookOpenCheck, LockKeyhole, Save } from "lucide-react";
 import { ApiClientError, getUserErrorMessage } from "../../../api/client";
@@ -93,6 +93,15 @@ const riskTierOptions: { label: string; value: AssessmentRiskTier }[] = [
   { label: "R3 · 高风险考试", value: "R3" }
 ];
 
+const inlineScoringModeOptions = scoringModeOptions.map((option) => ({ ...option, label: ({
+  RULE_AUTO: "按规则自动判分",
+  AI_ASSIST: "AI 辅助，教师评分",
+  AI_FAST_CONFIRM: "AI 评分，教师快速确认",
+  HUMAN_PRIMARY: "教师主评",
+  DUAL_HUMAN: "两位教师独立评分",
+  MANUAL_ONLY: "仅由教师评分"
+} satisfies Record<AssessmentScoringMode, string>)[option.value] }));
+
 function formatError(error: unknown) {
   return getUserErrorMessage(error, "学科评分配置加载失败");
 }
@@ -173,7 +182,7 @@ function AssessmentScopeFields({ examSubjectCode, examSubjectLabel, subject, edi
 
 function AssessmentProfileDrawerBody({ loading, error, onRetry, form, editable, saving, configurationReady, frozen, canManage,
   scopeProps, availableEvidence, selectedEvidence, evidenceNotice, selectedProfileDefinition, selectedArchetypeDefinition,
-  invalidEvidence, policyBlocked, scoringGuidance }: Readonly<{
+  invalidEvidence, policyBlocked, scoringGuidance, inline = false, actions, advancedOpen, onAdvancedChange }: Readonly<{
   loading: boolean;
   error?: string;
   onRetry: () => void;
@@ -192,13 +201,15 @@ function AssessmentProfileDrawerBody({ loading, error, onRetry, form, editable, 
   invalidEvidence: boolean;
   policyBlocked: boolean;
   scoringGuidance: ReturnType<typeof assessmentScoringGuidance>;
+  inline?: boolean;
+  actions?: ReactNode;
+  advancedOpen?: boolean;
+  onAdvancedChange?: (open: boolean) => void;
 }>) {
   // 读取未完成或失败时不挂载旧字段；重试成功后仍使用父组件的同一个表单实例。
   if (loading) return <div className="assessment-drawer-loading"><Spin /><span>正在读取评分模板</span></div>;
   if (error) return <Alert type="error" showIcon message="配置加载失败" description={error} action={<Button size="small" onClick={onRetry}>重试</Button>} />;
-  return <Form form={form} layout="vertical" disabled={!editable || saving || !configurationReady} requiredMark="optional">
-    {frozen ? <Alert className="assessment-policy-alert" type="info" showIcon message="考试配置已冻结" description="进入准备完成阶段后，本题只展示考试快照；后续修改不会覆盖本场考试。" /> : null}
-    {!canManage ? <Alert className="assessment-policy-alert" type="info" showIcon message="当前为只读模板" description="学科评分策略由学校管理员维护，阅卷教师按已发布模板执行。" /> : null}
+  const advancedFields = <>
     <AssessmentScopeFields {...scopeProps} />
 
     <div className="assessment-form-section">
@@ -219,13 +230,32 @@ function AssessmentProfileDrawerBody({ loading, error, onRetry, form, editable, 
         <Form.Item label="考试风险等级" name="risk_tier" rules={[{ required: true, message: "请选择风险等级" }]}>
           <Select options={riskTierOptions} />
         </Form.Item>
-        <Form.Item label="默认评分模式" name="scoring_mode" rules={[{ required: true, message: "请选择评分模式" }]}>
+        {!inline && <Form.Item label="默认评分模式" name="scoring_mode" rules={[{ required: true, message: "请选择评分模式" }]}>
           <Select options={scoringModeOptions} status={policyBlocked ? "error" : undefined} />
-        </Form.Item>
+        </Form.Item>}
       </div>
-      {policyBlocked ? <Alert className="assessment-policy-alert" type="error" showIcon message="该组合不允许保存" description="R3 高风险开放题必须由人工主评或双人评分，AI 只能提供建议或质检信号。" /> : null}
-      {scoringGuidance ? <Alert type={scoringGuidance.type} showIcon message={scoringGuidance.message} description={scoringGuidance.description} /> : null}
+      {!inline && policyBlocked ? <Alert className="assessment-policy-alert" type="error" showIcon message="该组合不允许保存" description="R3 高风险开放题必须由人工主评或双人评分，AI 只能提供建议或质检信号。" /> : null}
+      {!inline && scoringGuidance ? <Alert type={scoringGuidance.type} showIcon message={scoringGuidance.message} description={scoringGuidance.description} /> : null}
     </div>
+  </>;
+  return <Form form={form} layout="vertical" disabled={!editable || saving || !configurationReady} requiredMark="optional">
+    {frozen ? <Alert className="assessment-policy-alert" type="info" showIcon message="考试配置已冻结" description="进入准备完成阶段后，本题只展示考试快照；后续修改不会覆盖本场考试。" /> : null}
+    {!canManage ? <Alert className="assessment-policy-alert" type="info" showIcon message="当前为只读模板" description="学科评分策略由学校管理员维护，阅卷教师按已发布模板执行。" /> : null}
+    {inline ? <>
+      <div className="assessment-inline-controls">
+        <Form.Item label="判分方式" name="scoring_mode" rules={[{ required: true, message: "请选择判分方式" }]}>
+          <Select options={inlineScoringModeOptions} status={policyBlocked ? "error" : undefined} />
+        </Form.Item>
+        <div className="assessment-inline-actions">{actions}</div>
+      </div>
+      {policyBlocked && <Alert className="assessment-policy-alert" type="error" showIcon message="该组合不允许保存" description="R3 高风险开放题必须由人工主评或双人评分，AI 只能提供建议或质检信号。" />}
+      {scoringGuidance?.type === "warning" && <Alert type="warning" showIcon message={scoringGuidance.message} description={scoringGuidance.description} />}
+      {/* 字段保持注册，折叠只改变可见性；保存仍校验模板、证据及风险限制。 */}
+      <details className="assessment-advanced-settings" open={advancedOpen} onToggle={(event) => onAdvancedChange?.(event.currentTarget.open)}>
+        <summary>模板、证据与风险设置</summary>
+        {advancedFields}
+      </details>
+    </> : advancedFields}
   </Form>;
 }
 
@@ -236,7 +266,9 @@ export function AssessmentProfileEditor({
   examGradingMode,
   question,
   canManage,
-  onChanged
+  onChanged,
+  presentation = "drawer",
+  active = true
 }: Readonly<{
   examId: string;
   examSubject: string;
@@ -245,6 +277,8 @@ export function AssessmentProfileEditor({
   question: Question | null;
   canManage: boolean;
   onChanged?: () => void;
+  presentation?: "drawer" | "inline";
+  active?: boolean;
 }>) {
   const { message } = App.useApp();
   const [form] = Form.useForm<AssessmentFormValues>();
@@ -258,8 +292,9 @@ export function AssessmentProfileEditor({
   const [snapshot, setSnapshot] = useState<AssessmentSnapshot>();
   const [evidenceNotice, setEvidenceNotice] = useState("");
   const [loadedContext, setLoadedContext] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   // 页面、题目和阅卷方式共同限定这次读取；关闭重开或 A→B→A 时还要用代次淘汰旧请求。
-  const contextKey = JSON.stringify([examId, question?.id, question?.question_type, examSubject, examStatus, examGradingMode, canManage]);
+  const contextKey = JSON.stringify([examId, question?.id, question?.question_type, examSubject, examStatus, examGradingMode, canManage, presentation]);
   const currentContext = useRef(contextKey);
   currentContext.current = contextKey;
   const operationVersion = useRef(0);
@@ -298,6 +333,7 @@ export function AssessmentProfileEditor({
   const canSave = editable && configurationReady && Boolean(selectedProfileDefinition && selectedArchetypeDefinition)
     && availableEvidence.length > 0 && selectedEvidence.length > 0 && !invalidEvidence && !policyBlocked && !subjectMismatch;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 考试、题目或权限上下文变化时使旧弹窗和保存回调失效；只保留 form 依赖会跨题沿用配置。
   useLayoutEffect(() => {
     operationVersion.current++;
     reading.current = false; writing.current = false; opened.current = false; loaded.current = "";
@@ -306,9 +342,16 @@ export function AssessmentProfileEditor({
     setError(undefined);
     setSavedProfile(undefined);
     setSnapshot(undefined);
+    setAdvancedOpen(false);
     form.resetFields();
     return () => { operationVersion.current++; opened.current = false; loaded.current = ""; };
   }, [contextKey, form]);
+
+  // 评分标签首次可见时读取；切回题目标签不重置表单，换题仍由上下文代次隔离旧响应。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 读取依赖由 contextKey 和标签可见性限定，不能随每次渲染重发请求。
+  useLayoutEffect(() => {
+    if (presentation === "inline" && active && question && !opened.current) void loadConfiguration();
+  }, [contextKey, presentation, active]);
 
   function isCurrent(version: number) {
     return currentContext.current === contextKey && version === operationVersion.current && opened.current;
@@ -363,6 +406,12 @@ export function AssessmentProfileEditor({
       const selectedProfile = currentSnapshot?.subject_profile_id ?? currentProfile?.subject_profile_id
         ?? profileResult.subject_profiles.find((item) => item.education_stage === defaultStage && item.subject_code === defaultSubject)?.id;
       const defaultProfile = profileResult.subject_profiles.find((item) => item.id === selectedProfile);
+      // 首次设置缺少学段或模板时展开必填字段；已配置题目默认只露出判分方式。
+      const allowedEvidence = assessmentEvidenceOptions(defaultProfile, archetypeDefinition);
+      const originalEvidence = currentSnapshot?.allowed_evidence_types ?? currentProfile?.allowed_evidence_types;
+      setAdvancedOpen(!defaultProfile || !archetypeDefinition || !allowedEvidence.length
+        || Boolean(originalEvidence && (!originalEvidence.length || originalEvidence.some((item) => !allowedEvidence.includes(item))))
+        || Boolean(examSubjectCode && defaultSubject !== examSubjectCode));
 
       form.setFieldsValue({
         education_stage: defaultStage,
@@ -473,7 +522,13 @@ export function AssessmentProfileEditor({
       });
       if (!isCurrent(version)) return;
       setSavedProfile(result.assessment_profile);
-      message.success("学科评分配置已保存");
+      message.success(presentation === "inline" ? "判分方式已保存" : "学科评分配置已保存");
+      if (presentation === "inline") {
+        // 页面内保存后保留同一表单和新修订，继续编辑时不能回到上次读取的版本。
+        writing.current = false; setSaving(false);
+        onChanged?.();
+        return;
+      }
       opened.current = false; loaded.current = ""; operationVersion.current++;
       writing.current = false;
       setOpen(false); setSaving(false); setLoadedContext("");
@@ -483,6 +538,24 @@ export function AssessmentProfileEditor({
     } finally {
       if (isCurrent(version)) { writing.current = false; setSaving(false); }
     }
+  }
+
+  if (presentation === "inline") {
+    const savedMode = snapshot?.scoring_policy_snapshot.mode ?? savedProfile?.scoring_policy.mode;
+    return <section className="assessment-profile-section is-inline" aria-label="本题判分方式">
+      {!question ? <span className="muted">保存题目后设置判分方式</span> : open && <AssessmentProfileDrawerBody
+        loading={loading} error={error} onRetry={() => void loadConfiguration()} form={form} inline
+        editable={editable} saving={saving} configurationReady={configurationReady} frozen={frozen} canManage={canManage}
+        scopeProps={{ examSubjectCode, examSubjectLabel, subject, editable, subjectMismatch, matchingProfiles, archetypes,
+          selectScope, selectProfile, selectArchetype }} availableEvidence={availableEvidence} selectedEvidence={selectedEvidence}
+        evidenceNotice={evidenceNotice} selectedProfileDefinition={selectedProfileDefinition} selectedArchetypeDefinition={selectedArchetypeDefinition}
+        invalidEvidence={invalidEvidence} policyBlocked={policyBlocked} scoringGuidance={scoringGuidance}
+        advancedOpen={advancedOpen} onAdvancedChange={setAdvancedOpen}
+        actions={<>
+          {editable && <Button type="primary" disabled={!canSave} loading={saving} onClick={() => void save()}>保存判分方式</Button>}
+          {configurationReady && <span className="assessment-inline-saved">{savedMode ? `${snapshot ? "已冻结" : "已保存"}：${inlineScoringModeOptions.find((item) => item.value === savedMode)?.label ?? savedMode}` : "尚未保存"}</span>}
+        </>} />}
+    </section>;
   }
 
   return (

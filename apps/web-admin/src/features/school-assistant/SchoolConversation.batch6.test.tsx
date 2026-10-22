@@ -6,6 +6,7 @@ import type { SessionUser } from "../../auth/session";
 import type { SchoolChatMessage, SchoolConversationEvent } from "../../api/schoolAiChat";
 import { SchoolConversation } from "./SchoolConversation";
 import { conversationAccountKey } from "./conversationState";
+import { conversationModelPreferenceKey } from "./conversationModelPreference";
 
 const mocks = vi.hoisted(() => ({
   model: vi.fn(), stream: vi.fn(), attachment: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock("antd", async () => {
   return {
     App: { useApp: () => ({ message: { warning: mocks.warning, success: mocks.success, error: mocks.error }, modal: { confirm: mocks.confirm } }) },
     Button, Input: { TextArea },
+    Select: ({ value, options, onChange, disabled, "aria-label": label }: { value?: string; options: { value: string; label: string; disabled?: boolean }[]; onChange: (value: string) => void; disabled?: boolean; "aria-label": string }) => <select aria-label={label} value={value} disabled={disabled} onChange={event => onChange(event.target.value)}>{options.map(option => <option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>)}</select>,
     Tooltip: ({ children }: Readonly<{ children: ReactNode }>) => children,
     Drawer: ({ open, children }: Readonly<{ open: boolean; children: ReactNode }>) => open ? <div>{children}</div> : null,
   };
@@ -83,8 +85,10 @@ describe("school conversation account, stream, and presentation boundaries", () 
       sessions.push({ signal, callback, resolve, reject });
       signal.addEventListener("abort", () => reject(new DOMException("stopped", "AbortError")), { once: true });
     }));
-    scroll = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scroll });
+    scroll = vi.fn(function (this: HTMLElement, options: ScrollToOptions) {
+      this.scrollTop = Math.max(0, Math.min(options.top ?? this.scrollTop, this.scrollHeight - this.clientHeight));
+    });
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: scroll });
     host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
@@ -119,6 +123,230 @@ describe("school conversation account, stream, and presentation boundaries", () 
     });
   }
   async function finish(index = sessions.length - 1) { await act(async () => sessions[index]!.resolve()); }
+  async function chooseModel(id: string) {
+    await act(async () => {
+      const selector = host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')!;
+      selector.value = id; selector.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
+
+  it("switches approved providers for the next request without changing in-flight messages", async () => {
+    const first = { ...readyModel, id: "first" };
+    const second = { ...readyModel, id: "second", provider_key: "other", model_name: "other-model" };
+    mocks.model.mockResolvedValue({ model: first, models: [first, second] });
+    await render();
+    const selector = host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')!;
+    await act(async () => { selector.value = "second"; selector.dispatchEvent(new Event("change", { bubbles: true })); });
+    await send();
+    expect(mocks.stream.mock.calls[0][4]).toBe("second");
+    expect(selector.disabled).toBe(true);
+    await emit(done(1, "answer")); await finish();
+    expect(selector.disabled).toBe(false);
+    await act(async () => { selector.value = "first"; selector.dispatchEvent(new Event("change", { bubbles: true })); });
+    await send("next question");
+    expect(mocks.stream.mock.calls[1][4]).toBe("first");
+  });
+
+  it("allows a new thread to choose another provider while a background reply keeps its original model", async () => {
+    const first = { ...readyModel, id: "first" };
+    const second = { ...readyModel, id: "second", display_name: "第二供应商", model_name: "other-model" };
+    const preference = conversationModelPreferenceKey(conversationAccountKey(user));
+    mocks.model.mockResolvedValue({ model: first, models: [first, second] });
+    await render(); await send("original provider question");
+    const selector = host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')!;
+    expect(selector.disabled).toBe(true);
+
+    await click("开启新对话");
+    expect(selector.disabled).toBe(false);
+    await chooseModel("second"); await send("parallel provider question");
+    expect(mocks.stream.mock.calls.map(call => call[4])).toEqual(["first", "second"]);
+    expect(sessions[0]?.signal.aborted).toBe(false);
+    expect(sessions[1]?.signal.aborted).toBe(false);
+    await emit(delta(1, "parallel partial"), 1);
+
+    // 切换后才送达旧流元数据和正文，旧回复只能写回原对话，不能改新对话的模型偏好。
+    await emit({ type: "model", request_id: "request", seq: 1, model: first }, 0);
+    await emit(delta(2, "original partial"), 0);
+    await emit(done(3, "original final"), 0); await finish(0);
+    expect(selector.value).toBe("second");
+    expect(window.localStorage.getItem(preference)).toBe("second");
+    expect(host.querySelector(".school-chat-live-body")?.textContent).toContain("parallel partial");
+    expect(host.querySelector(".school-chat-messages")?.textContent).not.toContain("original final");
+    expect(host.querySelector(".school-chat-model-status")?.textContent).toContain("1/5 个对话进行中");
+
+    await emit(done(2, "parallel final"), 1); await finish(1);
+    await click("original provider question");
+    expect(host.querySelector(".is-assistant")?.textContent).toContain("original final");
+    expect(host.querySelector(".school-chat-messages")?.textContent).not.toContain("parallel final");
+    await click("parallel provider question");
+    expect(host.querySelector(".is-assistant")?.textContent).toContain("parallel final");
+  });
+
+  it("shows each running thread's original provider and unlocks a completed thread while another reply continues", async () => {
+    const first = { ...readyModel, id: "first" };
+    const second = { ...readyModel, id: "second", model_name: "other-model" };
+    const preference = conversationModelPreferenceKey(conversationAccountKey(user));
+    mocks.model.mockResolvedValue({ model: first, models: [first, second] });
+    await render(); await send("first running question");
+    await click("开启新对话"); await chooseModel("second"); await send("second running question");
+    const selector = host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')!;
+    expect(selector.value).toBe("second");
+    expect(selector.disabled).toBe(true);
+
+    await click("first running question");
+    expect(selector.value).toBe("first");
+    expect(selector.disabled).toBe(true);
+    await chooseModel("second");
+    expect(selector.value).toBe("first");
+    expect(window.localStorage.getItem(preference)).toBe("second");
+    await emit(delta(1, "first partial"), 0);
+    expect(selector.value).toBe("first");
+
+    await click("开启新对话");
+    expect(selector.value).toBe("second");
+    expect(selector.disabled).toBe(false);
+    await chooseModel("first");
+    await click("second running question");
+    expect(selector.value).toBe("second");
+    expect(selector.disabled).toBe(true);
+    await emit(delta(1, "second partial"), 1);
+    expect(selector.value).toBe("second");
+
+    await emit(done(2, "first completed"), 0); await finish(0);
+    await click("first running question");
+    expect(selector.value).toBe("first");
+    expect(selector.disabled).toBe(false);
+    await chooseModel("second");
+    expect(window.localStorage.getItem(preference)).toBe("second");
+    expect(sessions[1]?.signal.aborted).toBe(false);
+    expect(mocks.stream.mock.calls.map(call => call[4])).toEqual(["first", "second"]);
+  });
+
+  it("locks provider changes in the sending frame and releases that lock immediately when opening a new thread", async () => {
+    const first = { ...readyModel, id: "first" };
+    const second = { ...readyModel, id: "second", model_name: "other-model" };
+    const preference = conversationModelPreferenceKey(conversationAccountKey(user));
+    mocks.model.mockResolvedValue({ model: first, models: [first, second] });
+    await render(); await draft("same-frame first question");
+    const selector = host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')!;
+
+    // 不等待 React 提交发送状态，强制触发可用模型变更，验证同步请求锁而非控件 disabled。
+    await act(async () => {
+      host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      selector.value = "second"; selector.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(mocks.stream.mock.calls[0][4]).toBe("first");
+    expect(selector.value).toBe("first");
+    expect(selector.disabled).toBe(true);
+    expect(window.localStorage.getItem(preference)).toBe("first");
+
+    await act(async () => {
+      button("开启新对话").click();
+      selector.value = "second"; selector.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(selector.value).toBe("second");
+    expect(selector.disabled).toBe(false);
+    expect(window.localStorage.getItem(preference)).toBe("second");
+    await send("same-frame new question");
+    expect(mocks.stream.mock.calls.map(call => call[4])).toEqual(["first", "second"]);
+    expect(sessions[0]?.signal.aborted).toBe(false);
+  });
+
+  it("keeps the second provider's streamed reasoning expandable after completion and history restoration", async () => {
+    const first = { ...readyModel, id: "first" };
+    const second = { ...readyModel, id: "second", display_name: "第二供应商", model_name: "reasoning-model" };
+    mocks.model.mockResolvedValue({ model: first, models: [first, second] });
+    await render(); await chooseModel("second"); await send("reasoning history question");
+    expect(mocks.stream.mock.calls[0][4]).toBe("second");
+    await emit(delta(1, "先核对已知条件", "reasoning"));
+    await click("思考过程");
+    expect(host.querySelector(".school-chat-reasoning-content")?.textContent).toBe("先核对已知条件");
+    await emit(delta(2, "，再计算结果。", "reasoning"));
+    await emit(delta(3, "计算结果是 42。"));
+    expect(host.querySelector(".school-chat-reasoning-content")?.textContent).toBe("先核对已知条件，再计算结果。");
+    await emit(done(4, "计算结果是 42。", "先核对已知条件，再计算结果。")); await finish();
+    expect(host.querySelector(".is-assistant .school-chat-reasoning-toggle")?.getAttribute("aria-expanded")).toBe("true");
+    expect(host.querySelector(".is-assistant .school-chat-reasoning-content")?.textContent).toBe("先核对已知条件，再计算结果。");
+
+    // 重新挂载模拟页面刷新，恢复后的历史不能只剩正文而丢掉供应商已返回的思考文本。
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await render(); await click("reasoning history question");
+    expect(host.querySelector(".school-chat-reasoning-toggle")?.getAttribute("aria-expanded")).toBe("false");
+    await click("思考过程");
+    expect(host.querySelector(".school-chat-reasoning-content")?.textContent).toBe("先核对已知条件，再计算结果。");
+    expect(host.querySelector(".is-assistant")?.textContent).toContain("计算结果是 42。");
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')?.value).toBe("second");
+  });
+
+  it("does not let an in-flight callback or forced change replace the chosen provider", async () => {
+    const first = { ...readyModel, id: "first" };
+    const second = { ...readyModel, id: "second", available: false, model_name: "disabled" };
+    mocks.model.mockResolvedValue({ model: first, models: [first, second] });
+    await render(); await chooseModel("second"); await send();
+    expect(mocks.stream.mock.calls[0][4]).toBe("first");
+    await emit({ type: "model", request_id: "request", seq: 1, model: second });
+    await chooseModel("second");
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')?.value).toBe("first");
+    await act(async () => sessions[0]!.reject(new Error("请求连接已断开")));
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')?.disabled).toBe(false);
+    await click("重试");
+    expect(mocks.stream.mock.calls[1][4]).toBe("first");
+  });
+
+  it("restores the account's preferred model only when it remains available in the server list", async () => {
+    const first = { ...readyModel, id: "first" };
+    const second = { ...readyModel, id: "second", model_name: "other" };
+    const preference = conversationModelPreferenceKey(conversationAccountKey(user));
+    window.localStorage.setItem(preference, "second");
+    mocks.model.mockResolvedValue({ model: first, models: [first, second] });
+    await render(); await send();
+    expect(mocks.stream.mock.calls[0][4]).toBe("second");
+    await emit(done(1, "answer")); await finish();
+    const nextUser = { ...user, id: "another-account" };
+    window.localStorage.setItem(conversationModelPreferenceKey(conversationAccountKey(nextUser)), "revoked");
+    await render({ user: nextUser }); await send();
+    expect(mocks.stream.mock.calls[1][4]).toBe("first");
+    expect(window.localStorage.getItem(preference)).toBe("second");
+  });
+
+  it.each([false, true])("ignores an unavailable remembered model, public computer=%s", async (publicComputer) => {
+    const first = { ...readyModel, id: "first" };
+    const second = { ...readyModel, id: "second", available: false };
+    const currentUser = { ...user, publicComputer };
+    const preference = conversationModelPreferenceKey(conversationAccountKey(currentUser));
+    window.localStorage.setItem(preference, "second");
+    mocks.model.mockResolvedValue({ model: first, models: [first, second] });
+    await render({ user: currentUser }); await send();
+    expect(mocks.stream.mock.calls[0][4]).toBe("first");
+    expect(window.localStorage.getItem(preference)).toBe(publicComputer ? "second" : "first");
+  });
+
+  it("persists a personal model choice but keeps a public computer choice only in memory", async () => {
+    const first = { ...readyModel, id: "first" };
+    const second = { ...readyModel, id: "second", model_name: "other" };
+    mocks.model.mockResolvedValue({ model: first, models: [first, second] });
+    await render(); await chooseModel("second");
+    expect(window.localStorage.getItem(conversationModelPreferenceKey(conversationAccountKey(user)))).toBe("second");
+    const publicUser = { ...user, publicComputer: true };
+    await render({ user: publicUser }); await chooseModel("second"); await send();
+    expect(mocks.stream.mock.calls[0][4]).toBe("second");
+    expect(window.localStorage.getItem(conversationModelPreferenceKey(conversationAccountKey(publicUser)))).toBeNull();
+  });
+
+  it("late model metadata cannot select or persist a provider for the next school's account", async () => {
+    let resolveOld!: (value: unknown) => void;
+    mocks.model.mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve; }));
+    const nextUser = { ...user, tenant: "next-school" };
+    const nextModel = { ...readyModel, id: "next" };
+    mocks.model.mockResolvedValue({ model: nextModel, models: [nextModel] });
+    await render(); await render({ user: nextUser });
+    const old = { ...readyModel, id: "foreign", display_name: "旧学校供应商" };
+    await act(async () => resolveOld({ model: old, models: [old] }));
+    await send(); expect(mocks.stream.mock.calls[0][4]).toBe("next");
+    expect(host.textContent).not.toContain("旧学校供应商");
+    expect(window.localStorage.getItem(conversationModelPreferenceKey(conversationAccountKey(user)))).toBeNull();
+  });
 
   it("preserves loading, unavailable, and ready model labels and composer placeholders", async () => {
     let resolveModel!: (value: unknown) => void;
@@ -182,7 +410,69 @@ describe("school conversation account, stream, and presentation boundaries", () 
     await render(); await send(); await emit(delta(1, "reasoning", "reasoning"));
     await click("思考过程"); await click("思考过程");
     scroll.mockClear(); await emit(delta(2, "content"));
-    expect(scroll).toHaveBeenCalledExactlyOnceWith({ behavior: "smooth", block: "end" });
+    expect(scroll).toHaveBeenCalledExactlyOnceWith({ top: 0, behavior: "instant" });
+  });
+
+  it("hands scroll control to an upward wheel before the browser scroll event arrives", async () => {
+    await render(); await send();
+    const flow = host.querySelector<HTMLDivElement>(".school-chat-flow")!;
+    Object.defineProperties(flow, { scrollHeight: { configurable: true, value: 1200 }, clientHeight: { value: 400 } });
+    flow.scrollTop = 800;
+    await emit(delta(1, "正文"));
+    expect(scroll).toHaveBeenLastCalledWith({ top: 1200, behavior: "instant" });
+    scroll.mockClear();
+    // 流增量可能紧跟滚轮事件到达；此时浏览器尚未来得及改变 scrollTop 或派发 scroll。
+    await act(async () => flow.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaY: -8 })));
+    await emit(delta(2, "继续生成"));
+    await emit(done(3, "回复结束")); await finish();
+    expect(scroll).not.toHaveBeenCalled();
+    expect(flow.scrollTop).toBe(800);
+  });
+
+  it("keeps the reader's position after scrolling away and resumes only after returning to the bottom", async () => {
+    await render(); await send();
+    const flow = host.querySelector<HTMLDivElement>(".school-chat-flow")!;
+    let contentHeight = 1200;
+    Object.defineProperties(flow, { scrollHeight: { get: () => contentHeight }, clientHeight: { value: 400 } });
+    await emit(delta(1, "正文"));
+    await act(async () => { flow.scrollTop = 792; flow.dispatchEvent(new Event("scroll")); });
+    scroll.mockClear(); contentHeight = 1600;
+    await emit(delta(2, "新增段落"));
+    await emit({ type: "tool_started", request_id: "request", seq: 3, call_id: "tool", tool_name: "exam_progress", label: "查询考试" });
+    expect(scroll).not.toHaveBeenCalled();
+    expect(flow.scrollTop).toBe(792);
+
+    await act(async () => { flow.scrollTop = 1200; flow.dispatchEvent(new Event("scroll")); });
+    // 回到底部后，即使下一段很长，也按用户此前的跟随意愿滚动，不能把内容增长误判成上翻。
+    contentHeight = 2200;
+    await emit(delta(4, "继续追加的长段落"));
+    expect(scroll).toHaveBeenCalledExactlyOnceWith({ top: 2200, behavior: "instant" });
+    expect(flow.scrollTop).toBe(1800);
+  });
+
+  it("does not resume after reasoning collapses when the user has scrolled away", async () => {
+    await render(); await send(); await emit(delta(1, "思考", "reasoning"));
+    await click("思考过程");
+    const flow = host.querySelector<HTMLDivElement>(".school-chat-flow")!;
+    Object.defineProperties(flow, { scrollHeight: { value: 1200 }, clientHeight: { value: 400 } });
+    await act(async () => { flow.scrollTop = 300; flow.dispatchEvent(new Event("scroll")); });
+    await click("思考过程"); scroll.mockClear();
+    await emit(delta(2, "正文"));
+    expect(scroll).not.toHaveBeenCalled();
+    expect(flow.scrollTop).toBe(300);
+  });
+
+  it("resets following when switching threads and ignores background deltas", async () => {
+    await render(); await send("第一条对话");
+    const flow = host.querySelector<HTMLDivElement>(".school-chat-flow")!;
+    Object.defineProperties(flow, { scrollHeight: { value: 1200 }, clientHeight: { value: 400 } });
+    await act(async () => { flow.scrollTop = 300; flow.dispatchEvent(new Event("scroll")); });
+    await click("开启新对话"); await send("第二条对话");
+    expect(flow.scrollTop).toBe(800);
+    scroll.mockClear(); await emit(delta(1, "后台继续生成"), 0);
+    expect(scroll).not.toHaveBeenCalled();
+    await emit(delta(1, "当前对话生成"), 1);
+    expect(scroll).toHaveBeenCalledExactlyOnceWith({ top: 1200, behavior: "instant" });
   });
 
   it("binds evidence to the completed reply and keeps business history out of storage", async () => {
@@ -389,6 +679,20 @@ describe("school conversation account, stream, and presentation boundaries", () 
     const publicUser = { ...user, publicComputer: true };
     await render({ user: publicUser }); await send(); await emit(done(1, "public reply")); await finish();
     expect(window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(publicUser)}`)).toBeNull();
+  });
+
+  it("restores completed messages and reasoning when the page reloads during a followup", async () => {
+    await render(); await send("已完成的一般问题");
+    await emit(done(1, "已完成的回复", "已返回的思考")); await finish();
+    await send("尚未完成的追问");
+    // 卸载模拟用户在流返回前刷新；缓存须保留此前的问答，也不能保存尚未确定业务范围的追问。
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await render(); await click("已完成的一般问题");
+    expect(host.querySelector(".is-assistant")?.textContent).toContain("已完成的回复");
+    expect(host.textContent).not.toContain("尚未完成的追问");
+    await click("思考过程");
+    expect(host.querySelector(".school-chat-reasoning-content")?.textContent).toBe("已返回的思考");
   });
 
   it("preserves initial thinking text and switches to partial markdown without inventing reply text", async () => {

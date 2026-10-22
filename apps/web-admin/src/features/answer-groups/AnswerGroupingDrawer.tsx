@@ -106,7 +106,7 @@ export function AnswerGroupingDrawer({ open, examId, initialQuestionId = "", ava
     && value.question.id === group.question_id && value.question.exam_id === group.exam_id
     && group.members.some(member => member.segment_id === value.member.segment_id && member.representation_hash === value.member.representation_hash));
 
-  const clearQuestionState = () => {
+  const clearQuestionState = useCallback(() => {
     rollbackDialogRef.current += 1;
     setGroups([]);
     setReferences([]);
@@ -120,17 +120,17 @@ export function AnswerGroupingDrawer({ open, examId, initialQuestionId = "", ava
     setLoadError("");
     setLoading(false);
     setActing(false);
-  };
+  }, []);
 
-  const beginQuestionContext = (nextQuestionId: string) => {
+  const beginQuestionContext = useCallback((nextQuestionId: string) => {
     questionEpochRef.current += 1;
     contextRef.current = { examId, questionId: nextQuestionId, open, groups: [] };
     loadRequestRef.current += 1;
     clearQuestionState();
     setQuestionId(nextQuestionId);
-  };
+  }, [examId, open, clearQuestionState]);
 
-  const load = useCallback(async (nextQuestionId = questionId) => {
+  const load = useCallback(async (nextQuestionId: string) => {
     const requestId = ++loadRequestRef.current;
     const targetExamId = examId;
     const targetQuestionId = nextQuestionId;
@@ -165,7 +165,7 @@ export function AnswerGroupingDrawer({ open, examId, initialQuestionId = "", ava
     } finally {
       if (isCurrentRequest()) setLoading(false);
     }
-  }, [examId, questionId]);
+  }, [examId, clearQuestionState]);
 
   useEffect(() => {
     if (!open || !examId) {
@@ -191,14 +191,15 @@ export function AnswerGroupingDrawer({ open, examId, initialQuestionId = "", ava
       questionEpochRef.current += 1;
       loadRequestRef.current += 1;
     };
-  }, [examId, initialQuestionId, open, availableQuestions]);
+  }, [examId, initialQuestionId, open, availableQuestions, beginQuestionContext, clearQuestionState, load]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 切组或决策修订必须重新载入候选；即使两组分数相同也不能沿用上组的本地选择。
   useEffect(() => {
     const decisionScore = selectedGroup?.decision?.score_candidate.score;
     setScore(typeof decisionScore === "number" ? decisionScore : null);
     const selection = selectedGroup?.decision?.rubric_selection.rubric_points;
     setRubricPoints(Array.isArray(selection) ? selection.filter((item): item is string => typeof item === "string") : []);
-  }, [selectedGroup?.id, selectedGroup?.decision?.revision]);
+  }, [selectedGroup?.id, selectedGroup?.decision?.revision, selectedGroup?.decision?.score_candidate.score, selectedGroup?.decision?.rubric_selection.rubric_points]);
 
   const run = async (action: () => Promise<unknown>, success: string, targetQuestionId = questionId, targetExamId = examId, targetEpoch = questionEpochRef.current) => {
     // 用户可能在写操作返回前切题；旧操作不能刷新新题、显示成功或覆盖新题的忙碌状态。
@@ -372,7 +373,7 @@ export function AnswerGroupingDrawer({ open, examId, initialQuestionId = "", ava
 
   return (
     <>
-      <Drawer title="相似答案分组" width={1040} open={open} onClose={onClose} extra={<Button loading={loading} onClick={() => void load()}>刷新</Button>}>
+      <Drawer title="相似答案分组" width={1040} open={open} onClose={onClose} extra={<Button loading={loading} onClick={() => void load(questionId)}>刷新</Button>}>
         <Alert
           type="info"
           showIcon

@@ -15,22 +15,7 @@ func (s *PostgresStore) createBatchCommand(ctx context.Context, tenantID, examID
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, "capture-batch:"+tenantID+":"+actorID+":"+input.IdempotencyKey); err != nil {
 		return Batch{}, err
 	}
-	// 包含已删除记录和旧命令。旧历史存在歧义时应判为冲突，不能视为允许额外创建资源。
-	rows, err := tx.QueryContext(ctx, `SELECT id::text FROM capture_batch WHERE tenant_id=$1::uuid AND operator_id=$2::uuid AND idempotency_key=$3 ORDER BY created_at,id LIMIT 2`, tenantID, actorID, input.IdempotencyKey)
-	if err != nil {
-		return Batch{}, err
-	}
-	ids := []string{}
-	for rows.Next() {
-		var id string
-		if err = rows.Scan(&id); err != nil {
-			rows.Close()
-			return Batch{}, err
-		}
-		ids = append(ids, id)
-	}
-	err = rows.Err()
-	rows.Close()
+	ids, err := loadBatchCommandIDsTx(ctx, tx, tenantID, actorID, input.IdempotencyKey)
 	if err != nil {
 		return Batch{}, err
 	}
@@ -40,19 +25,9 @@ func (s *PostgresStore) createBatchCommand(ctx context.Context, tenantID, examID
 	hash := batchCommandHash(examID, input)
 	// 先恢复已接受命令，再检查当前考试状态；考试后来离开采集阶段也应能找回原批次。
 	if len(ids) == 1 {
-		batch, err := scanBatch(tx.QueryRowContext(ctx, `SELECT `+batchColumns+` FROM capture_batch WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, ids[0]))
+		batch, err := recoverBatchCommandTx(ctx, tx, tenantID, ids[0], hash)
 		if err != nil {
 			return Batch{}, err
-		}
-		var storedHash string
-		if err = tx.QueryRowContext(ctx, `SELECT COALESCE(command_request_hash,'') FROM capture_batch WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, batch.ID).Scan(&storedHash); err != nil {
-			return Batch{}, err
-		}
-		if storedHash == "" {
-			storedHash = batchCommandHash(batch.ExamID, CreateBatchInput{Name: batch.Name, SourceType: batch.SourceType, ScannerDevice: batch.ScannerDevice})
-		}
-		if storedHash != hash {
-			return Batch{}, ErrConflict
 		}
 		return batch, tx.Commit()
 	}
@@ -71,6 +46,45 @@ func (s *PostgresStore) createBatchCommand(ctx context.Context, tenantID, examID
 		return Batch{}, err
 	}
 	return batch, tx.Commit()
+}
+
+// 调用方持有命令事务锁；包含已删除记录和旧命令，歧义历史由调用方判为冲突。
+func loadBatchCommandIDsTx(ctx context.Context, tx *sql.Tx, tenantID, actorID, idempotencyKey string) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT id::text FROM capture_batch WHERE tenant_id=$1::uuid AND operator_id=$2::uuid AND idempotency_key=$3 ORDER BY created_at,id LIMIT 2`, tenantID, actorID, idempotencyKey)
+	if err != nil {
+		return nil, err
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	return ids, err
+}
+
+func recoverBatchCommandTx(ctx context.Context, tx *sql.Tx, tenantID, batchID, requestHash string) (Batch, error) {
+	batch, err := scanBatch(tx.QueryRowContext(ctx, `SELECT `+batchColumns+` FROM capture_batch WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, batchID))
+	if err != nil {
+		return Batch{}, err
+	}
+	var storedHash string
+	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(command_request_hash,'') FROM capture_batch WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, batch.ID).Scan(&storedHash); err != nil {
+		return Batch{}, err
+	}
+	// 旧批次没有命令哈希时用原字段比较，不能把同一个命令标识用于不同请求。
+	if storedHash == "" {
+		storedHash = batchCommandHash(batch.ExamID, CreateBatchInput{Name: batch.Name, SourceType: batch.SourceType, ScannerDevice: batch.ScannerDevice})
+	}
+	if storedHash != requestHash {
+		return Batch{}, ErrConflict
+	}
+	return batch, nil
 }
 
 func (s *PostgresStore) RecoverBatchCommand(ctx context.Context, tenantID, examID, actorID, commandID string) (BatchCommandRecovery, error) {

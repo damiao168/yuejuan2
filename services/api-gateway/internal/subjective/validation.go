@@ -66,6 +66,9 @@ func ValidatePolicy(policy ModelPolicy) error {
 
 // 这里校验格式、量规覆盖和证据归属；通过只代表结果可进入服务器结算，不代表模型拥有最终评分权。
 func ValidateOutput(output AdapterOutput, ctx Context) error {
+	if err := validateOutputExecutionDiagnostics(output); err != nil {
+		return err
+	}
 	if output.SuggestedScore < 0 || output.SuggestedScore > ctx.Question.Score {
 		return ErrInvalidModelOutput
 	}
@@ -85,7 +88,13 @@ func ValidateOutput(output AdapterOutput, ctx Context) error {
 	if err := validateOutputRubric(output, ctx.Rubric.Points); err != nil {
 		return err
 	}
-	evidenceByID, err := outputEvidenceIndex(output.Evidence, ctx.AnswerText)
+	var evidenceByID map[string]gradingEvidenceLink
+	var err error
+	if ctx.InputVersionID != "" && output.SchemaVersion == ImageProtocolVersion {
+		evidenceByID, err = imageOutputEvidenceIndex(output, ctx)
+	} else {
+		evidenceByID, err = outputEvidenceIndex(output.Evidence, ctx.AnswerText)
+	}
 	if err != nil {
 		return err
 	}
@@ -200,7 +209,8 @@ func normalizeEvidenceText(value string) string {
 	value = strings.ToLower(norm.NFKC.String(value))
 	var builder strings.Builder
 	for _, current := range value {
-		if unicode.IsSpace(current) || unicode.IsPunct(current) {
+		// 引文和严格别名只忽略排版空白；负号、小数点、分数线和关系符号决定数学含义。
+		if unicode.IsSpace(current) {
 			continue
 		}
 		builder.WriteRune(current)

@@ -129,21 +129,54 @@ type reportQueryer interface {
 }
 
 func (s *PostgresStore) loadDataset(ctx context.Context, q reportQueryer, tenantID string, examID string) (dataset, error) {
-	data := dataset{ExamID: examID}
-	var hasRelease bool
-	if err := q.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM score_release_current WHERE tenant_id=$1::uuid AND exam_id=$2::uuid)`, tenantID, examID).Scan(&hasRelease); err != nil {
+	// 只解析一次当前发布指针。后续汇总、题分和策略使用同一个不可变 release ID，
+	// 即使并发发布改变 current 指针，也不能把旧策略与新分数拼成一份学生报告。
+	data := dataset{ExamID: examID, ShowQuestionScores: true, ShowKnowledgeAnalysis: true, ShowFeedback: true}
+	var releaseID string
+	var releaseStatus sql.NullString
+	var visibility []byte
+	err := q.QueryRowContext(ctx, `
+SELECT current_release.release_id::text, release.status, release.visibility_policy
+FROM score_release_current current_release
+LEFT JOIN score_release release ON release.tenant_id=current_release.tenant_id
+  AND release.id=current_release.release_id AND release.exam_id=current_release.exam_id
+WHERE current_release.tenant_id=$1::uuid AND current_release.exam_id=$2::uuid
+`, tenantID, examID).Scan(&releaseID, &releaseStatus, &visibility)
+	hasRelease := err == nil
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return dataset{}, err
+	}
+	if hasRelease {
+		// 当前指针存在但快照不可用时拒绝读取，不能回退旧发布或恢复默认可见性。
+		if !releaseStatus.Valid || releaseStatus.String != "published" {
+			return dataset{}, ErrNotFound
+		}
+		var policy struct {
+			ShowQuestionScores    bool `json:"show_question_scores"`
+			ShowKnowledgeAnalysis bool `json:"show_knowledge_analysis"`
+			ShowFeedback          bool `json:"show_feedback"`
+		}
+		if err := json.Unmarshal(visibility, &policy); err != nil {
+			return dataset{}, err
+		}
+		data.ShowQuestionScores, data.ShowKnowledgeAnalysis, data.ShowFeedback = policy.ShowQuestionScores, policy.ShowKnowledgeAnalysis, policy.ShowFeedback
+	}
+	data = studentReportAudience(ctx, data)
+	subArgs := []any{tenantID, examID}
+	gradeArgs := []any{tenantID, examID}
+	if hasRelease {
+		subArgs = append(subArgs, releaseID)
+		gradeArgs = append(gradeArgs, releaseID, data.ShowFeedback)
 	}
 	subQuery := `
 SELECT item.submission_id::text, COALESCE(item.student_id::text, ''), COALESCE(st.class_id::text, ''),
   COALESCE(sc.name, ''), COALESCE(NULLIF(sub.candidate_no,''),sub.id::text), item.total_score::float8, item.max_score::float8
-FROM score_release_current current_release
-JOIN score_release release ON release.tenant_id=current_release.tenant_id AND release.id=current_release.release_id AND release.status='published'
+FROM score_release release
 JOIN score_release_item item ON item.tenant_id=release.tenant_id AND item.release_id=release.id
 JOIN submission sub ON sub.tenant_id=item.tenant_id AND sub.id=item.submission_id AND sub.deleted_at IS NULL
 LEFT JOIN student st ON st.tenant_id = item.tenant_id AND st.id = item.student_id AND st.deleted_at IS NULL
 LEFT JOIN school_class sc ON sc.tenant_id = st.tenant_id AND sc.id = st.class_id AND sc.deleted_at IS NULL
-WHERE current_release.tenant_id = $1 AND current_release.exam_id::text = $2
+WHERE release.tenant_id = $1 AND release.exam_id::text = $2 AND release.id=$3::uuid AND release.status='published'
 ORDER BY sub.candidate_no, sub.id
 `
 	if !hasRelease {
@@ -158,7 +191,7 @@ LEFT JOIN school_class sc ON sc.tenant_id=st.tenant_id AND sc.id=st.class_id AND
 WHERE sg.tenant_id=$1::uuid AND sg.exam_id=$2::uuid AND sg.status='published' AND sg.locked AND sg.deleted_at IS NULL
 ORDER BY sg.anonymous_code`
 	}
-	subRows, err := q.QueryContext(ctx, subQuery, tenantID, examID)
+	subRows, err := q.QueryContext(ctx, subQuery, subArgs...)
 	if err != nil {
 		return dataset{}, err
 	}
@@ -173,17 +206,19 @@ ORDER BY sg.anonymous_code`
 	if err := subRows.Err(); err != nil {
 		return dataset{}, err
 	}
-	// 对学生展示的反馈取发布快照，并受该次发布的 show_feedback 控制；不能读取后来改写的原始批阅意见。
+	if err := subRows.Close(); err != nil {
+		return dataset{}, err
+	}
+	// 反馈取绑定的发布快照，学生还受该快照的 show_feedback 控制；不能读取后来改写的原始批阅意见。
 	gradeQuery := `
 SELECT released_question.submission_id::text, COALESCE(item.student_id::text, ''), COALESCE(st.class_id::text, ''),
   COALESCE(sc.name, ''), released_question.question_id::text, released_question.question_no, q.question_type, fg.answer_segment_id::text,
   released_question.score::float8, released_question.max_score::float8, released_question.source_type, q.knowledge_points,
   COALESCE(ans.answer_payload, '{}'::jsonb),
   ag.suggested_score::float8, hg.score::float8,
-  CASE WHEN COALESCE((release.visibility_policy->>'show_feedback')::boolean, false)
+  CASE WHEN $4::boolean
     THEN NULLIF(BTRIM(released_question.student_explanation->>'feedback'), '') ELSE NULL END
-FROM score_release_current current_release
-JOIN score_release release ON release.tenant_id=current_release.tenant_id AND release.id=current_release.release_id AND release.status='published'
+FROM score_release release
 JOIN score_release_item item ON item.tenant_id=release.tenant_id AND item.release_id=release.id
 JOIN score_release_question released_question ON released_question.tenant_id=item.tenant_id AND released_question.release_id=item.release_id AND released_question.submission_id=item.submission_id
 JOIN final_grade fg ON fg.tenant_id=released_question.tenant_id AND fg.id=released_question.final_grade_id AND fg.deleted_at IS NULL
@@ -212,7 +247,7 @@ LEFT JOIN LATERAL (
     AND released_question.source_type = 'single_review' AND deleted_at IS NULL
   LIMIT 1
 ) hg ON true
-WHERE current_release.tenant_id = $1 AND current_release.exam_id::text = $2
+WHERE release.tenant_id = $1 AND release.exam_id::text = $2 AND release.id=$3::uuid AND release.status='published'
 ORDER BY released_question.question_no, released_question.id
 `
 	if !hasRelease {
@@ -239,7 +274,7 @@ WHERE fg.tenant_id=$1::uuid AND fg.exam_id=$2::uuid AND fg.deleted_at IS NULL AN
   AND sg.status='published' AND sg.locked
 ORDER BY fg.question_no, fg.created_at DESC`
 	}
-	rows, err := q.QueryContext(ctx, gradeQuery, tenantID, examID)
+	rows, err := q.QueryContext(ctx, gradeQuery, gradeArgs...)
 	if err != nil {
 		return dataset{}, err
 	}

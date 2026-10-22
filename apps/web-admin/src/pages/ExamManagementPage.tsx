@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { App, Button, Drawer, Dropdown, Input, Select, Space, Table, Tooltip, type MenuProps, type TableColumnsType } from "antd";
-import { Archive, Eye, LayoutDashboard, MoreHorizontal, Pencil, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { Archive, Eye, MoreHorizontal, Pencil, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
 import { getManagementExam, listAllManagementExams, type ManagementExam } from "../api/exams";
 import { listClasses, listGrades, listSchools, type Grade, type School, type SchoolClass } from "../api/org";
@@ -106,7 +106,7 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
   };
 
   const columns: TableColumnsType<ManagementExam> = [
-    { title: "考试名称", dataIndex: "name", width: 220, ellipsis: true, render: (value: string, exam) => <Tooltip title={value}><button className="exam-name-link" type="button" onClick={() => onOpenWorkspace(exam)}>{value}</button></Tooltip> },
+    { title: "考试名称", dataIndex: "name", width: 220, ellipsis: true, render: (value: string, exam) => <Tooltip title={value}><button className="exam-name-link" type="button" onClick={(event) => { event.stopPropagation(); onOpenWorkspace(exam); }}>{value}</button></Tooltip> },
     { title: "考试类型", dataIndex: "exam_type", width: 105, render: (value: string) => examTypeOptions.find((item) => item.value === value)?.label ?? "其他类型" },
     { title: "年级", width: 100, ellipsis: true, render: (_, exam) => gradeName(exam) },
     { title: "参考班级", width: 100, render: (_, exam) => <Tooltip title={exam.class_ids.map((id) => classNames.get(id) ?? id).join("、") || "暂无班级信息"}>{exam.class_ids.length} 个班级</Tooltip> },
@@ -115,21 +115,20 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
       return <Tooltip title={names.join("、")}>{names.slice(0, 3).join("、")} · 共 {exam.exams.length} 科{!exam.scope_complete ? "（已授权）" : ""}</Tooltip>;
     } },
     { title: "考试进度", width: 220, render: (_, exam) => <StatusTag tone={isManagementExamArchived(exam) ? "neutral" : examStatusTone(exam.progress.status)}>{isManagementExamArchived(exam) ? "已归档" : exam.progress.label}</StatusTag> },
-    { title: "操作", width: 180, render: (_, exam) => {
+    // 菜单及其弹层的点击不能冒泡到整行，否则查看详情、编辑和归档会意外跳转。
+    { title: "操作", width: 64, onCell: () => ({ onClick: (event) => event.stopPropagation() }), render: (_, exam) => {
       const items: MenuProps["items"] = [
         { key: "detail", label: "查看考试详情", icon: <Eye size={14} /> },
         ...(canManage ? [{ key: "edit", label: "编辑考试", icon: <Pencil size={14} />, disabled: !exam.can_edit || !exam.can_manage || !exam.scope_complete }] : []),
         ...(canManage && !isManagementExamArchived(exam) ? [{ key: "archive", label: "归档考试", icon: <Archive size={14} />, danger: true, disabled: !exam.can_manage || !exam.scope_complete }] : []),
         ...(canManage && isManagementExamArchived(exam) ? [{ key: "restore", label: "恢复考试", icon: <RotateCcw size={14} />, disabled: !exam.can_restore || !exam.can_manage || !exam.scope_complete }] : [])
       ];
-      return <Space className="table-actions exam-table-actions" size={6}>
-        <Button size="small" icon={<LayoutDashboard size={14} />} onClick={() => onOpenWorkspace(exam)}>考试工作区</Button>
-        <Dropdown trigger={["click"]} menu={{ items, onClick: ({ key }) => {
+      return <Dropdown trigger={["click"]} menu={{ items, onClick: ({ key, domEvent }) => {
+          domEvent.stopPropagation();
           if (key === "detail") void openDetail(exam);
           if (key === "edit") void openEdit(exam);
           if (key === "archive" || key === "restore") setArchiveSelection({ exam, action: key });
-        } }}><Button size="small" loading={actioningId === managementExamKey(exam)} aria-label={`${exam.name}更多操作`} icon={<MoreHorizontal size={15} />} /></Dropdown>
-      </Space>;
+        } }}><Button size="small" loading={actioningId === managementExamKey(exam)} aria-label={`${exam.name}更多操作`} icon={<MoreHorizontal size={15} />} /></Dropdown>;
     } }
   ];
 
@@ -138,7 +137,7 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
     if (loading) return <section className="workspace-section"><LoadingState label="正在加载考试列表" /></section>;
     if (error) return <ErrorState message={error} onRetry={() => void loadData()} />;
     return <section className="member-table-section"><div className="section-head"><h2>{teacherMode ? "已授权考试" : "考试列表"}</h2></div><section aria-label="考试列表表格">
-      <Table<ManagementExam> rowKey={managementExamKey} dataSource={filteredExams} columns={columns} pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 场考试` }} locale={{ emptyText: <EmptyState title="暂无考试" description={canManage ? "没有符合条件的考试。试试调整筛选条件，或新建考试。" : "没有符合条件的考试，请联系管理员为你授权。"} /> }} size="small" className="dense-data-table" tableLayout="fixed" scroll={{ x: 1095 }} />
+      <Table<ManagementExam> rowKey={managementExamKey} dataSource={filteredExams} columns={columns} pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 场考试` }} locale={{ emptyText: <EmptyState title="暂无考试" description={canManage ? "没有符合条件的考试。试试调整筛选条件，或新建考试。" : "没有符合条件的考试，请联系管理员为你授权。"} /> }} size="small" className="dense-data-table" tableLayout="fixed" scroll={{ x: 980 }} rowClassName="exam-navigable-row" onRow={(exam) => ({ onClick: () => onOpenWorkspace(exam) })} />
     </section></section>;
   };
 
@@ -146,7 +145,7 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
     if (detail?.loading) return <LoadingState label="正在读取整场考试详情" />;
     if (detail?.error) return <ErrorState message={detail.error} />;
     if (!detail?.exam) return null;
-    return <ManagementExamDetails exam={detail.exam} schoolName={schoolById.get(detail.exam.school_id)?.name} gradeName={gradeName(detail.exam)} classNames={classNames} creatorName={detail.exam.created_by === currentUser.id ? currentUser.name : undefined} />;
+    return <ManagementExamDetails exam={detail.exam} gradeName={gradeName(detail.exam)} classNames={classNames} creatorName={detail.exam.created_by === currentUser.id ? currentUser.name : undefined} />;
   };
 
   return <div className="page-stack exam-management-page">

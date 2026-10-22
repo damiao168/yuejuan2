@@ -66,14 +66,20 @@ ORDER BY created_at DESC LIMIT 1`, tenantID, run.ID).Scan(&runtimeTaskID)
 		return Run{}, err
 	}
 	if run.ProcessingStatus == ProcessingCompleted {
-		if _, err = submission.ApplyPageQualityResultInTx(ctx, tx, tenantID, submission.ApplyPageQualityInput{
+		_, projected, projectionErr := submission.ApplyPageQualityProjectionInTx(ctx, tx, tenantID, submission.ApplyPageQualityInput{
 			SubmissionID: run.SubmissionID, PageID: run.SubmissionPageID, LatestQualityRunID: run.ID,
+			SourceFileAssetID:     run.SourceFileAssetID,
 			NormalizedFileAssetID: run.NormalizedFileAssetID, QualityStatus: run.QualityStatus,
 			QualityIssues: toSubmissionIssues(run.QualityIssues),
-		}); err != nil {
-			return Run{}, err
+		})
+		if projectionErr != nil {
+			return Run{}, projectionErr
 		}
-		linked, captureErr := capture.ApplyQualityOutcomeInTx(ctx, tx, tenantID, run.SubmissionPageID, run.QualityStatus)
+		linked := false
+		var captureErr error
+		if projected {
+			linked, captureErr = capture.ApplyQualityOutcomeInTx(ctx, tx, tenantID, run.SubmissionPageID, run.QualityStatus)
+		}
 		if captureErr != nil {
 			return Run{}, captureErr
 		}

@@ -56,6 +56,14 @@ type GradeRequest struct {
 }
 
 type Context struct {
+	AIPlan *grading.GradingAIPlan `json:"ai_plan,omitempty"`
+	// 结算时从服务器已选连接恢复，不能由 worker 正文声明，也不进入持久化上下文或模型请求。
+	modelConfigID      string
+	modelName          string
+	InputVersionID     string
+	CropSHA256         string
+	Observation        *StudentObservation
+	ReferenceMaterials *paper.ReferenceMaterialBinding
 	SegmentID          string
 	AssessmentSnapshot assessment.ExamQuestionSnapshot
 	AnswerVersion      string
@@ -89,6 +97,10 @@ type GradingAnswerPart struct {
 }
 
 type AdapterInput struct {
+	ImageModel         *ImageModelConfig               `json:"-"`
+	InputVersionID     string                          `json:"input_version_id,omitempty"`
+	CropSHA256         string                          `json:"crop_sha256,omitempty"`
+	Observation        *StudentObservation             `json:"observation,omitempty"`
 	RequestID          string                          `json:"request_id"`
 	SegmentID          string                          `json:"answer_segment_id"`
 	Subject            string                          `json:"subject"`
@@ -107,9 +119,12 @@ type AdapterInput struct {
 	OutputConstraint aieligibility.OutputConstraint `json:"output_constraint"`
 	MathEvidence     *MathEvidenceContext           `json:"math_evidence,omitempty"`
 	ReferenceContext *GradingReferenceContext       `json:"reference_context,omitempty"`
-	// ActiveCrop 在本地核验，仅由 v2 适配器编码。
+	// ActiveCrop 在本地核验后由图像 v3 或数学 v2 适配器编码。
 	// 它绝不参与通用 JSON 序列化，也不随运行持久化。
 	ActiveCrop *ResolvedActiveCrop `json:"-"`
+	// ReferenceManifest/ReferenceMedia 仅在确认考试明确选择参考图时出现；nil 继续使用历史单图契约。
+	ReferenceManifest *ReferenceManifest `json:"reference_manifest,omitempty"`
+	ReferenceMedia    []ReferenceMedia   `json:"reference_media,omitempty"`
 }
 
 type PromptGuard struct {
@@ -120,6 +135,9 @@ type PromptGuard struct {
 }
 
 type AdapterOutput struct {
+	PanelExecution               *ImagePanelExecution           `json:"panel_execution,omitempty"`
+	Observation                  *StudentObservation            `json:"observation,omitempty"`
+	ImageJudgments               []ImageCriterionJudgment       `json:"image_judgments,omitempty"`
 	SchemaVersion                string                         `json:"schema_version,omitempty"`
 	RequestID                    string                         `json:"request_id"`
 	SuggestedScore               float64                        `json:"suggested_score"`
@@ -145,15 +163,16 @@ type AdapterOutput struct {
 }
 
 type AdapterTelemetry struct {
-	Adapter         string          `json:"adapter"`
-	Provider        string          `json:"provider"`
-	Deployment      string          `json:"deployment"`
-	Region          string          `json:"region"`
-	Attempts        int             `json:"attempts"`
-	RepairAttempted bool            `json:"repair_attempted"`
-	PriorErrorCodes []string        `json:"prior_error_codes"`
-	ElapsedMS       int64           `json:"elapsed_ms"`
-	Usage           ModelTokenUsage `json:"usage,omitempty"`
+	Adapter              string                `json:"adapter"`
+	Provider             string                `json:"provider"`
+	Deployment           string                `json:"deployment"`
+	Region               string                `json:"region"`
+	Attempts             int                   `json:"attempts"`
+	RepairAttempted      bool                  `json:"repair_attempted"`
+	PriorErrorCodes      []string              `json:"prior_error_codes"`
+	ElapsedMS            int64                 `json:"elapsed_ms"`
+	Usage                ModelTokenUsage       `json:"usage,omitempty"`
+	ExecutionDiagnostics *ExecutionDiagnostics `json:"execution_diagnostics,omitempty"`
 }
 
 type ModelTokenUsage struct {
@@ -219,31 +238,34 @@ type Grade struct {
 
 // GradingRun 固定答案、量规和模型版本，状态与成绩通过同一 request_id 关联，便于重试和审计。
 type GradingRun struct {
-	ID                     string     `json:"id"`
-	TenantID               string     `json:"tenant_id"`
-	AnswerSegmentID        string     `json:"answer_segment_id"`
-	BatchID                string     `json:"batch_id,omitempty"`
-	AnswerVersion          string     `json:"answer_version"`
-	QuestionID             string     `json:"question_id"`
-	RubricVersion          string     `json:"rubric_version"`
-	ModelVersion           string     `json:"model_version"`
-	PromptVersion          string     `json:"prompt_version"`
-	MinConfidence          float64    `json:"min_confidence"`
-	RequestID              string     `json:"request_id"`
-	PanelID                string     `json:"panel_id,omitempty"`
-	AgentRole              string     `json:"agent_role"`
-	MathArtifactID         string     `json:"math_artifact_id,omitempty"`
-	MathArtifactVersion    int64      `json:"math_artifact_version,omitempty"`
-	MathCorrectionRevision int64      `json:"math_correction_revision,omitempty"`
-	MathScoringVersion     string     `json:"math_scoring_version,omitempty"`
-	Status                 string     `json:"status"`
-	AttemptCount           int        `json:"attempt_count"`
-	GradeID                string     `json:"grade_id,omitempty"`
-	ErrorCode              string     `json:"error_code,omitempty"`
-	StartedAt              *time.Time `json:"started_at,omitempty"`
-	CompletedAt            *time.Time `json:"completed_at,omitempty"`
-	CreatedAt              time.Time  `json:"created_at"`
-	UpdatedAt              time.Time  `json:"updated_at"`
+	ID              string `json:"id"`
+	TenantID        string `json:"tenant_id"`
+	AnswerSegmentID string `json:"answer_segment_id"`
+	BatchID         string `json:"batch_id,omitempty"`
+	AnswerVersion   string `json:"answer_version"`
+	QuestionID      string `json:"question_id"`
+	// 空值只代表迁移前未记录的快照，不能据当前题目反推历史运行的评分依据。
+	ExamQuestionSnapshotID string                `json:"exam_question_snapshot_id,omitempty"`
+	RubricVersion          string                `json:"rubric_version"`
+	ModelVersion           string                `json:"model_version"`
+	PromptVersion          string                `json:"prompt_version"`
+	MinConfidence          float64               `json:"min_confidence"`
+	RequestID              string                `json:"request_id"`
+	PanelID                string                `json:"panel_id,omitempty"`
+	AgentRole              string                `json:"agent_role"`
+	MathArtifactID         string                `json:"math_artifact_id,omitempty"`
+	MathArtifactVersion    int64                 `json:"math_artifact_version,omitempty"`
+	MathCorrectionRevision int64                 `json:"math_correction_revision,omitempty"`
+	MathScoringVersion     string                `json:"math_scoring_version,omitempty"`
+	Status                 string                `json:"status"`
+	AttemptCount           int                   `json:"attempt_count"`
+	GradeID                string                `json:"grade_id,omitempty"`
+	ErrorCode              string                `json:"error_code,omitempty"`
+	ExecutionDiagnostics   *ExecutionDiagnostics `json:"execution_diagnostics,omitempty"`
+	StartedAt              *time.Time            `json:"started_at,omitempty"`
+	CompletedAt            *time.Time            `json:"completed_at,omitempty"`
+	CreatedAt              time.Time             `json:"created_at"`
+	UpdatedAt              time.Time             `json:"updated_at"`
 }
 
 type CreateRunInput struct {
@@ -251,6 +273,7 @@ type CreateRunInput struct {
 	BatchID                string
 	AnswerVersion          string
 	QuestionID             string
+	ExamQuestionSnapshotID string
 	RubricVersion          string
 	ModelVersion           string
 	PromptVersion          string
@@ -265,13 +288,16 @@ type CreateRunInput struct {
 }
 
 type UpdateRunInput struct {
-	Status       string
-	GradeID      string
-	ErrorCode    string
-	AttemptCount int
+	Status               string
+	GradeID              string
+	ErrorCode            string
+	AttemptCount         int
+	ExecutionDiagnostics *ExecutionDiagnostics
 }
 
 type WorkerResultInput struct {
+	// resultHash 在服务器结算前冻结原请求；结算可能修改共享切片，但回放必须比较 worker 原始输出。
+	resultHash          string
 	TaskID              string        `json:"task_id"`
 	LeaseToken          string        `json:"lease_token"`
 	ResultSchemaVersion string        `json:"result_schema_version"`
@@ -289,20 +315,21 @@ type WorkerFailureInput struct {
 }
 
 type GradingBatch struct {
-	ID              string    `json:"id"`
-	TenantID        string    `json:"tenant_id"`
-	IdempotencyKey  string    `json:"idempotency_key"`
-	ScoringRunID    string    `json:"scoring_run_id,omitempty"`
-	Status          string    `json:"status"`
-	SegmentIDs      []string  `json:"segment_ids"`
-	TotalCount      int       `json:"total_count"`
-	QueuedCount     int       `json:"queued_count"`
-	ProcessingCount int       `json:"processing_count"`
-	SucceededCount  int       `json:"succeeded_count"`
-	FailedCount     int       `json:"failed_count"`
-	CreatedBy       string    `json:"created_by"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              string                `json:"id"`
+	TenantID        string                `json:"tenant_id"`
+	IdempotencyKey  string                `json:"idempotency_key"`
+	ScoringRunID    string                `json:"scoring_run_id,omitempty"`
+	Status          string                `json:"status"`
+	SegmentIDs      []string              `json:"segment_ids"`
+	TotalCount      int                   `json:"total_count"`
+	QueuedCount     int                   `json:"queued_count"`
+	ProcessingCount int                   `json:"processing_count"`
+	SucceededCount  int                   `json:"succeeded_count"`
+	FailedCount     int                   `json:"failed_count"`
+	FailureSummary  []BatchFailureSummary `json:"failure_summary,omitempty"`
+	CreatedBy       string                `json:"created_by"`
+	CreatedAt       time.Time             `json:"created_at"`
+	UpdatedAt       time.Time             `json:"updated_at"`
 }
 
 type CreateBatchInput struct {

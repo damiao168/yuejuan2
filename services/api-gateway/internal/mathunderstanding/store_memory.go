@@ -26,6 +26,13 @@ func (s *MemoryStore) CreateArtifact(_ context.Context, tenantID string, input C
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.createArtifactLocked(tenantID, input)
+}
+
+func (s *MemoryStore) createArtifactLocked(tenantID string, input CreateArtifactInput) (Artifact, error) {
+	if tenantID == "" || ValidateCreateArtifact(input) != nil {
+		return Artifact{}, ErrInvalidInput
+	}
 	key := tenantID + ":" + input.AnswerSegmentID
 	for _, existing := range s.artifacts {
 		if existing.TenantID == tenantID && existing.AnswerSegmentID == input.AnswerSegmentID && existing.InputHash == input.InputHash && existing.Stage == "recognition" {

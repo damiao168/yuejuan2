@@ -3,11 +3,13 @@ package grading
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 )
 
 var ErrScoringNotReady = errors.New("exam is not ready for scoring")
+var ErrScoringPlanChanged = errors.New("scoring plan changed after preview")
 
 type ScoringReadinessError struct {
 	Readiness ScoringReadiness
@@ -76,6 +78,7 @@ WITH scoped_segments AS (
     seg.id,
     seg.processing_status,
     seg.crop_file_asset_id,
+	COALESCE(seg.normalized_bbox->>'answer_scope','question') AS answer_scope,
     seg.template_id,
     seg.template_content_hash,
     q.question_type,
@@ -123,15 +126,15 @@ SELECT
   count(*) FILTER (WHERE processable)::int,
   count(*) FILTER (WHERE processable AND missing_metadata)::int,
   count(*) FILTER (
-    WHERE processable AND NOT missing_metadata AND scoring_mode='RULE_AUTO' AND has_rule AND (
+    WHERE processable AND NOT missing_metadata AND ((scoring_mode='RULE_AUTO' AND has_rule AND (
       (question_type IN ('single_choice','multiple_choice','true_false') AND option_count >= 2)
-      OR (question_type IN ('fill_blank','numeric') AND has_answer)
-    )
+      OR question_type IN ('fill_blank','numeric')
+    )) OR (scoring_mode IN ('AI_ASSIST','AI_FAST_CONFIRM') AND question_type IN ('short_answer','calculation','essay','discussion')))
   )::int,
   count(*) FILTER (
     WHERE processable AND scoring_mode='RULE_AUTO' AND (
       (question_type IN ('single_choice','multiple_choice','true_false') AND (NOT has_rule OR option_count < 2))
-      OR (question_type IN ('fill_blank','numeric') AND (NOT has_rule OR NOT has_answer))
+      OR (question_type IN ('fill_blank','numeric') AND NOT has_rule)
     )
   )::int
 FROM segment_facts
@@ -160,7 +163,34 @@ WHERE e.tenant_id=$1::uuid AND e.id=$2::uuid AND u.status='active' AND u.deleted
 			return ScoringReadiness{}, fmt.Errorf("count school graders: %w", err)
 		}
 	}
-	return buildScoringReadiness(status, activeRun, counts), nil
+	readiness := buildScoringReadiness(status, activeRun, counts)
+	readiness.PlanHash, err = scoringPlanHash(ctx, q, tenantID, examID)
+	if err != nil {
+		return ScoringReadiness{}, err
+	}
+	var routesRaw []byte
+	err = q.QueryRowContext(ctx, `SELECT COALESCE(jsonb_object_agg(route,total),'{}'::jsonb) FROM (SELECT CASE WHEN eqs.scoring_policy_snapshot_json->>'mode' IN ('AI_ASSIST','AI_FAST_CONFIRM') AND q.question_type IN ('short_answer','calculation','essay','discussion') THEN 'image_ai' WHEN eqs.scoring_policy_snapshot_json->>'mode'='RULE_AUTO' AND q.question_type IN ('fill_blank','numeric') THEN 'observe_rule' WHEN eqs.scoring_policy_snapshot_json->>'mode'='RULE_AUTO' AND q.question_type IN ('single_choice','multiple_choice','true_false') THEN 'omr' ELSE 'manual_review' END AS route,count(*)::int AS total FROM answer_segment seg JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id AND sub.deleted_at IS NULL JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id AND q.deleted_at IS NULL JOIN exam_question_snapshot eqs ON eqs.tenant_id=q.tenant_id AND eqs.exam_id=q.exam_id AND eqs.question_id=q.id WHERE seg.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND seg.deleted_at IS NULL GROUP BY route)routes`, tenantID, examID).Scan(&routesRaw)
+	if err != nil {
+		return ScoringReadiness{}, err
+	}
+	if err = json.Unmarshal(routesRaw, &readiness.RouteCounts); err != nil {
+		return ScoringReadiness{}, err
+	}
+	if readiness.RouteCounts["image_ai"] > 0 {
+		queries, ok := q.(gradingAIPlanQueryer)
+		if !ok {
+			return ScoringReadiness{}, ErrInvalidInput
+		}
+		detail, err := loadGradingAIPlan(ctx, queries, tenantID, examID)
+		if err != nil {
+			return ScoringReadiness{}, err
+		}
+		if check := gradingAIPlanReadinessCheck(detail.Plan, true); check != nil {
+			readiness.Checks = append(readiness.Checks, *check)
+			readiness.Ready = readiness.Ready && check.Passed
+		}
+	}
+	return readiness, nil
 }
 
 func buildScoringReadiness(status string, activeRun *ScoringRun, counts scoringReadinessCounts) ScoringReadiness {

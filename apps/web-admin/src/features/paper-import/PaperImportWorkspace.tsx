@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Alert, Button, Upload } from "antd";
 import { ClipboardPaste, FileUp } from "lucide-react";
 import type { PaperImportJob, PaperImportRole, Question } from "../../api/papers";
@@ -14,7 +14,7 @@ export function PaperImportWorkspace({
   workflow,
   setShowQuestionEditor,
   initialExamId,
-  onNavigate, connectionError, onRecheck
+  onNavigate, connectionError, onRecheck, headerStatus
 }: Readonly<{
   canManage: boolean;
   latestPaperImport?: PaperImportJob;
@@ -25,6 +25,7 @@ export function PaperImportWorkspace({
   onNavigate?: (path: string) => void;
   connectionError?: string;
   onRecheck?: () => void;
+  headerStatus?: ReactNode;
 }>) {
   const { uploadProps, parsing, importPastedText } = workflow;
   const [textImportOpen, setTextImportOpen] = useState(false);
@@ -52,7 +53,7 @@ export function PaperImportWorkspace({
   return <>
     <section className={"workspace-section paper-source-files" + (latestPaperImport ? " has-materials" : " is-empty")}>
       <div className="section-head">
-        <div><span className="preparation-kicker">考试资料</span><h2>{latestPaperImport ? "已添加的资料" : "添加试卷资料"}</h2><p>上传试题、答案、解析或评分标准，系统会自动识别并匹配到题目。</p></div>
+        <div className="paper-source-heading"><div className="paper-source-title"><h2>{latestPaperImport ? "已添加的资料" : "添加试卷资料"}</h2>{headerStatus}</div><p>上传试题、答案、解析或评分标准，系统会自动识别并匹配到题目。</p></div>
         <Button icon={<ClipboardPaste size={16} />} disabled={!canManage || parsing} onClick={() => setTextImportOpen(true)}>粘贴文本</Button>
       </div>
       <Upload.Dragger {...uploadProps} disabled={!canManage || parsing} className="paper-import-dropzone">

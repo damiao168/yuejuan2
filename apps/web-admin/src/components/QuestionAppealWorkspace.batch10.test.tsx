@@ -6,6 +6,7 @@ import type { PublishedQuestionAppeal, PublishedQuestionAppealContext } from "..
 import type { ManagedUser } from "../api/users";
 import { QuestionAppealWorkspace } from "./QuestionAppealWorkspace";
 import { ApiClientError } from "../api/client";
+import { PageReadinessContext, PageVisibilityContext } from "./pageReadiness";
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(), context: vi.fn(), image: vi.fn(), users: vi.fn(), assign: vi.fn(), decide: vi.fn(), opinion: vi.fn(), resolve: vi.fn(), jobs: vi.fn(), confirm: vi.fn(), changed: vi.fn(),
@@ -75,6 +76,43 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
   function select(id: string) { const row = [...host.querySelectorAll(".question-appeal-list article")].find((node) => node.querySelector("strong")?.textContent?.startsWith(`${id} ·`)); expect(row).toBeDefined(); row!.querySelector<HTMLButtonElement>("button")!.click(); }
   function job(value: string) { (control("job").onChange as (value: string) => void)(value); }
   function reply(value: string) { (control("reply").onChange as (event: { target: { value: string } }) => void)({ target: { value } }); }
+
+  it("候选页等待列表和首条依据，隐藏时仍取数但不提前打开 body 抽屉", async () => {
+    const list = deferred<{ appeals: PublishedQuestionAppeal[] }>();
+    const detail = deferred<{ context: PublishedQuestionAppealContext }>();
+    mocks.list.mockReturnValue(list.promise); mocks.context.mockReturnValue(detail.promise);
+    const blockers = new Set<symbol>();
+    const readiness = { registerLoading: () => { const token = Symbol(); blockers.add(token); return () => { blockers.delete(token); }; } };
+    const page = (visible: boolean) => <PageReadinessContext.Provider value={readiness}><PageVisibilityContext.Provider value={visible}>
+      <QuestionAppealWorkspace examId="exam" canManage canWork />
+    </PageVisibilityContext.Provider></PageReadinessContext.Provider>;
+    await act(async () => root.render(page(false)));
+    expect(blockers.size).toBeGreaterThan(0);
+    expect(mocks.list).toHaveBeenCalledOnce();
+    await act(async () => list.resolve({ appeals: [appeal("A")] }));
+    expect(mocks.context).toHaveBeenCalledWith("A");
+    expect(blockers.size).toBeGreaterThan(0);
+    expect(control("drawer").open).toBe(false);
+    await act(async () => detail.resolve({ context: context("A") }));
+    expect(blockers.size).toBe(0);
+    expect(control("drawer").open).toBe(false);
+    await act(async () => root.render(page(true)));
+    expect(control("drawer").open).toBe(true);
+    expect(mocks.list).toHaveBeenCalledOnce(); expect(mocks.context).toHaveBeenCalledOnce();
+  });
+
+  it.each(["无读取权限", "列表失败", "依据失败"])("%s 不会让切页一直等待", async (scenario) => {
+    if (scenario === "列表失败") mocks.list.mockRejectedValue(new Error("列表无法读取"));
+    if (scenario === "依据失败") mocks.context.mockRejectedValue(new Error("依据无法读取"));
+    const blockers = new Set<symbol>();
+    const readiness = { registerLoading: () => { const token = Symbol(); blockers.add(token); return () => { blockers.delete(token); }; } };
+    await act(async () => root.render(<PageReadinessContext.Provider value={readiness}>
+      <QuestionAppealWorkspace examId="exam" canManage canWork canRead={scenario !== "无读取权限"} />
+    </PageReadinessContext.Provider>));
+    expect(blockers.size).toBe(0);
+    if (scenario === "无读取权限") expect(mocks.list).not.toHaveBeenCalled();
+    else expect(host.textContent).toContain(scenario === "列表失败" ? "列表无法读取" : "依据无法读取");
+  });
 
   it("没有管理或工作权限时不显示也不取列表", async () => {
     await render({ canManage: false, canWork: false });

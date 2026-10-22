@@ -9,8 +9,21 @@ test("normal evidence passes verification", () => {
   assert.equal(verification.evidence_validity_rate, 1);
 });
 
-test("normalized matching ignores punctuation and spaces", () => {
-  assert.equal(normalizeText("老屋，雨声！"), normalizeText("老屋雨声"));
+test("normalized matching allows width case and spaces but preserves punctuation", () => {
+  assert.equal(normalizeText("Ｖ ＝－３ ｍ／ｓ"), normalizeText("v=-3 m/s"));
+  assert.notEqual(normalizeText("老屋，雨声！"), normalizeText("老屋雨声"));
+});
+
+test("fabricated mathematical punctuation fails literal evidence verification", () => {
+  for (const [answer, excerpt] of [["v=3 m/s", "v=-3 m/s"], ["x=15", "x=1.5"], ["a=12", "a=1/2"], ["x<3", "x>3"]]) {
+    const input = baseInput({ synthetic: true, answer_text: answer });
+    const output = baseOutput({
+      suggested_score: 1,
+      matched_points: [{ rubric_point_id: "p1", score: 1, evidence_ids: ["ev-p1"] }],
+      evidence: [{ evidence_id: "ev-p1", rubric_point_id: "p1", text_excerpt: excerpt, location: "answer_text", confidence: 0.9 }],
+    });
+    assert.equal(verifyEvidence(input, output).verification_passed, false, `${answer} versus ${excerpt}`);
+  }
 });
 
 test("missing evidence fails verification", () => {

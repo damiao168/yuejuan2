@@ -143,11 +143,18 @@ func (s *MemoryStore) GetHistogram(_ context.Context, _ string, batchID string) 
 
 // ListBatches 在同一锁内复制批次，再按时间和 ID 降序分页。
 // 内存夹具的 Batch 没有租户字段，这里只执行 exam/question 条件。
-func (s *MemoryStore) ListBatches(_ context.Context, _ string, examID, questionID string, page PageOptions) ([]Batch, error) {
+func (s *MemoryStore) ListBatches(ctx context.Context, tenantID string, examID, questionID string, page PageOptions) ([]Batch, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	out := []Batch{}
 	for _, batch := range s.batches {
+		allowed, err := page.Access.Allows(ctx, tenantID, "backmark_batch", batch.ID, batch.ExamID)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
+			continue
+		}
 		if (examID == "" || batch.ExamID == examID) && (questionID == "" || batch.QuestionID == questionID) {
 			out = append(out, cloneBatch(batch))
 		}

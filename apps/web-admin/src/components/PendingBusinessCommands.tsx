@@ -44,6 +44,12 @@ function readableObjectLabel(object: ReadableCommandObject, fallback: string): s
 
 type CompletedCommand = { key: string; text: string; path: string };
 
+function pendingCommandKeys(prefix: string) {
+  // 存储被禁用时主界面仍可挂载；没有读到记录不代表服务端原命令已经完成。
+  try { return Object.keys(localStorage).filter(key => key.startsWith(prefix)); }
+  catch { return []; }
+}
+
 function decodeReportBlob(content: string, contentType: string): Blob {
   // atob 返回 0-255 的单字节字符，每项都有索引 0，不会出现 Unicode 代理对。
   return new Blob([Uint8Array.from(atob(content), char => char.codePointAt(0)!)], { type: contentType });
@@ -61,7 +67,7 @@ export function PendingBusinessCommands({ tenant, actor, onNavigate }: Readonly<
   const [labels, setLabels] = useState<Record<string, string>>({});
   useEffect(() => {
     mountedRef.current = true;
-    const refresh = () => setKeys(Object.keys(localStorage).filter(key => key.startsWith(prefix)));
+    const refresh = () => setKeys(pendingCommandKeys(prefix));
     const sessionChanged = () => {
       busyRef.current = false;
       setBusy("");
@@ -97,9 +103,11 @@ export function PendingBusinessCommands({ tenant, actor, onNavigate }: Readonly<
     if (!isCurrent()) return;
     if (receipt.status !== "succeeded") return;
     // 成功回执保留在本次界面供核对；本地仅移除同一个命令，不能清掉后来页面创建的新命令。
-    const raw = localStorage.getItem(key);
-    if (raw && (JSON.parse(raw) as { id: string }).id === receipt.command_id) localStorage.removeItem(key);
-    setKeys(Object.keys(localStorage).filter(item => item.startsWith(prefix)));
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw && (JSON.parse(raw) as { id: string }).id === receipt.command_id) localStorage.removeItem(key);
+    } catch { /* 已确认成功事实仍展示，清理失败的记录留待恢复。 */ }
+    setKeys(pendingCommandKeys(prefix));
     const result = receipt.result as { task?: { score?: number }; human_grade?: { score?: number }; final_grade?: { score?: number }; status?: string } | undefined;
     const score = result?.human_grade?.score ?? result?.final_grade?.score;
     // 本地待确认键删除后，成功回执仍保留可读对象和业务入口，便于核对实际成绩或任务。
@@ -143,7 +151,7 @@ export function PendingBusinessCommands({ tenant, actor, onNavigate }: Readonly<
         (id, original) => apiClient.request(entry.path(encodeURIComponent(target)), { method: "POST", headers: { "Idempotency-Key": id }, body: JSON.stringify(original) }),
         () => undefined, expectedSession);
       if (isCurrent()) {
-        setKeys(Object.keys(localStorage).filter(item => item.startsWith(prefix)));
+        setKeys(pendingCommandKeys(prefix));
         setOutcomes(current => [...current.filter(item => item.key !== key), { key, text: completionText(entry.label, labels[key] || target), path: businessPagePath(operation, target) }]);
       }
     } catch (cause) {

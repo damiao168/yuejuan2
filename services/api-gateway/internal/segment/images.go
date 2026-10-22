@@ -42,6 +42,10 @@ func (s *ImageService) ReadCropImage(ctx context.Context, tenantID, segmentID st
 	if err != nil {
 		return binaryresource.Resource{}, err
 	}
+	// 整区来源没有精确单题图；必须通过共区入口读取，不能借单题端点改变图片含义。
+	if AnswerScope(evidence.NormalizedBBox) != "question" {
+		return binaryresource.Resource{}, ErrEvidenceUnavailable
+	}
 	if evidence.ProcessingStatus != "completed" || evidence.RegistrationStatus != "completed" || evidence.CropFileAssetID == "" || evidence.CropSHA256 == "" {
 		// 切题和配准都完成，且裁剪图已有资产 ID 与哈希，才能继续读取评分图片。
 		return binaryresource.Resource{}, ErrEvidenceUnavailable

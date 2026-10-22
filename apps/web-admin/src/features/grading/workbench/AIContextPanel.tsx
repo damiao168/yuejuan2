@@ -24,7 +24,11 @@ function candidateSourceLabel(value: string): string {
     ai: "智能评分",
     model: "评分模型",
     rule: "规则判断",
-    ensemble: "综合判断"
+    ensemble: "综合判断",
+    omr: "填涂识别",
+    ocr: "文字识别",
+    manual: "人工录入",
+    imported: "导入答案"
   };
   return labels[value] ?? "智能评分候选";
 }
@@ -35,7 +39,13 @@ function candidateDecisionLabel(value: string | undefined): string {
     accept: "建议通过",
     reject: "建议不通过",
     review: "建议人工复核",
-    abstain: "已放弃自动判断"
+    abstain: "已放弃自动判断",
+    selected: "已识别选项",
+    confirmed: "识别结果已确认",
+    ambiguous: "识别结果不明确",
+    blank: "未识别到作答",
+    multiple: "填涂数量与本题要求不符",
+    parse_failed: "识别结果解析失败"
   };
   return labels[value] ?? (/[\u3400-\u9fff]/u.test(value) ? value : "待人工确认");
 }
@@ -64,7 +74,8 @@ function AICandidatePanel({ candidates, hasMetadata }: Readonly<{
           label: `${candidateSourceLabel(candidate.source)} · ${candidate.engine_version || "版本未知"}`,
           children: (
             <Descriptions size="small" column={1} colon={false}>
-              <Descriptions.Item label="结论">{candidateDecisionLabel(candidate.display_text || candidate.decision)}</Descriptions.Item>
+              {candidate.display_text ? <Descriptions.Item label="识别内容">{candidate.display_text}</Descriptions.Item> : null}
+              <Descriptions.Item label="结论">{candidateDecisionLabel(candidate.decision)}</Descriptions.Item>
               <Descriptions.Item label="配置版本">{candidate.profile_version || "—"}</Descriptions.Item>
               <Descriptions.Item label="置信度">{candidate.confidence ?? "—"}</Descriptions.Item>
               <Descriptions.Item label="当前候选">{candidate.is_current ? "是" : "否"}</Descriptions.Item>
@@ -89,6 +100,8 @@ export function AIContextPanel({
   visible: boolean;
   onReveal: () => void;
 }>) {
+  // 失败投影属于当前冻结版本；主工作区已给人工提示，此处不再展示旧候选或半截模型内容。
+  if (context.ai_failure) return null;
   const explicit = requiresExplicitSecondOpinion(context);
   // 显式揭示前跳过整个候选与证据面板，避免只隐藏分数却提前透露 AI 结论。
   if (explicit && !visible) {
@@ -107,13 +120,14 @@ export function AIContextPanel({
 
   const metadata = secondOpinionMetadata(context, visible);
   const flags = metadata ? flagList(metadata) : [];
-  const candidates = context.ai_candidates;
+  const candidates = context.ai_candidates.filter((candidate) => candidate.is_current);
+  const history = context.ai_candidates.filter((candidate) => !candidate.is_current);
   return (
+    <details className="grading-reference-details"><summary>{explicit ? "AI 第二意见详情" : "识别与评分证据详情"}</summary>
     <section className="evidence-panel" aria-label="评分候选与证据">
       <div className="panel-head">
         <div>
-          <h2>{explicit ? "AI 第二意见" : "评分候选与证据"}</h2>
-          <p>{candidates.length} 个候选 · {context.scoring_evidence.length} 条结构化证据</p>
+          <h2>{explicit ? "AI 第二意见" : "当前识别与评分依据"}</h2>
         </div>
       </div>
       {metadata ? (
@@ -131,6 +145,7 @@ export function AIContextPanel({
         </Descriptions>
       ) : null}
       <AICandidatePanel candidates={candidates} hasMetadata={Boolean(metadata)} />
+      {history.length ? <details className="grading-reference-details"><summary>历史识别与建议</summary><AICandidatePanel candidates={history} hasMetadata /></details> : null}
       {context.scoring_evidence.length ? (
         <div className="structured-evidence-list">
           {context.scoring_evidence.map((item) => (
@@ -139,5 +154,6 @@ export function AIContextPanel({
         </div>
       ) : null}
     </section>
+    </details>
   );
 }

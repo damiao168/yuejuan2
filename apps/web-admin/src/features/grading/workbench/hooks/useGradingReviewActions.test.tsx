@@ -9,7 +9,6 @@ import type { AiGrade, ReviewTask } from "../../../../api/review";
 import { createInitialDraft } from "../gradingWorkbench.model";
 import type { PrefetchedTaskBundle, WorkbenchContext } from "../gradingWorkbench.types";
 import type { DraftConflictResolution } from "../draftConflict";
-import type { MathWorkbenchEvidence } from "../mathWorkbenchEvidence";
 import { useGradingReviewActions, type UseGradingReviewActionsOptions } from "./useGradingReviewActions";
 
 const mocks = vi.hoisted(() => ({
@@ -36,22 +35,6 @@ function context(id: string, revision = 3): WorkbenchContext {
     reviewContext: { expected_revision: revision, draft: null } as WorkbenchContext["reviewContext"],
     pages: [], ocrTasks: [], ocrResults: [], aiGrades: [], warnings: [], ocrText: "", segmentImageUrl: ""
   };
-}
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => { resolve = done; });
-  return { promise, resolve };
-}
-
-function currentMathEvidence(): MathWorkbenchEvidence {
-  return {
-    segmentId: "segment-A", phase: "ready", message: "",
-    understanding: { correction_revision: 0, artifact: { id: "artifact-A", version: 2, correction_revision: 0, exam_question_snapshot_id: "snapshot-A" } },
-    score: { schema_version: "math-rubric-score-v1", scope: "teacher_suggestion_only", artifact_id: "artifact-A", artifact_version: 2,
-      correction_revision: 0, verified_correction_revision: 0, exam_question_snapshot_id: "snapshot-A", rubric_version: "rubric-v1",
-      suggested_score: 9, max_score: 10, unresolved_score: 0 }
-  } as unknown as MathWorkbenchEvidence;
 }
 
 describe("grading review submission lifecycle", () => {
@@ -271,102 +254,5 @@ describe("grading review submission lifecycle", () => {
     expect(mocks.nominate).not.toHaveBeenCalled();
   });
 
-  it("does not start an old action after the same user moves to another exam", async () => {
-    await mount();
-    const previous = actions;
-    await act(async () => { switchExam("exam-B"); });
-    await act(async () => {
-      await previous.submitGrade();
-      await previous.markDispute();
-      await previous.adoptAiScore();
-      await previous.openDraftConflict();
-      previous.confirmReturnTask(false);
-    });
 
-    expect(mocks.submitHumanGrade).not.toHaveBeenCalled();
-    expect(mocks.returnReviewTask).not.toHaveBeenCalled();
-    expect(mocks.mathRefresh).not.toHaveBeenCalled();
-    expect(mocks.rememberCurrent).not.toHaveBeenCalled();
-    expect(mocks.loadTaskContext).not.toHaveBeenCalled();
-    expect(mocks.confirm).not.toHaveBeenCalled();
-    expect(mocks.runAction).not.toHaveBeenCalled();
-    expect(current.draft.score).toBe(6);
-  });
-
-  it("does not submit when its scope expires while runAction is waiting", async () => {
-    await mount();
-    const gate = deferred<void>();
-    mocks.runAction.mockImplementationOnce(async (_key: string, action: () => Promise<void>) => { await gate.promise; await action(); });
-    const pending = submitGrade();
-    await act(async () => { switchExam("exam-B"); });
-    await act(async () => { gate.resolve(); await pending; });
-    expect(mocks.submitHumanGrade).not.toHaveBeenCalled();
-  });
-
-  it("does not return a task from a late confirmation belonging to an earlier exam", async () => {
-    await mount();
-    actions.confirmReturnTask(false);
-    const onOk = mocks.confirm.mock.calls[0][0].onOk as () => Promise<void>;
-    await act(async () => { switchExam("exam-B"); });
-    await act(async () => { await onOk(); });
-
-    expect(mocks.returnReviewTask).not.toHaveBeenCalled();
-    expect(mocks.runAction).not.toHaveBeenCalled();
-    expect(mocks.refreshCurrent).not.toHaveBeenCalled();
-  });
-
-  it("does not return when its scope expires while runAction is waiting", async () => {
-    await mount();
-    const gate = deferred<void>();
-    mocks.runAction.mockImplementationOnce(async (_key: string, action: () => Promise<void>) => { await gate.promise; await action(); });
-    const pending = actions.markDispute();
-    await act(async () => { changeOriginalImagePermission(true); });
-    await act(async () => { gate.resolve(); await pending; });
-    expect(mocks.returnReviewTask).not.toHaveBeenCalled();
-  });
-
-  it("does not refresh a new exam after an earlier return finishes", async () => {
-    await mount();
-    const response = deferred<void>();
-    mocks.returnReviewTask.mockReturnValueOnce(response.promise);
-    const pending = actions.markDispute();
-    await act(async () => { switchExam("exam-B"); });
-    await act(async () => { response.resolve(); await pending; });
-    expect(mocks.returnReviewTask).toHaveBeenCalledTimes(1);
-    expect(mocks.refreshCurrent).not.toHaveBeenCalled();
-  });
-
-  it("does not adopt a late mathematics suggestion after an original-image permission change", async () => {
-    await mount({ subjectCode: "mathematics" });
-    const response = deferred<MathWorkbenchEvidence>();
-    mocks.mathRefresh.mockReturnValueOnce(response.promise);
-    let pending!: Promise<void>;
-    await act(async () => { pending = actions.adoptAiScore(); });
-    await act(async () => { changeOriginalImagePermission(true); });
-    const before = current;
-    await act(async () => { response.resolve(currentMathEvidence()); await pending; });
-
-    expect(current).toBe(before);
-    expect(current.draft.score).toBe(6);
-    expect(mocks.rememberCurrent).not.toHaveBeenCalled();
-    expect(mocks.warning).not.toHaveBeenCalled();
-  });
-
-  it("does not fill conflict results into a new exam using the same task ID", async () => {
-    await mount();
-    const response = deferred<WorkbenchContext>();
-    mocks.loadTaskContext.mockReturnValueOnce(response.promise);
-    let pending!: Promise<void>;
-    await act(async () => { pending = actions.openDraftConflict(); });
-    await act(async () => { switchExam("exam-B"); });
-    const before = current;
-    await act(async () => {
-      response.resolve(context("A", 4));
-      await pending;
-    });
-
-    expect(current).toBe(before);
-    expect(current.draftConflict).toBeNull();
-    expect(mocks.error).not.toHaveBeenCalled();
-  });
 });

@@ -303,11 +303,12 @@ func (s *PostgresStore) Heartbeat(ctx context.Context, tenantID string, taskID s
 		return Task{}, err
 	}
 	defer tx.Rollback()
-	dbNow, err := databaseNow(ctx, tx)
+	task, err := getTaskForUpdate(ctx, tx, tenantID, taskID)
 	if err != nil {
 		return Task{}, err
 	}
-	task, err := getTaskForUpdate(ctx, tx, tenantID, taskID)
+	// 等待任务行锁期间租约可能到期；取得锁后才采样本次心跳的实际数据库时间。
+	dbNow, err := databaseNow(ctx, tx)
 	if err != nil {
 		return Task{}, err
 	}
@@ -431,6 +432,35 @@ WHERE tenant_id = $1 AND task_id = $2::uuid AND attempt_no = $3 AND completed_at
 			return Task{}, rowsErr
 		}
 		return Task{}, ErrConflict
+	}
+	return task, nil
+}
+
+// LockTaskForCompletionInTx 先锁定当前任务再写来源事实，避免另一尝试在提交期间接管租约。
+// 成功任务仍须由调用方校验已接受结果，并在 CompleteTaskInTx 中完成严格回放校验。
+func LockTaskForCompletionInTx(ctx context.Context, tx *sql.Tx, tenantID, taskID, leaseToken string) (Task, error) {
+	if tx == nil || leaseToken == "" {
+		return Task{}, ErrInvalidInput
+	}
+	task, err := getTaskForUpdate(ctx, tx, tenantID, taskID)
+	if err != nil {
+		return Task{}, err
+	}
+	if task.Status == StatusSucceeded {
+		if task.LeaseToken != leaseToken {
+			return Task{}, ErrLeaseMismatch
+		}
+		return task, nil
+	}
+	if task.Status != StatusLeased && task.Status != StatusRunning {
+		return Task{}, ErrInvalidTransition
+	}
+	now, err := databaseNow(ctx, tx)
+	if err != nil {
+		return Task{}, err
+	}
+	if err := validateTaskLeaseAt(task, leaseToken, now); err != nil {
+		return Task{}, err
 	}
 	return task, nil
 }
@@ -713,10 +743,12 @@ func getTaskForUpdate(ctx context.Context, tx *sql.Tx, tenantID string, taskID s
 	return scanTask(row)
 }
 
-// 租约判断和到期时间使用同一事务的数据库时钟，避免 API 实例时钟偏差影响接管。
+// 租约判断和新到期时间共用一次实际数据库时钟采样；验证旧租约须在取得任务锁后读取。
+// 领取轮询的采样用于筛选候选，不代表已验证某个旧租约。
+// transaction_timestamp 固定在事务开始，不能判断等锁结束后的租约是否已经到期。
 func databaseNow(ctx context.Context, tx *sql.Tx) (time.Time, error) {
 	var now time.Time
-	if err := tx.QueryRowContext(ctx, `SELECT transaction_timestamp()`).Scan(&now); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&now); err != nil {
 		return time.Time{}, err
 	}
 	return now.UTC(), nil
@@ -726,7 +758,8 @@ func validateTaskLeaseAt(task Task, token string, now time.Time) error {
 	if token == "" || task.LeaseToken != token {
 		return ErrLeaseMismatch
 	}
-	if task.LeaseExpiresAt == nil || task.LeaseExpiresAt.Before(now) {
+	// 与执行能力授权保持同一排他边界；恰好到期时已经没有继续写入的租约。
+	if task.LeaseExpiresAt == nil || !task.LeaseExpiresAt.After(now) {
 		return ErrLeaseExpired
 	}
 	return nil

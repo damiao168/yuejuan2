@@ -79,15 +79,15 @@ func (s *PostgresStore) CreateTask(ctx context.Context, tenantID string, runID s
 	if err := ValidateTaskInput(input); err != nil {
 		return Task{}, err
 	}
-	if _, err := s.getRun(ctx, tenantID, runID); err != nil {
-		return Task{}, err
-	}
 	inputRef, _ := json.Marshal(input.InputRef)
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Task{}, err
 	}
 	defer tx.Rollback()
+	if err := lockRunTx(ctx, tx, tenantID, runID); err != nil {
+		return Task{}, err
+	}
 	row := tx.QueryRowContext(ctx, `
 INSERT INTO agent_task (
   tenant_id, orchestration_run_id, agent_type, status, input_ref, max_attempts, created_by
@@ -115,14 +115,19 @@ WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 }
 
 func (s *PostgresStore) StartTask(ctx context.Context, tenantID string, id string) (Task, error) {
-	task, err := s.getTask(ctx, tenantID, id)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Task{}, err
+	}
+	defer tx.Rollback()
+	task, err := s.getTaskTx(ctx, tx, tenantID, id)
 	if err != nil {
 		return Task{}, err
 	}
 	if !CanStart(task.Status) {
 		return Task{}, ErrInvalidTransition
 	}
-	row := s.db.QueryRowContext(ctx, `
+	row := tx.QueryRowContext(ctx, `
 UPDATE agent_task
 SET status = 'running', started_at = now(), updated_at = now()
 WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
@@ -134,18 +139,14 @@ RETURNING id::text, tenant_id::text, orchestration_run_id::text, agent_type, sta
 	if err := scanTask(row, &out); err != nil {
 		return Task{}, err
 	}
+	if err := tx.Commit(); err != nil {
+		return Task{}, err
+	}
 	return out, nil
 }
 
 // 任务结果与运行汇总状态同一事务落库，提交失败时不会留下半完成的智能体任务。
 func (s *PostgresStore) CompleteTask(ctx context.Context, tenantID string, id string, input CompleteTaskInput) (Task, error) {
-	task, err := s.getTask(ctx, tenantID, id)
-	if err != nil {
-		return Task{}, err
-	}
-	if !CanComplete(task.Status) {
-		return Task{}, ErrInvalidTransition
-	}
 	if input.Confidence != nil && (*input.Confidence < 0 || *input.Confidence > 1) {
 		return Task{}, ErrInvalidInput
 	}
@@ -164,6 +165,14 @@ func (s *PostgresStore) CompleteTask(ctx context.Context, tenantID string, id st
 		return Task{}, err
 	}
 	defer tx.Rollback()
+	// 状态读取必须和结果更新使用同一把行锁；否则并发失败/完成请求都可能先读到 running，后提交者会覆盖终态。
+	task, err := s.getTaskTx(ctx, tx, tenantID, id)
+	if err != nil {
+		return Task{}, err
+	}
+	if !CanComplete(task.Status) {
+		return Task{}, ErrInvalidTransition
+	}
 	row := tx.QueryRowContext(ctx, `
 UPDATE agent_task
 SET status = $3,
@@ -195,18 +204,19 @@ func (s *PostgresStore) FailTask(ctx context.Context, tenantID string, id string
 	if errorMessage == "" {
 		return Task{}, ErrInvalidInput
 	}
-	task, err := s.getTask(ctx, tenantID, id)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Task{}, err
+	}
+	defer tx.Rollback()
+	// 在同一事务内重新读取并锁定状态，第二个终态请求会看到首个请求已提交的结果并被拒绝。
+	task, err := s.getTaskTx(ctx, tx, tenantID, id)
 	if err != nil {
 		return Task{}, err
 	}
 	if !CanFail(task.Status) {
 		return Task{}, ErrInvalidTransition
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return Task{}, err
-	}
-	defer tx.Rollback()
 	row := tx.QueryRowContext(ctx, `
 UPDATE agent_task
 SET status = 'failed',
@@ -232,18 +242,19 @@ RETURNING id::text, tenant_id::text, orchestration_run_id::text, agent_type, sta
 }
 
 func (s *PostgresStore) RetryTask(ctx context.Context, tenantID string, id string) (Task, error) {
-	task, err := s.getTask(ctx, tenantID, id)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Task{}, err
+	}
+	defer tx.Rollback()
+	// 重试也要在锁内检查旧状态和次数，避免两个重试请求同时递增 attempt_no。
+	task, err := s.getTaskTx(ctx, tx, tenantID, id)
 	if err != nil {
 		return Task{}, err
 	}
 	if !CanRetry(task.Status, task.AttemptNo, task.MaxAttempts) {
 		return Task{}, ErrRetryExhausted
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return Task{}, err
-	}
-	defer tx.Rollback()
 	row := tx.QueryRowContext(ctx, `
 UPDATE agent_task
 SET status = 'queued',
@@ -296,6 +307,43 @@ WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 		return Task{}, err
 	}
 	return out, nil
+}
+
+func (s *PostgresStore) getTaskTx(ctx context.Context, tx *sql.Tx, tenantID string, id string) (Task, error) {
+	// 同一运行的任务先锁父运行再锁任务；父汇总才能看到前一个任务的已提交状态，
+	// 也避免不同任务各自汇总后再排队写父状态时，把 completed 覆盖成过时的 running。
+	var runID string
+	if err := tx.QueryRowContext(ctx, `SELECT r.id::text FROM orchestration_run r
+JOIN agent_task t ON t.tenant_id=r.tenant_id AND t.orchestration_run_id=r.id
+WHERE r.tenant_id=$1 AND t.id::text=$2 AND r.deleted_at IS NULL AND t.deleted_at IS NULL
+FOR UPDATE OF r`, tenantID, id).Scan(&runID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Task{}, ErrNotFound
+		}
+		return Task{}, err
+	}
+	row := tx.QueryRowContext(ctx, `
+SELECT id::text, tenant_id::text, orchestration_run_id::text, agent_type, status,
+  input_ref, output_ref, evidence_ref, confidence::float8, attempt_no, max_attempts,
+  COALESCE(error_message, ''), created_by::text, started_at, completed_at, created_at
+FROM agent_task
+WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
+FOR UPDATE
+`, tenantID, id)
+	var out Task
+	if err := scanTask(row, &out); err != nil {
+		return Task{}, err
+	}
+	return out, nil
+}
+
+func lockRunTx(ctx context.Context, tx *sql.Tx, tenantID, runID string) error {
+	var lockedID string
+	err := tx.QueryRowContext(ctx, `SELECT id::text FROM orchestration_run WHERE tenant_id=$1 AND id::text=$2 AND deleted_at IS NULL FOR UPDATE`, tenantID, runID).Scan(&lockedID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	return err
 }
 
 func refreshRunStatusTx(ctx context.Context, tx *sql.Tx, tenantID string, runID string) error {

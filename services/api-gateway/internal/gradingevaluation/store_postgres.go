@@ -71,7 +71,20 @@ func (s *PostgresStore) AddObservation(ctx context.Context, tenantID, runID stri
 	if s.db == nil {
 		return Observation{}, ErrInvalidInput
 	}
-	row := s.db.QueryRowContext(ctx, `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Observation{}, err
+	}
+	defer tx.Rollback()
+	// 与完成操作先锁同一父运行，再检查 draft；等锁后不能使用旧的草稿判断追加冻结观察。
+	var status RunStatus
+	if err = tx.QueryRowContext(ctx, `SELECT status FROM grading_evaluation_run WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE`, tenantID, runID).Scan(&status); err != nil {
+		return Observation{}, mapStoreError(err)
+	}
+	if status != RunDraft {
+		return Observation{}, ErrStateConflict
+	}
+	row := tx.QueryRowContext(ctx, `
 INSERT INTO grading_evaluation_observation(
  tenant_id,run_id,response_key,response_fingerprint,reference_kind,subject,archetype,ocr_quality,answer_length,rubric_complexity,
  reference_score,model_score,max_score,reference_score_band,page_match_correct,crop_iou,transcription_cer,formula_exact,
@@ -85,7 +98,13 @@ RETURNING id::text,run_id::text,response_key,response_fingerprint,reference_kind
 		input.PageMatchCorrect, input.CropIoU, input.TranscriptionCER, input.FormulaExact, input.RubricAgreement, input.ErrorSource,
 		input.NeedsHumanReview, input.ReferenceReviewers, input.ReferenceAdjudicated)
 	item, err := scanObservation(row)
-	return item, mapStoreError(err)
+	if err != nil {
+		return Observation{}, mapStoreError(err)
+	}
+	if err = tx.Commit(); err != nil {
+		return Observation{}, mapStoreError(err)
+	}
+	return item, nil
 }
 
 func (s *PostgresStore) AddPanelObservation(ctx context.Context, tenantID, runID string, input PanelObservation) (PanelObservation, error) {
@@ -195,7 +214,7 @@ FROM grading_evaluation_observation WHERE tenant_id=$1::uuid AND run_id=$2::uuid
 	return items, nil
 }
 
-// 完成事务锁住运行并重新统计原始观测，再替换派生指标；并发新增样本会使本次提交失败而非污染结果。
+// 完成事务先锁父运行并核对观测数，再替换派生指标；已提交的新样本使计数检查失败，等锁的追加在完成后被拒绝。
 func (s *PostgresStore) ReplaceComputed(ctx context.Context, tenantID, runID string, expectedCount int, slices []SliceMetric, difficulty []ResponseDifficulty, at time.Time) (Run, error) {
 	if s.db == nil {
 		return Run{}, ErrInvalidInput

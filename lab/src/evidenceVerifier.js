@@ -1,15 +1,11 @@
 import { OCR_REVIEW_THRESHOLD } from "./schemas/gradingSchema.js";
 import { detectPromptInjection } from "./guardrails/promptInjection.js";
 
-const CHINESE_PUNCTUATION = /[，。！？；：“”‘’（）【】《》、]/g;
-
-// 用于证据片段检索的宽松归一化，会忽略标点与空白；不用于判断数学表达式等价。
+// 引文与严格别名保留标点和数学符号，只容忍字宽、大小写与空白差异，不能把不同数值改成相同证据。
 export function normalizeText(text) {
   return String(text ?? "")
     .normalize("NFKC")
     .toLowerCase()
-    .replace(CHINESE_PUNCTUATION, "")
-    .replace(/[.,!?;:'"()[\]{}<>/\\|-]/g, "")
     .replace(/\s+/g, "");
 }
 

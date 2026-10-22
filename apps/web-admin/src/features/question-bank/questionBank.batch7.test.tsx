@@ -244,7 +244,7 @@ describe("question bank batch7 preserved component boundaries", () => {
     await render(<QuestionBankWorkspace {...props} selected={selected} members={members} />);
     expect(host.textContent).not.toContain("批准版本"); expect(host.textContent).not.toContain("退回草稿");
     const link = host.querySelector<HTMLInputElement>('input[aria-label="本题审核链接"]')!;
-    expect(link.readOnly).toBe(true); expect(link.value).toContain("#/question-bank?bank=bank&item=item&version=version");
+    expect(link.readOnly).toBe(true); expect(link.value).toBe(`${window.location.origin}/question-bank?bank=bank&item=item&version=version`);
     const writeText = vi.fn().mockRejectedValueOnce(new Error("clipboard denied"));
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     await click("复制本题审核链接"); expect(writeText).toHaveBeenCalledWith(link.value);

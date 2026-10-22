@@ -193,6 +193,12 @@ func (r *Registry) ObserveRequest(method string, route string, status int, durat
 }
 
 func (r *Registry) observeRequest(method string, route string, status int, duration time.Duration, errorCode string, outcome string) {
+	// 方法由客户端提供；未知方法收敛为固定标签，不能让任意输入永久增加指标序列。
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodConnect, http.MethodOptions, http.MethodTrace:
+	default:
+		method = "other"
+	}
 	if route == "" {
 		route = "unmatched"
 	}
@@ -228,9 +234,7 @@ func (r *Registry) Middleware() func(http.Handler) http.Handler {
 			recorder := &responseRecorder{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(recorder, req)
 			route := req.Pattern
-			if route == "" {
-				route = req.URL.Path
-			}
+			// CORS/CSRF 等可能在匹配路由前结束请求；空 Pattern 统一为 unmatched，不能采集原始资源路径。
 			r.observeRequest(req.Method, route, recorder.status, time.Since(started), recorder.Header().Get("X-EduGrade-Error-Code"), recorder.Header().Get("X-EduGrade-Operation-Outcome"))
 		})
 	}

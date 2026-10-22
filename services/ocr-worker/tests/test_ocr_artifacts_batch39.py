@@ -87,7 +87,7 @@ def test_roi_engine_selection_and_input_hash_preserve_repeated_page_order():
 
 
 @pytest.mark.parametrize("failure", ["authentication", "download", "page_metadata"])
-def test_paper_original_entry_keeps_authentication_and_terminal_failure_boundaries(failure):
+def test_paper_original_entry_keeps_authentication_and_classified_retry_boundaries(failure):
     api, task = _paper_api()
     error = AuthenticationError("expired") if failure == "authentication" else APIError("download failed")
     if failure == "page_metadata":
@@ -106,8 +106,8 @@ def test_paper_original_entry_keeps_authentication_and_terminal_failure_boundari
         assert api.paper_failed == []
     else:
         assert runner.process_once() == 1
-        code = "invalid_paper_ocr_page" if failure == "page_metadata" else "download failed"
-        assert api.paper_failed == [("import-1", code, False)]
+        code = "invalid_paper_ocr_page" if failure == "page_metadata" else "paper_ocr_download_failed"
+        assert api.paper_failed == [("import-1", code, failure == "download")]
 
     assert api.download.call_count == (0 if failure == "page_metadata" else 1)
     engine.recognize.assert_not_called()

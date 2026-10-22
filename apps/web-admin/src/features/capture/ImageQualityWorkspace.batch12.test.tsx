@@ -170,10 +170,21 @@ describe("图像质量工作区展示职责回归", () => {
     expect(host.querySelectorAll(".quality-dimension-row")).toHaveLength(7);
     expect(host.textContent).toContain("文件可解码通过"); expect(host.textContent).toContain("gate-1待模板阶段评估");
     expect(host.textContent).toContain("局部坏块 0%"); expect(host.textContent).toContain("有效短边 124 px");
-    const structured = process.env.IMAGE_QUALITY_BATCH12_MODE === "baseline" ? ["观测值：[object Object]", "观测值：0,[object Object]"] : ['观测值：{"x":1}', '观测值：[0,{"x":1}]'];
     expect([...host.querySelectorAll(".quality-issue-list small")].map((item) => item.textContent)).toEqual([
-      "已触发质量门禁", "观测值：null", "观测值：false", "观测值：0", "观测值：原值", "观测值：1.235", "观测值：NaN", "观测值：Infinity", ...structured,
+      "请查看原图和检测详情", "实测 null", "实测 false", "实测 0", "实测 原值", "实测 1.235", "实测 NaN", "实测 Infinity", '实测 {"x":1}', '实测 [0,{"x":1}]',
     ]);
+  });
+
+  it("先显示失败原因和阈值，文件内第1页不冒充真实答题卡页码", async () => {
+    mocks.runs.mockResolvedValue({ runs: [run("r1", {}, [{ code: "low_effective_resolution", severity: "failed", action: "recapture", observed: 900, threshold: 1200 }])] });
+    await render([page(), page("p2", { sequence_no: 2, assigned_page_no: 2, page_identity: { quality_status: "passed", page_no_source: "visual_template_match", matched_page_no: 2 } })]);
+    const rows = [...host.querySelectorAll(".image-quality-page-row")];
+    expect(rows[0].textContent).toContain("扫描页 1");
+    expect(rows[0].textContent).toContain("答题卡页码待匹配");
+    expect(rows[1].textContent).toContain("答题卡第 2 页");
+    const issues = host.querySelector(".quality-issue-list")!;
+    expect(issues.textContent).toContain("实测 900；规则阈值 1200；请重新扫描或上传更清晰的原图");
+    expect(issues.compareDocumentPosition(host.querySelector(".quality-dimensions")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("重检成功后加载所选页和刷新批次，人工放行接收原页面", async () => {

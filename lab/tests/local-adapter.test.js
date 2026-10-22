@@ -145,3 +145,23 @@ test("student feedback language is owned by code", async () => {
   assert.doesNotMatch(output.student_feedback, /none/);
   assert.match(output.student_feedback, /uses equation/);
 });
+
+test("strict aliases preserve negative signs and always keep human review", async () => {
+  const input = baseInput({ synthetic: true, answer_text: "v=3 m/s", prompt_version: "prompt-local-structured-v2" });
+  input.rubric.points[0] = { ...input.rubric.points[0], match_policy: "strict_alias", aliases: ["v=-3 m/s"] };
+  const raw = successfulRawOutput({
+    matched_points: [{ rubric_point_id: "p1", score: 1, evidence_ids: ["ev-p1"] }],
+    missing_points: [{ rubric_point_id: "p2", reason: "not present" }],
+    evidence: [{ evidence_id: "ev-p1", rubric_point_id: "p1", text_excerpt: "v=-3 m/s", location: "answer_text", confidence: 0.9 }],
+  });
+  const adapter = new LocalModelAdapter({ maxRetries: 0, fetchImpl: async () => responseWith(raw) });
+  const rejected = await adapter.grade(input);
+  assert.equal(rejected.suggested_score, 0);
+  assert.deepEqual(rejected.matched_points, []);
+  assert.deepEqual(rejected.evidence, []);
+  assert.equal(rejected.needs_human_review, true);
+
+  const accepted = await adapter.grade({ ...input, answer_text: "Ｖ＝－３ ｍ／ｓ" });
+  assert.equal(accepted.suggested_score, 1);
+  assert.equal(accepted.needs_human_review, true);
+});

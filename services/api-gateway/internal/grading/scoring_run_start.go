@@ -18,6 +18,7 @@ type scoringRunSegment struct {
 	referenceAssetID, referenceHash, referenceContentType                                                                           string
 	area, answerPayload, templateLayout                                                                                             []byte
 	answerConfidence                                                                                                                sql.NullFloat64
+	inputVersionID, planItemID, snapshotID                                                                                          string
 }
 
 type scoringStartReviewTask struct {
@@ -78,6 +79,21 @@ func (s *PostgresStore) startScoringRun(ctx context.Context, tenantID, examID, a
 	if err = validateNewScoringRunTx(ctx, tx, tenantID, examID, segmentID); err != nil {
 		return ScoringRun{}, err
 	}
+	if err = validateGradingAIPlanForStartTx(ctx, tx, tenantID, examID, segmentID); err != nil {
+		return ScoringRun{}, err
+	}
+	if input.ExpectedPlanHash != "" {
+		hash, hashErr := scoringPlanHash(ctx, tx, tenantID, examID)
+		if hashErr != nil {
+			return ScoringRun{}, hashErr
+		}
+		if hash != input.ExpectedPlanHash {
+			return ScoringRun{}, ErrScoringPlanChanged
+		}
+	}
+	if err = paper.RepairConfirmedObjectiveRulesInTx(ctx, tx, tenantID, examID, actorID); err != nil {
+		return ScoringRun{}, err
+	}
 	var runID string
 	err = tx.QueryRowContext(ctx, `
 INSERT INTO scoring_run (tenant_id, exam_id, idempotency_key, status, started_by, started_at, command_request_hash)
@@ -90,10 +106,17 @@ RETURNING id::text`, tenantID, examID, input.IdempotencyKey, actorID, requestHas
 	if err != nil {
 		return ScoringRun{}, err
 	}
+	if err = freezeScoringRunRulesTx(ctx, tx, tenantID, examID, runID); err != nil {
+		return ScoringRun{}, err
+	}
 	if err = invalidateScoringSegmentCurrentTx(ctx, tx, tenantID, segmentID); err != nil {
 		return ScoringRun{}, err
 	}
 	segments, err := loadScoringRunSegmentsTx(ctx, tx, tenantID, examID, segmentID)
+	if err != nil {
+		return ScoringRun{}, err
+	}
+	segments, err = prepareScoringPlanTx(ctx, tx, tenantID, runID, segments)
 	if err != nil {
 		return ScoringRun{}, err
 	}
@@ -234,7 +257,7 @@ func loadScoringRunSegmentsTx(ctx context.Context, tx *sql.Tx, tenantID, examID,
 	rows, err := tx.QueryContext(ctx, `
  SELECT seg.id::text, seg.submission_id::text, q.id::text, q.question_no, q.question_type,
    seg.crop_file_asset_id::text, seg.crop_sha256, seg.template_id::text, seg.template_content_hash,
-   q.answer_area, COALESCE(NULLIF(sub.candidate_no,''), seg.id::text), fa.content_type,
+   COALESCE(q.answer_area,'{}'::jsonb) || jsonb_build_object('answer_scope',COALESCE(seg.normalized_bbox->>'answer_scope','question')), COALESCE(NULLIF(sub.candidate_no,''), sub.id::text), fa.content_type,
    COALESCE(sr.id::text,''), COALESCE(ans.id::text,''), COALESCE(ans.answer_text,''),
    COALESCE(ans.answer_payload,'{}'::jsonb), COALESCE(ans.source,''), ans.confidence::float8,
    COALESCE(ast.status,''), COALESCE(ast.content_hash,''), COALESCE(ast.layout,'{}'::jsonb),
@@ -389,19 +412,37 @@ func (s *PostgresStore) createScoringSegmentTasksTx(ctx context.Context, tx *sql
 	}
 	options, _ := area["option_regions"].([]any)
 	options = cropRelativeOptionRegions(area, options)
-	route := routeScoringSegmentForMode(segment.kind, segment.scoringMode, segment.ruleID != "", segment.answerID != "", len(options))
+	answerScope, _ := area["answer_scope"].(string)
+	route := routeScoringSegmentForScope(segment.kind, segment.scoringMode, answerScope, segment.ruleID != "", segment.answerID != "", len(options))
+	if _, err := tx.ExecContext(ctx, `UPDATE scoring_run_item SET route=$3,stage='score',processing_status='waiting_dependency',updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, segment.planItemID, route.Kind); err != nil {
+		return 0, 0, err
+	}
+	if route.Kind == scoringRouteObserveRule || route.Kind == scoringRouteImageAI {
+		if err := queueScoringObservationTx(ctx, tx, tenantID, runID, actorID, segment, route.Kind); err != nil {
+			return 0, 0, err
+		}
+		return 1, 0, nil
+	}
 	if route.Kind == scoringRouteRuleInput {
 		created, err := insertRuleScoringInputTx(ctx, tx, tenantID, examID, runID, actorID, segment)
 		if err != nil {
 			return 0, 0, err
 		}
-		return 0, created, nil
+		lowConfidence := segment.answerSource != "manual_entry" && segment.answerSource != "imported_answer" && (!segment.answerConfidence.Valid || segment.answerConfidence.Float64 < 0.9)
+		_, err = tx.ExecContext(ctx, `UPDATE scoring_run_item SET recognition_completed=true,stage=CASE WHEN $3 THEN 'done' ELSE 'score' END,processing_status=CASE WHEN $3 THEN 'succeeded' ELSE 'waiting_dependency' END,decision_status=CASE WHEN $3 THEN 'review_needed' ELSE 'undecided' END,reason_code=CASE WHEN $3 THEN 'answer_low_confidence' ELSE '' END,next_action=CASE WHEN $3 THEN 'teacher_review' ELSE 'wait' END WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, segment.planItemID, lowConfidence)
+		return 0, created, err
 	}
 	if route.Kind == scoringRouteOMR {
 		if err := s.queueScoringOMRTx(ctx, tx, tenantID, examID, runID, actorID, scoringOMRSegment{segment: segment, options: options}); err != nil {
 			return 0, 0, err
 		}
+		if _, err := tx.ExecContext(ctx, `UPDATE scoring_run_item item SET stage='observe',processing_status='queued',runtime_task_id=o.runtime_task_id FROM omr_run o WHERE item.tenant_id=$1::uuid AND item.id=$2::uuid AND o.tenant_id=item.tenant_id AND o.scoring_run_id=item.scoring_run_id AND o.answer_segment_id=item.answer_segment_id`, tenantID, segment.planItemID); err != nil {
+			return 0, 0, err
+		}
 		return 1, 0, nil
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE scoring_run_item SET stage='done',processing_status='succeeded',decision_status='manual_only',reason_code=$3,next_action='teacher_review' WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, segment.planItemID, route.Reason); err != nil {
+		return 0, 0, err
 	}
 	if segment.scoringMode == "DUAL_HUMAN" {
 		if err := insertScoringDualMarkTx(ctx, tx, tenantID, examID, runID, actorID, task); err != nil {
@@ -440,7 +481,7 @@ func insertRuleScoringInputTx(ctx context.Context, tx *sql.Tx, tenantID, examID,
 	if _, err := tx.ExecContext(ctx, `UPDATE answer_candidate SET is_current=false WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND is_current`, tenantID, segment.id); err != nil {
 		return 0, err
 	}
-	_, err := tx.ExecContext(ctx, `INSERT INTO answer_candidate(tenant_id,answer_segment_id,scoring_run_id,exam_question_snapshot_id,source,payload,display_text,confidence,decision,evidence,engine_version,profile_version,input_hash,is_current,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,(SELECT eqs.id FROM answer_segment snapshot_seg JOIN question snapshot_q ON snapshot_q.tenant_id=snapshot_seg.tenant_id AND snapshot_q.id=snapshot_seg.question_id JOIN exam_question_snapshot eqs ON eqs.tenant_id=snapshot_q.tenant_id AND eqs.exam_id=snapshot_q.exam_id AND eqs.question_id=snapshot_q.id WHERE snapshot_seg.tenant_id=$1::uuid AND snapshot_seg.id=$2::uuid),$4,$5::jsonb,$6,NULLIF($7,0),$8,jsonb_build_object('answer_segment_answer_id',$9::text),'rule-input-v1','rule-input-v1',$10,true,$11::uuid)`, tenantID, segment.id, runID, source, segment.answerPayload, segment.answerText, confidence, decision, segment.answerID, "sha256:"+strings.ReplaceAll(segment.answerID, "-", ""), actorID)
+	_, err := tx.ExecContext(ctx, `INSERT INTO answer_candidate(tenant_id,answer_segment_id,scoring_run_id,exam_question_snapshot_id,input_version_id,source,payload,display_text,confidence,decision,evidence,engine_version,profile_version,input_hash,is_current,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$12::uuid,$13::uuid,$4,$5::jsonb,$6,NULLIF($7,0),$8,jsonb_build_object('answer_segment_answer_id',$9::text),'rule-input-v1','rule-input-v1',$10,true,$11::uuid)`, tenantID, segment.id, runID, source, segment.answerPayload, segment.answerText, confidence, decision, segment.answerID, "sha256:"+strings.ReplaceAll(segment.answerID, "-", ""), actorID, segment.snapshotID, segment.inputVersionID)
 	if err != nil {
 		return 0, err
 	}
@@ -538,6 +579,10 @@ ON CONFLICT (tenant_id,task_type,idempotency_key) DO UPDATE SET idempotency_key=
 }
 
 func cropRelativeOptionRegions(area map[string]any, options []any) []any {
+	// 题区内的坐标有时恰好也落在页面题区范围；显式标记优先，避免旧启发式再次转换。
+	if area["option_coordinate_space"] == "question_relative" {
+		return options
+	}
 	areaX, xOK := area["x"].(float64)
 	areaY, yOK := area["y"].(float64)
 	areaWidth, widthOK := area["width"].(float64)

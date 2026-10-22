@@ -1,10 +1,11 @@
-import { useState, type CSSProperties, type RefObject } from "react";
+import { useState, type CSSProperties, type RefObject, type UIEventHandler, type WheelEventHandler } from "react";
 import { Button, Tooltip } from "antd";
 import { Bot, Check, ChevronDown, Copy, FileText, MessageSquareText, Plus, RotateCcw, Trash2 } from "lucide-react";
 import type { SessionUser } from "../../auth/session";
 import type { SchoolChatMessage, SchoolChatModel } from "../../api/schoolAiChat";
 import { MathMarkdown } from "../../components/MathMarkdown";
 import { ConversationEvidenceView } from "./ConversationEvidenceView";
+import { canPreviewConversationImage, ConversationImage } from "./ConversationImage";
 import type { ConversationEvidence } from "./conversationState";
 import type { ConversationThread } from "./conversationStorage";
 import type { PendingConversation } from "./conversationPresentation";
@@ -13,10 +14,11 @@ interface ReasoningProps {
   content: string;
   defaultExpanded?: boolean;
   onToggle?: (expanded: boolean) => void;
+  streaming?: boolean;
 }
 
 // 组件在模块级定义，增量刷新不会因组件类型变化重建 Markdown 或展开状态。
-function ReasoningDisclosure({ content, defaultExpanded = false, onToggle }: Readonly<ReasoningProps>) {
+function ReasoningDisclosure({ content, defaultExpanded = false, onToggle, streaming = false }: Readonly<ReasoningProps>) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   return <div className={`school-chat-reasoning ${expanded ? "is-expanded" : ""}`}>
     <button type="button" className="school-chat-reasoning-toggle" aria-expanded={expanded} onClick={() => {
@@ -24,7 +26,7 @@ function ReasoningDisclosure({ content, defaultExpanded = false, onToggle }: Rea
       onToggle?.(next);
       setExpanded(next);
     }}><span>思考过程</span><span className="school-chat-reasoning-control">{expanded ? "收起" : "展开"}<ChevronDown size={14} /></span></button>
-    {expanded ? <div className="school-chat-reasoning-content"><MathMarkdown promoteInlineMath={false}>{content}</MathMarkdown></div> : null}
+    {expanded ? <div className="school-chat-reasoning-content"><MathMarkdown promoteInlineMath={false} streaming={streaming}>{content}</MathMarkdown></div> : null}
   </div>;
 }
 
@@ -40,7 +42,6 @@ interface HistoryProps {
 export function ConversationHistory({ threads, activeId, pending, onNew, onSelect, onDelete }: Readonly<HistoryProps>) {
   return <>
     <div className="school-chat-history-head"><span>对话历史</span></div>
-    <p className="school-conversation-history-note">查询学校数据的对话仅在本次页面保留。</p>
     <Button className="school-chat-new" icon={<Plus size={17} />} onClick={onNew}>开启新对话</Button>
     <div className="school-chat-thread-list">
       {threads.length === 0 ? <p className="school-chat-history-empty">还没有对话记录</p> : threads.map((thread) => <div className={`school-chat-thread ${activeId === thread.id ? "is-active" : ""}`} key={thread.id}>
@@ -65,17 +66,20 @@ interface MessagesProps {
   reasoningExpanded: boolean;
   copiedMessage: string;
   onCopy: (content: string, key: string) => Promise<void>;
+  onReasoningToggle?: (expanded: boolean) => void;
 }
 
-export function ConversationMessages({ thread, evidence, user, onNavigate, reasoningExpanded, copiedMessage, onCopy }: Readonly<MessagesProps>) {
+export function ConversationMessages({ thread, evidence, user, onNavigate, reasoningExpanded, copiedMessage, onCopy, onReasoningToggle }: Readonly<MessagesProps>) {
   return <>{thread.messages.map((message, index) => {
     const messageKey = `${thread.id}-${index}`;
     return <article className={`school-chat-message is-${message.role}`} key={messageKey}>
       {message.role === "assistant" ? <div className="school-chat-avatar"><Bot size={18} /></div> : null}
       <div className="school-chat-message-body">
         {message.role === "assistant" ? <ConversationEvidenceView evidence={evidence.get(message)} user={user} onNavigate={onNavigate} /> : null}
-        {message.attachments?.length ? <div className="school-chat-message-files">{message.attachments.map((attachment) => <span key={`${messageKey}-${attachment.name}`}><FileText size={14} />{attachment.name}</span>)}</div> : null}
-        {message.role === "assistant" && message.reasoning_content ? <ReasoningDisclosure content={message.reasoning_content} defaultExpanded={index === thread.messages.length - 1 && reasoningExpanded} /> : null}
+        {message.attachments?.length ? <div className="school-chat-message-files">{message.attachments.map((attachment, attachmentIndex) => canPreviewConversationImage(attachment)
+          ? <ConversationImage attachment={attachment} key={`${messageKey}-${attachmentIndex}`} />
+          : <span title={attachment.name} key={`${messageKey}-${attachmentIndex}`}><FileText size={14} />{attachment.name}</span>)}</div> : null}
+        {message.role === "assistant" && message.reasoning_content ? <ReasoningDisclosure content={message.reasoning_content} defaultExpanded={index === thread.messages.length - 1 && reasoningExpanded} onToggle={index === thread.messages.length - 1 ? onReasoningToggle : undefined} /> : null}
         <MessageContent message={message} />
         {message.role === "assistant" && message.content ? <div className="school-chat-message-actions"><Button type="text" size="small" icon={copiedMessage === messageKey ? <Check size={14} /> : <Copy size={14} />} onClick={() => void onCopy(message.content, messageKey)}>{copiedMessage === messageKey ? "已复制" : "复制"}</Button></div> : null}
       </div>
@@ -102,8 +106,8 @@ export function PendingConversationView({ pending, user, onReasoningToggle }: Re
     <output className={thinking ? "school-chat-thinking" : undefined} style={thinking ? undefined : hiddenStatusStyle}>
       {thinking ? <>思考中<span aria-hidden="true"><i /><i /><i /></span></> : "正在回复"}
     </output>
-    {pending.reasoning ? <ReasoningDisclosure content={pending.reasoning} onToggle={onReasoningToggle} /> : null}
-    {pending.content ? <MathMarkdown promoteInlineMath={false}>{pending.content}</MathMarkdown> : null}
+    {pending.reasoning ? <ReasoningDisclosure content={pending.reasoning} onToggle={onReasoningToggle} streaming /> : null}
+    {pending.content ? <MathMarkdown promoteInlineMath={false} streaming>{pending.content}</MathMarkdown> : null}
   </div></div>;
 }
 
@@ -124,11 +128,13 @@ interface FlowProps {
   modelError: string;
   model: SchoolChatModel | null;
   onSuggestion: (question: string) => void;
-  scrollEndRef: RefObject<HTMLDivElement | null>;
+  scrollRef?: RefObject<HTMLDivElement | null>;
+  onScroll?: UIEventHandler<HTMLDivElement>;
+  onWheel?: WheelEventHandler<HTMLDivElement>;
 }
 
-export function ConversationFlow({ thread, pending, evidence, failedEvidence, sendError, user, onNavigate, reasoningExpanded, onReasoningToggle, copiedMessage, onCopy, retryDisabled, onRetry, modelError, model, onSuggestion, scrollEndRef }: Readonly<FlowProps>) {
-  return <div className={`school-chat-flow ${!thread ? "is-empty" : ""}`} aria-live="polite">
+export function ConversationFlow({ thread, pending, evidence, failedEvidence, sendError, user, onNavigate, reasoningExpanded, onReasoningToggle, copiedMessage, onCopy, retryDisabled, onRetry, modelError, model, onSuggestion, scrollRef, onScroll, onWheel }: Readonly<FlowProps>) {
+  return <div ref={scrollRef} className={`school-chat-flow ${!thread ? "is-empty" : ""}`} aria-live="polite" onScroll={onScroll} onWheel={onWheel}>
     {!thread ? <div className="school-chat-welcome">
       <div className="school-chat-welcome-mark"><Bot size={30} strokeWidth={1.6} /></div>
       <h1>有什么可以帮你？</h1>
@@ -137,10 +143,9 @@ export function ConversationFlow({ thread, pending, evidence, failedEvidence, se
       {modelError || (model && !model.available) ? <div className="school-chat-notice" role="alert">{modelError || model?.message}</div> : null}
     </div> : <div className="school-chat-messages">
       <ConversationMessages thread={thread} evidence={evidence} user={user} onNavigate={onNavigate}
-        reasoningExpanded={reasoningExpanded} copiedMessage={copiedMessage} onCopy={onCopy} />
+        reasoningExpanded={reasoningExpanded} copiedMessage={copiedMessage} onCopy={onCopy} onReasoningToggle={onReasoningToggle} />
       {pending ? <PendingConversationView pending={pending} user={user} onReasoningToggle={onReasoningToggle} /> : null}
       {sendError ? <div className="school-conversation-failure"><ConversationEvidenceView evidence={failedEvidence} user={user} allowActions={false} /><div className="school-chat-send-error" role="alert"><span>{sendError}</span><Button type="link" size="small" icon={<RotateCcw size={14} />} disabled={retryDisabled} onClick={onRetry}>重试</Button></div></div> : null}
-      <div ref={scrollEndRef} />
     </div>}
   </div>;
 }

@@ -1,0 +1,8 @@
+.route-content { position: relative; min-width: 0; }
+.route-content-stage { min-width: 0; }
+/* 候选页保留正常宽度供图表测量；隐藏并裁切，避免加载内容撑高旧页或接收输入。 */
+.route-content-stage-pending { position: absolute; inset: 0; visibility: hidden; overflow: hidden; pointer-events: none; }
+/* 沉浸阅卷依赖父容器高度；新增路由边界也必须把这条高度链传给工作台。 */
+.immersive-workspace > .route-content, .immersive-workspace .route-content-stage { height: 100%; min-height: 0; }
+/* 导航提示不撑高工作区；保留的上一页原样可见，等待期间由 inert 阻止误操作。 */
+.route-content-progress { position: absolute; top: 8px; right: 8px; z-index: 8; display: block; max-width: calc(100% - 16px); padding: 6px 12px; border: 1px solid #dce5f0; border-radius: 6px; background: #f4f8ff; color: #3168b2; box-shadow: 0 2px 8px rgba(30, 60, 100, .06); font-size: 12px; line-height: 1.6; pointer-events: none; }

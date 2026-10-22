@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PaperVersion } from "../../../api/papers";
-import { answerSource, answerTemplate } from "../testing/answerSheetFixtures";
+import { answerQuestion, answerSource, answerTemplate } from "../testing/answerSheetFixtures";
 import { TemplateToolbar } from "../view/TemplateWorkspaceView";
 import type { TemplatePageViewState } from "../view/templateViewTypes";
 import { useTemplatePreview } from "./useTemplatePreview";
@@ -14,10 +14,13 @@ vi.mock("../../../api/files", () => ({ downloadFileBlob: mocks.download }));
 vi.mock("../../../api/client", () => ({ getUserErrorMessage: (_error: unknown, fallback: string) => fallback }));
 vi.mock("pdfjs-dist", () => ({ GlobalWorkerOptions: {}, getDocument: mocks.getDocument }));
 vi.mock("pdfjs-dist/build/pdf.worker.min.mjs?url", () => ({ default: "mock-worker.js" }));
-vi.mock("antd", () => {
+vi.mock("antd", async () => {
+  const { MockTemplateSourceDropdown, MockTemplatePopover } = await import("../testing/MockTemplateSourceDropdown");
   const Box = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   return {
-    Alert: Box, Input: Box, InputNumber: Box, List: Box, Progress: Box, Space: Box, Spin: Box, Upload: Box,
+    App: { useApp: () => ({ modal: { confirm: vi.fn() } }) },
+    Alert: Box, Dropdown: { Button: MockTemplateSourceDropdown }, Input: Box, InputNumber: Box, List: Box, Progress: Box, Space: Box, Spin: Box, Tag: Box, Upload: Box,
+    Popover: MockTemplatePopover,
     Button: ({ children, disabled, onClick }: { children: ReactNode; disabled?: boolean; onClick?: () => void }) => <button disabled={disabled} onClick={onClick}>{children}</button>,
     Select: () => null
   };
@@ -52,8 +55,10 @@ describe("R15 answer-sheet source preview and real toolbar", () => {
     current = useTemplatePreview(paper);
     const view = {
       papers: paper ? [paper] : [], templates: [answerTemplate], selectedPaperId: paper?.id ?? "", selectedTemplateId: answerTemplate.id,
-      selectedTemplate: answerTemplate, canManage: true, canEditSources: true, questions: [], sourceUpload: { uploading: false }, uploadProps: { disabled: false },
-      editor: { saving: false, suggestingRegions: false, readonly: false, suggestQuestionRegions: mocks.suggest }, binding: {}, previewController: current
+      selectedTemplate: answerTemplate, canManage: true, canEditSources: true, questions: [answerQuestion], sourceUpload: { uploading: false }, uploadProps: { disabled: false },
+      editor: { saving: false, suggestingRegions: false, readonly: false, coveredQuestions: new Set([answerQuestion.id]), suggestQuestionRegions: mocks.suggest,
+        revision: answerTemplate.revision, layout: answerTemplate.layout, unassignedRegions: new Map(), discardSuggestedRegion: vi.fn() },
+      binding: { bindingBusy: false }, printing: { printBusy: false }, previewController: current
     } as unknown as TemplatePageViewState;
     return <TemplateToolbar view={view} />;
   }
@@ -74,7 +79,7 @@ describe("R15 answer-sheet source preview and real toolbar", () => {
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
   async function render(paper?: PaperVersion) { await act(async () => { root.render(<Probe paper={paper} />); }); }
-  const candidateButton = () => [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("按题号生成候选区域"));
+  const candidateButton = () => [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "识别区域");
 
   it("checks every PDF page and enables question-number assistance when the cover has no text", async () => {
     const document = pdf([[], [{ str: "2. 请作答" }], []]); mocks.getDocument.mockReturnValue({ promise: Promise.resolve(document.document) });
@@ -82,36 +87,38 @@ describe("R15 answer-sheet source preview and real toolbar", () => {
     expect(current.preview).toMatchObject({ pageCount: 3, textLayerAvailable: true, textLayerChecking: false });
     for (const page of document.pages) expect(page.getTextContent).toHaveBeenCalledOnce();
     expect(candidateButton()?.disabled).toBe(false);
+		expect(mocks.suggest).not.toHaveBeenCalled();
     await act(async () => candidateButton()!.click()); expect(mocks.suggest).toHaveBeenCalledOnce();
     expect(host.textContent).not.toContain("图片及扫描件需手动设置区域");
   });
 
-  it("offers manual region selection for a multi-page scanned PDF with no readable text", async () => {
+  it("offers whole-document recognition for a scanned PDF without readable text", async () => {
     const document = pdf([[], [{ str: "   " }, { type: "marked-content" }]]); mocks.getDocument.mockReturnValue({ promise: Promise.resolve(document.document) });
     await render(source("scanned"));
     expect(current.preview).toMatchObject({ pageCount: 2, textLayerAvailable: false, textLayerChecking: false });
-    expect(candidateButton()).toBeUndefined();
-    expect(host.textContent).toContain("请选题后拖拽框选；图片及扫描件需手动设置区域");
+    expect(candidateButton()?.disabled).toBe(false);
+    expect(host.textContent).not.toContain("按印刷边框与题号定位");
+    await act(async () => candidateButton()!.click()); expect(mocks.suggest).toHaveBeenCalledOnce();
     expect(host.textContent).not.toContain("OCR");
   });
 
-  it("offers manual region selection for an image and keeps its real dimensions", async () => {
+  it("offers recognition for a handwritten image and keeps its real dimensions", async () => {
     mocks.download.mockResolvedValue(download("image/png")); await render(source("image", "image/png"));
     expect(current.preview).toMatchObject({ width: 1000, height: 2000, pageCount: 1, textLayerAvailable: false, textLayerChecking: false });
-    expect(mocks.getDocument).not.toHaveBeenCalled(); expect(candidateButton()).toBeUndefined();
-    expect(host.textContent).toContain("图片及扫描件需手动设置区域");
+    expect(mocks.getDocument).not.toHaveBeenCalled(); expect(candidateButton()?.disabled).toBe(false);
+    expect(host.textContent).not.toContain("已填写答题卡");
   });
 
   it("shows checking feedback and ignores old text-layer results after switching to an image", async () => {
     const waiting = deferred<{ items: unknown[] }>(); const old = pdf([waiting.promise]);
     mocks.getDocument.mockReturnValue({ promise: Promise.resolve(old.document) }); await render(source("checking"));
-    expect(current.preview.textLayerChecking).toBe(true); expect(host.textContent).toContain("正在检查文件文字层");
-    expect(candidateButton()).toBeUndefined();
+    expect(current.preview.textLayerChecking).toBe(true);
+    expect(candidateButton()?.disabled).toBe(false);
     mocks.download.mockResolvedValue(download("image/png")); await render(source("replacement", "image/png"));
     const imageUrl = current.preview.imageUrl;
     await act(async () => waiting.resolve({ items: [{ str: "旧答题卡第1题" }] }));
     expect(current.preview).toMatchObject({ imageUrl, width: 1000, height: 2000, textLayerAvailable: false, textLayerChecking: false });
-    expect(candidateButton()).toBeUndefined(); expect(old.destroy).toHaveBeenCalled();
+    expect(candidateButton()?.disabled).toBe(false); expect(old.destroy).toHaveBeenCalled();
   });
 
   it("destroys a PDF parsed after a source switch without replacing the new document", async () => {
@@ -120,7 +127,7 @@ describe("R15 answer-sheet source preview and real toolbar", () => {
     await render(source("old-parse")); await render(source("new-parse"));
     await act(async () => parsing.resolve(old.document));
     expect(old.destroy).toHaveBeenCalledOnce(); expect(current.pdfRef.current).toBe(next.document);
-    expect(current.preview.textLayerAvailable).toBe(false); expect(candidateButton()).toBeUndefined();
+    expect(current.preview.textLayerAvailable).toBe(false); expect(candidateButton()?.disabled).toBe(false);
   });
 
   it("ignores a download finishing after a source switch", async () => {
@@ -155,7 +162,7 @@ describe("R15 answer-sheet source preview and real toolbar", () => {
     old.destroy.mockRejectedValueOnce(new Error("obsolete cleanup failure"));
     mocks.download.mockResolvedValue(download("image/png")); await render(source("replacement-image", "image/png"));
     expect(current.preview).toMatchObject({ loading: false, width: 1000, height: 2000, textLayerAvailable: false, textLayerChecking: false });
-    expect(current.preview.error).toBeUndefined(); expect(candidateButton()).toBeUndefined();
-    expect(host.textContent).toContain("图片及扫描件需手动设置区域");
+    expect(current.preview.error).toBeUndefined(); expect(candidateButton()?.disabled).toBe(false);
+    expect(host.textContent).not.toContain("已填写答题卡");
   });
 });

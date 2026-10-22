@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from .errors import AgentError
+from .execution_diagnostics import completed_content, response_diagnostics
 
 DASHSCOPE_TEXT_GENERATION_PATH = "/services/aigc/text-generation/generation"
 DASHSCOPE_MULTIMODAL_GENERATION_PATH = "/services/aigc/multimodal-generation/generation"
@@ -41,9 +42,9 @@ FORBIDDEN_EXPORT_KEYS = frozenset(
 class DashScopeNativeResult:
     output: dict
     request_id: str
-    input_tokens: int
-    output_tokens: int
-    total_tokens: int
+    input_tokens: int | None
+    output_tokens: int | None
+    total_tokens: int | None
 
 
 @dataclass(frozen=True)
@@ -282,48 +283,16 @@ def build_dashscope_multimodal_grading_payload(
 def _dashscope_response_facts(response):
     """Read the common non-streaming response envelope."""
 
-    if not isinstance(response, Mapping):
-        raise AgentError("model_output_invalid", "provider response was not an object", status=502)
+    facts = response_diagnostics(response, None)
+    request_id = response.get("request_id", "") if isinstance(response, Mapping) else ""
     try:
-        request_id = _bounded_identifier(response["request_id"], _REQUEST_ID, "request_id")
-        choice = response["output"]["choices"][0]
-        finish_reason = choice["finish_reason"]
-        role = choice["message"]["role"]
-        content = choice["message"]["content"]
-        usage = response["usage"]
-        input_tokens = usage["input_tokens"]
-        output_tokens = usage["output_tokens"]
-        total_tokens = usage["total_tokens"]
-    except (KeyError, IndexError, TypeError, ValueError) as exc:
-        raise AgentError(
-            "model_output_invalid",
-            "provider response omitted required structured facts",
-            status=502,
-        ) from exc
-    if role != "assistant":
-        raise AgentError(
-            "model_output_invalid",
-            "provider response role was invalid",
-            status=502,
-            request_id=request_id,
-        )
-    # 截断或异常结束的内容即使能解成 JSON，也不能当作一次完整的候选响应。
-    if finish_reason != "stop":
-        raise AgentError(
-            "model_output_invalid",
-            "provider response did not complete normally",
-            status=502,
-            request_id=request_id,
-        )
-    token_counts = (input_tokens, output_tokens, total_tokens)
-    if any(isinstance(value, bool) or not isinstance(value, int) or value < 0 for value in token_counts):
-        raise AgentError(
-            "model_output_invalid",
-            "provider response contained invalid usage facts",
-            status=502,
-            request_id=request_id,
-        )
-    return request_id, content, input_tokens, output_tokens, total_tokens
+        if request_id:
+            request_id = _bounded_identifier(request_id, _REQUEST_ID, "request_id")
+    except ValueError:
+        request_id = ""
+    content = completed_content(response, facts, request_id, native=True, native_parts=True)
+    usage = facts.get("usage", {})
+    return request_id, content, usage.get("input_tokens"), usage.get("output_tokens"), usage.get("total_tokens")
 
 
 def _parse_json_content(content, request_id):
@@ -375,26 +344,14 @@ def parse_dashscope_multimodal_response(response):
     """Parse Qwen-VL message content, which is returned as an array of parts."""
 
     request_id, content, input_tokens, output_tokens, total_tokens = _dashscope_response_facts(response)
-    if not isinstance(content, list):
+    if not isinstance(response["output"]["choices"][0]["message"]["content"], list):
         raise AgentError(
             "model_output_invalid",
             "multimodal response content was not an array",
             status=502,
             request_id=request_id,
         )
-    text_parts = [
-        part["text"]
-        for part in content
-        if isinstance(part, Mapping) and set(part) == {"text"} and isinstance(part["text"], str)
-    ]
-    if len(text_parts) != 1 or len(content) != 1:
-        raise AgentError(
-            "model_output_invalid",
-            "multimodal response did not contain exactly one text result",
-            status=502,
-            request_id=request_id,
-        )
-    output = _parse_json_content(text_parts[0], request_id)
+    output = _parse_json_content(content, request_id)
     return _native_result(output, request_id, input_tokens, output_tokens, total_tokens)
 
 

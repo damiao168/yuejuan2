@@ -46,7 +46,7 @@ describe("exam module navigation ownership", () => {
   it.each([
     ["students", "/exams"], ["paper", "/exams"], ["questions", "/exams"],
     ["template", "/exams"], ["settings", "/exams"],
-    ["capture", "/grading"], ["processing", "/grading"], ["grading", "/grading"],
+    ["capture", "/exams"], ["processing", "/exams"], ["grading", "/grading"],
     ["quality", "/arbitration"], ["scores", "/scores"], ["reports", "/reports"], ["appeals", "/appeals"]
   ])("highlights the owning module for %s", (section, expected) => {
     expect(examWorkspaceNavigationPath(section)).toBe(expected);

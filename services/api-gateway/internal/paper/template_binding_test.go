@@ -34,6 +34,13 @@ func TestMemoryExamTemplateBindingKeepsTemplateAndRoutingLifecyclesSeparate(t *t
 	if _, err = store.GetExamTemplateBinding(context.Background(), "tenant-1", "exam-1"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("binding should be absent after unbind, got %v", err)
 	}
+	if _, err = store.BindExamTemplate(context.Background(), "tenant-1", "exam-1", "admin-1", BindExamTemplateInput{TemplateID: "template-1", Mode: "locked_with_guard", ExpectedRevision: binding.Revision}); !errors.Is(err, ErrConflict) {
+		t.Fatalf("old revision must not rebind after unbind, got %v", err)
+	}
+	rebound, err := store.BindExamTemplate(context.Background(), "tenant-1", "exam-1", "admin-1", BindExamTemplateInput{TemplateID: "template-1", Mode: "locked_with_guard", ExpectedRevision: binding.Revision + 1})
+	if err != nil || rebound.Revision != binding.Revision+2 {
+		t.Fatalf("rebind must consume a fresh revision: binding=%#v err=%v", rebound, err)
+	}
 }
 
 func TestMemoryExamTemplateBindingRequiresLockedTemplateAndRevision(t *testing.T) {

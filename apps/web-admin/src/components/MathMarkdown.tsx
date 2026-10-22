@@ -25,7 +25,7 @@ function rehypeRestoreMathPipes() {
   };
 }
 
-export const MathMarkdown = memo(function MathMarkdown({ children, className = "", promoteInlineMath = true }: Readonly<{ children: string; className?: string } & MathMarkdownOptions>) {
+export const MathMarkdown = memo(function MathMarkdown({ children, className = "", promoteInlineMath = true, streaming = false }: Readonly<{ children: string; className?: string } & MathMarkdownOptions>) {
   const footnotePrefix = `markdown-${useId().replace(/:/g, "")}-`;
   if (!children.trim()) return null;
 
@@ -47,7 +47,7 @@ export const MathMarkdown = memo(function MathMarkdown({ children, className = "
         }], [rehypeHighlight, { detect: false, plainText: ["text", "txt", "plain", "plaintext", "mermaid"] }]]}
         components={mathMarkdownComponents}
       >
-        {normalizeMathMarkdown(children, { promoteInlineMath })}
+        {normalizeMathMarkdown(children, { promoteInlineMath, streaming })}
       </ReactMarkdown>
     </div>
     </MarkdownFootnoteContext>

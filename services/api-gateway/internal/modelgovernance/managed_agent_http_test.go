@@ -233,6 +233,9 @@ func writeAgentFinalStream(t *testing.T, adapter string, w http.ResponseWriter, 
 	if string(parameters["tool_choice"]) != `"none"` || len(parameters["tools"]) == 0 {
 		t.Error("final answer did not disable native tools")
 	}
+	if len(parameters["thinking"]) > 0 || len(parameters["enable_thinking"]) > 0 {
+		t.Error("final stream overrode the provider's default thinking mode")
+	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	if adapter == "dashscope_native" {
 		_, _ = io.WriteString(w, "data: {\"output\":{\"choices\":[{\"message\":{\"reasoning_content\":\"整理事实\"},\"finish_reason\":\"null\"}]}}\n\n")
@@ -247,14 +250,18 @@ func writeAgentFinalStream(t *testing.T, adapter string, w http.ResponseWriter, 
 }
 
 // 最终回答阶段关闭原生工具调用，分别验证两种协议的增量事件和完整用量。
-func exerciseAgentFinalStream(t *testing.T, adapter string) {
+func exerciseAgentFinalStream(t *testing.T, test agentThinkingTestCase) {
 	t.Helper()
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writeAgentFinalStream(t, adapter, w, r)
+		writeAgentFinalStream(t, test.adapter, w, r)
 	}))
 	defer server.Close()
+	connection := agentTestConnection(server, test.adapter)
+	if test.provider != "" {
+		connection.Config.ProviderKey, connection.Config.ModelName = test.provider, test.model
+	}
 	var events []AgentEvent
-	response, err := agentTestModel(t, server).Stream(context.Background(), agentTestConnection(server, adapter), AgentRequest{Messages: []AgentMessage{{Role: "user", Content: "解释进度"}}, Tools: []AgentTool{agentTestTool()}, ToolChoice: "none"}, func(event AgentEvent) error {
+	response, err := agentTestModel(t, server).Stream(context.Background(), connection, AgentRequest{Messages: []AgentMessage{{Role: "user", Content: "解释进度"}}, Tools: []AgentTool{agentTestTool()}, ToolChoice: "none"}, func(event AgentEvent) error {
 		events = append(events, event)
 		return nil
 	})
@@ -270,7 +277,24 @@ func exerciseAgentFinalStream(t *testing.T, adapter string) {
 func TestHTTPAgentFinalStreamForBothAdapters(t *testing.T) {
 	for _, adapter := range []string{"openai_compatible", "dashscope_native"} {
 		t.Run(adapter, func(t *testing.T) {
-			exerciseAgentFinalStream(t, adapter)
+			exerciseAgentFinalStream(t, agentThinkingTestCase{adapter: adapter})
+		})
+	}
+}
+
+// 最终轮仍携带工具定义并用 none 禁止调用；不能因此沿用非流式规划的关闭思考参数。
+// 本地响应验证供应商实际返回的思考片段能进入增量事件和完整结果，不代表这些模型一定返回思考内容。
+func TestHTTPAgentFinalStreamKeepsDefaultThinkingAndReasoning(t *testing.T) {
+	for _, test := range []agentThinkingTestCase{
+		{name: "deepseek flash", adapter: "openai_compatible", provider: "deepseek", model: "deepseek-flash"},
+		{name: "native qwen hybrid", adapter: "dashscope_native", provider: "aliyun", model: "qwen3-max"},
+		{name: "compatible qwen hybrid", adapter: "openai_compatible", provider: "aliyun", model: "qwen3-max"},
+		{name: "deepseek reasoner", adapter: "openai_compatible", provider: "deepseek", model: "deepseek-reasoner"},
+		{name: "other compatible provider", adapter: "openai_compatible", provider: "other", model: "qwen3-max"},
+		{name: "custom compatible provider", adapter: "openai_compatible", provider: "custom", model: "DeepSeek-V4-Flash"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			exerciseAgentFinalStream(t, test)
 		})
 	}
 }
@@ -415,6 +439,7 @@ func TestHTTPAgentAppliesOnlyKnownThinkingCompatibilityFields(t *testing.T) {
 		{name: "native qwen hybrid", adapter: "dashscope_native", provider: "aliyun", model: "qwen3-max", field: "enable_thinking"},
 		{name: "compatible qwen hybrid", adapter: "openai_compatible", provider: "aliyun", model: "qwen3-max", field: "enable_thinking"},
 		{name: "deepseek hybrid", adapter: "openai_compatible", provider: "deepseek", model: "deepseek-chat", field: "thinking"},
+		{name: "deepseek flash", adapter: "openai_compatible", provider: "deepseek", model: "deepseek-flash", field: "thinking"},
 		{name: "deepseek reasoner", adapter: "openai_compatible", provider: "deepseek", model: "deepseek-reasoner"},
 		{name: "other compatible provider", adapter: "openai_compatible", provider: "other", model: "qwen3-max"},
 	} {

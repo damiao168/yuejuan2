@@ -240,7 +240,8 @@ def intersection_area(left: list[float] | tuple[float, ...], right: list[float] 
 
 
 # 为现有 paper-formula 导入和测试保留兼容别名。新代码
-# 应使用上面的公开名称。
+# 应使用上面的公开名称。_crop_formula 与 _intersection_area 暂未发现仓库内调用，
+# 但它们属于旧版本兼容入口；确认旧调用方迁移后再一起移除，不能只凭本模块未使用就删除。
 _adaptive_crop_formula = adaptive_crop_formula
 _crop_formula = crop_formula
 _merge_formula_boxes = merge_formula_boxes

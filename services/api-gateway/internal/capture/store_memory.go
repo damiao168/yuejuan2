@@ -111,6 +111,10 @@ func (s *MemoryStore) ConfirmStudentMatch(_ context.Context, tenantID, submissio
 	if input.Revision <= 0 || input.StudentID == "" {
 		return MatchingSubmission{}, ErrInvalidInput
 	}
+	// 内存身份记录没有独立租户字段，必须先由已采集页面确认答卷归属，不能凭客户端 ID 新建身份。
+	if !s.ownsSubmissionLocked(tenantID, submissionID) {
+		return MatchingSubmission{}, ErrNotFound
+	}
 	x, ok := s.identities[submissionID]
 	if !ok {
 		x = MatchingSubmission{ID: submissionID, IdentityStatus: "unassigned", IdentityRevision: 1, IdentityEvidence: map[string]any{}}
@@ -132,6 +136,10 @@ func (s *MemoryStore) MarkStudentUnknown(_ context.Context, tenantID, submission
 	if input.Revision <= 0 || strings.TrimSpace(input.Reason) == "" {
 		return MatchingSubmission{}, ErrInvalidInput
 	}
+	// 内存身份记录没有独立租户字段，必须先由已采集页面确认答卷归属，不能凭客户端 ID 新建身份。
+	if !s.ownsSubmissionLocked(tenantID, submissionID) {
+		return MatchingSubmission{}, ErrNotFound
+	}
 	x, ok := s.identities[submissionID]
 	if !ok {
 		x = MatchingSubmission{ID: submissionID, IdentityStatus: "unassigned", IdentityRevision: 1}
@@ -146,6 +154,16 @@ func (s *MemoryStore) MarkStudentUnknown(_ context.Context, tenantID, submission
 	x.IdentityEvidence = map[string]any{"method": "manual_unknown", "actor_id": actorID, "reason": input.Reason}
 	s.identities[submissionID] = x
 	return x, nil
+}
+
+// 调用方持有采集锁；页面在解码时绑定答卷和租户，删除页面仍保留其答卷归属。
+func (s *MemoryStore) ownsSubmissionLocked(tenantID, submissionID string) bool {
+	for _, page := range s.pages {
+		if page.TenantID == tenantID && page.SubmissionID == submissionID {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *MemoryStore) ConfirmPageMatch(_ context.Context, tenantID, pageID, actorID string, input ConfirmPageMatchInput) (Page, error) {
@@ -395,6 +413,10 @@ func (s *MemoryStore) ApplyTemplateMatchFailure(_ context.Context, tenantID, run
 func (s *MemoryStore) ApplyRegistrationResult(_ context.Context, tenantID, runID string, input RegistrationResultInput) (RegistrationRun, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.applyRegistrationResultLocked(tenantID, runID, input)
+}
+
+func (s *MemoryStore) applyRegistrationResultLocked(tenantID, runID string, input RegistrationResultInput) (RegistrationRun, error) {
 	item, ok := s.registrations[runID]
 	if !ok {
 		return RegistrationRun{}, ErrNotFound
@@ -529,11 +551,18 @@ func (s *MemoryStore) RegisterFile(_ context.Context, tenantID, batchID, actorID
 	}
 	for _, x := range s.files {
 		if x.TenantID == tenantID && x.CaptureBatchID == batchID && x.IdempotencyKey == input.IdempotencyKey {
+			if x.FileAssetID != input.FileAssetID || x.UploadGroupID != input.UploadGroupID || x.UploadGroupFileCount != input.UploadGroupFileCount || x.UploadGroupFileIndex != input.UploadGroupFileIndex || x.PagesPerStudent != input.PagesPerStudent {
+				return File{}, ErrConflict
+			}
 			return x, nil
+		}
+		if input.UploadGroupID != "" && x.TenantID == tenantID && x.CaptureBatchID == batchID && x.UploadGroupID == input.UploadGroupID && (x.UploadGroupFileCount != input.UploadGroupFileCount || x.PagesPerStudent != input.PagesPerStudent || x.UploadGroupFileIndex == input.UploadGroupFileIndex) {
+			return File{}, ErrConflict
 		}
 	}
 	status := s.registeredFileStatusLocked(tenantID, batchID, asset.SHA256)
 	x := File{ID: uuid.NewString(), TenantID: tenantID, CaptureBatchID: batchID, FileAssetID: asset.ID, OriginalName: asset.OriginalName, ContentType: asset.ContentType, SHA256: asset.SHA256, ByteSize: asset.SizeBytes, Status: status, IdempotencyKey: input.IdempotencyKey, UploadedBy: actorID, CreatedAt: time.Now().UTC()}
+	x.UploadGroupID, x.UploadGroupFileCount, x.UploadGroupFileIndex, x.PagesPerStudent = input.UploadGroupID, input.UploadGroupFileCount, input.UploadGroupFileIndex, input.PagesPerStudent
 	s.files[x.ID] = x
 	batch.FileCount++
 	batch.Status = "uploading"
@@ -641,6 +670,10 @@ func (s *MemoryStore) ApplyFileResult(_ context.Context, tenantID, fileID string
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.applyFileResultLocked(tenantID, fileID, inputs)
+}
+
+func (s *MemoryStore) applyFileResultLocked(tenantID, fileID string, inputs []DecodedPageInput) (File, error) {
 	file, ok := s.files[fileID]
 	if !ok || file.TenantID != tenantID {
 		return File{}, ErrNotFound
@@ -663,6 +696,12 @@ func (s *MemoryStore) ApplyFileResult(_ context.Context, tenantID, fileID string
 			return File{}, ErrInvalidInput
 		}
 		page := Page{ID: uuid.NewString(), TenantID: tenantID, CaptureBatchID: file.CaptureBatchID, CaptureFileID: file.ID, SourceIndex: input.SourceIndex, SubmissionID: submissionID, SubmissionPageID: uuid.NewString(), AssignedPageNo: input.SourceIndex, SequenceNo: base + i + 1, DecodedFileAssetID: input.FileAssetID, Status: "quality_checking", Revision: 1, PageIdentity: map[string]any{"width": input.Width, "height": input.Height, "sha256": input.SHA256}, MatchCandidates: []any{}, ManualOverride: map[string]any{}, CreatedAt: time.Now().UTC()}
+		if file.UploadGroupID != "" {
+			page.Status = "decoded"
+			page.PageIdentity["grouping_status"] = "waiting_files"
+			page.PageIdentity["upload_group_id"] = file.UploadGroupID
+			page.PageIdentity["expected_pages"] = file.PagesPerStudent
+		}
 		s.pages[page.ID] = page
 	}
 	file.Status = "completed"
@@ -675,7 +714,71 @@ func (s *MemoryStore) ApplyFileResult(_ context.Context, tenantID, fileID string
 	batch.Status = "matching"
 	batch.Revision++
 	s.batches[batch.ID] = batch
+	if file.UploadGroupID != "" {
+		s.finalizeUploadGroupLocked(file)
+	}
 	return file, nil
+}
+
+// 内存运行模式沿用同一组边界；不同文件选择的余页不能拼到一起。
+func (s *MemoryStore) finalizeUploadGroupLocked(file File) {
+	files := map[string]File{}
+	for _, f := range s.files {
+		if f.TenantID == file.TenantID && f.CaptureBatchID == file.CaptureBatchID && f.UploadGroupID == file.UploadGroupID {
+			if f.Status != "completed" {
+				return
+			}
+			files[f.ID] = f
+		}
+	}
+	if len(files) != file.UploadGroupFileCount {
+		return
+	}
+	pages := []Page{}
+	for _, p := range s.pages {
+		if _, ok := files[p.CaptureFileID]; ok && p.Status != "deleted" {
+			pages = append(pages, p)
+		}
+	}
+	sort.Slice(pages, func(i, j int) bool {
+		a, b := files[pages[i].CaptureFileID], files[pages[j].CaptureFileID]
+		if a.UploadGroupFileIndex != b.UploadGroupFileIndex {
+			return a.UploadGroupFileIndex < b.UploadGroupFileIndex
+		}
+		return pages[i].SourceIndex < pages[j].SourceIndex
+	})
+	complete := len(pages) > 0 && len(pages)%file.PagesPerStudent == 0
+	target := ""
+	for i, p := range pages {
+		if complete {
+			if i%file.PagesPerStudent == 0 {
+				target = uuid.NewString()
+			}
+			p.SubmissionID = target
+			p.AssignedPageNo = i%file.PagesPerStudent + 1
+			p.Status = "quality_checking"
+			p.PageIdentity["grouping_status"] = "complete"
+			p.PageIdentity["received_pages"] = file.PagesPerStudent
+		} else {
+			p.Status = "needs_review"
+			p.PageIdentity["grouping_status"] = "incomplete_pages"
+			p.PageIdentity["received_pages"] = len(pages)
+			p.PageIdentity["missing_pages"] = (file.PagesPerStudent - len(pages)%file.PagesPerStudent) % file.PagesPerStudent
+		}
+		s.pages[p.ID] = p
+	}
+	batch := s.batches[file.CaptureBatchID]
+	submissions := map[string]bool{}
+	for _, p := range s.pages {
+		if p.CaptureBatchID == batch.ID && p.Status != "deleted" {
+			submissions[p.SubmissionID] = true
+		}
+	}
+	batch.SubmissionCount = len(submissions)
+	if !complete {
+		batch.Status = "needs_review"
+	}
+	s.batches[batch.ID] = batch
 }
 
 func (s *MemoryStore) ApplyFileFailure(_ context.Context, tenantID, fileID, errorCode string, retryable bool) (File, error) {

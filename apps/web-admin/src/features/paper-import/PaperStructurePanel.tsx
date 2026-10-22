@@ -4,10 +4,12 @@ import {
   adoptPaperStructure,
   previewPaperStructure,
   type PaperImportJob,
+  type PaperVersion,
   type PaperStructurePreview,
 } from "../../api/papers";
 import { getUserErrorMessage } from "../../api/client";
 import { questionTypeOptions } from "../../constants/examCatalog";
+import { registerConfirmedPaperMaterials } from "./PaperMaterialsConfirmation";
 
 const actions: Record<string, string> = {
   add: "新增",
@@ -21,10 +23,12 @@ const typeName = (value?: string) => questionTypeOptions.find((item) => item.val
 export function PaperStructurePanel({
   job,
   disabled,
+  papers = [],
   onAdopted,
 }: Readonly<{
   job: PaperImportJob;
   disabled: boolean;
+  papers?: PaperVersion[];
   onAdopted: () => Promise<void>;
 }>) {
   const { message } = App.useApp();
@@ -34,54 +38,81 @@ export function PaperStructurePanel({
   const [complete, setComplete] = useState(false);
   const [saving, setSaving] = useState(false);
   const key = `${job.id}:${job.generation}:${job.updated_at}`;
-  const active = useRef(key);
-  active.current = key;
+  const active = useRef({ key, version: 0 });
+  if (active.current.key !== key) active.current = { key, version: active.current.version + 1 };
+  const version = active.current.version;
+  const mounted = useRef(true);
+  const unavailable = useRef(disabled);
+  unavailable.current = disabled;
+  const savingScope = useRef<number | null>(null);
+  const isCurrent = () => mounted.current && active.current.key === key && active.current.version === version;
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
     const controller = new AbortController();
     setPreview(null);
     setError("");
     setOpen(false);
     setComplete(false);
+    setSaving(false);
     // 资料代次或核对内容变化后丢弃旧预览；卸载后的请求不能更新另一份资料的页面。
     void previewPaperStructure(job.id, controller.signal)
       .then((result) => {
-        if (!controller.signal.aborted && active.current === key) setPreview(result);
+        if (!controller.signal.aborted && active.current.key === key && active.current.version === version) setPreview(result);
       })
       .catch((err) => {
-        if (!controller.signal.aborted && active.current === key) setError(getUserErrorMessage(err, "结构预览加载失败"));
+        if (!controller.signal.aborted && active.current.key === key && active.current.version === version) setError(getUserErrorMessage(err, "结构预览加载失败"));
       });
     return () => controller.abort();
-  }, [key, job.id]);
+  }, [key, job.id, version]);
   async function refreshAndOpen() {
+    if (unavailable.current || !isCurrent() || savingScope.current === version) return;
     try {
       const current = await previewPaperStructure(job.id);
-      if (active.current !== key) return;
+      if (!isCurrent() || unavailable.current) return;
       setPreview(current);
       setError("");
       setComplete(false);
       setOpen(true);
     } catch (err) {
-      message.error(getUserErrorMessage(err, "结构预览加载失败"));
+      if (isCurrent()) message.error(getUserErrorMessage(err, "结构预览加载失败"));
     }
   }
   async function adopt() {
-    if (!preview || !complete || saving) return;
+    if (!preview || preview.blocked_reasons.length > 0 || !complete || unavailable.current || !isCurrent() || savingScope.current === version) return;
+    savingScope.current = version;
     setSaving(true);
+    let structureAdopted = false;
     try {
       await adoptPaperStructure(job.id, {
         expected_generation: preview.generation,
         preview_hash: preview.preview_hash,
         complete_paper_confirmed: complete,
       });
-      if (active.current !== key) return;
+      structureAdopted = true;
+      if (!isCurrent()) return;
+      // 结构采用不会登记试卷文件；沿用真实来源登记，才能通过资料步骤的试卷文件检查。
+      await registerConfirmedPaperMaterials(job, papers, () => isCurrent() && !unavailable.current);
+      if (!isCurrent()) return;
       setOpen(false);
-      message.success("已采用试卷题目结构，请继续核对小题分值和评分配置");
       await onAdopted();
+      if (isCurrent()) message.success("考试资料已确认，请继续核对小题分值和评分配置");
     } catch (err) {
-      if (active.current === key) message.error(getUserErrorMessage(err, "调整失败，请重新打开预览核对"));
+      await reportAdoptionFailure(err, structureAdopted);
     } finally {
-      setSaving(false);
+      if (savingScope.current === version) savingScope.current = null;
+      if (isCurrent()) setSaving(false);
     }
+  }
+  async function reportAdoptionFailure(error: unknown, structureAdopted: boolean) {
+    if (!isCurrent()) return;
+    if (!structureAdopted) {
+      message.error(getUserErrorMessage(error, "调整失败，请重新打开预览核对"));
+      return;
+    }
+    // 结构写入已成功；登记或回读失败仍读取已采用事实，后续补登记不能重写正式题目。
+    setOpen(false);
+    try { await onAdopted(); } catch { /* 回读失败保留原提示，允许重新读取或补登记。 */ }
+    if (isCurrent()) message.error(`题目结构已采用，资料登记或状态刷新未完成：${getUserErrorMessage(error, "确认失败")}；请重试确认考试资料`);
   }
   if (job.structure_confirmed_generation === job.generation) return null;
   return (
@@ -89,7 +120,7 @@ export function PaperStructurePanel({
       <Alert
         showIcon
         type={preview?.blocked_reasons.length ? "warning" : "info"}
-        message="按试卷资料确认题目结构"
+        message="确认考试资料"
         description={
           error ||
           (!preview ? (
@@ -103,7 +134,7 @@ export function PaperStructurePanel({
                   : `资料分值合计 ${preview.recognized_total} 分`}
                 ，考试预期满分 {preview.expected_total} 分。
               </p>
-              <p>确认资料完整后预览调整；不从总分补题或平均分配分值。</p>
+              <p>核对完整试卷及题目范围后确认，系统会登记试卷来源并采用题目结构。小题分值和评分配置在下一步核对。</p>
               {preview.blocked_reasons.map((reason) => (
                 <p key={reason}>{reason}</p>
               ))}
@@ -111,20 +142,20 @@ export function PaperStructurePanel({
           ))
         }
         action={
-          <Button disabled={disabled || (!preview && !error)} onClick={() => void refreshAndOpen()}>
-            {error ? "重试结构预览" : "预览并采用试卷结构"}
+          <Button type="primary" disabled={disabled || saving || (!preview && !error)} onClick={() => void refreshAndOpen()}>
+            {error ? "重试结构预览" : "确认考试资料"}
           </Button>
         }
       />
       <Modal
-        title="按完整试卷调整题目结构"
+        title="确认考试资料与题目结构"
         open={open}
         width={900}
         onCancel={() => {
           if (!saving) setOpen(false);
         }}
         confirmLoading={saving}
-        okText="确认采用资料结构"
+        okText="确认资料并采用题目结构"
         onOk={() => void adopt()}
         okButtonProps={{ disabled: disabled || !complete || !!preview?.blocked_reasons.length }}
         destroyOnHidden

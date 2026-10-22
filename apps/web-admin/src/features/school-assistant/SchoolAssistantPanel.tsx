@@ -31,6 +31,7 @@ export function SchoolAssistantPanel({ compact = false }: Readonly<{ compact?: b
   const [examRetry, setExamRetry] = useState(0);
   const canListExams = Boolean(assistant?.user.permissions.includes("exam:manage"));
   // 重试计数用于主动触发新请求，保留该依赖才能让重试按钮重新读取考试列表。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: examRetry 用于手动重试考试列表，删除后同一布局和权限下重试无效。
   useEffect(() => {
     if (compact || !canListExams) return;
     // 布局或列表权限变化后，旧请求不能再回写此轮列表状态。

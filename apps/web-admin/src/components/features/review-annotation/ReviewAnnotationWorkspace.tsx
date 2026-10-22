@@ -74,10 +74,11 @@ function canvasLabel(tool: DrawTool) {
   return "答题卡批注画布";
 }
 
-function AnnotationEditor({ draft, setDraft, annotationCount, disabled, saving, rubricCriteria, trailingShortcut, templates, templateSuggestions, updateGeometry, insertTemplate, saveDraft, removeAnnotation }: Readonly<{
+function AnnotationEditor({ draft, setDraft, annotationCount, readOnly, disabled, saving, rubricCriteria, trailingShortcut, templates, templateSuggestions, updateGeometry, insertTemplate, saveDraft, removeAnnotation }: Readonly<{
   draft?: AnnotationDraft;
   setDraft: Dispatch<SetStateAction<AnnotationDraft | undefined>>;
   annotationCount: number;
+  readOnly: boolean;
   disabled: boolean;
   saving: boolean;
   rubricCriteria: CriterionOption[];
@@ -89,6 +90,9 @@ function AnnotationEditor({ draft, setDraft, annotationCount, disabled, saving, 
   saveDraft: () => Promise<void>;
   removeAnnotation: ReturnType<typeof useReviewAnnotations>["removeAnnotation"];
 }>) {
+  // 查看权限保留批注内容与原图定位，不用禁用表单暗示用户还能编辑。
+  if (readOnly) return draft ? <div className="review-annotation-editor"><strong>批注内容</strong><p>{draft.content}</p><Tag>{draft.visibility === "private" ? "仅教师可见" : "成绩发布后学生可见"}</Tag></div>
+    : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={annotationCount ? "选择图上批注查看内容" : "本题暂无批注"} />;
   // 编辑器只展示父层草稿；保存和删除继续使用父层回调及原批注对象，版本处理仍由共享 hook 负责。
   if (!draft) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={annotationCount ? "选择已有批注，或在原图上新增" : "选择点批注或框选工具开始"} />;
@@ -114,7 +118,7 @@ function AnnotationEditor({ draft, setDraft, annotationCount, disabled, saving, 
         rows={5}
         maxLength={4000}
         showCount
-        disabled={disabled}
+        disabled={disabled || saving}
         value={draft.content}
         placeholder="输入评语；键入 /快捷码 后按 Enter 插入个人常用评语"
         onChange={(event) => setDraft((current) => current ? { ...current, content: event.target.value } : current)}
@@ -129,7 +133,7 @@ function AnnotationEditor({ draft, setDraft, annotationCount, disabled, saving, 
       {templateSuggestions.length ? (
         <div className="review-template-suggestions" aria-label="匹配的常用评语">
           {templateSuggestions.map((template) => (
-            <Button key={template.id} size="small" onClick={() => void insertTemplate(template.shortcut)}>
+            <Button key={template.id} size="small" disabled={disabled || saving} onClick={() => void insertTemplate(template.shortcut)}>
               /{template.shortcut} · {template.title}
             </Button>
           ))}
@@ -138,7 +142,7 @@ function AnnotationEditor({ draft, setDraft, annotationCount, disabled, saving, 
       <label>
         <span>学生可见性</span>
         <Select
-          disabled={disabled}
+          disabled={disabled || saving}
           aria-label="批注学生可见性"
           value={draft.visibility}
           onChange={(visibility) => setDraft((current) => current ? { ...current, visibility } : current)}
@@ -152,7 +156,7 @@ function AnnotationEditor({ draft, setDraft, annotationCount, disabled, saving, 
         <label>
           <span>关联评分点（可选）</span>
           <Select
-            disabled={disabled}
+            disabled={disabled || saving}
             aria-label="批注关联评分点"
             allowClear
             value={draft.rubricCriterionId}
@@ -165,19 +169,19 @@ function AnnotationEditor({ draft, setDraft, annotationCount, disabled, saving, 
         <Button type="primary" icon={<Check size={16} />} loading={saving} disabled={disabled || !draft.content.trim()} onClick={() => void saveDraft()}>
           保存批注
         </Button>
-        <Button onClick={() => setDraft(undefined)}>取消</Button>
+        <Button disabled={saving} onClick={() => setDraft(undefined)}>取消</Button>
         {draft.current ? (
           <Popconfirm
             title="删除这条批注？"
             okText="删除"
             cancelText="取消"
             onConfirm={async () => {
-              if (disabled || !draft.current) return;
+              if (disabled || saving || !draft.current) return;
               await removeAnnotation(draft.current);
               setDraft(undefined);
             }}
           >
-            <Button danger disabled={disabled} type="text" icon={<Trash2 size={16} />}>删除</Button>
+            <Button danger disabled={disabled || saving} type="text" icon={<Trash2 size={16} />}>删除</Button>
           </Popconfirm>
         ) : null}
       </Space>
@@ -199,10 +203,13 @@ export function ReviewAnnotationWorkspace({
   const [draft, setDraft] = useState<AnnotationDraft>();
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const saveBusy = useRef(false);
+  const editDraft: typeof setDraft = value => { if (!saveBusy.current) setDraft(value); };
   const [templateFailure, setTemplateFailure] = useState<{ shortcut: string; error: string }>();
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const templateTask = useRef(reviewTaskId);
   templateTask.current = reviewTaskId;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 切阅卷任务必须清掉上一份答卷的未提交标注和模板失败状态。
   useEffect(() => { setDraft(undefined); setTemplateFailure(undefined); setApplyingTemplate(false); }, [reviewTaskId]);
 
   const trailingShortcut = useMemo(() => trailingTemplateShortcut(draft?.content ?? ""), [draft?.content]);
@@ -223,7 +230,7 @@ export function ReviewAnnotationWorkspace({
   };
 
   const startDrawing = (event: ReactPointerEvent<HTMLElement>) => {
-    if (disabled || tool === "select") return;
+    if (disabled || saveBusy.current || tool === "select") return;
     const point = canonicalEventPoint(event);
     if (!point) return;
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -236,7 +243,7 @@ export function ReviewAnnotationWorkspace({
   };
 
   const finishDrawing = (event: ReactPointerEvent<HTMLElement>) => {
-    if (disabled || tool !== "rectangle" || !dragStart) return;
+    if (disabled || saveBusy.current || tool !== "rectangle" || !dragStart) return;
     const end = canonicalEventPoint(event);
     setDragStart(undefined);
     setTool("select");
@@ -247,14 +254,14 @@ export function ReviewAnnotationWorkspace({
   };
 
   const createKeyboardDraft = (type: "note" | "rectangle") => {
-    if (disabled || saving) return;
+    if (disabled || saveBusy.current || saving) return;
     setTool("select");
     setDragStart(undefined);
     setDraft({ type, geometry: type === "note" ? canonicalPoint({ x: 0.5, y: 0.5 }) : canonicalRectangle({ x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }), content: "", visibility: "private" });
   };
 
   const updateGeometry = (field: "x" | "y" | "width" | "height", percentage: number | null) => {
-    if (percentage === null || !Number.isFinite(percentage) || disabled || saving) return;
+    if (percentage === null || !Number.isFinite(percentage) || disabled || saving || saveBusy.current) return;
     setDraft((current) => {
       if (!current) return current;
       const next = { ...current.geometry, [field]: percentage / 100 };
@@ -270,7 +277,10 @@ export function ReviewAnnotationWorkspace({
   };
 
   const saveDraft = async () => {
-    if (disabled || !draft?.content.trim()) return;
+    if (disabled || saveBusy.current || applyingTemplate || !draft?.content.trim()) return;
+    // 保存冻结这份草稿；所有输入/切换入口共用同步锁，旧回执不能静默丢弃后续输入。
+    saveBusy.current = true;
+    const originalTask = reviewTaskId;
     const input: CreateReviewAnnotationRequest = {
       type: draft.type,
       geometry: draft.geometry,
@@ -281,18 +291,19 @@ export function ReviewAnnotationWorkspace({
     setSaving(true);
     try {
       await workspace.saveAnnotation(input, draft.current);
-      setDraft(undefined);
+      if (templateTask.current === originalTask) setDraft(undefined);
     } catch (saveError) {
-      if (saveError instanceof AnnotationRevisionConflict && saveError.latest) {
+      if (templateTask.current === originalTask && saveError instanceof AnnotationRevisionConflict && saveError.latest) {
         setDraft(draftFromAnnotation(saveError.latest));
       }
     } finally {
-      setSaving(false);
+      saveBusy.current = false;
+      if (templateTask.current === originalTask) setSaving(false);
     }
   };
 
   const insertTemplate = async (shortcut: string) => {
-    if (!draft || applyingTemplate) return;
+    if (!draft || applyingTemplate || saveBusy.current) return;
     const originalDraft = draft;
     const originalTask = reviewTaskId;
     setApplyingTemplate(true);
@@ -320,9 +331,9 @@ export function ReviewAnnotationWorkspace({
     <section className="review-annotation-workspace" aria-label="答题卡批注">
       <header className="review-annotation-toolbar">
         <Space wrap>
-          <Segmented<DrawTool>
+          {!disabled ? <><Segmented<DrawTool>
             value={tool}
-            disabled={disabled}
+            disabled={disabled || saving}
             onChange={setTool}
             options={[
               { value: "select", label: <span className="review-tool-label"><MousePointer2 size={15} />选择</span> },
@@ -331,7 +342,7 @@ export function ReviewAnnotationWorkspace({
             ]}
           />
           <Button disabled={disabled || saving} onClick={() => createKeyboardDraft("note")}>新增点批注</Button>
-          <Button disabled={disabled || saving} onClick={() => createKeyboardDraft("rectangle")}>新增矩形批注</Button>
+          <Button disabled={saving} onClick={() => createKeyboardDraft("rectangle")}>新增矩形批注</Button></> : null}
           <Tag>{workspace.annotations.length} 条批注</Tag>
           {workspace.saveState !== "idle" ? <span className={`review-save-state review-save-state--${workspace.saveState}`}>{statusLabel(workspace.saveState)}</span> : null}
         </Space>
@@ -339,19 +350,19 @@ export function ReviewAnnotationWorkspace({
           <Tooltip title="只刷新批注，不会认领其他任务">
             <Button type="text" icon={<RefreshCw size={16} />} onClick={() => void workspace.reloadAnnotations()} aria-label="刷新批注" />
           </Tooltip>
-          <Button icon={<Settings2 size={16} />} onClick={() => setTemplateManagerOpen(true)}>常用评语</Button>
+          {!disabled ? <Button icon={<Settings2 size={16} />} onClick={() => setTemplateManagerOpen(true)}>常用评语</Button> : null}
         </Space>
       </header>
 
       {workspace.error ? <Alert type={workspace.saveState === "conflict" ? "warning" : "error"} showIcon message={workspace.error} /> : null}
-      {templateFailure ? <Alert type="error" showIcon message={templateFailure.error} action={<Button loading={applyingTemplate} disabled={!draft || disabled} onClick={() => void insertTemplate(templateFailure.shortcut)}>重试插入评语</Button>} /> : null}
+      {templateFailure ? <Alert type="error" showIcon message={templateFailure.error} action={<Button loading={applyingTemplate} disabled={!draft || disabled || saving} onClick={() => void insertTemplate(templateFailure.shortcut)}>重试插入评语</Button>} /> : null}
 
       <div className="review-annotation-layout">
         <section
-          className={`review-annotation-canvas review-annotation-canvas--${tool}`}
+          className={`review-annotation-canvas review-annotation-canvas--${disabled ? "select" : tool}`}
           onPointerDown={startDrawing}
           onPointerUp={finishDrawing}
-          aria-label={canvasLabel(tool)}
+          aria-label={canvasLabel(disabled ? "select" : tool)}
         >
           <img ref={imageRef} src={imageUrl} alt={imageAlt} draggable={false} />
           <div className="review-annotation-overlay">
@@ -365,8 +376,9 @@ export function ReviewAnnotationWorkspace({
                   style={geometryStyle(annotation.geometry)}
                   title={annotation.content}
                   onPointerDown={(event) => event.stopPropagation()}
-                  onClick={() => setDraft(draftFromAnnotation(annotation))}
-                  aria-label={`编辑批注：${annotation.content}`}
+                  disabled={saving}
+                  onClick={() => editDraft(draftFromAnnotation(annotation))}
+                  aria-label={`${disabled ? "查看" : "编辑"}批注：${annotation.content}`}
                 />
               );
             })}
@@ -374,18 +386,18 @@ export function ReviewAnnotationWorkspace({
         </section>
 
         <aside className="review-annotation-inspector">
-          <AnnotationEditor draft={draft} setDraft={setDraft} annotationCount={workspace.annotations.length} disabled={disabled} saving={saving} rubricCriteria={rubricCriteria} trailingShortcut={trailingShortcut} templates={workspace.templates} templateSuggestions={templateSuggestions} updateGeometry={updateGeometry} insertTemplate={insertTemplate} saveDraft={saveDraft} removeAnnotation={workspace.removeAnnotation} />
+          <AnnotationEditor draft={draft} setDraft={editDraft} annotationCount={workspace.annotations.length} readOnly={disabled} disabled={disabled || saving} saving={saving} rubricCriteria={rubricCriteria} trailingShortcut={trailingShortcut} templates={workspace.templates} templateSuggestions={templateSuggestions} updateGeometry={updateGeometry} insertTemplate={insertTemplate} saveDraft={saveDraft} removeAnnotation={workspace.removeAnnotation} />
         </aside>
       </div>
 
-      <CommentTemplateManager
+      {!disabled ? <CommentTemplateManager
         open={templateManagerOpen}
         templates={workspace.templates}
         onClose={() => setTemplateManagerOpen(false)}
         onCreate={workspace.createTemplate}
         onUpdate={workspace.updateTemplate}
         onDelete={workspace.removeTemplate}
-      />
+      /> : null}
     </section>
   );
 }

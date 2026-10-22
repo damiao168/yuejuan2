@@ -50,6 +50,7 @@ class _HTTPFixtureHandler(BaseHTTPRequestHandler):
         try:
             self.wfile.write(self.server.response_body)
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, ssl.SSLError):
+            # 超时测试故意先关闭客户端；仅允许合成响应写回时的断连，继续清理测试监听器。
             pass
 
     def log_message(self, _format, *_args):

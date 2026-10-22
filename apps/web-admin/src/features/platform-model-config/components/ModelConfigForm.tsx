@@ -2,11 +2,11 @@
 import { Alert, AutoComplete, Button, Form, Input, Select, type FormInstance } from "antd";
 import { KeyRound } from "lucide-react";
 import type { ManagedModelAPIConfig } from "../../../api/modelApiConfig";
-import { presetForConfig, supplierOptions, type ConfigFormValues, type SupplierPreset } from "../lib/modelConfig";
+import { isSameModelAPIOrigin, presetForConfig, supplierOptions, type ConfigFormValues, type SupplierPreset } from "../lib/modelConfig";
 
 export function ModelConfigForm({
   form, editing, credentialSource, watchedSupplier, changeSupplier, availableModels, modelOptionsOpen,
-  filterAvailableModels, modelsLoading, setAvailableModels, setModelOptionsOpen, setFilterAvailableModels, fetchAvailableModels,
+  filterAvailableModels, modelsLoading, discoveryDisabledReason, setAvailableModels, setModelOptionsOpen, setFilterAvailableModels, fetchAvailableModels, onConnectionChange,
 }: Readonly<{
   form: FormInstance<ConfigFormValues>;
   editing: ManagedModelAPIConfig | null;
@@ -17,10 +17,12 @@ export function ModelConfigForm({
   modelOptionsOpen: boolean;
   filterAvailableModels: boolean;
   modelsLoading: boolean;
+  discoveryDisabledReason?: string;
   setAvailableModels: (models: string[]) => void;
   setModelOptionsOpen: (open: boolean) => void;
   setFilterAvailableModels: (filter: boolean) => void;
   fetchAvailableModels: () => Promise<void>;
+  onConnectionChange?: () => void;
 }>) {
   const renderCredentialField = () => {
     if (credentialSource) {
@@ -34,15 +36,15 @@ export function ModelConfigForm({
         { min: 16, message: "密钥至少 16 个字符" },
         ({ getFieldValue }) => ({
           validator: async (_rule, value) => {
-            const endpointChanged = presetForConfig(editing) === "custom" &&
-              String(getFieldValue("base_url") ?? "").trim() !== editing.base_url;
-            if (endpointChanged && !String(value ?? "").trim()) {
-              throw new Error("更换 API 地址时请输入新 API Key");
+            const originChanged = presetForConfig(editing) === "custom" &&
+              !isSameModelAPIOrigin(editing.base_url, String(getFieldValue("base_url") ?? ""));
+            if (originChanged && !String(value ?? "").trim()) {
+              throw new Error("更换 API 域名或端口时，请重新输入 API Key（可以使用原密钥）");
             }
           }
         })
       ] : [{ required: true, message: "请输入 API Key" }, { min: 16, message: "密钥至少 16 个字符" }]}
-      extra={editing ? "原密钥不会回显；留空则继续使用。更换 API 地址时必须输入新密钥。" : "密钥将加密保存；保存只做零生成 Token 连接检测。"}
+      extra={editing ? "原密钥不会回显；留空则继续使用。同域名、同端口修改路径无需重填；更换域名或端口时需重新输入，可以使用原密钥。" : "密钥将加密保存；保存只做零生成 Token 连接检测。"}
     >
       <Input.Password
         prefix={<KeyRound size={15} />}
@@ -50,6 +52,7 @@ export function ModelConfigForm({
         autoComplete="new-password"
         placeholder={editing ? `当前 ${editing.credential_hint ?? "已配置"}` : "输入供应商密钥"}
         onChange={() => {
+          onConnectionChange?.();
           setAvailableModels([]);
           setModelOptionsOpen(false);
           setFilterAvailableModels(false);
@@ -80,6 +83,7 @@ export function ModelConfigForm({
             placeholder="https://api.example.com/v1"
             autoComplete="url"
             onChange={() => {
+              onConnectionChange?.();
               setAvailableModels([]);
               setModelOptionsOpen(false);
               setFilterAvailableModels(false);
@@ -91,7 +95,7 @@ export function ModelConfigForm({
         name="model_name"
         label="模型名称"
         rules={[{ required: true, message: "请输入模型名称" }]}
-        extra={<span className="platform-model-field-help">{credentialSource || editing ? "可使用已保存的密钥" : "选择供应商并填写 API Key"}，零 Token 获取模型列表。<Button type="link" size="small" loading={modelsLoading} onClick={() => {
+        extra={<span className="platform-model-field-help"><span>{discoveryDisabledReason ?? "零 Token 获取模型列表，也可手工输入模型名称。"}</span><Button type="link" size="small" loading={modelsLoading} disabled={Boolean(discoveryDisabledReason)} onClick={() => {
           if (availableModels.length > 0) {
             setFilterAvailableModels(false);
             setModelOptionsOpen(true);
@@ -101,7 +105,7 @@ export function ModelConfigForm({
       >
         <AutoComplete
           options={availableModels.map((model) => ({ value: model }))}
-          open={modelOptionsOpen && availableModels.length > 0}
+          open={!discoveryDisabledReason && modelOptionsOpen && availableModels.length > 0}
           onOpenChange={(open) => setModelOptionsOpen(open && availableModels.length > 0)}
           onFocus={() => setModelOptionsOpen(availableModels.length > 0)}
           placeholder="获取后选择，也可手工输入模型名称"

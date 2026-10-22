@@ -992,6 +992,10 @@ func (s *PostgresStore) applyImportedAnswerSolutionAndRubric(ctx context.Context
 	if draft.Rubric == nil {
 		return nil
 	}
+	// 导入确认与直接保存执行相同的 ID 边界；模型候选不能绕过人工编辑入口的校验。
+	if !ValidRubricPointIdentities(draft.Rubric.Points) {
+		return ErrInvalidInput
+	}
 	status := draft.Rubric.Status
 	if status == "" {
 		status = "draft"

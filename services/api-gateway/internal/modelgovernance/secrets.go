@@ -32,9 +32,39 @@ func NewEnvironmentSecretResolver(dockerSecretDir string) *EnvironmentSecretReso
 	return &EnvironmentSecretResolver{dockerSecretDir: dockerSecretDir}
 }
 
-// Probe 只返回是否配置和强度，不读取或返回密钥；路径、查询参数和目录穿越一律拒绝。
+// 已登记的下划线协议不是标准 URL scheme；仅在解析时替换协议，不能改写持久化引用格式。
+// net/url 仍负责 authority 和转义检查，本地引用与云层级路径使用各自原有边界。
+func parseCredentialReference(reference string) (*url.URL, error) {
+	scheme, rest, found := strings.Cut(strings.TrimSpace(reference), "://")
+	scheme = strings.ToLower(scheme)
+	if !found {
+		return nil, ErrInvalidSecretReference
+	}
+	switch scheme {
+	case "env", "docker_secret", "vault", "aws_secrets_manager", "azure_key_vault", "gcp_secret_manager":
+	default:
+		return nil, ErrInvalidSecretReference
+	}
+	parsed, err := url.Parse("secret://" + rest)
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || strings.Contains(rest, "#") {
+		return nil, ErrInvalidSecretReference
+	}
+	parsed.Scheme = scheme
+	name := strings.TrimPrefix(parsed.Host+parsed.Path, "/")
+	if name == "" || strings.Contains(name, "..") {
+		return nil, ErrInvalidSecretReference
+	}
+	if (scheme == "env" || scheme == "docker_secret") && strings.ContainsAny(name, `/\`) {
+		return nil, ErrInvalidSecretReference
+	}
+	return parsed, nil
+}
+
+// Probe 只返回配置与长度检查结果，不返回密钥内容；env 读取当前值，docker_secret 只检查文件元数据。
+// 本地引用只接受单个名称；云引用保留层级路径，所有引用拒绝用户信息、参数、片段和穿越。
+// 未安装解析器的外部密钥服务返回不支持，不能由引用语法合法推断为可激活。
 func (r *EnvironmentSecretResolver) Probe(reference string) (SecretProbe, error) {
-	parsed, err := url.Parse(strings.TrimSpace(reference))
+	parsed, err := parseCredentialReference(reference)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
 		return SecretProbe{}, ErrInvalidSecretReference
 	}

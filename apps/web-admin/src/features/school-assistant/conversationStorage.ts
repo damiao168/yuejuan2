@@ -34,10 +34,12 @@ function storedMessage(message: SchoolChatMessage): SchoolChatMessage {
 
 export function serializeConversationThreads(threads: ConversationThread[]) {
   // 只要本会话曾尝试查询业务，后续追问也可能引用业务数据；整段会话都不能落盘。
-  // 在途问题还不知道是否会调用业务工具，只有完整的一般回复才可持久化。
-  return JSON.stringify(threads.filter((thread) => !thread.business && thread.messages[thread.messages.length - 1]?.role === "assistant").slice(0, 20).map(({ id, title, updatedAt, messages }) => ({
-    id, title, updatedAt, messages: messages.slice(-50).map(storedMessage)
-  })));
+  // 在途追问不落盘，但不能因此覆盖掉此前已完成的一般问答；一旦开始业务查询，仍移除整段缓存。
+  return JSON.stringify(threads.filter((thread) => !thread.business).map(({ id, title, updatedAt, messages }) => {
+    let completedEnd = messages.length;
+    while (completedEnd > 0 && messages[completedEnd - 1]?.role !== "assistant") completedEnd--;
+    return { id, title, updatedAt, messages: messages.slice(Math.max(0, completedEnd - 50), completedEnd).map(storedMessage) };
+  }).filter((thread) => thread.messages.length > 0).slice(0, 20));
 }
 
 export function parseConversationThreads(value: unknown): ConversationThread[] {

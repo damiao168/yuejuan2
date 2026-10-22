@@ -396,18 +396,34 @@ func (h *Handler) ListStudents(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateStudent(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	var input struct {
-		Status string `json:"status"`
-	}
-	if !decodeJSON(w, r, &input) {
+	var input StudentPatch
+	if !decodeOrganizationPatch(w, r, &input) {
 		return
 	}
-	out, err := h.store.UpdateStudentStatus(r.Context(), user.TenantID, r.PathValue("id"), input.Status)
+	if input.Name == nil && input.StudentNo == nil && input.Gender == nil && input.Status == nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "at least one student field is required")
+		return
+	}
+	if !normalizePatchText(w, r, input.Name, "name", 120, false) ||
+		!normalizePatchText(w, r, input.StudentNo, "student_no", 64, false) ||
+		!normalizePatchText(w, r, input.Gender, "gender", 16, true) ||
+		!normalizePatchText(w, r, input.Status, "status", 16, false) {
+		return
+	}
+	if input.Gender != nil && *input.Gender != "" && *input.Gender != "male" && *input.Gender != "female" && *input.Gender != "unknown" {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_gender", "gender must be male, female, unknown or empty")
+		return
+	}
+	if input.Status != nil && *input.Status != "active" && *input.Status != "inactive" {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_status", "status must be active or inactive")
+		return
+	}
+	out, err := h.store.UpdateStudent(r.Context(), user.TenantID, r.PathValue("id"), input)
 	if err != nil {
-		httpx.Error(w, r, http.StatusNotFound, "student_not_found", "student not found")
+		writeOrganizationPatchError(w, r, err, "student")
 		return
 	}
-	h.auditAction(r, "org.student_updated", "student", out.ID, "update student status")
+	h.auditAction(r, "org.student_updated", "student", out.ID, "update student information")
 	httpx.JSON(w, http.StatusOK, map[string]any{"student": out})
 }
 

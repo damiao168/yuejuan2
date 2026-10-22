@@ -1,6 +1,7 @@
 import json
 import unittest
 from unittest.mock import patch
+from edugrade_worker_runtime import ResponseValidationError
 
 from ocr_worker.api import (
     PAPER_IMPORT_COMPLETION_TIMEOUT_SECONDS,
@@ -47,8 +48,18 @@ class APITests(unittest.TestCase):
     def test_download_rejects_cross_origin_url_before_sending_worker_token(self):
         client = EduGradeClient("http://api-gateway:8080", "demo", "worker", "secret", token="worker-token")
 
-        with self.assertRaisesRegex(APIError, "configured API origin"):
+        with self.assertRaisesRegex(APIError, "configured API origin") as caught:
             client.download("https://attacker.invalid/collect")
+        self.assertFalse(caught.exception.retryable)
+
+    @patch("ocr_worker.api._open_request", return_value=FakeResponse())
+    def test_download_preserves_invalid_response_vs_transient_transport_boundary(self, _open):
+        client = EduGradeClient("http://api-gateway:8080", "demo", "worker", "test-only", token="worker-token")
+        for failure, retryable in ((ResponseValidationError("too large"), False), (OSError("reset"), True)):
+            with self.subTest(failure=type(failure).__name__), patch("ocr_worker.api.read_bounded", side_effect=failure):
+                with self.assertRaises(APIError) as caught:
+                    client.download("/files/page/download")
+                self.assertIs(caught.exception.retryable, retryable)
 
     @patch("ocr_worker.api._open_request", return_value=FakeResponse())
     def test_claimed_task_capability_is_sent_without_caller_selected_tenant(self, urlopen):

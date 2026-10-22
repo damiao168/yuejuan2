@@ -263,10 +263,12 @@ export function PaperImportReviewPanel({ job, drafts, readOnly = false, showOver
     if (currentPage > pageCount) setCurrentPage(pageCount);
   }, [currentPage, pageCount]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 换导入任务后回到识别结果第一页，同一任务轮询保留当前阅读页。
   useEffect(() => {
     setCurrentPage(1);
   }, [job.id]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 导入身份、代次或内容版本变化后旧采分点建议不再适用，不能继续复制到新草稿。
   useEffect(() => {
     setSuggestions({});
     suggestionContexts.current = {};

@@ -23,13 +23,14 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"golang.org/x/sync/singleflight"
 )
 
 const (
 	managedProbeResponseLimit     = 1 << 20
 	managedCapabilityMaxTokens    = 1024
-	ManagedCapabilityProbeVersion = "structured-json-v3"
+	ManagedCapabilityProbeVersion = "structured-json-v4"
 	managedProbeInvalidEndpoint   = "接口地址无效"
 	managedProbeAPIKeyValid       = "API Key 有效"
 	managedProbeCapabilityOK      = "结构化输出兼容检测通过"
@@ -71,7 +72,13 @@ func (p *HTTPManagedAPIProber) probeCapability(ctx context.Context, connection M
 		ProbeMode: "capability", Provider: connection.Config.ProviderKey,
 		Model: connection.Config.ModelName, Message: "结构化输出兼容检测失败",
 	}
-	defer func() { result.LatencyMS = time.Since(started).Milliseconds() }()
+	defer func() {
+		result.LatencyMS = time.Since(started).Milliseconds()
+		// 此处只在单次实际检测内执行一次，合并等待者得到同一计量身份，失败生成也计一次。
+		if result.GeneratedRequest {
+			result.generationRequestID = "model-probe:" + uuid.NewString()
+		}
+	}()
 	if connection.Config.AdapterType == "dashscope_native" {
 		return p.probeDashScope(ctx, p.capabilityHTTPClient, connection, result)
 	}
@@ -91,6 +98,7 @@ func (p *HTTPManagedAPIProber) ProbeQuick(ctx context.Context, connection Manage
 	result.Model = connection.Config.ModelName
 	result.ModelCheck = ManagedAPICheckResult{OK: true, Message: "模型可用"}
 	result.CapabilityCheck = ManagedAPICheckResult{Code: "not_run", Message: "本次为零生成 Token 快速检查，未调用模型生成"}
+	result.TextCheck = ManagedAPICheckResult{Code: "not_run", Message: "本次为零生成 Token 快速检查，未调用模型生成"}
 	if connection.Config.LastCapabilityStatus == "success" && connection.Config.LastCapabilityVersion == ManagedCapabilityProbeVersion {
 		result.CapabilityCheck = ManagedAPICheckResult{OK: true, Code: "reused", Message: "沿用此前的结构化能力验证结果"}
 	}
@@ -98,9 +106,174 @@ func (p *HTTPManagedAPIProber) ProbeQuick(ctx context.Context, connection Manage
 	return result
 }
 
+// ProbeText 只验证模型能否返回非空文本；普通聊天不依赖 JSON 输出，因此不发送 response_format。
+func (p *HTTPManagedAPIProber) ProbeText(ctx context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult {
+	// 普通回复也会消耗 Token；同一配置的并发点击复用同一次请求，并与结构化检测分开合并。
+	value, _, shared := p.capabilityFlights.Do("text:"+managedCapabilityFlightKey(connection), func() (any, error) {
+		return p.probeText(ctx, connection), nil
+	})
+	result := value.(ManagedAPIProbeResult)
+	result.Coalesced = shared
+	return result
+}
+
+func (p *HTTPManagedAPIProber) probeText(ctx context.Context, connection ManagedAPIConnection) (result ManagedAPIProbeResult) {
+	started := time.Now()
+	result = ManagedAPIProbeResult{
+		ProbeMode: string(ManagedAPIProbeText), Provider: connection.Config.ProviderKey,
+		Model: connection.Config.ModelName, Message: "文本生成检测失败",
+	}
+	defer func() {
+		result.LatencyMS = time.Since(started).Milliseconds()
+		if result.GeneratedRequest {
+			result.generationRequestID = "model-probe:" + uuid.NewString()
+		}
+	}()
+	if connection.Config.AdapterType == "dashscope_native" {
+		return p.probeDashScopeText(ctx, p.capabilityHTTPClient, connection, result)
+	}
+	return p.probeOpenAICompatibleText(ctx, connection, result)
+}
+
+func (p *HTTPManagedAPIProber) probeOpenAICompatibleText(ctx context.Context, connection ManagedAPIConnection, result ManagedAPIProbeResult) ManagedAPIProbeResult {
+	list, access := p.ListModels(ctx, connection)
+	result.CredentialCheck = access.CredentialCheck
+	result.ConnectionDiagnostic = access.ConnectionDiagnostic
+	result.StatusCode = access.StatusCode
+	if !access.OK {
+		result.ErrorCode, result.Message = access.ErrorCode, access.Message
+		result.ConnectionDiagnostic = access.ConnectionDiagnostic
+		return result
+	}
+	if !slices.Contains(list.Models, connection.Config.ModelName) {
+		return failedManagedProbe(result, "model_not_found", fmt.Sprintf("没有找到模型 %s", connection.Config.ModelName), "model")
+	}
+	result.ModelCheck = ManagedAPICheckResult{OK: true, Message: "模型可用"}
+	endpoint, err := managedCompletionEndpoint(connection.Config.BaseURL)
+	if err != nil {
+		return failedManagedProbe(result, "invalid_endpoint", managedProbeInvalidEndpoint, "text")
+	}
+	parameters := map[string]any{
+		"model": connection.Config.ModelName, "messages": []map[string]string{{"role": "user", "content": "请只回复 OK。"}},
+		"max_tokens": managedCapabilityMaxTokens, "temperature": 0, "stream": false,
+	}
+	applyManagedThinkingPolicy(parameters, connection)
+	payload, _ := json.Marshal(parameters)
+	result.GeneratedRequest = true
+	result.Diagnostic.ResponseFormat = "text"
+	response, err := p.doRequest(ctx, p.capabilityHTTPClient, http.MethodPost, endpoint, connection, payload, &result)
+	if err != nil {
+		return networkManagedProbeFailure(result, err, "text")
+	}
+	result.StatusCode = response.StatusCode
+	body, readErr := readManagedProbeBody(response)
+	if readErr != nil {
+		return bodyManagedProbeFailure(result, readErr, "text")
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return statusManagedProbeFailure(result, response.StatusCode, "text")
+	}
+	var completion struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+			FinishReason string `json:"finish_reason"`
+		} `json:"choices"`
+		Usage managedOpenAIProbeUsage `json:"usage"`
+	}
+	if err = json.Unmarshal(body, &completion); err != nil {
+		return failedManagedProbe(result, "provider_invalid_response", "供应商返回了无法解析的响应", "text")
+	}
+	result.Usage = completion.Usage.normalized()
+	if len(completion.Choices) == 0 {
+		return failedManagedProbe(result, "no_choices", "模型响应中没有可用结果", "text")
+	}
+	content := strings.TrimSpace(completion.Choices[0].Message.Content)
+	result.Diagnostic = managedCapabilityDiagnostic(content, completion.Choices[0].FinishReason, result.Diagnostic.ResponseFormat)
+	if content == "" {
+		return failedManagedProbe(result, "empty_content", "模型返回内容为空", "text")
+	}
+	result.TextCheck = ManagedAPICheckResult{OK: true, Message: "模型返回了文本"}
+	result.CapabilityCheck = ManagedAPICheckResult{Code: "not_run", Message: "本次只验证文本生成，未检查 JSON 输出"}
+	result.OK = true
+	result.Message = "文本生成检测通过"
+	return result
+}
+
+func (p *HTTPManagedAPIProber) probeDashScopeText(ctx context.Context, client *http.Client, connection ManagedAPIConnection, result ManagedAPIProbeResult) ManagedAPIProbeResult {
+	if connection.Config.BaseURL != "https://dashscope.aliyuncs.com/api/v1" {
+		return failedManagedProbe(result, "invalid_endpoint", "DashScope 原生接口地址无效", "credential")
+	}
+	parameters := map[string]any{"max_tokens": managedCapabilityMaxTokens, "result_format": "message", "temperature": 0}
+	if managedModelSupportsThinkingDisable(connection.Config.ProviderKey, connection.Config.ModelName) {
+		parameters["enable_thinking"] = false
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"model":      connection.Config.ModelName,
+		"input":      map[string]any{"messages": []map[string]string{{"role": "user", "content": "请只回复 OK。"}}},
+		"parameters": parameters,
+	})
+	result.GeneratedRequest = true
+	result.Diagnostic.ResponseFormat = "text"
+	endpoint := connection.Config.BaseURL + "/services/aigc/text-generation/generation"
+	response, err := p.doRequest(ctx, client, http.MethodPost, endpoint, connection, payload, &result)
+	if err != nil {
+		return networkManagedProbeFailure(result, err, "text")
+	}
+	result.StatusCode = response.StatusCode
+	body, readErr := readManagedProbeBody(response)
+	if readErr != nil {
+		return bodyManagedProbeFailure(result, readErr, "text")
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return statusManagedProbeFailure(result, response.StatusCode, "text")
+	}
+	result.CredentialCheck = ManagedAPICheckResult{OK: true, Message: managedProbeAPIKeyValid}
+	result.ModelCheck = ManagedAPICheckResult{OK: true, Message: "模型可用"}
+	var completion struct {
+		Output struct {
+			Choices []struct {
+				Message struct {
+					Content string `json:"content"`
+				} `json:"message"`
+				FinishReason string `json:"finish_reason"`
+			} `json:"choices"`
+		} `json:"output"`
+		Usage struct {
+			InputTokens  int64 `json:"input_tokens"`
+			OutputTokens int64 `json:"output_tokens"`
+			TotalTokens  int64 `json:"total_tokens"`
+		} `json:"usage"`
+	}
+	if err = json.Unmarshal(body, &completion); err != nil {
+		return failedManagedProbe(result, "provider_invalid_response", "供应商返回了无法解析的响应", "text")
+	}
+	usage := completion.Usage
+	result.Usage = ManagedAPIProbeUsage{InputTokens: usage.InputTokens, OutputTokens: usage.OutputTokens, TotalTokens: usage.TotalTokens}
+	if result.Usage.TotalTokens == 0 {
+		result.Usage.TotalTokens = result.Usage.InputTokens + result.Usage.OutputTokens
+	}
+	if len(completion.Output.Choices) == 0 {
+		return failedManagedProbe(result, "no_choices", "模型响应中没有可用结果", "text")
+	}
+	content := strings.TrimSpace(completion.Output.Choices[0].Message.Content)
+	result.Diagnostic = managedCapabilityDiagnostic(content, completion.Output.Choices[0].FinishReason, result.Diagnostic.ResponseFormat)
+	if content == "" {
+		return failedManagedProbe(result, "empty_content", "模型返回内容为空", "text")
+	}
+	result.TextCheck = ManagedAPICheckResult{OK: true, Message: "模型返回了文本"}
+	result.CapabilityCheck = ManagedAPICheckResult{Code: "not_run", Message: "本次只验证文本生成，未检查 JSON 输出"}
+	result.OK = true
+	result.Message = "文本生成检测通过"
+	return result
+}
+
 func (p *HTTPManagedAPIProber) ListModels(ctx context.Context, connection ManagedAPIConnection) (list ManagedAPIModelListResult, result ManagedAPIProbeResult) {
 	started := time.Now()
 	list.Provider = connection.Config.ProviderKey
+	// 供应商可能成功返回空列表；保持空数组，避免 JSON null 被前端当成可遍历的模型列表。
+	list.Models = []string{}
 	result = ManagedAPIProbeResult{ProbeMode: "quick", Provider: connection.Config.ProviderKey, Model: connection.Config.ModelName, Message: "获取模型列表失败"}
 	defer func() {
 		latency := time.Since(started).Milliseconds()
@@ -147,7 +320,7 @@ func (p *HTTPManagedAPIProber) ListModels(ctx context.Context, connection Manage
 	return list, result
 }
 
-// 兼容接口先列模型确认密钥和模型，再发送固定 JSON 能力样例；能力请求失败不能被当成连接成功。
+// 兼容接口先列模型确认访问权限，再发送 JSON 样例；结构化结果与访问、普通回复证据分别记录。
 func (p *HTTPManagedAPIProber) probeOpenAICompatible(ctx context.Context, client *http.Client, connection ManagedAPIConnection, result ManagedAPIProbeResult) ManagedAPIProbeResult {
 	modelsEndpoint, err := managedModelsEndpoint(connection.Config.BaseURL)
 	if err != nil {
@@ -223,6 +396,10 @@ func (p *HTTPManagedAPIProber) probeOpenAICompatible(ctx context.Context, client
 		return failedManagedProbe(result, "no_choices", "模型响应中没有可用结果", "capability")
 	}
 	result.Diagnostic = managedCapabilityDiagnostic(completion.Choices[0].Message.Content, completion.Choices[0].FinishReason, result.Diagnostic.ResponseFormat)
+	if strings.TrimSpace(completion.Choices[0].Message.Content) != "" {
+		// 结构化校验失败仍说明模型已经完成文本生成，普通聊天不应因此被禁用。
+		result.TextCheck = ManagedAPICheckResult{OK: true, Message: "模型返回了文本"}
+	}
 	if code, message := validateManagedCapabilityJSON(completion.Choices[0].Message.Content, completion.Choices[0].FinishReason); code != "" {
 		return failedManagedProbe(result, code, message, "capability")
 	}
@@ -289,6 +466,9 @@ func (p *HTTPManagedAPIProber) probeDashScope(ctx context.Context, client *http.
 		return failedManagedProbe(result, "no_choices", "模型响应中没有可用结果", "capability")
 	}
 	result.Diagnostic = managedCapabilityDiagnostic(completion.Output.Choices[0].Message.Content, completion.Output.Choices[0].FinishReason, result.Diagnostic.ResponseFormat)
+	if strings.TrimSpace(completion.Output.Choices[0].Message.Content) != "" {
+		result.TextCheck = ManagedAPICheckResult{OK: true, Message: "模型返回了文本"}
+	}
 	if code, message := validateManagedCapabilityJSON(completion.Output.Choices[0].Message.Content, completion.Output.Choices[0].FinishReason); code != "" {
 		return failedManagedProbe(result, code, message, "capability")
 	}
@@ -478,6 +658,12 @@ func managedCapabilityPayload(connection ManagedAPIConnection) map[string]any {
 		"temperature":     0,
 		"stream":          false,
 	}
+	applyManagedThinkingPolicy(payload, connection)
+	return payload
+}
+
+// 已知可关闭思考的模型使用相同策略，避免极短探测只有推理 Token 而没有最终回复。
+func applyManagedThinkingPolicy(payload map[string]any, connection ManagedAPIConnection) {
 	switch NewProviderRegistry().ProbePolicy(connection.Config.ProviderKey) {
 	case "deepseek_hybrid":
 		if managedModelSupportsThinkingDisable(connection.Config.ProviderKey, connection.Config.ModelName) {
@@ -488,13 +674,12 @@ func managedCapabilityPayload(connection ManagedAPIConnection) map[string]any {
 			payload["enable_thinking"] = false
 		}
 	}
-	return payload
 }
 
 func managedCapabilityMessages() []map[string]string {
 	return []map[string]string{
 		{"role": "system", "content": "只输出合法 JSON，不要解释，不要使用 Markdown。"},
-		{"role": "user", "content": "将“第1题，满分2分”转换为 JSON；question_no 必须是字符串，max_score 必须是数字。"},
+		{"role": "user", "content": "只输出一个 JSON 对象，必须包含 question_no（字符串）和 max_score（数字）；字段值可以任意，不要输出其他说明。"},
 	}
 }
 
@@ -515,7 +700,8 @@ func managedCapabilityFlightKey(connection ManagedAPIConnection) string {
 	_, _ = io.WriteString(mac, strings.Join([]string{
 		connection.Config.ProviderKey, connection.Config.AdapterType,
 		strings.TrimRight(connection.Config.BaseURL, "/"), connection.Config.ModelName,
-		ManagedCapabilityProbeVersion,
+		connection.Config.TenantID, connection.Config.ID, connection.Config.ModelVersion, connection.Config.Region,
+		connection.Config.UpdatedAt.UTC().Format(time.RFC3339Nano), ManagedCapabilityProbeVersion,
 	}, "\x00"))
 	return hex.EncodeToString(mac.Sum(nil))
 }
@@ -576,14 +762,13 @@ func validateManagedCapabilityJSON(content, finishReason string) (string, string
 	}
 	questionNo, questionExists := payload["question_no"]
 	maxScore, scoreExists := payload["max_score"]
-	questionText, questionTypeOK := questionNo.(string)
+	_, questionTypeOK := questionNo.(string)
 	scoreNumber, scoreTypeOK := maxScore.(json.Number)
 	if !questionExists || !scoreExists || !questionTypeOK || !scoreTypeOK {
 		return "schema_mismatch", "JSON 缺少必要字段或字段类型不正确"
 	}
-	score, scoreErr := scoreNumber.Float64()
-	if strings.TrimSpace(questionText) != "1" || scoreErr != nil || score != 2 {
-		return "semantic_mismatch", "JSON 字段值与测试文本不一致"
+	if _, scoreErr := scoreNumber.Float64(); scoreErr != nil {
+		return "schema_mismatch", "max_score 不是有效数字"
 	}
 	return "", ""
 }
@@ -611,6 +796,8 @@ func failedManagedProbe(result ManagedAPIProbeResult, code, message, stage strin
 		result.ModelCheck = check
 	case "capability":
 		result.CapabilityCheck = check
+	case "text":
+		result.TextCheck = check
 	}
 	return result
 }
@@ -637,6 +824,8 @@ func statusManagedProbeFailure(result ManagedAPIProbeResult, statusCode int, sta
 		return failedManagedProbe(result, "model_not_found", fmt.Sprintf("没有找到模型 %s", result.Model), "model")
 	case http.StatusTooManyRequests:
 		return failedManagedProbe(result, "provider_rate_limited", "供应商额度不足或请求频率受限", stage)
+	case http.StatusRequestTimeout, http.StatusTooEarly:
+		return failedManagedProbe(result, "provider_unavailable", "供应商暂时无法处理请求，请稍后重试", stage)
 	default:
 		return failedManagedProbe(result, "provider_error", fmt.Sprintf("供应商返回 HTTP %d", statusCode), stage)
 	}

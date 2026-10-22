@@ -15,6 +15,7 @@ func TestTaskContextAggregatesFrozenFactsAndSubjectHints(t *testing.T) {
 	store := NewMemoryStore()
 	contextValue := reviewContext()
 	contextValue.AssessmentSnapshot = taskContextSnapshot(assessment.RiskR2, assessment.ScoringAIAssist)
+	bindTaskSuggestionFixture(&contextValue, "segment-1")
 	store.AddContext(tenantID, "segment-1", contextValue)
 	task, err := store.CreateTask(context.Background(), tenantID, "manager-1", CreateTaskInput{
 		AnswerSegmentID: "segment-1", Source: "ai_low_confidence", AssignedTo: "reviewer-1",
@@ -58,6 +59,7 @@ func TestR3HumanPrimaryContextRemovesAllAIScoreFields(t *testing.T) {
 	}
 	automationScore, automationMax := 4.0, 5.0
 	contextValue.AutomationResult = &AutomationResult{Decision: "review", Score: &automationScore, MaxScore: &automationMax}
+	bindTaskSuggestionFixture(&contextValue, "segment-1")
 	store.AddContext(tenantID, "segment-1", contextValue)
 	task, err := store.CreateTask(context.Background(), tenantID, "manager-1", CreateTaskInput{
 		AnswerSegmentID: "segment-1", Source: "manual_sample", AssignedTo: "reviewer-1",
@@ -101,6 +103,7 @@ func TestGetTaskContextIncludesOnlyAssignedReviewersDraft(t *testing.T) {
 	store := NewMemoryStore()
 	contextValue := reviewContext()
 	contextValue.AssessmentSnapshot = taskContextSnapshot(assessment.RiskR2, assessment.ScoringAIAssist)
+	bindTaskSuggestionFixture(&contextValue, "segment-1")
 	store.AddContext(tenantID, "segment-1", contextValue)
 	task, err := store.CreateTask(context.Background(), tenantID, "manager-1", CreateTaskInput{
 		AnswerSegmentID: "segment-1", Source: "manual_sample", AssignedTo: "reviewer-1",

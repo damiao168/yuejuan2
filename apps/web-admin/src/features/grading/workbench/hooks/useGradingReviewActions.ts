@@ -1,95 +1,20 @@
+import { useGradingDraftConflict } from "./useGradingDraftConflict";
+import type { UseGradingReviewActionsOptions } from "./gradingReviewActions.types";
+export type { UseGradingReviewActionsOptions } from "./gradingReviewActions.types";
 import { Modal } from "antd";
+import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Dispatch, RefObject, SetStateAction } from "react";
-import { removeReviewDraftFallback, loadReviewDraftFallback, saveReviewDraftFallback } from "../../../../auth/reviewDraftFallback";
-import { type RubricPoint } from "../../../../api/papers";
+import { removeReviewDraftFallback } from "../../../../auth/reviewDraftFallback";
 import {
   returnReviewTask,
   submitHumanGrade,
-  type AiGrade,
-  type ReviewTask
+  type AiGrade
 } from "../../../../api/review";
-import { isReviewTaskContextScopeCurrent, reviewTaskContextKeys, type ReviewTaskContextScope } from "../../../../query/reviewTaskContext";
-import type { GoldPaperNominationCandidate } from "../../../gold-papers";
-import { createDraftSnapshot, createInitialDraft, fallbackSnapshot, formatError, serverDraftSnapshot } from "../gradingWorkbench.model";
-import { loadTaskContext } from "../gradingTaskContext";
-import type { DraftFallbackSnapshot, DraftSaveStatus, ScoreDraft, ViewerMode, WorkbenchContext, PrefetchedTaskBundle } from "../gradingWorkbench.types";
-import type { DraftConflictResolution } from "../draftConflict";
+import { isReviewTaskContextScopeCurrent, reviewTaskContextKeys } from "../../../../query/reviewTaskContext";
+import { createInitialDraft } from "../gradingWorkbench.model";
+import type { ScoreDraft } from "../gradingWorkbench.types";
 import { mathSuggestionState } from "../mathWorkbenchEvidence";
 import { aiPointAdoption } from "../aiAdoption";
-import type { TaskDraftSaveQueue } from "./taskDraftSaveQueue";
-import type { useExamScoring } from "./useExamScoring";
-import type { useGradingScoreShortcuts } from "./useGradingScoreShortcuts";
-import type { useMathWorkbenchEvidence } from "./useMathWorkbenchEvidence";
-
-type StateSetter<T> = Dispatch<SetStateAction<T>>;
-type RunAction = (key: string, action: () => Promise<void>, successText: string) => Promise<void>;
-
-interface WorkbenchNotifications {
-  info: (text: string) => void;
-  warning: (text: string) => void;
-  error: (text: string) => void;
-}
-
-export interface UseGradingReviewActionsOptions {
-  queryScope: ReviewTaskContextScope;
-  isCurrentScope: () => boolean;
-  ctx: WorkbenchContext | null;
-  setCtx: StateSetter<WorkbenchContext | null>;
-  draft: ScoreDraft;
-  setDraft: StateSetter<ScoreDraft>;
-  draftConflict: DraftConflictResolution | null;
-  canSubmit: boolean;
-  canReturn: boolean;
-  canEditDraft: boolean;
-  canAdoptAiScore: boolean;
-  canViewOriginalImage: boolean;
-  canManageTasks: boolean;
-  hasMoreTasks: boolean;
-  currentUserId: string;
-  selectedTaskId: string;
-  nextTask: ReviewTask | undefined;
-  selectedGrade: AiGrade | undefined;
-  subjectCode: string;
-  maxScore: number;
-  rubricPoints: RubricPoint[];
-  viewerMode: ViewerMode;
-  scale: number;
-  rotation: number;
-  offset: { x: number; y: number };
-  autoFit: boolean;
-  math: ReturnType<typeof useMathWorkbenchEvidence>;
-  scoreShortcuts: ReturnType<typeof useGradingScoreShortcuts>;
-  examScoring: ReturnType<typeof useExamScoring>;
-  runAction: RunAction;
-  refreshCurrent: () => Promise<void>;
-  loadMoreTasks: () => Promise<ReviewTask[]>;
-  refreshTaskAggregate: () => Promise<void>;
-  restoreViewer: (viewer: DraftFallbackSnapshot["viewer"]) => void;
-  invalidateViewerContent: () => void;
-  setTasks: StateSetter<ReviewTask[]>;
-  setSelectedTaskId: StateSetter<string>;
-  setDraftHydrated: StateSetter<boolean>;
-  setDraftSaveStatus: StateSetter<DraftSaveStatus>;
-  setDraftRevision: StateSetter<number>;
-  setDraftConflict: StateSetter<DraftConflictResolution | null>;
-  setResolvingConflict: StateSetter<boolean>;
-  setGoldPaperCandidate: StateSetter<GoldPaperNominationCandidate | null>;
-  setMathRequesting: StateSetter<boolean>;
-  contextRequestRef: RefObject<number>;
-  activeTask: RefObject<string>;
-  activeUserId: RefObject<string>;
-  liveDraft: RefObject<ScoreDraft>;
-  mathActionLock: RefObject<boolean>;
-  conflictedDrafts: RefObject<Set<string>>;
-  draftSaves: RefObject<TaskDraftSaveQueue>;
-  lastSavedDraft: RefObject<string>;
-  conflictServerContext: RefObject<WorkbenchContext | null>;
-  prefetchedTaskRef: RefObject<Map<string, Promise<PrefetchedTaskBundle>>>;
-  pendingNextRef: RefObject<string | null>;
-  suppressAutoSelectRef: RefObject<boolean>;
-  notify: WorkbenchNotifications;
-}
 
 export function useGradingReviewActions({
   queryScope,
@@ -151,8 +76,19 @@ export function useGradingReviewActions({
   notify
 }: UseGradingReviewActionsOptions) {
   const queryClient = useQueryClient();
+  // 数学证据刷新期间，同一任务也可能收到当前失败或新建议；旧闭包不能把历史建议回填到草稿。
+  const liveAdoption = useRef({ ctx, selectedGrade, canEditDraft, canAdoptAiScore, dirty: math.dirty });
+  liveAdoption.current = { ctx, selectedGrade, canEditDraft, canAdoptAiScore, dirty: math.dirty };
+  const isAdoptionCurrent = (grade: AiGrade) => {
+    const live = liveAdoption.current;
+    return live.ctx?.task.id === ctx?.task.id && !live.ctx?.reviewContext.ai_failure
+      && live.selectedGrade?.id === grade.id && live.canEditDraft && live.canAdoptAiScore && !live.dirty;
+  };
   // 同一账号切换考试或原图权限也会更换作用域；同考试内切任务仍允许更新原任务的提交结果。
   const isCurrentSession = () => isCurrentScope() && activeUserId.current === currentUserId && isReviewTaskContextScopeCurrent(queryScope);
+  const { openDraftConflict, applyDraftConflict } = useGradingDraftConflict({
+    ctx, currentUserId, draft, viewerMode, scale, rotation, offset, autoFit, setResolvingConflict, queryScope, prefetchedTaskRef, activeTask, activeUserId, canViewOriginalImage, conflictServerContext, setDraftConflict, notify, draftConflict, conflictedDrafts, draftSaves, setCtx, setDraftRevision, lastSavedDraft, setDraft, restoreViewer, setDraftSaveStatus, isCurrentSession
+  });
   const submitGrade = async (nominateAsGold = false) => {
     if (!isCurrentSession()) return;
     if (!ctx) {
@@ -282,6 +218,7 @@ export function useGradingReviewActions({
       notify.warning("本场考试未开放 AI 建议，无法采纳");
       return;
     }
+    if (!isAdoptionCurrent(selectedGrade)) return;
     if (!canEditDraft || !canAdoptAiScore) {
       notify.warning("当前建议未通过版本核对，请按原图人工判定或刷新证据。");
       return;
@@ -299,6 +236,7 @@ export function useGradingReviewActions({
     try {
       const evidence = await math.refresh();
       if (activeTask.current !== taskId || !isCurrentSession()) return;
+      if (!isAdoptionCurrent(selectedGrade)) return;
       if (!evidence || !mathSuggestionState(selectedGrade, evidence, math.dirty).current) {
         notify.warning("数学证据或图片已更新，旧建议不可采纳。");
         return;
@@ -316,67 +254,13 @@ export function useGradingReviewActions({
 
   const adoptAiFeedback = () => {
     if (!isCurrentSession() || activeTask.current !== ctx?.task.id || !selectedGrade || !canEditDraft || !canAdoptAiScore) return;
+    if (!isAdoptionCurrent(selectedGrade)) return;
     // 该入口由展示全文的确认框调用，不把模型文字随分数一起默默提交。
     setDraft((current) => ({ ...current,
       studentFeedback: selectedGrade.student_feedback ?? current.studentFeedback,
       privateNote: selectedGrade.teacher_note ?? current.privateNote
     }));
     notify.info("AI 反馈已作为可编辑草稿填入，请在提交前审读学生可见文字。");
-  };
-
-  const openDraftConflict = async () => {
-    if (!isCurrentSession() || activeTask.current !== ctx?.task.id) return;
-    const taskId = ctx.task.id;
-    const userId = currentUserId;
-    const initial = createInitialDraft(ctx);
-    const fallback = loadReviewDraftFallback<unknown>(userId, taskId);
-    const local = (fallback && fallbackSnapshot(fallback.snapshot, initial))
-      ?? createDraftSnapshot(draft, viewerMode, scale, rotation, offset, autoFit);
-    setResolvingConflict(true);
-    try {
-      if (!isCurrentSession()) return;
-      queryClient.removeQueries({ queryKey: reviewTaskContextKeys.task(queryScope, taskId) });
-      prefetchedTaskRef.current.delete(taskId);
-      const latestContext = await loadTaskContext(queryClient, queryScope, taskId);
-      if (activeTask.current !== taskId || activeUserId.current !== userId || !isCurrentSession()) return;
-      const server = serverDraftSnapshot(
-        createInitialDraft(latestContext),
-        latestContext.task.assigned_to === userId ? latestContext.reviewContext.draft : null,
-        canViewOriginalImage
-      );
-      conflictServerContext.current = latestContext;
-      setDraftConflict({ taskId, serverRevision: server.revision, local, server: server.snapshot });
-    } catch (currentError) {
-      if (activeTask.current === taskId && activeUserId.current === userId && isCurrentSession()) {
-        notify.error(formatError(currentError));
-      }
-    } finally {
-      if (activeTask.current === taskId && activeUserId.current === userId && isCurrentSession()) setResolvingConflict(false);
-    }
-  };
-
-  const applyDraftConflict = (merged: DraftFallbackSnapshot) => {
-    if (!isCurrentSession()) return;
-    const conflict = draftConflict;
-    const latestContext = conflictServerContext.current;
-    if (!conflict || !latestContext || conflict.taskId !== activeTask.current || latestContext.task.id !== conflict.taskId) return;
-    const draftKey = JSON.stringify([currentUserId, conflict.taskId]);
-    const serverSnapshot = JSON.stringify(conflict.server);
-    const mergedSnapshot = JSON.stringify(merged);
-    conflictedDrafts.current.delete(draftKey);
-    // 合并结果以服务端最新修订号续存；旧版本号不能再次提交，否则会把已解决的冲突重新带回去。
-    draftSaves.current.observeRevision(draftKey, conflict.serverRevision);
-    if (mergedSnapshot === serverSnapshot) removeReviewDraftFallback(currentUserId, conflict.taskId);
-    else saveReviewDraftFallback(currentUserId, conflict.taskId, merged);
-    setCtx(latestContext);
-    setDraftRevision(conflict.serverRevision);
-    lastSavedDraft.current = serverSnapshot;
-    setDraft(merged.draft);
-    restoreViewer(merged.viewer);
-    setDraftConflict(null);
-    conflictServerContext.current = null;
-    setDraftSaveStatus(mergedSnapshot === serverSnapshot ? "saved" : "saving");
-    setResolvingConflict(false);
   };
 
   const confirmReturnTask = (asException: boolean) => {

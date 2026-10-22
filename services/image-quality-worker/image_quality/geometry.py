@@ -194,9 +194,8 @@ def _detect_page_border(
         status = "complete" if completeness >= 0.8 else "partial"
         return status, confidence, completeness, None
 
-    # 平板扫描中的纸张可能延伸到画布各边，因此
-    # 看不到外部轮廓。此时报告中等完整度和低置信度，
-    # 而不虚构可靠的边框观测结果。
+    # 纸张可能铺满平板扫描画布，无法观察外部轮廓时，不把边缘亮度当作可靠边框。
+    # 明亮边缘只给出中等完整度和低置信度，其他情况保留未知结果。
     edge_band = max(2, int(min(width, height) * 0.015))
     edge_pixels = np.concatenate(
         (

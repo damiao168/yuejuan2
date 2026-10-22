@@ -13,8 +13,8 @@ func TestValidateTaskLeaseUsesProvidedDatabaseClock(t *testing.T) {
 	if err := validateTaskLeaseAt(task, "lease-1", expires.Add(-time.Hour)); err != nil {
 		t.Fatalf("lease should be valid according to the database clock: %v", err)
 	}
-	if err := validateTaskLeaseAt(task, "lease-1", expires); err != nil {
-		t.Fatalf("lease is valid through its exact expiry instant: %v", err)
+	if err := validateTaskLeaseAt(task, "lease-1", expires); !errors.Is(err, ErrLeaseExpired) {
+		t.Fatalf("lease must be expired at its exact expiry instant: %v", err)
 	}
 	if err := validateTaskLeaseAt(task, "lease-1", expires.Add(time.Nanosecond)); !errors.Is(err, ErrLeaseExpired) {
 		t.Fatalf("lease should be expired according to the database clock, got %v", err)

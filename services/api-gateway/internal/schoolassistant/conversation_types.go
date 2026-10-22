@@ -22,8 +22,9 @@ type ConversationContext struct {
 }
 
 type ConversationRequest struct {
-	Messages []modelgovernance.ManagedChatMessage `json:"messages"`
-	Context  *ConversationContext                 `json:"context,omitempty"`
+	ModelConfigID string                               `json:"model_config_id,omitempty"`
+	Messages      []modelgovernance.ManagedChatMessage `json:"messages"`
+	Context       *ConversationContext                 `json:"context,omitempty"`
 }
 
 type ConversationEvent struct {

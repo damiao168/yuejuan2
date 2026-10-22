@@ -176,6 +176,7 @@ def main() -> None:
     environment = os.environ.get("EDUGRADE_ENV", "production").strip().lower()
     # 缺省和未知环境都需要 TLS；所有明文例外检查必须在占用监听端口前完成。
     _validate_listener_policy(environment, host, _allow_insecure_loopback_http(), bool(cert_file))
+    # 使用证书时，下方完成 TLS 封装后才处理请求；无证书的开发回环例外已在上面验证。
     server = ThreadingHTTPServer((host, port), Handler)
     try:
         if cert_file:

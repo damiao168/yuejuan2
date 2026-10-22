@@ -2,7 +2,7 @@
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { TableColumnsType } from "antd";
+import type { TableColumnsType, TableProps } from "antd";
 import type { ManagementExam } from "../api/exams";
 import type { SessionUser } from "../auth/session";
 import { ExamManagementPage } from "./ExamManagementPage";
@@ -21,9 +21,9 @@ vi.mock("antd", () => {
     Button: ({ children, onClick, disabled, loading, "aria-label": label }: { children?: ReactNode; onClick?: () => void; disabled?: boolean; loading?: boolean; "aria-label"?: string }) => <button disabled={disabled || loading} onClick={onClick} aria-label={label}>{children}</button>,
     Input: ({ placeholder, value, onChange }: { placeholder?: string; value: string; onChange: (event: unknown) => void }) => <input placeholder={placeholder} value={value} onChange={onChange} />,
     Select: ({ options, value, onChange, "aria-label": label }: { options: { label: string; value: string }[]; value?: string; onChange: (value: string) => void; "aria-label"?: string }) => <select aria-label={label} value={value ?? ""} onChange={(event) => onChange(event.target.value)}><option value="">全部</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>,
-    Dropdown: ({ children, menu }: { children: ReactNode; menu: { items: { key: string; label: string; disabled?: boolean }[]; onClick: (item: { key: string }) => void } }) => <div>{children}<div role="menu">{menu.items.map((item) => <button key={item.key} role="menuitem" disabled={item.disabled} onClick={() => menu.onClick({ key: item.key })}>{item.label}</button>)}</div></div>,
+    Dropdown: ({ children, menu }: { children: ReactNode; menu: { items: { key: string; label: string; disabled?: boolean }[]; onClick: (item: { key: string; domEvent: { stopPropagation: () => void } }) => void } }) => <div>{children}<div role="menu">{menu.items.map((item) => <button key={item.key} role="menuitem" disabled={item.disabled} onClick={(domEvent) => menu.onClick({ key: item.key, domEvent })}>{item.label}</button>)}</div></div>,
     Drawer: ({ children, open, onClose }: { children: ReactNode; open: boolean; onClose: () => void }) => open ? <div role="dialog"><button onClick={onClose}>关闭详情</button>{children}</div> : null,
-    Table: ({ columns, dataSource }: { columns: TableColumnsType<ManagementExam>; dataSource: ManagementExam[] }) => <div>{dataSource.map((exam, index) => <div data-exam-id={exam.id} key={exam.id}>{columns.map((column, columnIndex) => "render" in column && column.render ? <div key={columnIndex}>{column.render("dataIndex" in column && column.dataIndex === "name" ? exam.name : undefined, exam, index) as ReactNode}</div> : null)}</div>)}</div>,
+    Table: ({ columns, dataSource, onRow }: { columns: TableColumnsType<ManagementExam>; dataSource: ManagementExam[]; onRow?: TableProps<ManagementExam>["onRow"] }) => <div>{dataSource.map((exam, index) => <div {...onRow?.(exam, index)} data-exam-id={exam.id} key={exam.id}>{columns.map((column, columnIndex) => "render" in column && column.render ? <div {...column.onCell?.(exam, index)} key={columnIndex}>{column.render("dataIndex" in column && column.dataIndex === "name" ? exam.name : undefined, exam, index) as ReactNode}</div> : null)}</div>)}</div>,
     Space: pass, Tooltip: pass, Spin: () => null, Empty: () => null, Alert: () => null
   };
 });
@@ -63,14 +63,16 @@ async function click(text: string) {
 }
 
 describe("考试列表整场操作", () => {
-  it("移除单科菜单与手工状态推进，名称和工作区都打开包含全部学科的整场对象", async () => {
+  it("点击整行或考试名称都打开完整整场对象，名称点击只跳转一次", async () => {
     const open = await mount();
     expect(container.textContent).toContain("查看考试详情");
     const tableRegion = container.querySelector("section[aria-label='考试列表表格']");
     expect(tableRegion).not.toBeNull();
     expect(tableRegion?.getAttribute("tabindex")).toBeNull();
     expect(container.textContent).not.toMatch(/开始配置|归档当前学科|编辑学科设置|查看学科详情/);
-    await click("考试工作区");
+    expect(container.querySelector(".exam-name-link")?.tagName).toBe("BUTTON");
+    expect([...container.querySelectorAll("button")].some(button => button.textContent === "考试工作区")).toBe(false);
+    await act(async () => container.querySelector<HTMLElement>('[data-exam-id="session-1"]')!.click());
     await click("期中考试");
     expect(open).toHaveBeenCalledTimes(2);
     expect(open.mock.calls[0][0]).toMatchObject({ kind: "session", id: "session-1" });
@@ -94,7 +96,7 @@ describe("考试列表整场操作", () => {
     const open = await mount();
     const select = container.querySelector<HTMLSelectElement>("select[aria-label='考试进度筛选']")!;
     await act(async () => { select.value = "configured"; select.dispatchEvent(new Event("change", { bubbles: true })); });
-    await click("考试工作区");
+    await click("期中考试");
     expect(open.mock.lastCall?.[0].exams.map((subject: { id: string }) => subject.id)).toEqual(["math", "physics"]);
     expect(mocks.list).toHaveBeenCalledTimes(1);
   });
@@ -104,6 +106,19 @@ describe("考试列表整场操作", () => {
     await mount();
     expect([...container.querySelectorAll("button")].find((item) => item.textContent === "归档考试")?.disabled).toBe(true);
     expect([...container.querySelectorAll("button")].find((item) => item.textContent === "编辑考试")?.disabled).toBe(true);
+  });
+
+  it("更多按钮和菜单不会触发行跳转，详情编辑和归档仍执行各自操作", async () => {
+    const open = await mount();
+    const more = container.querySelector<HTMLButtonElement>('button[aria-label="期中考试更多操作"]')!;
+    await act(async () => more.click());
+    await click("查看考试详情");
+    await click("编辑考试");
+    await click("归档考试");
+    expect(open).not.toHaveBeenCalled();
+    expect(mocks.get).toHaveBeenCalledTimes(2);
+    expect(mocks.edit.mock.lastCall?.[0].exam.id).toBe("session-1");
+    expect(mocks.archive.mock.lastCall?.[0].selection.action).toBe("archive");
   });
 
   it("最新权限拒绝不会打开编辑抽屉", async () => {

@@ -4,11 +4,11 @@ export function calibrationThresholdChecks(metrics: CalibrationMetrics, policy?:
   // 未设置采分点门槛时不据此拦截；已设置门槛但缺失数据时，按不达标处理。
   if (!policy) return [];
   return [
-    { key: "mae", label: "平均绝对误差", value: metrics.mae, passed: metrics.mae <= policy.maximum_mae },
-    { key: "exact", label: "完全一致率", value: metrics.exact_agreement, passed: metrics.exact_agreement >= policy.minimum_exact_agreement },
-    { key: "within-one", label: "误差不超过 1 分", value: metrics.within_one_agreement, passed: metrics.within_one_agreement >= policy.minimum_within_one_agreement },
-    { key: "criterion", label: "采分点一致率", value: metrics.criterion_agreement, passed: policy.minimum_criterion_agreement === undefined || (metrics.criterion_agreement ?? -1) >= policy.minimum_criterion_agreement },
-    { key: "severe", label: "严重偏差率", value: metrics.severe_disagreement_rate, passed: metrics.severe_disagreement_rate <= policy.maximum_severe_rate }
+    { key: "mae", label: "平均分差（分）", value: metrics.mae, passed: metrics.mae <= policy.maximum_mae },
+    { key: "exact", label: "分数完全相同的比例", value: metrics.exact_agreement, passed: metrics.exact_agreement >= policy.minimum_exact_agreement },
+    { key: "within-one", label: "分差不超过 1 分的比例", value: metrics.within_one_agreement, passed: metrics.within_one_agreement >= policy.minimum_within_one_agreement },
+    { key: "criterion", label: "采分点判断相同的比例", value: metrics.criterion_agreement, passed: policy.minimum_criterion_agreement === undefined || (metrics.criterion_agreement ?? -1) >= policy.minimum_criterion_agreement },
+    { key: "severe", label: "严重分差的比例", value: metrics.severe_disagreement_rate, passed: metrics.severe_disagreement_rate <= policy.maximum_severe_rate }
   ];
 }
 

@@ -151,6 +151,18 @@ RETURNING id::text, tenant_id::text, exam_id::text, exam_paper_id::text, version
 }
 
 func (s *PostgresStore) LockTemplate(ctx context.Context, tenantID string, id string, userID string) (AnswerSheetTemplate, error) {
+	return s.lockTemplateAtRevision(ctx, tenantID, id, userID, 0)
+}
+
+// LockTemplateAtRevision 将复核版本和锁定写入放在同一事务中，避免先读取后锁定时采用其他人的改框。
+func (s *PostgresStore) LockTemplateAtRevision(ctx context.Context, tenantID, id, userID string, expectedRevision int) (AnswerSheetTemplate, error) {
+	if expectedRevision < 1 {
+		return AnswerSheetTemplate{}, ErrInvalidInput
+	}
+	return s.lockTemplateAtRevision(ctx, tenantID, id, userID, expectedRevision)
+}
+
+func (s *PostgresStore) lockTemplateAtRevision(ctx context.Context, tenantID, id, userID string, expectedRevision int) (AnswerSheetTemplate, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return AnswerSheetTemplate{}, err
@@ -171,6 +183,9 @@ FOR UPDATE
 		}
 		return AnswerSheetTemplate{}, err
 	}
+	if expectedRevision > 0 && draft.Revision != expectedRevision {
+		return AnswerSheetTemplate{}, ErrConflict
+	}
 	if err := ensureExamPaperMutableTx(ctx, tx, tenantID, draft.ExamID); err != nil {
 		return AnswerSheetTemplate{}, err
 	}
@@ -181,6 +196,13 @@ FOR UPDATE
 	}
 	if err := ValidateTemplateInput(draft.Name, draft.PageCount, draft.Layout); err != nil {
 		return AnswerSheetTemplate{}, ErrInvalidInput
+	}
+	questions, err := listQuestions(ctx, tx, tenantID, draft.ExamID)
+	if err != nil {
+		return AnswerSheetTemplate{}, err
+	}
+	if err := validateTemplateReadyToLock(draft.Layout, questions); err != nil {
+		return AnswerSheetTemplate{}, err
 	}
 	layout, _ := json.Marshal(draft.Layout)
 	row = tx.QueryRowContext(ctx, `
@@ -198,7 +220,9 @@ RETURNING id::text, tenant_id::text, exam_id::text, exam_paper_id::text, version
 	}
 	// 锁定模板同时把区域同步到正式题目；任一区域引用无效时整笔事务回滚。
 	for _, page := range item.Layout.Pages {
+		individual := map[string]bool{}
 		for _, region := range page.QuestionRegions {
+			individual[region.QuestionID] = true
 			result, err := tx.ExecContext(ctx, `
 UPDATE question
 SET answer_area = jsonb_build_object(
@@ -208,15 +232,30 @@ SET answer_area = jsonb_build_object(
   'width', $7::float8,
   'height', $8::float8,
   'option_regions', $9::jsonb
-), updated_at = now()
+) || jsonb_strip_nulls(jsonb_build_object('option_coordinate_space', NULLIF($10::text, ''))), updated_at = now()
 WHERE tenant_id = $1::uuid AND exam_id = $2::uuid AND id = $3::uuid AND deleted_at IS NULL AND status <> 'deleted'
-`, tenantID, item.ExamID, region.QuestionID, page.PageNo, region.X, region.Y, region.Width, region.Height, mustJSON(region.OptionRegions))
+`, tenantID, item.ExamID, region.QuestionID, page.PageNo, region.X, region.Y, region.Width, region.Height, mustJSON(region.OptionRegions), region.OptionCoordinateSpace)
 			if err != nil {
 				return AnswerSheetTemplate{}, err
 			}
 			count, _ := result.RowsAffected()
 			if count != 1 {
 				return AnswerSheetTemplate{}, ErrInvalidInput
+			}
+		}
+		for _, group := range page.GradingGroups {
+			for _, questionID := range group.QuestionIDs {
+				if individual[questionID] {
+					continue
+				}
+				// 新模板不再有子框时清掉旧版本的精确几何，只留下明确的整区上下文引用。
+				result, err := tx.ExecContext(ctx, `UPDATE question SET answer_area=jsonb_build_object('page',$4::int,'answer_scope','grading_group','grading_group_id',$5::text),updated_at=now() WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND id=$3::uuid AND deleted_at IS NULL AND status<>'deleted'`, tenantID, item.ExamID, questionID, page.PageNo, group.GroupID)
+				if err != nil {
+					return AnswerSheetTemplate{}, err
+				}
+				if count, _ := result.RowsAffected(); count != 1 {
+					return AnswerSheetTemplate{}, ErrInvalidInput
+				}
 			}
 		}
 	}
@@ -314,11 +353,22 @@ func (s *PostgresStore) Readiness(ctx context.Context, tenantID string, examID s
 	if err != nil {
 		return ReadinessResult{}, err
 	}
+	result, err = loadReadinessConfirmationFacts(ctx, tx, tenantID, examID, status, result)
+	if err != nil {
+		return ReadinessResult{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return ReadinessResult{}, err
+	}
+	return result, nil
+}
+
+func loadReadinessConfirmationFacts(ctx context.Context, queryer postgresQueryer, tenantID, examID, status string, result ReadinessResult) (ReadinessResult, error) {
 	var confirmedAt time.Time
 	var confirmedBy string
 	var snapshotID string
 	var importSnapshotAvailable bool
-	err = tx.QueryRowContext(ctx, `
+	err := queryer.QueryRowContext(ctx, `
 SELECT confirmed_at, confirmed_by::text, id::text, import_snapshot_json IS NOT NULL
 FROM exam_readiness_snapshot
 WHERE tenant_id = $1::uuid AND exam_id = $2::uuid AND status = 'passed' AND configuration_hash = $3
@@ -330,8 +380,21 @@ ORDER BY confirmed_at DESC LIMIT 1
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return ReadinessResult{}, err
 	}
-	if err = tx.Commit(); err != nil {
-		return ReadinessResult{}, err
+	// 下游阶段保留准备完成的历史事实；它不覆盖上面的当前配置匹配，也不能用于导入或再次确认。
+	switch status {
+	case "collecting", "grading", "reviewing", "finalized", "archived":
+		var preparationConfirmedAt time.Time
+		var preparationSnapshotID string
+		err = queryer.QueryRowContext(ctx, `
+SELECT confirmed_at, id::text FROM exam_readiness_snapshot
+WHERE tenant_id = $1::uuid AND exam_id = $2::uuid AND status = 'passed'
+ORDER BY confirmed_at DESC, id DESC LIMIT 1
+`, tenantID, examID).Scan(&preparationConfirmedAt, &preparationSnapshotID)
+		if err == nil {
+			result.PreparationConfirmedAt, result.PreparationSnapshotID = &preparationConfirmedAt, preparationSnapshotID
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return ReadinessResult{}, err
+		}
 	}
 	return result, nil
 }
@@ -344,6 +407,9 @@ func (s *PostgresStore) ConfirmReadiness(ctx context.Context, tenantID string, e
 	defer tx.Rollback()
 	lockedStatus, err := lockReadinessExam(ctx, tx, tenantID, examID)
 	if err != nil {
+		return ReadinessResult{}, err
+	}
+	if err := lockObjectiveConfirmationRulesTx(ctx, tx, tenantID, examID); err != nil {
 		return ReadinessResult{}, err
 	}
 	// 全部试卷配置写入都取得同一考试行锁。
@@ -376,6 +442,15 @@ func (s *PostgresStore) ConfirmReadiness(ctx context.Context, tenantID string, e
 	questions, err := listQuestions(ctx, tx, tenantID, examID)
 	if err != nil {
 		return ReadinessResult{}, err
+	}
+	// 发布与准备确认共享事务；任何草稿冲突或后续冻结失败都回滚全部新规则。
+	if hasObjectiveRuleAutoPreview(result) {
+		if err := publishObjectiveConfirmationRulesTx(ctx, tx, tenantID, examID, userID, status, questions); err != nil {
+			return result, err
+		}
+	}
+	if err := lockReadinessReferenceMaterials(ctx, tx, tenantID, examID, questions); err != nil {
+		return result, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 UPDATE exam_readiness_snapshot SET status = 'invalidated', invalidated_at = now(), invalidation_reason = 'superseded by new confirmation'
@@ -416,9 +491,9 @@ WHERE tenant_id = $1::uuid AND exam_id = $2::uuid AND status = 'passed'
 	  tenant_id, exam_id, configuration_hash, status, checks, confirmed_by, confirmed_at,
 	  import_snapshot_schema_version, import_snapshot_hash, import_snapshot_json
 	)
-	VALUES ($1::uuid, $2::uuid, $3, 'passed', $4::jsonb, $5::uuid, $6, 1, $7, $8::jsonb)
+	VALUES ($1::uuid, $2::uuid, $3, 'passed', $4::jsonb, $5::uuid, $6, $9, $7, $8::jsonb)
 	RETURNING confirmed_at,id::text
-	`, tenantID, examID, result.ConfigurationHash, checks, userID, now, importSnapshotHash, importSnapshotJSON).Scan(&now, &snapshotID); err != nil {
+	`, tenantID, examID, result.ConfigurationHash, checks, userID, now, importSnapshotHash, importSnapshotJSON, importSnapshot.Version).Scan(&now, &snapshotID); err != nil {
 		return ReadinessResult{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -483,6 +558,9 @@ func (s *PostgresStore) StartCollection(ctx context.Context, tenantID string, ex
 	if !result.Ready || status != "ready" {
 		return result, ErrNotReady
 	}
+	if err := lockReadinessReferenceMaterials(ctx, tx, tenantID, examID, result.referenceQuestions); err != nil {
+		return result, err
+	}
 	var confirmedAt time.Time
 	var confirmedBy string
 	var snapshotID string
@@ -510,6 +588,7 @@ ORDER BY confirmed_at DESC LIMIT 1
 	}
 	result.Confirmed, result.ConfirmedAt, result.ConfirmedBy = true, &confirmedAt, confirmedBy
 	result.SnapshotID, result.ImportSnapshotAvailable = snapshotID, importSnapshotAvailable
+	result.PreparationConfirmedAt, result.PreparationSnapshotID = &confirmedAt, snapshotID
 	return result, nil
 }
 
@@ -576,6 +655,10 @@ WHERE e.tenant_id = $1::uuid AND e.id = $2::uuid AND e.deleted_at IS NULL
 		return ReadinessResult{}, "", nil, err
 	}
 	result := buildReadinessForScope(total, classIDs, candidateIDs, papers, questions, templates)
+	result, err = withReferenceReadiness(ctx, queryer, tenantID, examID, questions, result)
+	if err != nil {
+		return ReadinessResult{}, "", nil, err
+	}
 	var latest PaperImportJob
 	err = queryer.QueryRowContext(ctx, `SELECT id::text,current_generation,status,COALESCE(structure_confirmed_generation,0) FROM paper_import_job WHERE tenant_id=$1 AND exam_id=$2::uuid AND deleted_at IS NULL ORDER BY created_at DESC,id DESC LIMIT 1`, tenantID, examID).Scan(&latest.ID, &latest.Generation, &latest.Status, &latest.StructureConfirmedGeneration)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -585,6 +668,10 @@ WHERE e.tenant_id = $1::uuid AND e.id = $2::uuid AND e.deleted_at IS NULL
 		result = withStructureReadiness(result, latest)
 	}
 	result, err = assessmentReadinessHash(ctx, queryer, tenantID, examID, status, result)
+	if err != nil {
+		return ReadinessResult{}, "", nil, err
+	}
+	result, err = withObjectiveReadinessPlan(ctx, queryer, tenantID, examID, status, questions, result)
 	if err != nil {
 		return ReadinessResult{}, "", nil, err
 	}
@@ -636,7 +723,7 @@ func mustJSON(value any) []byte {
 }
 
 func (s *PostgresStore) materializeTemplateOMRReferenceTx(ctx context.Context, tx *sql.Tx, tenantID, examID, examPaperID string, layout TemplateLayout) (TemplateLayout, error) {
-	if layout.OMRProfile.Mode != OMRProfileModeTemplateDifference {
+	if layout.OMRProfile.Mode != OMRProfileModeTemplateDifference && layout.EditorState == nil {
 		return BindTemplateOMRReference(layout, TemplateOMRReference{}), nil
 	}
 	var reference TemplateOMRReference
@@ -651,6 +738,12 @@ WHERE ep.tenant_id = $1::uuid AND ep.exam_id = $2::uuid AND ep.id = $3::uuid AND
 	}
 	if err != nil {
 		return TemplateLayout{}, err
+	}
+	if err := validateTemplateEditorSource(layout, reference.HashSHA256); err != nil {
+		return TemplateLayout{}, err
+	}
+	if layout.OMRProfile.Mode != OMRProfileModeTemplateDifference {
+		return BindTemplateOMRReference(layout, TemplateOMRReference{}), nil
 	}
 	reference.Source = OMRReferenceSourceExamPaper
 	if err := ValidateTemplateOMRReference(reference); err != nil {

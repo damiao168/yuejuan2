@@ -174,23 +174,9 @@ func (s *MemoryStore) UpdateManagedUserAccess(_ context.Context, actor User, sco
 		if target.TenantID != actor.TenantID || target.ID != userID || target.Status == "deleted" {
 			continue
 		}
-		schoolID, err := managedUserAuthority(actor, scope, target)
+		schoolID, err := s.validateManagedAccessUpdateLocked(actor, scope, target, input, roles, classes)
 		if err != nil {
 			return ManagedUser{}, err
-		}
-		if !sameManagedAccess(target.Roles, target.ManagedClassIDs, input.ExpectedRoles, input.ExpectedClassIDs) {
-			return ManagedUser{}, ErrManagedUserAccessConflict
-		}
-		if _, err := s.managedUserBinding(actor, scope, CreateManagedUserInput{RoleCodes: roles, SchoolID: schoolID, ClassIDs: classes}); err != nil {
-			return ManagedUser{}, err
-		}
-		if err := s.validateManagedAccessClassesLocked(actor.TenantID, schoolID, classes); err != nil {
-			return ManagedUser{}, err
-		}
-		if target.Status == "active" && slices.Contains(target.Roles, "school_admin") && !slices.Contains(roles, "school_admin") {
-			if err := s.validateManagedUserStatus(target, schoolID, "disabled"); err != nil {
-				return ManagedUser{}, err
-			}
 		}
 		if sameManagedAccess(target.Roles, target.ManagedClassIDs, roles, classes) {
 			return managedUserFromMemory(target, schoolID), nil
@@ -203,6 +189,29 @@ func (s *MemoryStore) UpdateManagedUserAccess(_ context.Context, actor User, sco
 		return managedUserFromMemory(target, schoolID), nil
 	}
 	return ManagedUser{}, ErrManagedUserNotFound
+}
+
+// 调用方持有账户写锁；旧授权、组织绑定和最后管理员检查必须全部通过后才能改动授权或凭据。
+func (s *MemoryStore) validateManagedAccessUpdateLocked(actor User, scope AccessScope, target UserWithPassword, input UpdateManagedUserAccessInput, roles, classes []string) (string, error) {
+	schoolID, err := managedUserAuthority(actor, scope, target)
+	if err != nil {
+		return "", err
+	}
+	if !sameManagedAccess(target.Roles, target.ManagedClassIDs, input.ExpectedRoles, input.ExpectedClassIDs) {
+		return "", ErrManagedUserAccessConflict
+	}
+	if _, err := s.managedUserBinding(actor, scope, CreateManagedUserInput{RoleCodes: roles, SchoolID: schoolID, ClassIDs: classes}); err != nil {
+		return "", err
+	}
+	if err := s.validateManagedAccessClassesLocked(actor.TenantID, schoolID, classes); err != nil {
+		return "", err
+	}
+	if target.Status == "active" && slices.Contains(target.Roles, "school_admin") && !slices.Contains(roles, "school_admin") {
+		if err := s.validateManagedUserStatus(target, schoolID, "disabled"); err != nil {
+			return "", err
+		}
+	}
+	return schoolID, nil
 }
 
 // 调用方持有账户写锁；班级必须属于同一租户和学校，兼容边界表的两个资源名称。

@@ -2,6 +2,7 @@ import copy
 import json
 import unittest
 from pathlib import Path
+from decimal import Decimal
 
 from grading_agent.app import GradingAgentApplication
 from grading_agent.contract_v2 import (
@@ -11,6 +12,8 @@ from grading_agent.contract_v2 import (
 )
 from grading_agent.errors import AgentError
 from helpers import FakeModel, settings
+from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
 
 FIXTURES = Path(__file__).resolve().parents[2] / "contracts" / "grading-agent" / "v2" / "fixtures"
 
@@ -87,6 +90,39 @@ class ContractV2Tests(unittest.TestCase):
         formula["id"] = request["math_evidence"]["steps"][0]["id"]
         with self.assertRaisesRegex(AgentError, "formula identity or status"):
             validate_request_v2(request)
+
+    def test_formula_crop_accepts_full_extent_and_pixel_ratio_precision(self):
+        schema = json.loads((FIXTURES.parent / "request.schema.json").read_text(encoding="utf-8"), parse_float=Decimal)
+        prior_schema = json.loads((FIXTURES.parent.parent / "v1/request.schema.json").read_text(encoding="utf-8"), parse_float=Decimal)
+        # 契约引用只从仓库注册，测试不得为相对 $ref 请求网络。
+        registry = Registry().with_resource(prior_schema["$id"], Resource.from_contents(prior_schema))
+        for bbox in (
+            {"x": 0, "y": 0, "width": 1, "height": 1},
+            {"x": 1 / 300, "y": 2 / 300, "width": 1 / 3, "height": 1 / 7},
+        ):
+            request = fixture("valid-request.json")
+            original_binding = request["media_evidence"]["binding_hash"]
+            request["math_evidence"]["formulas"][0]["bbox"] = bbox
+            with self.subTest(bbox=bbox):
+                self.assertIs(validate_request_v2(request), request)
+                # multipleOf 属于十进制契约，验证时避免二进制 0.1 / 0.000001 舍入造成假失败。
+                decimal_request = json.loads(json.dumps(request), parse_float=Decimal)
+                self.assertEqual(list(Draft202012Validator(schema, registry=registry).iter_errors(decimal_request)), [])
+                self.assertEqual(compute_media_binding_hash(request), original_binding)
+
+    def test_formula_crop_still_rejects_invalid_coordinates(self):
+        for bbox in (
+            {"x": -0.1, "y": 0, "width": 1, "height": 1},
+            {"x": 0.5, "y": 0, "width": 0.6, "height": 1},
+            {"x": 0, "y": 0, "width": 0, "height": 1},
+            {"x": float("nan"), "y": 0, "width": 1, "height": 1},
+            {"x": False, "y": 0, "width": 1, "height": 1},
+        ):
+            request = fixture("valid-request.json")
+            request["math_evidence"]["formulas"][0]["bbox"] = bbox
+            with self.subTest(bbox=bbox), self.assertRaises(AgentError) as caught:
+                validate_request_v2(request)
+            self.assertEqual(caught.exception.code, "invalid_request")
 
     def test_reference_solution_error_precedes_answer_part_error(self):
         request = fixture("valid-request.json")

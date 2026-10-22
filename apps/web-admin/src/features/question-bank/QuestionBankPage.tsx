@@ -21,9 +21,10 @@ import { listSchools } from "../../api/org";
 import { ApiClientError, getUserErrorMessage } from "../../api/client";
 import { hasEveryPermission, type SessionUser } from "../../auth/session";
 import { ErrorState } from "../../components/PageState";
+import { usePageLoading } from "../../components/pageReadiness";
 import { useUnsavedChangesGuard } from "../../router/useUnsavedChangesGuard";
 import "./question-bank.css";
-import { defaults, contentFrom, matchingVersionForItem, metadataSchemaReadState, metadataSchemaUpdate } from "./questionBankPageState";
+import { defaults, contentFrom, matchingVersionForItem, metadataSchemaReadState, metadataSchemaUpdate, transitionSuccessMessages } from "./questionBankPageState";
 import { QuestionBankHeader } from "./QuestionBankHeader";
 import { QuestionBankWorkspace } from "./QuestionBankWorkspace";
 import { QuestionBankDialogs } from "./QuestionBankDialogs";
@@ -31,13 +32,6 @@ import { QuestionBankConflictComparison } from "./QuestionBankConflictComparison
 import { emptySearch, isEditableACLRole, type ACLFormValues, type MetadataSchemaFormValues, type SearchFilters } from "./questionBankTypes";
 import { listQuestionBankMembers, bankRoleLabels, questionBankMemberAmbiguous, questionBankMemberLabel } from "./questionBankMembers";
 import { hashQueryParam } from "../../router/query";
-
-const transitionSuccessMessages = {
-	publish: "已发布到学校题库。请在考试的题目页选择此版本；已有考试不受影响。",
-	"submit-review": "已提交审核，请通知本题库的审核教师在题库中处理。",
-	approve: "审核已通过，下一步由有发布权限的教师发布到题库。",
-	"return-to-draft": "已退回草稿，可修改后重新提交审核。",
-};
 
 export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 	const { message, modal } = App.useApp();
@@ -177,6 +171,8 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 	});
 	const linkedBank = useQuery({queryKey:[...prefix,"linked-bank",bankId],queryFn:()=>questionBankApi.getQuestionBank({path:{bankId}}),enabled:Boolean(bankId && !banks.data?.banks.some(bank=>bank.id===bankId))});
 	const linkedItem = useQuery({queryKey:[...prefix,"linked-item",linkedItemId],queryFn:()=>questionBankApi.getQuestionBankItem({path:{itemId:linkedItemId}}),enabled:Boolean(linkedItemId && !linkedSelectionApplied.current)});
+	// 题库目录会继续触发题目和版本读取；这些首屏等待只显示在控件内，也须参与切页就绪判断。
+	usePageLoading(banks.isLoading || (!banks.isError && (items.isLoading || linkedBank.isLoading || linkedItem.isLoading || versions.isLoading || version.isLoading)));
 	useEffect(()=>{ if (linkedItem.data?.item && !linkedSelectionApplied.current) {linkedSelectionApplied.current=true;setItem(linkedItem.data.item);setBankId(linkedItem.data.item.bank_id);} },[linkedItem.data]);
 	const bank = banks.data?.banks.find((b) => b.id === bankId) ?? linkedBank.data?.bank;
 	const { schemaReadable, schemaFormReady, schemaLoadFailed } = metadataSchemaReadState({
@@ -222,6 +218,7 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 			}] : []),
 		});
 	}, [acl.data, aclForm, aclOpen, bank?.created_by, user.id]);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: 题库身份变化必须清除旧元数据表单；读取失败不能沿用上一题库的配置。
 	useEffect(() => {
 		// 打开或切换题库时先清除旧表单。404、断网等读取失败都不能被解释成新库没有配置。
 		if (schemaOpen) schemaForm.setFieldsValue({ fields: [], taxonomies: [] });
@@ -300,6 +297,7 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 		if (id === versionId && nextOffset === undefined) return;
 		confirmDiscard(() => {
 			if (nextOffset !== undefined) setVersionOffset(nextOffset);
+      loadedVersion.current = null;
 			setVersionId(id);
 		});
 	}
@@ -447,6 +445,8 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 		window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 	}
 	function scoringSaved(v: QuestionBankVersion) {
+    // 评分保存有独立的等待状态；即使用户已换题，旧表单的成功回执也不能重建当前内容表单。
+    if (loadedVersion.current !== v.id) return;
 		setEditorVersion(v);
 		editor.setFieldsValue({ ...contentFrom(v), expected_revision: v.revision });
 		void refresh();

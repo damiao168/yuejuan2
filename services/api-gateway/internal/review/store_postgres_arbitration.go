@@ -198,38 +198,7 @@ func (s *PostgresStore) SubmitArbitration(ctx context.Context, tenantID string, 
 		return replay.Task, replay.Grade, err
 	}
 	// 先按评分取消流程的锁序锁住父运行，再锁仲裁任务，避免取消与提交交叉写入。
-	scoringRunID, err := lockScoringRunForArbitrationTx(ctx, tx, tenantID, id)
-	if err != nil {
-		return ArbitrationTask{}, FinalGrade{}, err
-	}
-	task, err := scanArbitration(tx.QueryRowContext(ctx, arbitrationSelect()+`
-WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
-FOR UPDATE
-`, tenantID, id))
-	if err != nil {
-		return ArbitrationTask{}, FinalGrade{}, err
-	}
-	if task.Status != "pending" && task.Status != "assigned" {
-		return ArbitrationTask{}, FinalGrade{}, ErrInvalidTransition
-	}
-	if task.Revision != input.ExpectedRevision {
-		return ArbitrationTask{}, FinalGrade{}, ErrRevisionConflict
-	}
-	// 必须先显式分配，再检查是否允许原阅卷人仲裁；有仲裁角色本身不等于拥有这项任务。
-	if task.AssignedTo == "" || task.AssignedTo != arbitratorID {
-		return ArbitrationTask{}, FinalGrade{}, ErrForbidden
-	}
-	if !arbitratorAllowed(task, arbitratorID) {
-		return ArbitrationTask{}, FinalGrade{}, ErrForbidden
-	}
-	taskContext, err := s.loadContextTx(ctx, tx, tenantID, task.AnswerSegmentID)
-	if err != nil {
-		return ArbitrationTask{}, FinalGrade{}, err
-	}
-	if input.FinalScore < 0 || input.FinalScore > taskContext.Question.Score {
-		return ArbitrationTask{}, FinalGrade{}, ErrInvalidInput
-	}
-	session, err := s.getSessionTx(ctx, tx, tenantID, task.DoubleMarkSessionID, true)
+	scoringRunID, task, session, err := s.prepareArbitrationSubmissionTx(ctx, tx, tenantID, id, arbitratorID, input)
 	if err != nil {
 		return ArbitrationTask{}, FinalGrade{}, err
 	}
@@ -239,7 +208,68 @@ FOR UPDATE
 	if err != nil {
 		return ArbitrationTask{}, FinalGrade{}, err
 	}
-	task, err = scanArbitration(tx.QueryRowContext(ctx, `
+	task, err = submitArbitrationTaskTx(ctx, tx, tenantID, id, arbitratorID, input)
+	if err != nil {
+		return ArbitrationTask{}, FinalGrade{}, err
+	}
+	if err := s.completeArbitrationSessionTx(ctx, tx, tenantID, arbitratorID, scoringRunID, session, &finalGrade); err != nil {
+		return ArbitrationTask{}, FinalGrade{}, err
+	}
+	// 回执与终分、任务状态同一事务提交；响应丢失后可按命令 ID 找回本次结果。
+	if err := commandreceipt.Save(ctx, tx, identity, input, ArbitrationSubmitResult{Task: task, Grade: finalGrade}); err != nil {
+		return ArbitrationTask{}, FinalGrade{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return ArbitrationTask{}, FinalGrade{}, err
+	}
+	return task, finalGrade, nil
+}
+
+func (s *PostgresStore) prepareArbitrationSubmissionTx(ctx context.Context, tx *sql.Tx, tenantID, id, arbitratorID string, input SubmitArbitrationInput) (sql.NullString, ArbitrationTask, DoubleMarkSession, error) {
+	scoringRunID, err := lockScoringRunForArbitrationTx(ctx, tx, tenantID, id)
+	if err != nil {
+		return scoringRunID, ArbitrationTask{}, DoubleMarkSession{}, err
+	}
+	task, err := scanArbitration(tx.QueryRowContext(ctx, arbitrationSelect()+`
+WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
+FOR UPDATE
+`, tenantID, id))
+	if err != nil {
+		return scoringRunID, ArbitrationTask{}, DoubleMarkSession{}, err
+	}
+	if err := validateArbitrationSubmission(task, arbitratorID, input.ExpectedRevision); err != nil {
+		return scoringRunID, ArbitrationTask{}, DoubleMarkSession{}, err
+	}
+	taskContext, err := s.loadContextTx(ctx, tx, tenantID, task.AnswerSegmentID)
+	if err != nil {
+		return scoringRunID, ArbitrationTask{}, DoubleMarkSession{}, err
+	}
+	if input.FinalScore < 0 || input.FinalScore > taskContext.Question.Score {
+		return scoringRunID, ArbitrationTask{}, DoubleMarkSession{}, ErrInvalidInput
+	}
+	session, err := s.getSessionTx(ctx, tx, tenantID, task.DoubleMarkSessionID, true)
+	return scoringRunID, task, session, err
+}
+
+func validateArbitrationSubmission(task ArbitrationTask, arbitratorID string, revision int64) error {
+	if task.Status != "pending" && task.Status != "assigned" {
+		return ErrInvalidTransition
+	}
+	if task.Revision != revision {
+		return ErrRevisionConflict
+	}
+	// 必须先显式分配，再检查是否允许原阅卷人仲裁；有仲裁角色本身不等于拥有这项任务。
+	if task.AssignedTo == "" || task.AssignedTo != arbitratorID {
+		return ErrForbidden
+	}
+	if !arbitratorAllowed(task, arbitratorID) {
+		return ErrForbidden
+	}
+	return nil
+}
+
+func submitArbitrationTaskTx(ctx context.Context, tx *sql.Tx, tenantID, id, arbitratorID string, input SubmitArbitrationInput) (ArbitrationTask, error) {
+	task, err := scanArbitration(tx.QueryRowContext(ctx, `
 UPDATE arbitration_task
 SET assigned_to = $3::uuid, status = 'submitted', final_score = $4, reason = $5, student_feedback = $6,
     revision = revision + 1, updated_at = now()
@@ -252,34 +282,33 @@ RETURNING id::text, tenant_id::text, double_mark_session_id::text, exam_id::text
 `, tenantID, id, arbitratorID, input.FinalScore, input.Reason, input.StudentFeedback, input.ExpectedRevision))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ArbitrationTask{}, FinalGrade{}, ErrRevisionConflict
+			return ArbitrationTask{}, ErrRevisionConflict
 		}
-		return ArbitrationTask{}, FinalGrade{}, err
+		return ArbitrationTask{}, err
 	}
+	return task, nil
+}
+
+// 终分写入成功后再完成会话和两名阅卷人的任务；评分运行统计也使用同一事务。
+// 仲裁任务 ID 取自已插入终分的返回值，与本次提交时写入的任务关联一致。
+func (s *PostgresStore) completeArbitrationSessionTx(ctx context.Context, tx *sql.Tx, tenantID, arbitratorID string, scoringRunID sql.NullString, session DoubleMarkSession, finalGrade *FinalGrade) error {
 	if _, err := tx.ExecContext(ctx, `
 UPDATE double_mark_session
 SET status = 'arbitrated', final_grade_id = $3::uuid, arbitration_task_id = $4::uuid, updated_at = now()
 WHERE tenant_id = $1 AND id::text = $2
-`, tenantID, session.ID, finalGrade.ID, task.ID); err != nil {
-		return ArbitrationTask{}, FinalGrade{}, err
+`, tenantID, session.ID, finalGrade.ID, finalGrade.ArbitrationTaskID); err != nil {
+		return err
 	}
 	if err := s.completeSessionReviewTasksTx(ctx, tx, tenantID, session); err != nil {
-		return ArbitrationTask{}, FinalGrade{}, err
+		return err
 	}
 	if scoringRunID.Valid {
-		if _, err := s.recordScoringDoubleMarkGradeTx(ctx, tx, tenantID, scoringRunID.String, session.SecondReviewTaskID, arbitratorID, &finalGrade); err != nil {
-			return ArbitrationTask{}, FinalGrade{}, err
+		if _, err := s.recordScoringDoubleMarkGradeTx(ctx, tx, tenantID, scoringRunID.String, session.SecondReviewTaskID, arbitratorID, finalGrade); err != nil {
+			return err
 		}
 		if err := s.syncScoringDoubleMarkRunTx(ctx, tx, tenantID, scoringRunID.String); err != nil {
-			return ArbitrationTask{}, FinalGrade{}, err
+			return err
 		}
 	}
-	// 回执与终分、任务状态同一事务提交；响应丢失后可按命令 ID 找回本次结果。
-	if err := commandreceipt.Save(ctx, tx, identity, input, ArbitrationSubmitResult{Task: task, Grade: finalGrade}); err != nil {
-		return ArbitrationTask{}, FinalGrade{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return ArbitrationTask{}, FinalGrade{}, err
-	}
-	return task, finalGrade, nil
+	return nil
 }

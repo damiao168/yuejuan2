@@ -3,6 +3,7 @@ package backmark
 
 import (
 	"context"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"errors"
 	"time"
 
@@ -202,6 +203,7 @@ type StatusCounts struct {
 }
 
 type PageOptions struct {
+	Access          auth.ExamCollectionAccess
 	Status          string
 	Limit           int
 	CursorCreatedAt time.Time

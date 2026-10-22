@@ -9,6 +9,7 @@ import {
   publishExamGrades
 } from "../api/scores";
 import { ErrorState, LoadingState } from "../components/PageState";
+import { usePageLoading } from "../components/pageReadiness";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import type { ProductExperience } from "../router/experience";
@@ -204,6 +205,8 @@ export function ScoreManagementPage({
     regradeJobs, roster, setRoster, identities, auditLogs, loadingExams,
     loadingScores, error, loadExamList, loadScores, refresh
   } = workspace;
+  // 先读取考试目录，再读取自动选中考试的成绩；目录控件的 loading 也属于首屏等待。
+  usePageLoading(loadingExams || loadingScores);
   const [lastWatermark, setLastWatermark] = useState("");
   const [confirmReason, setConfirmReason] = useState("");
   const [publishReason, setPublishReason] = useState("");

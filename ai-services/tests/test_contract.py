@@ -115,6 +115,38 @@ class ContractTests(unittest.TestCase):
             self._normalize(request, raw)
         self.assertEqual(caught.exception.code, "evidence_verification_failed")
 
+    def test_mathematical_punctuation_cannot_be_invented_in_evidence(self):
+        for answer, excerpt in (("v=3 m/s", "v=-3 m/s"), ("x=15", "x=1.5"), ("a=12", "a=1/2"), ("x<3", "x>3")):
+            request = valid_request()
+            request["answer_text"] = answer
+            raw = valid_raw_output()
+            raw["matched_points"] = [raw["matched_points"][0]]
+            raw["missing_points"] = [{"rubric_point_id": "p2", "reason": "not present"}]
+            raw["evidence"] = [dict(raw["evidence"][0], text_excerpt=excerpt)]
+            with self.subTest(answer=answer, excerpt=excerpt), self.assertRaises(AgentError) as caught:
+                self._normalize(request, raw)
+            self.assertEqual(caught.exception.code, "evidence_verification_failed")
+
+    def test_strict_alias_keeps_signs_and_human_review_boundary(self):
+        request = valid_request()
+        request["answer_text"] = "v=3 m/s"
+        request["rubric"]["points"][0].update(match_policy="strict_alias", aliases=["v=-3 m/s"])
+        raw = valid_raw_output()
+        raw["matched_points"] = [raw["matched_points"][0]]
+        raw["missing_points"] = [{"rubric_point_id": "p2", "reason": "not present"}]
+        raw["evidence"] = [dict(raw["evidence"][0], text_excerpt="v=-3 m/s")]
+        self.assertIs(validate_request(request), request)
+        result = self._normalize(request, raw)
+        self.assertEqual(result["suggested_score"], 0)
+        self.assertEqual(result["matched_points"], [])
+        self.assertEqual(result["evidence"], [])
+        self.assertTrue(result["needs_human_review"])
+
+        request["answer_text"] = "Ｖ＝－３ ｍ／ｓ"
+        result = self._normalize(request, raw)
+        self.assertEqual(result["suggested_score"], request["rubric"]["points"][0]["score"])
+        self.assertTrue(result["needs_human_review"])
+
     def test_model_total_is_ignored_and_recomputed_from_points(self):
         request = valid_request()
         raw = valid_raw_output()

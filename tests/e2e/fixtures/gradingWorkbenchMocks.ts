@@ -98,7 +98,7 @@ function requestBody(route: Route): Record<string, unknown> {
   return JSON.parse(body) as Record<string, unknown>;
 }
 
-function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, fastConfirm = false) {
+export function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, fastConfirm = false) {
   const { subject } = task;
   return {
     task: wireTask(task),

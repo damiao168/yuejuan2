@@ -5,16 +5,29 @@ import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from .answer_sheet_page_order import AnswerSheetPageOrderAnalyzer
 from .app import GradingAgentApplication
+from .choice_grid import ObjectiveGridAnalyzer
 from .config import Settings
 from .errors import AgentError
 from .managed_model import paper_model
 from .math_rubric_draft import MathRubricDraftGenerator
 from .paper_parser import PaperParser
+from .template_analysis import TemplateAnalyzer
+from .template_analysis_model import prepare_template_model
+from .template_analysis_ocr_runtime import get_template_static_ocr_runtime
+from .template_matching import TemplateMatcher
 
 PAPER_PARSE_PATH = "/paper/parse"
 PAPER_RUBRIC_DRAFT_PATH = "/paper/rubric-draft"
+ANSWER_SHEET_ANALYZE_PATH = "/answer-sheet/analyze"
+ANSWER_SHEET_MATCH_PATH = "/answer-sheet/match"
+ANSWER_SHEET_OBJECTIVE_GRID_PATH = "/answer-sheet/objective-grid"
+ANSWER_SHEET_PAGE_ORDER_PATH = "/answer-sheet/page-order"
 GRADE_V2_PATH = "/grading/grade-v2"
+GRADE_IMAGE_PATH = "/grading/grade-image-v3"
+OBSERVE_IMAGE_PATH = "/grading/observe-image-v3"
+PROBE_IMAGE_PATH = "/grading/probe-image-v3"
 
 
 class GradingAgentHTTPServer(ThreadingHTTPServer):
@@ -49,6 +62,18 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
     server_version = "EduGradeGradingAgent/1"
 
     def do_GET(self):
+        if self.path == "/grading/capabilities":
+            try:
+                self._authorize()
+                from .material_runtime import math_wrapper_hash
+                settings = self.server.application.settings
+                enabled = settings.adapter_type == "local_llama_cpp" and bool(settings.material_callback_base_url)
+                self._json(200, {"features": ["material-input-v1"] if enabled else [], "math_wrapper_hash": math_wrapper_hash(),
+                                 "max_reference_images": 4, "adapter": settings.adapter_type, "provider": settings.provider_key,
+                                 "deployment": settings.deployment_key, "region": settings.deployment_region})
+            except AgentError as exc:
+                self._error(exc)
+            return
         if self.path == "/grading/prompts/current":
             try:
                 self._authorize()
@@ -81,7 +106,7 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
         self._error(AgentError("invalid_request", "route not found", status=404))
 
     def do_POST(self):
-        if self.path not in {"/grading/grade", GRADE_V2_PATH, PAPER_PARSE_PATH, PAPER_RUBRIC_DRAFT_PATH}:
+        if self.path not in {"/grading/grade", GRADE_V2_PATH, GRADE_IMAGE_PATH, OBSERVE_IMAGE_PATH, PROBE_IMAGE_PATH, PAPER_PARSE_PATH, PAPER_RUBRIC_DRAFT_PATH, ANSWER_SHEET_ANALYZE_PATH, ANSWER_SHEET_MATCH_PATH, ANSWER_SHEET_OBJECTIVE_GRID_PATH, ANSWER_SHEET_PAGE_ORDER_PATH}:
             self._error(AgentError("invalid_request", "route not found", status=404))
             return
         try:
@@ -105,6 +130,29 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
             self._error(AgentError("internal_error", "grading-agent operation failed", status=500))
 
     def _dispatch_post(self, payload):
+        if self.path == ANSWER_SHEET_PAGE_ORDER_PATH:
+            model = None
+            if isinstance(payload, dict) and payload.get("managed_model") is not None:
+                model = prepare_template_model(paper_model(self.server.application, payload))
+            self._json(200, AnswerSheetPageOrderAnalyzer(model).analyze(payload))
+            return
+        if self.path == ANSWER_SHEET_OBJECTIVE_GRID_PATH:
+            # 此入口只解析人工指定大框的实测小格，不能借用聊天或评分模型推断题号映射。
+            self._json(200, ObjectiveGridAnalyzer().analyze(payload))
+            return
+        if self.path == ANSWER_SHEET_MATCH_PATH:
+            self._json(200, TemplateMatcher().match(payload))
+            return
+        if self.path == ANSWER_SHEET_ANALYZE_PATH:
+            # 未配置文档模型时仍可返回几何候选；不借用评分模型冒充语义分析成功。
+            model = None
+            if isinstance(payload, dict):
+                if payload.get("managed_model") is not None:
+                    model = prepare_template_model(paper_model(self.server.application, payload))
+                else:
+                    payload.pop("managed_model", None)
+            self._json(200, TemplateAnalyzer(model).analyze(payload))
+            return
         if self.path == PAPER_PARSE_PATH:
             parser = PaperParser(paper_model(self.server.application, payload))
             if "application/x-ndjson" in self.headers.get("Accept", "").lower():
@@ -120,7 +168,8 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
     def _math_rubric_draft(self, payload):
         request_id = payload.get("request_id", "") if isinstance(payload, dict) else ""
         if not isinstance(payload, dict) or set(payload) - {
-            "request_id", "subject", "question_candidate", "answer_candidate", "solution_candidate", "managed_model"
+            "request_id", "subject", "question_candidate", "answer_candidate", "solution_candidate", "managed_model",
+            "question_reference"
         } or payload.get("subject") not in {"数学", "mathematics"}:
             raise AgentError("invalid_request", "math rubric draft request is invalid", status=400, request_id=request_id)
         if not isinstance(request_id, str) or not 8 <= len(request_id) <= 128:
@@ -130,6 +179,7 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
             payload.get("question_candidate"),
             payload.get("answer_candidate"),
             payload.get("solution_candidate"),
+            question_reference=payload.get("question_reference"),
         )
         self._json(200, draft)
 
@@ -144,7 +194,12 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
                 status=400,
                 request_id=request_id,
             )
-        if self.path == GRADE_V2_PATH:
+        if self.path == PROBE_IMAGE_PATH:
+            suggestion, replayed = self.server.application.image_v3.probe(payload, idempotency_key)
+        elif self.path in {GRADE_IMAGE_PATH, OBSERVE_IMAGE_PATH}:
+            suggestion, replayed = self.server.application.image_v3.execute(
+                payload, idempotency_key, "observe" if self.path == OBSERVE_IMAGE_PATH else "grade")
+        elif self.path == GRADE_V2_PATH:
             suggestion, replayed = self.server.application.grade_v2(
                 payload,
                 idempotency_key,
@@ -238,9 +293,13 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
             length = int(raw_length)
         except ValueError as exc:
             raise AgentError("invalid_request", "Content-Length is required", status=411) from exc
-        if self.path == GRADE_V2_PATH:
+        if self.path == ANSWER_SHEET_PAGE_ORDER_PATH:
+            max_bytes = 20 * 1024 * 1024
+        elif self.path == ANSWER_SHEET_OBJECTIVE_GRID_PATH:
+            max_bytes = 12 * 1024 * 1024
+        elif self.path in {GRADE_V2_PATH, GRADE_IMAGE_PATH, OBSERVE_IMAGE_PATH, PROBE_IMAGE_PATH}:
             max_bytes = 8 * 1024 * 1024
-        elif self.path == PAPER_PARSE_PATH:
+        elif self.path in {PAPER_PARSE_PATH, ANSWER_SHEET_ANALYZE_PATH, ANSWER_SHEET_MATCH_PATH}:
             max_bytes = max(
                 self.server.application.settings.max_request_bytes,
                 48 * 1024 * 1024,
@@ -258,7 +317,9 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
             raise AgentError("invalid_request", "request body must be valid UTF-8 JSON", status=400) from exc
 
     def _error(self, error):
-        self._json(error.status, error.payload())
+        # HTTP 路由决定错误协议版本；授权和读包失败也必须保持 v2 契约。
+        schema_version = "grading-image-v3" if self.path in {GRADE_IMAGE_PATH, OBSERVE_IMAGE_PATH, PROBE_IMAGE_PATH} else "grading-agent-v2" if self.path == GRADE_V2_PATH else "grading-agent-v1"
+        self._json(error.status, error.payload(schema_version))
 
     def _json(self, status, payload, extra_headers=None):
         body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -282,13 +343,17 @@ def serve(settings=None):
     settings._validate_credentials_and_listener()
     application = GradingAgentApplication(settings)
     server = GradingAgentHTTPServer((settings.host, settings.port), application)
+    static_ocr = get_template_static_ocr_runtime()
     try:
         if settings.tls_cert_file:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             context.minimum_version = ssl.TLSVersion.TLSv1_2
             context.load_cert_chain(settings.tls_cert_file, settings.tls_key_file)
             server.socket = context.wrap_socket(server.socket, server_side=True)
+        # 独立静态 OCR 冷启动较慢，后台预热不阻塞健康检查；未就绪时只保留原候选。
+        static_ocr.start()
         server.serve_forever()
     finally:
         # 证书加载失败或服务退出时也要清理；就绪线程先收到退出信号，再关闭监听。
         server.server_close()
+        static_ocr.close()

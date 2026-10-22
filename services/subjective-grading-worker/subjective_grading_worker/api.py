@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from http import client as http_client
 from typing import Any
 from urllib import error, request
 from urllib.parse import urlsplit
@@ -28,9 +29,14 @@ def _open_request(req: request.Request, *, timeout: float) -> Any:
 
 
 class APIError(RuntimeError):
-    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+    def __init__(self, message: str, *, status_code: int | None = None,
+                 code: str = "subjective_agent_failed", retryable: bool = True,
+                 task_failure_recorded: bool = False) -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.code = code
+        self.retryable = retryable
+        self.task_failure_recorded = task_failure_recorded
 
 
 class AuthenticationError(APIError):
@@ -113,8 +119,38 @@ class EduGradeClient:
                 return json.loads(read_json_response(response).decode() or "{}")
         except error.HTTPError as exc:
             if exc.code == 401:
-                raise AuthenticationError(f"unauthorized: {exc.code}", status_code=exc.code) from exc
-            raise APIError(f"api request failed: {exc.code}", status_code=exc.code) from exc
+                exc.close()
+                raise AuthenticationError(f"unauthorized: {exc.code}", status_code=exc.code, retryable=False) from exc
+            # execute 已在网关原子结束任务时，不能再用通用失败回调覆盖诊断或安排另一轮推理。
+            # 只信任此端点的有界协议标识；供应商正文、任意 message 和未知字段不进入回调。
+            recorded, code, retryable = False, "subjective_agent_failed", True
+            if path.startswith("/api/v1/internal/subjective-grading/runs/") and path.endswith("/execute"):
+                try:
+                    raw = exc.read(65537)
+                    body = json.loads(raw) if len(raw) <= 65536 else None
+                    if isinstance(body, dict):
+                        failure = body.get("error")
+                        terminal_codes = {
+                            "ai_output_incomplete", "ai_service_not_configured",
+                            "math_human_review_required", "math_evidence_unavailable",
+                            "math_evidence_version_conflict", "invalid_model_output",
+                        }
+                        if (isinstance(failure, dict) and isinstance(failure.get("code"), str)
+                                and failure["code"] in terminal_codes | {"ai_service_unavailable"}):
+                            code = failure["code"]
+                            recorded = body.get("task_failure_recorded") is True
+                            if type(body.get("retryable")) is bool:
+                                retryable = body["retryable"]
+                            elif code in terminal_codes:
+                                retryable = False
+                except (OSError, ValueError, http_client.IncompleteRead):
+                    pass
+                finally:
+                    exc.close()
+            else:
+                exc.close()
+            raise APIError(f"api request failed: {exc.code}", status_code=exc.code,
+                           code=code, retryable=retryable, task_failure_recorded=recorded) from exc
         except (OSError, ResponseValidationError, ValueError) as exc:
             raise APIError("api request failed") from exc
 

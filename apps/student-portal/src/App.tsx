@@ -30,38 +30,20 @@ import { appealDraftKey, clearStudentAppealDrafts, hasVolatileAppealDraft, isApp
 import { OldAppealDrafts } from "./features/results/OldAppealDrafts";
 import { StudentSessionContext, useStudentSession } from "./studentSession";
 import { friendlyError, sessionExpired, studentReleaseChanged } from "./errors";
-
-type Page = { kind: "home" } | { kind: "exam"; examID: string };
-
-// 只从 hash 读取考试 ID，解码失败时回到首页，避免坏链接阻塞学生端。
-function readPage(): Page {
-  const value = window.location.hash.replace(/^#/, "");
-  const match = /^\/exams\/([^/?#]+)$/.exec(value);
-  if (match) {
-    try {
-      return { kind: "exam", examID: decodeURIComponent(match[1]) };
-    } catch {
-      return { kind: "home" };
-    }
-  }
-  return { kind: "home" };
-}
-
-function goHome() { window.location.hash = "/"; }
-function goExam(examID: string) { window.location.hash = `/exams/${encodeURIComponent(examID)}`; }
+import { goExam, goHome, normalizeStudentLocation, readStudentPage, studentLocation, STUDENT_NAVIGATION_EVENT } from "./navigation";
 
 export default function App() {
   const [readingSize, setReadingSize] = useState(readReadingSize);
   useEffect(() => { applyReadingSize(readingSize); }, [readingSize]);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [page, setPage] = useState<Page>(readPage);
+  const [page, setPage] = useState(readStudentPage);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [exitingSession, setExitingSession] = useState(false);
   const exitingSessionRef = useRef(false);
   const sessionRestoreRef = useRef(0);
-  const acceptedHashRef = useRef(window.location.hash);
+  const acceptedLocationRef = useRef(studentLocation());
   const draftOwnerRef = useRef("");
   const [loginNotice, setLoginNotice] = useState("");
   const setSubmissionBusy = useCallback((value: boolean) => { submittingRef.current = value; setSubmitting(value); }, []);
@@ -121,16 +103,25 @@ export default function App() {
     return () => { sessionRestoreRef.current += 1; };
   }, [restore]);
   useEffect(() => {
-    // 提交中阻止 hash 前进后退卸载表单；服务端回执确认后才允许离开，避免把成功结果误当失败。
+    normalizeStudentLocation();
+    // 提交中阻止按钮和浏览器前进后退卸载表单；等待服务端回执，避免把成功结果误当失败。
     const onChange = () => {
-      if (submittingRef.current) { window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${acceptedHashRef.current}`); return; }
-      acceptedHashRef.current = window.location.hash;
-      setPage(readPage());
+      if (submittingRef.current) { window.history.replaceState(window.history.state, "", acceptedLocationRef.current); return; }
+      normalizeStudentLocation();
+      acceptedLocationRef.current = studentLocation();
+      setPage(readStudentPage());
     };
     // 已写入会话存储的草稿可恢复；只保护等待回执和当前身份仅留在内存的理由或圈选。
     const unsubscribeBeforeUnload = subscribeBeforeUnload(() => submittingRef.current || hasVolatileAppealDraft(draftOwnerRef.current));
+    window.addEventListener("popstate", onChange);
     window.addEventListener("hashchange", onChange);
-    return () => { window.removeEventListener("hashchange", onChange); unsubscribeBeforeUnload(); };
+    window.addEventListener(STUDENT_NAVIGATION_EVENT, onChange);
+    return () => {
+      window.removeEventListener("popstate", onChange);
+      window.removeEventListener("hashchange", onChange);
+      window.removeEventListener(STUDENT_NAVIGATION_EVENT, onChange);
+      unsubscribeBeforeUnload();
+    };
   }, []);
 
   if (loadingUser) {
@@ -488,7 +479,7 @@ function QuestionTables({ examID, result, questions, fallbackSubject, appealSele
   // 切题、收起或卸载都作废旧读取；迟到的冲突和收尾只能处理仍被选中的题目。
   useEffect(() => () => { requestRef.current += 1; }, []);
   const activeGroups = groups.filter(([subject]) => subject === activeSubject || groups.length === 1);
-  const markReleaseChanged = (reason: unknown, requestID: number) => {
+  const markReleaseChanged = useCallback((reason: unknown, requestID: number) => {
     const sourceUnavailable = reason instanceof PortalApiError && reason.code === "appeal_source_release_invalid";
     if (requestID !== requestRef.current || (!studentReleaseChanged(reason) && !sourceUnavailable)) return false;
     // 换版或来源失效立即隐藏证据，并用 ref 拦住旧版新提交；已发申请的回执不随证据一起卸载。
@@ -497,8 +488,8 @@ function QuestionTables({ examID, result, questions, fallbackSubject, appealSele
     setEvidenceChecking(false); setReleaseChanged(true); setDetail(null); setDetailLoading(false);
     setAnnotations([]); setAnnotationError(""); setAnnotationNeedsLogin(false); setDetailNeedsLogin(false); setDetailError(friendlyError(reason));
     return true;
-  };
-  const openQuestion = async (question: StudentQuestion, retry = false) => {
+  }, []);
+  const openQuestion = useCallback(async (question: StudentQuestion, retry = false) => {
     if (submitting || isSubmitting?.()) return;
     if (!selected) listPositionRef.current = window.scrollY;
     const requestId = ++requestRef.current;
@@ -522,7 +513,7 @@ function QuestionTables({ examID, result, questions, fallbackSubject, appealSele
       else { setAnnotationNeedsLogin(sessionExpired(annotationResponse.reason)); setAnnotationError(sessionExpired(annotationResponse.reason) ? friendlyError(annotationResponse.reason) : "教师批注暂时无法加载，当前显示的评分详情仍可查看。"); }
     } catch (reason) { if (requestId === requestRef.current && !evidenceVerificationRef.current.changed) { setDetailError(friendlyError(reason, "question")); setDetailNeedsLogin(sessionExpired(reason)); setReleaseChanged(studentReleaseChanged(reason)); } }
     finally { if (requestId === requestRef.current) setDetailLoading(false); }
-  };
+  }, [examID, isSubmitting, markReleaseChanged, result.release_id, selected, submitting]);
   useEffect(() => {
     // 同一定位请求只打开一次；显式再次查看本题递增token，普通重绘或关闭详情不应重新打开。
     if (!requestedQuestionID || requestedOpenedRef.current === `${requestedQuestionID}:${requestedQuestionToken}`) return;

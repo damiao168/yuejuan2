@@ -1,0 +1,203 @@
+.template-editor-page .template-compact-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 12px;
+  padding-bottom: 8px;
+}
+
+/* 识别反馈另占整行，不能参与文件按钮的横向布局并遮挡重试入口。 */
+.template-recognition-status { grid-column: 1 / -1; display: grid; gap: 6px; min-width: 0; }
+
+.template-editor-page .template-toolbar-heading {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.template-editor-page .template-title-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.template-editor-page .template-title-status h2 {
+  margin: 0;
+}
+
+.template-editor-page .template-title-status .ant-tag {
+  margin-inline-end: 0;
+}
+
+.template-editor-page .template-toolbar-actions {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  justify-content: flex-start;
+  padding-block: 2px;
+}
+
+/* 文件名先缩短，上传组合按钮只占内容宽度，避免把后续操作挤出工具栏。 */
+.template-editor-page .template-toolbar-actions > :not(.template-source-file) { flex-shrink: 0; }
+.template-editor-page .template-toolbar-actions .ant-btn { white-space: nowrap; padding-inline: 10px; font-size: 13px; height: 34px; min-height: 34px; }
+.template-editor-page .template-source-file { display: flex; flex: 1 1 260px; min-width: 230px; max-width: 340px; align-items: center; gap: 6px; }
+.template-editor-page .template-source-file > span { flex: none; font-size: 12px; white-space: nowrap; }
+.template-editor-page .template-toolbar .template-source-file .ant-select { flex: 1; min-width: 130px; width: 100%; }
+.template-editor-page .template-source-file > .ant-btn { flex: none; width: 30px; padding-inline: 0; }
+.template-editor-page .template-title-status h2 { font-size: 17px; }
+.template-editor-page .template-title-status > .ant-btn { padding-inline: 5px; }
+.template-editor-page .template-toolbar-actions .template-history-action,
+.template-editor-page .template-toolbar-actions > .ant-btn-icon-only { width: 34px; padding-inline: 0; }
+.template-more-actions { max-width: 280px; }
+.template-more-actions .ant-btn { width: 100%; text-align: left; }
+.template-model-detail { display: block; max-width: 260px; padding: 4px 8px; overflow-wrap: anywhere; font-size: 12px; }
+.template-library-panel > details > summary { width: fit-content; cursor: pointer; color: var(--text-muted); font-size: 13px; }
+.template-library-panel > details[open] > summary { margin-bottom: 10px; }
+.template-library-panel > details > p { margin: 8px 0 0; }
+.template-library-panel > .ant-alert { margin-top: 8px; }
+
+.template-editor-page .template-readiness-description,
+.template-editor-page .template-readiness-details,
+.template-editor-page .template-confirmation-reason {
+  margin: 6px 0 0;
+  font-size: var(--eg-font-caption);
+}
+
+.template-editor-page .template-confirmation-reason {
+  color: var(--text);
+}
+
+.template-editor-page .template-readiness-details summary,
+.template-editor-page .template-binding-details summary {
+  width: fit-content;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.template-editor-page .template-readiness-details p {
+  margin-top: 6px;
+}
+
+.template-editor-page .template-question-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.template-editor-page .template-question-filter > span {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.template-editor-page .template-binding-confirmation {
+  gap: 8px;
+  scroll-margin-block: 12px;
+}
+
+.template-editor-page .template-binding-confirmation:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+
+.template-editor-page .template-binding-confirmation > .template-pane-head {
+  min-height: 0;
+  padding: 0 0 8px;
+  flex-wrap: wrap;
+}
+
+.template-editor-page .template-binding-confirmation .ant-tag {
+  margin-inline-end: 0;
+}
+
+.template-editor-page .template-binding-confirmation > p {
+  margin: 0;
+}
+
+.template-editor-page .template-binding-details {
+  overflow-wrap: anywhere;
+  font-size: var(--eg-font-caption);
+}
+
+.template-editor-page .template-candidate-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.template-editor-page .template-canvas-toolbar {
+  flex-wrap: wrap;
+  white-space: nowrap;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.template-editor-page .template-canvas-toolbar > * { flex-shrink: 0; }
+.template-editor-page .template-canvas-toolbar > .ant-space { flex-wrap: nowrap; }
+
+.template-editor-page .template-candidate-actions {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: #fff9ec;
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+/* 候选仍待核对；彩色虚线和白色衬边将它与底图印刷框分开，不改变保存坐标。 */
+.template-editor-page .template-unassigned-region {
+  border: 2px dashed #bc5700;
+  background: rgba(255, 161, 36, .065);
+  box-shadow: 0 0 0 1px #fff, inset 0 0 0 1px rgba(255, 255, 255, .9);
+  cursor: pointer;
+}
+
+.template-editor-page .template-unassigned-region:hover {
+  border-color: #8c4100;
+  background: rgba(255, 161, 36, .11);
+}
+
+.template-editor-page .template-unassigned-region.selected,
+.template-editor-page .template-unassigned-region:focus-visible {
+  border: 3px solid #8c4100;
+  outline: 2px solid #fff;
+  outline-offset: 0;
+  background: rgba(255, 161, 36, .15);
+  box-shadow: 0 0 0 3px #8c4100, inset 0 0 0 1px rgba(255, 255, 255, .9);
+  z-index: 3;
+}
+
+/* 属性栏移到画布下方时，确认入口仍留在顶部工具栏，并可直接定位确认区域。 */
+@container template-editor (max-width: 919px) {
+  .template-editor-page .template-compact-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .template-editor-page .template-toolbar-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .template-editor-page .template-toolbar-actions > :first-child { margin-left: 0; }
+}
+
+.template-identity-editor { display: grid; gap: 8px; }
+.template-identity-controls { display: flex; gap: 6px; }
+.template-identity-controls .ant-select { flex: 1; min-width: 0; }
+.template-identity-list { display: grid; gap: 4px; max-height: 168px; overflow-y: auto; }
+.template-identity-row { display: flex; align-items: center; gap: 4px; border-radius: 4px; }
+.template-identity-row > .ant-btn:first-child { flex: 1; min-width: 0; text-align: left; }
+.template-identity-row small { margin-left: 8px; color: var(--text-muted); }
+.template-identity-row.is-selected { background: var(--primary-soft, #e6f4ff); }
+.template-identity-popover-content { width: min(320px, calc(100vw - 64px)); }
+.template-settings-content { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.template-settings-content .template-inspector { padding: 0; border-left: 0; }
+.template-current-region-settings { display: grid; gap: 10px; }
+
+/* 身份栏与题区独立保存；细虚线只标位置，不能盖住姓名或学号内容。 */
+.template-region.template-identity-region { border-style: dashed; background: transparent; }
+.template-region.template-identity-region.selected { border-style: solid; background: rgba(22, 119, 255, .035); }
+
+@media (prefers-reduced-motion: reduce) {
+  .template-region, .template-question { transition: none; }
+}
+

@@ -187,6 +187,53 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual([block["document_index"] for block in payload["blocks"]], [0, 1])
         self.assertEqual(payload["blocks"][0]["confidence"], 0.7)
 
+    def _paper_runner(self, api, engine=None):
+        api.claim_tasks = lambda *_: [{
+            "id": "runtime-paper", "tenant_id": "tenant-1", "source_id": "import-1",
+            "source_type": "paper_import_job", "lease_token": "lease-paper",
+            "payload": {"engine": "paddleocr", "engine_version": "pp-ocrv5", "pages": [
+                {"source_id": "source-paper", "document_index": 0, "page_no": 1, "download_url": "/files/paper-page"},
+            ]},
+        }]
+        return OCRRunner(api=api, engine=engine or FakeEngine([]), config=WorkerConfig(worker_id="worker-a"))
+
+    def test_paper_download_transient_failures_are_retryable_and_sanitized(self):
+        cases = [(None, None, True), (503, None, True), (429, None, True), (408, None, True),
+                 (404, None, False), (403, None, False), (302, None, False), (None, False, False)]
+        for status, explicit_retryable, retryable in cases:
+            api = FakeAPI()
+            api.downloads["/files/paper-page"] = APIError("private source text must not escape", status_code=status, retryable=explicit_retryable)
+            with self.subTest(status=status, explicit=explicit_retryable):
+                self._paper_runner(api).process_once()
+                self.assertEqual(api.paper_failed, [("import-1", "paper_ocr_download_failed", retryable)])
+                self.assertEqual(api.paper_completed, [])
+
+    def test_paper_authentication_failure_does_not_fail_owned_task(self):
+        api = FakeAPI()
+        api.downloads["/files/paper-page"] = AuthenticationError("reauthenticate")
+        with self.assertRaises(AuthenticationError):
+            self._paper_runner(api).process_once()
+        self.assertEqual(api.paper_failed, [])
+        self.assertEqual(api.paper_completed, [])
+
+    def test_paper_engine_runtime_failure_retries_but_invalid_image_does_not(self):
+        for failure, code, retryable in ((RuntimeError("temporary backend failure"), "paper_ocr_engine_failed", True),
+                                         (ValueError("invalid pixels"), "invalid_paper_ocr_image", False)):
+            api = FakeAPI()
+            engine = FakeEngine([])
+            engine.recognize = lambda _image, failure=failure: (_ for _ in ()).throw(failure)
+            with self.subTest(failure=type(failure).__name__):
+                self._paper_runner(api, engine).process_once()
+                self.assertEqual(api.paper_failed, [("import-1", code, retryable)])
+
+    def test_paper_completion_failure_is_not_reclassified_as_processing_failure(self):
+        api = FakeAPI()
+        api.complete_paper_import_ocr = lambda *_: (_ for _ in ()).throw(APIError("completion unavailable", status_code=503))
+        runner = self._paper_runner(api, FakeEngine([OCRBlock(text="Q1", bbox=[1, 2, 30, 10], confidence=0.9)]))
+        with self.assertRaises(APIError):
+            runner.process_once()
+        self.assertEqual(api.paper_failed, [])
+
     def test_incompatible_runtime_task_is_rejected_before_start(self):
         api = FakeAPI()
         original_claim = api.claim_tasks

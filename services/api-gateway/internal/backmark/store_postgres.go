@@ -3,6 +3,7 @@ package backmark
 import (
 	"context"
 	"database/sql"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -217,10 +218,16 @@ FROM backmark_item WHERE tenant_id=$1::uuid AND batch_id=$2::uuid`, tenantID, ba
 }
 
 func (s *PostgresStore) ListBatches(ctx context.Context, tenantID, examID, questionID string, page PageOptions) ([]Batch, error) {
+	scopeArgs, err := page.Access.SQLArgs(tenantID)
+	if err != nil {
+		return nil, err
+	}
+	args := append([]any{tenantID, examID, questionID, nullableCursorTime(page.CursorCreatedAt), nullableCursorID(page.CursorID), page.Limit}, scopeArgs...)
 	rows, err := s.db.QueryContext(ctx, `SELECT `+batchColumns+` FROM backmark_batch
 WHERE tenant_id=$1::uuid AND ($2='' OR exam_id::text=$2) AND ($3='' OR question_id::text=$3)
   AND ($4::timestamptz IS NULL OR (created_at,id) < ($4::timestamptz,$5::uuid))
-ORDER BY created_at DESC,id DESC LIMIT $6`, tenantID, examID, questionID, nullableCursorTime(page.CursorCreatedAt), nullableCursorID(page.CursorID), page.Limit)
+  AND `+auth.ExamCollectionPredicate("backmark_batch.exam_id", 7)+`
+ORDER BY created_at DESC,id DESC LIMIT $6`, args...)
 	if err != nil {
 		return nil, err
 	}

@@ -28,6 +28,7 @@ it("无对话默认模型时仍显示已配置的三个评分角色", async () =
   expect(host.textContent).toContain("尚未指定学校默认对话模型");
   for (const model of ["A-model", "B-model", "C-model"]) expect(host.textContent).toContain(model);
   expect(host.querySelector('a[href$="tab=bindings"]')?.getAttribute("href")).toContain("tenant_id=school-b");
+  expect(host.querySelector('a[href$="tab=bindings"]')?.getAttribute("href")).toBe("/admin/platform/model-config?tenant_id=school-b&tab=bindings");
 });
 
 it("学校切换期间的旧请求不能覆盖新的评分角色", async () => {
@@ -39,10 +40,25 @@ it("学校切换期间的旧请求不能覆盖新的评分角色", async () => {
   expect(host.textContent).toContain("new-model"); expect(host.textContent).not.toContain("old-model");
 });
 
+it("默认模型的普通回复与结构化失败分别展示，不能把结构化失败解释为不能对话", async () => {
+  mocks.health.mockResolvedValue({ default_model: {
+    status: "healthy", model_name: "chat-model", connection_status: "success", text_status: "success",
+    capability_status: "failed", capability_message: "字段结构未通过", last_text_tested_at: "2026-10-14T12:00:00Z"
+  }, roles: [] });
+  await act(async () => root.render(<SchoolModelsTab tenantId="school-a" />));
+  const fact = (name: string) => [...host.querySelectorAll("dt")].find((item) => item.textContent === name)!.nextElementSibling!.textContent;
+  expect(fact("普通回复")).toBe("通过");
+  expect(fact("结构化输出（评分/解析）")).toBe("未通过");
+  expect(fact("最近回复检测")).not.toBe("—");
+  expect(host.textContent).toContain("普通回复通过即可用于日常对话");
+  expect(host.textContent).toContain("结构化输出：字段结构未通过");
+});
+
 it("交接入口预填学校，复制资料不含初始密码", async () => {
   const copy = vi.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: copy } });
   expect(schoolLoginURL("school-a", { origin: "https://school.test", pathname: "/" })).toBe("https://school.test/?tenant=school-a");
+  expect(schoolLoginURL("school-a", { origin: "https://school.test", pathname: "/admin/platform/schools" })).toBe("https://school.test/?tenant=school-a");
   await act(async () => root.render(<SchoolCreatedReceipt delivery={{ tenant: { id: "school-a", name: "甲学校", code: "school-a", status: "active" }, adminUsername: "admin-a", adminDisplayName: "陈老师" }} onDone={() => undefined} />));
   await act(async () => [...host.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.textContent === "复制登录资料")!.click());
   expect(copy).toHaveBeenCalledWith(expect.stringContaining("账号：admin-a"));

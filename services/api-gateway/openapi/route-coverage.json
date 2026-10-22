@@ -4,9 +4,9 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 536,
-    "openapi": 288,
-    "registered_gaps": 248
+    "registered": 580,
+    "openapi": 336,
+    "registered_gaps": 244
   },
   "routes": [
     {
@@ -373,6 +373,20 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/answer-sheet-templates/{id}/analyze-objective-grid",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "analyzeAnswerSheetObjectiveGrid"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/answer-sheet-templates/{id}/analyze-page",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "analyzeAnswerSheetTemplatePage"
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/answer-sheet-templates/{id}/clone",
       "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "registered-gap",
@@ -386,16 +400,17 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/answer-sheet-templates/{id}/library",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "publishAnswerSheetTemplateToLibrary"
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/answer-sheet-templates/{id}/lock",
       "source": "services/api-gateway/internal/server/routes_paper.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "lockAnswerSheetTemplate"
     },
     {
       "method": "GET",
@@ -1179,6 +1194,13 @@
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
     },
     {
+      "method": "PATCH",
+      "path": "/api/v1/classes/{id}",
+      "source": "services/api-gateway/internal/server/routes_org.go",
+      "coverage": "openapi",
+      "operation_id": "updateOrganizationClass"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/classes/{id}/teachers",
       "source": "services/api-gateway/internal/server/routes_org.go",
@@ -1353,43 +1375,53 @@
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
     },
     {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/answer-sheet-page-order",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "analyzeAnswerSheetPageOrder"
+    },
+    {
       "method": "DELETE",
       "path": "/api/v1/exams/{examId}/answer-sheet-template-binding",
       "source": "services/api-gateway/internal/server/routes_paper.go",
-      "coverage": "registered-gap",
-      "interface_category": "public-feature",
-      "contract_carrier": "Go handler tests and TypeScript API consumer types",
-      "exception_scope": "Only the exact answer-sheet template binding endpoints introduced for the first-page routing workflow.",
-      "exception_policy": "answer-sheet-template-routing-v1",
-      "owner": "capture-platform",
-      "review_after": "2026-12-31",
-      "reason": "The routing workflow extends the existing handwritten answer-sheet API surface while its public OpenAPI migration is scheduled as a bounded follow-up."
+      "coverage": "openapi",
+      "operation_id": "unbindExamTemplate"
     },
     {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/answer-sheet-template-binding",
       "source": "services/api-gateway/internal/server/routes_paper.go",
-      "coverage": "registered-gap",
-      "interface_category": "public-feature",
-      "contract_carrier": "Go handler tests and TypeScript API consumer types",
-      "exception_scope": "Only the exact answer-sheet template binding endpoints introduced for the first-page routing workflow.",
-      "exception_policy": "answer-sheet-template-routing-v1",
-      "owner": "capture-platform",
-      "review_after": "2026-12-31",
-      "reason": "The routing workflow extends the existing handwritten answer-sheet API surface while its public OpenAPI migration is scheduled as a bounded follow-up."
+      "coverage": "openapi",
+      "operation_id": "getExamTemplateBinding"
     },
     {
       "method": "PUT",
       "path": "/api/v1/exams/{examId}/answer-sheet-template-binding",
       "source": "services/api-gateway/internal/server/routes_paper.go",
-      "coverage": "registered-gap",
-      "interface_category": "public-feature",
-      "contract_carrier": "Go handler tests and TypeScript API consumer types",
-      "exception_scope": "Only the exact answer-sheet template binding endpoints introduced for the first-page routing workflow.",
-      "exception_policy": "answer-sheet-template-routing-v1",
-      "owner": "capture-platform",
-      "review_after": "2026-12-31",
-      "reason": "The routing workflow extends the existing handwritten answer-sheet API surface while its public OpenAPI migration is scheduled as a bounded follow-up."
+      "coverage": "openapi",
+      "operation_id": "bindExamTemplate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/answer-sheet-template-library",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "listAnswerSheetTemplateLibrary"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/answer-sheet-template-library/{libraryId}/instantiate",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "instantiateAnswerSheetTemplateLibrary"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/answer-sheet-template-library/resolve",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "resolveAnswerSheetTemplateLibrary"
     },
     {
       "method": "GET",
@@ -1577,6 +1609,13 @@
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/exams/{examId}/papers/{id}",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "deleteAnswerSheetSource"
+    },
+    {
       "method": "GET",
       "path": "/api/v1/exams/{examId}/processing/actors",
       "source": "services/api-gateway/internal/processing/handlers.go",
@@ -1744,6 +1783,48 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/reference-material-commands/{commandId}/resume",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "resumeReferenceMaterialCommand"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/reference-material-crops",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "createReferenceMaterialCrop"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/reference-material-crops/{cropRef}/image",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "getReferenceMaterialCropImage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/reference-materials",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "getQuestionReferenceMaterials"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/reference-materials",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "saveQuestionReferenceMaterials"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/reference-materials/{manifestId}/withdraw",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "withdrawQuestionReferenceMaterials"
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/exams/{examId}/questions/{questionId}/regrade-jobs",
       "source": "services/api-gateway/internal/regrade/handlers.go",
       "coverage": "openapi",
@@ -1755,6 +1836,20 @@
       "source": "services/api-gateway/internal/regrade/handlers.go",
       "coverage": "openapi",
       "operation_id": "previewRegrade"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/rubric-draft",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "suggestQuestionMathRubricDraft"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/rubric-draft-jobs",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "createQuestionRubricDraftJob"
     },
     {
       "method": "GET",
@@ -1808,6 +1903,27 @@
       "source": "services/api-gateway/internal/server/routes_paper.go",
       "coverage": "openapi",
       "operation_id": "confirmExamReadiness"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/reference-material-commands/{commandId}",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "recoverReferenceMaterialCommand"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/reference-material-sources",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "listReferenceMaterialSources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/reference-material-sources/{pageRef}/image",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "getReferenceMaterialSourceImage"
     },
     {
       "method": "GET",
@@ -1928,6 +2044,27 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/rubric-draft-jobs",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "listQuestionRubricDraftJobs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/rubric-draft-jobs/{jobId}",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "getQuestionRubricDraftJob"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/rubric-draft-jobs/{jobId}/cancel",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "cancelQuestionRubricDraftJob"
     },
     {
       "method": "GET",
@@ -2252,6 +2389,13 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/grades/{id}",
+      "source": "services/api-gateway/internal/server/routes_org.go",
+      "coverage": "openapi",
+      "operation_id": "updateOrganizationGrade"
     },
     {
       "method": "GET",
@@ -2803,6 +2947,47 @@
       "source": "services/api-gateway/internal/mathunderstanding/handlers.go",
       "coverage": "openapi",
       "operation_id": "exportMathUnderstandingCorrections"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me/review-bookmarks",
+      "source": "services/api-gateway/internal/reviewbookmark/routes.go",
+      "coverage": "openapi",
+      "operation_id": "listPersonalReviewBookmarks"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/me/review-bookmarks/{bookmarkId}",
+      "source": "services/api-gateway/internal/reviewbookmark/routes.go",
+      "coverage": "openapi",
+      "operation_id": "deletePersonalReviewBookmark"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me/review-bookmarks/{first}/{second}",
+      "source": "services/api-gateway/internal/reviewbookmark/routes.go",
+      "coverage": "registered-gap",
+      "interface_category": "public-feature",
+      "contract_carrier": "OpenAPI concrete bookmark paths plus Go route dispatch tests",
+      "exception_scope": "Only the internal two-segment dispatcher used for the personal review bookmark context and image paths.",
+      "exception_policy": "personal-review-bookmark-dispatch-v1",
+      "owner": "review-platform",
+      "review_after": "2026-12-31",
+      "reason": "Go ServeMux treats by-task/{taskId} and {bookmarkId}/context as overlapping patterns; the dispatcher preserves the concrete OpenAPI paths while routing both handlers through one registered pattern."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/me/review-bookmarks/by-task/{taskId}",
+      "source": "services/api-gateway/internal/reviewbookmark/routes.go",
+      "coverage": "openapi",
+      "operation_id": "putPersonalReviewBookmark"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me/review-bookmarks/cleanup",
+      "source": "services/api-gateway/internal/reviewbookmark/routes.go",
+      "coverage": "openapi",
+      "operation_id": "listUnavailablePersonalReviewBookmarks"
     },
     {
       "method": "GET",
@@ -3518,6 +3703,34 @@
       "operation_id": "previewPaperStructure"
     },
     {
+      "method": "PUT",
+      "path": "/api/v1/platform/answer-sheet-model-selection",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "savePlatformAnswerSheetModelSelection"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/chat-model-access",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "getPlatformChatModelAccess"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/platform/chat-model-access",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "savePlatformChatModelAccess"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/platform/document-model-selection",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "savePlatformDocumentModelSelection"
+    },
+    {
       "method": "GET",
       "path": "/api/v1/platform/model-api-configs",
       "source": "services/api-gateway/internal/server/routes_governance.go",
@@ -3633,6 +3846,13 @@
       "owner": "model-platform",
       "review_after": "2026-12-31",
       "reason": "The managed model page predates OpenAPI migration; these endpoints complete its bounded typed workflow without expanding the generated SDK surface in this release."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/model-applications",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "getPlatformModelApplications"
     },
     {
       "method": "GET",
@@ -4343,6 +4563,20 @@
       "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
     },
     {
+      "method": "GET",
+      "path": "/api/v1/review-tasks/{id}/reference-materials",
+      "source": "services/api-gateway/internal/server/routes_review.go",
+      "coverage": "openapi",
+      "operation_id": "getTaskReferenceMaterials"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/review-tasks/{id}/reference-materials/{itemId}/image",
+      "source": "services/api-gateway/internal/server/routes_review.go",
+      "coverage": "openapi",
+      "operation_id": "getTaskReferenceMaterialImage"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/review-tasks/{id}/release",
       "source": "services/api-gateway/internal/server/routes_review.go",
@@ -4634,11 +4868,53 @@
       "operation_id": "listScoringRunAIBatches"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/scoring-runs/{runId}/ai-trials",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "listScoringRunAITrials"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scoring-runs/{runId}/ai-trials",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "createScoringRunAITrial"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scoring-runs/{runId}/ai-trials/{trialId}/decision",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "decideScoringRunAITrial"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scoring-runs/{runId}/ai-trials/{trialId}/enqueue",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "enqueueScoringRunAITrial"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/scoring-runs/{runId}/cancel",
       "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "cancelScoringRun"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scoring-runs/{runId}/questions/{questionId}/reference-materials",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "getScoringReferenceMaterials"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scoring-runs/{runId}/questions/{questionId}/reference-materials/{itemId}/image",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "getScoringReferenceMaterialImage"
     },
     {
       "method": "POST",
@@ -4743,17 +5019,18 @@
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/students/{id}",
+      "source": "services/api-gateway/internal/server/routes_org.go",
+      "coverage": "openapi",
+      "operation_id": "deleteOrganizationStudent"
+    },
+    {
       "method": "PATCH",
       "path": "/api/v1/students/{id}",
       "source": "services/api-gateway/internal/server/routes_org.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "updateOrganizationStudent"
     },
     {
       "method": "PUT",
@@ -5202,6 +5479,13 @@
       "source": "services/api-gateway/internal/server/routes_auth.go",
       "coverage": "openapi",
       "operation_id": "createManagedUserCredentialRecovery"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/users/{id}/profile",
+      "source": "services/api-gateway/internal/server/routes_auth.go",
+      "coverage": "openapi",
+      "operation_id": "updateManagedUserProfile"
     },
     {
       "method": "DELETE",

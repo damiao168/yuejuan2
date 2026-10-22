@@ -139,7 +139,23 @@ class EduGradeImageQualityClient:
             with _open_request(req, timeout=120) as response:
                 raw = read_json_response(response)
         except error.HTTPError as exc:
-            raise APIError(f"normalized upload failed: {exc.code}") from exc
+            # 重跑会生成同一张标准化图片；服务端已授权的同页、同答卷、同哈希资源可复用。
+            # 不能把其他 409 或仅凭文件名相同的资源当作成功，否则可能关联到别人的页面。
+            if exc.code != 409:
+                raise APIError(f"normalized upload failed: {exc.code}") from exc
+            try:
+                with exc:
+                    duplicate = json.loads(read_json_response(exc).decode("utf-8"))
+                existing = duplicate.get("existing_file") or {}
+                if (duplicate.get("error", {}).get("code") != "duplicate_file"
+                        or existing.get("owner_type") != "submission_page_normalized"
+                        or existing.get("owner_id") != str(job["submission_page_id"])
+                        or existing.get("submission_id") != str(job["submission_id"])
+                        or existing.get("hash_sha256") not in (sha256, "sha256:" + sha256)):
+                    raise APIError("normalized upload duplicate does not match this page")
+                raw = json.dumps({"file": existing}).encode("utf-8")
+            except (ResponseValidationError, ValueError, TypeError, AttributeError) as invalid:
+                raise APIError("normalized upload returned an invalid duplicate response") from invalid
         except ResponseValidationError as exc:
             raise APIError("normalized upload returned an invalid response") from exc
         payload = json.loads(raw.decode("utf-8"))

@@ -13,6 +13,7 @@ export function RegradeCandidateEvidence({ id, revision, onReady }: Readonly<{ i
   const [error, setError] = useState("");
   const [imageError, setImageError] = useState("");
   const ready = useRef(onReady); ready.current = onReady;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: attempt 由复核材料重试按钮触发；同一修订号也要重新核对实际材料。
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController(); let imageUrl = "";

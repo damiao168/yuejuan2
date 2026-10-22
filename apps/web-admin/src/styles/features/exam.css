@@ -36,32 +36,33 @@
 
 .exam-preparation-nav {
   display: flex;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 8px;
   overflow-x: auto;
-  margin-bottom: 16px;
-  padding: 0 0 8px;
-  border-bottom: 1px solid var(--border);
+  padding: 0 0 4px;
 }
-.exam-preparation-nav > strong { display: none; }
+.exam-preparation-progress { display: grid; gap: 8px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 .exam-preparation-nav button {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 10px;
-  min-height: 36px;
-  padding: 6px 12px;
-  color: var(--text-muted);
-  background: transparent;
-  border: 0;
+  min-height: 42px;
+  padding: 8px 12px;
+  color: #667085;
+  background: #f3f4f6;
+  border: 1px solid transparent;
   border-radius: 6px;
   text-align: left;
   cursor: pointer;
 }
-.exam-preparation-nav button:hover { color: var(--text); background: #f3f6fa; }
-.exam-preparation-nav button.is-active { color: var(--primary); background: #eef5ff; font-weight: 600; }
-.exam-preparation-step-number { display: grid; flex: 0 0 22px; width: 22px; height: 22px; place-items: center; border: 1px solid var(--border); border-radius: 50%; font-size: 12px; }
-.exam-preparation-nav button.is-active .exam-preparation-step-number { border-color: var(--primary); color: #fff; background: var(--primary); }
-.exam-preparation-shell { display: block; }
+.exam-preparation-nav button:hover { border-color: #c5ccd6; }
+.exam-preparation-nav button.is-complete { color: #166534; background: #edf7ef; }
+/* 当前所在步骤只用蓝色边框区分，不能覆盖真实完成状态的绿色或待检查的灰色。 */
+.exam-preparation-nav button.is-active { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); font-weight: 600; }
+.exam-preparation-nav button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.exam-preparation-step-number { display: grid; flex: 0 0 22px; width: 22px; height: 22px; place-items: center; border: 1px solid #c5ccd6; border-radius: 50%; color: #667085; background: #fff; font-size: 12px; }
+.exam-preparation-nav button.is-complete .exam-preparation-step-number { border-color: #16845b; color: #fff; background: #16845b; }
 .exam-workspace-content { min-width: 0; }
 .exam-workspace-content.is-preparation { width: 100%; max-width: none; }
 .exam-workspace-module { min-width: 0; }
@@ -111,7 +112,8 @@
 @media (max-width: 720px) {
   .exam-workspace-canvas { width: min(calc(100% - 24px), 1180px); padding-top: 14px; }
   .exam-workspace-canvas.is-preparation { width: calc(100% - 24px); }
-  .exam-workspace-canvas .exam-context-title { display: grid; gap: 2px; }
+  /* 手机页头改为纵向排列后，桌面 flex 基准宽度不能继续撑高标题。 */
+  .exam-workspace-canvas .exam-context-title { display: grid; flex: 0 1 auto; gap: 2px; }
   .exam-workspace-canvas .eg-workspace-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .exam-workspace-canvas .eg-workspace-stage:nth-child(2) { border-right: 0; }
   .exam-workspace-canvas .eg-workspace-stage:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
@@ -125,6 +127,25 @@
 .exam-workspace-subject { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12px; font-weight: 500; }
 .exam-workspace-subject .ant-select { width: 176px; }
 .exam-context-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* 准备步骤与考试上下文共用一行；只有步骤区可横滚，不能把整个工作区撑宽。 */
+.exam-workspace-canvas .exam-context-header.has-preparation {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(120px, 1fr) max-content;
+  gap: 12px;
+  padding-bottom: 0;
+}
+.exam-context-header.has-preparation .exam-context-leading { max-width: 360px; }
+.exam-workspace-canvas .exam-context-header.has-preparation .exam-context-title { gap: 8px; align-items: center; }
+.exam-workspace-canvas .exam-context-header.has-preparation .exam-context-title h1 { min-width: 0; max-width: clamp(48px, 10vw, 160px); white-space: nowrap; }
+.exam-context-header.has-preparation .exam-workspace-subject { flex: 0 0 auto; gap: 4px; white-space: nowrap; }
+.exam-context-header.has-preparation .exam-workspace-subject .ant-select { width: 128px; }
+.exam-context-header.has-preparation .exam-context-status { flex-wrap: nowrap; gap: 6px; }
+.exam-context-header.has-preparation .exam-preparation-progress { min-width: 0; margin: 0; padding: 4px 0; border: 0; }
+.exam-context-header.has-preparation .exam-preparation-nav { min-width: 0; flex-wrap: nowrap; gap: 4px; padding: 2px; scrollbar-width: thin; overscroll-behavior-x: contain; }
+.exam-context-header.has-preparation .exam-preparation-nav button { min-height: 34px; gap: 5px; padding: 5px 7px; white-space: nowrap; font-size: 12px; }
+.exam-context-header.has-preparation .exam-preparation-step-number { flex-basis: 20px; width: 20px; height: 20px; font-size: 11px; }
+
 .exam-setup-form-page { padding: 0 28px 32px; }
 .exam-setup-inline-issues { display: grid; gap: 5px; margin: 8px 0 0; padding: 0; list-style: none; }
 .exam-setup-inline-issues li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 10px; border-left: 2px solid #d97706; color: #7c4a03; background: #fffaf0; font-size: 13px; line-height: 1.45; }
@@ -139,4 +160,23 @@
   .exam-workspace-subject .ant-select { width: min(220px, 60vw); }
   .exam-setup-form-page { padding: 0 16px 24px; }
   .exam-setup-inline-issues li { grid-template-columns: 1fr; gap: 2px; }
+}
+
+@media (max-width: 1080px) {
+  .exam-workspace-canvas .exam-context-header.has-preparation { grid-template-columns: minmax(0, 1fr) max-content; gap: 4px 12px; }
+  .exam-context-header.has-preparation .exam-preparation-progress { grid-column: 1 / -1; grid-row: 2; }
+  .exam-context-header.has-preparation .exam-context-status { grid-column: 2; grid-row: 1; }
+}
+
+@media (max-width: 720px) {
+  .exam-workspace-canvas .exam-context-header.has-preparation .exam-context-leading { align-items: center; flex-direction: row; gap: 0; }
+  .exam-workspace-canvas .exam-context-header.has-preparation .exam-context-title { display: flex; align-items: center !important; gap: 6px; }
+  .exam-context-header.has-preparation .exam-workspace-subject { align-items: center; flex-direction: row; gap: 4px; }
+  .exam-context-header.has-preparation .exam-workspace-subject .ant-select { width: 112px; }
+}
+
+@media (max-width: 480px) {
+  .exam-workspace-canvas .exam-context-header.has-preparation { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .exam-context-header.has-preparation .exam-context-status { grid-column: 1; grid-row: 2; justify-content: flex-end; }
+  .exam-context-header.has-preparation .exam-preparation-progress { grid-row: 3; }
 }

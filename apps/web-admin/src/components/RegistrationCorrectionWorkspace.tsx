@@ -42,6 +42,10 @@ const labels = ["左上", "右上", "右下", "左下"];
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 const correctionErrorLabels: Record<string, string> = {
   coverage_too_low: "对齐后覆盖不足，请把四个点贴近答卷四角后重试",
+  registration_required_region_incomplete:
+    "对齐后有作答区域超出原图，请核对对应点；原图缺页或缺边时请重新扫描",
+  registration_roi_evidence_invalid:
+    "对应点无法形成有效的页面映射，请按左上、右上、右下、左下重新标记",
 };
 const correctionErrorText = (code: string) =>
   correctionErrorLabels[code] ?? "预览失败，请调整对应点后重试";
@@ -276,6 +280,7 @@ export function RegistrationCorrectionWorkspace({
       previewRequest.current += 1;
     };
   }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 换校正任务后必须丢弃旧图、旧点位和旧预览，runId 是这组状态的身份键。
   useEffect(() => {
     previewRequest.current += 1;
     materialContext.current = undefined;
@@ -292,6 +297,7 @@ export function RegistrationCorrectionWorkspace({
     setAdvanced(false);
     setBusy(false);
   }, [runId]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: materialRetry 只重读材料并作废旧预览；同一任务的点位仍保留供核对。
   useEffect(() => {
     let active = true;
     const urls: string[] = [];

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"edugrade-enterprise/services/api-gateway/internal/aieligibility"
 	"edugrade-enterprise/services/api-gateway/internal/answergroup"
@@ -10,21 +11,27 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/calibration"
 	"edugrade-enterprise/services/api-gateway/internal/config"
 	"edugrade-enterprise/services/api-gateway/internal/evidence"
+	"edugrade-enterprise/services/api-gateway/internal/exam"
 	"edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/goldpaper"
 	"edugrade-enterprise/services/api-gateway/internal/graderdrift"
 	"edugrade-enterprise/services/api-gateway/internal/grading"
 	"edugrade-enterprise/services/api-gateway/internal/mathunderstanding"
+	"edugrade-enterprise/services/api-gateway/internal/modelgovernance"
+	"edugrade-enterprise/services/api-gateway/internal/org"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/processing"
 	"edugrade-enterprise/services/api-gateway/internal/qualitydashboard"
 	"edugrade-enterprise/services/api-gateway/internal/regrade"
 	"edugrade-enterprise/services/api-gateway/internal/review"
 	"edugrade-enterprise/services/api-gateway/internal/reviewannotation"
+	"edugrade-enterprise/services/api-gateway/internal/reviewbookmark"
 	"edugrade-enterprise/services/api-gateway/internal/seedquality"
 	"edugrade-enterprise/services/api-gateway/internal/segment"
 	"edugrade-enterprise/services/api-gateway/internal/subjective"
 	"edugrade-enterprise/services/api-gateway/internal/taskmaterials"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
+	"encoding/json"
 )
 
 type GradingQualityStores struct {
@@ -33,6 +40,7 @@ type GradingQualityStores struct {
 	Evidence         evidence.Store
 	Review           review.Store
 	ReviewAnnotation reviewannotation.Store
+	ReviewBookmark   reviewbookmark.Store
 	GoldPaper        goldpaper.Store
 	Calibration      calibration.Store
 	AnswerGroup      answergroup.Store
@@ -44,6 +52,8 @@ type GradingQualityStores struct {
 }
 
 type GradingQualityModule struct {
+	ScoringCoordinator      *grading.ScoringCoordinator
+	MaterialReceipts        *subjective.MaterialReceiptStore
 	ReviewStore             review.Store
 	RegradeService          *regrade.Service
 	QualityDashboardService *qualitydashboard.Service
@@ -53,6 +63,7 @@ type GradingQualityModule struct {
 	EvidenceHandler         *evidence.Handler
 	ReviewHandler           *review.Handler
 	ReviewAnnotationHandler *reviewannotation.Handler
+	ReviewBookmarkHandler   *reviewbookmark.Handler
 	GoldPaperHandler        *goldpaper.Handler
 	CalibrationHandler      *calibration.Handler
 	AnswerGroupHandler      *answergroup.Handler
@@ -64,43 +75,60 @@ type GradingQualityModule struct {
 }
 
 type GradingQualityDependencies struct {
-	DB                   *sql.DB
-	Auth                 auth.Store
-	Files                files.Store
-	Objects              files.ObjectStorage
-	Segments             segment.Store
-	Assessments          assessment.Store
-	WorkerRuntime        workerruntime.Store
-	Processing           *processing.Service
-	Eligibility          *aieligibility.Service
-	EvaluationEvidence   subjective.EvaluationEvidenceProvider
-	CalibrationEvidence  subjective.CalibrationEvidenceProvider
-	DisagreementObserver review.AIHumanDisagreementObserver
-	SegmentImage         segment.CropImageReader
-	FileDownload         files.DownloadReader
-	MathUnderstanding    mathunderstanding.Store
-	MathCorrections      mathunderstanding.CorrectionStore
-	AIRequestObserver    subjective.AIGradingRequestObserver
+	ImageModelResolver     func(context.Context, string) (*subjective.ImageModelConfig, error)
+	ImageModelByIDResolver func(context.Context, string, string, string) (*subjective.ImageModelConfig, error)
+	ModelGovernance        modelgovernance.Store
+	DB                     *sql.DB
+	Auth                   auth.Store
+	Exams                  exam.Store
+	Schools                org.Store
+	Files                  files.Store
+	Objects                files.ObjectStorage
+	Segments               segment.Store
+	Assessments            assessment.Store
+	WorkerRuntime          workerruntime.Store
+	Processing             *processing.Service
+	Eligibility            *aieligibility.Service
+	EvaluationEvidence     subjective.EvaluationEvidenceProvider
+	CalibrationEvidence    subjective.CalibrationEvidenceProvider
+	DisagreementObserver   review.AIHumanDisagreementObserver
+	SegmentImage           segment.CropImageReader
+	FileDownload           files.DownloadReader
+	MathUnderstanding      mathunderstanding.Store
+	MathCorrections        mathunderstanding.CorrectionStore
+	AIRequestObserver      subjective.AIGradingRequestObserver
 }
 
 // 复核、校准、种子样本和漂移服务按依赖顺序组装；可选的 math grading v2 只有在配置开启且具备证据来源时才挂载。
 func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dependencies GradingQualityDependencies) *GradingQualityModule {
+	materialReceipts := subjective.NewMaterialReceiptStore(dependencies.DB, cfg.AIService.Token).WithImageAdmission(referenceImageAdmission(cfg, dependencies.ModelGovernance, stores.Subjective))
 	gradingHandler := grading.NewHandler(stores.Grading, grading.NewEngine(), dependencies.Auth)
 	gradingHandler.SetProductionDependencies(dependencies.WorkerRuntime, dependencies.Files)
+	cropEvidence, _ := dependencies.Segments.(subjective.ActiveCropEvidenceStore)
+	activeCrops := subjective.NewActiveCropResolver(cropEvidence, dependencies.Files, dependencies.Objects)
 
 	subjectiveHandler := subjective.NewHandler(stores.Subjective, newSubjectiveAdapter(cfg, dependencies.AIRequestObserver), dependencies.Auth).
+		WithImageModelResolver(dependencies.ImageModelResolver).
+		WithImageModelByIDResolver(dependencies.ImageModelByIDResolver).
+		WithImageCropResolver(activeCrops).
+		WithReferenceMaterials(paper.NewReferenceMaterialsService(dependencies.DB, dependencies.Files, dependencies.Objects, cfg.Files.Bucket)).
+		WithReferenceMaterialPreflight(referenceImagePreflight(cfg, dependencies.ModelGovernance)).
 		WithWorkerRuntimeStore(dependencies.WorkerRuntime).
 		WithEvaluationEvidence(dependencies.EvaluationEvidence).
 		WithCalibrationEvidence(dependencies.CalibrationEvidence).
 		WithParserQuality(dependencies.Processing)
+	gradingHandler.WithGradingAIProbe(subjectiveHandler.ProbeExamImageModel)
 	if dependencies.Eligibility != nil {
 		subjectiveHandler.WithEligibilityGate(dependencies.Eligibility)
 	}
 	if cfg.AIService.MathGradingV2 {
-		cropEvidence, _ := dependencies.Segments.(subjective.ActiveCropEvidenceStore)
-		subjectiveHandler.WithMathGradingV2(true, newSubjectiveAdapterV2(cfg, dependencies.AIRequestObserver), subjective.MathEvidenceSource{
+		mathAdapter := newSubjectiveAdapterV2(cfg, dependencies.AIRequestObserver)
+		if adapter, ok := mathAdapter.(*subjective.HTTPAdapterV2); ok {
+			adapter.WithMaterialReceipts(materialReceipts)
+		}
+		subjectiveHandler.WithMathGradingV2(true, mathAdapter, subjective.MathEvidenceSource{
 			Artifacts: dependencies.MathUnderstanding, Corrections: dependencies.MathCorrections,
-		}, subjective.NewActiveCropResolver(cropEvidence, dependencies.Files, dependencies.Objects))
+		}, activeCrops)
 	}
 
 	calibrationService := calibration.NewService(stores.Calibration, stores.GoldPaper)
@@ -127,21 +155,28 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 	if qualityDashboardService == nil && dependencies.DB != nil {
 		qualityDashboardService = newQualityDashboardService(dependencies.DB, stores, graderDriftService, backmarkService)
 	}
+	reviewHandler := review.NewHandler(
+		stores.Review, dependencies.Auth, dependencies.SegmentImage, dependencies.FileDownload,
+	).WithQualificationGate(calibrationService).
+		WithReferenceMaterials(paper.NewReferenceMaterialsService(dependencies.DB, dependencies.Files, dependencies.Objects, cfg.Files.Bucket)).
+		WithSeedHook(seedQualityService).
+		WithSeedObservationRefresher(graderDriftService).
+		WithAIHumanDisagreementObserver(dependencies.DisagreementObserver)
+	if failureReader, ok := stores.Subjective.(review.AIFailureReader); ok {
+		reviewHandler.WithAIFailureReader(failureReader)
+	}
 
 	module := &GradingQualityModule{
+		MaterialReceipts:        materialReceipts,
 		ReviewStore:             stores.Review,
 		RegradeService:          regradeService,
 		QualityDashboardService: qualityDashboardService,
 		GradingHandler:          gradingHandler,
 		SubjectiveHandler:       subjectiveHandler,
 		EvidenceHandler:         evidence.NewHandler(stores.Evidence, evidence.NewEngine(), dependencies.Auth),
-		ReviewHandler: review.NewHandler(
-			stores.Review, dependencies.Auth, dependencies.SegmentImage, dependencies.FileDownload,
-		).WithQualificationGate(calibrationService).
-			WithSeedHook(seedQualityService).
-			WithSeedObservationRefresher(graderDriftService).
-			WithAIHumanDisagreementObserver(dependencies.DisagreementObserver),
+		ReviewHandler:           reviewHandler,
 		ReviewAnnotationHandler: reviewannotation.NewHandler(stores.ReviewAnnotation, dependencies.Auth),
+		ReviewBookmarkHandler:   newPersonalReviewBookmarkHandler(cfg, stores, dependencies),
 		GoldPaperHandler:        goldpaper.NewHandler(stores.GoldPaper, dependencies.Auth),
 		CalibrationHandler:      calibration.NewHandler(calibrationService, dependencies.Auth),
 		AnswerGroupHandler:      answergroup.NewHandlerWithReferences(stores.AnswerGroup, dependencies.Auth, stores.GoldPaper).WithSegmentImage(dependencies.SegmentImage),
@@ -150,10 +185,24 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 		GraderDriftHandler:      graderdrift.NewHandler(graderDriftService, dependencies.Auth),
 		SeedQualityHandler:      seedquality.NewHandler(seedQualityService, dependencies.Auth),
 	}
+	if store, ok := stores.Grading.(*grading.PostgresStore); ok && dependencies.WorkerRuntime != nil {
+		module.ScoringCoordinator = grading.NewScoringCoordinator(store, dependencies.WorkerRuntime, scoringImageExecutor{handler: subjectiveHandler}, cfg.AIService.Timeout)
+	}
 	if qualityDashboardService != nil {
 		module.QualityDashboardHandler = qualitydashboard.NewHandler(qualityDashboardService)
 	}
 	return module
+}
+
+// 协调器只传不可变输入和本轮快照；观察与评分的协议校验仍由主观服务执行。
+type scoringImageExecutor struct{ handler *subjective.Handler }
+
+func (e scoringImageExecutor) Observe(ctx context.Context, tenantID string, input grading.ScoringObservationInput) (json.RawMessage, error) {
+	return e.handler.ObserveStudentAnswers(ctx, tenantID, input)
+}
+
+func (e scoringImageExecutor) Schedule(ctx context.Context, tenantID, actorID string, input grading.ScoringAIInput) (string, string, error) {
+	return e.handler.ScheduleScoringItem(ctx, tenantID, actorID, input)
 }
 
 func newQualityDashboardService(db *sql.DB, stores GradingQualityStores, graderDriftService *graderdrift.Service, backmarkService *backmark.Service) *qualitydashboard.Service {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"sort"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
@@ -60,8 +61,15 @@ func (s *PostgresStore) UpdateScoring(ctx context.Context, scope auth.AccessScop
 			return v, err
 		}
 		for _, a := range scoring.Assets {
-			f, err := files.NewPostgresStore(s.db).GetScoped(ctx, scope, a.FileAssetID)
-			if err != nil || f.HashSHA256 != a.SHA256 || f.OriginalName != a.Name || f.ContentType != a.ContentType {
+			// 资产和读取 ACL 使用当前变更事务；文件共享锁保留到评分事实一起提交。
+			f, err := files.NewPostgresStore(s.db).GetScopedTx(ctx, tx, scope, a.FileAssetID)
+			if err != nil {
+				if errors.Is(err, files.ErrNotFound) || errors.Is(err, files.ErrForbidden) {
+					return v, ErrInvalidInput
+				}
+				return v, err
+			}
+			if f.HashSHA256 != a.SHA256 || f.OriginalName != a.Name || f.ContentType != a.ContentType {
 				return v, ErrInvalidInput
 			}
 		}

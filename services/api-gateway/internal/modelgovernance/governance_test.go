@@ -14,15 +14,15 @@ func TestPolicyAuthorizesOnlyVerifiedModelsFromItsSchool(t *testing.T) {
 	const disabled = "33333333-3333-4333-8333-333333333333"
 	store.managedConfigs[allowed] = ManagedAPIConfig{
 		ID: allowed, TenantID: school, Status: "active",
-		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3",
+		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v4",
 	}
 	store.managedConfigs[otherSchool] = ManagedAPIConfig{
 		ID: otherSchool, TenantID: "school-b", Status: "active",
-		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3",
+		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v4",
 	}
 	store.managedConfigs[disabled] = ManagedAPIConfig{
 		ID: disabled, TenantID: school, Status: "disabled",
-		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3",
+		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v4",
 	}
 	current, err := store.GetPolicy(context.Background(), school)
 	if err != nil {
@@ -59,7 +59,7 @@ func TestSelectManagedModelFailsClosedForDisabledOrUnverifiedConfig(t *testing.T
 		ID: id, TenantID: "school-a", ProviderKey: "deepseek", ModelName: "model-a",
 		ModelVersion: "v1", AdapterType: "openai_compatible", Region: "global",
 		Modalities: []string{"text"}, Status: "active", LastTestStatus: "success",
-		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3",
+		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v4",
 	}
 	decision, err := SelectManagedModel(policy, RouteRequest{Modality: "text"}, []ManagedAPIConfig{config})
 	if err != nil || decision.ModelConfigID != id || decision.ModelVersion != "v1" {
@@ -74,7 +74,7 @@ func TestSelectManagedModelFailsClosedForDisabledOrUnverifiedConfig(t *testing.T
 	if _, err := SelectManagedModel(policy, RouteRequest{Modality: "text"}, []ManagedAPIConfig{config}); !errors.Is(err, ErrNoDeployment) {
 		t.Fatalf("stale capability must not route: %v", err)
 	}
-	config.LastCapabilityVersion = "structured-json-v3"
+	config.LastCapabilityVersion = "structured-json-v4"
 	config.TenantID = "school-b"
 	if _, err := SelectManagedModel(policy, RouteRequest{Modality: "text"}, []ManagedAPIConfig{config}); !errors.Is(err, ErrNoDeployment) {
 		t.Fatalf("cross-school model must not route: %v", err)

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Alert, Button, Space } from "antd";
+import { Button, Space } from "antd";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { getManagementExam, type ManagementExam, type ManagementExamKind } from "../../../api/exams";
 import { getUserErrorMessage } from "../../../api/client";
-import { listClasses, listGrades, listSchools } from "../../../api/org";
+import { listClasses, listGrades } from "../../../api/org";
 import { ErrorState, LoadingState } from "../../../components/PageState";
 import { defaultExamWorkspaceRoute } from "../workspace/defaultExamWorkspaceRoute";
 import { ManagementExamDetails } from "./ManagementExamDetails";
@@ -16,7 +16,7 @@ export function ManagementExamOverviewPage({ kind, examId, onNavigate }: Readonl
   const [exam, setExam] = useState<ManagementExam | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [names, setNames] = useState<{ school?: string; grade?: string; classes: Map<string, string> }>({ classes: new Map() });
+  const [names, setNames] = useState<{ grade?: string; classes: Map<string, string> }>({ classes: new Map() });
   const [generation, setGeneration] = useState(0);
   const refresh = useCallback(() => setGeneration((value) => value + 1), []);
   // 刷新序号是读取身份的一部分；相同考试重试也要淘汰前一轮迟到的结果。
@@ -33,12 +33,11 @@ export function ManagementExamOverviewPage({ kind, examId, onNavigate }: Readonl
         if (!active) return;
         setExam(result.exam);
         // 组织名称只是展示补充；缺少组织目录权限不应阻止访问已授权的考试。
-        const results = await Promise.allSettled([listSchools(), listGrades(result.exam.school_id), listClasses()]);
+        const results = await Promise.allSettled([listGrades(result.exam.school_id), listClasses()]);
         if (!active) return;
         setNames({
-          school: results[0].status === "fulfilled" ? results[0].value.schools.find((item) => item.id === result.exam.school_id)?.name : undefined,
-          grade: results[1].status === "fulfilled" ? results[1].value.grades.find((item) => item.id === result.exam.grade_id)?.name : undefined,
-          classes: new Map(results[2].status === "fulfilled" ? results[2].value.classes.map((item) => [item.id, item.name]) : [])
+          grade: results[0].status === "fulfilled" ? results[0].value.grades.find((item) => item.id === result.exam.grade_id)?.name : undefined,
+          classes: new Map(results[1].status === "fulfilled" ? results[1].value.classes.map((item) => [item.id, item.name]) : [])
         });
       } catch (currentError) {
         if (active) setError(getUserErrorMessage(currentError, "整场考试加载失败"));
@@ -56,9 +55,8 @@ export function ManagementExamOverviewPage({ kind, examId, onNavigate }: Readonl
   } else if (error) {
     content = <ErrorState message={error} onRetry={refresh} />;
   } else if (exam) {
-    content = <section className="workspace-section">
-      <Alert className="drawer-alert" type="info" showIcon message="整场考试总览" description="下面每行对应一门学科。点击对应学科的入口后，再维护试卷、参考范围和评分标准。" />
-      <ManagementExamDetails exam={exam} schoolName={names.school} gradeName={names.grade} classNames={names.classes.size ? names.classes : undefined} onOpenSubject={(subject) => onNavigate(defaultExamWorkspaceRoute(subject))} />
+    content = <section className="workspace-section management-exam-overview-section">
+      <ManagementExamDetails exam={exam} layout="columns" gradeName={names.grade} classNames={names.classes.size ? names.classes : undefined} onOpenSubject={(subject) => onNavigate(defaultExamWorkspaceRoute(subject))} />
     </section>;
   }
 

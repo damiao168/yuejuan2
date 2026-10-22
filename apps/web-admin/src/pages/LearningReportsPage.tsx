@@ -27,6 +27,7 @@ import {
   type QuestionAnalysis,
 } from "../api/reports";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
+import { usePageLoading } from "../components/pageReadiness";
 import { examSubjectLabel } from "../constants/examStatus";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import {
@@ -150,6 +151,8 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
   const [quality, setQuality] = useState<GradingQualityReport | null>(null);
   const [loadingExams, setLoadingExams] = useState(true);
   const [loadingReports, setLoadingReports] = useState(false);
+  // 目录返回后才会读取所选考试的报告；没有读取权限时不能阻塞权限提示的显示。
+  usePageLoading(canRead && (loadingExams || loadingReports));
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [lastExport, setLastExport] = useState<{ filename?: string; watermark?: string } | null>(null);
@@ -157,6 +160,8 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
   const [classMetric, setClassMetric] = useState<ClassMetric>("average");
   const [optionQuestionId, setOptionQuestionId] = useState("first-four");
   const reportRequestRef = useRef(0);
+  const currentExamRef = useRef(selectedExamId);
+  currentExamRef.current = selectedExamId;
 
   const selectedExam = useMemo(() => exams.find((exam) => exam.id === selectedExamId), [exams, selectedExamId]);
   const isEmptyReport = Boolean(overview?.empty?.empty);
@@ -214,6 +219,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
     if (optionQuestionId === "first-four") return allObjectiveQuestions.slice(0, 4);
     return allObjectiveQuestions.filter(item => item.question_id === optionQuestionId);
   }, [allObjectiveQuestions, optionQuestionId]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 换考试重置选项分析范围，不能沿用上一场的题目 ID。
   useEffect(() => { setOptionQuestionId("first-four"); }, [selectedExamId]);
 
   // 样本不足时隐藏该指标；缺少统计依据不能显示成真实的 0%，否则会误导学习判断。
@@ -282,8 +288,9 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
       const result = await listAllExams();
       setExams(result.exams);
       setSelectedExamId((current) => {
+        if (result.exams.some((exam) => exam.id === current)) return current;
         if (initialExamId && result.exams.some((exam) => exam.id === initialExamId)) return initialExamId;
-        return result.exams.some((exam) => exam.id === current) ? current : result.exams[0]?.id || "";
+        return result.exams[0]?.id || "";
       });
     } catch (currentError) {
       setError(formatError(currentError));
@@ -294,7 +301,10 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
 
   const loadReports = useCallback(
     async (examId: string) => {
+      // 旧刷新可能先等待考试列表；返回后不能让旧考试读取抢占当前考试的请求代次。
+      if (examId !== currentExamRef.current) return;
       const requestId = ++reportRequestRef.current;
+      const isCurrent = () => requestId === reportRequestRef.current && examId === currentExamRef.current;
       if (!examId) {
         setOverview(null);
         setClassReports([]);
@@ -312,20 +322,20 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
           listQuestionReports(examId),
           getGradingQualityReport(examId)
         ]);
-        if (requestId !== reportRequestRef.current) return;
+        if (!isCurrent()) return;
         setOverview(overviewResult.overview);
         setClassReports(classResult.classes);
         setQuestions(questionResult.questions);
         setQuality(qualityResult.grading_quality);
       } catch (currentError) {
-        if (requestId !== reportRequestRef.current) return;
+        if (!isCurrent()) return;
         setError(formatError(currentError));
         setOverview(null);
         setClassReports([]);
         setQuestions([]);
         setQuality(null);
       } finally {
-        if (requestId === reportRequestRef.current) setLoadingReports(false);
+        if (isCurrent()) setLoadingReports(false);
       }
     },
     []
@@ -344,9 +354,10 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
   }, [loadReports, selectedExamId]);
 
   const refresh = async () => {
+    const examId = currentExamRef.current;
     await loadExamList();
-    if (selectedExamId) {
-      await loadReports(selectedExamId);
+    if (examId && examId === currentExamRef.current) {
+      await loadReports(examId);
     }
   };
 

@@ -37,7 +37,7 @@ export const scoringModeLabels: Record<string, string> = {
 export const scoringRiskLabels: Record<string, string> = { R1: "低风险", R2: "中风险", R3: "高风险" };
 
 function scoringNote(lane: ScoringLane, mode: string): string {
-  if (lane === "ai") return "AI 仅生成建议，须由教师确认";
+  if (lane === "ai") return "自动识别学生作答并生成建议分，由教师确认最终分数";
   if (lane === "rule") return "规则判分；异常转人工";
   if (mode === "SNAPSHOT_UNAVAILABLE") return "策略快照暂不可读，按人工处理";
   if (mode === "DUAL_HUMAN") return "同校两名阅卷员互盲双评，分数不一致即仲裁";

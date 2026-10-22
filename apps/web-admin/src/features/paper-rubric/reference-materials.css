@@ -1,0 +1,13 @@
+.reference-material-editor { margin-block: 20px; padding-block: 16px; border-top: 1px solid var(--border-color, #ddd); }
+.reference-material-editor .section-head { display:flex; flex-wrap:wrap; align-items:center; gap:12px; justify-content:space-between; }
+.reference-protected-image { display:block; max-width:100%; max-height:600px; object-fit:contain; margin-block:12px; }
+.reference-selected-list { padding-inline-start:24px; }
+.reference-selected-list li { margin-block:20px; overflow-wrap:anywhere; }
+.reference-crop-surface { position:relative; width:fit-content; max-width:100%; margin-block:12px; touch-action:none; user-select:none; }
+.reference-crop-surface .reference-protected-image { margin:0; max-height:none; pointer-events:none; }
+.reference-crop-outline { position:absolute; border:2px solid #1677ff; background:rgba(22,119,255,.08); pointer-events:none; box-sizing:border-box; }
+.reference-coordinate-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-block:12px; }
+.reference-coordinate-grid label { display:grid; gap:4px; min-width:0; }
+.reference-coordinate-grid .ant-input-number { width:100%; }
+.reference-role-select { min-width:140px; }
+@media(max-width:600px) { .reference-coordinate-grid {grid-template-columns:repeat(2,minmax(0,1fr));} }

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { act, type ReactNode } from "react";
+import { act, type ReactNode, type ComponentProps } from "react";
+import type { SharedScoreControl } from "../features/grading/SharedScoreControl";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setBusinessCommandScope } from "../api/businessCommand";
@@ -15,14 +16,14 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("antd", () => ({
   App: { useApp: () => ({ message: mocks, modal: mocks }) },
-  Button: ({ children, onClick, disabled }: any) => <button disabled={disabled} onClick={onClick}>{children}</button>,
-  Drawer: ({ open, children }: any) => open ? <div>{children}</div> : null,
-  Alert: ({ message, description }: any) => <div>{message}{description}</div>,
-  Empty: ({ description }: any) => <p>{description}</p>,
-  Input: { TextArea: ({ value, onChange, disabled }: any) => <textarea disabled={disabled} value={value} onChange={onChange} /> },
-  List: Object.assign(({ dataSource, renderItem }: any) => <div>{dataSource.map(renderItem)}</div>, {
-    Item: Object.assign(({ children, actions }: any) => <div>{children}{actions}</div>, {
-      Meta: ({ title }: any) => <p>{title}</p>
+  Button: ({ children, onClick, disabled }: ComponentProps<"button">) => <button disabled={disabled} onClick={onClick}>{children}</button>,
+  Drawer: ({ open, children }: { open?: boolean; children?: ReactNode }) => open ? <div>{children}</div> : null,
+  Alert: ({ message, description }: { message?: ReactNode; description?: ReactNode }) => <div>{message}{description}</div>,
+  Empty: ({ description }: { description?: ReactNode }) => <p>{description}</p>,
+  Input: { TextArea: ({ value, onChange, disabled }: ComponentProps<"textarea">) => <textarea disabled={disabled} value={value} onChange={onChange} /> },
+  List: Object.assign(<T,>({ dataSource, renderItem }: { dataSource: T[]; renderItem: (item: T, index: number) => ReactNode }) => <div>{dataSource.map(renderItem)}</div>, {
+    Item: Object.assign(({ children, actions }: { children?: ReactNode; actions?: ReactNode[] }) => <div>{children}{actions}</div>, {
+      Meta: ({ title }: { title?: ReactNode }) => <p>{title}</p>
     })
   }),
   Space: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -31,7 +32,7 @@ vi.mock("antd", () => ({
 }));
 vi.mock("../router/useUnsavedChangesGuard", () => ({ useUnsavedChangesGuard: mocks.guard }));
 vi.mock("../features/grading/SharedScoreControl", () => ({
-  SharedScoreControl: ({ value, onChange, disabled }: any) => <>
+  SharedScoreControl: ({ value, onChange, disabled }: Pick<ComponentProps<typeof SharedScoreControl>, "value" | "onChange" | "disabled">) => <>
     <span>分数 {value.score ?? "空"}</span>
     <button disabled={disabled} onClick={() => onChange({ score: 4, rubricSelections: { p: 4 } })}>给4分</button>
   </>

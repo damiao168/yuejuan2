@@ -8,7 +8,8 @@ import { MathRubricMatrix } from "./MathRubricMatrix";
 import type { useMathWorkbenchEvidence } from "../hooks/useMathWorkbenchEvidence";
 import { mathSuggestionState } from "../mathWorkbenchEvidence";
 import { ReviewContextInspector } from "../ReviewContextInspector";
-import { requiresExplicitSecondOpinion } from "../reviewContext";
+import { imageSuggestionState, isImageWorkbenchGrade } from "../workbenchReviewState";
+import { choiceReviewReason, isChoiceReview, requiresExplicitSecondOpinion } from "../reviewContext";
 import {
   confidenceTone,
   evidenceTypeLabels,
@@ -19,6 +20,7 @@ import {
   sourceLabels
 } from "../gradingWorkbench.model";
 import type { ScoreDraft, WorkbenchContext } from "../gradingWorkbench.types";
+import { ImageGradingRecord } from "./ImageGradingRecord";
 
 export interface EvidenceInspectorProps {
   context: WorkbenchContext;
@@ -50,23 +52,35 @@ export function EvidenceInspector({
   onVerifyEvidence,
   math, onRefreshMath, onSelectMathStep, canRequestMath, mathDisabledReason, requestingMath, onRequestMath, mathRequestNotice
 }: Readonly<EvidenceInspectorProps>) {
+  const choice = isChoiceReview(context.reviewContext);
+  // 图像评分直接展示当前建议；旧规则结果卡和手动证据校验不适用于这条评分链路。
+  const imageGrade = isImageWorkbenchGrade(selectedGrade);
+  const formulaEvidence = !choice && !imageGrade && ["mathematics", "physics", "chemistry"].includes(context.reviewContext.subject_tool_hints.subject_code);
   const automationSummary = () => {
     const result = context.automationResult;
     if (!result) {
+      if (choice) {
+        const current = context.reviewContext.ai_candidates?.find((candidate) => candidate.is_current);
+        return <div className="task-automation-result"><div className="task-automation-grid">
+          <div><span>识别选项</span><strong>{current?.display_text || draft.answerText || "暂无识别结果"}</strong></div>
+          <div><span>标准答案</span><strong>{formatAnswer(context.question?.answer_key?.standard_answer)}</strong></div>
+          <div><span>本题分值</span><strong>{maxScore} 分</strong></div>
+        </div><p className="task-automation-note">{choiceReviewReason(context.reviewContext)}</p></div>;
+      }
       return <div className="ocr-snippet"><span>识别文本</span><p>{draft.answerText || "当前没有可用的识别结果"}</p></div>;
     }
     const automaticallyConfirmed = result.grade_source === "rule_confirmed" && typeof result.score === "number";
     return (
       <div className="task-automation-result">
         <div className="task-automation-grid">
-          <div><span>识别答案</span><strong>{result.recognized_answer || recognitionDecisionLabels[result.decision ?? ""] || "-"}</strong></div>
+          <div><span>{choice ? "识别选项" : "识别答案"}</span><strong>{result.recognized_answer || recognitionDecisionLabels[result.decision ?? ""] || "-"}</strong></div>
           <div><span>标准答案</span><strong>{formatAnswer(result.standard_answer)}</strong></div>
           <div><span>置信度</span><strong>{typeof result.confidence === "number" ? `${Math.round(result.confidence * 100)}%` : "-"}</strong></div>
-          <div><span>自动判定</span><strong>{automaticallyConfirmed ? `${result.score} / ${result.max_score ?? maxScore}` : "未生效 · 转人工"}</strong></div>
+          <div><span>{choice ? "本题分值" : "自动判定"}</span><strong>{choice ? `${result.max_score ?? maxScore} 分` : automaticallyConfirmed ? `${result.score} / ${result.max_score ?? maxScore}` : "未生效 · 转人工"}</strong></div>
         </div>
         <div className="task-automation-note">
-          <StatusTag tone="warning">{sourceLabels[context.task.source] ?? "人工复核"}</StatusTag>
-          <span title={[result.source, result.decision].filter(Boolean).join(" / ") || undefined}>{recognitionSourceLabels[result.source ?? ""] ?? "识别服务"} · {recognitionDecisionLabels[result.decision ?? ""] ?? "规则未自动确认"}</span>
+          {choice ? <span>{choiceReviewReason(context.reviewContext)}</span> : <><StatusTag tone="warning">{sourceLabels[context.task.source] ?? "人工复核"}</StatusTag>
+          <span title={[result.source, result.decision].filter(Boolean).join(" / ") || undefined}>{recognitionSourceLabels[result.source ?? ""] ?? "识别服务"} · {recognitionDecisionLabels[result.decision ?? ""] ?? "规则未自动确认"}</span></>}
         </div>
       </div>
     );
@@ -74,8 +88,9 @@ export function EvidenceInspector({
 
   const evidence = () => {
     if (!selectedGrade) return <div className="ai-empty-state"><strong>暂无 AI 建议</strong><span>请按评分细则人工判定。</span></div>;
+    if (imageGrade) return <ImageGradingRecord grade={selectedGrade} />;
     const confidenceCalibrated = selectedGrade.confidence > 0;
-    const mathState = context.reviewContext.subject_tool_hints.subject_code === "mathematics" ? mathSuggestionState(selectedGrade, math.state, math.dirty) : null;
+    const mathState = imageGrade ? imageSuggestionState(selectedGrade, context) : formulaEvidence && context.reviewContext.subject_tool_hints.subject_code === "mathematics" ? mathSuggestionState(selectedGrade, math.state, math.dirty) : null;
     const decisionTone = selectedGrade.needs_human_review || selectedGrade.mock ? "warning" : confidenceTone(selectedGrade.confidence);
     let decisionLabel = "未标记风险";
     // 历史数学建议先说明不可采纳的原因；风险颜色仍按原人工复核与模拟标记判断。
@@ -140,14 +155,15 @@ export function EvidenceInspector({
 
   return (
     <>
-      <ReviewContextInspector key={context.task.id} context={context.reviewContext} />
-      {context.reviewContext.subject_tool_hints.subject_code === "mathematics" && !requiresExplicitSecondOpinion(context.reviewContext) ? <MathRubricMatrix evidence={math.state} grades={context.aiGrades.filter((grade) => grade.delivery_mode !== "shadow_only")} points={context.question?.rubric?.points ?? []} dirty={math.dirty} requesting={requestingMath} canRequest={canRequestMath} disabledReason={mathDisabledReason} onRequest={onRequestMath} onSelectStep={onSelectMathStep} /> : null}
-      {mathRequestNotice ? <output className="math-suggestion-note">{mathRequestNotice}</output> : null}
-      <MathEvidenceInspector key={`math-${context.task.id}`} segmentId={context.task.answer_segment_id} subjectCode={context.reviewContext.subject_tool_hints.subject_code} disabled={!canEditDraft || math.state.phase === "conflict" || math.state.phase === "unavailable"} data={math.state.understanding} loading={math.state.phase === "loading"} onRefresh={onRefreshMath} onCorrectionSaved={math.correctionSaved} onDirtyChange={math.setDirty} onSelectStep={onSelectMathStep} />
-      {!requiresExplicitSecondOpinion(context.reviewContext) ? automationSummary() : null}
-      {selectedGrade ? evidence() : null}
+      {!choice ? <ReviewContextInspector key={context.task.id} context={context.reviewContext} /> : null}
+      {formulaEvidence && context.reviewContext.subject_tool_hints.subject_code === "mathematics" && !requiresExplicitSecondOpinion(context.reviewContext) ? <MathRubricMatrix evidence={math.state} grades={context.aiGrades.filter((grade) => grade.delivery_mode !== "shadow_only")} points={context.question?.rubric?.points ?? []} dirty={math.dirty} requesting={requestingMath} canRequest={canRequestMath} disabledReason={mathDisabledReason} onRequest={onRequestMath} onSelectStep={onSelectMathStep} /> : null}
+      {formulaEvidence && mathRequestNotice ? <output className="math-suggestion-note">{mathRequestNotice}</output> : null}
+      {formulaEvidence ? <details className="grading-reference-details"><summary>公式与解题步骤证据</summary><MathEvidenceInspector key={`math-${context.task.id}`} segmentId={context.task.answer_segment_id} subjectCode={context.reviewContext.subject_tool_hints.subject_code} disabled={!canEditDraft || math.state.phase === "conflict" || math.state.phase === "unavailable"} data={math.state.understanding} loading={math.state.phase === "loading"} onRefresh={onRefreshMath} onCorrectionSaved={math.correctionSaved} onDirtyChange={math.setDirty} onSelectStep={onSelectMathStep} /></details> : null}
+      {!imageGrade && !requiresExplicitSecondOpinion(context.reviewContext) ? automationSummary() : null}
+      {choice ? <ReviewContextInspector key={context.task.id} context={context.reviewContext} /> : null}
+      {selectedGrade && !choice ? evidence() : null}
       {evidenceJob()}
-      {canVerifyEvidence && selectedGrade ? (
+      {canVerifyEvidence && selectedGrade && !imageGrade ? (
         <Button icon={<BadgeCheck size={14} />} loading={actioning === "evidence"} onClick={() => void onVerifyEvidence()}>
           校验 AI 证据
         </Button>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ChangeEvent, ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setBusinessCommandScope } from "../../../../api/businessCommand";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
@@ -62,12 +62,14 @@ describe("快捷确认的候选展示和提交结果", () => {
     return <QueryClientProvider client={client}><FastConfirmDrawer {...value} /></QueryClientProvider>;
   }
 
-  async function open() {
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "查看候选任务" })));
+  async function open(waitForLoaded = true) {
+    fireEvent.click(screen.getByRole("button", { name: "查看待确认的建议分" }));
+    if (waitForLoaded) await waitFor(() => expect(screen.queryByText("加载中")).toBeNull());
   }
 
   async function preview(index: number) {
-    await act(async () => fireEvent.click(screen.getAllByRole("button", { name: "核对原图与证据" })[index]));
+    fireEvent.click(screen.getAllByRole("button", { name: "核对原图与证据" })[index]);
+    await screen.findByRole("img", { name: "待核对的学生答题原图" });
   }
 
   async function inspect(index: number) {
@@ -80,19 +82,32 @@ describe("快捷确认的候选展示和提交结果", () => {
     const pending = deferred<WorkbenchContext>();
     mocks.load.mockReturnValueOnce(pending.promise);
     render(tree(props()));
-    await open();
+    await open(false);
     expect(screen.getByText("加载中")).toBeDefined();
-    expect(screen.queryByText("当前队列前 20 份没有符合快捷确认条件的任务")).toBeNull();
+    expect(screen.queryByText("本次检查的任务中，暂无可批量确认的 AI 建议分")).toBeNull();
     expect(screen.queryByRole("button", { name: "核对原图与证据" })).toBeNull();
 
     const ineligible = context("A-1");
     ineligible.aiGrades[0].risk_flags = ["风险"];
     await act(async () => pending.resolve(ineligible));
     expect(screen.queryByText("加载中")).toBeNull();
-    expect(screen.getByText("当前队列前 20 份没有符合快捷确认条件的任务")).toBeDefined();
+    expect(screen.getByText("本次检查的任务中，暂无可批量确认的 AI 建议分")).toBeDefined();
     expect(screen.queryByRole("button", { name: "提交已核对的 0 份" })).toBeNull();
   });
 
+  it("提交前出现当前执行失败时停止采纳旧建议，保留完整工作台人工处理", async () => {
+    render(tree(props()));
+    await open();
+    await inspect(0);
+    const failed = context("A-1");
+    failed.reviewContext.ai_failure = { failure_kind: "output_truncated" };
+    // 首次核对成功之后服务端报告失败；二次读取不能沿用已勾选的旧成功建议。
+    mocks.load.mockResolvedValueOnce(failed);
+    fireEvent.click(screen.getByRole("button", { name: "提交已核对的 1 份" }));
+    await screen.findByText("已确认 0 / 1 份；其余任务可能已变化，请刷新并重新核对。");
+    expect(mocks.submit).not.toHaveBeenCalled();
+    expect(screen.getByText("1 · 匿名卷 匿名A-1")).toBeDefined();
+  });
   it("保留重复证据、文本优先级和英文回退，不同文本移动时沿用对应节点", async () => {
     const errors = vi.spyOn(console, "error");
     const loaded = context("A-1");
@@ -138,7 +153,8 @@ describe("快捷确认的候选展示和提交结果", () => {
     const mounted = render(tree(props(ids)));
     await open();
     for (let index = 0; index < ids.length; index++) await inspect(index);
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: `提交已核对的 ${ids.length} 份` })));
+    fireEvent.click(screen.getByRole("button", { name: `提交已核对的 ${ids.length} 份` }));
+    await screen.findByText(message);
 
     expect(screen.getByText(message)).toBeDefined();
     expect(mocks.submit.mock.calls.map((call) => call[0])).toEqual(ids);

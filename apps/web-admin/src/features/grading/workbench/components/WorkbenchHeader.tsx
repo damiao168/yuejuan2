@@ -1,17 +1,19 @@
+import type { ReactNode } from "react";
 import { Alert, Button, Progress, Space, Tooltip } from "antd";
-import { ArrowRight, BadgeCheck, LogOut, RefreshCw } from "lucide-react";
+import { ArrowRight, BadgeCheck, CheckCircle2, LogOut, RefreshCw } from "lucide-react";
 import { BackmarkQueue } from "../../../../components/BackmarkQueue";
 import { RegradeQueue } from "../../../../components/RegradeQueue";
 import type { DraftSaveStatus, ReviewerProgress } from "../gradingWorkbench.types";
 
 const draftStatusLabel: Record<DraftSaveStatus, string> = {
   idle: "尚未修改",
+  pending: "有未保存修改",
   saving: "正在保存到服务端",
   saved: "已保存到服务端",
   offline: "仅本页暂存，待同步",
   conflict: "草稿冲突",
   error: "保存失败，仅本页暂存",
-  readonly: "管理员只读"
+  readonly: "只读"
 };
 
 export interface WorkbenchHeaderProps {
@@ -25,6 +27,7 @@ export interface WorkbenchHeaderProps {
   remainingCount: number;
   progressComplete: boolean;
   draftSaveStatus: DraftSaveStatus;
+  draftStatusText?: string;
   loading: boolean;
   actioning: string | null;
   onRefresh: () => Promise<void>;
@@ -33,16 +36,22 @@ export interface WorkbenchHeaderProps {
   onRelease: () => Promise<void>;
   onReloadConflict: () => Promise<void>;
   onResolveConflict: () => Promise<void>;
+  personalActions?: ReactNode;
+  readonlyLabel?: string;
+  canSubmit?: boolean;
+  onSubmit?: () => void;
+  taskLabel?: string;
+  scoreLabel?: string;
 }
 
 // 告警只呈现当前草稿状态；是否显示操作以及能否暂放，仍由工具栏的权限和保存状态判断决定。
-function DraftStatusNotice({ draftSaveStatus, onResolveConflict, onReloadConflict }: Readonly<Pick<WorkbenchHeaderProps, "draftSaveStatus" | "onResolveConflict" | "onReloadConflict">>) {
+function DraftStatusNotice({ draftSaveStatus, onResolveConflict, onReloadConflict, readonlyLabel }: Readonly<Pick<WorkbenchHeaderProps, "draftSaveStatus" | "onResolveConflict" | "onReloadConflict" | "readonlyLabel">>) {
   return (
     <>
       {draftSaveStatus === "conflict" && <Alert type="error" showIcon message="草稿已被其他会话更新" description="为防止覆盖其他会话的修改，自动保存已暂停。可逐项选择本页或服务端内容，再按服务端新版本重新保存。" action={<Space wrap><Button type="primary" onClick={() => void onResolveConflict()}>逐项合并</Button><Button onClick={() => void onReloadConflict()}>放弃本页修改</Button></Space>} />}
       {draftSaveStatus === "offline" && <Alert type="warning" showIcon message="当前离线，未同步内容仅在本页暂存" description="关闭或刷新页面可能丢失未同步内容；恢复网络后会尝试保存到服务端。" />}
       {draftSaveStatus === "error" && <Alert type="warning" showIcon message="草稿尚未保存到服务端" description="未同步内容仅在本页短暂保留，关闭或刷新可能丢失；检查网络后再确认保存状态。" />}
-      {draftSaveStatus === "readonly" && <Alert type="info" showIcon message="管理员只读检查" description="管理员可查看材料、分配和管理任务；评分草稿与最终提交只能由被分配的阅卷员完成。" />}
+      {draftSaveStatus === "readonly" && <Alert type="info" showIcon message={readonlyLabel || "管理员只读检查"} description="当前材料只读；评分草稿与最终提交只能在本人可编辑的任务中完成。" />}
     </>
   );
 }
@@ -72,6 +81,7 @@ export function WorkbenchHeader({
   remainingCount,
   progressComplete,
   draftSaveStatus,
+  draftStatusText,
   loading,
   actioning,
   onRefresh,
@@ -79,7 +89,13 @@ export function WorkbenchHeader({
   onClaim,
   onRelease,
   onReloadConflict,
-  onResolveConflict
+  onResolveConflict,
+  personalActions,
+  readonlyLabel,
+  canSubmit,
+  onSubmit,
+  taskLabel,
+  scoreLabel
 }: Readonly<WorkbenchHeaderProps>) {
   const showReviewerActions = !canManageTasks || queueScope === "mine";
   const { incompleteProgress, totalLabel, progressSummary } = progressLabels({ canManageTasks, hasContext, myProgress, remainingCount, progressComplete });
@@ -88,10 +104,14 @@ export function WorkbenchHeader({
       <section className="grading-topbar">
         <div className="grading-work-title">
           <h1>{canManageTasks ? "阅卷管理" : "阅卷"}</h1>
+          {taskLabel ? <strong className="grading-current-task">{taskLabel}</strong> : null}
+          {scoreLabel ? <span className="grading-current-score">本题分 {scoreLabel}</span> : null}
           <span>{progressSummary}</span>
         </div>
         <Space wrap>
-          {hasContext ? <span className={`draft-save-status ${draftSaveStatus}`}>{draftStatusLabel[draftSaveStatus]}</span> : null}
+          {hasContext ? <span className={`draft-save-status ${draftSaveStatus}`}>{draftStatusText ?? (draftSaveStatus === "readonly" ? readonlyLabel || draftStatusLabel[draftSaveStatus] : draftStatusLabel[draftSaveStatus])}</span> : null}
+          {personalActions ? <div className="grading-personal-actions">{personalActions}</div> : null}
+          {onSubmit ? <Button type="primary" icon={<CheckCircle2 size={16} />} disabled={!canSubmit} loading={actioning === "submit"} onClick={onSubmit}>提交并下一份</Button> : null}
           <Button icon={<RefreshCw size={16} />} onClick={() => void onRefresh()} loading={loading}>刷新</Button>
           {showReviewerActions ? <Button icon={<ArrowRight size={16} />} onClick={() => void onNext()} disabled={!canWork}>下一份</Button> : null}
           {!canManageTasks ? <BackmarkQueue canWork={canWork} /> : null}
@@ -105,7 +125,7 @@ export function WorkbenchHeader({
         </Space>
       </section>
 
-      <DraftStatusNotice draftSaveStatus={draftSaveStatus} onResolveConflict={onResolveConflict} onReloadConflict={onReloadConflict} />
+      <DraftStatusNotice draftSaveStatus={draftSaveStatus} onResolveConflict={onResolveConflict} onReloadConflict={onReloadConflict} readonlyLabel={readonlyLabel} />
 
       {canManageTasks && queueScope === "all" ? (
         <section className="reviewer-progress-panel" aria-label="阅卷员进度">

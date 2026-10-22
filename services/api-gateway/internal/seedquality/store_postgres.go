@@ -3,6 +3,7 @@ package seedquality
 import (
 	"context"
 	"database/sql"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
 	"encoding/json"
 	"errors"
@@ -232,6 +233,11 @@ RETURNING `+seedTaskColumns, tenantID, taskID, graderID, observation.ObservedAt)
 }
 
 func (s *PostgresStore) ListObservations(ctx context.Context, tenantID string, filter ObservationFilter) ([]Observation, error) {
+	scopeArgs, err := filter.Access.SQLArgs(tenantID)
+	if err != nil {
+		return nil, err
+	}
+	args := append([]any{tenantID, filter.ExamID, filter.QuestionID, filter.GraderID, filter.Limit}, scopeArgs...)
 	query := `SELECT o.id::text,o.exam_id::text,o.question_id::text,o.grader_id::text,o.gold_paper_id::text,o.gold_version,
  o.submitted_score::float8,o.reference_score::float8,o.rubric_selection_json,o.error::float8,
  o.rubric_agreement::float8,o.observation_kind,o.trait_observation_json,o.criterion_observation_json,o.observed_at,
@@ -240,8 +246,9 @@ FROM seed_observation o
 JOIN seed_task t ON t.tenant_id=o.tenant_id AND t.id=o.seed_task_id
 WHERE o.tenant_id=$1::uuid
  AND ($2='' OR o.exam_id::text=$2) AND ($3='' OR o.question_id::text=$3) AND ($4='' OR o.grader_id::text=$4)
+ AND ` + auth.ExamCollectionPredicate("o.exam_id", 6) + `
 ORDER BY o.observed_at DESC,o.id DESC LIMIT $5`
-	rows, err := s.db.QueryContext(ctx, query, tenantID, filter.ExamID, filter.QuestionID, filter.GraderID, filter.Limit)
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

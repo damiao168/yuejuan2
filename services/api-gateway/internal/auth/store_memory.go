@@ -860,6 +860,9 @@ func matchesManagedUser(user UserWithPassword, tenantID string, filter ManagedUs
 	if user.TenantID != tenantID || (filter.UserID != "" && user.ID != filter.UserID) {
 		return false
 	}
+	if filter.Status != "" && user.Status != filter.Status {
+		return false
+	}
 	if filter.RestrictSchools && !containsID(filter.SchoolIDs, managedUserSchoolID(user)) {
 		return false
 	}

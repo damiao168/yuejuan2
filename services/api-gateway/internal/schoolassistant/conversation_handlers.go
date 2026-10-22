@@ -15,7 +15,7 @@ import (
 
 func (h *Handler) ConversationStream(w http.ResponseWriter, r *http.Request) {
 	var input ConversationRequest
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, modelgovernance.ChatRequestBodyLimit))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&input); err != nil {
 		httpx.Error(w, r, 400, "invalid_json", "请求必须为包含已知字段的 JSON 对象。")
@@ -66,6 +66,9 @@ func conversationError(err error) (string, string) {
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
 		return "ai_chat_timeout", "对话处理超时，请缩小问题范围后重试。"
+	}
+	if errors.Is(err, modelgovernance.ErrAgentImagesUnsupported) {
+		return "ai_chat_images_unsupported", "当前学校模型不支持图片，请联系管理员更换支持图片的对话模型，或开启新对话发送文字。"
 	}
 	if errors.Is(err, errConversationBudget) {
 		return "ai_chat_budget_exceeded", "本次问题需要的查询步骤过多，请分成更具体的问题。"

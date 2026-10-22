@@ -11,14 +11,14 @@ export function SchoolModelTable({ tenantID, loading, columns, configs }: Readon
 }>) {
   return <section className="platform-model-table-shell">
     {tenantID ? <ResponsiveTable<ManagedModelAPIConfig>
-      className="dense-data-table"
+      className="dense-data-table platform-model-table"
       rowKey="id"
       loading={loading}
       columns={columns}
-      mobilePrimaryKeys={["identity", "probe", "assignment"]}
+      mobilePrimaryKeys={["model-name", "provider", "connection", "text", "structured", "assignment"]}
       dataSource={configs}
       pagination={false}
-      scroll={{ x: 1040 }}
+      scroll={{ x: 1285 }}
       locale={{ emptyText: <Empty image={<Unplug size={38} />} description={<span>暂未配置 AI 模型<br /><small>选择供应商并准备 API Key 即可获取模型</small></span>} /> }}
     /> : <Empty description="请先选择学校" />}
   </section>;

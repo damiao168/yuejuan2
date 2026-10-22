@@ -1,0 +1,16 @@
+.grader-trial-intro h3 { margin: 0 0 8px; font-size: 20px; }
+.grader-trial-intro p { margin: 0; color: var(--text-muted, #64748b); line-height: 1.7; }
+.grader-trial-intro ol { display: grid; gap: 8px; margin: 16px 0 4px; padding-left: 22px; color: var(--text-muted, #64748b); }
+.grader-trial-settings { border-top: 1px solid var(--border, #e2e8f0); border-bottom: 1px solid var(--border, #e2e8f0); padding: 16px 0; }
+.grader-trial-settings summary { cursor: pointer; font-weight: 600; }
+.grader-trial-settings summary span { margin-left: 12px; color: var(--text-muted, #64748b); font-size: 12px; font-weight: 400; }
+.grader-trial-settings > p { margin: 14px 0 0; line-height: 1.7; }
+.grader-trial-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+.grader-trial-fields .ant-input-number-group-wrapper,
+.grader-trial-fields .ant-input-number,
+.grader-trial-fields .ant-select { width: 100%; }
+.grader-trial-fields .ant-form-item-extra { padding-top: 5px; font-size: 12px; }
+@media (max-width: 560px) {
+  .grader-trial-fields { grid-template-columns: minmax(0, 1fr); }
+  .grader-trial-drawer .ant-drawer-body { padding: 20px; }
+}

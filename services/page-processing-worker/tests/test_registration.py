@@ -48,6 +48,27 @@ def test_identical_page_uses_identity_registration() -> None:
     assert result.evidence.confidence == 1.0
 
 
+def test_registration_rejects_missing_required_region_even_when_global_area_passes(monkeypatch):
+    source = np.full((1000, 1000, 3), 255, np.uint8)
+    template = source.copy()
+    cv2.rectangle(template, (100, 100), (900, 900), (0, 0, 0), 10)
+    matrix = np.array([[1, 0, -100], [0, 1, 0], [0, 0, 1]], dtype=np.float64)
+    monkeypatch.setattr("page_processing.registration._feature_homography", lambda *args: (
+        matrix, "orb", 100, 100, np.ones(100, dtype=bool), 0.0))
+    with pytest.raises(RegistrationError, match="registration_required_region_incomplete"):
+        register_page(_png(source), "image/png", _png(template), "image/png", required_regions=[
+            {"question_id": "q19", "x": .9, "y": .1, "width": .08, "height": .8}])
+
+
+def test_registration_records_actual_required_region_visibility():
+    page = np.full((300, 200, 3), 255, np.uint8)
+    result = register_page(_png(page), "image/png", _png(page), "image/png", required_regions=[
+        {"question_id": "q1", "x": .1, "y": .1, "width": .8, "height": .8}])
+    assert result.evidence.required_region_visibility == {
+        "status": "passed", "region_count": 1, "minimum_visible_ratio": 1.0,
+        "coordinate_space": "template_pixels"}
+
+
 def test_template_guard_ignores_marks_inside_configured_answer_region() -> None:
     template = np.full((500, 350, 3), 255, np.uint8)
     cv2.rectangle(template, (20, 20), (330, 480), (0, 0, 0), 3)

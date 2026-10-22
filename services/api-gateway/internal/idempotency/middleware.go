@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -95,6 +96,11 @@ func Middleware(store Store, options Options) func(http.Handler) http.Handler {
 }
 
 func serveIdempotentRequest(w http.ResponseWriter, r *http.Request, store Store, options Options, next http.Handler) {
+	// 收据只用于命令重试；读取请求必须按当前权限与作用域重新生成结果。
+	if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
+		next.ServeHTTP(w, r)
+		return
+	}
 	route := r.Pattern
 	key := strings.TrimSpace(r.Header.Get(Header))
 	protected := protectedRoutes[route]
@@ -122,6 +128,15 @@ func serveIdempotentRequest(w http.ResponseWriter, r *http.Request, store Store,
 	}
 	// 请求体临时文件覆盖执行和重放路径，必须等业务读取完再释放。
 	defer cleanup()
+	var accessScope *auth.AccessScope
+	if scope, ok := auth.AccessScopeFromContext(r.Context()); ok {
+		accessScope = &scope
+	}
+	hash, err = authorizedRequestHash(hash, user, accessScope)
+	if err != nil {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "idempotency_unavailable", "safe request retry is temporarily unavailable")
+		return
+	}
 	now := time.Now().UTC()
 	input := BeginInput{
 		TenantID: user.TenantID, ActorID: user.ID, Method: r.Method, Route: route, Key: key,
@@ -146,6 +161,57 @@ func serveIdempotentRequest(w http.ResponseWriter, r *http.Request, store Store,
 		return
 	}
 	executeIdempotentRequest(w, r, store, options, next, input)
+}
+
+// 权限或组织范围变化后，旧命令键应冲突，不能重放旧数据或以新范围再次执行同一命令。
+// 不绑定会话令牌，因此相同授权下重新登录仍可恢复已经完成的命令。
+func authorizedRequestHash(requestHash string, user auth.User, accessScope *auth.AccessScope) (string, error) {
+	roles := slices.Clone(user.Roles)
+	permissions := slices.Clone(user.Permissions)
+	slices.Sort(roles)
+	slices.Sort(permissions)
+	mode := ""
+	if accessScope != nil {
+		mode = accessScope.QueryMode()
+		accessScope = canonicalAccessScope(*accessScope)
+	}
+	grant, err := json.Marshal(struct {
+		Roles             []string
+		Permissions       []string
+		DataScope         map[string]any
+		OrganizationScope *auth.OrganizationScope
+		// 分派关系可在 RBAC 声明不变时改变；派生的考试、提交边界也参与收据失效。
+		AccessScope *auth.AccessScope
+		// schoolWide 是私有字段，JSON 不包含它；集合模式必须单独绑定，避免学校投影相同而授权不同。
+		AccessScopeQueryMode string
+	}{roles, permissions, user.DataScope, user.OrganizationScope, accessScope, mode})
+	if err != nil {
+		return "", err
+	}
+	digest := sha256.Sum256(append([]byte("authorized-command-v1\n"+requestHash+"\n"), grant...))
+	return hex.EncodeToString(digest[:]), nil
+}
+
+// 派生 ID 表示集合，数据库返回顺序变化不应使同一授权的收据失效；只整理副本，不改请求上下文。
+func canonicalAccessScope(scope auth.AccessScope) *auth.AccessScope {
+	scope.SchoolIDs = canonicalScopeIDs(scope.SchoolIDs)
+	scope.GradeIDs = canonicalScopeIDs(scope.GradeIDs)
+	scope.ClassIDs = canonicalScopeIDs(scope.ClassIDs)
+	scope.ExamIDs = canonicalScopeIDs(scope.ExamIDs)
+	scope.SubmissionIDs = canonicalScopeIDs(scope.SubmissionIDs)
+	scope.FileIDs = canonicalScopeIDs(scope.FileIDs)
+	scope.ReviewTaskIDs = canonicalScopeIDs(scope.ReviewTaskIDs)
+	scope.ArbitrationTaskIDs = canonicalScopeIDs(scope.ArbitrationTaskIDs)
+	return &scope
+}
+
+func canonicalScopeIDs(ids []string) []string {
+	if len(ids) == 0 {
+		return nil
+	}
+	copy := slices.Clone(ids)
+	slices.Sort(copy)
+	return slices.Compact(copy)
 }
 
 func validMiddlewareKey(w http.ResponseWriter, r *http.Request, key string) bool {

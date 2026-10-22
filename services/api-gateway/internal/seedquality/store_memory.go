@@ -27,7 +27,9 @@ type memoryTask struct {
 
 type memoryObservation struct {
 	tenantID string
-	value    Observation
+	// taskID 保留精确任务关联；同一教师可能重复收到同题样本。
+	taskID string
+	value  Observation
 }
 
 type MemoryStore struct {
@@ -156,19 +158,26 @@ func (s *MemoryStore) CompleteTask(ctx context.Context, tenantID, taskID, grader
 	observation.RubricSelections = cloneObject(observation.RubricSelections)
 	observation.TraitObservation = cloneObjectOrNil(observation.TraitObservation)
 	observation.CriterionObservation = cloneObjectOrNil(observation.CriterionObservation)
-	s.observations[taskKey(tenantID, observation.ID)] = memoryObservation{tenantID: tenantID, value: observation}
+	s.observations[taskKey(tenantID, observation.ID)] = memoryObservation{tenantID: tenantID, taskID: taskID, value: observation}
 	if err := s.receipts.Save(ctx, tenantID, graderID, "review.submit", taskID, input, seedCommandResult(item.task)); err != nil {
 		return Task{}, Observation{}, err
 	}
 	return cloneTask(item.task), cloneObservation(observation), nil
 }
 
-func (s *MemoryStore) ListObservations(_ context.Context, tenantID string, filter ObservationFilter) ([]Observation, error) {
+func (s *MemoryStore) ListObservations(ctx context.Context, tenantID string, filter ObservationFilter) ([]Observation, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := []Observation{}
 	for _, item := range s.observations {
 		value := item.value
+		allowed, err := filter.Access.Allows(ctx, tenantID, "exam", value.ExamID, value.ExamID)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
+			continue
+		}
 		if item.tenantID != tenantID || filter.ExamID != "" && value.ExamID != filter.ExamID ||
 			filter.QuestionID != "" && value.QuestionID != filter.QuestionID || filter.GraderID != "" && value.GraderID != filter.GraderID {
 			continue

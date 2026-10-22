@@ -217,6 +217,7 @@ func structureBatch37QuestionDetails(t *testing.T, q Question) []structureBatch3
 		{kind: "query", fragment: "FROM question_answer_key", args: []driver.Value{"tenant", q.ID}, columns: 9},
 		{kind: "query", fragment: "FROM question_rubric qr", args: []driver.Value{"tenant", q.ID}, columns: 11},
 		{kind: "query", fragment: "FROM question_solution", args: []driver.Value{"tenant", q.ID}, columns: 8},
+		{kind: "query", fragment: "FROM question_reference_manifest", args: []driver.Value{"tenant", q.ExamID, q.ID, ""}, columns: 8},
 	}
 	if q.AnswerKey != nil {
 		a := q.AnswerKey

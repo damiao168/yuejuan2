@@ -44,7 +44,7 @@ class ModelAdapterTests(unittest.TestCase):
         if provider == "local":
             def transport(_url, _payload, _headers, _timeout):
                 content = output if isinstance(output, str) else json.dumps(output)
-                return {"choices": [{"message": {"content": content}}]}
+                return {"choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": content}}]}
 
             return LocalLlamaCppAdapter(settings(), transport=transport)
 
@@ -76,7 +76,9 @@ class ModelAdapterTests(unittest.TestCase):
             return {
                 "choices": [
                     {
+                        "finish_reason": "stop",
                         "message": {
+                            "role": "assistant",
                             "content": json.dumps(
                                 valid_raw_output(), ensure_ascii=False
                             )

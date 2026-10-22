@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import threading
 from contextlib import contextmanager
 from pathlib import Path
@@ -15,7 +16,6 @@ from .dashscope_native_contract import (
     DASHSCOPE_TEXT_GENERATION_PATH,
     build_dashscope_grading_payload,
     map_dashscope_error,
-    parse_dashscope_text_response,
 )
 from .dashscope_native_transport import (
     JSON_CONTENT_TYPE,
@@ -23,6 +23,7 @@ from .dashscope_native_transport import (
     MAX_DASHSCOPE_TEXT_REQUEST_BYTES,
 )
 from .errors import AgentError
+from .execution_diagnostics import completed_content, response_diagnostics
 
 MODEL_RISK_FLAGS = [
     "OCR_LOW_CONFIDENCE",
@@ -135,23 +136,26 @@ def _openai_usage(response):
 
 
 def sum_model_usage(accumulated, latest):
-    """Count every provider attempt, including attempts repaired before success."""
+    """累计已知字段；缺失用量不能补零后伪装成完整调用统计。"""
     fields = ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_tokens", "total_tokens")
     latest = latest if isinstance(latest, dict) else {}
-    normalized = {}
+    normalized = dict(accumulated)
     for field in fields:
-        value = latest.get(field, 0)
+        if field not in latest:
+            continue
+        value = latest[field]
         if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-            value = 0
-        normalized[field] = value
-    if not normalized["total_tokens"]:
-        normalized["total_tokens"] = normalized["input_tokens"] + normalized["output_tokens"]
-    return {field: accumulated.get(field, 0) + normalized[field] for field in fields}
+            continue
+        normalized[field] = accumulated.get(field, 0) + value
+    return normalized
 
 
 def describe_model_usage(model, usage, request_count=1):
     """Add the non-secret model identity needed by the platform usage ledger."""
     normalized = sum_model_usage({}, usage)
+    if "total_tokens" not in normalized and all(field in normalized for field in ("input_tokens", "output_tokens")):
+        # 旧文档解析摘要使用输入与输出之和；评分执行事实仍单独保留供应商字段是否缺失。
+        normalized["total_tokens"] = normalized["input_tokens"] + normalized["output_tokens"]
     settings = getattr(model, "settings", None)
     normalized["provider_key"] = str(getattr(settings, "provider_key", "") or "")
     normalized["model_name"] = str(getattr(settings, "model_name", "") or "")
@@ -475,7 +479,62 @@ def _default_transport(url, payload, headers, timeout):
         ) from exc
 
 
-class LocalLlamaCppAdapter:
+class _ExecutionFactsAdapter:
+    @contextmanager
+    def material_execution(self, observer):
+        self._usage.material_observer = observer
+        try:
+            yield
+        finally:
+            self._usage.material_observer = None
+    def last_provider_request_id(self):
+        """只供服务端日志关联；不能并入教师或评分诊断 DTO。"""
+        return getattr(self._usage, "provider_request_id", "")
+
+    def last_execution_diagnostics(self):
+        return dict(getattr(self._usage, "diagnostics", {}))
+
+    def _reset_execution(self, output_token_limit):
+        self._usage.value = {}
+        self._usage.provider_request_id = ""
+        self._usage.diagnostics = response_diagnostics(None, output_token_limit)
+        self._usage.diagnostics.update(attempts=0, provider_request_count=0)
+
+    def _dispatched(self):
+        self._usage.diagnostics.update(attempts=1, provider_request_count=1)
+
+    def _invalid_transport_envelope(self, request_id):
+        facts = dict(self._usage.diagnostics)
+        facts.update(finish_outcome="envelope_invalid", failure_kind="response_envelope_invalid",
+                     recovery_blocked_reason="not_enabled")
+        self._usage.diagnostics = facts
+        return AgentError("model_output_invalid", "provider response envelope is invalid", status=502,
+                          request_id=request_id, execution_diagnostics=facts)
+
+    def _validated_output(self, response, request_id, schema, *, native=False):
+        provider_id = response.get("request_id" if native else "id") if isinstance(response, dict) else None
+        # 供应商关联号只接受有界标识符，禁止把任意正文、URL 或多行信息写入服务日志。
+        self._usage.provider_request_id = provider_id if isinstance(provider_id, str) and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", provider_id) else ""
+        limit = self._usage.diagnostics.get("output_token_limit")
+        facts = response_diagnostics(response, limit)
+        self._usage.diagnostics = facts
+        self._usage.value = dict(facts.get("usage", {}))
+        observer = getattr(self._usage, "material_observer", None)
+        if observer is not None:
+            observer.response(self._usage.value, facts.get("usage_status", "unavailable"))
+        try:
+            content = completed_content(response, facts, request_id, native=native, native_parts=native)
+            output = _decode_structured_content(content, request_id)
+            return _validate_structured_output(output, schema, request_id)
+        except AgentError as exc:
+            if not exc.execution_diagnostics:
+                # 正常结束后的 JSON/schema 错误仍沿用原有一次修复，不能与截断混为同一失败类别。
+                facts.update(failure_kind="schema_invalid", recovery_blocked_reason="not_enabled")
+                exc.execution_diagnostics = dict(facts)
+            raise
+
+
+class LocalLlamaCppAdapter(_ExecutionFactsAdapter):
     def __init__(self, settings, transport=None, ready_transport=None):
         self.settings = settings
         self.prompt_registry = PromptRegistry(
@@ -510,7 +569,7 @@ class LocalLlamaCppAdapter:
 
     def request(self, grading_request, repair_reason=None):
         request_id = grading_request["request_id"]
-        self._usage.value = {}
+        self._reset_execution(self.settings.model_max_output_tokens)
         payload = {
             "model": self.settings.model_name,
             "messages": self.prompt_registry.messages(grading_request, repair_reason),
@@ -532,13 +591,17 @@ class LocalLlamaCppAdapter:
         if self.settings.model_api_key:
             headers["Authorization"] = f"Bearer {self.settings.model_api_key}"
         try:
+            self._dispatched()
             response = self.transport(
                 f"{self.settings.model_base_url}/chat/completions",
                 payload,
                 headers,
                 self.settings.model_timeout_seconds,
             )
-            self._usage.value = _openai_usage(response)
+        except AgentError as exc:
+            if exc.code == "model_output_invalid" and not exc.execution_diagnostics:
+                raise self._invalid_transport_envelope(request_id) from exc
+            raise
         except TimeoutError as exc:
             raise AgentError(
                 "model_timeout",
@@ -549,7 +612,9 @@ class LocalLlamaCppAdapter:
             ) from exc
         except urlerror.HTTPError as exc:
             raise _map_model_http_error(exc, request_id) from exc
-        except (OSError, ValueError) as exc:
+        except ValueError as exc:
+            raise self._invalid_transport_envelope(request_id) from exc
+        except OSError as exc:
             raise AgentError(
                 "model_unavailable",
                 "local model request failed",
@@ -557,13 +622,10 @@ class LocalLlamaCppAdapter:
                 retryable=True,
                 request_id=request_id,
             ) from exc
-        output = self._parse_content(response, request_id)
-        return _validate_structured_output(
-            output, grading_output_schema(grading_request), request_id
-        )
+        return self._validated_output(response, request_id, grading_output_schema(grading_request))
 
     def request_structured(self, request_id, messages, schema, name):
-        self._usage.value = {}
+        self._reset_execution(max(self.settings.model_max_output_tokens, 4096))
         payload = {
             "model": self.settings.model_name,
             "messages": messages,
@@ -578,17 +640,27 @@ class LocalLlamaCppAdapter:
         if self.settings.model_api_key:
             headers["Authorization"] = f"Bearer {self.settings.model_api_key}"
         try:
-            response = self.transport(f"{self.settings.model_base_url}/chat/completions", payload, headers, self.settings.model_timeout_seconds)
-            self._usage.value = _openai_usage(response)
-            output = self._parse_content(response, request_id)
-            return _validate_structured_output(output, schema, request_id)
-        except AgentError:
+            observer = getattr(self._usage, "material_observer", None)
+            if observer is not None:
+                observer.consume(payload)
+            self._dispatched()
+            try:
+                response = self.transport(f"{self.settings.model_base_url}/chat/completions", payload, headers, self.settings.model_timeout_seconds)
+            finally:
+                if observer is not None:
+                    observer.attempted()
+            return self._validated_output(response, request_id, schema)
+        except AgentError as exc:
+            if exc.code == "model_output_invalid" and not exc.execution_diagnostics:
+                raise self._invalid_transport_envelope(request_id) from exc
             raise
         except TimeoutError as exc:
             raise AgentError("model_timeout", "document parsing model request timed out", status=504, retryable=True, request_id=request_id) from exc
         except urlerror.HTTPError as exc:
             raise _map_model_http_error(exc, request_id) from exc
-        except (OSError, ValueError) as exc:
+        except ValueError as exc:
+            raise self._invalid_transport_envelope(request_id) from exc
+        except OSError as exc:
             raise AgentError("model_unavailable", "document parsing model request failed", status=503, retryable=True, request_id=request_id) from exc
 
     def _parse_content(self, response, request_id):
@@ -621,7 +693,7 @@ class LocalLlamaCppAdapter:
             return False
 
 
-class DashScopeNativeAdapter:
+class DashScopeNativeAdapter(_ExecutionFactsAdapter):
     """DashScope's native generation protocol; no OpenAI-compatible endpoint."""
 
     def __init__(self, settings, transport=None):
@@ -641,7 +713,7 @@ class DashScopeNativeAdapter:
 
     def request(self, grading_request, repair_reason=None):
         request_id = grading_request["request_id"]
-        self._usage.value = {}
+        self._reset_execution(self.settings.model_max_output_tokens)
         try:
             payload = build_dashscope_grading_payload(
                 grading_request=grading_request,
@@ -652,6 +724,7 @@ class DashScopeNativeAdapter:
                 seed=self.settings.model_seed,
                 repair_reason=repair_reason,
             )
+            self._dispatched()
             response = self.transport(
                 f"{self.settings.model_base_url}{DASHSCOPE_TEXT_GENERATION_PATH}",
                 payload,
@@ -663,13 +736,10 @@ class DashScopeNativeAdapter:
                 },
                 self.settings.model_timeout_seconds,
             )
-            native = parse_dashscope_text_response(response)
-            self._usage.value = {"input_tokens": native.input_tokens, "cached_input_tokens": 0, "output_tokens": native.output_tokens, "reasoning_tokens": 0, "total_tokens": native.total_tokens}
-            output = native.output
-            return _validate_structured_output(
-                output, grading_output_schema(grading_request), request_id
-            )
-        except AgentError:
+            return self._validated_output(response, request_id, grading_output_schema(grading_request), native=True)
+        except AgentError as exc:
+            if exc.code == "model_output_invalid" and not exc.execution_diagnostics:
+                raise self._invalid_transport_envelope(request_id) from exc
             raise
         except TimeoutError as exc:
             raise AgentError(
@@ -682,9 +752,12 @@ class DashScopeNativeAdapter:
         except urlerror.HTTPError as exc:
             error_payload = self._read_error_payload(exc)
             mapped = map_dashscope_error(exc.code, error_payload)
-            mapped.request_id = mapped.request_id or request_id
+            # 对外 request_id 绑定逻辑评分请求，供应商自己的关联号不能替换幂等身份。
+            mapped.request_id = request_id
             raise mapped from exc
-        except (OSError, ValueError) as exc:
+        except ValueError as exc:
+            raise self._invalid_transport_envelope(request_id) from exc
+        except OSError as exc:
             raise AgentError(
                 "model_unavailable",
                 "external model request failed",
@@ -694,37 +767,37 @@ class DashScopeNativeAdapter:
             ) from exc
 
     def request_structured(self, request_id, messages, schema, _name):
-        self._usage.value = {}
-        payload = {
-            "model": self.settings.model_name,
-            "input": {"messages": messages},
-            "parameters": {
-                "result_format": "message",
-                "temperature": 0,
-                "seed": self.settings.model_seed,
-                "max_tokens": max(self.settings.model_max_output_tokens, 4096),
-            },
-        }
+        self._reset_execution(max(self.settings.model_max_output_tokens, 4096))
+        visual = any(isinstance(message.get("content"), list) for message in messages)
+        # 普通评分与数学 v2 共用真实视觉 transport；不能仅凭模型名称把图片发往文本端点。
+        endpoint = f"{self.settings.model_base_url}{DASHSCOPE_TEXT_GENERATION_PATH}"
+        parameters = {"result_format": "message", "temperature": 0, "seed": self.settings.model_seed,
+                      "max_tokens": max(self.settings.model_max_output_tokens, 4096)}
+        if visual and not getattr(self, "supports_native_visual_wrapper", False):
+            from .visual_transport import native_visual_request
+            endpoint, messages, parameters = native_visual_request(self.settings.model_base_url, messages, parameters)
+            messages = [*messages, {"role": "user", "content": [{"text": "Return JSON matching this schema: " + json.dumps(schema, ensure_ascii=False)}]}]
+        payload = {"model": self.settings.model_name, "input": {"messages": messages}, "parameters": parameters}
         try:
+            self._dispatched()
             response = self.transport(
-                f"{self.settings.model_base_url}{DASHSCOPE_TEXT_GENERATION_PATH}", payload,
+                endpoint, payload,
                 {"Accept": JSON_CONTENT_TYPE, "Authorization": f"Bearer {self.settings.model_api_key}", "Content-Type": JSON_CONTENT_TYPE, "X-DashScope-SSE": "disable"},
                 self.settings.model_timeout_seconds,
             )
-            self._usage.value = _openai_usage(response)
-            content = response["output"]["choices"][0]["message"]["content"]
-            if isinstance(content, list):
-                content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
-            output = _decode_structured_content(content, request_id)
-            return _validate_structured_output(output, schema, request_id)
-        except AgentError:
+            return self._validated_output(response, request_id, schema, native=True)
+        except AgentError as exc:
+            if exc.code == "model_output_invalid" and not exc.execution_diagnostics:
+                raise self._invalid_transport_envelope(request_id) from exc
             raise
         except urlerror.HTTPError as exc:
             error_payload = self._read_error_payload(exc)
             mapped = map_dashscope_error(exc.code, error_payload)
-            mapped.request_id = mapped.request_id or request_id
+            mapped.request_id = request_id
             raise mapped from exc
-        except (KeyError, IndexError, TypeError, OSError, ValueError) as exc:
+        except ValueError as exc:
+            raise self._invalid_transport_envelope(request_id) from exc
+        except (KeyError, IndexError, TypeError, OSError) as exc:
             raise AgentError("model_unavailable", "document parsing model request failed", status=503, retryable=True, request_id=request_id) from exc
 
     @staticmethod
@@ -735,7 +808,8 @@ class DashScopeNativeAdapter:
             allow_nan=False,
             separators=(",", ":"),
         ).encode("utf-8")
-        if not body or len(body) > MAX_DASHSCOPE_TEXT_REQUEST_BYTES:
+        request_limit = 8 * 1024 * 1024 if "/multimodal-generation/" in url else MAX_DASHSCOPE_TEXT_REQUEST_BYTES
+        if not body or len(body) > request_limit:
             raise AgentError(
                 "invalid_request",
                 "native provider request exceeds its approved size",

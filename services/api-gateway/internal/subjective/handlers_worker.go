@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
-	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
 const (
@@ -22,6 +21,20 @@ func (h *Handler) CompleteWorker(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	input.resultHash, _ = workerResultHash(input)
+	// 成功回调重发只核对原租约和原请求；不得重新把运行改成 processing 或重新结算新版本证据。
+	if completed, replay, err := h.workerCompletionService().Replay(r.Context(), user.TenantID, user.ID, r.PathValue("runId"), input); replay || err != nil {
+		if err != nil {
+			if errors.Is(err, ErrWorkerCompletionRejected) {
+				httpx.Error(w, r, http.StatusConflict, "subjective_task_completion_rejected", "subjective worker lease or result is no longer valid")
+			} else {
+				writeStoreError(w, r, err)
+			}
+			return
+		}
+		httpx.JSON(w, http.StatusOK, map[string]any{"run": completed.Run, "grade": completed.Grade, "task": completed.Task})
+		return
+	}
 	prepared, err := h.workerExecutionService().Prepare(r.Context(), WorkerPrepareInput{
 		TenantID: user.TenantID, RunID: r.PathValue("runId"), TaskID: input.TaskID,
 		LeaseToken: input.LeaseToken, DurationMS: input.DurationMS, Result: &input,
@@ -31,6 +44,10 @@ func (h *Handler) CompleteWorker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	output := input.Output
+	if err := h.bindWorkerImageGradeModel(r.Context(), user.TenantID, &prepared.Context, prepared.Policy); err != nil {
+		h.writeWorkerPrepareError(w, r, err)
+		return
+	}
 	settlement := GradeSettlementInput{TenantID: user.TenantID, RunID: prepared.Run.ID, Context: prepared.Context, Policy: prepared.Policy, Decision: prepared.Decision, MathRun: prepared.MathRun}
 	if settleErr := h.gradeSettlementPipeline().Settle(r.Context(), settlement, &output); settleErr != nil {
 		if prepared.MathRun {
@@ -44,20 +61,14 @@ func (h *Handler) CompleteWorker(w http.ResponseWriter, r *http.Request) {
 				code, status = "math_evidence_version_conflict", http.StatusConflict
 				runStatus = RunConflict
 			}
-			h.workerCompletionService().Reject(r.Context(), user.TenantID, prepared, input, runStatus, code, settleErr)
-			if code == "math_human_review_required" {
-				httpx.JSON(w, status, mathReviewPayload(prepared.Context, output))
-			} else {
-				httpx.Error(w, r, status, code, "math worker result could not be settled")
-			}
+			h.writeWorkerSettlementFailure(w, r, user.TenantID, prepared, input, runStatus, code, status, settleErr)
 			return
 		}
 		if errors.Is(settleErr, ErrGradeCalibration) {
 			writeStoreError(w, r, settleErr)
 			return
 		}
-		h.workerCompletionService().Reject(r.Context(), user.TenantID, prepared, input, RunFailed, "invalid_model_output", settleErr)
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_model_output", "worker result failed schema validation")
+		h.writeWorkerSettlementFailure(w, r, user.TenantID, prepared, input, RunFailed, "invalid_model_output", http.StatusBadRequest, settleErr)
 		return
 	}
 	completed, err := h.workerCompletionService().Complete(r.Context(), user.TenantID, user.ID, prepared, input, output)
@@ -98,19 +109,38 @@ func (h *Handler) ExecuteWorker(w http.ResponseWriter, r *http.Request) {
 	adapterInput, activeAdapter, usedMathV2, err := h.buildAdapterInput(r.Context(), user.TenantID, prepared.Run.RequestID, prepared.Context, prepared.Policy, promptGuard, prepared.Decision.OutputConstraint)
 	if err != nil {
 		if isMathRevisionConflict(err) {
-			h.workerExecutionService().failMathEvidence(r.Context(), WorkerPrepareInput{TenantID: user.TenantID, TaskID: input.TaskID, LeaseToken: input.LeaseToken}, prepared.Run, prepared.Task, err)
-			writeStoreError(w, r, err)
+			h.writeWorkerSettlementFailure(w, r, user.TenantID, prepared, WorkerResultInput{TaskID: input.TaskID, LeaseToken: input.LeaseToken}, RunConflict, "math_evidence_version_conflict", http.StatusConflict, err)
 			return
 		}
-		_, _ = h.runtime.Fail(r.Context(), user.TenantID, input.TaskID, workerruntime.FailInput{LeaseToken: input.LeaseToken, Retryable: false, ErrorCode: "math_evidence_unavailable"})
-		_, _ = h.store.UpdateRun(r.Context(), user.TenantID, prepared.Run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "math_evidence_unavailable", AttemptCount: prepared.Task.AttemptCount})
-		httpx.JSON(w, http.StatusUnprocessableEntity, mathReviewPayload(prepared.Context, AdapterOutput{}))
+		h.writeWorkerSettlementFailure(w, r, user.TenantID, prepared, WorkerResultInput{TaskID: input.TaskID, LeaseToken: input.LeaseToken}, RunFailed, "math_evidence_unavailable", http.StatusUnprocessableEntity, err)
 		return
 	}
-	output, err := activeAdapter.Grade(r.Context(), adapterInput)
+	var output AdapterOutput
+	if prepared.Context.InputVersionID != "" && prepared.Context.AIPlan != nil {
+		output, err = h.executeImagePlan(r.Context(), user.TenantID, prepared, adapterInput)
+	} else {
+		output, err = activeAdapter.Grade(r.Context(), adapterInput)
+	}
 	output.RequestID = prepared.Run.RequestID
 	if err != nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "ai_service_unavailable", "AI grading service is unavailable; use manual review")
+		agentErr := &GradingAgentError{Code: "adapter_error", ExecutionDiagnostics: diagnosticsFromOutput(output, "")}
+		_ = errors.As(err, &agentErr)
+		code, _ := agentFailureHTTP(agentErr)
+		failureDetail := executionFailureDetail(agentErr.ExecutionDiagnostics)
+		if output.RawOutput["panel_execution"] != nil {
+			if failureDetail == nil {
+				failureDetail = map[string]any{}
+			}
+			failureDetail["panel_execution"] = output.RawOutput["panel_execution"]
+		}
+		// Execute 已持有租约；失败事实必须与租约关闭一同提交，再通知 worker 避免重复 Fail。
+		_, failErr := h.workerCompletionService().Fail(r.Context(), user.TenantID, prepared.Run.ID, WorkerFailureInput{
+			TaskID: input.TaskID, LeaseToken: input.LeaseToken, ErrorCode: code, Retryable: agentErrorRetryable(err), ErrorDetail: failureDetail})
+		if failErr != nil {
+			writeStoreError(w, r, failErr)
+			return
+		}
+		writeAgentFailureResponse(w, r, agentErr, true)
 		return
 	}
 	resultSchemaVersion := "subjective-grade-v1"
@@ -118,26 +148,43 @@ func (h *Handler) ExecuteWorker(w http.ResponseWriter, r *http.Request) {
 		resultSchemaVersion = "math-grade-v2"
 		if settleErr := h.settleMathOutput(r.Context(), user.TenantID, prepared.Context, prepared.Policy, &output); settleErr != nil {
 			if errors.Is(settleErr, ErrMathHumanReviewRequired) {
-				_, _ = h.runtime.Fail(r.Context(), user.TenantID, input.TaskID, workerruntime.FailInput{LeaseToken: input.LeaseToken, Retryable: false, ErrorCode: "math_human_review_required"})
-				_, _ = h.store.UpdateRun(r.Context(), user.TenantID, prepared.Run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "math_human_review_required", AttemptCount: prepared.Task.AttemptCount})
-				httpx.JSON(w, http.StatusUnprocessableEntity, mathReviewPayload(prepared.Context, output))
+				h.writeWorkerSettlementFailure(w, r, user.TenantID, prepared, WorkerResultInput{TaskID: input.TaskID, LeaseToken: input.LeaseToken, Output: output}, RunFailed, "math_human_review_required", http.StatusUnprocessableEntity, settleErr)
 				return
 			}
 			code := "invalid_model_output"
 			status := http.StatusBadRequest
 			runStatus := RunFailed
-			message := "math model candidates could not be settled"
 			if isMathRevisionConflict(settleErr) {
 				code, status, runStatus = "math_evidence_version_conflict", http.StatusConflict, RunConflict
-				message = "math evidence changed during grading"
 			}
-			_, _ = h.runtime.Fail(r.Context(), user.TenantID, input.TaskID, workerruntime.FailInput{LeaseToken: input.LeaseToken, Retryable: false, ErrorCode: code})
-			_, _ = h.store.UpdateRun(r.Context(), user.TenantID, prepared.Run.ID, UpdateRunInput{Status: runStatus, ErrorCode: code, AttemptCount: prepared.Task.AttemptCount})
-			httpx.Error(w, r, status, code, message)
+			h.writeWorkerSettlementFailure(w, r, user.TenantID, prepared, WorkerResultInput{TaskID: input.TaskID, LeaseToken: input.LeaseToken, Output: output}, runStatus, code, status, settleErr)
 			return
 		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"run_id": prepared.Run.ID, "task_id": prepared.Task.ID, "result_schema_version": resultSchemaVersion, "output": output})
+}
+
+// 原子拒绝成功后才标记 task_failure_recorded，worker 才能跳过自己的失败回调。
+// 若租约过期或事务失败，返回存储错误；不能让调用方把未提交的失败当成已经关闭任务。
+func (h *Handler) writeWorkerSettlementFailure(w http.ResponseWriter, r *http.Request, tenantID string, prepared WorkerExecutionContext, input WorkerResultInput, runStatus, code string, status int, cause error) {
+	if err := h.workerCompletionService().Reject(r.Context(), tenantID, prepared, input, runStatus, code, cause); err != nil {
+		writeStoreError(w, r, err)
+		return
+	}
+	payload := map[string]any{}
+	if code == "math_human_review_required" || code == "math_evidence_unavailable" {
+		payload = mathReviewPayload(prepared.Context, input.Output)
+	}
+	kind := "schema_invalid"
+	if errors.Is(cause, ErrMathHumanReviewRequired) || isMathRevisionConflict(cause) {
+		kind = "evidence_invalid"
+	}
+	payload["error"] = httpx.ErrorBody{Code: code, Message: "AI 建议未完成，请继续人工评分"}
+	payload["execution_diagnostics"] = diagnosticsFromOutput(input.Output, kind)
+	payload["task_failure_recorded"] = true
+	payload["retryable"] = false
+	w.Header().Set(httpx.ErrorCodeHeader, code)
+	httpx.JSON(w, status, payload)
 }
 
 func (h *Handler) FailWorker(w http.ResponseWriter, r *http.Request) {

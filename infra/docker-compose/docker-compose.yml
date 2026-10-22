@@ -273,7 +273,7 @@ services:
         BUILD_TIME: ${EDUGRADE_BUILD_TIME:-unknown}
         IMAGE_DIGEST: ${EDUGRADE_IMAGE_DIGEST:-unknown}
         RELEASE_ID: ${EDUGRADE_RELEASE_ID:-local}
-        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000184}
+        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000200}
         GOPROXY: ${EDUGRADE_GO_PROXY:-}
     image: ${EDUGRADE_API_GATEWAY_IMAGE:-edugrade/api-gateway:local}
     container_name: edugrade-api-gateway
@@ -432,7 +432,7 @@ services:
       context: ../..
       dockerfile: ai-services/Dockerfile
       args:
-        AI_PYTHON_IMAGE: ${EDUGRADE_AI_PYTHON_IMAGE:-python:3.12.13-alpine3.24}
+        AI_PYTHON_IMAGE: ${EDUGRADE_AI_PYTHON_IMAGE:-python:3.11.15-slim-trixie}
     image: ${EDUGRADE_GRADING_AGENT_IMAGE:-edugrade/grading-agent:local}
     container_name: edugrade-grading-agent
     environment:
@@ -451,11 +451,23 @@ services:
       EDUGRADE_GRADING_CAPABILITY_PROFILE: ${EDUGRADE_AI_CAPABILITY_PROFILE:-local-pilot-v1}
       EDUGRADE_GRADING_PROMPT_VERSION: ${EDUGRADE_AI_PROMPT_VERSION}
       EDUGRADE_GRADING_MODEL_TIMEOUT_SECONDS: ${EDUGRADE_GRADING_MODEL_TIMEOUT_SECONDS:-600}
+      # 留空时不接受参考图调用；显式配置的是许可回调 Gateway 根地址，生产需 HTTPS。
+      EDUGRADE_GRADING_MATERIAL_CALLBACK_BASE_URL: ${EDUGRADE_GRADING_MATERIAL_CALLBACK_BASE_URL:-}
       EDUGRADE_GRADING_MODEL_MAX_OUTPUT_TOKENS: ${EDUGRADE_GRADING_MODEL_MAX_OUTPUT_TOKENS:-512}
       EDUGRADE_GRADING_MODEL_READY_TIMEOUT_SECONDS: ${EDUGRADE_GRADING_MODEL_READY_TIMEOUT_SECONDS:-3}
       EDUGRADE_GRADING_MODEL_READINESS_CACHE_SECONDS: ${EDUGRADE_GRADING_MODEL_READINESS_CACHE_SECONDS:-10}
       EDUGRADE_GRADING_MODEL_QUEUE_TIMEOUT_SECONDS: ${EDUGRADE_GRADING_MODEL_QUEUE_TIMEOUT_SECONDS:-5}
       EDUGRADE_GRADING_MODEL_MAX_RETRIES: ${EDUGRADE_GRADING_MODEL_MAX_RETRIES:-1}
+      # 原始响应由独立诊断目录留存，普通日志只写摘要；生产默认关闭原文采集。
+      EDUGRADE_TEMPLATE_ANALYSIS_DIAGNOSTICS_DIR: /app/diagnostics/template-analysis
+      EDUGRADE_TEMPLATE_ANALYSIS_CAPTURE_CONTENT: ${EDUGRADE_TEMPLATE_ANALYSIS_CAPTURE_CONTENT:-false}
+      # 模板主识别默认返回可自动对应的题号与选项；显式 v6 仅供兼容或对照。
+      EDUGRADE_TEMPLATE_ANALYSIS_PROMPT_VARIANT: ${EDUGRADE_TEMPLATE_ANALYSIS_PROMPT_VARIANT:-v7-evidence}
+      EDUGRADE_TEMPLATE_ANALYSIS_RETENTION_SECONDS: ${EDUGRADE_TEMPLATE_ANALYSIS_RETENTION_SECONDS:-604800}
+      EDUGRADE_TEMPLATE_ANALYSIS_MAX_FILES: ${EDUGRADE_TEMPLATE_ANALYSIS_MAX_FILES:-1000}
+      EDUGRADE_TEMPLATE_ANALYSIS_MAX_BYTES: ${EDUGRADE_TEMPLATE_ANALYSIS_MAX_BYTES:-268435456}
+      # 仅带隔离 OCR 层的镜像可以启用；预热或识别失败时保留候选供人工核对。
+      EDUGRADE_TEMPLATE_LOCAL_OCR_ENABLED: ${EDUGRADE_TEMPLATE_LOCAL_OCR_ENABLED:-false}
       EDUGRADE_GRADING_AGENT_TLS_CERT_FILE: ${EDUGRADE_GRADING_AGENT_TLS_CERT_FILE:-/run/secrets/grading-agent-tls/server.crt}
       EDUGRADE_GRADING_AGENT_TLS_KEY_FILE: ${EDUGRADE_GRADING_AGENT_TLS_KEY_FILE:-/run/secrets/grading-agent-tls/server.key}
       EDUGRADE_GRADING_AGENT_HEALTH_URL: ${EDUGRADE_GRADING_AGENT_HEALTH_URL:-https://grading-agent:8100/health}
@@ -463,6 +475,8 @@ services:
     volumes:
       - ${EDUGRADE_INTERNAL_CA_DIR:-./certs/internal-ca}:/run/secrets/internal-ca:ro
       - ${EDUGRADE_GRADING_AGENT_TLS_CERTS_DIR:-./certs/grading-agent}:/run/secrets/grading-agent-tls:ro
+      - template_analysis_diagnostics:/app/diagnostics/template-analysis
+      - ${EDUGRADE_TEMPLATE_LOCAL_OCR_MODELS_DIR:-../../.cache/ocr-models/official_models}:/opt/template-ocr/models:ro
     mem_limit: ${EDUGRADE_GRADING_AGENT_MEM_LIMIT:-2g}
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -815,6 +829,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  template_analysis_diagnostics:
   postgres_data:
   redis_data:
   minio_data:

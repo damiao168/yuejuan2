@@ -3,6 +3,7 @@ package graderdrift
 import (
 	"context"
 	"database/sql"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"encoding/json"
 	"errors"
 	"time"
@@ -107,11 +108,17 @@ ORDER BY window_end DESC,computed_at DESC LIMIT $5`, tenantID, filter.ExamID, fi
 }
 
 func (s *PostgresStore) ListIncidents(ctx context.Context, tenantID string, filter IncidentFilter) ([]Incident, error) {
+	scopeArgs, err := filter.Access.SQLArgs(tenantID)
+	if err != nil {
+		return nil, err
+	}
+	args := append([]any{tenantID, filter.ExamID, filter.QuestionID, filter.GraderID, filter.Status, filter.Limit}, scopeArgs...)
 	rows, err := s.db.QueryContext(ctx, `SELECT `+incidentColumns+`
 FROM grading_quality_incident WHERE tenant_id=$1::uuid
  AND ($2='' OR exam_id::text=$2) AND ($3='' OR question_id::text=$3) AND ($4='' OR grader_id::text=$4)
  AND ($5='' OR status=$5)
-ORDER BY created_at DESC,id DESC LIMIT $6`, tenantID, filter.ExamID, filter.QuestionID, filter.GraderID, filter.Status, filter.Limit)
+ AND `+auth.ExamCollectionPredicate("grading_quality_incident.exam_id", 7)+`
+ORDER BY created_at DESC,id DESC LIMIT $6`, args...)
 	if err != nil {
 		return nil, err
 	}

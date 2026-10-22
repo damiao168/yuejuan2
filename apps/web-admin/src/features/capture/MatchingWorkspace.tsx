@@ -47,7 +47,7 @@ export function MatchingWorkspace({
   const [candidateId, setCandidateId] = useState("");
   const [mergeTarget, setMergeTarget] = useState("");
   const [mergeFeedback, setMergeFeedback] = useState<{ success: boolean; text: string }>();
-  useEffect(() => { if (initialSubmissionId && queue.submissions.some(item => item.id === initialSubmissionId)) setSelectedId(initialSubmissionId); }, [initialSubmissionId, queue.batch_id]);
+  useEffect(() => { if (initialSubmissionId && queue.submissions.some(item => item.id === initialSubmissionId)) setSelectedId(initialSubmissionId); }, [initialSubmissionId, queue.submissions]);
   // 编号属于答卷对象，不属于过滤后的位置；刷新和合并移除答卷时保留其余对象的编号。
   const submissionNumbers = useRef(new Map<string, number>());
   for (const item of queue.submissions) {
@@ -69,6 +69,7 @@ export function MatchingWorkspace({
     queue.submissions.find((item) => item.id === selectedId) ??
     queue.submissions[0];
   // 切换答卷时重置候选，即使两份答卷的学生 ID 相同，也不能沿用上一次手动选择。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 答卷 ID 是候选选择的身份键；两份答卷学生相同也须丢弃上次合并目标。
   useEffect(() => {
     setCandidateId(selected?.student_id ?? "");
     setMergeTarget("");

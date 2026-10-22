@@ -98,12 +98,19 @@ func (s *MemoryStore) ListWindows(_ context.Context, tenantID string, filter Win
 	return result, nil
 }
 
-func (s *MemoryStore) ListIncidents(_ context.Context, tenantID string, filter IncidentFilter) ([]Incident, error) {
+func (s *MemoryStore) ListIncidents(ctx context.Context, tenantID string, filter IncidentFilter) ([]Incident, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	result := []Incident{}
 	for _, entry := range s.incidents {
 		item := entry.value
+		allowed, err := filter.Access.Allows(ctx, tenantID, "grading_quality_incident", item.ID, item.ExamID)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
+			continue
+		}
 		if entry.tenantID != tenantID || filter.ExamID != "" && item.ExamID != filter.ExamID ||
 			filter.QuestionID != "" && item.QuestionID != filter.QuestionID || filter.GraderID != "" && item.GraderID != filter.GraderID ||
 			filter.Status != "" && item.Status != filter.Status {

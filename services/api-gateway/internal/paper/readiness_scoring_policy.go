@@ -133,9 +133,11 @@ SELECT CASE
 
 func withAssessmentProfileCheck(current ReadinessResult, facts []readinessAssessmentFact) ReadinessResult {
 	missing := []string{}
+	contextMissing := false
 	for _, fact := range facts {
-		if !fact.Policy.Mode.Valid() || !fact.RiskTier.Valid() || fact.Profile["id"] == nil || fact.Archetype["code"] == nil {
+		if reason, section := assessmentFactBlockingReason(fact); reason != "" {
 			missing = append(missing, fact.QuestionID)
+			contextMissing = contextMissing || section == "exam"
 		}
 	}
 	// 缺省模板尚未建立是准备阻断项，页面仍需返回其他检查结果，不能变成读取 500。
@@ -143,7 +145,12 @@ func withAssessmentProfileCheck(current ReadinessResult, facts []readinessAssess
 	if len(missing) > 0 {
 		assessmentMessage = fmt.Sprintf("有 %d 道题的评估配置待完善，请前往题目页核对学科模板、题型和评分策略", len(missing))
 	}
-	current.Checks = append(current.Checks, ReadinessCheck{Code: "assessment_profiles", Label: "题目评估配置", Passed: len(missing) == 0, Severity: "blocker", Section: "questions", Message: assessmentMessage})
+	section := "questions"
+	if contextMissing {
+		section = "exam"
+		assessmentMessage = "考试年级的学段缺失或冲突，请在考试基本信息核对年级和选班后重新匹配评分方案"
+	}
+	current.Checks = append(current.Checks, ReadinessCheck{Code: "assessment_profiles", Label: "题目评估配置", Passed: len(missing) == 0, Severity: "blocker", Section: section, Message: assessmentMessage})
 	if len(missing) > 0 {
 		current.Ready = false
 	}

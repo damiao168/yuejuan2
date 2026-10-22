@@ -109,11 +109,11 @@ func hasActiveOnboardingStudent(items []org.Student, scope onboarding.ResourceSc
 
 type onboardingUserReader struct{ store auth.Store }
 
-// 向导只关心仍可用的业务账号；每个角色最多取一条，避免为布尔结论加载整租户用户列表。
+// 向导只关心仍可用的业务账号；先筛选 active 再取一条，新邀请或停用账号不能遮住旧的启用人员。
 func (r onboardingUserReader) HasBusinessUser(ctx context.Context, tenantID string, scope onboarding.ResourceScope) (bool, error) {
 	for _, role := range []string{"school_admin", "teacher", "grader", "arbitrator"} {
 		users, err := r.store.ListManagedUsers(ctx, tenantID, auth.ManagedUserFilter{
-			Role: role, Limit: 1, RestrictSchools: !scope.TenantWide, SchoolIDs: append([]string(nil), scope.SchoolIDs...),
+			Role: role, Status: "active", Limit: 1, RestrictSchools: !scope.TenantWide, SchoolIDs: append([]string(nil), scope.SchoolIDs...),
 		})
 		if err != nil {
 			return false, err

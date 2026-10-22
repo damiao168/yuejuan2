@@ -78,6 +78,7 @@ export function CaptureBatchPage({
   const [preview, setPreview] = useState<{ url: string; page: CapturePage }>();
   const [correctionRunId, setCorrectionRunId] = useState<string>();
   const [activeTab, setActiveTab] = useState("files");
+  const [pagesPerStudent, setPagesPerStudent] = useState<number>();
   const [locatedSubmission,setLocatedSubmission]=useState("");
   const [locatedBatch, setLocatedBatch] = useState("");
   const [locationError,setLocationError]=useState("");
@@ -86,7 +87,7 @@ export function CaptureBatchPage({
   const [locationChoices, setLocationChoices] = useState<Array<{ batch: CaptureBatch; submissionId: string; candidateNo: string }>>([]);
   const { detail, detailError, detailLoading, matching, matchingError, setMatching, matchingLoading, processingSummaries,
     loadDetail, loadMatching, resetDetail } = useCaptureBatchDetail(setBatches, setActiveTab, selectedId, selectedId === locatedBatch ? hashQueryParam("tab") || "matching" : undefined);
-  const { uploading, uploadSource } = useCaptureUpload(detail, examId, loadDetail);
+  const { uploading, pendingUpload, uploadSources, retryUpload, discardUpload } = useCaptureUpload(detail, examId, loadDetail, selectedId);
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState("");
   const [qualityOverridePage, setQualityOverridePage] = useState<CapturePage>();
@@ -94,17 +95,22 @@ export function CaptureBatchPage({
   const previewRequestRef = useRef(0);
   const activeBatch = useRef(selectedId);
   activeBatch.current = selectedId;
-  const batchCanManage = canManage && !locating && detail?.batch.id === selectedId && !detailLoading && !detailError && !["completed", "cancelled"].includes(detail?.batch.status ?? "");
+  const batchCanManage = canManage && !locating && !uploading && detail?.batch.id === selectedId && !detailLoading && !detailError && !["completed", "cancelled"].includes(detail?.batch.status ?? "");
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 页数必须在当前考试和批次显式选择，不能沿用上一批次的上传设置。
+  useEffect(() => { setPagesPerStudent(undefined); }, [examId, selectedId]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 换考试时清理旧批次选择及影像请求；resetDetail 回调身份不能代替考试身份边界。
   useEffect(() => {
     resetDetail();
     previewRequestRef.current += 1;
     setSelectedId("");
     setPreview(undefined);
-  }, [examId, resetDetail]);
+  }, [examId, resetDetail, setSelectedId]);
   useEffect(() => {
     void loadBatches();
   }, [loadBatches]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: locationAttempt 用于主动重试深链定位，保留同一考试的显式重新查找能力。
   useEffect(() => {
     const batch = hashQueryParam("batch"), submission = hashQueryParam("submission"), student = hashQueryParam("student");
     if (loading || (!batch && !submission && !student)) return;
@@ -193,8 +199,10 @@ export function CaptureBatchPage({
     multiple: true,
     showUploadList: false,
     accept: ".pdf,.png,.jpg,.jpeg,.tif,.tiff",
-    beforeUpload: (file) => {
-      void uploadSource(file);
+    disabled: !batchCanManage || !pagesPerStudent || Boolean(pendingUpload),
+    beforeUpload: (file, files) => {
+      // antd 为每个文件调用一次；只用首个回调提交完整选择，避免同一选择被拆成多个学生组。
+      if (file === files[0] && batchCanManage && pagesPerStudent && !pendingUpload) void uploadSources(files, pagesPerStudent);
       return false;
     },
   };
@@ -259,6 +267,10 @@ export function CaptureBatchPage({
 
   async function startPageProcessing(submissionId: string) {
     if (!batchCanManage || !detail?.pages.some((page) => page.submission_id === submissionId)) return;
+    if (detail.pages.some(page => page.submission_id === submissionId && page.page_identity.grouping_status && page.page_identity.grouping_status !== "complete")) {
+      message.error("这份答卷尚未完成分组，请先核对缺页、文件失败或学生身份冲突");
+      return;
+    }
     setActioning(true);
     try {
       const result = await processSubmissionPages(submissionId);
@@ -394,14 +406,15 @@ export function CaptureBatchPage({
         </Empty>
       ) : (
         <div className="capture-batch-layout">
-          <CaptureBatchListPanel batches={batches} selectedId={selectedId} setSelectedId={setSelectedId} hasMoreBatches={hasMoreBatches} loadingMoreBatches={loadingMoreBatches} loadMoreBatches={loadMoreBatches} />
+          <CaptureBatchListPanel batches={batches} selectedId={selectedId} setSelectedId={setSelectedId} disabled={uploading} hasMoreBatches={hasMoreBatches} loadingMoreBatches={loadingMoreBatches} loadMoreBatches={loadMoreBatches} />
           <main className="capture-batch-workspace">
             <CaptureBatchWorkspace detail={detail} detailError={detailError} detailLoading={detailLoading} selectedId={selectedId}
               loadDetail={loadDetail} canManage={canManage} batchCanManage={batchCanManage} progressPercent={progressPercent}
               summary={summary} uploadProps={uploadProps} uploading={uploading} actioning={actioning} startProcessing={startProcessing}
+              pagesPerStudent={pagesPerStudent} setPagesPerStudent={setPagesPerStudent} pendingUpload={pendingUpload} retryUpload={retryUpload} discardUpload={discardUpload}
               completeBatch={completeBatch} reopenBatch={reopenBatch} activeTab={activeTab} setActiveTab={setActiveTab}
               issuePages={issuePages} pageColumns={pageColumns} fileColumns={fileColumns}
-              uploadRepair={() => { setActiveTab("files"); message.info("可重新导入修复后的同一文件，系统会保留原失败记录"); }}
+              uploadRepair={() => { setActiveTab("files"); message.info("请按学生页序一次选择完整答卷重新导入；新选择独立分组，系统会保留原失败记录"); }}
               onOverride={(page) => { setQualityOverrideReason(""); setQualityOverridePage(page); }}
               processingProps={{ submissions, processingSummaries, resolveRegistration, setCorrectionRunId, startPageProcessing }}
               matchingProps={{ loading: matchingLoading, error: matchingError, onRetry: () => void loadMatching(selectedId), queue: matching,

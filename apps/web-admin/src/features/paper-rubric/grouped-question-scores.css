@@ -1,0 +1,12 @@
+.paper-grouped-scores { display: grid; gap: 16px; min-width: 0; }
+.paper-grouped-scores p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.paper-grouped-score-table small { display: block; margin-top: 4px; color: var(--text-muted); font-weight: 400; }
+.paper-grouped-score-table .ant-input-number { width: 110px; }
+.paper-grouped-scores .responsive-record-field .ant-input-number { width: 110px; }
+.paper-grouped-score-total strong { color: var(--text); }
+.paper-grouped-score-total > span { margin-left: 16px; }
+.paper-grouped-score-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 4px 0; }
+.paper-grouped-score-footer > span { color: var(--text-muted); font-size: 13px; }
+@media (max-width: 480px) {
+  .paper-grouped-score-total > span { display: block; margin-left: 0; }
+}

@@ -102,6 +102,13 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	scope, hasScope := auth.AccessScopeFromContext(r.Context())
+	if !hasScope {
+		httpx.Error(w, r, http.StatusForbidden, "backmark_access_denied", "authenticated collection scope is required")
+		return
+	}
+	page.Access.Scope = &scope
+	page.Access.Resolver, _ = h.audit.(auth.ResourceBoundaryResolver)
 	batches, err := h.service.ListPage(r.Context(), user.TenantID, strings.TrimSpace(r.URL.Query().Get("exam_id")), strings.TrimSpace(r.URL.Query().Get("question_id")), page)
 	if err != nil {
 		writeError(w, r, err)

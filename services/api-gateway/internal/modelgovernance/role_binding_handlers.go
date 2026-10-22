@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	database "edugrade-enterprise/services/api-gateway/internal/db"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"github.com/google/uuid"
 )
@@ -27,7 +28,7 @@ func (h *Handler) ListPlatformPanelRoleBindings(w http.ResponseWriter, r *http.R
 	if !ok {
 		return
 	}
-	tenantID, ok := h.targetTenant(w, r, r.URL.Query().Get("tenant_id"))
+	tenantID, ok := h.targetManagedTenant(w, r, r.URL.Query().Get("tenant_id"), "model:read")
 	if !ok || !managedSchoolTenant(w, r, tenantID) {
 		return
 	}
@@ -35,7 +36,9 @@ func (h *Handler) ListPlatformPanelRoleBindings(w http.ResponseWriter, r *http.R
 		writePanelRoleBindingError(w, r, ErrInvalidManagedConfig)
 		return
 	}
-	items, err := store.ListConfiguredModelRoleBindings(r.Context(), tenantID,
+	// 目标学校已通过上面的权限和范围校验；只切换数据库租户，认证身份仍保留平台管理员。
+	ctx := database.WithTenant(r.Context(), tenantID)
+	items, err := store.ListConfiguredModelRoleBindings(ctx, tenantID,
 		r.URL.Query().Get("education_stage"), r.URL.Query().Get("subject_code"), r.URL.Query().Get("archetype_code"))
 	if err != nil {
 		writePanelRoleBindingError(w, r, err)
@@ -53,7 +56,7 @@ func (h *Handler) SavePlatformPanelRoleBinding(w http.ResponseWriter, r *http.Re
 	if !decodeStrictJSON(w, r, &input) {
 		return
 	}
-	tenantID, ok := h.targetTenant(w, r, input.TenantID)
+	tenantID, ok := h.targetManagedTenant(w, r, input.TenantID, "model:panel:manage")
 	if !ok || !managedSchoolTenant(w, r, tenantID) {
 		return
 	}
@@ -70,7 +73,9 @@ func (h *Handler) SavePlatformPanelRoleBinding(w http.ResponseWriter, r *http.Re
 		writePanelRoleBindingError(w, r, err)
 		return
 	}
-	item, err := store.SaveModelRoleBinding(r.Context(), tenantID, mustUser(r).ID, normalized)
+	// RLS 必须使用已授权的目标学校；不能修改认证身份，否则会丢失平台操作人的审计归属。
+	ctx := database.WithTenant(r.Context(), tenantID)
+	item, err := store.SaveModelRoleBinding(ctx, tenantID, mustUser(r).ID, normalized)
 	if err != nil {
 		writePanelRoleBindingError(w, r, err)
 		return

@@ -190,7 +190,7 @@ function App() {
     setDiagnosticError, logEvent
   });
   const {
-    queue, offlineDraftCount, fileBufferRef,
+    queue, offlineDraftCount, fileBufferRef, setOfflineDraftCount,
     uploadInFlightRef, queueRef, durablePersistenceRef, updateQueue,
   } = scanQueue;
   const uploadSync = useUploadSync({
@@ -199,16 +199,17 @@ function App() {
   });
   const quality = useSubmissionQuality({ client, token, scanSubmissionId, durableScopeKey, selectedExamId, captureBatchId,
     linkedSubmissionIds: capture.linkedSubmissionIds ?? [], logEvent });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 账号作用域变化必须清空旧草稿投影，不能因 effect 不读 key 就取消重置触发。
   useEffect(() => { setOfflineTaskId(""); setOfflineDrafts([]); }, [durableScopeKey]);
   useEffect(() => {
     if (workspace !== "sync" || hasDurableDesktopStore() && !durableScopeKey) return;
     let current = true;
     setOfflineQueueError(null);
     void listOfflineDraftEnvelopes(durableScopeKey).then((drafts) => {
-      if (current) { setOfflineDrafts(drafts); scanQueue.setOfflineDraftCount(drafts.length); }
+      if (current) { setOfflineDrafts(drafts); setOfflineDraftCount(drafts.length); }
     }).catch((error) => { if (current) setOfflineQueueError(getUserErrorMessage(error, "本机草稿同步状态读取失败，请重试。")); });
     return () => { current = false; };
-  }, [durableScopeKey, workspace]);
+  }, [durableScopeKey, workspace, setOfflineDraftCount]);
 
 
 

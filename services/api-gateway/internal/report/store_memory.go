@@ -23,7 +23,7 @@ type MemoryStore struct {
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{next: 1, data: dataset{Submissions: []submissionRecord{}, Grades: []gradeRecord{}}}
+	return &MemoryStore{next: 1, data: dataset{ShowQuestionScores: true, ShowKnowledgeAnalysis: true, ShowFeedback: true, Submissions: []submissionRecord{}, Grades: []gradeRecord{}}}
 }
 
 type SubmissionSeed struct {
@@ -125,10 +125,11 @@ func (s *MemoryStore) SetQuality(seed QualitySeed) {
 	s.lowConfidenceReviewCount = seed.LowConfidenceReviewCount
 }
 
-func (s *MemoryStore) StudentReport(_ context.Context, _ string, examID string, studentID string) (StudentReport, error) {
+func (s *MemoryStore) StudentReport(ctx context.Context, _ string, examID string, studentID string) (StudentReport, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	data := s.copyDataset(examID)
+	data = studentReportAudience(ctx, data)
 	return buildStudentReport(data, studentID), nil
 }
 
@@ -185,7 +186,8 @@ func (s *MemoryStore) ExportCount() int {
 }
 
 func (s *MemoryStore) copyDataset(examID string) dataset {
-	data := dataset{ExamID: examID}
+	// 默认种子代表旧发布；显式设置的发布策略与数据在同一读锁内复制。
+	data := dataset{ExamID: examID, ShowQuestionScores: s.data.ShowQuestionScores, ShowKnowledgeAnalysis: s.data.ShowKnowledgeAnalysis, ShowFeedback: s.data.ShowFeedback}
 	data.Submissions = append(data.Submissions, s.data.Submissions...)
 	data.Grades = append(data.Grades, s.data.Grades...)
 	return data

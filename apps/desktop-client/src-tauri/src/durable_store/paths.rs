@@ -160,6 +160,8 @@ pub(crate) fn store_root(app: &AppHandle) -> Result<PathBuf, String> {
         .app_data_dir()
         .map_err(|error| error.to_string())?;
     let root = account_root(&data_dir, &scope);
+    // 先恢复本账号已明确发起的认领，再创建目录或取账号密钥，防止错误密钥打开已迁入的草稿。
+    super::claim::recover_pending_claim(&data_dir, &scope)?;
     fs::create_dir_all(spool_path(&root)).map_err(|error| error.to_string())?;
     reject_symbolic_path(&root)?;
     reject_symbolic_path(&spool_path(&root))?;

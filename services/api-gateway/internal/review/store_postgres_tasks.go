@@ -16,7 +16,7 @@ type PostgresStore struct {
 
 const reviewTaskColumns = `id::text, tenant_id::text, exam_id::text, question_id::text, question_no,
   answer_segment_id::text, submission_id::text, anonymous_code, source, status, priority,
-  COALESCE(assigned_to::text, ''), return_reason, grade_round, due_at, revision, created_by::text, created_at, updated_at`
+  COALESCE(assigned_to::text, ''), return_reason, grade_round, due_at, revision, created_by::text, created_at, updated_at, reason_code`
 
 func NewPostgresStore(db *sql.DB) *PostgresStore {
 	return &PostgresStore{db: db}
@@ -149,7 +149,7 @@ GROUP BY status, assigned_to
 		completed := status == "submitted" || status == "completed"
 		if completed {
 			aggregate.CompletedCount += count
-		} else {
+		} else if isRemainingReviewTask(status) {
 			aggregate.RemainingCount += count
 		}
 		if reviewerID == "" {
@@ -163,7 +163,7 @@ GROUP BY status, assigned_to
 		reviewer.TotalCount += count
 		if completed {
 			reviewer.CompletedCount += count
-		} else {
+		} else if isRemainingReviewTask(status) {
 			reviewer.RemainingCount += count
 		}
 	}
@@ -366,6 +366,9 @@ FOR UPDATE
 		return SubmitResult{}, err
 	}
 	if err := validateSubmit(input, taskContext); err != nil {
+		return SubmitResult{}, err
+	}
+	if err := requireSubmissionQualification(ctx, tenantID, reviewerID, task, taskContext); err != nil {
 		return SubmitResult{}, err
 	}
 	selections, _ := json.Marshal(input.RubricSelections)

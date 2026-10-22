@@ -114,4 +114,11 @@ describe("pending command UI session ownership", () => {
     expect(navigate).toHaveBeenCalledWith(destination);
     expect(request.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(true);
   });
+
+  it("存储属性读取被浏览器禁用时仍能挂载及刷新事件，不误报已完成命令", async () => {
+    vi.spyOn(window, "localStorage", "get").mockImplementation(() => { throw new DOMException("storage blocked", "SecurityError"); });
+    await act(async () => root.render(<PendingBusinessCommands tenant="tenant" actor="A" />));
+    await act(async () => { window.dispatchEvent(new Event("storage")); window.dispatchEvent(new Event("business-command-changed")); });
+    expect(host.textContent).toBe("");
+  });
 });

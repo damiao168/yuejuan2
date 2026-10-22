@@ -30,6 +30,7 @@ func stableRequestID(tenantID string, ctx Context, policy ModelPolicy, key strin
 		SegmentID              string  `json:"segment_id"`
 		AnswerVersion          string  `json:"answer_version"`
 		QuestionID             string  `json:"question_id"`
+		ExamQuestionSnapshotID string  `json:"exam_question_snapshot_id,omitempty"`
 		RubricID               string  `json:"rubric_id"`
 		RubricVersion          string  `json:"rubric_version"`
 		ModelVersion           string  `json:"model_version"`
@@ -41,7 +42,8 @@ func stableRequestID(tenantID string, ctx Context, policy ModelPolicy, key strin
 		MathCorrectionRevision int64   `json:"math_correction_revision,omitempty"`
 		MathScoringVersion     string  `json:"math_scoring_version,omitempty"`
 	}{TenantID: tenantID, SegmentID: ctx.SegmentID, AnswerVersion: ctx.AnswerVersion, QuestionID: ctx.Question.ID,
-		RubricID: ctx.Rubric.ID, RubricVersion: ctx.Rubric.Version, ModelVersion: policy.ModelVersion,
+		ExamQuestionSnapshotID: ctx.AssessmentSnapshot.ID,
+		RubricID:               ctx.Rubric.ID, RubricVersion: ctx.Rubric.Version, ModelVersion: policy.ModelVersion,
 		PromptVersion: policy.PromptVersion, MinConfidence: policy.MinConfidence, IdempotencyKey: key}
 	if ctx.MathEvidence != nil {
 		payload.MathArtifactID = ctx.MathEvidence.ArtifactID

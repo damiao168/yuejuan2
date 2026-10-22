@@ -8,6 +8,8 @@ import type { PaperVersion } from "../../../api/papers";
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export interface PreviewState {
+  sourceId?: string;
+  pageSizes?: Array<{ width: number; height: number }>;
   loading: boolean;
   error?: string;
   pageCount: number;
@@ -20,7 +22,7 @@ export interface PreviewState {
 
 async function inspectPdfTextLayer(pdfDocument: PDFDocumentProxy, isActive: () => boolean) {
   // 检查全部页面，避免纯封面掩盖后续可用文字；前页已有文字也继续读取后页。
-  // 没有可用文字层的扫描件保留手动框选入口，不提供 OCR 操作。
+  // 扫描页没有文字层时仍可走图像边框和OCR；此标记只用于选择文字层辅助路径。
   let hasText = false;
   try {
     for (let index = 1; index <= pdfDocument.numPages; index += 1) {
@@ -52,7 +54,7 @@ export function useTemplatePreview(selectedPaper: PaperVersion | undefined) {
       pdfRef.current = undefined;
       if (imageObjectUrlRef.current) URL.revokeObjectURL(imageObjectUrlRef.current);
       imageObjectUrlRef.current = undefined;
-      setPreview((current) => ({ ...current, loading: Boolean(selectedPaper), error: undefined, imageUrl: undefined, textLayerAvailable: undefined, textLayerChecking: Boolean(selectedPaper) }));
+      setPreview((current) => ({ ...current, sourceId: undefined, pageSizes: undefined, loading: Boolean(selectedPaper), error: undefined, imageUrl: undefined, textLayerAvailable: undefined, textLayerChecking: Boolean(selectedPaper) }));
       // 先解除旧资源绑定，再等待销毁；旧文件清理迟到时不能清空新文件的文档引用和预览。
       await previousDocument?.destroy().catch(() => undefined);
       if (!active) return;
@@ -61,17 +63,30 @@ export function useTemplatePreview(selectedPaper: PaperVersion | undefined) {
         return;
       }
       setPreview((current) => ({ ...current, loading: true, error: undefined, imageUrl: undefined, textLayerAvailable: undefined, textLayerChecking: true }));
+      let unboundPDF: PDFDocumentProxy | undefined;
       try {
         const download = await downloadFileBlob(selectedPaper.file_asset_id);
         if (!active) return;
         if (download.contentType === "application/pdf" || selectedPaper.file.content_type === "application/pdf") {
           const pdfDocument = await getDocument({ data: await download.blob.arrayBuffer() }).promise;
+          unboundPDF = pdfDocument;
           // PDF 解析可能晚于答题卡文件切换完成，过期文档必须销毁，不能再绑定给当前预览。
           if (!active) { await pdfDocument.destroy(); return; }
+          if (pdfDocument.numPages > 100) {
+            throw new Error("一份答题卡最多支持100页，请拆分后上传");
+          }
+          const pageSizes: Array<{ width: number; height: number }> = [];
+          for (let number = 1; number <= pdfDocument.numPages; number++) {
+            const size = (await pdfDocument.getPage(number)).getViewport({ scale: 1 });
+            pageSizes.push({ width: Math.round(size.width), height: Math.round(size.height) });
+            if (!active) { await pdfDocument.destroy(); return; }
+          }
           pdfRef.current = pdfDocument;
+          unboundPDF = undefined;
           setPdfSourceId(selectedPaper.id);
           setPageNo((current) => Math.min(Math.max(1, current), pdfDocument.numPages));
-          setPreview((current) => ({ ...current, loading: false, pageCount: pdfDocument.numPages }));
+          setPreview((current) => ({ ...current, sourceId: selectedPaper.id, loading: false, pageCount: pdfDocument.numPages,
+            pageSizes, width: pageSizes[0].width, height: pageSizes[0].height }));
           const hasText = await inspectPdfTextLayer(pdfDocument, () => active);
           if (active) setPreview(current => ({ ...current, textLayerAvailable: hasText, textLayerChecking: false }));
         } else {
@@ -85,9 +100,11 @@ export function useTemplatePreview(selectedPaper: PaperVersion | undefined) {
           });
           if (!active) return;
           setPageNo(1);
-          setPreview((current) => ({ ...current, loading: false, pageCount: 1, imageUrl: url, textLayerAvailable: false, textLayerChecking: false, ...dimensions }));
+          setPreview((current) => ({ ...current, sourceId: selectedPaper.id, loading: false, pageCount: 1, pageSizes: [dimensions], imageUrl: url, textLayerAvailable: false, textLayerChecking: false, ...dimensions }));
         }
       } catch (error) {
+        // 读尺寸失败时文档尚未进入pdfRef，必须单独释放，避免新上传的大PDF留在内存。
+        await unboundPDF?.destroy().catch(() => undefined);
         if (active) setPreview((current) => ({ ...current, loading: false, error: getUserErrorMessage(error, "操作失败，请稍后重试") }));
       }
     }
@@ -104,8 +121,8 @@ export function useTemplatePreview(selectedPaper: PaperVersion | undefined) {
         setPreview((current) => ({ ...current, loading: true, error: undefined }));
         const page = await pdfDocument.getPage(Math.min(pageNo, pdfDocument.numPages));
         const base = page.getViewport({ scale: 1 });
-        // 渲染像素受上限控制；区域编辑仍使用原始页面尺寸，避免缩放改变保存的几何比例。
-        const scale = Math.min(1.5, 1400 / base.width);
+        // 选择题需放大核对小选项；限制长边和总像素，预览提高清晰度但不改变保存坐标。
+        const scale = Math.min(3, 3200 / Math.max(base.width, base.height), Math.sqrt(8_000_000 / (base.width * base.height)));
         const viewport = page.getViewport({ scale });
         const canvas = window.document.createElement("canvas");
         canvas.width = Math.ceil(viewport.width);

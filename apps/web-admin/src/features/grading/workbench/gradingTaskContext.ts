@@ -31,7 +31,9 @@ export async function loadTaskContext(queryClient: QueryClient, scope: ReviewTas
   const task = reviewContext.task;
   // 初次加载仍遵守第二意见的显式揭示规则，不能因预取任务而提前填入 AI 建议。
   const metadata = secondOpinionMetadata(reviewContext, false);
-  const suggestion = metadata ? resolveTaskAISuggestion(metadata) : {};
+  // 当前失败由服务端绑定答案和冻结评分版本；不能回退到更早的成功建议作为本次输出。
+  const suggestion = reviewContext.ai_failure ? { warning: "AI 建议未完成，请人工评分。" }
+    : metadata ? resolveTaskAISuggestion(metadata) : {};
   const history = metadata ? (reviewContext.ai_second_opinion?.history ?? []).flatMap((item) => {
     const resolved = resolveTaskAISuggestion(item);
     return resolved.grade?.answer_segment_id === task.answer_segment_id ? [resolved.grade] : [];
@@ -69,6 +71,9 @@ export async function loadTaskContext(queryClient: QueryClient, scope: ReviewTas
     warnings: suggestion.warning ? [suggestion.warning] : [],
     ocrText: recognizedText,
     segmentImageUrl: artifact.segment_image_url,
+    answerScope: artifact.answer_scope ?? "question",
+    gradingGroupImageUrl: artifact.grading_group_image_url,
+    gradingGroupId: artifact.grading_group_id,
     originalImageUrl: scope.allowOriginalImage ? artifact.original_image_url : undefined
   };
 }

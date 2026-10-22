@@ -2,6 +2,7 @@ package capture
 
 import (
 	"context"
+	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 	"errors"
 	"time"
 )
@@ -43,20 +44,24 @@ type BatchListFilter struct {
 }
 
 type File struct {
-	ID             string    `json:"id"`
-	TenantID       string    `json:"tenant_id"`
-	CaptureBatchID string    `json:"capture_batch_id"`
-	FileAssetID    string    `json:"file_asset_id"`
-	OriginalName   string    `json:"original_name"`
-	ContentType    string    `json:"content_type"`
-	SHA256         string    `json:"sha256"`
-	ByteSize       int64     `json:"byte_size"`
-	PageCount      int       `json:"page_count"`
-	Status         string    `json:"status"`
-	ErrorCode      string    `json:"error_code,omitempty"`
-	IdempotencyKey string    `json:"idempotency_key"`
-	UploadedBy     string    `json:"uploaded_by"`
-	CreatedAt      time.Time `json:"created_at"`
+	UploadGroupID        string    `json:"upload_group_id,omitempty"`
+	UploadGroupFileCount int       `json:"upload_group_file_count,omitempty"`
+	UploadGroupFileIndex int       `json:"upload_group_file_index,omitempty"`
+	PagesPerStudent      int       `json:"pages_per_student,omitempty"`
+	ID                   string    `json:"id"`
+	TenantID             string    `json:"tenant_id"`
+	CaptureBatchID       string    `json:"capture_batch_id"`
+	FileAssetID          string    `json:"file_asset_id"`
+	OriginalName         string    `json:"original_name"`
+	ContentType          string    `json:"content_type"`
+	SHA256               string    `json:"sha256"`
+	ByteSize             int64     `json:"byte_size"`
+	PageCount            int       `json:"page_count"`
+	Status               string    `json:"status"`
+	ErrorCode            string    `json:"error_code,omitempty"`
+	IdempotencyKey       string    `json:"idempotency_key"`
+	UploadedBy           string    `json:"uploaded_by"`
+	CreatedAt            time.Time `json:"created_at"`
 }
 
 // Page 的 Revision 用于人工改页、删除和恢复的乐观并发校验；状态变化必须随版本一起保存。
@@ -149,8 +154,13 @@ type CreateBatchInput struct {
 }
 
 type RegisterFileInput struct {
-	FileAssetID    string `json:"file_asset_id"`
-	IdempotencyKey string `json:"idempotency_key"`
+	// 同一次文件选择固定组号、文件总数和顺序；不同选择不能用余页拼成同一学生。
+	UploadGroupID        string `json:"upload_group_id,omitempty"`
+	UploadGroupFileCount int    `json:"upload_group_file_count,omitempty"`
+	UploadGroupFileIndex int    `json:"upload_group_file_index,omitempty"`
+	PagesPerStudent      int    `json:"pages_per_student,omitempty"`
+	FileAssetID          string `json:"file_asset_id"`
+	IdempotencyKey       string `json:"idempotency_key"`
 }
 
 type UpdatePageInput struct {
@@ -549,20 +559,41 @@ type BatchDetail struct {
 	ProcessingSummaries []ProcessingSummary `json:"processing_summaries"`
 }
 
+// Store 组合本模块装配所需能力，保持现有构造入口兼容；新消费者应按业务职责依赖下方小接口。
+// 接口拆分只说明依赖范围，不代替权限、版本校验，也不承诺跨能力调用自动进入同一事务。
 type Store interface {
-	RecoverBatchCommand(context.Context, string, string, string, string) (BatchCommandRecovery, error)
+	StudentSheetStore
+	BatchFileStore
+	MatchingStore
+	ProcessingStore
+	RegistrationCorrectionStore
+}
+
+// StudentSheetStore 管理考试冻结名单对应的受控打印与纸张生命周期，不含扫描匹配或图像处理。
+type StudentSheetStore interface {
 	IssueTemplateBarcodes(ctx context.Context, tenantID, templateID string) (IssuedTemplateBarcodes, error)
 	IssueStudentBarcodes(ctx context.Context, tenantID, templateID, actorID string, input IssueStudentBarcodesInput) (IssuedStudentBarcodes, error)
 	GetStudentPrintContext(ctx context.Context, tenantID, templateID string) (StudentPrintContext, error)
 	GetStudentPrintPackage(ctx context.Context, tenantID, printBatchID string) (StudentPrintPackage, error)
 	RevokeStudentSheet(ctx context.Context, tenantID, sheetSerial, actorID string, input StudentSheetLifecycleInput) (StudentSheet, error)
 	ReprintStudentSheet(ctx context.Context, tenantID, sheetSerial, actorID string, input ReprintStudentSheetInput) (IssuedStudentBarcodes, error)
+}
+
+// BatchFileStore 管理采集批次与源文件；命令恢复仍按考试、操作者和命令键检查。
+type BatchFileStore interface {
+	RecoverBatchCommand(context.Context, string, string, string, string) (BatchCommandRecovery, error)
 	CreateBatch(ctx context.Context, tenantID, examID, actorID string, input CreateBatchInput) (Batch, error)
 	ListBatches(ctx context.Context, tenantID, examID string, filter BatchListFilter) ([]Batch, error)
 	GetBatch(ctx context.Context, tenantID, batchID string) (Batch, error)
 	RegisterFile(ctx context.Context, tenantID, batchID, actorID string, input RegisterFileInput, asset FileAssetSnapshot) (File, error)
 	GetFile(ctx context.Context, tenantID, fileID string) (File, error)
 	ListFiles(ctx context.Context, tenantID, batchID string) ([]File, error)
+	QueueBatch(ctx context.Context, tenantID, batchID, actorID string) (Batch, error)
+	SetBatchStatus(ctx context.Context, tenantID, batchID, actorID, status, reason string) (Batch, error)
+}
+
+// MatchingStore 管理页归属与答卷合并拆分；身份确认和页生命周期属于同一匹配领域。
+type MatchingStore interface {
 	ListPages(ctx context.Context, tenantID, batchID string) ([]Page, error)
 	GetPageBySubmissionPageID(ctx context.Context, tenantID, submissionPageID string) (Page, error)
 	GetMatchingQueue(ctx context.Context, tenantID, batchID string) (MatchingQueue, error)
@@ -573,12 +604,14 @@ type Store interface {
 	RestorePage(ctx context.Context, tenantID, pageID, actorID string, input PageLifecycleInput) (Page, error)
 	SplitSubmission(ctx context.Context, tenantID, batchID, actorID string, input SplitSubmissionInput) (MatchingQueue, error)
 	MergeSubmissions(ctx context.Context, tenantID, batchID, actorID string, input MergeSubmissionsInput) (MatchingQueue, error)
-	QueueBatch(ctx context.Context, tenantID, batchID, actorID string) (Batch, error)
+	UpdatePage(ctx context.Context, tenantID, pageID, actorID string, input UpdatePageInput) (Page, error)
+}
+
+// ProcessingStore 接收解码、质量、模板匹配及定位结果；租约终态事务仍由对应命令接口负责。
+type ProcessingStore interface {
 	ApplyFileResult(ctx context.Context, tenantID, fileID string, pages []DecodedPageInput) (File, error)
 	ApplyFileFailure(ctx context.Context, tenantID, fileID, errorCode string, retryable bool) (File, error)
 	ApplyQualityOutcome(ctx context.Context, tenantID, submissionPageID, qualityStatus string) error
-	UpdatePage(ctx context.Context, tenantID, pageID, actorID string, input UpdatePageInput) (Page, error)
-	SetBatchStatus(ctx context.Context, tenantID, batchID, actorID, status, reason string) (Batch, error)
 	QueueSubmissionPages(ctx context.Context, tenantID, submissionID, actorID string) ([]RegistrationRun, error)
 	GetRegistrationRun(ctx context.Context, tenantID, runID string) (RegistrationRun, error)
 	ListRegistrationRuns(ctx context.Context, tenantID, submissionPageID string) ([]RegistrationRun, error)
@@ -591,6 +624,10 @@ type Store interface {
 	PrepareRegistrationRetry(ctx context.Context, tenantID, runID string) (RegistrationRun, error)
 	GetProcessingSummary(ctx context.Context, tenantID, submissionID string) (ProcessingSummary, error)
 	ListProcessingSummaries(ctx context.Context, tenantID, batchID string) ([]ProcessingSummary, error)
+}
+
+// RegistrationCorrectionStore 管理人工定位修正、预览及撤销，不能越过当前版本与审核约束。
+type RegistrationCorrectionStore interface {
 	CreateRegistrationCorrection(ctx context.Context, tenantID, runID, actorID string, input CreateRegistrationCorrectionInput) (RegistrationCorrection, error)
 	GetRegistrationCorrection(ctx context.Context, tenantID, correctionID string) (RegistrationCorrection, error)
 	QueueRegistrationCorrectionPreview(ctx context.Context, tenantID, correctionID, actorID string, revision int) (RegistrationCorrection, error)
@@ -605,6 +642,17 @@ type Store interface {
 type TransactionalTemplateMatchStore interface {
 	SubmitTemplateMatchResultCommand(context.Context, string, string, TemplateMatchResultInput) (TemplateMatchRun, []RegistrationRun, error)
 	SubmitTemplateMatchFailureCommand(context.Context, string, string, TemplateMatchFailureInput) (TemplateMatchRun, string, error)
+}
+
+// FileResultCommandStore 将解码页面和当前租约回执放在同一提交边界；失败不能留下采集页面。
+type FileResultCommandStore interface {
+	SubmitFileResultCommand(context.Context, string, string, FileResultInput, workerruntime.Store, map[string]any) (File, error)
+}
+
+// RegistrationResultCommandStore 把配准或修正预览与当前任务回执一起提交；成功回放只接受同一产物。
+type RegistrationResultCommandStore interface {
+	SubmitRegistrationResultCommand(context.Context, string, string, RegistrationResultInput, workerruntime.Store) (RegistrationRun, error)
+	SubmitRegistrationCorrectionResultCommand(context.Context, string, string, CorrectionPreviewResultInput, workerruntime.Store) (RegistrationCorrection, error)
 }
 
 type FileAssetSnapshot struct {

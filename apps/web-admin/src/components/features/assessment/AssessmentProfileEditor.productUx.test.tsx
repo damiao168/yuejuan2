@@ -92,6 +92,99 @@ describe("逐题评分配置的合法默认与恢复", () => {
     expect(host.querySelector('[role="dialog"]')).toBeNull();
   });
 
+  it("页面内直接选择和保存判分方式，后续保存使用最新修订", async () => {
+    api.profile.mockResolvedValue({ assessment_profile: saved() });
+    await render({ presentation: "inline" });
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    expect(host.textContent).not.toContain("学科评分配置");
+    expect(host.querySelector<HTMLDetailsElement>("details")?.open).toBe(false);
+    await select("scoring_mode", "DUAL_HUMAN");
+    await click("保存判分方式");
+    expect(api.put).toHaveBeenLastCalledWith("exam-1", "q1", expect.objectContaining({ expected_revision: 7, scoring_policy: expect.objectContaining({ mode: "DUAL_HUMAN" }) }));
+    expect(host.textContent).toContain("已保存：两位教师独立评分");
+    expect(host.querySelector("select")).not.toBeNull();
+    await select("scoring_mode", "MANUAL_ONLY");
+    await click("保存判分方式");
+    expect(api.put).toHaveBeenLastCalledWith("exam-1", "q1", expect.objectContaining({ expected_revision: 8 }));
+    expect(api.changed).toHaveBeenCalledTimes(2);
+  });
+
+  it("进入评分标签后才读取，切回题目标签再回来保留未保存的选择", async () => {
+    api.profile.mockResolvedValue({ assessment_profile: saved() });
+    await render({ presentation: "inline", active: false });
+    expect(api.profile).not.toHaveBeenCalled();
+    await render({ presentation: "inline", active: true });
+    await select("scoring_mode", "DUAL_HUMAN");
+    await render({ presentation: "inline", active: false });
+    await render({ presentation: "inline", active: true });
+    expect(fields.values.scoring_mode).toBe("DUAL_HUMAN");
+    expect(api.profile).toHaveBeenCalledTimes(1);
+    expect(api.put).not.toHaveBeenCalled();
+  });
+
+  it("首次设置缺少学段时展开必填设置，不把初值当作已保存", async () => {
+    await render({ presentation: "inline" });
+    expect(host.querySelector<HTMLDetailsElement>("details")?.open).toBe(true);
+    expect(button("保存判分方式").disabled).toBe(true);
+    expect(host.textContent).toContain("尚未保存");
+    await select("education_stage", "junior");
+    expect(button("保存判分方式").disabled).toBe(false);
+    await click("保存判分方式");
+    expect(api.put).toHaveBeenLastCalledWith("exam-1", "q1", expect.objectContaining({ expected_revision: 0, subject_profile_id: "math-v1" }));
+  });
+
+  it.each(["frozen", "readonly"])("页面内 %s 配置禁止修改", async (mode) => {
+    api.profile.mockResolvedValue({ assessment_profile: saved() });
+    if (mode === "frozen") api.snapshot.mockResolvedValue({ assessment_snapshot: { ...saved(), scoring_policy_snapshot: saved().scoring_policy } as unknown as AssessmentSnapshot });
+    await render({ presentation: "inline", canManage: mode === "frozen" });
+    expect(button("保存判分方式")).toBeUndefined();
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="scoring_mode"]')?.disabled).toBe(true);
+    expect(api.put).not.toHaveBeenCalled();
+  });
+
+  it("页面内读取失败可重试，保存失败保留选择并禁止重复提交", async () => {
+    api.profile.mockResolvedValue({ assessment_profile: saved() });
+    api.profiles.mockRejectedValueOnce(new Error("temporary"));
+    await render({ presentation: "inline" });
+    expect(host.textContent).toContain("配置加载失败");
+    expect(host.querySelector("select")).toBeNull();
+    await click("重试");
+    await select("scoring_mode", "DUAL_HUMAN");
+    const pending = deferred<unknown>(); api.put.mockReturnValueOnce(pending.promise);
+    await act(async () => { fields.actions["保存判分方式"](); fields.actions["保存判分方式"](); });
+    expect(api.put).toHaveBeenCalledTimes(1);
+    await act(async () => pending.reject(new Error("temporary")));
+    expect(fields.values.scoring_mode).toBe("DUAL_HUMAN");
+    expect(button("保存判分方式").disabled).toBe(false);
+    await click("保存判分方式");
+    expect(api.put).toHaveBeenCalledTimes(2);
+  });
+
+  it("页面内换题后旧读取和旧保存不能覆盖新题", async () => {
+    const oldRead = deferred<{ assessment_profile: AssessmentProfile }>(); api.profile.mockReturnValueOnce(oldRead.promise);
+    await render({ presentation: "inline" });
+    api.profile.mockResolvedValue({ assessment_profile: saved() });
+    await render({ presentation: "inline", question: question("short_answer", "q2") });
+    await act(async () => oldRead.resolve({ assessment_profile: saved({ scoring_policy: { mode: "DUAL_HUMAN", require_evidence: true } }) }));
+    expect(fields.values.scoring_mode).toBe("MANUAL_ONLY");
+    const oldSave = deferred<{ assessment_profile: AssessmentProfile }>(); api.put.mockReturnValueOnce(oldSave.promise);
+    await click("保存判分方式");
+    await render({ presentation: "inline", question: question("short_answer", "q3") });
+    await act(async () => oldSave.resolve({ assessment_profile: saved({ scoring_policy: { mode: "DUAL_HUMAN", require_evidence: true } }) }));
+    expect(fields.values.scoring_mode).toBe("MANUAL_ONLY");
+    expect(api.changed).not.toHaveBeenCalled();
+  });
+
+  it("页面内折叠后仍拦截不合法证据和高风险开放题模式", async () => {
+    api.profile.mockResolvedValue({ assessment_profile: saved({ risk_tier: "R3", archetype_code: "extended_response" }) });
+    await render({ presentation: "inline", question: question("essay") });
+    await select("scoring_mode", "AI_FAST_CONFIRM");
+    expect(host.textContent).toContain("该组合不允许保存");
+    expect(button("保存判分方式").disabled).toBe(true);
+    await force("保存判分方式");
+    expect(api.put).not.toHaveBeenCalled();
+  });
+
   it.each(["none", "saved", "snapshot"])("标题区保留 %s 配置状态，不改变打开后的字段", async (source) => {
     if (source === "saved") api.profile.mockResolvedValue({ assessment_profile: saved() });
     if (source === "snapshot") api.snapshot.mockResolvedValue({ assessment_snapshot: { ...saved(), scoring_policy_snapshot: saved().scoring_policy } as unknown as AssessmentSnapshot });

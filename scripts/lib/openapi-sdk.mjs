@@ -15,18 +15,26 @@ function propertyKey(value) {
   return JSON.stringify(value);
 }
 
-function objectSchemaToType(schema) {
+function objectSchemaToType(schema, inheritedProperties = {}) {
   const required = new Set(schema.required ?? []);
-  const properties = Object.entries(schema.properties ?? {}).map(([name, child]) => {
+  // required-only 分支沿用主体的字段类型，只要求该分支列出的键；不能退化成 unknown。
+  const definitions = { ...schema.properties };
+  for (const name of required) if (!Object.hasOwn(definitions, name)) definitions[name] = inheritedProperties[name] ?? {};
+  const properties = Object.entries(definitions).map(([name, child]) => {
     return `${propertyKey(name)}${required.has(name) ? "" : "?"}: ${schemaToType(child)};`;
   });
-  const objectType = properties.length ? `{ ${properties.join(" ")} }` : "Record<string, never>";
+  const objectType = properties.length ? `{ ${properties.join(" ")} }` : "Record<string, unknown>";
   if (schema.additionalProperties === true) {
     return properties.length ? `(${objectType} & Record<string, unknown>)` : "Record<string, unknown>";
   }
   if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
-    return `(${objectType} & Record<string, ${schemaToType(schema.additionalProperties)}>)`;
+    const additionalType = schemaToType(schema.additionalProperties);
+    if (!properties.length) return `Record<string, ${additionalType}>`;
+    // TS索引签名也覆盖已声明键；联合其显式类型，避免合法命名属性被字典值类型排除。
+    const indexType = [...new Set([additionalType, ...Object.values(definitions).map((item) => schemaToType(item))])].join(" | ");
+    return `(${objectType} & Record<string, ${indexType}>)`;
   }
+  if (!properties.length && schema.additionalProperties === false) return "Record<string, never>";
   return objectType;
 }
 
@@ -38,7 +46,7 @@ function primitiveSchemaToType(schema) {
   return "unknown";
 }
 
-export function schemaToType(schema) {
+export function schemaToType(schema, inheritedProperties = {}) {
   if (!schema || typeof schema !== "object") return "unknown";
   // 引用仍优先于 const、type 和 allOf；nullable 描述引用允许的空值，不能随提前返回丢掉。
   if (schema.$ref) {
@@ -51,21 +59,24 @@ export function schemaToType(schema) {
     result = JSON.stringify(schema.const);
   } else if (Array.isArray(schema.enum)) {
     result = schema.enum.map((value) => JSON.stringify(value)).join(" | ") || "never";
-  } else if (Array.isArray(schema.oneOf)) {
-    result = schema.oneOf.map(schemaToType).join(" | ");
-  } else if (Array.isArray(schema.anyOf)) {
-    result = schema.anyOf.map(schemaToType).join(" | ");
   } else if (schema.type === "array") {
     result = `Array<${schemaToType(schema.items)}>`;
-  } else if (schema.type === "object" || schema.properties || schema.additionalProperties) {
-    result = objectSchemaToType(schema);
+  } else if (schema.type === "object" || schema.properties || Object.hasOwn(schema, "additionalProperties") || schema.required) {
+    result = objectSchemaToType(schema, inheritedProperties);
   } else {
     result = primitiveSchemaToType(schema);
   }
 
-  if (Array.isArray(schema.allOf) && schema.allOf.length) {
-    result = [result, ...schema.allOf.map((item) => schemaToType(item))].map((item) => `(${item})`).join(" & ");
+  // JSON Schema 的组合与同层约束同时成立；主体必须保留，unknown只作为交集的中性元素。
+  const context = { ...inheritedProperties, ...schema.properties };
+  const constraints = result === "unknown" ? [] : [result];
+  for (const keyword of ["oneOf", "anyOf", "allOf"]) {
+    if (!Array.isArray(schema[keyword])) continue;
+    const branches = schema[keyword].map((item) => schemaToType(item, context));
+    if (keyword === "allOf") constraints.push(...branches);
+    else constraints.push(branches.join(" | ") || "never");
   }
+  result = constraints.includes("never") ? "never" : constraints.length > 1 ? constraints.map((item) => `(${item})`).join(" & ") : constraints[0] ?? "unknown";
 
   return schema.nullable ? `${result} | null` : result;
 }
@@ -206,8 +217,12 @@ function normalizeSchema(schema) {
   if (!schema || typeof schema !== "object") return schema ?? null;
   if (Array.isArray(schema)) return schema.map(normalizeSchema);
   const result = {};
-  for (const key of ["$ref", "type", "format", "nullable", "required", "enum", "properties", "items", "oneOf", "anyOf", "allOf", "additionalProperties"]) {
-    if (Object.hasOwn(schema, key)) result[key] = normalizeSchema(schema[key]);
+  for (const key of ["$ref", "type", "format", "nullable", "required", "const", "enum", "properties", "items", "oneOf", "anyOf", "allOf", "additionalProperties"]) {
+    if (!Object.hasOwn(schema, key)) continue;
+    // properties 的键是业务字段名；不能把字段映射再次当成schema做关键字过滤。
+    if (key === "properties") result[key] = Object.fromEntries(Object.entries(schema[key]).map(([name, value]) => [name, normalizeSchema(value)]));
+    else if (["const", "enum"].includes(key)) result[key] = structuredClone(schema[key]);
+    else result[key] = normalizeSchema(schema[key]);
   }
   return result;
 }

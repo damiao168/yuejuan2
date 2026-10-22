@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, App, Button, Empty, Form, Input, InputNumber, Segmented, Select, Space, Switch, Tag } from "antd";
 import { RefreshCw } from "lucide-react";
 import type { ManagedModelAPIConfig } from "../../api/modelApiConfig";
-import { modelConfigOptionLabel } from "../../features/platform-model-config/lib/modelConfig";
+import { capabilityVerified, modelConfigOptionLabel } from "../../features/platform-model-config/lib/modelConfig";
 import { getUserErrorMessage } from "../../api/client";
 import {
   getModelPolicy, listModelApprovals, listModelEvaluationRuns, updateModelPolicy,
@@ -13,7 +13,7 @@ import { ModelApprovalWorkspace } from "./ModelApprovalWorkspace";
 import { ScoringAssuranceWorkspace } from "./ScoringAssuranceWorkspace";
 import { PromptVersionWorkspace } from "./PromptVersionWorkspace";
 import { costToMicros, microsToCost } from "./costUnits";
-import { hashQueryParam } from "../../router/query";
+import { replaceRouteQuery, routeQueryParam } from "../../router/query";
 import { eligibilitySelection } from "./eligibilityScope";
 
 type View = "evaluations" | "approvals" | "assurance" | "policy" | "prompts";
@@ -28,8 +28,8 @@ const modeOptions = [
 type PolicyFormValues = Omit<UpdatePolicyInput, "max_cost_micros_per_question" | "max_cost_micros_per_exam"> & { max_cost_micros_per_question: string | number; max_cost_micros_per_exam: string | number };
 export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDirtyChange, onSavingChange }: Readonly<{ tenantID: string; schoolName?: string; configs: ManagedModelAPIConfig[]; onDirtyChange?: (dirty: boolean) => void; onSavingChange?: (busy: boolean) => void }>) {
   const { message } = App.useApp();
-  const [view, setView] = useState<View>(() => { const requested = hashQueryParam("view"); return ["approvals", "assurance", "policy", "prompts"].includes(requested) ? requested as View : "evaluations"; });
-  const stage = hashQueryParam("stage"), subject = hashQueryParam("subject"), archetype = hashQueryParam("archetype"), risk = hashQueryParam("risk");
+  const [view, setView] = useState<View>(() => { const requested = routeQueryParam("view"); return ["approvals", "assurance", "policy", "prompts"].includes(requested) ? requested as View : "evaluations"; });
+  const stage = routeQueryParam("stage"), subject = routeQueryParam("subject"), archetype = routeQueryParam("archetype"), risk = routeQueryParam("risk");
   const initialEligibilityAxis = useMemo(() => eligibilitySelection({ stage, subject, archetype, risk }), [stage, subject, archetype, risk]);
   const [dirty, setDirty] = useState(false);
   const policyDirtyRef = useRef(false);
@@ -129,7 +129,7 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
     <p>当前学校：{schoolName || tenantID}。模型证据与使用策略按该学校管理；系统提示词来自平台部署的只读版本。</p>
     {subject ? <p>已带入当前评分组合的学段与学科。通配绑定或作文等业务题型不能代替准入的具体题型；请在正式评分使用检查中补齐题型和题目实际风险级别。</p> : null}
     <Space wrap style={{ marginBottom: 18 }}>
-      <Segmented value={view} disabled={saving || evaluationSaving || assuranceSaving} onChange={(value) => { const next = value as View; setView(next); const [path, query = ""] = window.location.hash.split("?"); const params = new URLSearchParams(query); params.set("view", next); window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}${path}?${params}`); }} options={[
+      <Segmented value={view} disabled={saving || evaluationSaving || assuranceSaving} onChange={(value) => { const next = value as View; setView(next); replaceRouteQuery((params) => params.set("view", next)); }} options={[
         { value: "evaluations", label: "对比候选模型" },
         { value: "approvals", label: "模型批准" },
         { value: "assurance", label: "正式评分使用检查" },
@@ -161,7 +161,7 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
           <Form.Item name="text_export_enabled" label="允许发送文本" valuePropName="checked"><Switch /></Form.Item>
           <Form.Item name="image_export_enabled" label="允许发送图片" valuePropName="checked"><Switch /></Form.Item>
           <Form.Item name="allowed_model_config_ids" label="允许使用的学校模型">
-            <Select mode="multiple" options={configs.filter((item) => item.status === "active" && item.last_capability_status === "success" && item.last_capability_probe_version === "structured-json-v3").map((item) => ({ value: item.id, label: modelConfigOptionLabel(item) }))} />
+            <Select mode="multiple" options={configs.filter((item) => item.status === "active" && capabilityVerified(item)).map((item) => ({ value: item.id, label: modelConfigOptionLabel(item) }))} />
           </Form.Item>
           <Form.Item name="max_cost_micros_per_question" label="每题预算上限（美元）" extra="0 表示尚未配置预算，不能通过外部沙箱准入；不是不限额。" rules={[{ required: true }]}><InputNumber stringMode min="0" precision={6} style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="max_cost_micros_per_exam" label="整场考试预算上限（美元）" extra="按平台微美元口径保存，最多六位小数；不是本月的学校总额度。" rules={[{ required: true }]}><InputNumber stringMode min="0" precision={6} style={{ width: "100%" }} /></Form.Item>

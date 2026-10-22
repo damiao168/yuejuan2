@@ -2,13 +2,32 @@ package paper
 
 import "testing"
 
-func TestNormalizeTemplateLayoutMakesManualOMRPolicyExplicit(t *testing.T) {
+func TestNormalizeTemplateLayoutMakesDefaultOMRPolicyExplicit(t *testing.T) {
 	layout := NormalizeTemplateLayout(TemplateLayout{Pages: []TemplatePage{{PageNo: 1, Width: 100, Height: 100}}})
 	if layout.OMRProfile != DefaultTemplateOMRProfile() {
-		t.Fatalf("omitted profile must become the explicit manual-only default: %#v", layout.OMRProfile)
+		t.Fatalf("omitted profile must become the explicit default extraction profile: %#v", layout.OMRProfile)
 	}
 	if err := ValidateTemplateOMRProfile(layout.OMRProfile); err != nil {
-		t.Fatalf("normalized manual profile must be valid: %v", err)
+		t.Fatalf("normalized default profile must be valid: %v", err)
+	}
+}
+
+func TestLockedDefaultOMRProfilePermitsQualityGatedAutoConfirmationWithoutChangingWorkerContract(t *testing.T) {
+	layout := TemplateLayout{OMRProfile: DefaultTemplateOMRProfile()}
+	policy := OMRAutoConfirmPolicyForTemplate(layout, "locked", "template-hash", "template-hash")
+	if !policy.AutoConfirmEligible || policy.Reason != OMRAutoConfirmReasonLockedTemplateOMR {
+		t.Fatalf("locked matching default profile must permit per-question quality checks: %#v", policy)
+	}
+	if policy.MinimumConfidence != 0.8 {
+		t.Fatalf("default choice rule-strength threshold must be 0.8: %#v", policy)
+	}
+	// 资格调整只在服务端生效；旧模板的提取模式、版本和 Worker 配置哈希不能被重新编码。
+	if policy.RuntimeProfile.Mode != "manual_only" || policy.RuntimeProfile.Version != "opencv-fill-v1" ||
+		policy.ProfileHash != "sha256:83097fe80682c49894f52f1de95ec5e901d656a88f8144884cd9f6a160ca465c" {
+		t.Fatalf("historical extraction contract changed: %#v", policy)
+	}
+	if policy.Calibration != nil || policy.Reference != nil {
+		t.Fatalf("default extraction must not require or attach difference calibration: %#v", policy)
 	}
 }
 
@@ -22,9 +41,12 @@ func TestTemplateOMRAutoConfirmPolicyFailsClosed(t *testing.T) {
 		segmentHash  string
 		wantReason   string
 	}{
-		{name: "explicit manual profile", layout: explicit, status: "locked", templateHash: "template-hash", segmentHash: "template-hash", wantReason: OMRAutoConfirmReasonManualOnlyProfile},
 		{name: "legacy omitted profile", layout: TemplateLayout{}, status: "locked", templateHash: "template-hash", segmentHash: "template-hash", wantReason: OMRAutoConfirmReasonTemplateProfileUnverified},
+		{name: "unknown mode", layout: TemplateLayout{OMRProfile: TemplateOMRProfile{Mode: "unknown", Version: OMRProfileVersionOpenCVFillV1}}, status: "locked", templateHash: "template-hash", segmentHash: "template-hash", wantReason: OMRAutoConfirmReasonUnsupportedProfile},
+		{name: "invalid version", layout: TemplateLayout{OMRProfile: TemplateOMRProfile{Mode: OMRProfileModeManualOnly, Version: "unknown"}}, status: "locked", templateHash: "template-hash", segmentHash: "template-hash", wantReason: OMRAutoConfirmReasonUnsupportedProfile},
+		{name: "default profile with reference", layout: TemplateLayout{OMRProfile: TemplateOMRProfile{Mode: OMRProfileModeManualOnly, Version: OMRProfileVersionOpenCVFillV1, Reference: &TemplateOMRReference{}}}, status: "locked", templateHash: "template-hash", segmentHash: "template-hash", wantReason: OMRAutoConfirmReasonUnsupportedProfile},
 		{name: "template snapshot mismatch", layout: explicit, status: "locked", templateHash: "new-template-hash", segmentHash: "old-template-hash", wantReason: OMRAutoConfirmReasonTemplateContentHashMismatch},
+		{name: "empty template hash", layout: explicit, status: "locked", wantReason: OMRAutoConfirmReasonTemplateContentHashMismatch},
 		{name: "unlocked template", layout: explicit, status: "draft", templateHash: "template-hash", segmentHash: "template-hash", wantReason: OMRAutoConfirmReasonTemplateNotLocked},
 		{name: "unknown template", layout: explicit, status: "", templateHash: "", segmentHash: "template-hash", wantReason: OMRAutoConfirmReasonTemplateNotFound},
 	}
@@ -32,7 +54,7 @@ func TestTemplateOMRAutoConfirmPolicyFailsClosed(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			policy := OMRAutoConfirmPolicyForTemplate(test.layout, test.status, test.templateHash, test.segmentHash)
 			if policy.AutoConfirmEligible {
-				t.Fatal("raw OMR must never become automatically eligible")
+				t.Fatal("missing or invalid template evidence must block automatic eligibility")
 			}
 			if policy.Reason != test.wantReason {
 				t.Fatalf("reason=%q want=%q", policy.Reason, test.wantReason)
@@ -57,6 +79,9 @@ func TestTemplateDifferenceProfileUsesFrozenReferenceButStaysManual(t *testing.T
 	if policy.Reason != OMRAutoConfirmReasonCalibrationUnapproved {
 		t.Fatalf("unexpected policy reason: %q", policy.Reason)
 	}
+	if policy.MinimumConfidence != 0.9 {
+		t.Fatalf("default choice threshold must not change uncalibrated difference policy: %#v", policy)
+	}
 	if policy.RuntimeProfile.Version != OMRProfileVersionTemplateDifferenceBubbleV1 || policy.Reference == nil {
 		t.Fatalf("difference policy must include a reference-bound runtime contract: %#v", policy)
 	}
@@ -68,7 +93,7 @@ func TestTemplateDifferenceProfileUsesFrozenReferenceButStaysManual(t *testing.T
 	wrong.HashSHA256 = "other-hash"
 	fallback := OMRAutoConfirmPolicyForTemplateReference(layout, "locked", "template-hash", "template-hash", wrong, "question-1")
 	if fallback.RuntimeProfile.Version != OMRProfileVersionOpenCVFillV1 || fallback.Reason != OMRAutoConfirmReasonTemplateReferenceMismatch {
-		t.Fatalf("reference mismatch must fail closed to raw/manual extraction: %#v", fallback)
+		t.Fatalf("reference mismatch must retain blocked default extraction: %#v", fallback)
 	}
 }
 

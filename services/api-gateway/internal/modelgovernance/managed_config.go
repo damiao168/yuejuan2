@@ -10,18 +10,22 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
 
 var (
-	ErrManagedConfigUnavailable  = errors.New("managed model API configuration is unavailable")
-	ErrInvalidManagedConfig      = errors.New("invalid managed model API configuration")
-	ErrManagedProviderUnknown    = errors.New("managed model API provider is unknown")
-	ErrManagedDefaultMutation    = errors.New("current managed model API must remain active")
-	ErrManagedCapabilityRequired = errors.New("managed model API capability verification is required")
-	ErrManagedProbeStale         = errors.New("managed model API configuration changed during probe")
-	ErrManagedConfigInUse        = errors.New("managed model API configuration is used by an active panel binding")
+	ErrManagedConfigUnavailable        = errors.New("managed model API configuration is unavailable")
+	ErrInvalidManagedConfig            = errors.New("invalid managed model API configuration")
+	ErrManagedProviderUnknown          = errors.New("managed model API provider is unknown")
+	ErrManagedDefaultMutation          = errors.New("current managed model API must remain active")
+	ErrManagedCapabilityRequired       = errors.New("managed model API capability verification is required")
+	ErrManagedTextRequired             = errors.New("managed model API text verification is required")
+	ErrManagedProbeStale               = errors.New("managed model API configuration changed during probe")
+	ErrManagedConfigInUse              = errors.New("managed model API configuration is used by an active panel binding")
+	ErrManagedCredentialSourceDisabled = errors.New("managed model API credential source is disabled")
+	ErrManagedCredentialOriginChanged  = errors.New("managed model API origin changed without an explicit credential")
 )
 
 type ManagedAPIConfig struct {
@@ -49,6 +53,11 @@ type ManagedAPIConfig struct {
 	LastTestedAt             *time.Time                `json:"last_tested_at,omitempty"`
 	LastSuccessfulTestedAt   *time.Time                `json:"last_successful_tested_at,omitempty"`
 	LastProbeMode            string                    `json:"last_probe_mode,omitempty"`
+	LastTextStatus           string                    `json:"last_text_status"`
+	LastTextMessage          string                    `json:"last_text_message,omitempty"`
+	LastTextTestedAt         *time.Time                `json:"last_text_tested_at,omitempty"`
+	LastTextUsage            ManagedAPIProbeUsage      `json:"last_text_usage"`
+	LastTextDiagnostic       ManagedAPIProbeDiagnostic `json:"last_text_diagnostic"`
 	LastCapabilityStatus     string                    `json:"last_capability_status"`
 	LastCapabilityMessage    string                    `json:"last_capability_message,omitempty"`
 	LastCapabilityTestedAt   *time.Time                `json:"last_capability_tested_at,omitempty"`
@@ -91,6 +100,8 @@ type ManagedAPIConfigUpdateInput struct {
 	Status       string                 `json:"status"`
 	IsDefault    bool                   `json:"is_default"`
 	InitialProbe *ManagedAPIProbeResult `json:"-"`
+	// ExpectedUpdatedAt 由服务端读取，检测与保存必须针对同一版配置；客户端不能指定。
+	ExpectedUpdatedAt time.Time `json:"-"`
 }
 
 type ManagedAPIConnection struct {
@@ -104,7 +115,20 @@ type ManagedAPICheckResult struct {
 	Message string `json:"message,omitempty"`
 }
 
+// ManagedAPIProbeMode 表示检测范围；quick 不生成，text 验证普通回复，structured 验证结构化输出。
+type ManagedAPIProbeMode string
+
+const (
+	ManagedAPIProbeQuick      ManagedAPIProbeMode = "quick"
+	ManagedAPIProbeText       ManagedAPIProbeMode = "text"
+	ManagedAPIProbeStructured ManagedAPIProbeMode = "structured"
+	// 兼容旧客户端的模式名称，与 structured 使用相同检测和证据。
+	ManagedAPIProbeCapability ManagedAPIProbeMode = "capability"
+)
+
 type ManagedAPIProbeResult struct {
+	// 同一次供应商生成在 singleflight 中共用计量身份；HTTP 请求身份仍单独保留在审计中。
+	generationRequestID  string
 	OK                   bool                           `json:"ok"`
 	ProbeMode            string                         `json:"probe_mode"`
 	GeneratedRequest     bool                           `json:"generated_request"`
@@ -118,6 +142,7 @@ type ManagedAPIProbeResult struct {
 	ErrorCode            string                         `json:"error_code,omitempty"`
 	CredentialCheck      ManagedAPICheckResult          `json:"credential_check"`
 	ModelCheck           ManagedAPICheckResult          `json:"model_check"`
+	TextCheck            ManagedAPICheckResult          `json:"text_check"`
 	CapabilityCheck      ManagedAPICheckResult          `json:"capability_check"`
 	Usage                ManagedAPIProbeUsage           `json:"usage"`
 	Diagnostic           ManagedAPIProbeDiagnostic      `json:"diagnostic"`
@@ -179,7 +204,30 @@ type ManagedAPIQuickProber interface {
 	ProbeQuick(ctx context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult
 }
 
-// 无默认模型时继续使用现有本地解析器；显式选择的默认模型若停用或不可读，不得静默切换提供方。
+type ManagedAPITextProber interface {
+	ProbeText(ctx context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult
+}
+
+func managedCapabilityVerified(config ManagedAPIConfig) bool {
+	return config.LastCapabilityStatus == "success" && config.LastCapabilityVersion == ManagedCapabilityProbeVersion
+}
+
+// 文本证据独立保存；后续 quick 检查和结构化失败都不能把模型列表访问结果当作生成成功。
+func managedTextVerified(config ManagedAPIConfig) bool {
+	return config.LastTextStatus == "success"
+}
+
+func managedStructuredProbe(mode string) bool {
+	return mode == "structured" || mode == "capability" || mode == ""
+}
+
+// 结构化校验失败时必须有实际文本证据；仅通过密钥和模型列表检查不能推断模型生成成功。
+func managedProbeTextResponse(result ManagedAPIProbeResult) bool {
+	return result.TextCheck.OK || result.ProbeMode == "text" && result.OK ||
+		managedStructuredProbe(result.ProbeMode) && result.CapabilityCheck.OK
+}
+
+// 无外部对话默认项时返回 nil；显式默认项若停用或不可读，不得静默切换提供方。
 func ResolveDefaultManagedAPI(ctx context.Context, store ManagedAPIConfigStore, tenantID string) (*ManagedAPIConnection, error) {
 	items, err := store.ListManagedAPIConfigs(ctx, tenantID)
 	if err != nil {
@@ -194,7 +242,7 @@ func ResolveDefaultManagedAPI(ctx context.Context, store ManagedAPIConfigStore, 
 			return nil, err
 		}
 		if connection.Config.TenantID != tenantID || !connection.Config.IsDefault || connection.Config.Status != "active" ||
-			connection.Config.LastCapabilityStatus != "success" || connection.Config.LastCapabilityVersion != ManagedCapabilityProbeVersion {
+			!managedTextVerified(connection.Config) {
 			return nil, ErrManagedConfigUnavailable
 		}
 		return &connection, nil
@@ -312,6 +360,28 @@ func validManagedAPIEndpointAndKey(input ManagedAPIConfigInput) bool {
 	return true
 }
 
+// sameManagedAPIOrigin 只比较 HTTPS 主机和有效端口，允许同一服务调整 API 路径。
+// 新地址仍由配置校验和请求层检查；这里不能替代公网地址检查，也不能允许跨主机复用密钥。
+func sameManagedAPIOrigin(previousURL, nextURL string) bool {
+	parse := func(raw string) (string, uint64, bool) {
+		parsed, err := url.Parse(strings.TrimSpace(raw))
+		if err != nil || parsed.Scheme != "https" || parsed.Hostname() == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+			return "", 0, false
+		}
+		port := uint64(443)
+		if parsed.Port() != "" {
+			port, err = strconv.ParseUint(parsed.Port(), 10, 16)
+			if err != nil || port == 0 {
+				return "", 0, false
+			}
+		}
+		return strings.ToLower(parsed.Hostname()), port, true
+	}
+	previousHost, previousPort, previousOK := parse(previousURL)
+	nextHost, nextPort, nextOK := parse(nextURL)
+	return previousOK && nextOK && previousHost == nextHost && previousPort == nextPort
+}
+
 func normalizeManagedAPIUpdate(input ManagedAPIConfigUpdateInput) (ManagedAPIConfigUpdateInput, error) {
 	normalized, err := normalizeManagedAPIInput(ManagedAPIConfigInput{
 		ProviderKey: "update-placeholder", DisplayName: input.DisplayName,
@@ -327,7 +397,7 @@ func normalizeManagedAPIUpdate(input ManagedAPIConfigUpdateInput) (ManagedAPICon
 		BaseURL: normalized.BaseURL, ModelName: normalized.ModelName,
 		ModelVersion: normalized.ModelVersion, Region: normalized.Region,
 		APIKey: normalized.APIKey, Status: normalized.Status, IsDefault: normalized.IsDefault,
-		InitialProbe: input.InitialProbe,
+		InitialProbe: input.InitialProbe, ExpectedUpdatedAt: input.ExpectedUpdatedAt,
 	}, nil
 }
 

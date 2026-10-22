@@ -1,0 +1,944 @@
+[
+  {
+    "page_no": 1,
+    "role": "instruction",
+    "proposed_bbox": {
+      "x": 0.062,
+      "y": 0.205,
+      "width": 0.285,
+      "height": 0.115
+    },
+    "printed_question_label": null,
+    "identity_label": null,
+    "association_status": "unassociated",
+    "reason_codes": [
+      "MODEL_DISCOVERED_REGION",
+      "MODEL_LAYOUT_REQUIRES_REVIEW",
+      "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+      "MULTIMODAL_FORBIDDEN_REGION_EXCLUDED",
+      "MULTIMODAL_OBSERVATIONS_CONSISTENT"
+    ],
+    "objective_items": [],
+    "origin": "model",
+    "source_bbox": {
+      "x": 0.062,
+      "y": 0.205,
+      "width": 0.285,
+      "height": 0.115
+    },
+    "semantic_check": "not_evaluated",
+    "candidate_id": "replay-region-1",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "role": "instruction",
+    "proposed_bbox": {
+      "x": 0.135,
+      "y": 0.675,
+      "width": 0.115,
+      "height": 0.155
+    },
+    "printed_question_label": null,
+    "identity_label": null,
+    "association_status": "unassociated",
+    "reason_codes": [
+      "MODEL_DISCOVERED_REGION",
+      "MODEL_LAYOUT_REQUIRES_REVIEW",
+      "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+      "MULTIMODAL_FORBIDDEN_REGION_EXCLUDED",
+      "MULTIMODAL_OBSERVATIONS_CONSISTENT"
+    ],
+    "objective_items": [],
+    "origin": "model",
+    "source_bbox": {
+      "x": 0.135,
+      "y": 0.675,
+      "width": 0.115,
+      "height": 0.155
+    },
+    "semantic_check": "not_evaluated",
+    "candidate_id": "replay-region-2",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "role": "answer",
+    "proposed_bbox": {
+      "x": 0.363125,
+      "y": 0.0812720848056537,
+      "width": 0.2775,
+      "height": 0.8303886925795053
+    },
+    "printed_question_label": "15",
+    "identity_label": null,
+    "association_status": "associated",
+    "reason_codes": [
+      "MODEL_DISCOVERED_REGION",
+      "MODEL_LAYOUT_REQUIRES_REVIEW",
+      "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+      "MULTIMODAL_OBSERVATIONS_CONSISTENT",
+      "PRINTED_FRAME_VERIFIED",
+      "MULTIMODAL_CONTENT_CONSISTENT"
+    ],
+    "objective_items": [],
+    "origin": "model",
+    "source_bbox": {
+      "x": 0.36,
+      "y": 0.08,
+      "width": 0.28,
+      "height": 0.835
+    },
+    "semantic_check": "supported",
+    "candidate_id": "replay-region-3",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "role": "answer",
+    "proposed_bbox": {
+      "x": 0.64625,
+      "y": 0.08215547703180212,
+      "width": 0.279375,
+      "height": 0.8312720848056537
+    },
+    "printed_question_label": "16",
+    "identity_label": null,
+    "association_status": "associated",
+    "reason_codes": [
+      "MODEL_DISCOVERED_REGION",
+      "MODEL_LAYOUT_REQUIRES_REVIEW",
+      "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+      "MULTIMODAL_OBSERVATIONS_CONSISTENT",
+      "PRINTED_FRAME_VERIFIED",
+      "MULTIMODAL_CONTENT_CONSISTENT"
+    ],
+    "objective_items": [],
+    "origin": "model",
+    "source_bbox": {
+      "x": 0.645,
+      "y": 0.08,
+      "width": 0.28,
+      "height": 0.835
+    },
+    "semantic_check": "supported",
+    "candidate_id": "replay-region-4",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "role": "other",
+    "proposed_bbox": {
+      "x": 0.06,
+      "y": 0.01,
+      "width": 0.25,
+      "height": 0.03
+    },
+    "printed_question_label": null,
+    "identity_label": null,
+    "association_status": "unassociated",
+    "reason_codes": [
+      "MODEL_DISCOVERED_REGION",
+      "MODEL_LAYOUT_REQUIRES_REVIEW",
+      "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+      "MULTIMODAL_OBSERVATIONS_CONSISTENT"
+    ],
+    "objective_items": [],
+    "origin": "model",
+    "source_bbox": {
+      "x": 0.06,
+      "y": 0.01,
+      "width": 0.25,
+      "height": 0.03
+    },
+    "semantic_check": "not_evaluated",
+    "candidate_id": "replay-region-5",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "role": "other",
+    "proposed_bbox": {
+      "x": 0.38,
+      "y": 0.94,
+      "width": 0.25,
+      "height": 0.03
+    },
+    "printed_question_label": null,
+    "identity_label": null,
+    "association_status": "unassociated",
+    "reason_codes": [
+      "MODEL_DISCOVERED_REGION",
+      "MODEL_LAYOUT_REQUIRES_REVIEW",
+      "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+      "MULTIMODAL_OBSERVATIONS_CONSISTENT"
+    ],
+    "objective_items": [],
+    "origin": "model",
+    "source_bbox": {
+      "x": 0.38,
+      "y": 0.94,
+      "width": 0.25,
+      "height": 0.03
+    },
+    "semantic_check": "not_evaluated",
+    "candidate_id": "replay-region-6",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "printed_question_label": "12",
+    "identity_label": null,
+    "role": "answer",
+    "source_bbox": {
+      "x": 0.07416666666666667,
+      "y": 0.5118727915194347,
+      "width": 0.10458333333333332,
+      "height": 0.04839222614840987
+    },
+    "proposed_bbox": {
+      "x": 0.07416666666666667,
+      "y": 0.5118727915194347,
+      "width": 0.10458333333333332,
+      "height": 0.04839222614840987
+    },
+    "association_status": "associated",
+    "semantic_check": "supported",
+    "origin": "local_detector",
+    "reason_codes": [
+      "LOCAL_FILL_HEADER_VERIFIED",
+      "LOCAL_FILL_PRINTED_MARKER_VERIFIED",
+      "LOCAL_FILL_UNDERLINE_VERIFIED",
+      "LOCAL_FILL_LOCAL_OCR_RECHECKED",
+      "LOCAL_FILL_LAYOUT_VERIFIED"
+    ],
+    "candidate_id": "replay-region-7",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "printed_question_label": "13",
+    "identity_label": null,
+    "role": "answer",
+    "source_bbox": {
+      "x": 0.2020833333333333,
+      "y": 0.5119434628975265,
+      "width": 0.113125,
+      "height": 0.05107184923439345
+    },
+    "proposed_bbox": {
+      "x": 0.2020833333333333,
+      "y": 0.5119434628975265,
+      "width": 0.113125,
+      "height": 0.05107184923439345
+    },
+    "association_status": "associated",
+    "semantic_check": "supported",
+    "origin": "local_detector",
+    "reason_codes": [
+      "LOCAL_FILL_HEADER_VERIFIED",
+      "LOCAL_FILL_PRINTED_MARKER_VERIFIED",
+      "LOCAL_FILL_UNDERLINE_VERIFIED",
+      "LOCAL_FILL_LOCAL_OCR_RECHECKED",
+      "LOCAL_FILL_LAYOUT_VERIFIED"
+    ],
+    "candidate_id": "replay-region-8",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "printed_question_label": "14",
+    "identity_label": null,
+    "role": "answer",
+    "source_bbox": {
+      "x": 0.07416666666666667,
+      "y": 0.5602650176678445,
+      "width": 0.10458333333333332,
+      "height": 0.05545936395759715
+    },
+    "proposed_bbox": {
+      "x": 0.07416666666666667,
+      "y": 0.5602650176678445,
+      "width": 0.10458333333333332,
+      "height": 0.05545936395759715
+    },
+    "association_status": "associated",
+    "semantic_check": "supported",
+    "origin": "local_detector",
+    "reason_codes": [
+      "LOCAL_FILL_HEADER_VERIFIED",
+      "LOCAL_FILL_PRINTED_MARKER_VERIFIED",
+      "LOCAL_FILL_UNDERLINE_VERIFIED",
+      "LOCAL_FILL_LOCAL_OCR_RECHECKED",
+      "LOCAL_FILL_LAYOUT_VERIFIED"
+    ],
+    "candidate_id": "replay-region-9",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "role": "identity",
+    "proposed_bbox": {
+      "x": 0.06375,
+      "y": 0.12941696113074205,
+      "width": 0.12375,
+      "height": 0.04284452296819788
+    },
+    "printed_question_label": null,
+    "identity_label": "姓名",
+    "association_status": "unassociated",
+    "reason_codes": [
+      "MODEL_DISCOVERED_REGION",
+      "MODEL_LAYOUT_REQUIRES_REVIEW",
+      "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+      "MULTIMODAL_OBSERVATIONS_CONSISTENT",
+      "MODEL_PROPOSED_IDENTITY",
+      "IDENTITY_LAYOUT_REQUIRES_REVIEW",
+      "GEOMETRY_NOT_VERIFIED",
+      "NO_PRINTED_FRAME_REQUIRES_REVIEW",
+      "LOCAL_IDENTITY_FIELD_STRUCTURE_ALIGNED",
+      "MULTIMODAL_CONTENT_CONSISTENT",
+      "LOCAL_MODEL_REPAIR_APPLIED"
+    ],
+    "objective_items": [],
+    "origin": "model",
+    "source_bbox": {
+      "x": 0.06161875,
+      "y": 0.12302120141342757,
+      "width": 0.12706875,
+      "height": 0.030512367491166075
+    },
+    "semantic_check": "supported",
+    "candidate_id": "replay-region-10",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "role": "identity",
+    "proposed_bbox": {
+      "x": 0.059375,
+      "y": 0.17137809187279152,
+      "width": 0.13875,
+      "height": 0.03445229681978799
+    },
+    "printed_question_label": null,
+    "identity_label": "准考证号",
+    "association_status": "unassociated",
+    "reason_codes": [
+      "MODEL_DISCOVERED_REGION",
+      "MODEL_LAYOUT_REQUIRES_REVIEW",
+      "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+      "MULTIMODAL_OBSERVATIONS_CONSISTENT",
+      "MODEL_PROPOSED_IDENTITY",
+      "IDENTITY_LAYOUT_REQUIRES_REVIEW",
+      "GEOMETRY_NOT_VERIFIED",
+      "NO_PRINTED_FRAME_REQUIRES_REVIEW",
+      "LOCAL_IDENTITY_FIELD_STRUCTURE_ALIGNED",
+      "MULTIMODAL_CONTENT_CONSISTENT",
+      "LOCAL_MODEL_REPAIR_APPLIED"
+    ],
+    "objective_items": [],
+    "origin": "model",
+    "source_bbox": {
+      "x": 0.06161875,
+      "y": 0.15630742049469964,
+      "width": 0.13804999999999998,
+      "height": 0.030512367491166075
+    },
+    "semantic_check": "supported",
+    "candidate_id": "replay-region-11",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "role": "identity",
+    "proposed_bbox": {
+      "x": 0.219375,
+      "y": 0.11307420494699646,
+      "width": 0.1225,
+      "height": 0.10865724381625441
+    },
+    "printed_question_label": null,
+    "identity_label": "条码",
+    "association_status": "unassociated",
+    "reason_codes": [
+      "MODEL_DISCOVERED_REGION",
+      "MODEL_LAYOUT_REQUIRES_REVIEW",
+      "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+      "MULTIMODAL_OBSERVATIONS_CONSISTENT",
+      "MODEL_PROPOSED_IDENTITY",
+      "IDENTITY_LAYOUT_REQUIRES_REVIEW",
+      "GEOMETRY_NOT_VERIFIED",
+      "NO_PRINTED_FRAME_REQUIRES_REVIEW",
+      "LOCAL_BARCODE_OUTER_FRAME_LOCALIZED",
+      "MULTIMODAL_CONTENT_CONSISTENT",
+      "LOCAL_MODEL_REPAIR_APPLIED"
+    ],
+    "objective_items": [],
+    "origin": "model",
+    "source_bbox": {
+      "x": 0.21535624999999997,
+      "y": 0.10637809187279151,
+      "width": 0.12706875,
+      "height": 0.08598939929328621
+    },
+    "semantic_check": "supported",
+    "candidate_id": "replay-region-12",
+    "evidence_refs": []
+  },
+  {
+    "page_no": 1,
+    "role": "objective_group",
+    "proposed_bbox": {
+      "x": 0.066875,
+      "y": 0.33127208480565373,
+      "width": 0.281875,
+      "height": 0.1704946996466431
+    },
+    "printed_question_label": null,
+    "identity_label": null,
+    "association_status": "unassociated",
+    "reason_codes": [
+      "MODEL_DISCOVERED_REGION",
+      "MODEL_LAYOUT_REQUIRES_REVIEW",
+      "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+      "MULTIMODAL_OBSERVATIONS_CONSISTENT",
+      "MODEL_PROPOSED_OBJECTIVE_GROUP",
+      "OBJECTIVE_GROUP_REQUIRES_REVIEW",
+      "LOCAL_OBJECTIVE_OPTION_PIXELS_ALIGNED",
+      "GEOMETRY_NOT_VERIFIED",
+      "NO_PRINTED_FRAME_REQUIRES_REVIEW",
+      "SEMANTIC_OPTION_PATTERN_VERIFIED",
+      "LOCAL_MODEL_REPAIR_APPLIED"
+    ],
+    "objective_items": [
+      {
+        "printed_question_label": "1",
+        "bbox": {
+          "x": 0.100625,
+          "y": 0.3568904593639576,
+          "width": 0.05625000000000001,
+          "height": 0.008833922261484106
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.100625,
+              "y": 0.357773851590106,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.11375,
+              "y": 0.3568904593639576,
+              "width": 0.01375,
+              "height": 0.0088339222614841
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.130625,
+              "y": 0.357773851590106,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.145625,
+              "y": 0.357773851590106,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          }
+        ]
+      },
+      {
+        "printed_question_label": "2",
+        "bbox": {
+          "x": 0.07875,
+          "y": 0.3745583038869258,
+          "width": 0.07812500000000001,
+          "height": 0.010600706713780939
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.100625,
+              "y": 0.3754416961130742,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.115,
+              "y": 0.3754416961130742,
+              "width": 0.011875,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.128125,
+              "y": 0.3745583038869258,
+              "width": 0.015,
+              "height": 0.0088339222614841
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.145625,
+              "y": 0.3754416961130742,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          }
+        ]
+      },
+      {
+        "printed_question_label": "3",
+        "bbox": {
+          "x": 0.100625,
+          "y": 0.392226148409894,
+          "width": 0.056874999999999995,
+          "height": 0.009717314487632522
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.100625,
+              "y": 0.39399293286219084,
+              "width": 0.01125,
+              "height": 0.006183745583038869
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.115625,
+              "y": 0.39399293286219084,
+              "width": 0.01125,
+              "height": 0.006183745583038869
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.130625,
+              "y": 0.39399293286219084,
+              "width": 0.01125,
+              "height": 0.006183745583038869
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.145,
+              "y": 0.392226148409894,
+              "width": 0.0125,
+              "height": 0.009717314487632508
+            }
+          }
+        ]
+      },
+      {
+        "printed_question_label": "4",
+        "bbox": {
+          "x": 0.194375,
+          "y": 0.3568904593639576,
+          "width": 0.05812500000000001,
+          "height": 0.008833922261484106
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.194375,
+              "y": 0.3568904593639576,
+              "width": 0.015,
+              "height": 0.0088339222614841
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.210625,
+              "y": 0.357773851590106,
+              "width": 0.011875,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.22625,
+              "y": 0.357773851590106,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.240625,
+              "y": 0.357773851590106,
+              "width": 0.011875,
+              "height": 0.007067137809187279
+            }
+          }
+        ]
+      },
+      {
+        "printed_question_label": "5",
+        "bbox": {
+          "x": 0.195625,
+          "y": 0.3754416961130742,
+          "width": 0.05812500000000004,
+          "height": 0.008833922261484106
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.195625,
+              "y": 0.3754416961130742,
+              "width": 0.011875,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.210625,
+              "y": 0.3754416961130742,
+              "width": 0.011875,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.22625,
+              "y": 0.3754416961130742,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.238125,
+              "y": 0.3754416961130742,
+              "width": 0.015625,
+              "height": 0.0088339222614841
+            }
+          }
+        ]
+      },
+      {
+        "printed_question_label": "6",
+        "bbox": {
+          "x": 0.194375,
+          "y": 0.39045936395759717,
+          "width": 0.05750000000000002,
+          "height": 0.010600706713780939
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.194375,
+              "y": 0.39045936395759717,
+              "width": 0.013125,
+              "height": 0.01060070671378092
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.210625,
+              "y": 0.39399293286219084,
+              "width": 0.011875,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.225625,
+              "y": 0.39399293286219084,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.240625,
+              "y": 0.39399293286219084,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          }
+        ]
+      },
+      {
+        "printed_question_label": "7",
+        "bbox": {
+          "x": 0.28625,
+          "y": 0.357773851590106,
+          "width": 0.05624999999999997,
+          "height": 0.008833922261484106
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.28625,
+              "y": 0.3586572438162544,
+              "width": 0.011875,
+              "height": 0.006183745583038869
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.3,
+              "y": 0.357773851590106,
+              "width": 0.013125,
+              "height": 0.0088339222614841
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.31625,
+              "y": 0.3586572438162544,
+              "width": 0.011875,
+              "height": 0.006183745583038869
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.33125,
+              "y": 0.3586572438162544,
+              "width": 0.01125,
+              "height": 0.006183745583038869
+            }
+          }
+        ]
+      },
+      {
+        "printed_question_label": "8",
+        "bbox": {
+          "x": 0.28625,
+          "y": 0.3754416961130742,
+          "width": 0.059374999999999956,
+          "height": 0.009717314487632522
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.28625,
+              "y": 0.3754416961130742,
+              "width": 0.011875,
+              "height": 0.007950530035335688
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.30125,
+              "y": 0.3754416961130742,
+              "width": 0.01125,
+              "height": 0.007950530035335688
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.31625,
+              "y": 0.3754416961130742,
+              "width": 0.011875,
+              "height": 0.007950530035335688
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.32875,
+              "y": 0.3754416961130742,
+              "width": 0.016875,
+              "height": 0.009717314487632508
+            }
+          }
+        ]
+      },
+      {
+        "printed_question_label": "9",
+        "bbox": {
+          "x": 0.09625,
+          "y": 0.4531802120141343,
+          "width": 0.056249999999999994,
+          "height": 0.008833922261484106
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.09625,
+              "y": 0.4540636042402827,
+              "width": 0.011875,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.11,
+              "y": 0.4531802120141343,
+              "width": 0.0125,
+              "height": 0.0088339222614841
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.125625,
+              "y": 0.4531802120141343,
+              "width": 0.013125,
+              "height": 0.007950530035335688
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.14125,
+              "y": 0.4540636042402827,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          }
+        ]
+      },
+      {
+        "printed_question_label": "10",
+        "bbox": {
+          "x": 0.079375,
+          "y": 0.46819787985865724,
+          "width": 0.07374999999999998,
+          "height": 0.013250883392226187
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.095625,
+              "y": 0.46819787985865724,
+              "width": 0.013125,
+              "height": 0.013250883392226149
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.11125,
+              "y": 0.4717314487632509,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.12625,
+              "y": 0.4717314487632509,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.14125,
+              "y": 0.4717314487632509,
+              "width": 0.011875,
+              "height": 0.007067137809187279
+            }
+          }
+        ]
+      },
+      {
+        "printed_question_label": "11",
+        "bbox": {
+          "x": 0.198125,
+          "y": 0.45229681978798586,
+          "width": 0.05687500000000001,
+          "height": 0.00795053003533569
+        },
+        "options": [
+          {
+            "label": "A",
+            "bbox": {
+              "x": 0.198125,
+              "y": 0.45229681978798586,
+              "width": 0.01375,
+              "height": 0.007950530035335688
+            }
+          },
+          {
+            "label": "B",
+            "bbox": {
+              "x": 0.21375,
+              "y": 0.4531802120141343,
+              "width": 0.011875,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "C",
+            "bbox": {
+              "x": 0.22875,
+              "y": 0.4531802120141343,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          },
+          {
+            "label": "D",
+            "bbox": {
+              "x": 0.24375,
+              "y": 0.4531802120141343,
+              "width": 0.01125,
+              "height": 0.007067137809187279
+            }
+          }
+        ]
+      }
+    ],
+    "origin": "model",
+    "source_bbox": {
+      "x": 0.066875,
+      "y": 0.33127208480565373,
+      "width": 0.281875,
+      "height": 0.1704946996466431
+    },
+    "semantic_check": "supported",
+    "candidate_id": "replay-region-13",
+    "evidence_refs": []
+  }
+]

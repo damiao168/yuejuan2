@@ -23,6 +23,7 @@ export function ProcessingExceptionEvidence({ id, examId, onNavigate }: Readonly
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const [imageError, setImageError] = useState("");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: attempt 是用户重读同一异常材料的显式触发键；删除会使重试按钮无效。
   useEffect(() => {
     const controller = new AbortController();
     let objectURL = "";

@@ -50,27 +50,45 @@ func (r *BuiltGradingAgentV2Request) Clear() {
 }
 
 type gradingAgentV2Request struct {
-	SchemaVersion    string                       `json:"schema_version"`
-	RequestID        string                       `json:"request_id"`
-	Subject          string                       `json:"subject"`
-	GradeLevel       string                       `json:"grade_level"`
-	AgentRole        string                       `json:"agent_role"`
-	QuestionID       string                       `json:"question_id"`
-	AnswerSegmentID  string                       `json:"answer_segment_id"`
-	QuestionType     string                       `json:"question_type"`
-	QuestionText     string                       `json:"question_text"`
-	MaxScore         float64                      `json:"max_score"`
-	AnswerText       string                       `json:"answer_text"`
-	OCRConfidence    float64                      `json:"ocr_confidence"`
-	RubricVersion    string                       `json:"rubric_version"`
-	PromptVersion    string                       `json:"prompt_version"`
-	Rubric           gradingAgentRubric           `json:"rubric"`
-	ModelPolicy      gradingAgentModelPolicy      `json:"model_policy"`
-	PromptGuard      gradingAgentPromptGuard      `json:"prompt_guard"`
-	OutputConstraint gradingAgentOutputConstraint `json:"output_constraint"`
-	MediaEvidence    gradingAgentV2MediaEvidence  `json:"media_evidence"`
-	MathEvidence     MathEvidenceContext          `json:"math_evidence"`
-	ReferenceContext *GradingReferenceContext     `json:"reference_context,omitempty"`
+	SchemaVersion      string                       `json:"schema_version"`
+	RequestID          string                       `json:"request_id"`
+	Subject            string                       `json:"subject"`
+	GradeLevel         string                       `json:"grade_level"`
+	AgentRole          string                       `json:"agent_role"`
+	QuestionID         string                       `json:"question_id"`
+	AnswerSegmentID    string                       `json:"answer_segment_id"`
+	QuestionType       string                       `json:"question_type"`
+	QuestionText       string                       `json:"question_text"`
+	MaxScore           float64                      `json:"max_score"`
+	AnswerText         string                       `json:"answer_text"`
+	OCRConfidence      float64                      `json:"ocr_confidence"`
+	RubricVersion      string                       `json:"rubric_version"`
+	PromptVersion      string                       `json:"prompt_version"`
+	Rubric             gradingAgentRubric           `json:"rubric"`
+	ModelPolicy        gradingAgentModelPolicy      `json:"model_policy"`
+	PromptGuard        gradingAgentPromptGuard      `json:"prompt_guard"`
+	OutputConstraint   gradingAgentOutputConstraint `json:"output_constraint"`
+	MediaEvidence      gradingAgentV2MediaEvidence  `json:"media_evidence"`
+	MathEvidence       MathEvidenceContext          `json:"math_evidence"`
+	ReferenceContext   *GradingReferenceContext     `json:"reference_context,omitempty"`
+	RequiredFeatures   []string                     `json:"required_features,omitempty"`
+	ReferenceManifest  *ReferenceManifest           `json:"reference_manifest,omitempty"`
+	ReferenceMedia     []gradingAgentReferenceMedia `json:"reference_media,omitempty"`
+	RequestBindingHash string                       `json:"request_binding_hash,omitempty"`
+}
+
+type gradingAgentReferenceMedia struct {
+	MediaID      string `json:"media_id"`
+	Role         string `json:"role"`
+	Ordinal      int    `json:"ordinal"`
+	BindingHash  string `json:"binding_hash"`
+	Encoding     string `json:"encoding"`
+	MediaType    string `json:"media_type"`
+	SHA256       string `json:"sha256"`
+	ByteSize     int64  `json:"byte_size"`
+	WidthPixels  int    `json:"width_pixels"`
+	HeightPixels int    `json:"height_pixels"`
+	DataBase64   string `json:"data_base64"`
 }
 
 type gradingAgentV2MediaEvidence struct {
@@ -87,27 +105,31 @@ type gradingAgentV2MediaEvidence struct {
 }
 
 type gradingAgentV2DigestRequest struct {
-	SchemaVersion    string                       `json:"schema_version"`
-	RequestID        string                       `json:"request_id"`
-	Subject          string                       `json:"subject"`
-	GradeLevel       string                       `json:"grade_level"`
-	AgentRole        string                       `json:"agent_role"`
-	QuestionID       string                       `json:"question_id"`
-	AnswerSegmentID  string                       `json:"answer_segment_id"`
-	QuestionType     string                       `json:"question_type"`
-	QuestionText     string                       `json:"question_text"`
-	MaxScore         float64                      `json:"max_score"`
-	AnswerText       string                       `json:"answer_text"`
-	OCRConfidence    float64                      `json:"ocr_confidence"`
-	RubricVersion    string                       `json:"rubric_version"`
-	PromptVersion    string                       `json:"prompt_version"`
-	Rubric           gradingAgentRubric           `json:"rubric"`
-	ModelPolicy      gradingAgentModelPolicy      `json:"model_policy"`
-	PromptGuard      gradingAgentPromptGuard      `json:"prompt_guard"`
-	OutputConstraint gradingAgentOutputConstraint `json:"output_constraint"`
-	MediaEvidence    gradingAgentV2DigestEvidence `json:"media_evidence"`
-	MathEvidence     MathEvidenceContext          `json:"math_evidence"`
-	ReferenceContext *GradingReferenceContext     `json:"reference_context,omitempty"`
+	SchemaVersion      string                       `json:"schema_version"`
+	RequestID          string                       `json:"request_id"`
+	Subject            string                       `json:"subject"`
+	GradeLevel         string                       `json:"grade_level"`
+	AgentRole          string                       `json:"agent_role"`
+	QuestionID         string                       `json:"question_id"`
+	AnswerSegmentID    string                       `json:"answer_segment_id"`
+	QuestionType       string                       `json:"question_type"`
+	QuestionText       string                       `json:"question_text"`
+	MaxScore           float64                      `json:"max_score"`
+	AnswerText         string                       `json:"answer_text"`
+	OCRConfidence      float64                      `json:"ocr_confidence"`
+	RubricVersion      string                       `json:"rubric_version"`
+	PromptVersion      string                       `json:"prompt_version"`
+	Rubric             gradingAgentRubric           `json:"rubric"`
+	ModelPolicy        gradingAgentModelPolicy      `json:"model_policy"`
+	PromptGuard        gradingAgentPromptGuard      `json:"prompt_guard"`
+	OutputConstraint   gradingAgentOutputConstraint `json:"output_constraint"`
+	MediaEvidence      gradingAgentV2DigestEvidence `json:"media_evidence"`
+	MathEvidence       MathEvidenceContext          `json:"math_evidence"`
+	ReferenceContext   *GradingReferenceContext     `json:"reference_context,omitempty"`
+	RequiredFeatures   []string                     `json:"required_features,omitempty"`
+	ReferenceManifest  *ReferenceManifest           `json:"reference_manifest,omitempty"`
+	ReferenceMedia     []gradingAgentReferenceMedia `json:"reference_media,omitempty"`
+	RequestBindingHash string                       `json:"request_binding_hash,omitempty"`
 }
 
 type gradingAgentV2DigestEvidence struct {
@@ -157,6 +179,22 @@ func BuildGradingAgentV2Request(
 		return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "grading_reference_invalid"}
 	}
 	reference := normalizedGradingReferenceForV2(input.ReferenceContext)
+	if err := validMaterialManifest(input.ReferenceManifest, input.ReferenceMedia); err != nil {
+		return BuiltGradingAgentV2Request{}, err
+	}
+	if manifest := input.ReferenceManifest; manifest != nil {
+		if manifest.AssessmentSnapshotID != input.AssessmentSnapshot.ID || manifest.AssessmentSnapshotHash != input.AssessmentSnapshot.ContentHash {
+			return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "material_manifest_invalid"}
+		}
+		bytes, pixels := crop.ByteSize, int64(crop.WidthPixels)*int64(crop.HeightPixels)
+		for _, item := range input.ReferenceMedia {
+			bytes += item.ByteSize
+			pixels += int64(item.WidthPixels) * int64(item.HeightPixels)
+		}
+		if bytes > maxAllMediaBytes || pixels > maxAllMediaPixels {
+			return BuiltGradingAgentV2Request{}, &GradingAgentError{Code: "material_media_budget_exceeded"}
+		}
+	}
 	if err := validateResolvedActiveCropForV2(crop); err != nil {
 		return BuiltGradingAgentV2Request{}, err
 	}
@@ -240,6 +278,16 @@ func BuildGradingAgentV2Request(
 		MediaEvidence:    media,
 		MathEvidence:     *input.MathEvidence,
 		ReferenceContext: reference,
+	}
+	if input.ReferenceManifest != nil {
+		request.RequiredFeatures = []string{materialInputFeature}
+		request.ReferenceManifest = input.ReferenceManifest
+		request.ReferenceMedia = make([]gradingAgentReferenceMedia, 0, len(input.ReferenceMedia))
+		for _, item := range input.ReferenceMedia {
+			item.BindingHash = computeReferenceBindingHash(requestID, questionID, segmentID, input.ReferenceManifest, item)
+			request.ReferenceMedia = append(request.ReferenceMedia, gradingAgentReferenceMedia{MediaID: item.MediaID, Role: item.Role, Ordinal: item.Ordinal, BindingHash: item.BindingHash, Encoding: item.Encoding, MediaType: item.MediaType, SHA256: item.SHA256, ByteSize: item.ByteSize, WidthPixels: item.WidthPixels, HeightPixels: item.HeightPixels, DataBase64: base64.StdEncoding.EncodeToString(item.Data)})
+		}
+		request.RequestBindingHash = computeMaterialRequestBindingHash(requestID, questionID, segmentID, input.ReferenceManifest, crop, input.ReferenceMedia)
 	}
 	request.MathEvidence.effective = mathunderstanding.EffectiveArtifact{}
 	request.MathEvidence.frozen = mathunderstanding.FrozenRubric{}
@@ -467,8 +515,15 @@ func gradingAgentV2IdempotencyDigest(request gradingAgentV2Request) (string, err
 			NormalizedBBox: media.NormalizedBBox,
 			BindingHash:    media.BindingHash,
 		},
-		MathEvidence:     request.MathEvidence,
-		ReferenceContext: request.ReferenceContext,
+		MathEvidence:       request.MathEvidence,
+		ReferenceContext:   request.ReferenceContext,
+		RequiredFeatures:   request.RequiredFeatures,
+		ReferenceManifest:  request.ReferenceManifest,
+		RequestBindingHash: request.RequestBindingHash,
+	}
+	for _, item := range request.ReferenceMedia {
+		item.DataBase64 = ""
+		safe.ReferenceMedia = append(safe.ReferenceMedia, item)
 	}
 	encoded, err := json.Marshal(safe)
 	if err != nil {

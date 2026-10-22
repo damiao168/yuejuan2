@@ -12,6 +12,9 @@ export default defineConfig({
     manifest: true,
     rollupOptions: {
       output: {
+        // OCR Worker按eng.traineddata.gz拼接语言路径；只对此模型保留固定文件名，禁止回落公网CDN。
+        assetFileNames: (asset) => asset.names?.includes("eng.traineddata.gz")
+          ? "ocr/eng.traineddata.gz" : "assets/[name]-[hash][extname]",
         manualChunks: {
           antd: ["antd"],
           charts: ["recharts"],

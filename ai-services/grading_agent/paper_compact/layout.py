@@ -178,6 +178,5 @@ def _center_y(item):
 
 def _geometric_key(item):
     box = _box(item)
-    # 公式裁剪刻意留有边距，顶部可能高于所属文本行。
-    # 相比顶边，竖直中心更适合用来估计基线。
+    # 公式裁剪带有边距，顶边可能超出所属文本行；因此用竖直中心估计基线。
     return (box[1] + box[3] / 2, box[0], item[0]) if box else (float("inf"), 0, item[0])

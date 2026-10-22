@@ -125,13 +125,6 @@ func (s *PostgresStore) AddPage(ctx context.Context, tenantID string, submission
 	if err := ValidatePageInput(input); err != nil {
 		return SubmissionPage{}, err
 	}
-	item, err := s.getSubmission(ctx, tenantID, submissionID)
-	if err != nil {
-		return SubmissionPage{}, err
-	}
-	if item.Status == "ready_for_ocr" || item.Status == "rejected" {
-		return SubmissionPage{}, ErrSubmissionLocked
-	}
 	if _, err := s.pageByNo(ctx, tenantID, submissionID, input.PageNo); err == nil {
 		return SubmissionPage{}, ErrDuplicatePage
 	} else if !errors.Is(err, ErrNotFound) {
@@ -142,6 +135,10 @@ func (s *PostgresStore) AddPage(ctx context.Context, tenantID string, submission
 		return SubmissionPage{}, err
 	}
 	defer tx.Rollback()
+	// 答卷状态和页面变更使用同一父行锁；等锁期间冻结后不能继续写页。
+	if _, err = lockWritableSubmissionTx(ctx, tx, tenantID, submissionID); err != nil {
+		return SubmissionPage{}, err
+	}
 	row := tx.QueryRowContext(ctx, `
 INSERT INTO submission_page (tenant_id, submission_id, file_asset_id, page_no, status, quality_status, quality_override, quality_issues)
 VALUES ($1, $2, $3, $4, 'uploaded', 'unchecked', '{}', '[]')
@@ -162,7 +159,7 @@ SET actual_page_count = (
   status = 'pages_uploaded',
   quality_status = 'unchecked',
   quality_issues = '[]',
-  updated_at = now()
+  revision = revision + 1, updated_at = now()
 WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
 `, tenantID, submissionID); err != nil {
 		return SubmissionPage{}, err
@@ -178,18 +175,14 @@ func (s *PostgresStore) ReplacePage(ctx context.Context, tenantID string, submis
 	if err := ValidatePageInput(input); err != nil {
 		return SubmissionPage{}, err
 	}
-	item, err := s.getSubmission(ctx, tenantID, submissionID)
-	if err != nil {
-		return SubmissionPage{}, err
-	}
-	if item.Status == "ready_for_ocr" || item.Status == "rejected" {
-		return SubmissionPage{}, ErrSubmissionLocked
-	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return SubmissionPage{}, err
 	}
 	defer tx.Rollback()
+	if _, err = lockWritableSubmissionTx(ctx, tx, tenantID, submissionID); err != nil {
+		return SubmissionPage{}, err
+	}
 	row := tx.QueryRowContext(ctx, `
 UPDATE submission_page
 SET file_asset_id = $4,
@@ -218,7 +211,7 @@ SET actual_page_count = (
   status = 'pages_uploaded',
   quality_status = 'unchecked',
   quality_issues = '[]',
-  updated_at = now()
+  revision = revision + 1, updated_at = now()
 WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
 `, tenantID, submissionID); err != nil {
 		return SubmissionPage{}, err
@@ -323,11 +316,29 @@ func (s *PostgresStore) ApplyPageQualityResult(ctx context.Context, tenantID str
 
 // ApplyPageQualityResultInTx 允许质量结果协调器将页面投影与提交聚合结果同来源和运行时结果一起提交。
 func ApplyPageQualityResultInTx(ctx context.Context, tx *sql.Tx, tenantID string, input ApplyPageQualityInput) (SubmissionPage, error) {
+	page, _, err := ApplyPageQualityProjectionInTx(ctx, tx, tenantID, input)
+	return page, err
+}
+
+// ApplyPageQualityProjectionInTx 返回是否投影当前页面；旧源图、冻结答卷和同运行重放仅保留运行历史。
+// 先锁答卷再锁页面，与普通换页保持同一锁序，不能把旧质检结果放行给新源图。
+func ApplyPageQualityProjectionInTx(ctx context.Context, tx *sql.Tx, tenantID string, input ApplyPageQualityInput) (SubmissionPage, bool, error) {
 	if input.QualityStatus != "passed" && input.QualityStatus != "review" && input.QualityStatus != "failed" {
-		return SubmissionPage{}, ErrInvalidInput
+		return SubmissionPage{}, false, ErrInvalidInput
 	}
 	if tx == nil {
-		return SubmissionPage{}, ErrInvalidInput
+		return SubmissionPage{}, false, ErrInvalidInput
+	}
+	status, lockErr := lockWritableSubmissionTx(ctx, tx, tenantID, input.SubmissionID)
+	if lockErr != nil && !errors.Is(lockErr, ErrSubmissionLocked) {
+		return SubmissionPage{}, false, lockErr
+	}
+	var current SubmissionPage
+	if err := scanPage(tx.QueryRowContext(ctx, `SELECT id::text,tenant_id::text,submission_id::text,file_asset_id::text,page_no,status,COALESCE(latest_quality_run_id::text,''),COALESCE(normalized_file_asset_id::text,''),quality_status,quality_override,quality_issues,created_at FROM submission_page WHERE tenant_id=$1 AND submission_id=$2 AND id=$3::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, input.SubmissionID, input.PageID), &current); err != nil {
+		return SubmissionPage{}, false, err
+	}
+	if status == "ready_for_ocr" || status == "rejected" || input.SourceFileAssetID != "" && current.FileAssetID != input.SourceFileAssetID || input.LatestQualityRunID != "" && current.LatestQualityRunID == input.LatestQualityRunID {
+		return current, false, nil
 	}
 	issuesJSON, _ := json.Marshal(input.QualityIssues)
 	row := tx.QueryRowContext(ctx, `
@@ -344,12 +355,12 @@ RETURNING id::text, tenant_id::text, submission_id::text, file_asset_id::text, p
 `, tenantID, input.SubmissionID, input.PageID, input.LatestQualityRunID, input.NormalizedFileAssetID, input.QualityStatus, issuesJSON)
 	var page SubmissionPage
 	if err := scanPage(row, &page); err != nil {
-		return SubmissionPage{}, err
+		return SubmissionPage{}, false, err
 	}
 	if err := aggregateQualityTx(ctx, tx, tenantID, input.SubmissionID); err != nil {
-		return SubmissionPage{}, err
+		return SubmissionPage{}, false, err
 	}
-	return page, nil
+	return page, true, nil
 }
 
 func (s *PostgresStore) OverridePageQuality(ctx context.Context, tenantID string, pageID string, actorID string, input OverridePageQualityInput) (SubmissionPage, error) {
@@ -511,6 +522,21 @@ WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 	return out, nil
 }
 
+// 父答卷先于页面取锁；普通页面写入在锁内拒绝冻结状态。
+func lockWritableSubmissionTx(ctx context.Context, tx *sql.Tx, tenantID, submissionID string) (string, error) {
+	var status string
+	if err := tx.QueryRowContext(ctx, `SELECT status FROM submission WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, submissionID).Scan(&status); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrNotFound
+		}
+		return "", err
+	}
+	if status == "ready_for_ocr" || status == "rejected" {
+		return status, ErrSubmissionLocked
+	}
+	return status, nil
+}
+
 func (s *PostgresStore) pageByNo(ctx context.Context, tenantID string, submissionID string, pageNo int) (SubmissionPage, error) {
 	row := s.db.QueryRowContext(ctx, `
 SELECT id::text, tenant_id::text, submission_id::text, file_asset_id::text, page_no, status,
@@ -595,7 +621,7 @@ SET actual_page_count = $3,
   status = $5,
   quality_issues = $6,
   updated_at = now()
-WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL AND status NOT IN ('ready_for_ocr','rejected')
 `, tenantID, submissionID, pageCount, qualityStatus, submissionStatus, issuesJSON)
 	return err
 }

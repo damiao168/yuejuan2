@@ -224,7 +224,10 @@ type gradeRecord struct {
 }
 
 type dataset struct {
-	ExamID      string
-	Submissions []submissionRecord
-	Grades      []gradeRecord
+	ExamID                string
+	ShowQuestionScores    bool
+	ShowKnowledgeAnalysis bool
+	ShowFeedback          bool
+	Submissions           []submissionRecord
+	Grades                []gradeRecord
 }

@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import io
 import math
 import re
 
@@ -47,6 +48,13 @@ _REQUEST_FIELDS = {
     "output_constraint",
     "media_evidence",
     "math_evidence",
+    # 参考图扩展必须连同冻结身份和一次性许可完整提交，旧请求仍保持严格旧形状。
+    "required_features",
+    "reference_manifest",
+    "reference_media",
+    "math_wrapper_hash",
+    "execution_permit",
+    "request_binding_hash",
 }
 _MEDIA_FIELDS = {
     "kind",
@@ -76,6 +84,9 @@ _RESPONSE_FIELDS = {
     "capability_profile",
     "mock",
     "telemetry",
+    "accepted_features",
+    "manifest_hash",
+    "request_binding_hash",
 }
 _MATH_FIELDS = {"artifact_id", "artifact_version", "correction_revision", "exam_question_snapshot_id", "scoring_version", "overall_confidence", "quality", "steps", "formulas", "verifications", "rubric_evidence", "has_diagram", "graph_uncertain", "required_rubric_uncertain"}
 _QUALITY_FIELDS = {"recognition", "formula", "structure", "verification", "rubric_mapping", "critical"}
@@ -128,6 +139,37 @@ def compute_media_binding_hash(request):
         *(str(value) for value in units),
     )
     # 每段以 UTF-8 字节长度定界，避免字段拼接产生歧义。
+    material = "".join(f"{len(part.encode('utf-8'))}:{part}" for part in parts).encode("utf-8")
+    return hashlib.sha256(material).hexdigest()
+
+
+def compute_reference_media_binding_hash(request, media):
+    """参考图绑定到同一作答、冻结清单和快照；UTF-8 字节长度与 Go 保持一致。"""
+    manifest = request["reference_manifest"]
+    parts = (
+        SCHEMA_VERSION,
+        request["request_id"],
+        request["question_id"],
+        request["answer_segment_id"],
+        manifest["manifest_hash"],
+        manifest["assessment_snapshot_id"],
+        manifest["assessment_snapshot_hash"],
+        media["media_id"],
+        media["role"],
+        str(media["ordinal"]),
+        media["sha256"],
+    )
+    material = "".join(f"{len(part.encode('utf-8'))}:{part}" for part in parts).encode("utf-8")
+    return hashlib.sha256(material).hexdigest()
+
+
+def compute_request_binding_hash(request):
+    """Bind the complete frozen image set, including the student crop."""
+    parts = [SCHEMA_VERSION, request["request_id"], request["question_id"], request["answer_segment_id"], request["media_evidence"]["sha256"]]
+    if "reference_manifest" in request:
+        parts.append(request["reference_manifest"]["manifest_hash"])
+        for media in request["reference_media"]:
+            parts.append(compute_reference_media_binding_hash(request, media))
     material = "".join(f"{len(part.encode('utf-8'))}:{part}" for part in parts).encode("utf-8")
     return hashlib.sha256(material).hexdigest()
 
@@ -206,6 +248,118 @@ def _validate_media_content(media, request):
         _fail("media_evidence.binding_hash does not match this request", request_id)
 
 
+def validate_reference_media(media, request, index):
+    request_id = request.get("request_id", "")
+    expected = {"media_id", "role", "ordinal", "binding_hash", "encoding", "media_type", "sha256", "byte_size", "width_pixels", "height_pixels", "data_base64"}
+    _exact_fields(media, expected, f"reference_media[{index}]", request_id)
+    if not isinstance(media["media_id"], str) or not _INTERNAL_ID.fullmatch(media["media_id"]):
+        _fail("reference_media.media_id is invalid", request_id)
+    if not isinstance(media["role"], str) or media["role"] not in {"question_diagram", "reference_solution"}:
+        _fail("reference_media.role is unsupported", request_id)
+    if isinstance(media["ordinal"], bool) or not isinstance(media["ordinal"], int) or not 1 <= media["ordinal"] <= 4:
+        _fail("reference_media.ordinal is invalid", request_id)
+    if media["encoding"] != "base64" or media["media_type"] != "image/png":
+        _fail("reference_media must use base64 PNG images", request_id)
+    if not isinstance(media["sha256"], str) or not _SHA256.fullmatch(media["sha256"]):
+        _fail("reference_media.sha256 must be lowercase hexadecimal SHA-256", request_id)
+    if not isinstance(media["binding_hash"], str) or not _SHA256.fullmatch(media["binding_hash"]):
+        _fail("reference_media.binding_hash must be lowercase hexadecimal SHA-256", request_id)
+    if isinstance(media["byte_size"], bool) or not isinstance(media["byte_size"], int) or not 1 <= media["byte_size"] <= MAX_MEDIA_BYTES:
+        _fail("reference_media.byte_size is outside the approved limit", request_id)
+    if any(isinstance(media[key], bool) or not isinstance(media[key], int) or media[key] <= 0 for key in ("width_pixels", "height_pixels")):
+        _fail("reference_media dimensions are invalid", request_id)
+    if media["width_pixels"] * media["height_pixels"] > 4_000_000 or media["byte_size"] > 1024 * 1024:
+        _fail("reference_media dimensions are too large", request_id)
+    data = media["data_base64"]
+    if not isinstance(data, str) or not data or len(data) > MAX_MEDIA_BASE64_LENGTH:
+        _fail("reference_media.data_base64 must be non-empty and bounded", request_id)
+    try:
+        decoded = base64.b64decode(data, validate=True)
+    except ValueError as exc:
+        raise AgentError("invalid_request", "reference_media.data_base64 is not valid base64", status=400, request_id=request_id) from exc
+    if len(decoded) != media["byte_size"]:
+        _fail("reference_media.byte_size does not match decoded content", request_id)
+    if len(decoded) < 24 or not decoded.startswith(_PNG_SIGNATURE) or decoded[12:16] != b"IHDR":
+        _fail("reference_media content is not a PNG", request_id)
+    width = int.from_bytes(decoded[16:20], "big")
+    height = int.from_bytes(decoded[20:24], "big")
+    if (width, height) != (media["width_pixels"], media["height_pixels"]):
+        _fail("reference_media dimensions do not match decoded PNG", request_id)
+    # Pillow 的 verify 允许缺失 IEND 的 CRC；服务端裁图必须包含完整结束块。
+    if not decoded.endswith(b"\x00\x00\x00\x00IEND\xaeB`\x82"):
+        _fail("reference_media PNG is damaged", request_id)
+    try:
+        from PIL import Image
+        with Image.open(io.BytesIO(decoded)) as img:
+            # load 解码像素，verify 另查块校验和；只读 IHDR 或只调用 load 都可能放过坏 PNG。
+            img.verify()
+        with Image.open(io.BytesIO(decoded)) as img:
+            img.load()
+    except (OSError, ValueError, SyntaxError) as exc:
+        raise AgentError("invalid_request", "reference_media PNG is damaged", status=400, request_id=request_id) from exc
+    if hashlib.sha256(decoded).hexdigest() != media["sha256"]:
+        _fail("reference_media.sha256 does not match decoded content", request_id)
+    if compute_reference_media_binding_hash(request, media) != media["binding_hash"]:
+        _fail("reference_media.binding_hash does not match this request", request_id)
+
+
+def validate_reference_materials(request, request_id):
+    """Validate the new material-input-v1 shape without changing legacy v2."""
+    features = request.get("required_features")
+    fields = {"required_features", "reference_manifest", "reference_media", "request_binding_hash", "math_wrapper_hash", "execution_permit"}
+    present = fields & set(request)
+    if not present:
+        return False
+    if present != fields:
+        _fail("material-input-v1 requires required_features, reference_manifest, and reference_media together", request_id)
+    if features != ["material-input-v1"]:
+        _fail("required_features is unsupported", request_id)
+    manifest = request["reference_manifest"]
+    _exact_fields(manifest, {"mode", "manifest_hash", "assessment_snapshot_id", "assessment_snapshot_hash", "required_media_ids"}, "reference_manifest", request_id)
+    if manifest["mode"] != "reference_images" or not isinstance(manifest["manifest_hash"], str) or not _SHA256.fullmatch(manifest["manifest_hash"]):
+        _fail("reference_manifest identity is invalid", request_id)
+    if not isinstance(manifest["assessment_snapshot_id"], str) or not _INTERNAL_ID.fullmatch(manifest["assessment_snapshot_id"]):
+        _fail("reference_manifest.assessment_snapshot_id is invalid", request_id)
+    if not isinstance(manifest["assessment_snapshot_hash"], str) or not _SHA256.fullmatch(manifest["assessment_snapshot_hash"]):
+        _fail("reference_manifest.assessment_snapshot_hash is invalid", request_id)
+    media_ids = manifest["required_media_ids"]
+    if not isinstance(media_ids, list) or not 1 <= len(media_ids) <= 4 :
+        _fail("reference_manifest.required_media_ids must contain one to four unique images", request_id)
+    if any(not isinstance(value, str) or not _INTERNAL_ID.fullmatch(value) for value in media_ids) or len(media_ids) != len(set(media_ids)):
+        _fail("reference_manifest.required_media_ids contains an invalid image", request_id)
+    media = request["reference_media"]
+    if not isinstance(media, list) or len(media) != len(media_ids) or len(media) > 4:
+        _fail("reference_media must contain exactly the required images", request_id)
+    permit = request["execution_permit"]
+    _exact_fields(permit, {"run_id", "execution_attempt_id", "permit_id", "credential"}, "execution_permit", request_id)
+    for key in ("run_id", "execution_attempt_id", "permit_id"):
+        if not isinstance(permit[key], str) or not _INTERNAL_ID.fullmatch(permit[key]):
+            _fail("execution_permit identity is invalid", request_id)
+    if not isinstance(permit["credential"], str) or not re.fullmatch(r"[a-f0-9-]{36}:[a-f0-9]{64}", permit["credential"]):
+        _fail("execution_permit credential is invalid", request_id)
+    if not isinstance(request["math_wrapper_hash"], str) or not _SHA256.fullmatch(request["math_wrapper_hash"]):
+        _fail("math_wrapper_hash is invalid", request_id)
+    seen = set()
+    role_counts = {"question_diagram": 0, "reference_solution": 0}
+    for index, item in enumerate(media):
+        validate_reference_media(item, request, index)
+        if item["media_id"] in seen or item["media_id"] != media_ids[index] or item["ordinal"] != index+1:
+            _fail("reference_media IDs do not match required_media_ids", request_id)
+        seen.add(item["media_id"])
+        role_counts[item["role"]] += 1
+    if seen != set(media_ids) or any(count > 2 for count in role_counts.values()):
+        _fail("reference_media role or identity limits are invalid", request_id)
+    if [item["media_id"] for item in sorted(media, key=lambda value: value["ordinal"])] != media_ids:
+        _fail("reference_media order must match required_media_ids", request_id)
+    if sum(item["byte_size"] for item in [request["media_evidence"], *media]) > MAX_MEDIA_BYTES or sum(item["width_pixels"] * item["height_pixels"] for item in [request["media_evidence"], *media]) > MAX_MEDIA_PIXELS:
+        _fail("complete image set exceeds the approved resource limit", request_id)
+    if request["reference_manifest"]["assessment_snapshot_id"] != request["math_evidence"]["exam_question_snapshot_id"]:
+        _fail("reference material snapshot does not match student math evidence", request_id)
+    if request["request_binding_hash"] != compute_request_binding_hash(request):
+        _fail("request_binding_hash does not match this request", request_id)
+    return True
+
+
 def validate_request_v2(payload):
     if not isinstance(payload, dict):
         _fail("request body must be an object")
@@ -213,8 +367,14 @@ def validate_request_v2(payload):
     leaked = sorted(set(payload) & _FORBIDDEN_FIELDS)
     if leaked:
         _fail(f"request contains forbidden identity, storage, or final-grade fields: {leaked}", request_id)
+    # 旧 v2 请求和 material-input-v1 请求各自保持严格字段集合；不能把新增
+    # 字段当作可忽略的未知字段，否则旧实例可能静默丢掉参考图。
     optional = {"reference_context"} if "reference_context" in payload else set()
-    _exact_fields(payload, _REQUEST_FIELDS | optional, "request", request_id)
+    material_fields = {"required_features", "reference_manifest", "reference_media", "request_binding_hash", "math_wrapper_hash", "execution_permit"}
+    expected = (_REQUEST_FIELDS - material_fields) | optional
+    if material_fields & set(payload):
+        expected |= material_fields
+    _exact_fields(payload, expected, "request", request_id)
     if payload["schema_version"] != SCHEMA_VERSION:
         _fail("schema_version is unsupported", request_id)
     for field in ("request_id", "question_id", "answer_segment_id"):
@@ -224,13 +384,16 @@ def validate_request_v2(payload):
     # 复用已解析的值，避免重复复制长度受限的 Base64
     # 字符串。v1 校验器只读取数据，因此浅层继承请求信封
     # 就足够，也能让未来 v2 接入时的内存峰值保持可预测。
-    inherited = {key: value for key, value in payload.items() if key not in {"media_evidence", "math_evidence", "reference_context"}}
+    inherited = {key: value for key, value in payload.items() if key not in {"media_evidence", "math_evidence", "reference_context", "required_features", "reference_manifest", "reference_media", "request_binding_hash", "math_wrapper_hash", "execution_permit"}}
     inherited["schema_version"] = "grading-agent-v1"
     validate_request(inherited)
     validate_media_evidence(payload["media_evidence"], payload)
     validate_math_evidence(payload["math_evidence"], request_id)
+    has_materials = validate_reference_materials(payload, request_id)
     if "reference_context" in payload:
         validate_reference_context(payload["reference_context"], request_id)
+    if has_materials and payload["reference_manifest"]["mode"] != "reference_images":
+        _fail("reference material request mode is invalid", request_id)
     return payload
 
 
@@ -344,7 +507,18 @@ def _validate_math_formulas(formulas, known, request_id):
             _fail("math_evidence formula identity or status is invalid", request_id)
         known.add(formula["id"])
         _number_model(formula["confidence"], "math formula confidence", request_id, 0, 1)
-        _bbox_units(formula["bbox"], request_id)
+        _validate_formula_bbox(formula["bbox"], request_id)
+
+
+def _validate_formula_bbox(bbox, request_id):
+    # 公式坐标相对答案裁图，允许占满裁图及像素相除的小数；整页媒体摘要限制仍由 _bbox_units 执行。
+    _exact_fields(bbox, _BBOX_FIELDS, "math_evidence.formula.bbox", request_id)
+    values = (bbox["x"], bbox["y"], bbox["width"], bbox["height"])
+    if any(not _is_number(value) for value in values):
+        _fail("math_evidence.formula.bbox values must be finite numbers", request_id)
+    x, y, width, height = values
+    if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > 1 or y + height > 1:
+        _fail("math_evidence.formula.bbox must stay within the answer crop", request_id)
 
 
 def _validate_crop_bbox(bbox, request_id):
@@ -371,7 +545,12 @@ def _validate_response_binding(suggestion, request):
     request_id = request["request_id"]
     if not isinstance(suggestion, dict):
         _fail_model("suggestion must be an object", request_id)
-    _exact_fields(suggestion, _RESPONSE_FIELDS, "suggestion", request_id)
+    material_fields = {"accepted_features", "manifest_hash", "request_binding_hash"}
+    expected = _RESPONSE_FIELDS - material_fields
+    has_materials = "required_features" in request
+    if has_materials:
+        expected |= material_fields
+    _exact_fields(suggestion, expected, "suggestion", request_id)
     if suggestion["schema_version"] != SCHEMA_VERSION or suggestion["request_id"] != request_id:
         _fail_model("suggestion contract binding mismatch", request_id)
     if suggestion["status"] != "candidate_mapping" or suggestion["delivery"] != "teacher_suggestion":
@@ -380,6 +559,13 @@ def _validate_response_binding(suggestion, request):
         _fail_model("suggestion governance flags are invalid", request_id)
     if suggestion["rubric_version"] != request["rubric_version"] or suggestion["prompt_version"] != request["prompt_version"]:
         _fail_model("suggestion version mismatch", request_id)
+    if has_materials:
+        if suggestion["accepted_features"] != ["material-input-v1"]:
+            _fail_model("suggestion accepted_features does not acknowledge material-input-v1", request_id)
+        if suggestion["manifest_hash"] != request["reference_manifest"]["manifest_hash"]:
+            _fail_model("suggestion manifest hash mismatch", request_id)
+        if suggestion["request_binding_hash"] != compute_request_binding_hash(request):
+            _fail_model("suggestion request binding hash is invalid", request_id)
     if not isinstance(suggestion["alternative_solution_candidate"], bool):
         _fail_model("alternative solution candidate flag is invalid", request_id)
 

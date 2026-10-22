@@ -4,7 +4,7 @@ import { Maximize2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import type { RubricPoint } from "../../../../api/papers";
 import { EmptyState, LoadingState } from "../../../../components/PageState";
 import { ReviewAnnotationWorkspace } from "../../../../components/features/review-annotation";
-import { pointLabel, sourceLabels, taskStatusLabels } from "../gradingWorkbench.model";
+import { pointLabel, taskStatusLabels } from "../gradingWorkbench.model";
 import type { PreviewState, ViewerMode, WorkbenchContext } from "../gradingWorkbench.types";
 import type { MathStepSelection } from "../mathWorkbenchEvidence";
 
@@ -91,7 +91,7 @@ export function AnswerEvidencePane({
           ) : (
             <AnswerFilePreview preview={preview!} onImageLoad={onImageLoad} />
           )}
-          {viewerMode === "segment" && isImage && mathSelection?.segmentId === context.task.answer_segment_id ? <span className="math-step-highlight" role="img" aria-label={`步骤 ${mathSelection.stepId} 的答题位置`} style={{ left: `${mathSelection.bbox.x * 100}%`, top: `${mathSelection.bbox.y * 100}%`, width: `${mathSelection.bbox.width * 100}%`, height: `${mathSelection.bbox.height * 100}%` }}><span>{mathSelection.stepId}</span></span> : null}
+          {viewerMode === "segment" && context.answerScope !== "grading_group" && isImage && mathSelection?.segmentId === context.task.answer_segment_id ? <span className="math-step-highlight" role="img" aria-label={`步骤 ${mathSelection.stepId} 的答题位置`} style={{ left: `${mathSelection.bbox.x * 100}%`, top: `${mathSelection.bbox.y * 100}%`, width: `${mathSelection.bbox.width * 100}%`, height: `${mathSelection.bbox.height * 100}%` }}><span>{mathSelection.stepId}</span></span> : null}
         </div>
       </section>
     );
@@ -102,29 +102,39 @@ export function AnswerEvidencePane({
       <div className="panel-head">
         <div>
           <h2>{context.task.question_no} · 学生答案</h2>
-          <p title={[sourceLabels[context.task.source] ? "" : context.task.source, taskStatusLabels[context.task.status] ? "" : context.task.status].filter(Boolean).join(" / ") || undefined}>{context.task.anonymous_code || "暂无匿名码"} · {sourceLabels[context.task.source] ?? "其他来源"} · {taskStatusLabels[context.task.status] ?? "未知状态"}</p>
+          <p>{taskStatusLabels[context.task.status] ?? "待核对"}</p>
         </div>
         <Space wrap>
           <Segmented<ViewerMode>
             size="small"
             value={viewerMode}
-            options={canViewOriginalImage
-              ? [{ label: "答题区域", value: "segment" }, { label: "原图", value: "original" }, { label: "识别文本", value: "ocr" }]
-              : [{ label: "答题区域", value: "segment" }, { label: "识别文本", value: "ocr" }]}
+            options={[
+              ...(context.gradingGroupImageUrl ? [{ label: "整区", value: "group" as const }] : []),
+              ...(context.answerScope !== "grading_group" ? [{ label: context.gradingGroupImageUrl ? "单题" : "答题区域", value: "segment" as const }] : []),
+              ...(canViewOriginalImage ? [{ label: "原图", value: "original" as const }] : []),
+              { label: "识别文本", value: "ocr" as const }
+            ]}
             onChange={onChangeViewerMode}
           />
+          <Tooltip title="适配窗口"><Button type={autoFit ? "primary" : "default"} icon={<Maximize2 size={14} />} onClick={onFit} aria-label="适配窗口" /></Tooltip>
+        </Space>
+      </div>
+      {viewerMode === "group" ? <p className="muted">正在查看整区，当前录入第 {context.task.question_no} 题得分。</p> : null}
+      {context.answerScope === "grading_group" ? <p className="muted">此题使用人工确认的整区作答图，尚无单题框；各题仍分别计分。</p> : null}
+      {mathSelection?.segmentId === context.task.answer_segment_id && viewerMode === "segment" ? <output className="math-image-selection" style={{ display: "block" }}>已定位 {mathSelection.stepId} · {mathSelection.label}</output> : null}
+      {viewer()}
+      <details className="grading-more-fields">
+        <summary>图像工具与键盘帮助</summary>
+        <div className="grading-more-fields-body"><Space wrap>
           <Tooltip title="缩小"><Button icon={<ZoomOut size={14} />} onClick={() => onZoom(-1)} aria-label="缩小答题图" /></Tooltip>
           <span className="viewer-scale">{Math.round(scale * 100)}%</span>
           <Tooltip title="放大"><Button icon={<ZoomIn size={14} />} onClick={() => onZoom(1)} aria-label="放大答题图" /></Tooltip>
           <Tooltip title="顺时针旋转"><Button icon={<RotateCcw size={14} />} onClick={onRotate} aria-label="旋转答题图" /></Tooltip>
-          <Tooltip title="适配窗口"><Button type={autoFit ? "primary" : "default"} icon={<Maximize2 size={14} />} onClick={onFit} aria-label="适配窗口" /></Tooltip>
           <Button aria-label="键盘平移答题图" aria-describedby={viewerHelpId} onKeyDown={onKeyDown}>键盘平移</Button>
-        </Space>
-      </div>
-      {mathSelection?.segmentId === context.task.answer_segment_id && viewerMode === "segment" ? <output className="math-image-selection" style={{ display: "block" }}>已定位 {mathSelection.stepId} · {mathSelection.label}</output> : null}
-      <p id={viewerHelpId} className="muted">聚焦“键盘平移”按钮后，放大时可用方向键平移，Shift + 方向键加速，Home 适配窗口，Esc 结束拖拽。</p>
-      {viewer()}
-      {context.segmentImageUrl ? (
+        </Space><p id={viewerHelpId} className="muted">聚焦“键盘平移”按钮后，放大时可用方向键平移，Shift + 方向键加速，Home 适配窗口，Esc 结束拖拽。</p>
+        {context.task.anonymous_code ? <p className="muted">答卷标识：{context.task.anonymous_code}</p> : null}</div>
+      </details>
+      {context.answerScope !== "grading_group" && context.segmentImageUrl ? (
         <details className="grading-more-fields">
           <summary>答题区域批注与常用评语</summary>
           <div className="grading-more-fields-body">

@@ -249,7 +249,7 @@ func e2eCollectPostgresAnswerAndAbstainFromAI(t *testing.T, scope postgresWorkfl
 // 只读 HTTP 查询不能移动投影游标；随后重新投影也不能覆盖采集处理人已认领的异常归属。
 func e2eAssertPostgresProcessingProjectionIsReadOnly(t *testing.T, scope postgresWorkflowScope, examID, ocrTaskID string) {
 	t.Helper()
-	db, router, demoTenantID, adminToken, graderID := scope.DB, scope.Router, scope.TenantID, scope.AdminToken, scope.GraderID
+	db, router, demoTenantID, adminToken := scope.DB, scope.Router, scope.TenantID, scope.AdminToken
 	processingStore := processing.NewPostgresStore(db)
 	e2eProjectProcessingUntilCurrent(t, db, processingStore, demoTenantID, examID)
 	var requestedBefore, projectedBefore int64
@@ -275,11 +275,29 @@ func e2eAssertPostgresProcessingProjectionIsReadOnly(t *testing.T, scope postgre
 	if err != nil || len(exceptions.Exceptions) != 1 {
 		t.Fatalf("list projected OCR exception: %#v, %v", exceptions, err)
 	}
-	// 阅卷资格不等于采集处理权限；先保留同校阅卷员被拒绝的反例，再派给具有 capture:manage 的学校管理员。
+	captureManagerID := e2eAssertPostgresProcessingAssigneeIsolation(t, scope, processingStore, exceptions.Exceptions[0].ID)
+	assigned, err := processingStore.AssignException(context.Background(), demoTenantID, exceptions.Exceptions[0].ID, captureManagerID, processing.AssignInput{AssigneeID: captureManagerID})
+	if err != nil || assigned.Status != processing.ExceptionAssigned {
+		t.Fatalf("assign projected OCR exception: %#v, %v", assigned, err)
+	}
+	if _, err := db.Exec(`UPDATE ocr_task SET updated_at=clock_timestamp() WHERE tenant_id=$1::uuid AND id=$2::uuid`, demoTenantID, ocrTaskID); err != nil {
+		t.Fatalf("request processing projection after assignment: %v", err)
+	}
+	e2eProjectProcessingUntilCurrent(t, db, processingStore, demoTenantID, examID)
+	preserved, err := processingStore.GetException(context.Background(), demoTenantID, assigned.ID)
+	if err != nil || preserved.Status != processing.ExceptionAssigned || preserved.AssignedTo != captureManagerID {
+		t.Fatalf("query refresh must preserve manual assignment: %#v, %v", preserved, err)
+	}
+}
+
+// 阅卷资格不等于采集处理权限；同校阅卷员、外校管理员和停用管理员都不能受派。
+func e2eAssertPostgresProcessingAssigneeIsolation(t *testing.T, scope postgresWorkflowScope, processingStore *processing.PostgresStore, exceptionID string) string {
+	t.Helper()
+	db, demoTenantID, graderID := scope.DB, scope.TenantID, scope.GraderID
 	if _, err := db.Exec(`UPDATE app_user SET school_id=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid`, demoTenantID, graderID, scope.SchoolID); err != nil {
 		t.Fatalf("bind grader to workflow school: %v", err)
 	}
-	if _, err := processingStore.AssignException(context.Background(), demoTenantID, exceptions.Exceptions[0].ID, graderID, processing.AssignInput{AssigneeID: graderID}); !errors.Is(err, processing.ErrNotFound) {
+	if _, err := processingStore.AssignException(context.Background(), demoTenantID, exceptionID, graderID, processing.AssignInput{AssigneeID: graderID}); !errors.Is(err, processing.ErrNotFound) {
 		t.Fatalf("grader without capture permission must not receive processing exception: %v", err)
 	}
 	captureManagerID := e2eLookupUserID(t, db, "demo", "school_admin")
@@ -297,29 +315,18 @@ func e2eAssertPostgresProcessingProjectionIsReadOnly(t *testing.T, scope postgre
 		if _, err := db.Exec(`UPDATE app_user SET school_id=$3::uuid,status=$4 WHERE tenant_id=$1::uuid AND id=$2::uuid`, demoTenantID, captureManagerID, blocked.schoolID, blocked.status); err != nil {
 			t.Fatalf("prepare %s assignee: %v", blocked.name, err)
 		}
-		if _, err := processingStore.AssignException(context.Background(), demoTenantID, exceptions.Exceptions[0].ID, graderID, processing.AssignInput{AssigneeID: captureManagerID}); !errors.Is(err, processing.ErrNotFound) {
+		if _, err := processingStore.AssignException(context.Background(), demoTenantID, exceptionID, graderID, processing.AssignInput{AssigneeID: captureManagerID}); !errors.Is(err, processing.ErrNotFound) {
 			t.Fatalf("%s assignee must remain rejected: %v", blocked.name, err)
 		}
 	}
 	if _, err := db.Exec(`UPDATE app_user SET school_id=$3::uuid,status='active' WHERE tenant_id=$1::uuid AND id=$2::uuid`, demoTenantID, captureManagerID, scope.SchoolID); err != nil {
 		t.Fatalf("restore authorized assignee: %v", err)
 	}
-	unchanged, err := processingStore.GetException(context.Background(), demoTenantID, exceptions.Exceptions[0].ID)
+	unchanged, err := processingStore.GetException(context.Background(), demoTenantID, exceptionID)
 	if err != nil || unchanged.Status != processing.ExceptionOpen || unchanged.AssignedTo != "" {
 		t.Fatalf("rejected assignees changed projected exception: %#v, %v", unchanged, err)
 	}
-	assigned, err := processingStore.AssignException(context.Background(), demoTenantID, exceptions.Exceptions[0].ID, captureManagerID, processing.AssignInput{AssigneeID: captureManagerID})
-	if err != nil || assigned.Status != processing.ExceptionAssigned {
-		t.Fatalf("assign projected OCR exception: %#v, %v", assigned, err)
-	}
-	if _, err := db.Exec(`UPDATE ocr_task SET updated_at=clock_timestamp() WHERE tenant_id=$1::uuid AND id=$2::uuid`, demoTenantID, ocrTaskID); err != nil {
-		t.Fatalf("request processing projection after assignment: %v", err)
-	}
-	e2eProjectProcessingUntilCurrent(t, db, processingStore, demoTenantID, examID)
-	preserved, err := processingStore.GetException(context.Background(), demoTenantID, assigned.ID)
-	if err != nil || preserved.Status != processing.ExceptionAssigned || preserved.AssignedTo != captureManagerID {
-		t.Fatalf("query refresh must preserve manual assignment: %#v, %v", preserved, err)
-	}
+	return captureManagerID
 }
 
 // 管理员派发后才可人工评分；临时改派立即阻断原阅卷员读写草稿，再恢复原派发并核对超分拒绝与命令重放。

@@ -19,6 +19,7 @@ func TestWorkerCompletionServiceCompleteAndReuse(t *testing.T) {
 			prepared := preparedWorkerFixture(fixture)
 			output := validServiceOutput()
 			output.RequestID = fixture.run.RequestID
+			output.ModelVersion, output.PromptVersion, output.RubricVersion = fixture.run.ModelVersion, fixture.run.PromptVersion, fixture.run.RubricVersion
 			var existingGrade Grade
 			if existing {
 				var err error
@@ -27,7 +28,7 @@ func TestWorkerCompletionServiceCompleteAndReuse(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			input := WorkerResultInput{TaskID: fixture.task.ID, LeaseToken: fixture.task.LeaseToken, ResultSchemaVersion: "subjective-grade-v1", DurationMS: 15}
+			input := WorkerResultInput{TaskID: fixture.task.ID, LeaseToken: fixture.task.LeaseToken, ResultSchemaVersion: "subjective-grade-v1", DurationMS: 15, Output: output}
 			result, err := NewWorkerCompletionService(fixture.store, fixture.runtime).Complete(context.Background(), workerServiceTenant, "teacher-1", prepared, input, output)
 			if err != nil || result.Run.Status != RunSucceeded || result.Task.Status != workerruntime.StatusSucceeded || result.Run.GradeID != result.Grade.ID {
 				t.Fatalf("result=%#v err=%v", result, err)
@@ -44,7 +45,8 @@ func TestWorkerCompletionServiceRejectsRuntimeConflict(t *testing.T) {
 	prepared := preparedWorkerFixture(fixture)
 	output := validServiceOutput()
 	output.RequestID = fixture.run.RequestID
-	input := WorkerResultInput{TaskID: fixture.task.ID, LeaseToken: "wrong-token", ResultSchemaVersion: "subjective-grade-v1"}
+	output.ModelVersion, output.PromptVersion, output.RubricVersion = fixture.run.ModelVersion, fixture.run.PromptVersion, fixture.run.RubricVersion
+	input := WorkerResultInput{TaskID: fixture.task.ID, LeaseToken: "wrong-token", ResultSchemaVersion: "subjective-grade-v1", Output: output}
 	_, err := NewWorkerCompletionService(fixture.store, fixture.runtime).Complete(context.Background(), workerServiceTenant, "teacher-1", prepared, input, output)
 	if !errors.Is(err, ErrWorkerCompletionRejected) || !errors.Is(err, workerruntime.ErrLeaseMismatch) {
 		t.Fatalf("expected runtime completion conflict, got %v", err)

@@ -1,10 +1,15 @@
 package paper
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
 )
+
+type reviewedTemplateLocker interface {
+	LockTemplateAtRevision(context.Context, string, string, string, int) (AnswerSheetTemplate, error)
+}
 
 func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
@@ -60,7 +65,25 @@ func (h *Handler) UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) LockTemplate(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	item, err := h.templates.LockTemplate(r.Context(), user.TenantID, r.PathValue("id"), user.ID)
+	var item AnswerSheetTemplate
+	var err error
+	if r.ContentLength != 0 {
+		var input struct {
+			ExpectedRevision int `json:"expected_revision"`
+		}
+		if !decodeJSON(w, r, &input) {
+			return
+		}
+		locker, ok := h.templates.(reviewedTemplateLocker)
+		if !ok || input.ExpectedRevision < 1 {
+			writeStoreError(w, r, ErrInvalidInput)
+			return
+		}
+		item, err = locker.LockTemplateAtRevision(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input.ExpectedRevision)
+	} else {
+		// 兼容旧客户端空请求；新收录流程必须提交刚核对并保存的 revision。
+		item, err = h.templates.LockTemplate(r.Context(), user.TenantID, r.PathValue("id"), user.ID)
+	}
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -82,17 +105,13 @@ func (h *Handler) CloneTemplate(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetExamTemplateBinding(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	item, err := h.templateBinding.GetExamTemplateBinding(r.Context(), user.TenantID, r.PathValue("examId"))
-	// 尚未绑定是正常配置状态，返回空绑定供页面选择模板，不当作整个考试不存在。
-	if errors.Is(err, ErrNotFound) {
-		writeJSON(w, http.StatusOK, map[string]any{"binding": nil})
-		return
-	}
+	state, err := h.templateBinding.GetExamTemplateBindingState(r.Context(), user.TenantID, r.PathValue("examId"))
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"binding": item})
+	// 空绑定保留解绑后的游标，供合法重建使用；不能把“当前未绑定”解释成修订号归零。
+	writeJSON(w, http.StatusOK, state)
 }
 
 func (h *Handler) BindExamTemplate(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +126,7 @@ func (h *Handler) BindExamTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.auditAction(r, "exam.answer_sheet_template_bound", "exam", item.ExamID, "bind immutable answer sheet template version")
-	writeJSON(w, http.StatusOK, map[string]any{"binding": item})
+	writeJSON(w, http.StatusOK, map[string]any{"binding": item, "revision": item.Revision})
 }
 
 func (h *Handler) UnbindExamTemplate(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +141,8 @@ func (h *Handler) UnbindExamTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.auditAction(r, "exam.answer_sheet_template_unbound", "exam", item.ExamID, input.Reason)
-	writeJSON(w, http.StatusOK, map[string]any{"binding": item})
+	// 保留已解除的 binding 兼容旧消费者；revision 表示这次解绑提交后的游标。
+	writeJSON(w, http.StatusOK, map[string]any{"binding": item, "revision": item.Revision + 1})
 }
 
 func (h *Handler) GetReadiness(w http.ResponseWriter, r *http.Request) {

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"math"
 )
 
 // ErrImportedObjectiveRuleConflict 表示导入改变题型或分值前，必须先协调已有的教师编写草稿。
@@ -17,7 +18,7 @@ const importedObjectiveRuleOrigin = "paper_import_default"
 // 评分工作台将客观题策略与答案键分开存储。
 // 导入只创建可复核草稿，发布仍需显式操作。
 func objectiveRuleConfig(draft PaperImportDraftQuestion) (map[string]any, bool) {
-	if draft.Score <= 0 || draft.AnswerKey == nil || emptyAnswer(draft.AnswerKey.StandardAnswer) {
+	if draft.Score <= 0 || math.IsNaN(draft.Score) || math.IsInf(draft.Score, 0) || draft.AnswerKey == nil || emptyAnswer(draft.AnswerKey.StandardAnswer) {
 		return nil, false
 	}
 	var config map[string]any
@@ -27,18 +28,46 @@ func objectiveRuleConfig(draft PaperImportDraftQuestion) (map[string]any, bool) 
 		config = map[string]any{"policy": "exact_match", "max_score": draft.Score}
 	case "multiple_choice":
 		config = map[string]any{"policy": "exact_set", "max_score": draft.Score, "allow_partial": false, "wrong_option_penalty": draft.Score, "minimum_score": 0}
-		toleranceFields = []string{"allow_partial", "score_per_correct_option", "wrong_option_penalty", "minimum_score"}
+		toleranceFields = []string{"allow_partial", "score_per_correct_option", "wrong_option_penalty", "minimum_score", "partial_score", "wrong_answer_score"}
 	case "fill_blank":
 		config = map[string]any{"policy": "exact_or_equivalent", "max_score": draft.Score, "ignore_case": false, "ignore_spaces": false, "ignore_punctuation": false}
 		toleranceFields = []string{"ignore_case", "ignore_spaces", "ignore_punctuation"}
+	case "numeric":
+		config = map[string]any{"policy": "numeric_tolerance", "max_score": draft.Score, "absolute": 0.0, "relative": 0.0, "unit_required": false}
+		toleranceFields = []string{"absolute", "relative", "unit_required"}
 	default:
 		return nil, false
 	}
 	// 答案键可能已有从教师材料中提取的显式策略。默认值不能覆盖这些已复核设置。
 	tolerance, _ := draft.AnswerKey.Tolerance.(map[string]any)
+	// 旧数值配置用 value 表示绝对容差；不能被新默认值 absolute=0 遮住。
+	if draft.QuestionType == "numeric" {
+		if value, exists := tolerance["value"]; exists {
+			config["absolute"] = value
+		}
+	}
 	for _, field := range toleranceFields {
 		if value, exists := tolerance[field]; exists {
 			config[field] = value
+		}
+	}
+	if draft.QuestionType == "multiple_choice" {
+		_, fixedPartial := tolerance["partial_score"]
+		_, fixedWrong := tolerance["wrong_answer_score"]
+		legacy := false
+		for _, field := range []string{"allow_partial", "score_per_correct_option", "wrong_option_penalty", "minimum_score"} {
+			if _, exists := tolerance[field]; exists {
+				legacy = true
+			}
+		}
+		// 新规则默认少选、错选均为 0；答案键已有按项计分时保留原政策，不用新字段改变旧卷分数。
+		if fixedPartial || fixedWrong || !legacy {
+			if !fixedPartial {
+				config["partial_score"] = 0
+			}
+			if !fixedWrong {
+				config["wrong_answer_score"] = 0
+			}
 		}
 	}
 	config["origin"] = importedObjectiveRuleOrigin
@@ -112,7 +141,7 @@ func teacherObjectiveDraftCompatible(ruleType string, config map[string]any, dra
 		return false
 	}
 	if raw, ok := config["max_score"]; ok {
-		score, valid := raw.(float64)
+		score, valid := jsonNumericValue(raw)
 		return valid && scoreEqual(score, draft.Score)
 	}
 	// 未包含 max_score 的旧教师规则在评分时使用 question.score。

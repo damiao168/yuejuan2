@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/assessment"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 type PostgresStore struct{ db *sql.DB }
@@ -180,6 +181,10 @@ func (s *PostgresStore) ListExceptions(ctx context.Context, tenantID string, fil
 	if strings.TrimSpace(tenantID) == "" {
 		return ListResult{}, ErrInvalidInput
 	}
+	scopeArgs, err := filter.Access.SQLArgs(tenantID)
+	if err != nil {
+		return ListResult{}, err
+	}
 	if filter.Limit <= 0 || filter.Limit > 100 {
 		filter.Limit = 25
 	}
@@ -187,6 +192,10 @@ func (s *PostgresStore) ListExceptions(ctx context.Context, tenantID string, fil
 	if !filter.CursorAt.IsZero() {
 		cursorAt = filter.CursorAt.UTC()
 	}
+	// 授权谓词先于排序和 LIMIT 执行；同一个考试集合也限制下方的投影时间查询。
+	args := []any{tenantID, filter.ExamID, filter.Severity, filter.Stage, filter.Subject, filter.Status, cursorAt, filter.CursorID}
+	args = append(args, scopeArgs...)
+	args = append(args, filter.Limit+1)
 	rows, err := s.db.QueryContext(ctx, `
 SELECT e.id::text,e.exam_id::text,e.page_id::text,e.source_type,e.source_id::text,e.code,e.severity,e.blocking,e.status,
        COALESCE(e.assigned_to::text,''),e.details_json,e.created_at,e.updated_at,e.resolved_at,COALESCE(e.resolution,''),
@@ -205,9 +214,10 @@ WHERE e.tenant_id=$1::uuid
   AND ($5='' OR lower(x.subject)=lower($5))
   AND ($6='' OR e.status=$6)
   AND ($7::timestamptz IS NULL OR e.created_at < $7 OR (e.created_at=$7 AND e.id::text < $8))
+  AND `+auth.ExamCollectionPredicate("e.exam_id", 9)+`
 ORDER BY e.created_at DESC,e.id DESC
-LIMIT $9
-`, tenantID, filter.ExamID, filter.Severity, filter.Stage, filter.Subject, filter.Status, cursorAt, filter.CursorID, filter.Limit+1)
+LIMIT $13
+`, args...)
 	if err != nil {
 		return ListResult{}, err
 	}
@@ -224,6 +234,9 @@ LIMIT $9
 	if err := rows.Err(); err != nil {
 		return ListResult{}, err
 	}
+	if err := rows.Close(); err != nil {
+		return ListResult{}, err
+	}
 	result := ListResult{Exceptions: items}
 	if len(result.Exceptions) > filter.Limit {
 		result.HasMore = true
@@ -234,11 +247,13 @@ LIMIT $9
 		result.NextCursor = last.CreatedAt.UTC().Format(time.RFC3339Nano) + "|" + last.ID
 	}
 	var projectedAt sql.NullTime
+	projectionArgs := append([]any{tenantID, filter.ExamID}, scopeArgs...)
 	if err := s.db.QueryRowContext(ctx, `
 SELECT MAX(projected_at)
-FROM processing_projection_cursor
-WHERE tenant_id=$1::uuid AND ($2='' OR exam_id::text=$2)
-`, tenantID, filter.ExamID).Scan(&projectedAt); err != nil {
+FROM processing_projection_cursor pc
+WHERE pc.tenant_id=$1::uuid AND ($2='' OR pc.exam_id::text=$2)
+  AND `+auth.ExamCollectionPredicate("pc.exam_id", 3)+`
+`, projectionArgs...).Scan(&projectedAt); err != nil {
 		return ListResult{}, err
 	}
 	if projectedAt.Valid {

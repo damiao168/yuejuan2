@@ -6,6 +6,19 @@ afterEach(() => {
 });
 
 describe("web API diagnostics", () => {
+  it.each([
+    ["route_not_found", "route not found", "route_not_found", "当前功能的服务尚未更新，请联系管理员更新服务后重试。"],
+    ["not_found", "route not found", "route_not_found", "当前功能的服务尚未更新，请联系管理员更新服务后重试。"],
+    ["not_found", "template not found", "not_found", "请求的内容不存在或已被删除。"]
+  ])("distinguishes missing routes from missing records: %s / %s", async (code, message, expectedCode, expectedMessage) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: { code, message }, request_id: "route-diagnostic"
+    }), { status: 404, headers: { "Content-Type": "application/json" } })));
+    await expect(new ApiClient().request("/api/v1/test")).rejects.toMatchObject({
+      status: 404, code: expectedCode, message: expectedMessage, requestId: "route-diagnostic"
+    });
+  });
+
   it("parses chat events across network chunk boundaries", async () => {
     const bytes = new TextEncoder().encode('data: {"type":"reasoning","delta":"思考"}\n\ndata: {"type":"content","delta":"答案"}\n\n');
     const body = new ReadableStream<Uint8Array>({

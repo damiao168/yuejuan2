@@ -56,10 +56,11 @@ type HTTPAdapter struct {
 }
 
 type GradingAgentError struct {
-	Code      string
-	Status    int
-	Retryable bool
-	cause     error
+	Code                 string
+	Status               int
+	Retryable            bool
+	ExecutionDiagnostics *ExecutionDiagnostics
+	cause                error
 }
 
 func (e *GradingAgentError) Error() string {
@@ -132,6 +133,9 @@ func (a *HTTPAdapter) RuntimeStatus() RuntimeStatus {
 
 // 每次重试复用同一个请求 ID 和请求体，保证服务端幂等；只有明确可重试的代理错误才会再次发送。
 func (a *HTTPAdapter) Grade(ctx context.Context, input AdapterInput) (result AdapterOutput, gradeErr error) {
+	if input.InputVersionID != "" {
+		return a.gradeImage(ctx, input)
+	}
 	attempted := false
 	defer func() {
 		if attempted && a.requestObserver != nil {
@@ -160,6 +164,7 @@ func (a *HTTPAdapter) Grade(ctx context.Context, input AdapterInput) (result Ada
 		if requestErr == nil {
 			output, mapErr := a.mapResponse(input, response)
 			if mapErr != nil {
+				mapErr = attachResponseDiagnostics(mapErr, response.Telemetry)
 				return a.failureOutput(requestID, mapErr), mapErr
 			}
 			return output, nil
@@ -304,18 +309,11 @@ func (a *HTTPAdapter) request(ctx context.Context, requestID string, body []byte
 	if readErr != nil {
 		return gradingAgentResponse{}, &GradingAgentError{Code: "agent_response_read_failed", Retryable: true, cause: readErr}
 	}
+	if int64(len(responseBody)) > maxGradingAgentResponseBytes {
+		return gradingAgentResponse{}, &GradingAgentError{Code: "agent_response_too_large"}
+	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		var remote gradingAgentErrorResponse
-		_ = json.Unmarshal(responseBody, &remote)
-		code := strings.TrimSpace(remote.Error.Code)
-		if code == "" {
-			code = "agent_http_error"
-		}
-		return gradingAgentResponse{}, &GradingAgentError{
-			Code:      code,
-			Status:    resp.StatusCode,
-			Retryable: remote.Error.Retryable || resp.StatusCode >= http.StatusInternalServerError,
-		}
+		return gradingAgentResponse{}, parseAgentError(responseBody, resp.StatusCode, gradingAgentSchemaVersion, requestID)
 	}
 	if int64(len(responseBody)) > maxGradingAgentResponseBytes {
 		return gradingAgentResponse{}, &GradingAgentError{Code: "agent_response_too_large"}
@@ -361,6 +359,9 @@ func (a *HTTPAdapter) validateResponseContract(input AdapterInput, response grad
 }
 
 func (a *HTTPAdapter) mapResponse(input AdapterInput, response gradingAgentResponse) (AdapterOutput, error) {
+	if err := validateSuccessDiagnostics(response.Telemetry); err != nil {
+		return AdapterOutput{}, err
+	}
 	if err := a.validateResponseContract(input, response); err != nil {
 		return AdapterOutput{}, err
 	}
@@ -404,15 +405,16 @@ func (a *HTTPAdapter) mapResponse(input AdapterInput, response gradingAgentRespo
 		})
 	}
 	telemetry := AdapterTelemetry{
-		Adapter:         response.Telemetry.Adapter,
-		Provider:        response.Telemetry.Provider,
-		Deployment:      response.Telemetry.Deployment,
-		Region:          response.Telemetry.Region,
-		Attempts:        response.Telemetry.Attempts,
-		RepairAttempted: response.Telemetry.RepairAttempted,
-		PriorErrorCodes: nonNilStrings(response.Telemetry.PriorErrorCodes),
-		ElapsedMS:       response.Telemetry.ElapsedMS,
-		Usage:           response.Telemetry.Usage,
+		Adapter:              response.Telemetry.Adapter,
+		Provider:             response.Telemetry.Provider,
+		Deployment:           response.Telemetry.Deployment,
+		Region:               response.Telemetry.Region,
+		Attempts:             response.Telemetry.Attempts,
+		RepairAttempted:      response.Telemetry.RepairAttempted,
+		PriorErrorCodes:      nonNilStrings(response.Telemetry.PriorErrorCodes),
+		ElapsedMS:            response.Telemetry.ElapsedMS,
+		Usage:                response.Telemetry.Usage,
+		ExecutionDiagnostics: cloneExecutionDiagnostics(response.Telemetry.ExecutionDiagnostics),
 	}
 	return AdapterOutput{
 		RequestID:         response.RequestID,
@@ -460,7 +462,7 @@ func (a *HTTPAdapter) failureOutput(requestID string, err error) AdapterOutput {
 	if errors.As(err, &agentErr) && strings.TrimSpace(agentErr.Code) != "" {
 		code = agentErr.Code
 	}
-	return AdapterOutput{
+	output := AdapterOutput{
 		RequestID:        requestID,
 		NeedsHumanReview: true,
 		Telemetry: AdapterTelemetry{
@@ -479,11 +481,17 @@ func (a *HTTPAdapter) failureOutput(requestID string, err error) AdapterOutput {
 			"error_code": code,
 		},
 	}
+	if agentErr != nil && agentErr.ExecutionDiagnostics != nil {
+		output.Telemetry.ExecutionDiagnostics = cloneExecutionDiagnostics(agentErr.ExecutionDiagnostics)
+		output.Telemetry.Attempts = agentErr.ExecutionDiagnostics.Attempts
+		output.RawOutput["execution_diagnostics"] = output.Telemetry.ExecutionDiagnostics
+	}
+	return output
 }
 
 func agentErrorRetryable(err error) bool {
 	var agentErr *GradingAgentError
-	return errors.As(err, &agentErr) && agentErr.Retryable && agentErr.Code != "model_timeout"
+	return errors.As(err, &agentErr) && agentErr.Retryable && agentErr.Code != "model_timeout" && diagnosticsAllowRetry(agentErr.ExecutionDiagnostics)
 }
 
 func ensureJSONEOF(decoder *json.Decoder) error {
@@ -623,15 +631,16 @@ type gradingAgentEvidence struct {
 }
 
 type gradingAgentTelemetry struct {
-	Adapter         string          `json:"adapter"`
-	Provider        string          `json:"provider"`
-	Deployment      string          `json:"deployment"`
-	Region          string          `json:"region"`
-	Attempts        int             `json:"attempts"`
-	RepairAttempted bool            `json:"repair_attempted"`
-	PriorErrorCodes []string        `json:"prior_error_codes"`
-	ElapsedMS       int64           `json:"elapsed_ms"`
-	Usage           ModelTokenUsage `json:"usage"`
+	Adapter              string                `json:"adapter"`
+	Provider             string                `json:"provider"`
+	Deployment           string                `json:"deployment"`
+	Region               string                `json:"region"`
+	Attempts             int                   `json:"attempts"`
+	RepairAttempted      bool                  `json:"repair_attempted"`
+	PriorErrorCodes      []string              `json:"prior_error_codes"`
+	ElapsedMS            int64                 `json:"elapsed_ms"`
+	Usage                ModelTokenUsage       `json:"usage"`
+	ExecutionDiagnostics *ExecutionDiagnostics `json:"execution_diagnostics,omitempty"`
 }
 
 func firstConfigured(value string, fallback string) string {
@@ -648,6 +657,7 @@ type gradingAgentErrorResponse struct {
 	Error         struct {
 		Code      string `json:"code"`
 		Message   string `json:"message"`
-		Retryable bool   `json:"retryable"`
+		Retryable *bool  `json:"retryable"`
 	} `json:"error"`
+	ExecutionDiagnostics *ExecutionDiagnostics `json:"execution_diagnostics,omitempty"`
 }

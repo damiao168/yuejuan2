@@ -12,7 +12,7 @@ func (s *MemoryStore) ListTemplates(_ context.Context, tenantID string, examID s
 	out := []AnswerSheetTemplate{}
 	for _, item := range s.templates {
 		if item.TenantID == tenantID && item.ExamID == examID {
-			out = append(out, item)
+			out = append(out, cloneTemplateSnapshot(item))
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].VersionNo > out[j].VersionNo })
@@ -20,7 +20,7 @@ func (s *MemoryStore) ListTemplates(_ context.Context, tenantID string, examID s
 }
 
 func (s *MemoryStore) CreateTemplate(_ context.Context, tenantID string, examID string, userID string, input CreateTemplateInput) (AnswerSheetTemplate, error) {
-	input.Layout = NormalizeTemplateLayout(input.Layout)
+	input.Layout = NormalizeTemplateLayout(cloneTemplateLayout(input.Layout))
 	if err := ValidateTemplateInput(input.Name, input.PageCount, input.Layout); err != nil {
 		return AnswerSheetTemplate{}, ErrInvalidInput
 	}
@@ -50,11 +50,11 @@ func (s *MemoryStore) CreateTemplate(_ context.Context, tenantID string, examID 
 	item := AnswerSheetTemplate{ID: s.id("template"), TenantID: tenantID, ExamID: examID, ExamPaperID: input.ExamPaperID, VersionNo: version, Revision: 1, Name: input.Name, Status: "draft", PageCount: input.PageCount, Layout: input.Layout, ContentHash: stableContentHash(input.Layout), CreatedBy: userID, CreatedAt: now, UpdatedAt: now}
 	s.templates[item.ID] = item
 	s.invalidateReadiness(examID)
-	return item, nil
+	return cloneTemplateSnapshot(item), nil
 }
 
 func (s *MemoryStore) UpdateTemplate(_ context.Context, tenantID string, id string, input UpdateTemplateInput) (AnswerSheetTemplate, error) {
-	input.Layout = NormalizeTemplateLayout(input.Layout)
+	input.Layout = NormalizeTemplateLayout(cloneTemplateLayout(input.Layout))
 	if err := ValidateTemplateInput(input.Name, input.PageCount, input.Layout); err != nil {
 		return AnswerSheetTemplate{}, ErrInvalidInput
 	}
@@ -87,10 +87,22 @@ func (s *MemoryStore) UpdateTemplate(_ context.Context, tenantID string, id stri
 	item.UpdatedAt = time.Now().UTC()
 	s.templates[id] = item
 	s.invalidateReadiness(item.ExamID)
-	return item, nil
+	return cloneTemplateSnapshot(item), nil
 }
 
-func (s *MemoryStore) LockTemplate(_ context.Context, tenantID string, id string, userID string) (AnswerSheetTemplate, error) {
+func (s *MemoryStore) LockTemplate(ctx context.Context, tenantID string, id string, userID string) (AnswerSheetTemplate, error) {
+	return s.lockTemplateAtRevision(ctx, tenantID, id, userID, 0)
+}
+
+// LockTemplateAtRevision 在持有同一把写锁时核对用户已审阅的版本；旧空请求仍使用 LockTemplate。
+func (s *MemoryStore) LockTemplateAtRevision(ctx context.Context, tenantID, id, userID string, expectedRevision int) (AnswerSheetTemplate, error) {
+	if expectedRevision < 1 {
+		return AnswerSheetTemplate{}, ErrInvalidInput
+	}
+	return s.lockTemplateAtRevision(ctx, tenantID, id, userID, expectedRevision)
+}
+
+func (s *MemoryStore) lockTemplateAtRevision(_ context.Context, tenantID, id, userID string, expectedRevision int) (AnswerSheetTemplate, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.templates[id]
@@ -103,7 +115,10 @@ func (s *MemoryStore) LockTemplate(_ context.Context, tenantID string, id string
 	if item.Status != "draft" {
 		return AnswerSheetTemplate{}, ErrTemplateLocked
 	}
-	item.Layout = NormalizeTemplateLayout(item.Layout)
+	if expectedRevision > 0 && item.Revision != expectedRevision {
+		return AnswerSheetTemplate{}, ErrConflict
+	}
+	item.Layout = NormalizeTemplateLayout(cloneTemplateLayout(item.Layout))
 	var err error
 	item.Layout, err = s.materializeTemplateOMRReferenceLocked(tenantID, item.ExamID, item.ExamPaperID, item.Layout)
 	if err != nil {
@@ -112,13 +127,16 @@ func (s *MemoryStore) LockTemplate(_ context.Context, tenantID string, id string
 	if err := ValidateTemplateInput(item.Name, item.PageCount, item.Layout); err != nil {
 		return AnswerSheetTemplate{}, ErrInvalidInput
 	}
+	if err := validateTemplateReadyToLock(item.Layout, s.readinessQuestionsLocked(tenantID, item.ExamID)); err != nil {
+		return AnswerSheetTemplate{}, err
+	}
 	now := time.Now().UTC()
 	item.Status, item.LockedBy, item.LockedAt, item.UpdatedAt = "locked", userID, &now, now
 	item.Revision++
 	item.ContentHash = stableContentHash(item.Layout)
 	s.templates[id] = item
 	s.invalidateReadiness(item.ExamID)
-	return item, nil
+	return cloneTemplateSnapshot(item), nil
 }
 
 func (s *MemoryStore) CloneTemplate(_ context.Context, tenantID string, id string, userID string) (AnswerSheetTemplate, error) {
@@ -138,7 +156,7 @@ func (s *MemoryStore) CloneTemplate(_ context.Context, tenantID string, id strin
 		}
 	}
 	now := time.Now().UTC()
-	clone := source
+	clone := cloneTemplateSnapshot(source)
 	clone.ID, clone.VersionNo, clone.Revision = s.id("template"), version, 1
 	clone.Name, clone.Status, clone.CreatedBy = source.Name+" 副本", "draft", userID
 	clone.LockedBy, clone.LockedAt, clone.CreatedAt, clone.UpdatedAt = "", nil, now, now
@@ -150,7 +168,7 @@ func (s *MemoryStore) CloneTemplate(_ context.Context, tenantID string, id strin
 	clone.ContentHash = stableContentHash(clone.Layout)
 	s.templates[clone.ID] = clone
 	s.invalidateReadiness(clone.ExamID)
-	return clone, nil
+	return cloneTemplateSnapshot(clone), nil
 }
 
 func (s *MemoryStore) Readiness(_ context.Context, tenantID string, examID string) (ReadinessResult, error) {
@@ -260,12 +278,18 @@ func (s *MemoryStore) invalidateReadiness(examID string) {
 }
 
 func (s *MemoryStore) materializeTemplateOMRReferenceLocked(tenantID, examID, examPaperID string, layout TemplateLayout) (TemplateLayout, error) {
-	if layout.OMRProfile.Mode != OMRProfileModeTemplateDifference {
+	if layout.OMRProfile.Mode != OMRProfileModeTemplateDifference && layout.EditorState == nil {
 		return BindTemplateOMRReference(layout, TemplateOMRReference{}), nil
 	}
 	paper, ok := s.papers[examPaperID]
 	if !ok || paper.TenantID != tenantID || paper.ExamID != examID {
 		return TemplateLayout{}, ErrInvalidInput
+	}
+	if err := validateTemplateEditorSource(layout, paper.File.HashSHA256); err != nil {
+		return TemplateLayout{}, err
+	}
+	if layout.OMRProfile.Mode != OMRProfileModeTemplateDifference {
+		return BindTemplateOMRReference(layout, TemplateOMRReference{}), nil
 	}
 	reference := TemplateOMRReference{
 		Source:      OMRReferenceSourceExamPaper,

@@ -401,6 +401,7 @@ func postgresConstraint(err error, code string, constraint string) bool {
 }
 
 func (s *PostgresStore) ListStudents(ctx context.Context, tenantID string, filter StudentListFilter) ([]Student, error) {
+	// 同学年转班保留旧学籍；先取仍在读且未结束的记录，避免旧班教师继续从集合读取该学生。
 	query := `SELECT st.id::text,st.tenant_id::text,st.school_id::text,COALESCE(current_enrollment.class_id::text,st.class_id::text,''),
   COALESCE(current_enrollment.academic_year_id::text,''),COALESCE(current_enrollment.grade_cohort_id::text,''),
   st.student_no,st.name,COALESCE(st.gender,''),st.status,COALESCE(st.admission_year,0)
@@ -410,7 +411,7 @@ LEFT JOIN LATERAL (
   FROM student_enrollment enrollment
   JOIN academic_year year ON year.tenant_id=enrollment.tenant_id AND year.id=enrollment.academic_year_id
   WHERE enrollment.tenant_id=st.tenant_id AND enrollment.student_id=st.id AND enrollment.deleted_at IS NULL
-  ORDER BY year.is_current DESC,year.start_year DESC LIMIT 1
+  ORDER BY year.is_current DESC,year.start_year DESC,(enrollment.status='enrolled' AND enrollment.end_date IS NULL) DESC,enrollment.start_date DESC,enrollment.id DESC LIMIT 1
 ) current_enrollment ON true
 WHERE st.tenant_id=$1 AND st.deleted_at IS NULL
   AND ($2='' OR current_enrollment.class_id::text=$2)

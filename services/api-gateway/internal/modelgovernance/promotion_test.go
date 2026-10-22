@@ -98,7 +98,7 @@ func TestManagedApprovalUsesModelConfigAndFrozenScope(t *testing.T) {
 		store.managedConfigs[id] = ManagedAPIConfig{
 			ID: id, TenantID: tenantID, ProviderKey: "deepseek", ModelName: id,
 			ModelVersion: "version-1", Status: "active",
-			LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3",
+			LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v4",
 		}
 	}
 	runInput := validEvaluationRunInput()

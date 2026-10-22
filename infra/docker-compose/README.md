@@ -27,6 +27,10 @@ Copy-Item .env.example .env
 
 ### 本地内部 TLS
 
+`launch-local.ps1` 与 `scripts/init.ps1` 在模型下载、镜像构建和启动部署服务前执行 `scripts/prepare-internal-tls.ps1`。宿主机需 Python 3.11+ 和 OpenSSL；`python` 应在 PATH 中，OpenSSL 不在 PATH 时把 `$env:EDUGRADE_TEST_OPENSSL` 设为其可执行文件绝对路径。
+
+在 local/development/dev/test 环境，只有默认 `certs` 目录完全不存在且五个挂载文件路径均为默认值时，初始化会生成两天有效的测试证书；随后每次验证文件存在、私钥配对、有效期、CA 信任链以及服务和健康 URL 的 DNS/IP。宿主机 `EDUGRADE_*` 覆盖值按 Compose 的优先级一并验证。自定义路径、非本地环境、已存在但不完整的目录及无效或过期证书会直接停止，已有密钥和失败现场保留。轮换时在新目录生成并修改 `.env` 的三个 `*_DIR`，不自动覆盖或删除旧目录。
+
 所有跨容器的 Grading Agent 和数学验证连接都使用 HTTPS，包括 `local`/`development`/`test`。容器仍监听 `0.0.0.0`；不要打开仅限同一主机网络命名空间内 IPv4 回环地址的明文开发例外。
 
 本地隔离开发可用已安装的 OpenSSL 生成两天有效的测试证书，在本目录执行：
@@ -35,7 +39,15 @@ Copy-Item .env.example .env
 python .\scripts\generate-internal-test-certificates.py --environment local --output-dir .\certs --openssl D:\Anaconda3\Library\bin\openssl.exe
 ```
 
+长期使用的本地开发环境可显式指定 `--days 365`，在新目录生成一年期 CA 和服务证书；工具允许 1–3650 天，未指定时仍为两天：
+
+```powershell
+python .\scripts\generate-internal-test-certificates.py --environment local --days 365 --output-dir .\certs\local-development-365d --openssl D:\Anaconda3\Library\bin\openssl.exe
+```
+
 上述 OpenSSL 路径只是当前 Windows 开发机示例，其他主机使用自己的安装路径；Ubuntu CI 自动寻找已安装的 `openssl`。输出目录必须不存在，脚本拒绝覆盖现有证书。已有 `certs` 的部署应在另一个新目录生成，并在未提交的 `.env` 中同步三个 `*_DIR` 路径，不要删除或覆盖正在使用的密钥。
+
+更换 CA 时，所有挂载内部 CA 的 API 和 Worker 都需要重建以加载新信任，两个 TLS 服务端也需重建以加载新证书。保留运行中的镜像版本，先用新的目录值执行证书预检；切换两个服务端后尽快切换客户端，并检查实际 TLS 连接和健康状态。该顺序有短暂调用失败窗口；失败时恢复旧目录并重建本次已切换的服务。延长有效期不等于建立自动续期。
 
 只把 `internal-ca/ca.crt` 和各服务的 `server.crt` / `server.key` 挂载给对应服务；`private-ca` 包含签发私钥，绝不能挂载或作为 CI artifact。测试服务私钥在 POSIX 上是只读、可供不同非 root UID 读取，Windows 还需按本机 ACL 与 Docker 文件共享权限核实可读性。生产使用组织 PKI、受限密钥权限和轮换流程，不使用此脚本生成的测试 CA。
 
@@ -159,7 +171,7 @@ docker compose --env-file .env -f docker-compose.yml up -d --build grading-agent
 
 ```powershell
 docker compose --env-file .env -f docker-compose.yml exec grading-agent python -c "import os,urllib.request; print(urllib.request.urlopen(os.environ['EDUGRADE_GRADING_AGENT_HEALTH_URL'],timeout=3).read().decode())"
-docker compose --env-file .env -f docker-compose.yml exec grading-agent python -c "import os,urllib.request; print(urllib.request.urlopen(os.environ['EDUGRADE_GRADING_AGENT_HEALTH_URL'].removesuffix('/health')+'/ready',timeout=5).read().decode())"
+docker compose --env-file .env -f docker-compose.yml exec grading-agent python -c "import os,ssl,urllib.request; print(urllib.request.urlopen(os.environ['EDUGRADE_GRADING_AGENT_HEALTH_URL'].removesuffix('/health')+'/ready',context=ssl.create_default_context(cafile=os.environ['SSL_CERT_FILE']),timeout=5).read().decode())"
 ```
 
 ## 常用运维

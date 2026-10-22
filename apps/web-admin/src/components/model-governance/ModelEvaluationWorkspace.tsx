@@ -28,7 +28,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getUserErrorMessage } from "../../api/client";
 import type { ManagedModelAPIConfig } from "../../api/modelApiConfig";
-import { modelConfigOptionLabel } from "../../features/platform-model-config/lib/modelConfig";
+import { capabilityVerified, modelConfigOptionLabel } from "../../features/platform-model-config/lib/modelConfig";
 import {
   addModelEvaluationCandidate,
   completeModelEvaluationRun,
@@ -145,6 +145,9 @@ export function ModelEvaluationWorkspace({
   const [candidateDrawerOpen, setCandidateDrawerOpen] = useState(false);
   const [transitionKind, setTransitionKind] = useState<TransitionKind>();
   const [saving, setSaving] = useState(false);
+  const interactionVersion = useRef(0);
+  const mounted = useRef(true);
+  const pendingOperation = useRef<{ version: number; tenantID: string } | null>(null);
   const createScope = useRef<string | undefined>(undefined);
   const candidateScope = useRef<{ tenantID: string; runID: string } | undefined>(undefined);
   const transitionScope = useRef<{ tenantID: string; runID: string } | undefined>(undefined);
@@ -154,6 +157,10 @@ export function ModelEvaluationWorkspace({
   // 打开登记草稿后离开学校须确认；工作区切视图时保持挂载，失败输入仍留在原学校。
   useEffect(() => { onDirtyChange?.(createDrawerOpen || candidateDrawerOpen || Boolean(transitionKind)); return () => onDirtyChange?.(false); }, [createDrawerOpen, candidateDrawerOpen, transitionKind, onDirtyChange]);
   useEffect(() => { onSavingChange?.(saving); return () => onSavingChange?.(false); }, [saving, onSavingChange]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; interactionVersion.current += 1; };
+  }, []);
 
   const filteredRuns = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLocaleLowerCase();
@@ -180,7 +187,25 @@ export function ModelEvaluationWorkspace({
   const selectedRun = runs.find((run) => run.id === selectedRunID);
   // 弹窗或异步表单校验可能跨过权限、学校或冻结状态更新；提交前只认最新范围，不能沿用打开时的条件。
   const currentContext = useRef({ tenantID, canManage, run: selectedRun });
+  if (currentContext.current.tenantID !== tenantID || currentContext.current.canManage !== canManage || currentContext.current.run?.id !== selectedRun?.id) interactionVersion.current += 1;
   currentContext.current = { tenantID, canManage, run: selectedRun };
+  // 打开、关闭或切换批次都会淘汰旧弹窗；网络成功只完成原操作，不能关闭后来打开的新草稿。
+  const liveScope = (operation: { tenantID: string }) => mounted.current && currentContext.current.canManage && currentContext.current.tenantID === operation.tenantID;
+  const currentOperation = (operation: { version: number; tenantID: string }) => liveScope(operation) && interactionVersion.current === operation.version;
+  const beginOperation = () => {
+    if (pendingOperation.current || !mounted.current) return null;
+    const operation = { version: interactionVersion.current, tenantID };
+    pendingOperation.current = operation;
+    // 表单校验也属于保存等待期；先同步锁住外层切校和重复提交，再等待校验。
+    setSaving(true); onSavingChange?.(true);
+    return operation;
+  };
+  const finishOperation = (operation: { version: number; tenantID: string }) => {
+    if (pendingOperation.current !== operation) return;
+    pendingOperation.current = null;
+    if (mounted.current) { setSaving(false); onSavingChange?.(false); }
+  };
+  const selectRun = (id: string) => { interactionVersion.current += 1; setSelectedRunID(id); };
   const canMutateRun = (runID: string, kind: "candidate" | TransitionKind) => {
     const current = currentContext.current;
     return current.canManage && current.tenantID === tenantID && current.run?.id === runID
@@ -188,8 +213,7 @@ export function ModelEvaluationWorkspace({
   };
   const availableConfigs = selectedRun
     ? configs.filter((config) => config.status === "active"
-      && config.last_capability_status === "success"
-      && config.last_capability_probe_version === "structured-json-v3"
+      && capabilityVerified(config)
       && !selectedRun.candidates.some((candidate) => candidate.model_config_id === config.id))
     : [];
   const canCompleteSelected = Boolean(
@@ -281,7 +305,7 @@ export function ModelEvaluationWorkspace({
           icon={<Eye size={14} />}
           onClick={(event) => {
             event.stopPropagation();
-            setSelectedRunID(run.id);
+            selectRun(run.id);
           }}
         >
           对比
@@ -359,6 +383,7 @@ export function ModelEvaluationWorkspace({
 
   const openCreateDrawer = () => {
     if (!canManage) return;
+    interactionVersion.current += 1;
     createScope.current = tenantID;
     createForm.resetFields();
     createForm.setFieldsValue({
@@ -372,6 +397,7 @@ export function ModelEvaluationWorkspace({
 
   const openCandidateDrawer = () => {
     if (!selectedRun || !canMutateRun(selectedRun.id, "candidate")) return;
+    interactionVersion.current += 1;
     candidateScope.current = { tenantID, runID: selectedRun.id };
     const repeatComparisons = selectedRun.sample_count * Math.max(0, selectedRun.repeat_count - 1);
     candidateForm.resetFields();
@@ -391,10 +417,13 @@ export function ModelEvaluationWorkspace({
 
   const submitCreate = async () => {
     if (!currentContext.current.canManage || createScope.current !== tenantID) return;
-    const values = await createForm.validateFields();
-    if (!currentContext.current.canManage || currentContext.current.tenantID !== tenantID || createScope.current !== tenantID) return;
-    setSaving(true); onSavingChange?.(true);
+    const operation = beginOperation();
+    if (!operation) return;
+    let submitted = false;
     try {
+      const values = await createForm.validateFields();
+      if (!currentOperation(operation) || createScope.current !== tenantID) return;
+      submitted = true;
       const response = await createModelEvaluationRun({
         ...values,
         tenant_id: tenantID,
@@ -402,23 +431,27 @@ export function ModelEvaluationWorkspace({
           ? values.authorization_reference
           : undefined
       });
+      if (!currentOperation(operation)) { if (liveScope(operation)) await onRefresh(); return; }
       setCreateDrawerOpen(false);
       setSelectedRunID(response.evaluation_run.id);
       message.success("评测批次已创建，可开始录入候选结果");
       await onRefresh();
     } catch (error) {
-      message.error(errorMessage(error));
+      if (submitted && currentOperation(operation)) message.error(errorMessage(error));
     } finally {
-      setSaving(false); onSavingChange?.(false);
+      finishOperation(operation);
     }
   };
 
   const submitCandidate = async () => {
     if (!selectedRun || !canMutateRun(selectedRun.id, "candidate") || candidateScope.current?.tenantID !== tenantID || candidateScope.current.runID !== selectedRun.id) return;
-    const values = await candidateForm.validateFields();
-    if (!canMutateRun(selectedRun.id, "candidate")) return;
-    setSaving(true); onSavingChange?.(true);
+    const operation = beginOperation();
+    if (!operation) return;
+    let submitted = false;
     try {
+      const values = await candidateForm.validateFields();
+      if (!currentOperation(operation) || !canMutateRun(selectedRun.id, "candidate")) return;
+      submitted = true;
       await addModelEvaluationCandidate(tenantID, selectedRun.id, {
         ...values,
         total_cost_micros: costToMicros(values.total_cost_micros),
@@ -430,41 +463,46 @@ export function ModelEvaluationWorkspace({
           ? 0
           : values.teacher_accepted_samples
       });
+      if (!currentOperation(operation)) { if (liveScope(operation)) await onRefresh(); return; }
       setCandidateDrawerOpen(false);
       message.success("候选评测证据已加入批次");
       await onRefresh();
     } catch (error) {
-      message.error(errorMessage(error));
+      if (submitted && currentOperation(operation)) message.error(errorMessage(error));
     } finally {
-      setSaving(false); onSavingChange?.(false);
+      finishOperation(operation);
     }
   };
 
   const submitTransition = async () => {
     if (!selectedRun || !transitionKind || !canMutateRun(selectedRun.id, transitionKind) || transitionScope.current?.tenantID !== tenantID || transitionScope.current.runID !== selectedRun.id) return;
-    const { reason } = await transitionForm.validateFields();
-    if (!canMutateRun(selectedRun.id, transitionKind)) return;
-    setSaving(true); onSavingChange?.(true);
+    const operation = beginOperation();
+    if (!operation) return;
+    let submitted = false;
     try {
+      const { reason } = await transitionForm.validateFields();
+      if (!currentOperation(operation) || !canMutateRun(selectedRun.id, transitionKind)) return;
+      submitted = true;
       if (transitionKind === "complete") {
         await completeModelEvaluationRun(tenantID, selectedRun.id, reason);
-        message.success("评测批次已冻结，候选证据不再接受修改");
       } else {
         await invalidateModelEvaluationRun(tenantID, selectedRun.id, reason);
-        message.success("评测证据已标记为失效");
       }
+      if (!currentOperation(operation)) { if (liveScope(operation)) await onRefresh(); return; }
+      message.success(transitionKind === "complete" ? "评测批次已冻结，候选证据不再接受修改" : "评测证据已标记为失效");
       setTransitionKind(undefined);
       transitionForm.resetFields();
       await onRefresh();
     } catch (error) {
-      message.error(errorMessage(error));
+      if (submitted && currentOperation(operation)) message.error(errorMessage(error));
     } finally {
-      setSaving(false); onSavingChange?.(false);
+      finishOperation(operation);
     }
   };
 
   const openTransition = (kind: TransitionKind) => {
     if (!selectedRun || !canMutateRun(selectedRun.id, kind)) return;
+    interactionVersion.current += 1;
     transitionScope.current = { tenantID, runID: selectedRun.id };
     transitionForm.resetFields();
     setTransitionKind(kind);
@@ -580,7 +618,7 @@ export function ModelEvaluationWorkspace({
           loading={loading}
           pagination={{ pageSize: 10, hideOnSinglePage: true }}
           locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无符合条件的评测批次" /> }}
-          onRow={(run) => ({ onClick: () => setSelectedRunID(run.id) })}
+          onRow={(run) => ({ onClick: () => selectRun(run.id) })}
           rowClassName={(run) => run.id === selectedRunID ? "model-evaluation-selected-row" : ""}
         />
       </div>
@@ -590,7 +628,7 @@ export function ModelEvaluationWorkspace({
         title="登记已有离线评测报告"
         width={620}
         open={createDrawerOpen}
-        onClose={() => setCreateDrawerOpen(false)}
+        onClose={() => { interactionVersion.current += 1; setCreateDrawerOpen(false); }}
         extra={<Button type="primary" loading={saving} onClick={() => void submitCreate()}>创建批次</Button>}
       >
         <Alert
@@ -679,7 +717,7 @@ export function ModelEvaluationWorkspace({
         title={candidateDrawerTitle}
         width={620}
         open={candidateDrawerOpen}
-        onClose={() => setCandidateDrawerOpen(false)}
+        onClose={() => { interactionVersion.current += 1; setCandidateDrawerOpen(false); }}
         extra={<Button type="primary" loading={saving} onClick={() => void submitCandidate()}>保存候选</Button>}
       >
         {selectedRun ? (
@@ -757,7 +795,7 @@ export function ModelEvaluationWorkspace({
         okButtonProps={{ danger: transitionKind === "invalidate" }}
         confirmLoading={saving}
         onOk={() => void submitTransition()}
-        onCancel={() => setTransitionKind(undefined)}
+        onCancel={() => { interactionVersion.current += 1; setTransitionKind(undefined); }}
       >
         <Alert
           type={transitionKind === "complete" ? "warning" : "error"}

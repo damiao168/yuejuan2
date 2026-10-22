@@ -7,6 +7,8 @@ export interface FastConfirmCandidate { grade: AiGrade; score: number; threshold
 // 有评分细则、数学证据、高风险或 AI 证据不完整的条目，
 // 仍留在完整工作台中逐项判断。
 export function fastConfirmCandidate(context: WorkbenchContext, userId: string): FastConfirmCandidate | null {
+  // 当前执行已失败时，历史成功建议也不能快捷确认；不要依赖调用方是否生成了警告文案。
+  if (context.reviewContext.ai_failure) return null;
   const snapshot = context.reviewContext.question_snapshot;
   if (snapshot.scoring_policy_snapshot.mode !== "AI_FAST_CONFIRM" || !["R1", "R2"].includes(snapshot.risk_tier) || snapshot.subject_code === "mathematics") return null;
   if (context.task.assigned_to !== userId || !["assigned", "in_progress", "returned"].includes(context.task.status)) return null;

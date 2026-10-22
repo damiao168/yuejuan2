@@ -228,6 +228,10 @@ func TestPlatformModelRoutesUseSeparatePermissions(t *testing.T) {
 	}{
 		{"read configs", "model:read", http.MethodGet, "/api/v1/platform/model-api-configs", true},
 		{"read panel", "model:read", http.MethodGet, "/api/v1/platform/panel-model-bindings", true},
+		{"read applications", "model:read", http.MethodGet, "/api/v1/platform/model-applications", true},
+		{"read cannot select parser", "model:read", http.MethodPut, "/api/v1/platform/document-model-selection", false},
+		{"managed API can select parser", "model:managed_api:manage", http.MethodPut, "/api/v1/platform/document-model-selection", true},
+		{"panel cannot select parser", "model:panel:manage", http.MethodPut, "/api/v1/platform/document-model-selection", false},
 		{"read cannot write config", "model:read", http.MethodPost, "/api/v1/platform/model-api-configs", false},
 		{"read cannot write panel", "model:read", http.MethodPut, "/api/v1/platform/panel-model-bindings", false},
 		{"managed API can write config", "model:managed_api:manage", http.MethodPost, "/api/v1/platform/model-api-configs", true},

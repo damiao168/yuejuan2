@@ -4,6 +4,7 @@ import { Alert, Button, Card, Input, Progress, Space, Tag } from "antd";
 import { Play, RefreshCw, Sparkles } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
 import { enqueueSubjectiveGradingBatch, getSubjectiveGradingBatch, recoverSubjectiveEnqueueCommand, type SubjectiveGradingBatch } from "../api/subjectiveGrading";
+import { AIExecutionFailureSummary } from "../features/grading/AIExecutionFailureSummary";
 
 function errorMessage(error: unknown) {
   return getUserErrorMessage(error, "主观题批次操作失败");
@@ -28,12 +29,17 @@ function newBatchIdempotencyKey() {
   return `admin-${crypto.randomUUID()}`;
 }
 
+function readBatchCommand(key: string) {
+  // 可选恢复信息读取失败时不让页面崩溃；新命令仍须成功落盘才发送，不能改成不受控内存重试。
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
 export function SubjectiveGradingBatchPage({ scopeKey }: Readonly<{ scopeKey: string }>) {
   const storageKey = `subjective-batch-command:${scopeKey}`;
   const busy = useRef(false);
-  const [pending, setPending] = useState(() => Boolean(localStorage.getItem(storageKey)));
+  const [pending, setPending] = useState(() => Boolean(readBatchCommand(storageKey)));
   useEffect(() => {
-    const id = localStorage.getItem(`${storageKey}:batch`);
+    const id = readBatchCommand(`${storageKey}:batch`);
     let disposed = false;
     if (id) void getSubjectiveGradingBatch(id).then(result => { if (!disposed) setBatch(result.batch); }).catch(error => { if (!disposed) setError(errorMessage(error)); });
     return () => { disposed = true; };
@@ -122,7 +128,7 @@ export function SubjectiveGradingBatchPage({ scopeKey }: Readonly<{ scopeKey: st
       setPending(false);
     } catch (createError) {
       setError(errorMessage(createError));
-      setPending(Boolean(localStorage.getItem(storageKey)));
+      setPending(Boolean(readBatchCommand(storageKey)));
     } finally {
       busy.current = false;
       setLoading(false);
@@ -192,6 +198,7 @@ export function SubjectiveGradingBatchPage({ scopeKey }: Readonly<{ scopeKey: st
       {batch ? <Card title={<Space>批次进度 <Tag color={batchStatusColor(batch.status)}>{batchStatusLabels[batch.status] ?? "未知状态"}</Tag></Space>} extra={<Space><Button icon={<Play size={15} />} disabled={batch.status !== "planned" && batch.status !== "processing"} loading={loading} onClick={() => void enqueue()}>入队评分</Button><Button icon={<RefreshCw size={15} />} loading={loading} onClick={() => void refresh()}>刷新</Button></Space>}>
         <Progress percent={progress} status={batch.failed_count ? "exception" : undefined} />
         <div className="subjective-batch-counts"><span><strong>{batch.total_count}</strong>总量</span><span><strong>{batch.queued_count}</strong>排队</span><span><strong>{batch.processing_count}</strong>处理中</span><span><strong>{batch.succeeded_count}</strong>成功</span><span className={batch.failed_count ? "danger" : ""}><strong>{batch.failed_count}</strong>失败</span></div>
+        <AIExecutionFailureSummary summary={batch.failure_summary} />
       </Card> : null}
     </div>
   );

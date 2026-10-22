@@ -133,6 +133,8 @@ export function SubmissionCapturePage({
   const loadCaptureData = useCallback(
     async (examId: string) => {
       const requestId = captureRequestRef.current.begin();
+      // 首读新考试或刷新时终止旧结果集的分页状态；旧分页回执仍由请求代次淘汰。
+      setLoadingMore(false);
       if (!examId) {
         setRows([]);
         setNextSubmissionCursor("");

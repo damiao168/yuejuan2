@@ -132,7 +132,7 @@ def test_multiple_quality_issues_keep_order_and_hard_gate_severity() -> None:
     }
     gates = [
         {"code": code, "status": "failed"}
-        for code in ("low_effective_resolution", "severe_blur", "incomplete_page")
+        for code in ("low_effective_resolution", "severe_blur")
     ]
 
     issues = policy._issues(values, shape, gates)
@@ -141,10 +141,8 @@ def test_multiple_quality_issues_keep_order_and_hard_gate_severity() -> None:
         "low_effective_resolution",
         "low_sharpness",
         "blank_page",
-        "incomplete_page_border",
         "perspective_risk",
         "residual_skew",
-        "large_rotation_risk",
         "bad_exposure",
         "shadow_risk",
         "low_local_contrast",
@@ -152,18 +150,17 @@ def test_multiple_quality_issues_keep_order_and_hard_gate_severity() -> None:
         "occlusion_risk",
         "noise_or_compression",
     ]
-    assert [item["severity"] for item in issues[:4]] == [
+    assert [item["severity"] for item in issues[:3]] == [
         "failed",
         "failed",
         "review",
-        "failed",
     ]
     assert issues[1]["metric"] == "sharpness_score"
     assert issues[1]["parameters"] == {
         "window": "local_focus_map",
         "blur_pattern": "not_detected",
     }
-    assert all(item["severity"] == "review" for item in issues[4:])
+    assert all(item["severity"] == "review" for item in issues[3:])
     assert policy._decision(100.0, issues, gates, ["limited_deskew"]) == (
         "REJECT",
         "failed",

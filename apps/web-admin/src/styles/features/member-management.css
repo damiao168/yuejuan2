@@ -1,7 +1,7 @@
 .exam-workspace-module { min-width: 0; }
 .exam-module-return { margin: 0 0 10px; padding-inline: 0 !important; }
 
-.member-management-page { display: grid; gap: 16px; }
+.member-management-page { display: grid; gap: 16px; min-width: 0; }
 .class-management-page { container: class-management / inline-size; }
 .class-management-scope { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 900px; }
 .class-management-scope label { display: grid; gap: 6px; min-width: 0; color: var(--text-muted); font-size: var(--eg-font-caption); }
@@ -33,6 +33,26 @@
 .member-management-filters .ant-input-search { width: min(100%, 360px); }
 .member-management-filters > span { color: var(--text-muted); font-size: var(--eg-font-caption); }
 .member-administrator-alert { margin-bottom: 14px; }
+/* 长姓名和多项职责可以换行；状态和操作保留单行，表格始终使用容器宽度。 */
+.responsive-desktop-table.member-management-table table {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+}
+.responsive-desktop-table.member-management-table .ant-table-cell {
+  padding-inline: 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.responsive-desktop-table.member-management-table .ant-table-cell:nth-child(5),
+.responsive-desktop-table.member-management-table .ant-table-cell:last-child { white-space: nowrap; }
+.responsive-desktop-table.member-management-table .ant-table-cell .ant-space {
+  max-width: none;
+  flex-wrap: nowrap;
+}
+.responsive-desktop-table.member-management-table .ant-table-cell .ant-space-item { flex-shrink: 0; }
+.responsive-desktop-table.member-management-table .ant-table-cell .ant-btn { padding-inline: 4px; white-space: nowrap; }
 .paper-advanced-settings { margin: 12px 0; border-top: 1px solid var(--border); }
 .paper-advanced-settings > summary { padding: 12px 2px; color: var(--primary); font-size: var(--eg-font-body); font-weight: 600; cursor: pointer; }
 .paper-advanced-settings[open] > summary { margin-bottom: 12px; }

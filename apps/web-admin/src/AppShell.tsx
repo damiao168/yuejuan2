@@ -1,6 +1,6 @@
 import { PendingBusinessCommands } from "./components/PendingBusinessCommands";
 import { setBusinessCommandScope } from "./api/businessCommand";
-import { Suspense, useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { App as AntApp, ConfigProvider } from "antd";
@@ -14,7 +14,6 @@ import { clearAllReviewDraftFallbacks, clearReviewDraftFallbacks } from "./auth/
 import { clearLegacyRememberedLogin, clearPublicComputerData } from "./auth/loginSecurity";
 import { StepUpProvider } from "./auth/stepUpContext";
 import { AppLayout } from "./components/AppLayout";
-import { ErrorBoundary } from "./components/ErrorBoundary";
 import { LoadingState } from "./components/PageState";
 import { LoginPage } from "./pages/LoginPage";
 import { ActivationPage } from "./pages/ActivationPage";
@@ -33,6 +32,8 @@ import type { LoginFormValues } from "./pages/LoginPage";
 import { legacyRedirectForPath, normalizeEntryPath } from "./router/navigation";
 import { OnboardingGate } from "./features/onboarding/OnboardingGate";
 import { renderAppRouteContent } from "./router/pageRendering";
+import { RouteContent } from "./router/RouteContent";
+import "./router/route-content.css";
 import { SchoolAssistantProvider } from "./features/school-assistant/SchoolAssistantProvider";
 
 export function AppShell() {
@@ -254,7 +255,9 @@ export function AppShell() {
     );
   }
 
-  // 直接返回原页面元素，不加 keyed 包装，原来的页面状态、lazy 和账户/考试 key 边界保持不变。
+  // 普通导航保留旧画面直到新模块和首屏数据就绪；账户、身份或授权变化时立即清除旧范围内容。
+  const routeScopeKey = JSON.stringify([user.tenant, user.id, experience,
+    [...user.roles].sort(), [...user.permissions].sort(), user.organizationScope, user.publicComputer]);
   const content = renderAppRouteContent({
     user, route, path, experience, navigationExperience, examWorkspace, queryClient, navigate, logout
   });
@@ -278,9 +281,9 @@ export function AppShell() {
           <SchoolAssistantProvider user={user} onNavigate={navigate} locationKey={`${navigationExperience}:${canonicalPath}`}>
             <OnboardingGate user={user} currentPath={canonicalPath} navigate={navigate} />
             <PendingBusinessCommands key={`${user.tenant}:${user.id}`} tenant={user.tenant} actor={user.id} onNavigate={navigate} />
-            <ErrorBoundary resetKey={`${navigationExperience}:${canonicalPath}`}>
-              <Suspense fallback={<LoadingState label="正在加载页面" />}>{content}</Suspense>
-            </ErrorBoundary>
+            <RouteContent scopeKey={routeScopeKey} locationKey={`${navigationExperience}:${path}`} title={route.title}>
+              {content}
+            </RouteContent>
           </SchoolAssistantProvider>
         </AppLayout>
       </StepUpProvider>

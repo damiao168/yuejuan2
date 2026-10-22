@@ -164,11 +164,11 @@ func reviewBatch34Session() DoubleMarkSession {
 
 func reviewBatch34ContextSteps() []reviewBatch34Step {
 	return []reviewBatch34Step{
-		{name: "answer context", fragment: "FROM answer_segment seg", columns: 31, args: []any{"tenant", "segment"}, rows: [][]driver.Value{{
+		{name: "answer context", fragment: "FROM answer_segment seg", columns: 32, args: []any{"tenant", "segment"}, rows: [][]driver.Value{{
 			"exam", "submission", "anonymous", "segment", []byte(`{}`),
 			"question", "tenant", "exam", "", "Q1", "short_answer", float64(10.5), "stem",
 			[]byte(`[]`), []byte(`null`), int64(1), "active", "", "", "", "", float64(0),
-			[]byte(`[]`), []byte(`[]`), []byte(`[]`), "answer", "manual", []byte(`null`), []byte(`null`), []byte(`null`), []byte(`null`),
+			[]byte(`[]`), []byte(`[]`), []byte(`[]`), "answer", "manual", []byte(`null`), []byte(`null`), []byte(`null`), []byte(`null`), "answer-version",
 		}}},
 		{name: "automation context", fragment: "FROM (SELECT 1) seed", columns: 10, args: []any{"tenant", "segment"},
 			rows: [][]driver.Value{{"", "", nil, "", "", []byte(`null`), "", nil, nil, ""}}},

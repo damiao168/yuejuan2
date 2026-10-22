@@ -135,8 +135,78 @@ func TestAutoManagedAPIConfigReusesSchoolCredentialForAnotherModel(t *testing.T)
 	}
 	if _, _, _, err = service.Create(ctx, "school-a", "actor", AutoManagedAPIConfigInput{
 		CredentialSourceID: first.ID, Provider: "deepseek", ModelName: "deepseek-v5",
-	}); !errors.Is(err, ErrInvalidManagedConfig) {
+	}); !errors.Is(err, ErrManagedCredentialSourceDisabled) {
 		t.Fatalf("disabled credential source must not be reused: %v", err)
+	}
+}
+
+func TestManagedAPIHandlersExplainDisabledCredentialSource(t *testing.T) {
+	for _, action := range []string{"models", "validate", "auto"} {
+		t.Run(action, func(t *testing.T) {
+			store := NewMemoryStore()
+			const tenantID = "00000000-0000-0000-0000-000000000020"
+			const secret = "disabled-secret-at-least-16"
+			source, err := store.CreateManagedAPIConfig(context.Background(), tenantID, "actor", ManagedAPIConfigInput{
+				ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+				BaseURL: "https://api.deepseek.com", APIKey: secret, ModelName: "deepseek-chat",
+				ModelVersion: "deepseek-chat", Region: "global", Status: "disabled",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			seenKey := ""
+			handler := NewHandler(store, nil, NewEnvironmentSecretResolver(t.TempDir()), testBaseline()).
+				WithManagedAPIProber(listingManagedProber{keySeen: &seenKey})
+			user := auth.User{ID: "actor", TenantID: auth.PlatformTenantID, Permissions: []string{"model:provider:manage"}}
+			handle := handler.ListAvailableManagedAPIModels
+			if action == "validate" {
+				handle = handler.ValidateManagedAPIConfig
+			} else if action == "auto" {
+				handle = handler.AutoCreateManagedAPIConfig
+			}
+			response := performHandlerRequest(t, user, http.MethodPost, "/api/v1/platform/model-api-configs/"+action, `{
+				"tenant_id":"`+tenantID+`","credential_source_id":"`+source.ID+`",
+				"provider":"deepseek","model_name":"deepseek-reasoner"
+			}`, handle)
+			if response.Code != http.StatusConflict ||
+				!strings.Contains(response.Body.String(), `"code":"managed_model_credential_source_disabled"`) ||
+				!strings.Contains(response.Body.String(), "请先启用") || strings.Contains(response.Body.String(), secret) || seenKey != "" {
+				t.Fatalf("disabled source must return an actionable conflict before discovery: status=%d body=%s", response.Code, response.Body.String())
+			}
+			items, err := store.ListManagedAPIConfigs(context.Background(), tenantID)
+			if err != nil || len(items) != 1 || items[0].Status != "disabled" {
+				t.Fatalf("rejected reuse must not create or enable a config: count=%d err=%v", len(items), err)
+			}
+		})
+	}
+}
+
+func TestManagedAPIModelDiscoveryResumesAfterSourceEnabled(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	source, err := store.CreateManagedAPIConfig(ctx, "school-a", "actor", ManagedAPIConfigInput{
+		ProviderKey: "deepseek", DisplayName: "DeepSeek", AdapterType: "openai_compatible",
+		BaseURL: "https://api.deepseek.com", APIKey: "disabled-secret-at-least-16", ModelName: "deepseek-chat",
+		ModelVersion: "deepseek-chat", Region: "global", Status: "disabled",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	seenKey := ""
+	service := NewAutoManagedAPIConfigService(store, listingManagedProber{models: []string{"deepseek-reasoner"}, keySeen: &seenKey})
+	input := AutoManagedAPIConfigInput{CredentialSourceID: source.ID, Provider: "deepseek"}
+	if _, _, _, err = service.ListModels(ctx, "school-a", input); !errors.Is(err, ErrManagedCredentialSourceDisabled) || seenKey != "" {
+		t.Fatalf("disabled source must stop before the provider request: err=%v", err)
+	}
+	if _, err = store.UpdateManagedAPIConfig(ctx, "school-a", source.ID, ManagedAPIConfigUpdateInput{
+		DisplayName: source.DisplayName, AdapterType: source.AdapterType, BaseURL: source.BaseURL,
+		ModelName: source.ModelName, ModelVersion: source.ModelVersion, Region: source.Region, Status: "active",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_, list, result, err := service.ListModels(ctx, "school-a", input)
+	if err != nil || !result.OK || len(list.Models) != 1 || seenKey != "disabled-secret-at-least-16" {
+		t.Fatalf("enabled source should allow discovery without a model name: err=%v", err)
 	}
 }
 
@@ -483,7 +553,7 @@ func TestManagedAPIConfigHandlerRejectsUnverifiedBackupAsCurrent(t *testing.T) {
 	request = request.WithContext(auth.WithUser(request.Context(), user))
 	response := httptest.NewRecorder()
 	handler.UpdateManagedAPIConfig(response, request)
-	if response.Code != http.StatusConflict || calls != 0 || !strings.Contains(response.Body.String(), "managed_model_capability_required") {
+	if response.Code != http.StatusConflict || calls != 0 || !strings.Contains(response.Body.String(), "managed_model_text_required") {
 		t.Fatalf("unverified promotion returned %d calls=%d body=%s", response.Code, calls, response.Body.String())
 	}
 }
@@ -581,6 +651,7 @@ func successfulManagedProbe() ManagedAPIProbeResult {
 	return ManagedAPIProbeResult{
 		OK: true, StatusCode: 200, LatencyMS: 18, Message: "配置验证成功",
 		CredentialCheck: ManagedAPICheckResult{OK: true}, ModelCheck: ManagedAPICheckResult{OK: true},
+		TextCheck:       ManagedAPICheckResult{OK: true},
 		CapabilityCheck: ManagedAPICheckResult{OK: true},
 	}
 }
@@ -608,6 +679,10 @@ func (p recordingManagedProber) Probe(_ context.Context, connection ManagedAPICo
 	return successfulManagedProbe()
 }
 
+func (p recordingManagedProber) ProbeText(ctx context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult {
+	return managedTextProbeFixture(p.Probe(ctx, connection))
+}
+
 type generatedOnlyManagedProber struct {
 	calls *int
 }
@@ -628,6 +703,10 @@ func (p countingManagedProber) ProbeQuick(_ context.Context, _ ManagedAPIConnect
 	result.ProbeMode = "quick"
 	result.GeneratedRequest = false
 	return result
+}
+
+func (p countingManagedProber) ProbeText(ctx context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult {
+	return managedTextProbeFixture(p.Probe(ctx, connection))
 }
 
 type listingManagedProber struct {

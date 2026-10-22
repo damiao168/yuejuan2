@@ -67,7 +67,7 @@ test("左侧显示固定准备任务，右侧仅显示当前任务", async ({ pa
   await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
   await page.goto("/#/admin/exams/exam-created-math/settings", { waitUntil: "domcontentloaded" });
 
-  await expect(page.getByRole("heading", { name: "准备检查与确认" })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("heading", { name: "确认准备完成" })).toBeVisible({ timeout: 60_000 });
   await expect(page.locator(".exam-preparation-nav button > span:last-child")).toHaveText([
     "学生范围", "考试资料", "小题与分值", "答题卡设置", "确认准备完成"
   ]);

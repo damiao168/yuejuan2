@@ -25,30 +25,47 @@ func (s *PostgresStore) GetOrCreateRun(ctx context.Context, tenantID string, _ s
 	if !validRunPanelRole(input.PanelID, input.AgentRole) {
 		return GradingRun{}, ErrInvalidInput
 	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return GradingRun{}, err
+	}
+	defer tx.Rollback()
+	if input.ExamQuestionSnapshotID != "" {
+		var matches bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM exam_question_snapshot WHERE tenant_id=$1::uuid AND id=$2::uuid AND question_id=$3::uuid AND rubric_snapshot_json->>'version'=$4)`, tenantID, input.ExamQuestionSnapshotID, input.QuestionID, input.RubricVersion).Scan(&matches); err != nil {
+			return GradingRun{}, err
+		}
+		if !matches {
+			return GradingRun{}, ErrIdempotencyConflict
+		}
+	}
+	if err := validateTrialRunInTx(ctx, tx, tenantID, input); err != nil {
+		return GradingRun{}, err
+	}
 	status := RunProcessing
 	attemptCount := 1
 	if input.BatchID != "" || input.PanelID != "" {
 		status = RunQueued
 		attemptCount = 0
 	}
-	row := s.db.QueryRowContext(ctx, `
+	row := tx.QueryRowContext(ctx, `
 INSERT INTO subjective_grading_run (
   tenant_id, batch_id, answer_segment_id, answer_version, question_id, rubric_version,
   model_version, prompt_version, min_confidence, request_id, panel_id, agent_role,
   math_artifact_id, math_artifact_version, math_correction_revision, math_scoring_version,
-  status, attempt_count, started_at
+  status, attempt_count, started_at, exam_question_snapshot_id
 )
 VALUES ($1::uuid, NULLIF($2, '')::uuid, $3::uuid, $4, $5::uuid, $6, $7, $8, $9, $10, NULLIF($11, '')::uuid, $12,
-  NULLIF($13, '')::uuid, $14, $15, $16, $17, $18, CASE WHEN $17 = 'processing' THEN now() ELSE NULL END)
+  NULLIF($13, '')::uuid, $14, $15, $16, $17, $18, CASE WHEN $17 = 'processing' THEN now() ELSE NULL END, NULLIF($19, '')::uuid)
 ON CONFLICT (tenant_id, request_id) DO UPDATE SET updated_at = subjective_grading_run.updated_at
 RETURNING id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segment_id::text, answer_version,
   question_id::text, rubric_version, model_version, prompt_version, min_confidence::float8, request_id,
   COALESCE(panel_id::text, ''), agent_role,
   COALESCE(math_artifact_id::text, ''), math_artifact_version, math_correction_revision, math_scoring_version,
   status, attempt_count, COALESCE(grade_id::text, ''), COALESCE(error_code, ''),
-  started_at, completed_at, created_at, updated_at
+  started_at, completed_at, created_at, updated_at, execution_diagnostics, COALESCE(exam_question_snapshot_id::text, '')
 `, tenantID, input.BatchID, input.AnswerSegmentID, input.AnswerVersion, input.QuestionID, input.RubricVersion, input.ModelVersion, input.PromptVersion, input.MinConfidence, input.RequestID,
-		input.PanelID, input.AgentRole, input.MathArtifactID, input.MathArtifactVersion, input.MathCorrectionRevision, input.MathScoringVersion, status, attemptCount)
+		input.PanelID, input.AgentRole, input.MathArtifactID, input.MathArtifactVersion, input.MathCorrectionRevision, input.MathScoringVersion, status, attemptCount, input.ExamQuestionSnapshotID)
 	run, err := scanRun(row)
 	if err != nil {
 		if input.PanelID != "" && panelPersistenceConflict(err) {
@@ -56,10 +73,10 @@ RETURNING id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segmen
 		}
 		return GradingRun{}, err
 	}
-	if input.PanelID != "" && !runPanelIdentityMatches(run, input) {
+	if run.ExamQuestionSnapshotID != input.ExamQuestionSnapshotID || input.PanelID != "" && !runPanelIdentityMatches(run, input) {
 		return GradingRun{}, ErrIdempotencyConflict
 	}
-	return run, nil
+	return run, tx.Commit()
 }
 
 // 通过带 status=queued 条件的更新做原子抢占，只有成功更新的 worker 才能调用模型。
@@ -77,7 +94,7 @@ RETURNING id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segmen
   COALESCE(panel_id::text, ''), agent_role,
   COALESCE(math_artifact_id::text, ''), math_artifact_version, math_correction_revision, math_scoring_version,
   status, attempt_count, COALESCE(grade_id::text, ''), COALESCE(error_code, ''),
-  started_at, completed_at, created_at, updated_at`, tenantID, runID)
+  started_at, completed_at, created_at, updated_at, execution_diagnostics, COALESCE(exam_question_snapshot_id::text, '')`, tenantID, runID)
 	run, err := scanRun(row)
 	if err == nil {
 		return run, true, nil
@@ -96,10 +113,26 @@ RETURNING id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segmen
 }
 
 func (s *PostgresStore) UpdateRun(ctx context.Context, tenantID string, runID string, input UpdateRunInput) (GradingRun, error) {
+	return updateRunInDB(ctx, s.db, tenantID, runID, input)
+}
+
+func updateRunInDB(ctx context.Context, query rowQueryer, tenantID string, runID string, input UpdateRunInput) (GradingRun, error) {
 	if input.Status != RunQueued && input.Status != RunProcessing && input.Status != RunSucceeded && input.Status != RunFailed && input.Status != RunConflict {
 		return GradingRun{}, ErrInvalidInput
 	}
-	row := s.db.QueryRowContext(ctx, `
+	if err := validateExecutionDiagnostics(input.ExecutionDiagnostics); err != nil {
+		return GradingRun{}, err
+	}
+	var diagnostics any
+	if input.ExecutionDiagnostics != nil {
+		raw, err := json.Marshal(input.ExecutionDiagnostics)
+		if err != nil {
+			return GradingRun{}, err
+		}
+		diagnostics = string(raw)
+	}
+	// 旧协议成功响应没有诊断时必须清除上次失败；排队和处理中仍保留最近已知事实。
+	row := query.QueryRowContext(ctx, `
 UPDATE subjective_grading_run
 SET status=$3,
   grade_id=NULLIF($4, '')::uuid,
@@ -107,6 +140,7 @@ SET status=$3,
   attempt_count=CASE WHEN $6 > 0 THEN $6 ELSE attempt_count END,
   started_at=CASE WHEN $3 = 'processing' THEN COALESCE(started_at, now()) ELSE started_at END,
   completed_at=CASE WHEN $3 IN ('succeeded','failed','conflict') THEN now() ELSE completed_at END,
+  execution_diagnostics=CASE WHEN $3='succeeded' THEN $7::jsonb ELSE COALESCE($7::jsonb, execution_diagnostics) END,
   updated_at=now()
 WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
 RETURNING id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segment_id::text, answer_version,
@@ -114,22 +148,30 @@ RETURNING id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segmen
   COALESCE(panel_id::text, ''), agent_role,
   COALESCE(math_artifact_id::text, ''), math_artifact_version, math_correction_revision, math_scoring_version,
   status, attempt_count, COALESCE(grade_id::text, ''), COALESCE(error_code, ''),
-  started_at, completed_at, created_at, updated_at
-`, tenantID, runID, input.Status, input.GradeID, input.ErrorCode, input.AttemptCount)
+  started_at, completed_at, created_at, updated_at, execution_diagnostics, COALESCE(exam_question_snapshot_id::text, '')
+`, tenantID, runID, input.Status, input.GradeID, input.ErrorCode, input.AttemptCount, diagnostics)
 	return scanRun(row)
 }
 
 func (s *PostgresStore) GetRun(ctx context.Context, tenantID string, runID string) (GradingRun, error) {
-	row := s.db.QueryRowContext(ctx, `
+	return getRunInDB(ctx, s.db, tenantID, runID, false)
+}
+
+func getRunInDB(ctx context.Context, query rowQueryer, tenantID string, runID string, lock bool) (GradingRun, error) {
+	suffix := ""
+	if lock {
+		suffix = " FOR UPDATE"
+	}
+	row := query.QueryRowContext(ctx, `
 SELECT id::text, tenant_id::text, COALESCE(batch_id::text, ''), answer_segment_id::text, answer_version,
   question_id::text, rubric_version, model_version, prompt_version, min_confidence::float8, request_id,
   COALESCE(panel_id::text, ''), agent_role,
   COALESCE(math_artifact_id::text, ''), math_artifact_version, math_correction_revision, math_scoring_version,
   status, attempt_count, COALESCE(grade_id::text, ''), COALESCE(error_code, ''),
-  started_at, completed_at, created_at, updated_at
+  started_at, completed_at, created_at, updated_at, execution_diagnostics, COALESCE(exam_question_snapshot_id::text, '')
 FROM subjective_grading_run
 WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL
-`, tenantID, runID)
+`+suffix, tenantID, runID)
 	return scanRun(row)
 }
 
@@ -142,6 +184,20 @@ func (s *PostgresStore) CreateBatch(ctx context.Context, tenantID string, actorI
 	raw, err := json.Marshal(segments)
 	if err != nil {
 		return GradingBatch{}, err
+	}
+	var requiresTrial bool
+	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(
+ SELECT 1 FROM scoring_run sr WHERE sr.tenant_id=$1::uuid AND sr.id=NULLIF($2,'')::uuid AND sr.ai_trial_required
+ UNION ALL
+ SELECT 1 FROM jsonb_array_elements_text($3::jsonb) requested(id)
+ JOIN review_task task ON task.tenant_id=$1::uuid AND task.answer_segment_id=requested.id::uuid AND task.deleted_at IS NULL
+ JOIN scoring_run sr ON sr.tenant_id=task.tenant_id AND sr.id=task.scoring_run_id
+ WHERE sr.ai_trial_required AND sr.status IN ('queued','processing','needs_review','failed') AND sr.deleted_at IS NULL
+)`, tenantID, input.ScoringRunID, raw).Scan(&requiresTrial); err != nil {
+		return GradingBatch{}, err
+	}
+	if requiresTrial {
+		return GradingBatch{}, ErrTrialConflict
 	}
 	if input.ScoringRunID != "" {
 		if _, parseErr := uuid.Parse(input.ScoringRunID); parseErr != nil {
@@ -340,15 +396,21 @@ type runScanner interface {
 
 func scanRun(row runScanner) (GradingRun, error) {
 	var out GradingRun
+	var diagnostics []byte
 	var startedAt, completedAt sql.NullTime
 	if err := row.Scan(&out.ID, &out.TenantID, &out.BatchID, &out.AnswerSegmentID, &out.AnswerVersion, &out.QuestionID, &out.RubricVersion, &out.ModelVersion, &out.PromptVersion, &out.MinConfidence, &out.RequestID,
 		&out.PanelID, &out.AgentRole,
 		&out.MathArtifactID, &out.MathArtifactVersion, &out.MathCorrectionRevision, &out.MathScoringVersion,
-		&out.Status, &out.AttemptCount, &out.GradeID, &out.ErrorCode, &startedAt, &completedAt, &out.CreatedAt, &out.UpdatedAt); err != nil {
+		&out.Status, &out.AttemptCount, &out.GradeID, &out.ErrorCode, &startedAt, &completedAt, &out.CreatedAt, &out.UpdatedAt, &diagnostics, &out.ExamQuestionSnapshotID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return GradingRun{}, ErrNotFound
 		}
 		return GradingRun{}, err
+	}
+	if len(diagnostics) > 0 {
+		if err := json.Unmarshal(diagnostics, &out.ExecutionDiagnostics); err != nil {
+			return GradingRun{}, err
+		}
 	}
 	if startedAt.Valid {
 		value := startedAt.Time.UTC()
@@ -412,7 +474,7 @@ LEFT JOIN LATERAL (
   SELECT id, answer_text, confidence, created_at
   FROM answer_segment_answer
   WHERE tenant_id = seg.tenant_id AND answer_segment_id = seg.id AND deleted_at IS NULL
-  ORDER BY created_at DESC
+  ORDER BY created_at DESC, id DESC
   LIMIT 1
 ) ans ON true
 LEFT JOIN LATERAL (
@@ -487,6 +549,15 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL
 		return Context{}, err
 	}
 	out.ReferenceContext = reference
+	if len(referenceRaw) > 0 {
+		var materials struct {
+			Binding *paper.ReferenceMaterialBinding `json:"reference_materials"`
+		}
+		if err = json.Unmarshal(referenceRaw, &materials); err != nil {
+			return Context{}, err
+		}
+		out.ReferenceMaterials = materials.Binding
+	}
 	out.Subject = string(out.AssessmentSnapshot.SubjectCode)
 	out.GradeLevel = string(out.AssessmentSnapshot.EducationStage)
 	if !IsSupportedQuestionType(question.QuestionType) {
@@ -541,16 +612,36 @@ func rubricFromAssessmentSnapshot(snapshot map[string]any, questionID string) (p
 }
 
 func (s *PostgresStore) CreateGrade(ctx context.Context, tenantID string, actorID string, grade Grade) (Grade, error) {
-	matched, _ := json.Marshal(grade.MatchedPoints)
-	missing, _ := json.Marshal(grade.MissingPoints)
-	evidence, _ := json.Marshal(grade.Evidence)
-	risks, _ := json.Marshal(grade.RiskFlags)
-	raw, _ := json.Marshal(cloneMap(grade.RawOutput))
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Grade{}, err
 	}
 	defer tx.Rollback()
+	out, err := createGradeInTx(ctx, tx, tenantID, actorID, grade)
+	if err != nil {
+		return Grade{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Grade{}, err
+	}
+	return out, nil
+}
+
+func createGradeInTx(ctx context.Context, tx *sql.Tx, tenantID string, actorID string, grade Grade) (Grade, error) {
+	// 试改身份由已保存的服务端样本判定，不能信任供应商回传的 risk_flags；重放也需先补同一标记再比较事实。
+	var trialSample bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM scoring_ai_trial trial CROSS JOIN LATERAL jsonb_array_elements(trial.payload->'samples') sample WHERE trial.tenant_id=$1::uuid AND sample->>'segment_id'=$2)`, tenantID, grade.AnswerSegmentID).Scan(&trialSample); err != nil {
+		return Grade{}, err
+	}
+	if trialSample {
+		grade = markTrialGrade(grade)
+	}
+	matched, _ := json.Marshal(grade.MatchedPoints)
+	missing, _ := json.Marshal(grade.MissingPoints)
+	evidence, _ := json.Marshal(grade.Evidence)
+	risks, _ := json.Marshal(grade.RiskFlags)
+	raw, _ := json.Marshal(cloneMap(grade.RawOutput))
+	// 建议沿用来源运行冻结的快照；来源缺失或历史运行未记录快照时保持未知，不能用当前题目补造。
 	row := tx.QueryRowContext(ctx, `
 INSERT INTO ai_grade (
   tenant_id, answer_segment_id, question_id, question_no, question_type, answer_version,
@@ -564,7 +655,11 @@ INSERT INTO ai_grade (
   adapter_attempts, adapter_latency_ms, adapter_repair_attempted, subjective_grading_run_id,
   math_artifact_id, math_artifact_version, math_correction_revision, math_scoring_version
 )
-VALUES ($1, $2, $3, $4, $5, $6, (SELECT id FROM exam_question_snapshot WHERE tenant_id=$1::uuid AND question_id=$3::uuid), $7, 'llm-adapter', $8, $9, $10,
+VALUES ($1, $2, $3, $4, $5, $6,
+  CASE WHEN NULLIF($36,'') IS NOT NULL THEN
+    (SELECT exam_question_snapshot_id FROM subjective_grading_run WHERE tenant_id=$1::uuid AND id=NULLIF($36,'')::uuid AND question_id=$3::uuid AND answer_segment_id=$2::uuid)
+  ELSE NULL END,
+  $7, 'llm-adapter', $8, $9, $10,
   $11, $12, $13, $14, $15, false, $16, $17, $18, $19, NULLIF($20, ''),
   $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, NULLIF($36, '')::uuid,
   NULLIF($37, '')::uuid, $38, $39, $40)
@@ -589,7 +684,7 @@ RETURNING id::text, tenant_id::text, answer_segment_id::text, question_id::text,
 	var out Grade
 	if err := scanGrade(row, &out); err != nil {
 		if errors.Is(err, ErrNotFound) && grade.AdapterRequestID != "" {
-			existing, lookupErr := s.GetGradeByAdapterRequestID(ctx, tenantID, grade.AdapterRequestID)
+			existing, lookupErr := getGradeByRequestInDB(ctx, tx, tenantID, grade.AdapterRequestID)
 			if lookupErr == nil {
 				if sameGradeIdentity(existing, grade) {
 					return existing, nil
@@ -599,7 +694,13 @@ RETURNING id::text, tenant_id::text, answer_segment_id::text, question_id::text,
 		}
 		return Grade{}, err
 	}
-	if !out.Mock &&
+	if !out.Mock && grade.RawOutput["panel_execution"] != nil {
+		if err := recordImagePanelCallsInTx(ctx, tx, tenantID, grade); err != nil {
+			return Grade{}, err
+		}
+		return out, nil
+	}
+	if !out.Mock && gradeUsageReported(grade) &&
 		out.AdapterRequestID != "" &&
 		out.AdapterName != "" &&
 		out.ProviderKey != "" &&
@@ -654,17 +755,18 @@ VALUES (
 			return Grade{}, err
 		}
 	}
-	if err := tx.Commit(); err != nil {
-		return Grade{}, err
-	}
 	return out, nil
 }
 
 func (s *PostgresStore) GetGradeByAdapterRequestID(ctx context.Context, tenantID string, requestID string) (Grade, error) {
+	return getGradeByRequestInDB(ctx, s.db, tenantID, requestID)
+}
+
+func getGradeByRequestInDB(ctx context.Context, query rowQueryer, tenantID string, requestID string) (Grade, error) {
 	if requestID == "" {
 		return Grade{}, ErrNotFound
 	}
-	row := s.db.QueryRowContext(ctx, `
+	row := query.QueryRowContext(ctx, `
 SELECT id::text, tenant_id::text, answer_segment_id::text, question_id::text, question_no, question_type,
   answer_version, grader_type, model_version, prompt_version, rubric_version, delivery_mode, capability_profile,
   adapter_request_id, adapter_name, provider_key, deployment_key, deployment_region,

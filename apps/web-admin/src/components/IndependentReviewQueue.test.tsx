@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, type ReactNode, type ComponentProps } from "react";
+import type { SharedScoreControl } from "../features/grading/SharedScoreControl";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setBusinessCommandScope } from "../api/businessCommand";
@@ -12,15 +13,15 @@ const mocks = vi.hoisted(() => ({ confirm: vi.fn(), warning: vi.fn(), error: vi.
 }));
 vi.mock("antd", () => ({
   App: { useApp: () => ({ message: mocks, modal: mocks }) },
-  Button: ({ children, onClick, disabled }: any) => <button disabled={disabled} onClick={onClick}>{children}</button>,
-  Drawer: ({ open, children, onClose }: any) => open ? <div><button onClick={onClose}>关闭抽屉</button>{children}</div> : null,
-  Alert: ({ message, description }: any) => <div>{message}{description}</div>, Empty: ({ description }: any) => <p>{description}</p>,
-  Input: { TextArea: ({ value, onChange, disabled }: any) => <textarea disabled={disabled} value={value} onChange={onChange} /> },
-  List: Object.assign(({ dataSource, renderItem }: any) => <div>{dataSource.map(renderItem)}</div>, { Item: Object.assign(({ children, actions }: any) => <div>{children}{actions}</div>, { Meta: ({ title }: any) => <p>{title}</p> }) }),
-  Space: ({ children }: any) => <div>{children}</div>, Spin: ({ children }: any) => <div>{children}</div>, Tag: ({ children }: any) => <span>{children}</span>
+  Button: ({ children, onClick, disabled }: ComponentProps<"button">) => <button disabled={disabled} onClick={onClick}>{children}</button>,
+  Drawer: ({ open, children, onClose }: { open?: boolean; children?: ReactNode; onClose?: () => void }) => open ? <div><button onClick={onClose}>关闭抽屉</button>{children}</div> : null,
+  Alert: ({ message, description }: { message?: ReactNode; description?: ReactNode }) => <div>{message}{description}</div>, Empty: ({ description }: { description?: ReactNode }) => <p>{description}</p>,
+  Input: { TextArea: ({ value, onChange, disabled }: ComponentProps<"textarea">) => <textarea disabled={disabled} value={value} onChange={onChange} /> },
+  List: Object.assign(<T,>({ dataSource, renderItem }: { dataSource: T[]; renderItem: (item: T, index: number) => ReactNode }) => <div>{dataSource.map(renderItem)}</div>, { Item: Object.assign(({ children, actions }: { children?: ReactNode; actions?: ReactNode[] }) => <div>{children}{actions}</div>, { Meta: ({ title }: { title?: ReactNode }) => <p>{title}</p> }) }),
+  Space: ({ children }: { children?: ReactNode }) => <div>{children}</div>, Spin: ({ children }: { children?: ReactNode }) => <div>{children}</div>, Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>
 }));
 vi.mock("../router/useUnsavedChangesGuard", () => ({ useUnsavedChangesGuard: mocks.guard }));
-vi.mock("../features/grading/SharedScoreControl", () => ({ SharedScoreControl: ({ value, onChange, disabled }: any) => <><span>分数 {value.score ?? "空"}</span><button disabled={disabled} onClick={() => onChange({ score: 4, rubricSelections: { p: 4 } })}>给4分</button></> }));
+vi.mock("../features/grading/SharedScoreControl", () => ({ SharedScoreControl: ({ value, onChange, disabled }: Pick<ComponentProps<typeof SharedScoreControl>, "value" | "onChange" | "disabled">) => <><span>分数 {value.score ?? "空"}</span><button disabled={disabled} onClick={() => onChange({ score: 4, rubricSelections: { p: 4 } })}>给4分</button></> }));
 vi.mock("../api/regrade", () => ({ listMyRegradeItems: mocks.regrade.list, claimRegradeItem: mocks.regrade.claim, getRegradeItemContext: mocks.regrade.context, downloadRegradeSegmentImage: mocks.regrade.image, recordRegradeCandidate: mocks.regrade.submit }));
 vi.mock("../api/backmark", () => ({ listMyBackmarkItems: mocks.backmark.list, claimBackmarkItem: mocks.backmark.claim, getBackmarkItemContext: mocks.backmark.context, downloadBackmarkSegmentImage: mocks.backmark.image, submitBackmarkItem: mocks.backmark.submit }));
 

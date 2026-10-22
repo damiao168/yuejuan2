@@ -378,6 +378,6 @@ export function routeGroups(experience: ProductExperience, user?: SessionUser | 
 }
 
 export function pathFromHash(): string {
-  const hash = window.location.hash.replace(/^#/, "");
-  return hash || "/dashboard";
+  // 保留旧导出供调用方过渡，实际路径已由 Browser History 管理。
+  return `${window.location.pathname}${window.location.search}` || "/dashboard";
 }

@@ -66,6 +66,14 @@ func listAppeals(t *testing.T, handler *Handler, user auth.User, query string) (
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/appeals"+query, nil)
 	request = request.WithContext(auth.WithUser(request.Context(), user))
+	// 单测直接调用 handler，显式补上生产认证中间件提供的可信边界。
+	scope := auth.AccessScope{TenantID: user.TenantID, ActorID: user.ID}
+	if hasPermission(user, appealManagePermission) {
+		scope.TenantWide = true
+	} else if studentID, ok := auth.ScopedStudentID(user); ok {
+		scope.StudentID = studentID
+	}
+	request = request.WithContext(auth.WithAccessScope(request.Context(), scope))
 	recorder := httptest.NewRecorder()
 	handler.ListAppeals(recorder, request)
 	var body struct {

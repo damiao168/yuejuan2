@@ -1,6 +1,6 @@
 import { Modal } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
-import type { RefObject, Dispatch, SetStateAction } from "react";
+import { useRef, type RefObject, type Dispatch, type SetStateAction } from "react";
 import { ApiClientError } from "../../../../api/client";
 import { createSubjectiveAiGrade } from "../../../../api/review";
 import { isReviewTaskContextScopeCurrent, reviewTaskContextKeys, type ReviewTaskContextScope } from "../../../../query/reviewTaskContext";
@@ -29,6 +29,9 @@ interface UseGradingMathActionsOptions {
 }
 
 function mathSuggestionRequestErrorMessage(cause: unknown): string {
+  if (cause instanceof ApiClientError && cause.code === "ai_output_incomplete") {
+    return "AI 建议未完成，请人工评分。";
+  }
   // 人工确认错误码优先于 HTTP 409，不能把转人工误写成普通版本冲突。
   if (cause instanceof ApiClientError && cause.code === "math_human_review_required") {
     return "仍有未决评分点或风险，已转人工确认；未生成成功建议。";
@@ -57,6 +60,9 @@ export function useGradingMathActions({
   notifyInfo
 }: UseGradingMathActionsOptions) {
   const queryClient = useQueryClient();
+  // 同任务的上下文也会刷新；数学请求只能解除开始时已知的失败，不能覆盖等待期间收到的新失败。
+  const liveContext = useRef(ctx);
+  liveContext.current = ctx;
   const isCurrentSession = () => isCurrentScope() && isReviewTaskContextScopeCurrent(queryScope);
   const refreshMath = () => {
     if (!isCurrentSession()) return;
@@ -93,11 +99,38 @@ export function useGradingMathActions({
       if (activeTask.current !== taskId || !isCurrentSession()) return;
       const latest = await math.refresh();
       if (activeTask.current !== taskId || !isCurrentSession()) return;
-      setCtx((current) => current?.task.id === taskId ? { ...current, aiGrades: [result.grade, ...current.aiGrades.filter((grade) => grade.id !== result.grade.id)] } : current);
-      setMathRequestNotice(latest && mathSuggestionState(result.grade, latest).current ? "新版本数学建议已生成，仍需教师确认。" : "未生成可采纳的当前数学 v2 建议，请继续人工阅卷。");
+      const failureAdvanced = Boolean(liveContext.current?.reviewContext.ai_failure
+        && liveContext.current.reviewContext.ai_failure !== ctx.reviewContext.ai_failure);
+      const suggestionCurrent = Boolean(latest && mathSuggestionState(result.grade, latest).current && !failureAdvanced);
+      setCtx((current) => {
+        if (current?.task.id !== taskId) return current;
+        const canReplaceFailure = suggestionCurrent && (!current.reviewContext.ai_failure
+          || current.reviewContext.ai_failure === ctx.reviewContext.ai_failure);
+        return {
+          ...current,
+          // 当前失败尚未被同版成功替代时，不把刚返回但已过期的建议重新展示为历史建议。
+          aiGrades: current.reviewContext.ai_failure && !canReplaceFailure ? []
+            : [result.grade, ...current.aiGrades.filter((grade) => grade.id !== result.grade.id)],
+          // 新成功建议通过当前数学证据绑定后才移除失败提示；教师评分草稿始终由独立状态保留。
+          reviewContext: canReplaceFailure ? { ...current.reviewContext, ai_failure: undefined } : current.reviewContext,
+          warnings: canReplaceFailure ? current.warnings?.filter((warning) => warning !== "AI 建议未完成，请人工评分。") ?? [] : current.warnings
+        };
+      });
+      setMathRequestNotice(suggestionCurrent ? "新版本数学建议已生成，仍需教师确认。" : "未生成可采纳的当前数学 v2 建议，请继续人工阅卷。");
       void queryClient.invalidateQueries({ queryKey: reviewTaskContextKeys.task(queryScope, taskId) });
     } catch (cause) {
       if (activeTask.current !== taskId || !isCurrentSession()) return;
+      if (cause instanceof ApiClientError && cause.code === "ai_output_incomplete") {
+        // 同步错误只有“不完整”事实，不能猜成截断；刷新前先停用旧建议，保留所有人工输入。
+        // output_incomplete 是 UI 临时归因，后续任务上下文的服务端诊断优先。
+        setCtx((current) => current?.task.id === taskId ? {
+          ...current,
+          aiGrades: [],
+          reviewContext: { ...current.reviewContext, ai_failure: { failure_kind: "output_incomplete" } },
+          warnings: ["AI 建议未完成，请人工评分。", ...(current.warnings ?? []).filter((warning) => warning !== "AI 建议未完成，请人工评分。")]
+        } : current);
+        void queryClient.invalidateQueries({ queryKey: reviewTaskContextKeys.task(queryScope, taskId) });
+      }
       setMathRequestNotice(mathSuggestionRequestErrorMessage(cause));
       await math.refresh();
     } finally {

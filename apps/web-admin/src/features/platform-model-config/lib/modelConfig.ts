@@ -70,6 +70,18 @@ export function presetForConfig(config: ManagedModelAPIConfig): SupplierPreset {
   return "custom";
 }
 
+// 同一 HTTPS 域名和端口下改路径可沿用密钥；换域名或端口时必须由用户重新输入，避免把保存的密钥转发给别的服务。
+export function isSameModelAPIOrigin(previousURL: string, nextURL: string) {
+  try {
+    const previous = new URL(previousURL.trim());
+    const next = new URL(nextURL.trim());
+    return [previous, next].every((url) => url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash)
+      && previous.origin === next.origin;
+  } catch {
+    return false;
+  }
+}
+
 export function modelConfigOptionLabel(config: ManagedModelAPIConfig) {
   return `${config.display_name} · ${config.model_name} · 密钥 ${config.credential_hint || "已加密"} · ${config.id.slice(0, 8)}`;
 }
@@ -82,15 +94,29 @@ export function modelConfigDraftKey(tenantID: string, editingID?: string, creden
 
 // 能力通过还须匹配当前探测协议，旧版探测成功不能代替当前结构化输出验证。
 export function capabilityVerified(config: ManagedModelAPIConfig) {
-  return config.last_capability_status === "success" && config.last_capability_probe_version === "structured-json-v3";
+  return config.last_capability_status === "success" && config.last_capability_probe_version === "structured-json-v4";
 }
 
-export function isTransientProbeError(code?: string) {
-  return code === "provider_timeout" || code === "provider_unavailable";
+// quick 只查访问权限；独立保存的文本结果不会被后续结构化失败或连接检查覆盖。
+export function textVerified(config: ManagedModelAPIConfig) {
+  return config.last_text_status === "success";
+}
+
+export function isTransientProbeError(code?: string, statusCode?: number) {
+  if (code === "provider_timeout" || code === "provider_unavailable" || code === "provider_rate_limited") return true;
+  // provider_error 也可能是参数错误；只有临时 HTTP 状态或缺少供应商状态时才按暂不可用提示。
+  return code === "provider_error" && (!statusCode || statusCode === 408 || statusCode === 425 || statusCode === 429 || statusCode >= 500);
+}
+
+export function textStatusLabel(config: ManagedModelAPIConfig) {
+  if (textVerified(config)) return "已验证";
+  if (config.last_text_status === "temporary_unavailable") return "暂时无法验证";
+  if (config.last_text_status === "failed") return "验证失败";
+  return "未验证";
 }
 
 export function applySavedModelConfig(current: ManagedModelAPIConfig[], saved: ManagedModelAPIConfig) {
-  // 默认模型由服务端确认；同一学校只能保留一个日常对话默认项。
+  // 默认配置仍为单项，供默认路由和解析跟随使用；它不等于允许聊天的多模型名单。
   return current.map((item) => {
     if (item.id === saved.id) return saved;
     if (saved.is_default) return { ...item, is_default: false };
@@ -99,12 +125,12 @@ export function applySavedModelConfig(current: ManagedModelAPIConfig[], saved: M
 }
 
 export function modelUsageMessage(config: ManagedModelAPIConfig, status: "active" | "disabled", isDefault: boolean) {
-  if (isDefault) return `${config.display_name} 已设为日常对话模型`;
+  if (isDefault) return `${config.display_name} 已设为默认配置`;
   if (status === "disabled") {
-    const fallback = config.is_default ? "，日常对话已切回本地模型" : "";
+    const fallback = config.is_default ? "，已取消默认配置" : "";
     return `${config.display_name} 已停用${fallback}`;
   }
-  if (config.is_default) return "日常对话已切回本地模型";
+  if (config.is_default) return "已取消默认配置，对话开放范围不变";
   return `${config.display_name} 已恢复`;
 }
 
@@ -125,9 +151,9 @@ export function hasModelFormChanges(values: ConfigFormValues, editing: ManagedMo
 }
 
 export function capabilityDialogPresentation(displayName: string, temporarilyUnavailable: boolean, failed: boolean): { kind: "warning" | "error" | "info"; title: string } {
-  if (temporarilyUnavailable) return { kind: "warning", title: `${displayName}：能力检测暂时无法完成` };
+  if (temporarilyUnavailable) return { kind: "warning", title: `${displayName}：结构化检测暂时无法完成` };
   if (failed) return { kind: "error", title: `${displayName}：结构化输出检测未通过` };
-  return { kind: "info", title: `${displayName}：能力检测详情` };
+  return { kind: "info", title: `${displayName}：结构化检测详情` };
 }
 
 export function connectionStatusLabel(config: ManagedModelAPIConfig) {
@@ -138,6 +164,7 @@ export function connectionStatusLabel(config: ManagedModelAPIConfig) {
 }
 
 export function probeFormatLabel(value?: string) {
+  if (value === "text") return "普通文本";
   if (value === "json_object") return "JSON Object 模式";
   if (value === "json_schema") return "严格 JSON Schema";
   if (value === "prompt_only") return "提示词约束";

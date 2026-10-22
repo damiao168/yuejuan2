@@ -16,6 +16,7 @@ export interface SchoolChatMessage {
 }
 
 export interface SchoolChatModel {
+  id?: string;
   available: boolean;
   display_name?: string;
   model_name?: string;
@@ -33,7 +34,7 @@ export interface SchoolChatCompletion {
 }
 
 export function getSchoolChatModel() {
-  return apiClient.request<{ model: SchoolChatModel }>("/api/v1/ai-chat/model");
+  return apiClient.request<{ model: SchoolChatModel; models?: SchoolChatModel[] }>("/api/v1/ai-chat/model");
 }
 
 export function sendSchoolChat(messages: SchoolChatMessage[]) {
@@ -62,10 +63,10 @@ export interface SchoolConversationContext extends ApiSchoolConversationContext 
 // SSE 仍由专用传输解析，消息契约直接引用权威 OpenAPI 生成的类型。
 export type SchoolConversationEvent = ApiSchoolConversationEvent;
 
-export function streamSchoolConversation(messages: SchoolChatMessage[], context: SchoolConversationContext | undefined, signal: AbortSignal, onEvent: (event: SchoolConversationEvent) => void) {
+export function streamSchoolConversation(messages: SchoolChatMessage[], context: SchoolConversationContext | undefined, signal: AbortSignal, onEvent: (event: SchoolConversationEvent) => void, modelConfigID?: string) {
   // 名称只供界面展示，模型传入的考试 ID 由服务端重新授权；不把前端标签当成业务事实。
   const requestContext = context ? { exam_id: context.exam_id, origin_module: context.origin_module, origin_section: context.origin_section } : undefined;
   return apiClient.requestEventStream<SchoolConversationEvent>("/api/v1/school-assistant/conversations/stream", {
-    method: "POST", body: JSON.stringify({ messages, context: requestContext }), signal
+    method: "POST", body: JSON.stringify({ messages, context: requestContext, model_config_id: modelConfigID || undefined }), signal
   }, onEvent);
 }

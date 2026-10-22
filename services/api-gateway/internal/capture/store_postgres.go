@@ -25,7 +25,8 @@ normal_count, review_count, failed_count, started_at, completed_at, created_at`
 
 const fileColumns = `id::text, tenant_id::text, capture_batch_id::text, file_asset_id::text,
 original_name, content_type, sha256, byte_size, page_count, status, COALESCE(error_code, ''),
-idempotency_key, uploaded_by::text, created_at`
+idempotency_key, uploaded_by::text, created_at, COALESCE(upload_group_id::text,''),
+COALESCE(upload_group_file_count,0), COALESCE(upload_group_file_index,0), COALESCE(pages_per_student,0)`
 
 const pageColumns = `id::text, tenant_id::text, capture_batch_id::text, capture_file_id::text,
 source_index, COALESCE(submission_id::text, ''), COALESCE(submission_page_id::text, ''),
@@ -99,6 +100,9 @@ func (s *PostgresStore) RegisterFile(ctx context.Context, tenantID, batchID, act
 	if asset.ExamID != "" && asset.ExamID != examID {
 		return File{}, ErrInvalidInput
 	}
+	if err = validateUploadGroupTx(ctx, tx, tenantID, batchID, input); err != nil {
+		return File{}, err
+	}
 	duplicateStatus := "uploaded"
 	var duplicateID string
 	err = tx.QueryRowContext(ctx, `SELECT id::text FROM capture_file
@@ -112,11 +116,11 @@ LIMIT 1`, tenantID, batchID, asset.SHA256).Scan(&duplicateID)
 		return File{}, err
 	}
 	row := tx.QueryRowContext(ctx, `
-INSERT INTO capture_file (tenant_id, capture_batch_id, file_asset_id, original_name, content_type, sha256, byte_size, status, idempotency_key, uploaded_by)
-VALUES ($1,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10::uuid)
+INSERT INTO capture_file (tenant_id, capture_batch_id, file_asset_id, original_name, content_type, sha256, byte_size, status, idempotency_key, uploaded_by,upload_group_id,upload_group_file_count,upload_group_file_index,pages_per_student)
+VALUES ($1,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10::uuid,NULLIF($11,'')::uuid,NULLIF($12,0),NULLIF($13,0),NULLIF($14,0))
 ON CONFLICT (tenant_id, capture_batch_id, idempotency_key)
 DO UPDATE SET idempotency_key=EXCLUDED.idempotency_key
-RETURNING `+fileColumns, tenantID, batchID, asset.ID, asset.OriginalName, asset.ContentType, asset.SHA256, asset.SizeBytes, duplicateStatus, input.IdempotencyKey, actorID)
+RETURNING `+fileColumns, tenantID, batchID, asset.ID, asset.OriginalName, asset.ContentType, asset.SHA256, asset.SizeBytes, duplicateStatus, input.IdempotencyKey, actorID, input.UploadGroupID, input.UploadGroupFileCount, input.UploadGroupFileIndex, input.PagesPerStudent)
 	item, err := scanFile(row)
 	if err != nil {
 		return File{}, err
@@ -268,14 +272,26 @@ ON CONFLICT (tenant_id,task_type,idempotency_key) DO NOTHING`, tenantID, item.ID
 }
 
 func (s *PostgresStore) ApplyFileResult(ctx context.Context, tenantID, fileID string, pages []DecodedPageInput) (File, error) {
-	if err := validateDecodedFilePages(pages); err != nil {
-		return File{}, err
-	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return File{}, err
 	}
 	defer tx.Rollback()
+	item, err := s.applyFileResultInTx(ctx, tx, tenantID, fileID, pages)
+	if err != nil {
+		return File{}, err
+	}
+	return item, tx.Commit()
+}
+
+// applyFileResultInTx 沿用命令事务；调用方负责提交，任一步失败都回滚页面和质检排队。
+func (s *PostgresStore) applyFileResultInTx(ctx context.Context, tx *sql.Tx, tenantID, fileID string, pages []DecodedPageInput) (File, error) {
+	if err := validateDecodedFilePages(pages); err != nil {
+		return File{}, err
+	}
+	if err := lockFileBatchTx(ctx, tx, tenantID, fileID); err != nil {
+		return File{}, err
+	}
 	item, err := scanFile(tx.QueryRowContext(ctx, `SELECT `+fileColumns+` FROM capture_file WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, fileID))
 	if err != nil {
 		return File{}, err
@@ -283,7 +299,7 @@ func (s *PostgresStore) ApplyFileResult(ctx context.Context, tenantID, fileID st
 	// 重复提交相同页数直接返回已完成文件；页数不同视为同一文件的冲突，避免追加第二套页面。
 	if item.Status == "completed" {
 		if item.PageCount == len(pages) {
-			return item, tx.Commit()
+			return item, nil
 		}
 		return File{}, ErrConflict
 	}
@@ -298,17 +314,24 @@ func (s *PostgresStore) ApplyFileResult(ctx context.Context, tenantID, fileID st
 	if err != nil {
 		return File{}, err
 	}
-	if err = reconcileDecodedFileIdentityTx(ctx, tx, scope, identity); err != nil {
-		return File{}, err
+	if item.UploadGroupID == "" {
+		if err = reconcileDecodedFileIdentityTx(ctx, tx, scope, identity); err != nil {
+			return File{}, err
+		}
 	}
 	item, err = scanFile(tx.QueryRowContext(ctx, `UPDATE capture_file SET status='completed',page_count=$3,error_code=NULL,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid RETURNING `+fileColumns, tenantID, fileID, len(pages)))
 	if err != nil {
 		return File{}, err
 	}
+	if item.UploadGroupID != "" {
+		if err = s.finalizeUploadGroupTx(ctx, tx, scope); err != nil {
+			return File{}, err
+		}
+	}
 	if err = s.aggregateDecodedFileBatchesTx(ctx, tx, tenantID, item.CaptureBatchID, conflictBatchIDs); err != nil {
 		return File{}, err
 	}
-	return item, tx.Commit()
+	return item, nil
 }
 
 type decodedFileScope struct {
@@ -417,8 +440,11 @@ func (s *PostgresStore) applyDecodedPageTx(ctx context.Context, tx *sql.Tx, scop
 			return decodedCapturePageResult{}, err
 		}
 	}
-	if err = queueDecodedPageQualityTx(ctx, tx, scope, p, submissionPageID, result.capturePageID); err != nil {
-		return decodedCapturePageResult{}, err
+	// 同组文件可能乱序解码；组齐后才创建质检任务，避免移动页面时破坏运行记录的答卷外键。
+	if scope.file.UploadGroupID == "" {
+		if err = queueDecodedPageQualityTx(ctx, tx, scope, p, submissionPageID, result.capturePageID); err != nil {
+			return decodedCapturePageResult{}, err
+		}
 	}
 	return result, nil
 }
@@ -479,6 +505,13 @@ func insertDecodedCapturePageTx(ctx context.Context, tx *sql.Tx, scope decodedFi
 	identity, _ := json.Marshal(identityFields)
 	candidates, _ := json.Marshal(barcode.Candidates)
 	pageStatus := "quality_checking"
+	if item.UploadGroupID != "" {
+		pageStatus = "decoded"
+		identityFields["grouping_status"] = "waiting_files"
+		identityFields["expected_pages"] = item.PagesPerStudent
+		identityFields["upload_group_id"] = item.UploadGroupID
+		identity, _ = json.Marshal(identityFields)
+	}
 	if duplicate.PageID != "" {
 		pageStatus = "needs_review"
 	}
@@ -849,6 +882,9 @@ func (s *PostgresStore) ApplyFileFailure(ctx context.Context, tenantID, fileID, 
 		return File{}, err
 	}
 	defer tx.Rollback()
+	if err = lockFileBatchTx(ctx, tx, tenantID, fileID); err != nil {
+		return File{}, err
+	}
 	var batchID string
 	if err = tx.QueryRowContext(ctx, `SELECT capture_batch_id::text FROM capture_file WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, fileID).Scan(&batchID); err != nil {
 		return File{}, mapNotFound(err)
@@ -1013,7 +1049,7 @@ func scanBatch(r scanner) (Batch, error) {
 }
 func scanFile(r scanner) (File, error) {
 	var x File
-	err := r.Scan(&x.ID, &x.TenantID, &x.CaptureBatchID, &x.FileAssetID, &x.OriginalName, &x.ContentType, &x.SHA256, &x.ByteSize, &x.PageCount, &x.Status, &x.ErrorCode, &x.IdempotencyKey, &x.UploadedBy, &x.CreatedAt)
+	err := r.Scan(&x.ID, &x.TenantID, &x.CaptureBatchID, &x.FileAssetID, &x.OriginalName, &x.ContentType, &x.SHA256, &x.ByteSize, &x.PageCount, &x.Status, &x.ErrorCode, &x.IdempotencyKey, &x.UploadedBy, &x.CreatedAt, &x.UploadGroupID, &x.UploadGroupFileCount, &x.UploadGroupFileIndex, &x.PagesPerStudent)
 	if err != nil {
 		return File{}, mapNotFound(err)
 	}

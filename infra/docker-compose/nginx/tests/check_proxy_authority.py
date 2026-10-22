@@ -16,13 +16,25 @@ import time
 
 
 CONFIG_DIR = Path(__file__).resolve().parents[1]
+REDIRECT_LOCATIONS = {
+    "edugrade_web": "http://edugrade_web/front-landing",
+    "story056_web": "http://story056_web/front-landing",
+    "story060_web": "http://story060_web/front-landing",
+}
 
 
 class EchoUpstream(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == "/front-redirect":
+            # 合成上游只接受三份配置的固定内部 authority；不能把请求 Host 原样拼入 Location。
+            location = REDIRECT_LOCATIONS.get(self.headers.get("Host", ""))
+            if location is None:
+                self.send_response(400)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             self.send_response(302)
-            self.send_header("Location", f"http://{self.headers['Host']}/front-landing")
+            self.send_header("Location", location)
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
@@ -94,6 +106,7 @@ def check_config(nginx: Path, config_name: str, upstream_port: int) -> dict[str,
             paths = [("/api/echo?limit=1", f"{prefix_name}_api", "/api/echo?limit=1"),
                      ("/ui-test?limit=1", f"{prefix_name}_web", "/ui-test?limit=1")]
             if config_name == "nginx.conf":
+                paths.append(("/assets/worker.min-OCR_test.js?version=1", "edugrade_web", "/assets/worker.min-OCR_test.js?version=1"))
                 paths.extend((path, "edugrade_api", target) for path, target in [
                     ("/health/live", "/health/live"), ("/health/ready", "/health/ready"),
                     ("/ready", "/ready"), ("/backend-health", "/health/live")])

@@ -128,6 +128,21 @@ describe("grading utility batch28 boundaries", () => {
     expect(result.warnings).toEqual([]);
   });
 
+  it.each([false, true])("does not replace a failed current execution with an earlier successful suggestion (explicit=%s)", async (explicit) => {
+    const context = contextFixture({ ...aiGrade("previous-success") }, [aiGrade("previous-history")]);
+    context.ai_failure = { failure_kind: "output_truncated" };
+    context.draft = { score: 2, comments: "教师未完成的草稿" } as ReviewTaskContext["draft"];
+    if (explicit) {
+      context.ai_second_opinion!.presentation = "explicit_second_opinion";
+      context.ai_second_opinion!.score_prefill_allowed = false;
+    }
+    const result = await loadedContext(context);
+    expect(result.aiGrades).toEqual([]);
+    expect(result.warnings).toEqual(["AI 建议未完成，请人工评分。"]);
+    expect(result.reviewContext.draft).toEqual(context.draft);
+    expect(context.draft?.score).toBe(2);
+  });
+
   it.each([
     { key: "+", direction: 1 }, { key: "-", direction: -1 },
     { key: "", code: "NumpadAdd", direction: 1 }, { key: "", code: "NumpadSubtract", direction: -1 }
@@ -160,7 +175,7 @@ describe("grading utility batch28 boundaries", () => {
     expect(mocks.create).not.toHaveBeenCalled();
     expect(mocks.enqueue).toHaveBeenCalledExactlyOnceWith("existing");
     expect(onBatch).toHaveBeenCalledExactlyOnceWith("existing");
-    expect(result).toEqual({ batchIds: ["existing"], requested: 0, failed: 2 });
+    expect(result).toEqual({ batchIds: ["existing"], createdBatchIds: [], resumedBatchIds: ["existing"], requested: 0, failed: 2 });
   });
 
   it("fully replaces the default transport and waits for existing enqueue before creating uncovered work", async () => {
@@ -183,7 +198,7 @@ describe("grading utility batch28 boundaries", () => {
     const result = await launchScoringAIBatches("run", plan, items, (id) => events.push(`on:${id}`), transport);
     expect(events).toEqual(["on:existing", "enqueue-start:existing", "enqueue-end:existing", "create", "on:new", "enqueue-start:new", "enqueue-end:new"]);
     expect(transport.create).toHaveBeenCalledWith(expect.stringMatching(/^scoring-ai-run-[a-f0-9]{32}$/), ["s2"], "run");
-    expect(result).toEqual({ batchIds: ["existing", "new"], requested: 1, failed: 0 });
+    expect(result).toEqual({ batchIds: ["existing", "new"], createdBatchIds: ["new"], resumedBatchIds: ["existing"], requested: 1, failed: 0 });
     expect(mocks.list).not.toHaveBeenCalled();
     expect(mocks.create).not.toHaveBeenCalled();
     expect(mocks.enqueue).not.toHaveBeenCalled();

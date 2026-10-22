@@ -206,6 +206,7 @@ export interface Rubric {
 }
 
 export interface Question {
+	reference_materials?: import("./referenceMaterials").ReferenceBinding;
   id: string;
   tenant_id: string;
   exam_id: string;
@@ -265,7 +266,7 @@ export interface ValidationResult {
 }
 
 export async function registerPaperFromFile(examId: string, fileAssetId: string, purpose: "question_paper" | "answer_sheet" = "question_paper") {
-  return apiClient.request<{ paper: PaperVersion; note: string }>(`/api/v1/exams/${encodeURIComponent(examId)}/papers`, {
+  return apiClient.request<{ paper: PaperVersion; note: string; duplicate?: boolean }>(`/api/v1/exams/${encodeURIComponent(examId)}/papers`, {
     method: "POST",
     body: JSON.stringify({ file_asset_id: fileAssetId, ...(purpose === "answer_sheet" ? { purpose } : {}) })
   });
@@ -361,6 +362,39 @@ export async function createRubric(questionId: string, payload: RubricPayload) {
     method: "POST",
     body: JSON.stringify(payload)
   });
+}
+
+export interface QuestionRubricSegment {
+  spans: { source_id: string; start: number; end: number }[];
+}
+
+export type RubricDraftJobStatus = "queued" | "running" | "cancelling" | "cancelled" | "succeeded" | "failed" | "stale";
+export interface RubricDraftJob {
+  id: string; exam_id: string; question_id: string; question_no: string; status: RubricDraftJobStatus;
+  request_id: string; model_name: string; attempt: number; created_at: string; updated_at: string; error?: string;
+  input: { expected_question: Question; solution_segments?: QuestionRubricSegment[] };
+  result?: { suggested_rubric_candidates: SuggestedRubricCandidate[] };
+}
+export function createQuestionRubricDraftJob(question: Question, segments: QuestionRubricSegment[], requestId: string, regenerate = false) {
+  return apiClient.request<{ job: RubricDraftJob }>(`/api/v1/exams/${encodeURIComponent(question.exam_id)}/questions/${encodeURIComponent(question.id)}/rubric-draft-jobs`, {
+    method: "POST", headers: { "Idempotency-Key": requestId }, body: JSON.stringify({ expected_question: question, solution_segments: segments, request_id: requestId, regenerate })
+  });
+}
+export function listQuestionRubricDraftJobs(examId: string, signal?: AbortSignal) {
+  return apiClient.request<{ jobs: RubricDraftJob[]; concurrency: number }>(`/api/v1/exams/${encodeURIComponent(examId)}/rubric-draft-jobs`, { signal });
+}
+export function getQuestionRubricDraftJob(examId: string, jobId: string) {
+  return apiClient.request<{ job: RubricDraftJob }>(`/api/v1/exams/${encodeURIComponent(examId)}/rubric-draft-jobs/${encodeURIComponent(jobId)}`);
+}
+export function cancelQuestionRubricDraftJob(examId: string, jobId: string) {
+  return apiClient.request<{ job: RubricDraftJob }>(`/api/v1/exams/${encodeURIComponent(examId)}/rubric-draft-jobs/${encodeURIComponent(jobId)}/cancel`, { method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() } });
+}
+
+export async function generateQuestionRubricDraft(question: Question, signal?: AbortSignal, solutionSegments?: QuestionRubricSegment[]) {
+  return apiClient.request<{ suggested_rubric_candidates: SuggestedRubricCandidate[] }>(
+    `/api/v1/exams/${encodeURIComponent(question.exam_id)}/questions/${encodeURIComponent(question.id)}/rubric-draft`,
+    { method: "POST", body: JSON.stringify({ expected_question: question, ...(solutionSegments ? { solution_segments: solutionSegments } : {}) }), signal }
+  );
 }
 
 export async function validatePaperConfig(examId: string) {

@@ -437,5 +437,6 @@ func aiGradingStatus(cfg config.Config) map[string]any {
 }
 
 func (h *Handlers) NotFound(w http.ResponseWriter, r *http.Request) {
-	httpx.Error(w, r, http.StatusNotFound, "not_found", "route not found")
+	// 未注册接口通常意味着页面与服务版本未同步；不能与业务记录已删除共用错误码。
+	httpx.Error(w, r, http.StatusNotFound, "route_not_found", "route not found")
 }

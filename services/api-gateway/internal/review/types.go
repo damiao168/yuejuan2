@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/assessment"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
@@ -19,9 +20,11 @@ var (
 )
 
 type Context struct {
-	ExamID             string                          `json:"exam_id"`
-	SubmissionID       string                          `json:"submission_id"`
-	AnswerSegmentID    string                          `json:"answer_segment_id"`
+	ExamID          string `json:"exam_id"`
+	SubmissionID    string `json:"submission_id"`
+	AnswerSegmentID string `json:"answer_segment_id"`
+	// 内部版本取当前图像输入或最新文本答案记录；不能用作答文字相同推测版本相同。
+	AnswerVersion      string                          `json:"-"`
 	AnonymousCode      string                          `json:"anonymous_code"`
 	AssessmentSnapshot assessment.ExamQuestionSnapshot `json:"assessment_snapshot"`
 	Question           paper.Question                  `json:"question"`
@@ -47,27 +50,29 @@ type AutomationResult struct {
 }
 
 type ReviewTask struct {
-	ID              string     `json:"id"`
-	TenantID        string     `json:"tenant_id"`
-	ExamID          string     `json:"exam_id"`
-	ExamName        string     `json:"exam_name,omitempty"`
-	Subject         string     `json:"subject,omitempty"`
-	QuestionID      string     `json:"question_id"`
-	QuestionNo      string     `json:"question_no"`
-	AnswerSegmentID string     `json:"answer_segment_id"`
-	SubmissionID    string     `json:"submission_id"`
-	AnonymousCode   string     `json:"anonymous_code"`
-	Source          string     `json:"source"`
-	Status          string     `json:"status"`
-	Priority        int        `json:"priority"`
-	AssignedTo      string     `json:"assigned_to,omitempty"`
-	ReturnReason    string     `json:"return_reason,omitempty"`
-	GradeRound      string     `json:"grade_round"`
-	DueAt           *time.Time `json:"due_at,omitempty"`
-	Revision        int64      `json:"revision"`
-	CreatedBy       string     `json:"created_by"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	ID              string `json:"id"`
+	TenantID        string `json:"tenant_id"`
+	ExamID          string `json:"exam_id"`
+	ExamName        string `json:"exam_name,omitempty"`
+	Subject         string `json:"subject,omitempty"`
+	QuestionID      string `json:"question_id"`
+	QuestionNo      string `json:"question_no"`
+	AnswerSegmentID string `json:"answer_segment_id"`
+	SubmissionID    string `json:"submission_id"`
+	AnonymousCode   string `json:"anonymous_code"`
+	Source          string `json:"source"`
+	// ReasonCode 区分识别异常与未开放自动确认等复核原因；Source 仅表示任务来源。
+	ReasonCode   string     `json:"reason_code,omitempty"`
+	Status       string     `json:"status"`
+	Priority     int        `json:"priority"`
+	AssignedTo   string     `json:"assigned_to,omitempty"`
+	ReturnReason string     `json:"return_reason,omitempty"`
+	GradeRound   string     `json:"grade_round"`
+	DueAt        *time.Time `json:"due_at,omitempty"`
+	Revision     int64      `json:"revision"`
+	CreatedBy    string     `json:"created_by"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
 type HumanGrade struct {
@@ -210,7 +215,6 @@ type ListFilter struct {
 	CursorCreatedAt time.Time
 	CursorID        string
 	// Scope 字段由 HTTP handler 根据服务器生成的认证作用域填充。
-	// 它们使用普通值，使 review 包保持独立于 auth 包。
 	ScopeMode      string
 	ScopeActorID   string
 	ScopeSchoolIDs []string
@@ -259,6 +263,7 @@ type SetDoubleMarkPolicyInput struct {
 type PolicyFilter struct {
 	ExamID     string
 	QuestionID string
+	Access     auth.ExamCollectionAccess
 }
 
 type CreateDoubleMarkSessionInput struct {
@@ -301,6 +306,7 @@ type DoubleMarkSessionFilter struct {
 	// ExamID 和 QuestionID 避免聚合消费方读取租户全部双评会话后再在应用内存中筛选。
 	ExamID     string
 	QuestionID string
+	Access     auth.ExamCollectionAccess
 }
 
 type CreateArbitrationTaskInput struct {
@@ -394,7 +400,16 @@ type FinalGrade struct {
 	UpdatedAt           time.Time `json:"updated_at"`
 }
 
+// Store 组合本模块装配所需能力，保持现有构造入口兼容；新消费者应按业务职责依赖下方小接口。
+// 接口拆分只说明依赖范围，不代替权限、版本校验，也不承诺跨能力调用自动进入同一事务。
 type Store interface {
+	TaskStore
+	DoubleMarkStore
+	ArbitrationStore
+}
+
+// TaskStore 管理单评任务、分派及人工提交；命令恢复保留原操作者与请求绑定。
+type TaskStore interface {
 	RecoverCommand(context.Context, string, string, string) (commandreceipt.Receipt, error)
 	CreateTask(ctx context.Context, tenantID string, actorID string, input CreateTaskInput) (ReviewTask, error)
 	ListTasks(ctx context.Context, tenantID string, filter ListFilter) ([]ReviewTask, error)
@@ -405,12 +420,20 @@ type Store interface {
 	BatchAssignTasks(ctx context.Context, tenantID string, actorID string, input BatchAssignInput) ([]ReviewTask, error)
 	SubmitGrade(ctx context.Context, tenantID string, id string, reviewerID string, input SubmitGradeInput) (SubmitResult, error)
 	ReturnTask(ctx context.Context, tenantID string, id string, actorID string, input ReturnTaskInput) (ReviewTask, error)
+}
+
+// DoubleMarkStore 管理双评策略与会话，不开放仲裁裁决写入能力。
+type DoubleMarkStore interface {
 	SetExamDoubleMarkPolicy(ctx context.Context, tenantID string, examID string, actorID string, input SetDoubleMarkPolicyInput) (DoubleMarkPolicy, error)
 	SetQuestionDoubleMarkPolicy(ctx context.Context, tenantID string, questionID string, actorID string, input SetDoubleMarkPolicyInput) (DoubleMarkPolicy, error)
 	ListDoubleMarkPolicies(ctx context.Context, tenantID string, filter PolicyFilter) ([]DoubleMarkPolicy, error)
 	CreateDoubleMarkSession(ctx context.Context, tenantID string, actorID string, input CreateDoubleMarkSessionInput) (DoubleMarkSession, error)
 	ListDoubleMarkSessions(ctx context.Context, tenantID string, filter DoubleMarkSessionFilter) ([]DoubleMarkSession, error)
 	GetDoubleMarkSession(ctx context.Context, tenantID string, id string) (DoubleMarkSession, error)
+}
+
+// ArbitrationStore 管理仲裁任务与最终裁决；提交实现继续负责裁决与最终成绩的原子写入。
+type ArbitrationStore interface {
 	CreateArbitrationTask(ctx context.Context, tenantID string, actorID string, input CreateArbitrationTaskInput) (ArbitrationTask, error)
 	ListArbitrationTasks(ctx context.Context, tenantID string, filter ArbitrationFilter) ([]ArbitrationTask, error)
 	GetArbitrationTask(ctx context.Context, tenantID string, id string) (ArbitrationTask, error)

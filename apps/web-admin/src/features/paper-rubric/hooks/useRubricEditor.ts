@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { App } from "antd";
 import { getUserErrorMessage } from "../../../api/client";
+import { newRubricPointId, rubricPointIdentityError } from "../rubricPointIdentity";
+import { newRubricAssistantDraft, type RubricAssistantDraft } from "../rubricAssistantDraft";
 import {
   createRubric,
   type Question,
@@ -43,6 +45,9 @@ export function useRubricEditor({
   const { message } = App.useApp();
   const [savingRubric, setSavingRubric] = useState(false);
   const [rubricDirty, setRubricDirty] = useState(false);
+  const [assistantDirty, setAssistantDirty] = useState(false);
+  const [assistantResetVersion, setAssistantResetVersion] = useState(0);
+  const assistantDraftStore = useRef<RubricAssistantDraft | null>(null);
   const [rubricStatus, setRubricStatus] = useState("draft");
   const [rubricPoints, setRubricPoints] = useState<RubricPoint[]>([]);
   const [deductionsJson, setDeductionsJson] = useState("");
@@ -51,10 +56,15 @@ export function useRubricEditor({
   const saveInFlight = useRef(false);
 
   useEffect(() => {
-    const questionKey = selectedQuestion?.id ?? "create";
-    if ((rubricDirty || preserveUnsaved) && loadedQuestionKey.current === questionKey) return;
+    // 同一编号跨学校或考试也属于不同来源，不能用 preserveUnsaved 携带上一范围的细则。
+    const questionKey = selectedQuestion ? JSON.stringify([selectedQuestion.tenant_id, selectedQuestion.exam_id, selectedQuestion.id]) : "create";
+    if ((rubricDirty || assistantDirty || preserveUnsaved) && loadedQuestionKey.current === questionKey) return;
     loadedQuestionKey.current = questionKey;
+    if (assistantDraftStore.current && selectedQuestion && assistantDraftStore.current.scope !== JSON.stringify(selectedQuestion)) {
+      assistantDraftStore.current = newRubricAssistantDraft(selectedQuestion, assistantDraftStore.current);
+    }
     setRubricDirty(false);
+    setAssistantDirty(false);
     if (selectedQuestion) {
       setRubricStatus(selectedQuestion.rubric?.status ?? "draft");
       setRubricPoints(selectedQuestion.rubric?.points ?? []);
@@ -66,7 +76,34 @@ export function useRubricEditor({
     setRubricPoints([{ id: "p1", description: "", score: 10, required: true }]);
     setDeductionsJson("");
     setExamplesJson("");
-  }, [rubricDirty, preserveUnsaved, selectedQuestion]);
+  }, [rubricDirty, assistantDirty, preserveUnsaved, selectedQuestion]);
+
+  const discardRubricDraft = () => {
+    assistantDraftStore.current = selectedQuestion ? newRubricAssistantDraft(selectedQuestion, assistantDraftStore.current) : null;
+    setRubricDirty(false);
+    setAssistantDirty(false);
+    setAssistantResetVersion((version) => version + 1);
+  };
+
+  const replaceRubricPoints = (points: RubricPoint[]) => {
+    const identityError = rubricPointIdentityError(points);
+    if (identityError) throw new Error(identityError);
+    if (!points.length || points.some((point) => !point.description.trim() || !Number.isFinite(point.score) || point.score < 0)) {
+      throw new Error("请核对采分点内容和分值");
+    }
+    if (!selectedQuestion || Math.abs(rubricPointTotal(points) - selectedQuestion.score) > 0.0001) {
+      throw new Error("采分点合计必须等于本题满分");
+    }
+    // 分段或 AI 建议只是新草稿；旧扣分规则与示例可能引用原采分点，不能跟随替换继续生效。
+    setRubricPoints(structuredClone(points));
+    assistantDraftStore.current = newRubricAssistantDraft(selectedQuestion, assistantDraftStore.current);
+    setDeductionsJson("[]");
+    setExamplesJson("[]");
+    setRubricStatus("draft");
+    setRubricDirty(true);
+    setAssistantDirty(false);
+    setAssistantResetVersion((version) => version + 1);
+  };
 
   const updatePoint = (index: number, patch: Partial<RubricPoint>) => {
     setRubricDirty(true);
@@ -97,10 +134,14 @@ export function useRubricEditor({
   };
   const addPoint = () => {
     setRubricDirty(true);
-    setRubricPoints((current) => [...current, { id: `p${current.length + 1}`, description: "", score: 0, required: false }]);
+    setRubricPoints((current) => [...current, { id: newRubricPointId(), description: "", score: 0, required: false }]);
   };
 
   const prepareRubricSave = (score = selectedQuestion?.score): RubricPayload => {
+    // 区间配分和模型预览尚未应用时，保存旧采分点会让教师误以为预览已提交。
+    if (assistantDirty) throw new Error("请先应用分值划分草稿，或放弃本区修改，再保存评分细则");
+    const identityError = rubricPointIdentityError(rubricPoints);
+    if (identityError) throw new Error(identityError);
     const total = rubricPointTotal(rubricPoints);
     if (!score || !Number.isFinite(score) || Math.abs(total - score) > 0.0001) throw new Error("评分细则采分点总分必须等于本次填写的题目分值");
     if (rubricPoints.some(point => !Number.isFinite(Number(point.score)) || Number(point.score) < 0)) throw new Error("采分点分值必须为有限的非负数");
@@ -108,6 +149,9 @@ export function useRubricEditor({
   };
 
   const persistRubricSave = async (questionId: string, payload: RubricPayload, options: { refresh?: boolean; notify?: boolean; onAccepted?: (result: Awaited<ReturnType<typeof createRubric>>) => void } = {}) => {
+    // 接口前再次检查传入快照；调用方不能绕过编辑器校验提交历史重复 ID。
+    const identityError = rubricPointIdentityError(payload.points);
+    if (identityError) throw new Error(identityError);
     if (saveInFlight.current) return false;
     saveInFlight.current = true; setSavingRubric(true);
     try {
@@ -132,7 +176,7 @@ export function useRubricEditor({
 
   const pointTotal = rubricPointTotal(rubricPoints);
   return {
-    savingRubric, rubricDirty, discardRubricDraft: () => setRubricDirty(false), rubricStatus, setRubricStatus: (value: string) => { setRubricDirty(true); setRubricStatus(value); }, rubricPoints, deductionsJson,
+    savingRubric, rubricDirty: rubricDirty || assistantDirty, assistantDirty, assistantResetVersion, assistantDraftStore, setAssistantDirty, replaceRubricPoints, discardRubricDraft, rubricStatus, setRubricStatus: (value: string) => { setRubricDirty(true); setRubricStatus(value); }, rubricPoints, deductionsJson,
     setDeductionsJson: (value: string) => { setRubricDirty(true); setDeductionsJson(value); }, examplesJson, setExamplesJson: (value: string) => { setRubricDirty(true); setExamplesJson(value); }, pointTotal,
     scoreMismatch: Boolean(selectedQuestion && Math.abs(pointTotal - selectedQuestion.score) > 0.0001),
     updatePoint, addEvidenceRequirement, updateEvidenceRequirement,

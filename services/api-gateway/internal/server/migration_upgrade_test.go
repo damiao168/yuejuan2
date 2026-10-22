@@ -243,7 +243,7 @@ INSERT INTO managed_model_api_config(id,tenant_id,provider_key,display_name,adap
   is_default,last_test_status,last_tested_at,last_capability_status,last_capability_tested_at,
   last_capability_probe_version,created_by)
 VALUES($1::uuid,$2::uuid,$3,$4,'openai_compatible','https://example.invalid/v1',$5,$5,$6,$7,'key-***',
-  'active',$8,'success',now(),'success',now(),'structured-json-v3',$9::uuid)`,
+  'active',$8,'success',now(),'success',now(),'structured-json-v4',$9::uuid)`,
 			configID, fixture.tenantID, modelName, modelName, modelName, ciphertext, nonce, index == 0, fixture.actorID)
 		fixture.modelIDs = append(fixture.modelIDs, configID)
 		fixture.modelNames = append(fixture.modelNames, modelName)

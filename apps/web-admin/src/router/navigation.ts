@@ -19,7 +19,8 @@ export function normalizeEntryPath(path: string): string {
 }
 
 export function examWorkspaceNavigationPath(section: string): string {
-  if (["capture", "processing", "grading"].includes(section)) return "/grading";
+  // 学生答卷导入归入考试列表的步骤；阅卷和成绩仍选中各自的业务模块。
+  if (section === "grading") return "/grading";
   if (section === "quality") return "/arbitration";
   if (section === "scores") return "/scores";
   if (section === "reports") return "/reports";

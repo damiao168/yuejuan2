@@ -21,16 +21,20 @@ const (
 )
 
 type Handler struct {
-	papers          PaperRepository
-	imports         PaperImportRepository
-	questions       QuestionRepository
-	rubrics         RubricRepository
-	validation      ConfigurationValidationRepository
-	templates       TemplateRepository
-	templateBinding TemplateBindingRepository
-	readiness       ReadinessRepository
-	audit           auth.Store
-	documentImport  *DocumentImportService
+	referenceMaterials *ReferenceMaterialsService
+	papers                 PaperRepository
+	imports                PaperImportRepository
+	questions              QuestionRepository
+	rubrics                RubricRepository
+	validation             ConfigurationValidationRepository
+	templates              TemplateRepository
+	templateBinding        TemplateBindingRepository
+	readiness              ReadinessRepository
+	audit                  auth.Store
+	documentImport         *DocumentImportService
+	questionRubricExams    QuestionRubricExamReader
+	rubricDraftJobs        *RubricDraftJobs
+	templateLibraryMatcher TemplateLibraryVisualMatcher
 }
 
 func (h *Handler) WithDocumentImport(service *DocumentImportService) *Handler {
@@ -41,6 +45,13 @@ func (h *Handler) WithDocumentImport(service *DocumentImportService) *Handler {
 func (h *Handler) WithDocumentModelResolver(resolve func(context.Context, string) (*DocumentModelConfig, error)) *Handler {
 	if h.documentImport != nil {
 		h.documentImport.WithModelResolver(resolve)
+	}
+	return h
+}
+
+func (h *Handler) WithTemplateVisionResolver(resolve func(context.Context, string) (*DocumentModelConfig, error)) *Handler {
+	if h.documentImport != nil {
+		h.documentImport.WithTemplateVisionResolver(resolve)
 	}
 	return h
 }
@@ -388,12 +399,14 @@ func (h *Handler) CreatePaper(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusInternalServerError, "paper_create_failed", "failed to register paper metadata")
 		return
 	}
-	h.auditAction(r, "paper.created", "exam_paper", out.ID, "register exam paper metadata")
+	if !out.Duplicate {
+		h.auditAction(r, "paper.created", "exam_paper", out.ID, "register exam paper metadata")
+	}
 	note := "file metadata registered; binary upload is handled by file upload story"
 	if input.FileAssetID != "" {
 		note = "uploaded file asset linked to exam paper"
 	}
-	httpx.JSON(w, http.StatusCreated, map[string]any{"paper": out, "note": note})
+	httpx.JSON(w, http.StatusCreated, map[string]any{"paper": out, "note": note, "duplicate": out.Duplicate})
 }
 
 func (h *Handler) ListPapers(w http.ResponseWriter, r *http.Request) {
@@ -529,6 +542,8 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusConflict, "template_locked", "locked template cannot be modified; clone a new version")
 	case errors.Is(err, ErrTemplateNotLocked):
 		httpx.Error(w, r, http.StatusConflict, "template_not_locked", "template must be locked before it can be used for an exam")
+	case errors.Is(err, ErrTemplateReviewRequired):
+		httpx.Error(w, r, http.StatusConflict, "template_review_required", "答题卡仍有未处理候选、题区缺失或区域冲突，请核对后再确认；同题分块或跨页作答暂需调整模板")
 	case errors.Is(err, ErrExamFrozen):
 		httpx.Error(w, r, http.StatusConflict, "exam_frozen", "exam paper configuration is frozen after readiness confirmation")
 	case errors.Is(err, ErrImportedObjectiveRuleConflict):

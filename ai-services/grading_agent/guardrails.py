@@ -1,8 +1,6 @@
 import re
 import unicodedata
 
-_CHINESE_PUNCTUATION = re.compile(r"[，。！？；：‘’“”（）【】《》、]")
-_ASCII_PUNCTUATION = re.compile(r"[.,!?;:'\"()\[\]{}<>/\\|\-]")
 _ZERO_WIDTH = re.compile(r"[\u200B-\u200D\uFEFF]")
 _SPACE = re.compile(r"\s+")
 
@@ -18,9 +16,8 @@ _INJECTION_RULES = (
 
 
 def normalize_evidence_text(value):
+    # 引文和严格别名只容忍字宽、大小写与空白差异；删标点会把负数、分数或关系式改成另一个答案。
     text = unicodedata.normalize("NFKC", str(value or "")).casefold()
-    text = _CHINESE_PUNCTUATION.sub("", text)
-    text = _ASCII_PUNCTUATION.sub("", text)
     return _SPACE.sub("", text)
 
 

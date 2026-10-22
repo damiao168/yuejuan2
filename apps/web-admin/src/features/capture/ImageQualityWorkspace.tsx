@@ -46,15 +46,15 @@ interface FocusPatch {
 const pageStatusLabels: Record<string, string> = {
   passed: "合格",
   review: "需复核",
-  failed: "拒绝",
+  failed: "质量不合格",
   unchecked: "待检测",
 };
 
 const decisionLabels: Record<string, string> = {
-  PASS: "A · 直接通过",
-  PASS_WITH_ENHANCEMENT: "B · 增强后通过",
-  LOW_QUALITY: "C · 低质量复核",
-  REJECT: "D · 拒绝使用",
+  PASS: "质检通过",
+  PASS_WITH_ENHANCEMENT: "已优化，可继续处理",
+  LOW_QUALITY: "图像质量需确认",
+  REJECT: "图像质量不合格",
   PENDING: "等待检测",
 };
 
@@ -65,6 +65,7 @@ const issueLabels: Record<string, string> = {
   incomplete_page_border: "页面边界不完整",
   perspective_risk: "透视变形风险",
   residual_skew: "倾斜超出自动修正范围",
+  large_rotation_risk: "旧版横版方向提示",
   bad_exposure: "曝光异常",
   shadow_risk: "阴影影响识别",
   low_local_contrast: "局部对比度不足",
@@ -89,7 +90,7 @@ export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, on
   const filteredPages = useMemo(() => filterQualityPages(eligiblePages, filter), [eligiblePages, filter]);
   const counts = useMemo(() => qualityPageCounts(eligiblePages), [eligiblePages]);
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
-  useEffect(() => { if (initialPageId && pages.some(page => page.id === initialPageId)) setSelectedPageId(initialPageId); }, [initialPageId]);
+  useEffect(() => { if (initialPageId && pages.some(page => page.id === initialPageId)) setSelectedPageId(initialPageId); }, [initialPageId, pages]);
   const selectedPage = eligiblePages.find((page) => page.id === selectedPageId) ?? filteredPages[0];
   const [runs, setRuns] = useState<ImageQualityRun[]>([]);
   const [runsPageId, setRunsPageId] = useState("");
@@ -108,6 +109,10 @@ export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, on
   const [showFocusMap, setShowFocusMap] = useState(true);
   // 质检历史与图片预览各自计代次，切页后的迟到响应不能覆盖新选择。
   const runRequest = useRef(0);
+  const currentPage = useRef(selectedPage?.id);
+  currentPage.current = selectedPage?.id;
+  const actionRequest = useRef(0);
+  const actionBusy = useRef(false);
   const previewRequest = useRef(0);
   const assetId = previewMode === "normalized" ? selectedRun?.normalized_file_asset_id : selectedPage?.decoded_file_asset_id;
   const previewKey = `${selectedPage?.id ?? ""}:${previewMode}:${assetId ?? ""}`;
@@ -151,8 +156,13 @@ export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, on
 
   useEffect(() => {
     void loadRuns(selectedPage);
+    actionRequest.current += 1;
+    actionBusy.current = false;
+    setActioning(false);
+    return () => { runRequest.current += 1; actionRequest.current += 1; };
   }, [loadRuns, selectedPage]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: previewRetry 由重试按钮触发；同一文件也需要重新下载，旧请求会被代次淘汰。
   useEffect(() => {
     const requestId = ++previewRequest.current;
     // 新页、新文件或新预览模式都先移除旧图；失败时不能把旧证据标成当前页。
@@ -201,16 +211,21 @@ export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, on
   const effectiveShortEdge = selectedRun ? optionalMetric(selectedRun, "effective_short_edge_px") : undefined;
 
   async function rerunSelectedSubmission() {
-    if (!selectedPage?.submission_id) return;
+    if (!canManage || !selectedPage?.submission_id || actionBusy.current || currentPage.current !== selectedPage.id) return;
+    const request = ++actionRequest.current;
+    const isCurrent = () => request === actionRequest.current && currentPage.current === selectedPage.id;
+    actionBusy.current = true;
     setActioning(true);
     try {
       const result = await runImageQualityCheck(selectedPage.submission_id);
+      // 补读会成为新的历史请求；换页后不能由旧重检重新发起A页读取并覆盖B页。
+      if (!isCurrent()) return;
       await Promise.all([loadRuns(selectedPage), onRefresh()]);
-      message.success(`已提交 ${result.runs.length} 页重新检测；原质检记录继续保留`);
+      if (isCurrent()) message.success(`已提交 ${result.runs.length} 页重新检测；原质检记录继续保留`);
     } catch (error) {
-      message.error(getUserErrorMessage(error, "重新检测提交失败"));
+      if (isCurrent()) message.error(getUserErrorMessage(error, "重新检测提交失败"));
     } finally {
-      setActioning(false);
+      if (isCurrent()) { actionBusy.current = false; setActioning(false); }
     }
   }
 
@@ -358,8 +373,8 @@ function QualityPageList({ pages, selectedPageId, onSelect }: Readonly<{
             onClick={() => onSelect(page.id)}
           >
             <span>
-              <strong>第 {page.assigned_page_no ?? page.sequence_no} 页</strong>
-              <small>扫描序号 {page.sequence_no}</small>
+              <strong>扫描页 {page.sequence_no}</strong>
+              <small>扫描序号 {page.sequence_no} · {cardPageLabel(page)}</small>
             </span>
             <StatusTag tone={qualityTone(status)}>{pageStatusLabels[status] ?? "检测中"}</StatusTag>
           </button>
@@ -382,7 +397,7 @@ function QualityPreview({ loading, url, page, focusPatches, showFocusMap, onLoad
   if (!url) return <Empty image={<ImageIcon size={34} />} description="暂无可预览图像" />;
   return (
     <div className="image-quality-document-frame">
-      <img key={url} src={url} alt={`第 ${page?.assigned_page_no ?? page?.sequence_no} 页答题卡`} onLoad={onLoad} onError={onError} />
+      <img key={url} src={url} alt={`扫描页 ${page?.sequence_no ?? ""} 答题卡`} onLoad={onLoad} onError={onError} />
       {showFocusMap ? (
         <div className="focus-map-overlay" aria-label="局部清晰度热区">
           {focusPatches.map((patch) => (
@@ -425,6 +440,7 @@ function QualityRunDetails({ run, runs, dimensions, gates, badFocusPatchRatio, e
 >) {
   return (
     <>
+      <IssueList issues={run.quality_issues} />
       <div className="quality-run-select">
         <span>检测记录</span>
         <Select
@@ -439,14 +455,13 @@ function QualityRunDetails({ run, runs, dimensions, gates, badFocusPatchRatio, e
         {dimensions.length ? dimensions.map((dimension) => (
           <div className="quality-dimension-row" key={dimension.key}>
             <span>{dimension.label}</span>
-            <Progress percent={dimension.score} showInfo={false} size="small" status={dimension.status === "failed" ? "exception" : "normal"} />
-            <strong>{Math.round(dimension.score)}</strong>
+            {dimension.status === "not_evaluated" ? <small>待模板配准判断</small> : <Progress percent={dimension.score} showInfo={false} size="small" status={dimension.status === "failed" ? "exception" : "normal"} />}
+            <strong>{dimension.status === "not_evaluated" ? "—" : Math.round(dimension.score)}</strong>
           </div>
         )) : <div className="quality-legacy-note">旧版检测记录未包含七项明细，请重新检测。</div>}
       </div>
-      <IssueList issues={run.quality_issues} />
       <div className="quality-gates">
-        <div className="quality-section-label">Hard Gate</div>
+        <div className="quality-section-label">处理条件</div>
         {gates.map((raw, index) => {
           const gate = isRecord(raw) ? raw : {};
           const code = typeof gate.code === "string" ? gate.code : `gate-${index}`;
@@ -465,7 +480,7 @@ function QualityRunDetails({ run, runs, dimensions, gates, badFocusPatchRatio, e
 }
 
 function IssueList({ issues }: Readonly<{ issues: ImageQualityIssue[] }>) {
-  if (!issues.length) return <div className="quality-pass-note"><span>未触发质量问题</span><small>页面可继续进入后续处理门禁</small></div>;
+  if (!issues.length) return <div className="quality-pass-note"><span>未发现图像质量问题</span><small>后续会检查题目区域是否完整</small></div>;
   return (
     <div className="quality-issue-list">
       <div className="quality-section-label">触发问题</div>
@@ -506,13 +521,20 @@ function optionalMetric(run: ImageQualityRun, key: string): number | undefined {
 }
 
 function formatObserved(issue: ImageQualityIssue): string {
-  if (issue.observed === undefined) return "已触发质量门禁";
-  let observed: string | number;
-  if (typeof issue.observed === "number") observed = Math.round(issue.observed * 1000) / 1000;
-  else if (typeof issue.observed === "string") observed = issue.observed;
-  // 观测值来自 JSON 响应；布尔值和 null 保留字面值，数组与对象展示其内容。
-  else observed = JSON.stringify(issue.observed);
-  return `${issue.metric ?? "观测值"}：${observed}`;
+  const actions: Record<string, string> = { recapture: "请重新扫描或上传更清晰的原图", manual_review: "请查看原图确认是否影响作答内容" };
+  const value = (raw: unknown): string => typeof raw === "number" ? String(Math.round(raw * 1000) / 1000)
+    : typeof raw === "string" ? raw : JSON.stringify(raw) ?? "未知";
+  const measured = issue.observed === undefined ? "" : `实测 ${value(issue.observed)}`;
+  const threshold = issue.threshold === undefined ? "" : `规则阈值 ${value(issue.threshold)}`;
+  return [measured, threshold, actions[issue.action]].filter(Boolean).join("；") || "请查看原图和检测详情";
+}
+
+function cardPageLabel(page: CapturePage): string {
+  const identity = page.page_identity;
+  // 单个 PNG 的文件内页码通常为 1，只有条码、人工指定或视觉匹配证据才能作为答题卡页码显示。
+  const reliable = identity.barcode_status === "verified" || identity.barcode_status === "manual_override"
+    || (identity.page_no_source === "visual_template_match" && identity.matched_page_no === page.assigned_page_no);
+  return reliable && page.assigned_page_no ? `答题卡第 ${page.assigned_page_no} 页` : "答题卡页码待匹配";
 }
 
 function scoreStrokeColor(score: number): string {

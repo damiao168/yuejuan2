@@ -13,6 +13,7 @@ type PostgresStore struct{ db *sql.DB }
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
 // 运营汇总来自多个租户表；查询必须保留租户边界，避免把学校数据串到别的租户。
+// 文本证据直接关联同校默认配置，旧运营投影的结构化字段不能代替日常对话健康。
 func (s *PostgresStore) ListSummaries(ctx context.Context, windowDays int) ([]PlatformSchoolSummary, error) {
 	rows, err := s.db.QueryContext(ctx, `
 SELECT
@@ -21,11 +22,12 @@ SELECT
   metrics.account_count,metrics.active_account_count,metrics.admin_count,metrics.teacher_count,metrics.grader_count,metrics.student_count,metrics.class_count,metrics.exam_count,
   usage.input_tokens,usage.output_tokens,usage.cached_input_tokens,usage.reasoning_tokens,usage.total_tokens,usage.request_count,usage.arbitration_requests,usage.estimated_cost_microusd,
   COALESCE(metrics.model_config_id::text,''),metrics.model_status,metrics.model_display_name,metrics.model_provider_key,metrics.model_name,metrics.model_credential_hint,
-  metrics.model_test_status,metrics.model_test_message,metrics.model_capability_status,metrics.model_capability_version,metrics.model_capability_message,
-  metrics.model_test_latency_ms,metrics.model_tested_at,metrics.model_capability_tested_at
+  metrics.model_test_status,metrics.model_test_message,COALESCE(default_model.last_text_status,''),COALESCE(default_model.last_text_message,''),metrics.model_capability_status,metrics.model_capability_version,metrics.model_capability_message,
+  metrics.model_test_latency_ms,metrics.model_tested_at,default_model.last_text_tested_at,metrics.model_capability_tested_at
 FROM tenant t
 JOIN platform_school_metrics metrics ON metrics.tenant_id=t.id
 JOIN school s ON s.tenant_id=t.id AND s.id=metrics.school_id AND s.deleted_at IS NULL
+LEFT JOIN managed_model_api_config default_model ON default_model.tenant_id=t.id AND default_model.id=metrics.model_config_id AND default_model.deleted_at IS NULL
 LEFT JOIN LATERAL (
   SELECT
     COALESCE(sum(d.input_tokens),0)::bigint input_tokens,
@@ -48,21 +50,22 @@ ORDER BY t.created_at DESC,t.id`, windowDays)
 	items := []PlatformSchoolSummary{}
 	for rows.Next() {
 		var item PlatformSchoolSummary
-		var adminLast, lastActivity, lastTested, lastCapability sql.NullTime
+		var adminLast, lastActivity, lastTested, lastText, lastCapability sql.NullTime
 		if err := rows.Scan(
 			&item.TenantID, &item.SchoolID, &item.Name, &item.Code, &item.Status, &item.CreatedAt, &lastActivity, &item.ConsecutiveAIFailures,
 			&item.Administrator.ID, &item.Administrator.DisplayName, &item.Administrator.Username, &item.Administrator.AdminCount, &adminLast,
 			&item.Members.Accounts, &item.Members.ActiveAccounts, &item.Members.Administrators, &item.Members.Teachers, &item.Members.Graders, &item.Members.Students, &item.Members.Classes, &item.ExamCount,
 			&item.Usage.InputTokens, &item.Usage.OutputTokens, &item.Usage.CachedInputTokens, &item.Usage.ReasoningTokens, &item.Usage.TotalTokens, &item.Usage.Requests, &item.Usage.ArbitrationRequests, &item.Usage.EstimatedCostMicroUSD,
 			&item.ModelHealth.ConfigID, &item.ModelHealth.ConfigStatus, &item.ModelHealth.DisplayName, &item.ModelHealth.ProviderKey, &item.ModelHealth.ModelName, &item.ModelHealth.CredentialHint,
-			&item.ModelHealth.ConnectionStatus, &item.ModelHealth.ConnectionMessage, &item.ModelHealth.CapabilityStatus, &item.ModelHealth.CapabilityVersion, &item.ModelHealth.CapabilityMessage,
-			&item.ModelHealth.LatencyMS, &lastTested, &lastCapability,
+			&item.ModelHealth.ConnectionStatus, &item.ModelHealth.ConnectionMessage, &item.ModelHealth.TextStatus, &item.ModelHealth.TextMessage, &item.ModelHealth.CapabilityStatus, &item.ModelHealth.CapabilityVersion, &item.ModelHealth.CapabilityMessage,
+			&item.ModelHealth.LatencyMS, &lastTested, &lastText, &lastCapability,
 		); err != nil {
 			return nil, err
 		}
 		item.LastActivityAt = nullableTime(lastActivity)
 		item.Administrator.LastLoginAt = nullableTime(adminLast)
 		item.ModelHealth.LastTestedAt = nullableTime(lastTested)
+		item.ModelHealth.LastTextTestedAt = nullableTime(lastText)
 		item.ModelHealth.LastCapabilityTestedAt = nullableTime(lastCapability)
 		item.ModelHealth.Status = modelHealthStatus(item.ModelHealth)
 		item.Usage.WindowDays = windowDays
@@ -184,18 +187,19 @@ func (s *PostgresStore) usageBreakdown(ctx context.Context, tenantID string, usa
 
 func (s *PostgresStore) GetModelHealth(ctx context.Context, tenantID string) (ModelHealthResult, error) {
 	result := ModelHealthResult{Roles: []ModelRole{}}
-	var lastTested, lastCapability sql.NullTime
+	var lastTested, lastText, lastCapability sql.NullTime
 	err := s.db.QueryRowContext(ctx, `
 SELECT COALESCE(id::text,''),COALESCE(status,''),COALESCE(display_name,''),COALESCE(provider_key,''),COALESCE(model_name,''),COALESCE(credential_hint,''),
-       COALESCE(last_test_status,''),COALESCE(last_test_message,''),COALESCE(last_capability_status,''),COALESCE(last_capability_probe_version,''),COALESCE(last_capability_message,''),COALESCE(last_test_latency_ms,0),last_tested_at,last_capability_tested_at
+       COALESCE(last_test_status,''),COALESCE(last_test_message,''),COALESCE(last_text_status,''),COALESCE(last_text_message,''),COALESCE(last_capability_status,''),COALESCE(last_capability_probe_version,''),COALESCE(last_capability_message,''),COALESCE(last_test_latency_ms,0),last_tested_at,last_text_tested_at,last_capability_tested_at
 FROM managed_model_api_config WHERE tenant_id=$1::uuid AND deleted_at IS NULL AND is_default ORDER BY updated_at DESC LIMIT 1`, tenantID).Scan(
 		&result.DefaultModel.ConfigID, &result.DefaultModel.ConfigStatus, &result.DefaultModel.DisplayName, &result.DefaultModel.ProviderKey, &result.DefaultModel.ModelName, &result.DefaultModel.CredentialHint,
-		&result.DefaultModel.ConnectionStatus, &result.DefaultModel.ConnectionMessage, &result.DefaultModel.CapabilityStatus, &result.DefaultModel.CapabilityVersion, &result.DefaultModel.CapabilityMessage, &result.DefaultModel.LatencyMS, &lastTested, &lastCapability)
+		&result.DefaultModel.ConnectionStatus, &result.DefaultModel.ConnectionMessage, &result.DefaultModel.TextStatus, &result.DefaultModel.TextMessage, &result.DefaultModel.CapabilityStatus, &result.DefaultModel.CapabilityVersion, &result.DefaultModel.CapabilityMessage, &result.DefaultModel.LatencyMS, &lastTested, &lastText, &lastCapability)
 	if err != nil && !errorsIsNoRows(err) {
 		return ModelHealthResult{}, err
 	}
 	if err == nil {
 		result.DefaultModel.LastTestedAt = nullableTime(lastTested)
+		result.DefaultModel.LastTextTestedAt = nullableTime(lastText)
 		result.DefaultModel.LastCapabilityTestedAt = nullableTime(lastCapability)
 	}
 	result.DefaultModel.Status = modelHealthStatus(result.DefaultModel)
@@ -257,7 +261,8 @@ func modelHealthStatus(model ModelHealth) string {
 	if model.ConfigID == "" {
 		return ModelUnconfigured
 	}
-	if model.ConfigStatus == "active" && model.ConnectionStatus == "success" && model.CapabilityStatus == "success" && model.CapabilityVersion == "structured-json-v3" {
+	// 这里只描述日常对话默认模型；评分角色由独立投影检查结构化协议，JSON 失败不能否定普通回复。
+	if model.ConfigStatus == "active" && model.TextStatus == "success" {
 		return ModelHealthy
 	}
 	return ModelWarning

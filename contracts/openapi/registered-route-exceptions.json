@@ -61,20 +61,6 @@
       ]
     },
     {
-      "id": "answer-sheet-template-routing-v1",
-      "interface_category": "public-feature",
-      "contract_carrier": "Go handler tests and TypeScript API consumer types",
-      "exception_scope": "Only the exact answer-sheet template binding endpoints introduced for the first-page routing workflow.",
-      "owner": "capture-platform",
-      "review_after": "2026-12-31",
-      "reason": "The routing workflow extends the existing handwritten answer-sheet API surface while its public OpenAPI migration is scheduled as a bounded follow-up.",
-      "routes": [
-        "DELETE /api/v1/exams/{examId}/answer-sheet-template-binding",
-        "GET /api/v1/exams/{examId}/answer-sheet-template-binding",
-        "PUT /api/v1/exams/{examId}/answer-sheet-template-binding"
-      ]
-    },
-    {
       "id": "managed-model-auto-config-v1",
       "interface_category": "public-feature",
       "contract_carrier": "Go handler and registry tests plus the typed web-admin API client",
@@ -187,6 +173,18 @@
       ]
     },
     {
+      "id": "personal-review-bookmark-dispatch-v1",
+      "interface_category": "public-feature",
+      "contract_carrier": "OpenAPI concrete bookmark paths plus Go route dispatch tests",
+      "exception_scope": "Only the internal two-segment dispatcher used for the personal review bookmark context and image paths.",
+      "owner": "review-platform",
+      "review_after": "2026-12-31",
+      "reason": "Go ServeMux treats by-task/{taskId} and {bookmarkId}/context as overlapping patterns; the dispatcher preserves the concrete OpenAPI paths while routing both handlers through one registered pattern.",
+      "routes": [
+        "GET /api/v1/me/review-bookmarks/{first}/{second}"
+      ]
+    },
+    {
       "id": "legacy-public-command-v1",
       "interface_category": "legacy-public-command",
       "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
@@ -207,14 +205,12 @@
         "PATCH /api/v1/model-providers/{id}/status",
         "PATCH /api/v1/platform/model-api-configs/{id}",
         "PATCH /api/v1/questions/{id}",
-        "PATCH /api/v1/students/{id}",
         "PATCH /api/v1/tenants/{id}",
         "POST /api/v1/ai-grades/{id}/verify-evidence",
         "POST /api/v1/answer-segments/{id}/reprocess-score",
         "POST /api/v1/answer-sheet-print-sheets/{id}/reprint",
         "POST /api/v1/answer-sheet-print-sheets/{id}/revoke",
         "POST /api/v1/answer-sheet-templates/{id}/clone",
-        "POST /api/v1/answer-sheet-templates/{id}/lock",
         "POST /api/v1/answer-sheet-templates/{id}/page-barcodes",
         "POST /api/v1/answer-sheet-templates/{id}/student-barcodes",
         "POST /api/v1/appeals",

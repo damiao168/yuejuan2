@@ -250,7 +250,7 @@ describe("换版后的原版复核回执", () => {
     expect(readAppealDraft(draftKey)).toBeUndefined();
   });
 
-  it("同一轮事件排队的收起、切题、切科和hash离开均被同步提交标记拦住", async () => {
+  it.each(["hashchange", "popstate"] as const)("同一轮事件排队的收起、切题、切科和%s离开均被同步提交标记拦住", async (navigation) => {
     const receipt = deferredResponse();
     const result = makeResult([makeQuestion(), makeQuestion({ question_id: "question-2", question_no: "2" }), makeQuestion({ question_id: "question-3", question_no: "3", subject: "english" })]);
     const calls = installApi((call) => call.init.method === "POST" ? receipt.promise : resultRoute(call, result));
@@ -268,11 +268,12 @@ describe("换版后的原版复核回执", () => {
       fireEvent.click(first);
       fireEvent.click(second);
       fireEvent.click(english);
-      window.history.replaceState(null, "", "/#/");
-      window.dispatchEvent(new HashChangeEvent("hashchange"));
+      window.history.replaceState(null, "", navigation === "hashchange" ? "/#/" : "/");
+      window.dispatchEvent(new Event(navigation));
     });
     expect(screen.getByRole("heading", { name: "第 1 题 · 作答与评分依据" })).toBeTruthy();
-    expect(window.location.hash).toBe("#/exams/exam-1");
+    expect(window.location.pathname).toBe("/exams/exam-1");
+    expect(window.location.hash).toBe("");
     expect(screen.getByRole("button", { name: "正在提交…" })).toBeTruthy();
     expect(calls.filter((call) => isAppeal(call.url.pathname) && call.init.method === "POST")).toHaveLength(1);
     await act(async () => receipt.resolve(jsonResponse({ appeal: makeAppeal() })));

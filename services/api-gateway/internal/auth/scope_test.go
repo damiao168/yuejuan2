@@ -7,6 +7,27 @@ import (
 	"testing"
 )
 
+func TestIsPlatformWorkerRequiresPlatformTenantAndSupportedServiceRole(t *testing.T) {
+	for _, tc := range []struct {
+		name, tenant, role string
+		allowed            bool
+	}{
+		{"platform page worker", PlatformTenantID, "page_processing_worker", true},
+		{"platform subjective worker", PlatformTenantID, "subjective_grading_worker", true},
+		{"school page worker", "school-tenant", "page_processing_worker", false},
+		{"school subjective worker", "school-tenant", "subjective_grading_worker", false},
+		{"platform administrator", PlatformTenantID, "platform_admin", false},
+		{"school administrator", "school-tenant", "school_admin", false},
+		{"unknown platform worker", PlatformTenantID, "other_worker", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := IsPlatformWorker(User{TenantID: tc.tenant, Roles: []string{tc.role}}); got != tc.allowed {
+				t.Fatalf("IsPlatformWorker=%t, want %t", got, tc.allowed)
+			}
+		})
+	}
+}
+
 func TestScopedStudentIDSupportsFlatAndRoleKeyedScopes(t *testing.T) {
 	flat := User{DataScope: map[string]any{"scope": "self", "student_id": "student-flat"}}
 	if got, ok := ScopedStudentID(flat); !ok || got != "student-flat" {

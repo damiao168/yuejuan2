@@ -84,7 +84,8 @@ body { font-family: var(--eg-font-family); font-size: var(--eg-font-body); line-
 }
 @container grading (max-width: 1050px) {
   .immersive-workspace .grading-workspace, .grading-workspace { grid-template-columns: minmax(0, 1fr); }
-  .immersive-workspace .grading-task-rail, .grading-task-rail { height: auto; max-height: 180px; }
+  /* 单列时让筛选自然展开，仅任务列表滚动，避免纵向筛选被固定侧栏高度裁掉。 */
+  .immersive-workspace .grading-task-rail, .grading-task-rail { height: auto; max-height: none; }
   .grading-task-list { max-height: 120px; }
 }
 @media (max-width: 760px) {

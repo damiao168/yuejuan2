@@ -2,6 +2,7 @@
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { UploadProps } from "antd";
 import type { CaptureBatch, CaptureBatchDetail, CapturePage, MatchingQueue, ProcessingSummary } from "../api/capture";
 import type { SessionUser } from "../auth/session";
 import { CaptureBatchPage } from "./CaptureBatchPage";
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   matchStudent: vi.fn(), markUnknown: vi.fn(), matchPage: vi.fn(), lifecycle: vi.fn(), split: vi.fn(), merge: vi.fn(),
   form: { validateFields: vi.fn(), resetFields: vi.fn() },
   targets: vi.fn(), getBatch: vi.fn(),
+  uploading: false, uploadProps: undefined as UploadProps | undefined,
 }));
 
 vi.mock("../api/capture", () => ({ confirmRegistration: mocks.confirm, retryRegistration: mocks.retry, findCaptureTargets: mocks.targets, getCaptureBatch: mocks.getBatch }));
@@ -30,12 +32,15 @@ vi.mock("../features/capture/useCaptureBatchDetail", () => ({ useCaptureBatchDet
   detail: mocks.detail, detailError: mocks.detailError, detailLoading: mocks.detailLoading, matching: mocks.matching, matchingLoading: mocks.matchingLoading, setMatching: mocks.setMatching,
   processingSummaries: mocks.summaries, loadDetail: mocks.loadDetail, loadMatching: mocks.loadMatching, resetDetail: mocks.resetDetail,
 }) }));
-vi.mock("../features/capture/useCaptureUpload", () => ({ useCaptureUpload: () => ({ uploading: false, uploadSource: mocks.upload }) }));
+vi.mock("../features/capture/useCaptureUpload", () => ({ useCaptureUpload: () => ({ uploading: mocks.uploading, uploadSources: mocks.upload, retryUpload: vi.fn(), discardUpload: vi.fn() }) }));
 vi.mock("../features/capture/useCaptureMatchActions", () => ({ useCaptureMatchActions: () => ({
   matchStudent: mocks.matchStudent, markUnknown: mocks.markUnknown, matchPage: mocks.matchPage,
   changePageLifecycle: mocks.lifecycle, splitSubmission: mocks.split, mergeSubmissions: mocks.merge,
 }) }));
-vi.mock("../features/capture/captureColumns", () => ({ captureFileColumns: () => [], capturePageColumns: () => [], errorLabels: {} }));
+vi.mock("../features/capture/captureColumns", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../features/capture/captureColumns")>(),
+  captureFileColumns: () => [], capturePageColumns: () => [],
+}));
 vi.mock("../features/capture/ImageQualityWorkspace", () => ({ ImageQualityWorkspace: () => null }));
 vi.mock("../components/RegistrationCorrectionWorkspace", () => ({ RegistrationCorrectionWorkspace: () => null }));
 vi.mock("../features/capture/MatchingWorkspace", () => ({ MatchingWorkspace: (props: { queue: MatchingQueue; canManage: boolean }) => {
@@ -56,8 +61,9 @@ vi.mock("antd", () => {
     Button: ({ children, onClick, disabled, loading }: { children?: ReactNode; onClick?: () => void; disabled?: boolean; loading?: boolean }) => <button onClick={onClick} disabled={disabled} data-loading={String(Boolean(loading))}>{children}</button>,
     Empty: Object.assign(({ description }: { description: ReactNode }) => <div>{description}</div>, { PRESENTED_IMAGE_SIMPLE: null }),
     Input: Object.assign(Wrap, { TextArea: Wrap }),
-    Select: ({ options = [], onChange, "aria-label": label }: { options?: { value: string; label: string }[]; onChange?: (value: string) => void; "aria-label"?: string }) => <select aria-label={label} defaultValue="" onChange={event => onChange?.(event.target.value)}><option value="">选择</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>,
-    Alert: ({ message, description, action }: { message: ReactNode; description?: ReactNode; action?: ReactNode }) => <aside>{message}{description}{action}</aside>, Space: Wrap, Upload: Wrap,
+    Select: ({ options = [], onChange, disabled, value, "aria-label": label }: { options?: { value: string | number; label: string }[]; onChange?: (value: string | number) => void; disabled?: boolean; value?: string | number; "aria-label"?: string }) => <select aria-label={label} value={value ?? ""} disabled={disabled} onChange={event => onChange?.(options.find(option => String(option.value) === event.target.value)?.value ?? "")}><option value="">选择</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>,
+    Alert: ({ message, description, action }: { message: ReactNode; description?: ReactNode; action?: ReactNode }) => <aside>{message}{description}{action}</aside>, Space: Wrap,
+    Upload: (props: UploadProps) => { mocks.uploadProps = props; return <div>{props.children}</div>; },
     Modal: ({ open, children }: { open: boolean; children: ReactNode }) => open ? <div>{children}</div> : null,
     Progress: ({ percent }: { percent: number }) => <progress value={percent} max={100} />,
     Tabs: ({ items }: { items: { key: string; children: ReactNode }[] }) => <div>{items.map((item) => <section key={item.key} data-tab={item.key}>{item.children}</section>)}</div>,
@@ -101,6 +107,7 @@ describe("采集批次页条件展示与对齐回读", () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.detail = detail(); mocks.summaries = {}; mocks.matching = undefined; mocks.matchingLoading = false;
     mocks.batches = undefined; mocks.detailError = undefined; mocks.detailLoading = false;
+    mocks.uploading = false; mocks.uploadProps = undefined;
     mocks.loadDetail.mockResolvedValue(undefined); mocks.confirm.mockResolvedValue({}); mocks.retry.mockResolvedValue({});
     localStorage.clear();
     location.hash = "";
@@ -116,6 +123,41 @@ describe("采集批次页条件展示与对齐回读", () => {
     expect(button).toBeDefined();
     await act(async () => button!.click());
   }
+  async function choosePages(pages = 2) {
+    const selector = host.querySelector<HTMLSelectElement>('select[aria-label="每名学生答题卡页数"]');
+    await act(async () => { selector!.value = String(pages); selector!.dispatchEvent(new Event("change", { bubbles: true })); });
+  }
+
+  it("先显式选择学生页数，再将 antd 的整次选择只提交一次", async () => {
+    await renderPage();
+    const importButton = () => [...host.querySelectorAll("button")].find(button => button.textContent === "导入文件");
+    expect(importButton()?.disabled).toBe(true);
+    expect(mocks.uploadProps?.disabled).toBe(true);
+    await choosePages();
+    expect(importButton()?.disabled).toBe(false);
+    const files = [new File(["front"], "front.png"), new File(["back"], "back.png")] as Parameters<NonNullable<UploadProps["beforeUpload"]>>[1];
+    await act(async () => { for (const current of files) await mocks.uploadProps!.beforeUpload!(current, files); });
+    expect(mocks.upload).toHaveBeenCalledExactlyOnceWith(files, 2);
+    expect(host.textContent).toContain("不会跨两次选择凑页");
+  });
+
+  it("上传期间冻结页数、批次选择和处理操作", async () => {
+    await renderPage(); await choosePages();
+    mocks.uploading = true; await renderPage();
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="每名学生答题卡页数"]')?.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>(".capture-batch-row")?.disabled).toBe(true);
+    expect(mocks.uploadProps?.disabled).toBe(true);
+  });
+
+  it.each(["waiting_files", "incomplete_pages", "identity_conflict"])("分组 %s 阻止答卷进入后续页面处理", async status => {
+    mocks.detail!.files = [{ ...file("completed"), page_count: 1, upload_group_id: "group-16", upload_group_file_count: 1, upload_group_file_index: 1, pages_per_student: 2 }];
+    mocks.detail!.pages[0].page_identity = { grouping_status: status };
+    await renderPage();
+    const processButton = [...host.querySelectorAll("button")].find(button => button.textContent === "等待答卷完整分组");
+    expect(processButton?.disabled).toBe(true);
+    if (status === "incomplete_pages") expect(host.textContent).toContain("缺少 1 页");
+    if (status === "identity_conflict") expect(host.textContent).toContain("学生身份冲突");
+  });
 
   it.each([
     [false, "首次读取失败", true, "error"],
@@ -160,6 +202,7 @@ describe("采集批次页条件展示与对齐回读", () => {
   ] as const)("批次 %s、管理权限 %s 保留写入与完成/重开边界", async (status, canManage, writable, showComplete, showReopen) => {
     mocks.detail!.batch.status = status; mocks.detail!.files = [file()];
     await renderPage(canManage);
+    if (writable) await choosePages();
     const findButton = (label: string) => [...host.querySelectorAll("button")].find(button => button.textContent === label);
     expect(findButton("导入文件")?.disabled).toBe(!writable);
     expect(findButton("开始处理")?.disabled).toBe(!writable);
@@ -243,7 +286,7 @@ describe("采集批次页条件展示与对齐回读", () => {
     await renderPage();
     expect(host.querySelector(".capture-file-issue")?.textContent).toContain("待修复.pdf");
     await click("上传修复文件");
-    expect(mocks.info).toHaveBeenCalledWith("可重新导入修复后的同一文件，系统会保留原失败记录");
+    expect(mocks.info).toHaveBeenCalledWith("请按学生页序一次选择完整答卷重新导入；新选择独立分组，系统会保留原失败记录");
   });
 
   it("名册定位读取分页外的真实批次，保留明确答卷对象", async () => {

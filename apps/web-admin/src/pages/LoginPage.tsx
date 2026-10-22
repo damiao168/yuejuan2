@@ -62,7 +62,7 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Re
     const poll = async () => {
       try {
         const response = await pollWechatLogin({ challenge_id: challenge.challenge_id, poll_token: challenge.poll_token }, controller.signal);
-        if (generation !== pollGeneration.current) return;
+        if (controller.signal.aborted || generation !== pollGeneration.current) return;
         if (response.status === "authenticated" && response.user) {
           setWechatLoading(true);
           await onWechatLogin({ expires_at: response.expires_at, user: response.user });
@@ -82,8 +82,11 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Re
         if (response.status === "consumed") {
           try {
             const recovered = await getCurrentUser();
+            // consumed后的身份恢复还有第二次等待；切换方式后这一回执也必须废弃。
+            if (controller.signal.aborted || generation !== pollGeneration.current) return;
             await onWechatLogin({ expires_at: response.expires_at, user: recovered.user });
           } catch {
+            if (controller.signal.aborted || generation !== pollGeneration.current) return;
             setChallenge(undefined);
             setWechatError("二维码已使用，请刷新后重新扫码。");
           }

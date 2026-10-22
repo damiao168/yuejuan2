@@ -28,6 +28,18 @@
   color: var(--primary);
 }
 
+.exam-name-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.exam-navigable-row { cursor: pointer; }
+.ant-table-wrapper .ant-table-tbody > tr.exam-navigable-row:hover > td.ant-table-cell,
+.ant-table-wrapper .ant-table-tbody > tr.exam-navigable-row:focus-within > td.ant-table-cell {
+  background: var(--primary-soft, #e6f4ff);
+}
+
 .exam-subject-select {
   width: 100%;
 }
@@ -36,6 +48,46 @@
   margin: 0 0 18px;
   color: var(--text-secondary);
   font-weight: 600;
+}
+
+.management-exam-overview-section {
+  padding: 16px;
+}
+
+.management-exam-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  align-items: start;
+  gap: 20px;
+}
+
+.management-exam-subjects,
+.management-exam-information {
+  min-width: 0;
+}
+
+.management-exam-overview-grid h3 {
+  margin: 0 0 12px;
+  font-size: var(--eg-font-section);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.management-exam-information .ant-descriptions-item-label {
+  width: 88px;
+  white-space: nowrap;
+}
+
+.management-exam-information .ant-descriptions-item-label,
+.management-exam-information .ant-descriptions-item-content {
+  padding: 8px 10px !important;
+}
+
+@media (max-width: 1180px) {
+  .management-exam-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
 }
 
 .exam-table-actions {

@@ -68,11 +68,52 @@ describe("native pending status and real rich-text content boundaries", () => {
     expect(host.querySelector(".math-markdown p")?.textContent).toBe("第一段后续");
   });
 
+  it("renders chat formulas after streamed delimiters close and preserves prices and code", async () => {
+    // SSE 可能停在积分上下限或分式花括号中；中间帧不能先显示公式错误，闭合后再呈现数学排版。
+    for (const content of [String.raw`欧拉公式 $e^{i`, String.raw`欧拉公式 $e^{i\theta}`, "积分：\n\n$$\n\\int_{-\\infty}^{", "积分：\n\n$$\n\\frac{1}{", "积分：\n\n\\[\\sqrt{"]) {
+      await renderPending(content);
+      expect(host.querySelector(".katex-error")).toBeNull();
+    }
+    const fraction = "$$\n\\frac{1}{\\sqrt{x}}\n$$";
+    for (let length = 1; length <= fraction.length; length += 1) {
+      await renderPending(fraction.slice(0, length));
+      expect(host.querySelector(".katex-error")).toBeNull();
+    }
+    await renderPending("", "$$\n\\frac{1}{");
+    await act(async () => host.querySelector<HTMLButtonElement>(".school-chat-reasoning-toggle")!.click());
+    expect(host.querySelector(".school-chat-reasoning-content .katex-error")).toBeNull();
+    const content = String.raw`欧拉公式 $e^{i\theta}=\cos\theta+i\sin\theta$。
+
+$$
+\int_{-\infty}^{+\infty}e^{-x^2}\,dx=\sqrt{\pi}
+$$
+
+费用 \$20；代码示例：` + "`$x^2$`";
+    await renderPending(content);
+    expect(host.querySelectorAll(".school-chat-live-body > .math-markdown .katex")).toHaveLength(2);
+    expect(host.querySelectorAll(".katex-display")).toHaveLength(1);
+    expect(host.querySelector(".katex-error")).toBeNull();
+    expect(host.textContent).toContain("费用 $20");
+    expect(host.querySelector("code")?.textContent).toBe("$x^2$");
+  });
+
+  it("keeps completed reply and expanded reasoning formulas in the real chat renderer", async () => {
+    await act(async () => root.render(<ConversationFlow thread={{ id: "math-thread", title: "公式", updatedAt: 1,
+      messages: [{ role: "assistant", content: String.raw`\[e^{i\pi}+1=0\]`, reasoning_content: String.raw`代入 $\theta=\pi$。` }] }}
+      evidence={new Map()} user={user} reasoningExpanded={false} onReasoningToggle={() => undefined} copiedMessage=""
+      onCopy={async () => undefined} retryDisabled={false} onRetry={() => undefined} modelError="" model={model}
+      onSuggestion={() => undefined} />));
+    expect(host.querySelectorAll(".katex")).toHaveLength(1);
+    await act(async () => host.querySelector<HTMLButtonElement>(".school-chat-reasoning-toggle")!.click());
+    expect(host.querySelectorAll(".katex")).toHaveLength(2);
+    expect(host.querySelector(".katex-error")).toBeNull();
+  });
+
   it("does not add native live statuses to static messages", async () => {
     await act(async () => root.render(<ConversationFlow thread={{ id: "thread", title: "一般聊天", updatedAt: 1, messages: [{ role: "user", content: "历史消息" }] }}
       evidence={new Map()} user={user} reasoningExpanded={false} onReasoningToggle={() => undefined} copiedMessage=""
       onCopy={async () => undefined} retryDisabled={false} onRetry={() => undefined} modelError="" model={model}
-      onSuggestion={() => undefined} scrollEndRef={{ current: null }} />));
+      onSuggestion={() => undefined} />));
     expect(host.querySelector("output")).toBeNull();
     expect(host.querySelector(".school-chat-flow")?.getAttribute("aria-live")).toBe("polite");
     expect(host.querySelector(".school-chat-message-body")?.textContent).toBe("历史消息");

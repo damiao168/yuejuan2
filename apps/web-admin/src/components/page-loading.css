@@ -1,0 +1,9 @@
+/* 页面取数时维持内容轮廓；使用静态色块，避免短请求期间反复淡入或闪烁。 */
+.state-panel.state-panel-loading { display: flex; min-height: 240px; min-width: 0; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 24px; padding: 20px 0; text-align: left; }
+.page-loading-status { display: flex; min-height: 24px; align-items: center; gap: 10px; color: var(--text-muted, #667085); font-size: 13px; }
+.page-loading-skeleton { display: grid; min-width: 0; gap: 14px; }
+.page-loading-skeleton > i { display: block; height: 20px; border-radius: 4px; background: #e8ecf1; }
+.page-loading-skeleton > .page-loading-heading { width: 28%; min-width: 110px; height: 28px; }
+.page-loading-skeleton > .page-loading-toolbar { height: 42px; margin-bottom: 4px; background: #edf0f4; }
+.page-loading-skeleton > i:nth-last-child(2) { width: 88%; }
+.page-loading-skeleton > i:last-child { width: 66%; }

@@ -36,6 +36,9 @@ func buildStudentReport(data dataset, studentID string) StudentReport {
 	records := []gradeRecord{}
 	for _, grade := range data.Grades {
 		if grade.SubmissionID == submission.ID {
+			if !data.ShowFeedback {
+				grade.TeacherFeedback, grade.AIFeedback, grade.ErrorClues = nil, nil, nil
+			}
 			records = append(records, grade)
 			report.TeacherFeedback = append(report.TeacherFeedback, grade.TeacherFeedback...)
 			report.AIFeedback = append(report.AIFeedback, grade.AIFeedback...)
@@ -43,21 +46,29 @@ func buildStudentReport(data dataset, studentID string) StudentReport {
 		}
 	}
 	sort.Slice(records, func(i, j int) bool { return records[i].QuestionNo < records[j].QuestionNo })
-	for _, grade := range records {
-		report.Questions = append(report.Questions, StudentQuestionReport{
-			QuestionID:      grade.QuestionID,
-			QuestionNo:      grade.QuestionNo,
-			QuestionType:    grade.QuestionType,
-			Score:           round2(grade.Score),
-			MaxScore:        round2(grade.MaxScore),
-			ScoreRate:       ratio(grade.Score, grade.MaxScore),
-			KnowledgePoints: append([]string(nil), grade.KnowledgePoints...),
-			TeacherFeedback: grade.TeacherFeedback,
-			AIFeedback:      grade.AIFeedback,
-			ErrorClues:      grade.ErrorClues,
-		})
+	if data.ShowQuestionScores {
+		for _, grade := range records {
+			knowledgePoints := []string(nil)
+			if data.ShowKnowledgeAnalysis {
+				knowledgePoints = append([]string(nil), grade.KnowledgePoints...)
+			}
+			report.Questions = append(report.Questions, StudentQuestionReport{
+				QuestionID:      grade.QuestionID,
+				QuestionNo:      grade.QuestionNo,
+				QuestionType:    grade.QuestionType,
+				Score:           round2(grade.Score),
+				MaxScore:        round2(grade.MaxScore),
+				ScoreRate:       ratio(grade.Score, grade.MaxScore),
+				KnowledgePoints: knowledgePoints,
+				TeacherFeedback: grade.TeacherFeedback,
+				AIFeedback:      grade.AIFeedback,
+				ErrorClues:      grade.ErrorClues,
+			})
+		}
 	}
-	report.KnowledgeMastery = knowledgeMastery(records)
+	if data.ShowKnowledgeAnalysis {
+		report.KnowledgeMastery = knowledgeMastery(records)
+	}
 	return report
 }
 
@@ -419,8 +430,22 @@ func buildExportCSV(tenantID string, examID string, actorID string, overview Ove
 	for _, question := range questions {
 		write("question", question.QuestionNo+"_score_rate", fmt.Sprintf("%.2f", question.ScoreRate))
 	}
-	write("grading_quality", "ai_adoption_rate", fmt.Sprintf("%.2f", quality.AIAdoptionRate.Value))
-	write("grading_quality", "ocr_failure_rate", fmt.Sprintf("%.2f", quality.OCRFailureRate.Value))
+	// 不可评估的指标不能写成 0；空值与 available/reason 一起导出，避免把“没有样本”误读为真实零值。
+	writeMetric := func(key string, metric Metric) {
+		value := ""
+		if metric.Available {
+			value = fmt.Sprintf("%.2f", metric.Value)
+		}
+		write("grading_quality", key, value)
+		write("grading_quality", key+"_available", fmt.Sprintf("%t", metric.Available))
+		write("grading_quality", key+"_numerator", fmt.Sprintf("%d", metric.Numerator))
+		write("grading_quality", key+"_denominator", fmt.Sprintf("%d", metric.Denominator))
+		if metric.Reason != "" {
+			write("grading_quality", key+"_reason", metric.Reason)
+		}
+	}
+	writeMetric("ai_adoption_rate", quality.AIAdoptionRate)
+	writeMetric("ocr_failure_rate", quality.OCRFailureRate)
 	writer.Flush()
 	return ExportResult{
 		Filename:    fmt.Sprintf("exam-%s-report.csv", examID),

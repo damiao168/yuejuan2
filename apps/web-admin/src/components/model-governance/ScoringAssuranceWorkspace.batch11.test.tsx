@@ -109,7 +109,7 @@ describe("评分保障共同旧新回归：模拟 API 和表单", () => {
   let root: Root;
   beforeEach(() => {
     vi.resetAllMocks(); mocks.forms.clear(); mocks.drawers.clear(); Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-    window.location.hash = "";
+    window.history.replaceState(null, "", "/admin/platform/model-config");
     host = document.createElement("div"); document.body.append(host); root = createRoot(host);
     mocks.api.getAIEligibilityPolicy.mockRejectedValue(new ApiClientError(404, "not_found", "not found"));
     mocks.api.listGradingEvaluations.mockResolvedValue({ evaluation_runs: [evaluation("A"), evaluation("B")] });
@@ -167,7 +167,7 @@ describe("评分保障共同旧新回归：模拟 API 和表单", () => {
   });
 
   it.each(["essay", "*", "unknown"])("高中英语组合入口的%s不能静默查询初中数学；补齐具体题型和风险后发送真实范围", async archetype => {
-    window.location.hash = `/admin/platform/model-config?tenant_id=school&tab=governance&view=assurance&stage=senior&subject=english&archetype=${encodeURIComponent(archetype)}`;
+    window.history.replaceState(null, "", `/admin/platform/model-config?tenant_id=school&tab=governance&view=assurance&stage=senior&subject=english&archetype=${encodeURIComponent(archetype)}`);
     await act(async () => root.render(<ManagedGovernanceWorkspace tenantID="school" schoolName="测试高中" configs={[]} />));
     expect(mocks.api.getAIEligibilityPolicy).not.toHaveBeenCalled();
     expect(host.querySelector<HTMLSelectElement>('[aria-label="学段"]')!.value).toBe("senior");
@@ -312,10 +312,13 @@ describe("评分保障共同旧新回归：模拟 API 和表单", () => {
     await render({ canReadEligibility: false, canReadDisagreements: false }); form(2).values = { key: "new" };
     mocks.api.createGradingEvaluation.mockResolvedValue({ evaluation_run: evaluation("N") });
     const pending = deferred<{ evaluation_runs: GradingEvaluationRun[] }>(); mocks.api.listGradingEvaluations.mockReturnValueOnce(pending.promise);
+    // 先通过真实入口打开草稿；关闭状态下保留的测试DOM不能充当可提交的编辑会话。
+    await act(async () => button("登记评分验证报告").click());
     await act(async () => button("登记报告", host.querySelector('[data-drawer="登记已有评分验证报告"]')!).click());
     expect(form(2).resetFields).toHaveBeenCalledTimes(1); expect(mocks.success).not.toHaveBeenCalled(); expect(mocks.drawers.get("登记已有评分验证报告")?.open).toBe(false);
     await act(async () => pending.resolve({ evaluation_runs: [evaluation("A"), evaluation("N")] })); expect(detail(0).textContent).toContain("评测-N"); expect(mocks.api.getGradingEvaluationQualitySummary).toHaveBeenLastCalledWith("N");
     mocks.api.addGradingEvaluationObservation.mockRejectedValueOnce(new Error("write failed")); form(3).values = { response_key: "answer" };
+    await act(async () => button("录入对齐观察", detail(0)).click());
     await act(async () => button("保存观察").click()); expect(mocks.api.addGradingEvaluationObservation).toHaveBeenCalledWith("N", { response_key: "answer" }); expect(button("保存观察").getAttribute("data-loading")).toBe("false"); expect(mocks.error).toHaveBeenCalled();
   });
 

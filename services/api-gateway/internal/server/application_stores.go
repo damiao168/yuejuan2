@@ -39,6 +39,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/report"
 	"edugrade-enterprise/services/api-gateway/internal/review"
 	"edugrade-enterprise/services/api-gateway/internal/reviewannotation"
+	"edugrade-enterprise/services/api-gateway/internal/reviewbookmark"
 	"edugrade-enterprise/services/api-gateway/internal/score"
 	"edugrade-enterprise/services/api-gateway/internal/scorerelease"
 	"edugrade-enterprise/services/api-gateway/internal/seedquality"
@@ -86,7 +87,8 @@ func NewMemoryApplicationStores() ApplicationStores {
 		Grading: GradingQualityStores{
 			Grading: grading.NewMemoryStore(), Subjective: subjective.NewMemoryStore(), Evidence: evidence.NewMemoryStore(),
 			Review: review.NewMemoryStore(), ReviewAnnotation: reviewannotation.NewMemoryStore(),
-			GoldPaper: goldpaper.NewMemoryStore(), Calibration: calibration.NewMemoryStore(),
+			ReviewBookmark: reviewbookmark.NewMemoryStore(nil),
+			GoldPaper:      goldpaper.NewMemoryStore(), Calibration: calibration.NewMemoryStore(),
 			AnswerGroup: answergroup.NewMemoryStore(nil, answergroup.DefaultPolicy()), Backmark: backmark.NewMemoryStore(),
 			Regrade: regrade.NewMemoryStore(), GraderDrift: graderdrift.NewMemoryStore(), SeedQuality: seedquality.NewMemoryStore(),
 		},
@@ -116,6 +118,7 @@ func NewPostgresApplicationStores(infra *Infrastructure) (ApplicationStores, err
 		Evidence:         evidence.NewPostgresStore(infra.DB),
 		Review:           review.NewPostgresStore(infra.DB),
 		ReviewAnnotation: reviewannotation.NewPostgresStore(infra.DB),
+		ReviewBookmark:   reviewbookmark.NewPostgresStore(infra.DB, nil),
 		GoldPaper:        goldpaper.NewPostgresStore(infra.DB),
 		Calibration:      calibration.NewPostgresStore(infra.DB),
 		AnswerGroup:      answergroup.NewPostgresStore(infra.DB, nil, answergroup.DefaultPolicy()),

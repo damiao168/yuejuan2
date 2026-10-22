@@ -160,15 +160,18 @@ func TestReconciliationInspectBranchOrder(t *testing.T) {
 		return append([]reconciliationBatch21Step{{kind: "stat"}, {kind: "get"}, {kind: "close"}}, tail...)
 	}
 	remove := reconciliationBatch21Step{kind: "remove"}
+	unpinned := reconciliationBatch21Step{kind: "query", fragment: "FROM question_reference_manifest_item", columns: 1, rows: [][]driver.Value{{false}}}
+	pinned := reconciliationBatch21Step{kind: "query", fragment: "FROM question_reference_manifest_item", columns: 1, rows: [][]driver.Value{{true}}}
 	deleteConflict := reconciliationBatch21Step{kind: "exec", fragment: "SET lifecycle_status='deleted'"}
 	removeFailed := reconciliationBatch21Step{kind: "remove", err: storageErr}
 	updateFailed := reconciliationBatch21Step{kind: "exec", fragment: "SET lifecycle_status=$3", err: updateErr}
 	cases := []fileReconciliationBranchCase{
 		{"missing callback", LifecycleActive, true, []reconciliationBatch21Step{finding, {kind: "stat", err: ErrObjectNotFound}, setState, finding}, []string{"tenant_prefix_mismatch", "object_missing"}, true, nil},
 		{"verified callback", LifecyclePendingUpload, true, append([]reconciliationBatch21Step{finding}, matched(setState, finding)...), []string{"tenant_prefix_mismatch", "recoverable_pending_upload"}, true, nil},
-		{"delete CAS conflict", LifecyclePendingDelete, false, matched(remove, deleteConflict, finding), []string{"delete_cleanup_pending"}, false, nil},
-		{"remove failure compensated", LifecycleDeleteFailed, false, matched(removeFailed, setState, finding), []string{"delete_cleanup_pending"}, false, nil},
-		{"remove compensation fails", LifecycleDeleteFailed, false, matched(removeFailed, updateFailed), nil, false, updateErr},
+		{"delete CAS conflict", LifecyclePendingDelete, false, matched(unpinned, remove, deleteConflict, finding), []string{"delete_cleanup_pending"}, false, nil},
+		{"remove failure compensated", LifecycleDeleteFailed, false, matched(unpinned, removeFailed, setState, finding), []string{"delete_cleanup_pending"}, false, nil},
+		{"remove compensation fails", LifecycleDeleteFailed, false, matched(unpinned, removeFailed, updateFailed), nil, false, updateErr},
+		{"reference pin prevents physical removal", LifecyclePendingDelete, false, matched(pinned, finding), []string{"reference_material_pinned"}, false, nil},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {

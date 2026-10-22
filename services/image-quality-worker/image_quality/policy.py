@@ -92,31 +92,7 @@ def _capture_issues(
                 "manual_review",
             )
         )
-    if "incomplete_page" in failed_gate_codes:
-        issues.append(
-            _issue(
-                "incomplete_page_border",
-                "failed",
-                "border_completeness_score",
-                metrics["border_completeness_score"],
-                0.75,
-                "recapture",
-            )
-        )
-    elif (
-        geometry["page_border_confidence"] >= 0.5
-        and metrics["border_completeness_score"] < 0.98
-    ):
-        issues.append(
-            _issue(
-                "incomplete_page_border",
-                "review",
-                "border_completeness_score",
-                metrics["border_completeness_score"],
-                0.98,
-                "manual_review",
-            )
-        )
+    # 纸边启发式可能把分栏线当作外框；完整性留到模板配准后的必需答题区检查，不要求人工放行。
     return issues
 
 
@@ -152,17 +128,7 @@ def _geometry_issues(
                 "manual_review",
             )
         )
-    if geometry["coarse_orientation"] == "landscape":
-        issues.append(
-            _issue(
-                "large_rotation_risk",
-                "review",
-                "coarse_orientation",
-                geometry["coarse_orientation"],
-                "portrait_or_square",
-                "manual_review",
-            )
-        )
+    # 横版只是画布比例，不能证明内容旋转；有角度与置信度证据的大幅倾斜仍由上面的规则复核。
     return issues
 
 
@@ -256,10 +222,6 @@ def _hard_gates(
         float(metrics["bad_focus_patch_ratio"]) > 0.5
         and float(metrics["focus_tenengrad_median"]) < 8.0
     )
-    incomplete = (
-        geometry["page_border_confidence"] >= 0.7
-        and float(metrics["border_completeness_score"]) < 0.75
-    )
     return [
         _gate("page_decode", "passed", True, True),
         _gate(
@@ -278,9 +240,13 @@ def _hard_gates(
         ),
         _gate(
             "incomplete_page",
-            "failed" if incomplete else "passed",
+            "not_evaluated",
             metrics["border_completeness_score"],
-            0.75,
+            None,
+            {
+                "reason": "template_registration_not_available_at_quality_stage",
+                "page_border_confidence": geometry["page_border_confidence"],
+            },
         ),
         _gate(
             "required_roi_completeness",

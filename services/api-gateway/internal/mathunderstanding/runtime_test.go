@@ -39,6 +39,82 @@ func TestRuntimeCompletionPreservesWorkerHumanReviewSignal(t *testing.T) {
 	}
 }
 
+func TestRuntimeExpiredLeaseDoesNotPersistArtifactOrVerificationTask(t *testing.T) {
+	ctx := context.Background()
+	artifacts := NewMemoryStore()
+	runtime := workerruntime.NewMemoryStore()
+	task, err := runtime.CreateTask(ctx, "tenant-a", "worker-user", workerruntime.CreateTaskInput{
+		TaskType: "evidence_verify", QueueName: "math-understanding", SourceType: "answer_segment", SourceID: "segment-1",
+		PayloadSchemaVersion: "math-understanding-task-v1", IdempotencyKey: "math:segment-1:expired",
+		Payload: map[string]any{"answer_segment_id": "segment-1", "exam_question_snapshot_id": "snapshot-1", "subject_code": "mathematics", "region_kind": "formula", "input_hash": "sha256:crop-1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	claimed, err := runtime.Claim(ctx, "tenant-a", workerruntime.ClaimInput{QueueName: "math-understanding", WorkerService: "ocr-worker", WorkerInstanceID: "worker-1", Limit: 1, LeaseSeconds: 300})
+	if err != nil || len(claimed) != 1 {
+		t.Fatalf("claim: items=%d err=%v", len(claimed), err)
+	}
+	runtime.ForceExpireLeaseForTest(task.ID)
+	body, _ := json.Marshal(completeRuntimeRequest{LeaseToken: claimed[0].LeaseToken, DurationMS: 12, Artifact: runtimeFormulaInput()})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/internal/math-understanding/tasks/"+task.ID+"/complete", bytes.NewReader(body))
+	req.SetPathValue("taskId", task.ID)
+	req = req.WithContext(auth.WithUser(req.Context(), auth.User{ID: "worker-user", TenantID: "tenant-a"}))
+	rec := httptest.NewRecorder()
+	NewHandler(artifacts, NewMemoryCorrectionStore(artifacts), NewMemoryPilotGateStore(), nil, nil).WithRuntime(runtime).CompleteRuntimeTask(rec, req)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expired completion code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if _, err := artifacts.GetLatestArtifact(ctx, "tenant-a", "segment-1"); err != ErrNotFound {
+		t.Fatalf("expired result persisted artifact: err=%v", err)
+	}
+	if _, err := runtime.GetBySource(ctx, "tenant-a", "math_understanding_artifact", "math-artifact-1"); err != workerruntime.ErrNotFound {
+		t.Fatalf("expired result persisted verification task: err=%v", err)
+	}
+	claimed, err = runtime.Claim(ctx, "tenant-a", workerruntime.ClaimInput{QueueName: "math-understanding", WorkerService: "ocr-worker", WorkerInstanceID: "worker-2", Limit: 1, LeaseSeconds: 300})
+	if err != nil || len(claimed) != 1 {
+		t.Fatalf("reclaim: items=%d err=%v", len(claimed), err)
+	}
+	currentInput := runtimeFormulaInput()
+	currentInput.Formulas[0].RawLatex = "x=9"
+	currentInput.Formulas[0].CanonicalLatex = "x=9"
+	currentInput.Formulas[0].AST.Children[1].Value = "9"
+	currentInput.Formulas[0].Candidates[0].Latex = "x=9"
+	invoke := func(input CreateArtifactInput, lease string) *httptest.ResponseRecorder {
+		t.Helper()
+		body, _ := json.Marshal(completeRuntimeRequest{LeaseToken: lease, DurationMS: 12, Artifact: input})
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/internal/math-understanding/tasks/"+task.ID+"/complete", bytes.NewReader(body))
+		req.SetPathValue("taskId", task.ID)
+		req = req.WithContext(auth.WithUser(req.Context(), auth.User{ID: "worker-user", TenantID: "tenant-a"}))
+		rec := httptest.NewRecorder()
+		NewHandler(artifacts, NewMemoryCorrectionStore(artifacts), NewMemoryPilotGateStore(), nil, nil).WithRuntime(runtime).CompleteRuntimeTask(rec, req)
+		return rec
+	}
+	for _, replay := range []bool{false, true} {
+		if rec := invoke(currentInput, claimed[0].LeaseToken); rec.Code != http.StatusOK {
+			t.Fatalf("valid completion replay=%t code=%d body=%s", replay, rec.Code, rec.Body.String())
+		}
+	}
+	if rec := invoke(runtimeFormulaInput(), claimed[0].LeaseToken); rec.Code != http.StatusConflict {
+		t.Fatalf("conflicting formula reused successful receipt: code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if rec := invoke(currentInput, "old-wrong-token"); rec.Code != http.StatusConflict {
+		t.Fatalf("wrong lease replay code=%d", rec.Code)
+	}
+	current, err := artifacts.GetLatestArtifact(ctx, "tenant-a", "segment-1")
+	if err != nil || current.Formulas[0].CanonicalLatex != "x=9" || current.Version != 1 || len(artifacts.artifacts) != 1 {
+		t.Fatalf("reclaimed result did not replace rejected facts: %#v err=%v", current, err)
+	}
+}
+
+func runtimeFormulaInput() CreateArtifactInput {
+	input := validInput()
+	// 识别回执由服务端重建步骤；旧 fixture 的 step-1 核验属于重建前图，不能附到新步骤。
+	input.Verifications = []MathVerification{}
+	input.RubricEvidence = []RubricEvidence{}
+	return input
+}
+
 func TestPrepareRuntimeArtifactPreservesWorkerRelations(t *testing.T) {
 	input := runtimeSpatialInput(false)
 	input.Relations = []SpatialRelation{{

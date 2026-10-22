@@ -7,7 +7,6 @@ import { ManagementExamOverviewPage } from "./ManagementExamOverviewPage";
 
 interface DetailsProps {
   exam: ManagementExam;
-  schoolName?: string;
   gradeName?: string;
   classNames?: Map<string, string>;
   onOpenSubject: (subject: Exam) => void;
@@ -89,9 +88,9 @@ async function click(text: string) {
 describe("整场考试总览展示边界", () => {
   it("考试与组织名称读取期间保留页头，加载内容优先于已返回的考试", async () => {
     const pendingExam = deferred<{ exam: ManagementExam }>();
-    const pendingSchools = deferred<{ schools: [] }>();
+    const pendingGrades = deferred<{ grades: [] }>();
     mocks.get.mockReturnValue(pendingExam.promise);
-    mocks.schools.mockReturnValue(pendingSchools.promise);
+    mocks.grades.mockReturnValue(pendingGrades.promise);
     const target = exam();
     await mount(target);
     expect(container.querySelector("h1")?.textContent).toBe("考试工作区");
@@ -104,7 +103,7 @@ describe("整场考试总览展示边界", () => {
     expect(container.querySelector("h1")?.textContent).toBe(target.name);
     expect(container.querySelector("[data-loading]")).not.toBeNull();
     expect(mocks.details).not.toHaveBeenCalled();
-    await act(async () => pendingSchools.resolve({ schools: [] }));
+    await act(async () => pendingGrades.resolve({ grades: [] }));
     expect(container.querySelector("[data-loading]")).toBeNull();
     expect(mocks.details.mock.lastCall?.[0].exam).toBe(target);
   });
@@ -133,7 +132,7 @@ describe("整场考试总览展示边界", () => {
     const navigate = await mount(target);
     const props = mocks.details.mock.lastCall?.[0] as DetailsProps;
     expect(props.exam).toBe(target);
-    expect(props.schoolName).toBe("测试学校");
+    expect(mocks.schools).not.toHaveBeenCalled();
     expect(props.gradeName).toBeUndefined();
     expect(props.classNames).toEqual(new Map([["class-25", "一班"]]));
     expect(mocks.grades).toHaveBeenCalledWith(target.school_id);
@@ -156,28 +155,28 @@ describe("整场考试总览展示边界", () => {
     expect(mocks.details.mock.lastCall?.[0].exam).toBe(currentExam);
     await act(async () => pendingExam.resolve({ exam: oldExam }));
     expect(mocks.get.mock.calls).toEqual([[oldExam.kind, oldExam.id], [currentExam.kind, currentExam.id]]);
-    expect(mocks.schools).toHaveBeenCalledTimes(1);
+    expect(mocks.grades).toHaveBeenCalledTimes(1);
     expect(container.querySelector("h1")?.textContent).toBe(currentExam.name);
     expect(mocks.details.mock.lastCall?.[0].exam).toBe(currentExam);
   });
 
   it("同一考试刷新后迟到的组织目录不能覆盖新版考试名称", async () => {
-    const pendingSchools = deferred<{ schools: { id: string; name: string }[] }>();
+    const pendingGrades = deferred<{ grades: { id: string; name: string }[] }>();
     const target = exam();
     const latest = { ...target, name: "刷新后的考试", revision: 4 };
     mocks.get.mockResolvedValueOnce({ exam: target }).mockResolvedValueOnce({ exam: latest });
-    mocks.schools.mockReturnValueOnce(pendingSchools.promise).mockResolvedValueOnce({ schools: [{ id: target.school_id, name: "当前学校" }] });
+    mocks.grades.mockReturnValueOnce(pendingGrades.promise).mockResolvedValueOnce({ grades: [{ id: target.grade_id, name: "当前年级" }] });
     await mount(target);
     // 直接触发页头回调模拟上一轮目录查询尚未结束的刷新，只验证页面淘汰迟到结果的边界。
     const refresh = [...mocks.buttons.mock.calls].reverse().find(([props]) => props.children === "刷新")?.[0].onClick;
     if (!refresh) throw new Error("Missing refresh callback");
     await act(async () => refresh());
     expect(mocks.details.mock.lastCall?.[0].exam).toBe(latest);
-    await act(async () => pendingSchools.resolve({ schools: [{ id: target.school_id, name: "旧学校" }] }));
+    await act(async () => pendingGrades.resolve({ grades: [{ id: target.grade_id, name: "旧年级" }] }));
     const props = mocks.details.mock.lastCall?.[0] as DetailsProps;
     expect(mocks.get.mock.calls).toEqual([[target.kind, target.id], [target.kind, target.id]]);
     expect(container.querySelector("h1")?.textContent).toBe(latest.name);
     expect(props.exam).toBe(latest);
-    expect(props.schoolName).toBe("当前学校");
+    expect(props.gradeName).toBe("当前年级");
   });
 });

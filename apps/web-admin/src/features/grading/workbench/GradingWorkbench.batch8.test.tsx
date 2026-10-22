@@ -7,6 +7,7 @@ import { createDraftSnapshot, createInitialDraft } from "./gradingWorkbench.mode
 import type { WorkbenchContext } from "./gradingWorkbench.types";
 import type { ScoreEditor } from "./components/ScoreEditor";
 import type { WorkbenchHeader } from "./components/WorkbenchHeader";
+import type { RegionScoreEditor } from "./components/RegionScoreEditor";
 import type { TaskDraftSaveQueue } from "./hooks/taskDraftSaveQueue";
 import { GradingWorkbench, type GradingWorkbenchProps } from "./GradingWorkbench";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   resetShortcuts: vi.fn(), prepareViewer: vi.fn(), restoreViewer: vi.fn(), invalidateViewer: vi.fn(),
   noop: vi.fn(), asyncNoop: vi.fn(async () => undefined),
   header: null as Record<string, unknown> | null, editor: null as Record<string, unknown> | null,
+  region: null as Record<string, unknown> | null,
   evidence: null as Record<string, unknown> | null, review: null as Record<string, unknown> | null,
   selectTask: null as ((id: string) => void) | null,
   prefetchedTaskRef: { current: new Map() }, prefetchedPreviewRef: { current: new Map() },
@@ -27,7 +29,9 @@ const mocks = vi.hoisted(() => ({
   offset: { x: 0, y: 0 }, viewportRef: { current: null }
 }));
 
-vi.mock("antd", () => ({ App: { useApp: () => ({ message: mocks.notify }) }, Alert: () => null }));
+vi.mock("antd", () => ({ App: { useApp: () => ({ message: mocks.notify }) }, Alert: () => null, Button: () => null, Space: () => null, Drawer: () => null }));
+vi.mock("./components/ReviewBookmarks", () => ({ ReviewBookmarkControls: () => null, ReviewBookmarksDrawer: () => null }));
+vi.mock("./hooks/usePersonalReviewBookmarks", () => ({ usePersonalReviewBookmarks: () => ({ state: {}, busy: false, error: "", uncertainTask: "" }) }));
 vi.mock("../../../api/review", () => ({ renewReviewTask: mocks.renew, saveReviewDraft: mocks.save, verifyEvidence: mocks.verify }));
 vi.mock("./gradingTaskContext", () => ({ loadTaskContext: mocks.loadContext }));
 vi.mock("../../../router/useUnsavedChangesGuard", () => ({ useUnsavedChangesGuard: mocks.noop }));
@@ -74,6 +78,10 @@ vi.mock("./components/WorkbenchOverlays", () => ({ WorkbenchOverlays: () => null
 vi.mock("./components/AnswerEvidencePane", () => ({ AnswerEvidencePane: () => null }));
 vi.mock("./components/EvidenceInspector", () => ({ EvidenceInspector: (props: Record<string, unknown>) => { mocks.evidence = props; return null; } }));
 vi.mock("./components/ScoreEditor", () => ({ ScoreEditor: (props: Record<string, unknown>) => { mocks.editor = props; return null; } }));
+vi.mock("./components/RegionScoreEditor", () => ({
+  groupTaskRefs: (value: WorkbenchContext) => value.reviewContext.answer_artifact?.grading_group_tasks ?? [],
+  RegionScoreEditor: (value: Record<string, unknown>) => { mocks.region = value; return null; }
+}));
 vi.mock("./components/FrozenQuestionReference", () => ({ FrozenQuestionReference: () => null }));
 vi.mock("../../../components/PageState", () => ({ LoadingState: () => null, ErrorState: () => null, EmptyState: () => null }));
 
@@ -109,7 +117,7 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     vi.spyOn(queryClient, "removeQueries").mockImplementation(mocks.removeQueries);
     vi.spyOn(queryClient, "invalidateQueries").mockImplementation(mocks.invalidateQueries);
     mocks.prefetchedTaskRef.current.clear(); mocks.prefetchedPreviewRef.current.clear();
-    mocks.header = null; mocks.editor = null; mocks.review = null; mocks.evidence = null;
+    mocks.header = null; mocks.editor = null; mocks.region = null; mocks.review = null; mocks.evidence = null;
     mocks.loadContext.mockImplementation(async (_client: unknown, _scope: unknown, id: string) => context(id));
     mocks.save.mockResolvedValue({ draft: { revision: 1 } });
     mocks.renew.mockResolvedValue(undefined);
@@ -136,6 +144,30 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
   async function edit(score: number) {
     await act(async () => editor().setDraft((current) => ({ ...current, score, comments: "教师评语", rubricSelections: { criterion: 2, skipped: 0 } })));
   }
+
+  it("整区逐行保存停用当前题自动保存，提交当前行不换题也不显示锚点未评分", async () => {
+    const grouped = context();
+    grouped.gradingGroupId = "fill"; grouped.gradingGroupImageUrl = "/shared";
+    grouped.reviewContext.answer_artifact = { grading_group_tasks: ["A", "B", "C"].map(id => ({ id })) } as WorkbenchContext["reviewContext"]["answer_artifact"];
+    mocks.loadContext.mockResolvedValue(grouped);
+    await render({ canGrade: true });
+    const region = () => mocks.region as unknown as ComponentProps<typeof RegionScoreEditor>;
+    expect(mocks.editor).toBeNull();
+    expect(header().onSubmit).toBeUndefined();
+    expect(header().scoreLabel).toBeUndefined();
+    await act(async () => region().onStateChange(true, false));
+    expect(header().draftSaveStatus).toBe("pending");
+    expect(header().draftStatusText).toBe("本区有未保存评分");
+    await act(async () => region().onStateChange(false, false));
+    expect(header().draftSaveStatus).toBe("saved");
+    await act(async () => region().setDraft(value => ({ ...value, score: 2 })));
+    await act(async () => { vi.advanceTimersByTime(1500); });
+    expect(mocks.save).not.toHaveBeenCalled();
+    await act(async () => region().onSubmitted({ ...grouped.task, status: "submitted", revision: 2 }));
+    expect(region().context.task.id).toBe("A");
+    expect(region().draft.score).toBe(2);
+    expect(mocks.loadContext).toHaveBeenCalledTimes(1);
+  });
 
   it.each([
     [false, "teacher", "当前身份无重新生成数学建议的权限；请按冻结细则人工评分，需要重新生成时请联系管理员。"],
@@ -190,6 +222,7 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     mocks.loadContext.mockResolvedValue(context("A", owner, renewable));
     await render();
     expect(header().draftSaveStatus).toBe("readonly");
+    expect(header().onSubmit).toBeUndefined();
     expect(mocks.renew).not.toHaveBeenCalled();
     await edit(0);
     await act(async () => { vi.advanceTimersByTime(1200); });
@@ -200,8 +233,14 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
   it("debounces edits for 1200ms and persists an explicit zero rather than null", async () => {
     await render();
     expect(mocks.renew).toHaveBeenCalledWith("A");
+    expect(header().scoreLabel).toBe("未评分");
     await edit(0);
     expect(editor().canSubmit).toBe(true);
+    expect(header().scoreLabel).toBe("0.0 / 10");
+    expect(editor().hidePrimarySubmit).toBe(true);
+    const submissions = mocks.asyncNoop.mock.calls.length;
+    await act(async () => header().onSubmit?.());
+    expect(mocks.asyncNoop).toHaveBeenCalledTimes(submissions + 1);
     await act(async () => { vi.advanceTimersByTime(1199); });
     expect(mocks.save).not.toHaveBeenCalled();
     await act(async () => { vi.advanceTimersByTime(1); });

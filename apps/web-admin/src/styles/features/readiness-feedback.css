@@ -1,0 +1,41 @@
+.exam-workspace-content .preparation-page.readiness-page { gap: 12px; }
+.exam-workspace-content .readiness-heading { gap: 16px; padding-bottom: 12px; }
+.readiness-heading-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.exam-workspace-content .readiness-heading-title h2 { margin: 0; }
+.readiness-status { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 12px; line-height: 1.6; }
+.readiness-status.is-complete { color: #166534; background: #edf7ef; }
+.readiness-status.is-pending { color: #925b0a; background: #fff6e5; }
+.readiness-status.is-neutral { color: var(--text-muted); background: #f3f4f6; }
+.readiness-heading-actions { display: grid; flex: 0 0 auto; justify-items: end; gap: 5px; }
+.exam-workspace-content .readiness-heading .readiness-action-hint { max-width: 360px; font-size: 12px; text-align: right; }
+.readiness-heading > div:first-child > p { margin-top: 5px; }
+.readiness-page .readiness-state-note { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+
+.readiness-page .exam-readiness-issues { gap: 0; margin: 0; }
+.readiness-page .exam-readiness-issues li { min-height: 40px; padding: 6px 0; border-left: 0; border-bottom: 1px solid var(--border); color: var(--text); background: transparent; }
+.readiness-page .exam-readiness-issues li > div { grid-template-columns: minmax(100px, 144px) minmax(0, 1fr); align-items: baseline; gap: 12px; }
+.readiness-page .exam-readiness-issues li span { color: #925b0a; }
+.readiness-page .exam-readiness-issues .ant-btn { padding: 4px 0 4px 8px; }
+
+/* 评分区嵌在准备页内，用分隔线代替第二层卡片，避免重复容器缩窄表格。 */
+.readiness-page .scoring-preparation { display: grid; gap: 10px; padding: 0; border: 0; border-radius: 0; }
+.scoring-preparation .section-head { align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+.scoring-preparation-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; min-width: 0; }
+.scoring-preparation-title h2 { font-size: 18px; }
+.scoring-verification-count { color: var(--text-muted); font-size: 13px; }
+.scoring-required-label { color: var(--text-muted); font-size: 12px; }
+.scoring-preparation-feedback { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 12px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.scoring-preparation-feedback .scoring-problem-count { color: #925b0a; }
+.scoring-preparation-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.scoring-preparation-controls > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.scoring-stage-control .ant-select { width: 150px; max-width: 100%; }
+.scoring-template-control .ant-select { width: 240px; max-width: 100%; }
+.scoring-preparation > .ant-btn { justify-self: start; }
+
+@media (max-width: 720px) {
+  .readiness-heading-actions { width: 100%; justify-items: start; }
+  .exam-workspace-content .readiness-heading .readiness-action-hint { max-width: none; text-align: left; }
+  .readiness-page .exam-readiness-issues li > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .scoring-preparation-controls > div { width: 100%; }
+  .scoring-template-control .ant-select { flex: 1; min-width: 0; }
+}

@@ -9,9 +9,11 @@ import { SchoolManagementToolbar } from "../features/platform/schools/SchoolMana
 import { SchoolSummaryTable, type SchoolDetailTab, type SchoolDetailTarget } from "../features/platform/schools/SchoolSummaryTable";
 import { SchoolDetailDrawer } from "../features/platform/schools/SchoolDetailDrawer";
 import { isStepUpCancelledError, useStepUp } from "../auth/stepUpContext";
+import { routeSearchParams } from "../router/query";
+import { usePageLoading } from "../components/pageReadiness";
 
 function initialSchoolFilter(): PlatformSchoolListFilter {
-  const params = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+  const params = routeSearchParams();
   const status = params.get("status");
   const modelHealth = params.get("model_health");
   // 工作台只传入明确允许的筛选值；其他地址参数不能扩大或改变列表查询范围。
@@ -29,6 +31,7 @@ export function PlatformSchoolsPage() {
   const [schools, setSchools] = useState<PlatformSchoolSummary[]>([]);
   const [summary, setSummary] = useState({ total: 0, active: 0, disabled: 0 });
   const [loading, setLoading] = useState(true);
+  usePageLoading(loading);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
@@ -42,36 +45,45 @@ export function PlatformSchoolsPage() {
   const listRequestRef = useRef(0);
 
   const query = useMemo(() => ({ ...filter, cursor: undefined }), [filter]);
+  const activeQuery = useRef(query);
+  activeQuery.current = query;
   const loadSchools = useCallback(async () => {
+    if (activeQuery.current !== query) return;
     const requestID = ++listRequestRef.current;
+    const isCurrent = () => requestID === listRequestRef.current && activeQuery.current === query;
     setLoading(true);
+    // 首读接管当前结果集，淘汰旧分页的等待状态；旧finally只能结束自己的请求。
+    setLoadingMore(false);
     try {
       const response = await listPlatformSchools(query);
-      if (requestID !== listRequestRef.current) return;
+      if (!isCurrent()) return;
       setSchools(response.schools);
       setSummary(response.summary);
       setHasMore(response.has_more);
       setNextCursor(response.next_cursor);
     } catch {
-      if (requestID === listRequestRef.current) message.error("学校列表加载失败");
+      if (isCurrent()) message.error("学校列表加载失败");
     } finally {
-      if (requestID === listRequestRef.current) setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [message, query]);
 
-  useEffect(() => { void loadSchools(); }, [loadSchools]);
+  useEffect(() => { void loadSchools(); return () => { listRequestRef.current += 1; }; }, [loadSchools]);
   const refresh = useCallback(() => { void loadSchools(); }, [loadSchools]);
   const loadMore = useCallback(async () => {
-    if (!hasMore || !nextCursor || loadingMore) return;
+    if (!hasMore || !nextCursor || loadingMore || loading || activeQuery.current !== query) return;
+    const requestID = ++listRequestRef.current;
+    const isCurrent = () => requestID === listRequestRef.current && activeQuery.current === query;
     setLoadingMore(true);
     try {
       const response = await listPlatformSchools({ ...query, cursor: nextCursor });
+      if (!isCurrent()) return;
       setSchools((current) => [...current, ...response.schools]);
       setHasMore(response.has_more);
       setNextCursor(response.next_cursor);
-    } catch { message.error("更多学校加载失败"); }
-    finally { setLoadingMore(false); }
-  }, [hasMore, nextCursor, loadingMore, query, message]);
+    } catch { if (isCurrent()) message.error("更多学校加载失败"); }
+    finally { if (isCurrent()) setLoadingMore(false); }
+  }, [hasMore, nextCursor, loadingMore, loading, query, message]);
 
   const openSchool = useCallback((school: PlatformSchoolSummary, target: SchoolDetailTarget) => {
     setSelectedId(school.tenant_id);

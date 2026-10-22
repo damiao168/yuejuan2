@@ -17,6 +17,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/pagination"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/seedquality"
 	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
@@ -42,15 +43,23 @@ type AIHumanDisagreementObserver interface {
 	ObserveHumanGrade(context.Context, string, string, string) (aidisagreement.Disagreement, bool, error)
 }
 
+// AIFailureReader 只返回当前任务、答案和冻结量规版本对应的白名单失败类别。
+// 实现不得把供应商正文、请求标识或其他租户的运行状态投影到教师工作台。
+type AIFailureReader interface {
+	CurrentAIFailure(context.Context, string, string, string, string, string, string) (string, error)
+}
+
 type Handler struct {
-	store             Store
-	audit             auth.Store
-	segmentImage      segment.CropImageReader
-	fileDownload      files.DownloadReader
-	qualificationGate GraderQualificationGate
-	seedHook          seedquality.ReviewHook
-	seedRefresher     SeedObservationRefresher
-	disagreement      AIHumanDisagreementObserver
+	referenceMaterials *paper.ReferenceMaterialsService
+	store              Store
+	audit              auth.Store
+	segmentImage       segment.CropImageReader
+	fileDownload       files.DownloadReader
+	qualificationGate  GraderQualificationGate
+	seedHook           seedquality.ReviewHook
+	seedRefresher      SeedObservationRefresher
+	disagreement       AIHumanDisagreementObserver
+	aiFailure          AIFailureReader
 }
 
 func NewHandler(store Store, audit auth.Store, segmentImage segment.CropImageReader, fileDownload files.DownloadReader) *Handler {
@@ -76,6 +85,11 @@ func (h *Handler) WithSeedObservationRefresher(refresher SeedObservationRefreshe
 
 func (h *Handler) WithAIHumanDisagreementObserver(observer AIHumanDisagreementObserver) *Handler {
 	h.disagreement = observer
+	return h
+}
+
+func (h *Handler) WithAIFailureReader(reader AIFailureReader) *Handler {
+	h.aiFailure = reader
 	return h
 }
 
@@ -243,6 +257,7 @@ func (h *Handler) SubmitGrade(w http.ResponseWriter, r *http.Request) {
 	if h.trySubmitSeedGrade(w, r, user, input) {
 		return
 	}
+	r = r.WithContext(prepareSubmissionQualification(r.Context(), h.store, h.qualificationGate, user.TenantID, r.PathValue("id"), user.ID))
 	result, err := h.store.SubmitGrade(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
 	if err != nil {
 		writeStoreError(w, r, err)
@@ -596,7 +611,16 @@ func (h *Handler) GetWorkspaceSegmentImage(w http.ResponseWriter, r *http.Reques
 		httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", reviewImageUnavailable)
 		return
 	}
-	resource, err := h.segmentImage.ReadCropImage(r.Context(), user.TenantID, workspace.Task.AnswerSegmentID)
+	readImage := h.segmentImage.ReadCropImage
+	if r.URL.Query().Get("scope") == "grading_group" {
+		reader, ok := h.segmentImage.(segment.GradingGroupReader)
+		if !ok {
+			segment.WriteImageError(w, r, segment.ErrEvidenceUnavailable)
+			return
+		}
+		readImage = reader.ReadGradingGroupImage
+	}
+	resource, err := readImage(r.Context(), user.TenantID, workspace.Task.AnswerSegmentID)
 	if err != nil {
 		segment.WriteImageError(w, r, err)
 		return
@@ -692,10 +716,16 @@ func (h *Handler) ListDoubleMarkPolicies(w http.ResponseWriter, r *http.Request)
 	if !h.authorizeReviewManager(w, r, user) {
 		return
 	}
-	policies, err := h.store.ListDoubleMarkPolicies(r.Context(), user.TenantID, PolicyFilter{
-		ExamID:     r.URL.Query().Get("exam_id"),
-		QuestionID: r.URL.Query().Get("question_id"),
-	})
+	policyFilter := PolicyFilter{
+		ExamID:     strings.TrimSpace(r.URL.Query().Get("exam_id")),
+		QuestionID: strings.TrimSpace(r.URL.Query().Get("question_id")),
+	}
+	access, ok := h.doubleMarkCollectionAccess(w, r, user)
+	if !ok {
+		return
+	}
+	policyFilter.Access = access
+	policies, err := h.store.ListDoubleMarkPolicies(r.Context(), user.TenantID, policyFilter)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -732,10 +762,18 @@ func (h *Handler) ListDoubleMarkSessions(w http.ResponseWriter, r *http.Request)
 	if !h.authorizeReviewManager(w, r, user) {
 		return
 	}
-	sessions, err := h.store.ListDoubleMarkSessions(r.Context(), user.TenantID, DoubleMarkSessionFilter{
-		Status:          r.URL.Query().Get("status"),
-		AnswerSegmentID: r.URL.Query().Get("answer_segment_id"),
-	})
+	sessionFilter := DoubleMarkSessionFilter{
+		Status:          strings.TrimSpace(r.URL.Query().Get("status")),
+		AnswerSegmentID: strings.TrimSpace(r.URL.Query().Get("answer_segment_id")),
+		ExamID:          strings.TrimSpace(r.URL.Query().Get("exam_id")),
+		QuestionID:      strings.TrimSpace(r.URL.Query().Get("question_id")),
+	}
+	access, ok := h.doubleMarkCollectionAccess(w, r, user)
+	if !ok {
+		return
+	}
+	sessionFilter.Access = access
+	sessions, err := h.store.ListDoubleMarkSessions(r.Context(), user.TenantID, sessionFilter)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
@@ -754,6 +792,17 @@ func (h *Handler) GetDoubleMarkSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"double_mark_session": session})
+}
+
+// 集合路由没有路径对象可供边界中间件检查，必须把认证范围交给存储筛选；请求参数只能继续缩小范围。
+func (h *Handler) doubleMarkCollectionAccess(w http.ResponseWriter, r *http.Request, user auth.User) (auth.ExamCollectionAccess, bool) {
+	scope, ok := auth.AccessScopeFromContext(r.Context())
+	if !ok || scope.TenantID != user.TenantID || scope.ActorID != user.ID {
+		writeStoreError(w, r, ErrForbidden)
+		return auth.ExamCollectionAccess{}, false
+	}
+	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
+	return auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver}, true
 }
 
 func (h *Handler) CreateArbitrationTask(w http.ResponseWriter, r *http.Request) {
@@ -894,11 +943,13 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	switch {
+	case errors.Is(err, ErrQualificationRequired):
+		httpx.Error(w, r, http.StatusForbidden, "grader_qualification_required", "complete the current question calibration before submitting R3 work")
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "review_resource_not_found", "review resource not found")
 	case errors.Is(err, ErrInvalidInput):
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_review_input", "review input is invalid")
-	case errors.Is(err, ErrForbidden):
+	case errors.Is(err, ErrForbidden), errors.Is(err, auth.ErrForbidden):
 		httpx.Error(w, r, http.StatusForbidden, "review_action_forbidden", "review action is forbidden")
 	case errors.Is(err, ErrInvalidTransition):
 		httpx.Error(w, r, http.StatusConflict, "invalid_review_transition", "review task transition is invalid")

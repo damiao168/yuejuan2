@@ -48,7 +48,7 @@ export function PaperViewer({ examID, result, onViewCurrent, onViewTextFeedback 
 function PaperEmptyState({ hasQuestions, submitting, isSubmitting, onViewTextFeedback }: Readonly<{
   hasQuestions: boolean; submitting: boolean; isSubmitting?: () => boolean; onViewTextFeedback?: () => void;
 }>) {
-  // 成绩页使用 hash 路由；页内定位由父页滚动与聚焦，不能写入一个会卸载成绩页的新 hash。
+  // 页内定位由父页滚动与聚焦，不修改当前考试地址，保留成绩页和未提交的复核内容。
   // 按钮禁用依赖渲染状态，点击时再查同步提交标记，避免提交刚开始就跳转。
   return <div className="paper-empty"><div><p>暂无可查看的答卷图像。可先查看题目文字反馈；需要原卷时请联系学校考试负责人。</p>{hasQuestions && onViewTextFeedback ? <button type="button" className="text-button" disabled={submitting} onClick={() => { if (!submitting && !isSubmitting?.()) onViewTextFeedback(); }}>查看题目文字反馈</button> : null}</div></div>;
 }
@@ -83,6 +83,7 @@ function PaperPageEvidence({ examID, releaseID, page, highScore, pageQuestions, 
     return () => { lifecycle.active = false; lifecycle.generation += 1; };
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: annotationAttempt 是教师批注失败后的显式重试触发，移除会让重试按钮只改计数而不重新请求。
   useEffect(() => {
     let active = true;
     const generation = lifecycleRef.current.generation;

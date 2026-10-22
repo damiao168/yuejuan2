@@ -70,6 +70,10 @@ type CalibrationEvidence struct {
 }
 
 type DecisionInput struct {
+	// 仅内部图像 v3 入口提供；观察绑定与裁图哈希由调用方先校验，不能由 HTTP 客户端声称已完成。
+	InputProtocol               string `json:"input_protocol,omitempty"`
+	InputVersionID              string `json:"input_version_id,omitempty"`
+	StudentObservationAvailable bool   `json:"student_observation_available,omitempty"`
 	// RunItemID 是幂等和审计键，由调用方提供且视为不透明 ID；它可以表示主观题评分运行、工作项或试运行项。
 	RunItemID          string                          `json:"run_item_id"`
 	AssessmentSnapshot assessment.ExamQuestionSnapshot `json:"assessment_snapshot"`

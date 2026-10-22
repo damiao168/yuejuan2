@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"math"
 	"strings"
 
 	"edugrade-enterprise/services/api-gateway/internal/paper"
@@ -23,9 +24,10 @@ type scoringReviewCause struct {
 
 // confirmedOMRAnswer 关联本次回调刚写入的候选和答案，不能改成按时间查找最新答案。
 type confirmedOMRAnswer struct {
-	segmentID   string
-	candidateID string
-	answerID    string
+	segmentID         string
+	candidateID       string
+	answerID          string
+	minimumConfidence float64
 }
 
 func (s *PostgresStore) GetOMRRun(ctx context.Context, tenantID, id string) (OMRRun, error) {
@@ -65,14 +67,29 @@ func (s *PostgresStore) ApplyOMRResult(ctx context.Context, tenantID, id, actorI
 		return OMRRun{}, nil, err
 	}
 	defer tx.Rollback()
-	var currentStatus, currentVersion, expectedProfileVersion, expectedProfileHash, expectedReferenceAssetID, expectedReferenceSHA256, expectedCalibrationID, expectedCalibrationEvidenceHash, calibrationStatus, calibrationEvidenceHash, autoConfirmReason string
-	var autoConfirmEligible bool
-	var autoConfirmMinimumConfidence float64
-	if err = tx.QueryRowContext(ctx, `SELECT o.status,COALESCE(o.result_version,''),o.profile_version,o.profile_hash,COALESCE(o.reference_file_asset_id::text,''),COALESCE(o.reference_sha256,''),COALESCE(o.calibration_session_id::text,''),COALESCE(o.calibration_evidence_hash,''),COALESCE(c.status,''),COALESCE(c.evidence_hash,''),o.auto_confirm_min_confidence,o.auto_confirm_eligible,o.auto_confirm_reason FROM omr_run o LEFT JOIN omr_calibration_session c ON c.tenant_id=o.tenant_id AND c.id=o.calibration_session_id WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid AND o.deleted_at IS NULL FOR UPDATE OF o`, tenantID, id).Scan(&currentStatus, &currentVersion, &expectedProfileVersion, &expectedProfileHash, &expectedReferenceAssetID, &expectedReferenceSHA256, &expectedCalibrationID, &expectedCalibrationEvidenceHash, &calibrationStatus, &calibrationEvidenceHash, &autoConfirmMinimumConfidence, &autoConfirmEligible, &autoConfirmReason); err != nil {
+	// 取消也先锁父运行；回调持有相同顺序，避免运行与 OMR 子记录互相等待。
+	var parentStatus string
+	if err := tx.QueryRowContext(ctx, `SELECT run.status FROM scoring_run run JOIN omr_run omr ON omr.tenant_id=run.tenant_id AND omr.scoring_run_id=run.id WHERE omr.tenant_id=$1::uuid AND omr.id=$2::uuid AND omr.deleted_at IS NULL AND run.deleted_at IS NULL FOR UPDATE OF run`, tenantID, id).Scan(&parentStatus); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return OMRRun{}, nil, ErrNotFound
 		}
 		return OMRRun{}, nil, err
+	}
+	var currentStatus, currentVersion, expectedProfileVersion, expectedProfileHash, expectedReferenceAssetID, expectedReferenceSHA256, expectedCalibrationID, expectedCalibrationEvidenceHash, calibrationStatus, calibrationEvidenceHash, autoConfirmReason, expectedCropHash, currentCropHash string
+	var autoConfirmEligible bool
+	var autoConfirmMinimumConfidence float64
+	if err = tx.QueryRowContext(ctx, `SELECT o.status,COALESCE(o.result_version,''),o.profile_version,o.profile_hash,COALESCE(o.reference_file_asset_id::text,''),COALESCE(o.reference_sha256,''),COALESCE(o.calibration_session_id::text,''),COALESCE(o.calibration_evidence_hash,''),COALESCE(c.status,''),COALESCE(c.evidence_hash,''),o.auto_confirm_min_confidence,o.auto_confirm_eligible,o.auto_confirm_reason,o.crop_sha256,seg.crop_sha256 FROM omr_run o JOIN answer_segment seg ON seg.tenant_id=o.tenant_id AND seg.id=o.answer_segment_id AND seg.deleted_at IS NULL LEFT JOIN omr_calibration_session c ON c.tenant_id=o.tenant_id AND c.id=o.calibration_session_id WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid AND o.deleted_at IS NULL FOR UPDATE OF o,seg`, tenantID, id).Scan(&currentStatus, &currentVersion, &expectedProfileVersion, &expectedProfileHash, &expectedReferenceAssetID, &expectedReferenceSHA256, &expectedCalibrationID, &expectedCalibrationEvidenceHash, &calibrationStatus, &calibrationEvidenceHash, &autoConfirmMinimumConfidence, &autoConfirmEligible, &autoConfirmReason, &expectedCropHash, &currentCropHash); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return OMRRun{}, nil, ErrNotFound
+		}
+		return OMRRun{}, nil, err
+	}
+	if currentStatus != "completed" && parentStatus != "processing" {
+		return OMRRun{}, nil, ErrInvalidTransition
+	}
+	// 裁图已被配准修正替换时，旧任务只保留原运行历史，不能覆盖新输入的当前候选。
+	if currentStatus != "completed" && expectedCropHash != currentCropHash {
+		return OMRRun{}, nil, ErrRevisionConflict
 	}
 	if currentStatus != "completed" && (input.ProfileVersion != expectedProfileVersion || input.ProfileHash != expectedProfileHash || input.ReferenceSHA256 != expectedReferenceSHA256) {
 		return OMRRun{}, nil, ErrInvalidInput
@@ -100,12 +117,13 @@ func (s *PostgresStore) ApplyOMRResult(ctx context.Context, tenantID, id, actorI
 		return out, nil, getErr
 	}
 	var segmentID, scoringRunID string
+	// 可重试失败是临时 Worker 故障留下的持久状态；新租约可以继续完成，旧租约仍由运行时完成检查拒绝。
 	err = tx.QueryRowContext(ctx, `
 UPDATE omr_run o
 SET status='completed',decision=$3,confidence=$4,measurements=$5::jsonb,selected_options=$6::jsonb,
   overlay_file_asset_id=$7::uuid,result_version=$8,duration_ms=$9,completed_at=now(),updated_at=now()
 FROM scoring_run sr
-WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid AND o.status IN ('queued','processing')
+WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid AND o.status IN ('queued','processing','retryable_error')
 	  AND o.runtime_task_id=$10::uuid
   AND sr.tenant_id=o.tenant_id AND sr.id=o.scoring_run_id AND sr.status='processing'
 RETURNING o.answer_segment_id::text,o.scoring_run_id::text`, tenantID, id, input.Decision, input.Confidence, measurements, selected, input.OverlayFileAssetID, input.ResultVersion, input.DurationMS, task.ID).Scan(&segmentID, &scoringRunID)
@@ -139,25 +157,58 @@ RETURNING o.answer_segment_id::text,o.scoring_run_id::text`, tenantID, id, input
 		return OMRRun{}, nil, err
 	}
 	answerText := strings.Join(input.Selected, ",")
+	var questionType string
+	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(run.rule_snapshot->'questions'->(seg.question_id::text)->>'question_type',q.question_type) FROM answer_segment seg JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id JOIN scoring_run run ON run.tenant_id=seg.tenant_id AND run.id=$3::uuid WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid`, tenantID, segmentID, scoringRunID).Scan(&questionType); err != nil {
+		return OMRRun{}, nil, err
+	}
 	decision := input.Decision
-	if omrResultCanAutoConfirm(input, autoConfirmEligible, autoConfirmMinimumConfidence) {
+	if omrResultCanAutoConfirmForQuestion(input, questionType, autoConfirmEligible, autoConfirmMinimumConfidence) {
 		decision = "confirmed"
 	}
+	presence := "present"
+	if input.Decision == "blank" {
+		presence = "blank"
+	}
 	var candidateID string
-	err = tx.QueryRowContext(ctx, `INSERT INTO answer_candidate(tenant_id,answer_segment_id,scoring_run_id,exam_question_snapshot_id,source,payload,display_text,confidence,decision,evidence,engine_version,profile_version,input_hash,is_current,created_by) SELECT $1::uuid,$2::uuid,$3::uuid,eqs.id,'omr',jsonb_build_object('answers',$4::jsonb),$5,$6,$7,$8::jsonb,'opencv-omr-v1',$9,seg.crop_sha256,true,$10::uuid FROM answer_segment seg JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id JOIN exam_question_snapshot eqs ON eqs.tenant_id=q.tenant_id AND eqs.exam_id=q.exam_id AND eqs.question_id=q.id WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid RETURNING id::text`, tenantID, segmentID, scoringRunID, selected, answerText, input.Confidence, decision, evidence, expectedProfileVersion, actorID).Scan(&candidateID)
+	err = tx.QueryRowContext(ctx, `INSERT INTO answer_candidate(tenant_id,answer_segment_id,scoring_run_id,exam_question_snapshot_id,source,payload,display_text,confidence,decision,evidence,engine_version,profile_version,input_hash,is_current,created_by) SELECT $1::uuid,$2::uuid,$3::uuid,eqs.id,'omr',jsonb_build_object('answers',$4::jsonb,'presence',$11::text),$5,$6,$7,$8::jsonb,'opencv-omr-v1',$9,seg.crop_sha256,true,$10::uuid FROM answer_segment seg JOIN scoring_run run ON run.tenant_id=seg.tenant_id AND run.id=$3::uuid JOIN LATERAL(SELECT id FROM exam_question_snapshot WHERE tenant_id=seg.tenant_id AND question_id=seg.question_id AND (run.rule_snapshot='{}'::jsonb OR id::text=run.rule_snapshot->'questions'->(seg.question_id::text)->'assessment_snapshot'->>'id') ORDER BY snapshot_version DESC LIMIT 1)eqs ON true WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid RETURNING id::text`, tenantID, segmentID, scoringRunID, selected, answerText, input.Confidence, decision, evidence, expectedProfileVersion, actorID, presence).Scan(&candidateID)
 	if err != nil {
 		return OMRRun{}, nil, err
 	}
 	var answerID string
-	err = tx.QueryRowContext(ctx, `INSERT INTO answer_segment_answer(tenant_id,answer_segment_id,answer_text,answer_payload,source,confidence,recorded_by) VALUES($1::uuid,$2::uuid,$3,jsonb_build_object('answers',$4::jsonb), 'omr',$5,$6::uuid) RETURNING id::text`, tenantID, segmentID, answerText, selected, input.Confidence, actorID).Scan(&answerID)
+	err = tx.QueryRowContext(ctx, `INSERT INTO answer_segment_answer(tenant_id,answer_segment_id,answer_text,answer_payload,source,confidence,recorded_by) VALUES($1::uuid,$2::uuid,$3,jsonb_build_object('answers',$4::jsonb,'presence',$7::text), 'omr',$5,$6::uuid) RETURNING id::text`, tenantID, segmentID, answerText, selected, input.Confidence, actorID, presence).Scan(&answerID)
 	if err != nil {
 		return OMRRun{}, nil, err
 	}
 	var questionGrade *QuestionGrade
 	if decision != "confirmed" {
-		err = s.insertScoringReviewTaskTx(ctx, tx, tenantID, segmentID, scoringRunID, actorID, scoringReviewCause{source: "omr_ambiguous", reason: omrReviewReason(input, autoConfirmEligible, autoConfirmReason, autoConfirmMinimumConfidence)})
+		// 未取得服务端资格时，清晰观察仍按本轮冻结规则给教师提供建议。
+		// 建议附在对应候选证据中，不伪装成已确认的 question_grade。
+		if engine != nil && omrResultCanAutoConfirmForQuestion(input, questionType, true, 0.9) {
+			contextValue, contextErr := s.loadContextForAnswerTx(ctx, tx, tenantID, segmentID, answerID)
+			if contextErr != nil {
+				return OMRRun{}, nil, contextErr
+			}
+			contextValue, ruleID, contextErr := applyFrozenScoringRunContextTx(ctx, tx, tenantID, scoringRunID, contextValue)
+			if contextErr == nil {
+				suggestion, gradeErr := engine.Grade(contextValue)
+				if presence == "blank" {
+					suggestion = applyInputConfidence(contextValue, finalize(engine.baseGrade(contextValue, "omr_explicit_blank")))
+					gradeErr = nil
+				}
+				if gradeErr == nil {
+					raw, marshalErr := json.Marshal(map[string]any{"suggested_score": suggestion.SuggestedScore, "max_score": suggestion.MaxScore, "scoring_rule_id": ruleID, "confidence": suggestion.Confidence})
+					if marshalErr != nil {
+						return OMRRun{}, nil, marshalErr
+					}
+					if _, updateErr := tx.ExecContext(ctx, `UPDATE answer_candidate SET evidence=evidence || jsonb_build_object('rule_suggestion',$3::jsonb) WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, candidateID, raw); updateErr != nil {
+						return OMRRun{}, nil, updateErr
+					}
+				}
+			}
+		}
+		err = s.insertScoringReviewTaskTx(ctx, tx, tenantID, segmentID, scoringRunID, actorID, scoringReviewCause{source: "omr_ambiguous", reason: omrReviewReasonForQuestion(input, questionType, autoConfirmEligible, autoConfirmReason, autoConfirmMinimumConfidence)})
 	} else {
-		answer := confirmedOMRAnswer{segmentID: segmentID, candidateID: candidateID, answerID: answerID}
+		answer := confirmedOMRAnswer{segmentID: segmentID, candidateID: candidateID, answerID: answerID, minimumConfidence: autoConfirmMinimumConfidence}
 		questionGrade, err = s.gradeConfirmedOMRAnswerTx(ctx, tx, tenantID, scoringRunID, actorID, answer, engine)
 	}
 	if err != nil {
@@ -178,7 +229,17 @@ func encodeOMRResultInput(input OMRResultInput) ([]byte, []byte, error) {
 	if input.Decision != "selected" && input.Decision != "blank" && input.Decision != "multiple" && input.Decision != "ambiguous" {
 		return nil, nil, ErrInvalidInput
 	}
-	if input.Confidence < 0 || input.Confidence > 1 || input.ResultVersion == "" || strings.TrimSpace(input.ProfileVersion) == "" || strings.TrimSpace(input.ProfileHash) == "" {
+	if math.IsNaN(input.Confidence) || math.IsInf(input.Confidence, 0) || input.Confidence < 0 || input.Confidence > 1 || input.ResultVersion == "" || strings.TrimSpace(input.ProfileVersion) == "" || strings.TrimSpace(input.ProfileHash) == "" {
+		return nil, nil, ErrInvalidInput
+	}
+	labels := map[string]bool{}
+	for _, label := range input.Selected {
+		if strings.TrimSpace(label) == "" || labels[label] {
+			return nil, nil, ErrInvalidInput
+		}
+		labels[label] = true
+	}
+	if input.Decision == "blank" && len(input.Selected) != 0 || input.Decision == "selected" && len(input.Selected) == 0 || input.Decision == "multiple" && len(input.Selected) < 2 {
 		return nil, nil, ErrInvalidInput
 	}
 	measurements, err := json.Marshal(input.Measurements)
@@ -214,7 +275,17 @@ func (s *PostgresStore) gradeConfirmedOMRAnswerTx(ctx context.Context, tx *sql.T
 	if contextErr != nil {
 		return nil, s.insertScoringReviewTaskTx(ctx, tx, tenantID, answer.segmentID, scoringRunID, actorID, scoringReviewCause{source: "grading_failure", reason: "auto_grade_context_failed"})
 	}
-	evaluation, gradeErr := engine.Grade(gradingContext)
+	gradingContext, _, contextErr = applyFrozenScoringRunContextTx(ctx, tx, tenantID, scoringRunID, gradingContext)
+	if contextErr != nil {
+		return nil, s.insertScoringReviewTaskTx(ctx, tx, tenantID, answer.segmentID, scoringRunID, actorID, scoringReviewCause{source: "grading_failure", reason: "frozen_scoring_rule_unavailable"})
+	}
+	// 只有上游逐题质量门禁已接受的 OMR 进入这里；选择题沿用本次冻结阈值，不能被通用 OCR 的 0.9 二次拦截。
+	evaluation, gradeErr := engine.gradeConfirmedOMRChoice(gradingContext, answer.minimumConfidence)
+	// blank 是 OMR 明确观察到的事实，不用空字符串猜测。清晰空白按冻结题分记 0，仍受输入置信度约束。
+	if gradingContext.Answer.AnswerPayload["presence"] == "blank" && gradingContext.Question.QuestionType != "single_choice" && gradingContext.Question.QuestionType != "multiple_choice" {
+		evaluation = applyInputConfidence(gradingContext, finalize(engine.baseGrade(gradingContext, "omr_explicit_blank")))
+		gradeErr = nil
+	}
 	if gradeErr != nil {
 		return nil, s.insertScoringReviewTaskTx(ctx, tx, tenantID, answer.segmentID, scoringRunID, actorID, scoringReviewCause{source: "grading_failure", reason: "auto_grade_execution_failed"})
 	}
@@ -260,11 +331,61 @@ func omrReviewReason(input OMRResultInput, autoConfirmEligible bool, autoConfirm
 	return "omr_" + input.Decision
 }
 
+// 多选要逐项确认整个集合，不能套用单选的 len=1 和第一、第二涂点差距。
+// 新的 blank/多选分支必须带集合质量；旧 Worker 的单选仍沿用原有校准和置信度门槛。
+func omrResultCanAutoConfirmForQuestion(input OMRResultInput, questionType string, eligible bool, minimumConfidence float64) bool {
+	if !eligible || input.NeedsHumanReview || input.Confidence < minimumConfidence {
+		return false
+	}
+	if input.Decision == "selected" && questionType != "multiple_choice" {
+		if quality, ok := input.Thresholds["quality"].(map[string]any); ok && quality["classification"] != "clear" {
+			return false
+		}
+		return omrResultCanAutoConfirm(input, eligible, minimumConfidence)
+	}
+	quality, ok := input.Thresholds["quality"].(map[string]any)
+	if !ok || quality["version"] != "omr-set-quality-v1" {
+		return false
+	}
+	expectedType := "single_choice"
+	if questionType == "multiple_choice" {
+		expectedType = "multiple_choice"
+	}
+	setConfidence, valid := floatValue(quality["set_confidence"])
+	optionCount, countValid := floatValue(quality["option_count"])
+	selectedCount, selectedValid := floatValue(quality["selected_count"])
+	riskRaw, err := json.Marshal(quality["risk_flags"])
+	var risks []string
+	if !valid || !countValid || !selectedValid || math.IsNaN(setConfidence) || math.IsInf(setConfidence, 0) || setConfidence < minimumConfidence || setConfidence > 1 || quality["question_type"] != expectedType || optionCount < 1 || selectedCount != float64(len(input.Selected)) || selectedCount > optionCount || err != nil || json.Unmarshal(riskRaw, &risks) != nil || string(riskRaw) == "null" || len(risks) != 0 {
+		return false
+	}
+	if input.Decision == "blank" {
+		return len(input.Selected) == 0 && quality["classification"] == "blank"
+	}
+	return questionType == "multiple_choice" && input.Decision == "selected" && len(input.Selected) > 0 && quality["classification"] == "clear"
+}
+
+func omrReviewReasonForQuestion(input OMRResultInput, questionType string, eligible bool, eligibilityReason string, minimumConfidence float64) string {
+	if quality, ok := input.Thresholds["quality"].(map[string]any); ok {
+		switch quality["classification"] {
+		case "possible_erasure", "unreadable", "uncertain_mark", "multiple_marks":
+			return "omr_" + quality["classification"].(string)
+		}
+	}
+	if !eligible && strings.TrimSpace(eligibilityReason) != "" && omrResultCanAutoConfirmForQuestion(input, questionType, true, minimumConfidence) {
+		return "omr_" + eligibilityReason
+	}
+	if questionType == "multiple_choice" && input.Decision == "selected" && !omrResultCanAutoConfirmForQuestion(input, questionType, true, minimumConfidence) {
+		return "omr_set_quality_insufficient"
+	}
+	return omrReviewReason(input, eligible, eligibilityReason, minimumConfidence)
+}
+
 func (s *PostgresStore) insertScoringReviewTaskTx(ctx context.Context, tx *sql.Tx, tenantID, segmentID, scoringRunID, actorID string, cause scoringReviewCause) error {
 	source, reason := cause.source, cause.reason
 	_, err := tx.ExecContext(ctx, `
 INSERT INTO review_task(tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,source,status,priority,grade_round,reason_code,scoring_run_id,created_by)
-SELECT seg.tenant_id,sub.exam_id,q.id,q.question_no,seg.id,sub.id,COALESCE(NULLIF(sub.candidate_no,''),seg.id::text),$3,'pending',80,'single',$4,$5::uuid,$6::uuid
+SELECT seg.tenant_id,sub.exam_id,q.id,q.question_no,seg.id,sub.id,COALESCE(NULLIF(sub.candidate_no,''),sub.id::text),$3,'pending',80,'single',$4,$5::uuid,$6::uuid
 FROM answer_segment seg
 JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id AND sub.deleted_at IS NULL
 JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id AND q.deleted_at IS NULL
@@ -348,20 +469,27 @@ FOR UPDATE OF seg,ans`, tenantID, segmentID, answerID)
 // confirmRuleGradeForCandidateTx 是事务内的 ConfirmRuleGrade；显式传入候选 ID，
 // 防止并发或旧答案被误判为当前候选。
 func (s *PostgresStore) confirmRuleGradeForCandidateTx(ctx context.Context, tx *sql.Tx, tenantID, segmentID, candidateID, actorID string, grade Grade) (QuestionGrade, error) {
-	if grade.AnswerSegmentID != segmentID || grade.NeedsHumanReview || !grade.AutoPass || grade.SuggestedScore < 0 || grade.SuggestedScore > grade.MaxScore {
+	if grade.AnswerSegmentID != segmentID || grade.NeedsHumanReview || !grade.AutoPass || math.IsNaN(grade.SuggestedScore) || math.IsInf(grade.SuggestedScore, 0) || math.IsNaN(grade.MaxScore) || math.IsInf(grade.MaxScore, 0) || grade.SuggestedScore < 0 || grade.SuggestedScore > grade.MaxScore {
 		return QuestionGrade{}, ErrInvalidInput
 	}
-	var examID, submissionID, questionID, ruleID, scoringRunID string
+	var examID, submissionID, questionID, ruleID, scoringRunID, snapshotID string
 	err := tx.QueryRowContext(ctx, `
-SELECT sub.exam_id::text,seg.submission_id::text,seg.question_id::text,sr.id::text,COALESCE(ac.scoring_run_id::text,'')
+SELECT sub.exam_id::text,seg.submission_id::text,seg.question_id::text,COALESCE(ac.scoring_run_id::text,'')
 FROM answer_segment seg
 JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id AND sub.deleted_at IS NULL
 JOIN answer_candidate ac ON ac.tenant_id=seg.tenant_id AND ac.answer_segment_id=seg.id AND ac.id=$3::uuid AND ac.is_current AND ac.decision='confirmed' AND ac.deleted_at IS NULL
-JOIN scoring_rule sr ON sr.tenant_id=seg.tenant_id AND sr.question_id=seg.question_id AND sr.status='published' AND sr.deleted_at IS NULL
 WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid AND seg.deleted_at IS NULL
-FOR UPDATE OF seg,ac`, tenantID, segmentID, candidateID).Scan(&examID, &submissionID, &questionID, &ruleID, &scoringRunID)
+FOR UPDATE OF seg,ac`, tenantID, segmentID, candidateID).Scan(&examID, &submissionID, &questionID, &scoringRunID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return QuestionGrade{}, ErrNotFound
+	}
+	if err != nil {
+		return QuestionGrade{}, err
+	}
+	if scoringRunID != "" {
+		ruleID, snapshotID, err = frozenScoringRuleIDTx(ctx, tx, tenantID, scoringRunID, questionID)
+	} else {
+		err = tx.QueryRowContext(ctx, `SELECT rule.id::text,snapshot.id::text FROM scoring_rule rule JOIN exam_question_snapshot snapshot ON snapshot.tenant_id=rule.tenant_id AND snapshot.exam_id=rule.exam_id AND snapshot.question_id=rule.question_id WHERE rule.tenant_id=$1::uuid AND rule.question_id=$2::uuid AND rule.status='published' AND rule.deleted_at IS NULL ORDER BY rule.version DESC,snapshot.snapshot_version DESC LIMIT 1`, tenantID, questionID).Scan(&ruleID, &snapshotID)
 	}
 	if err != nil {
 		return QuestionGrade{}, err
@@ -378,6 +506,9 @@ FOR UPDATE OF seg,ac`, tenantID, segmentID, candidateID).Scan(&examID, &submissi
 	if !errors.Is(err, sql.ErrNoRows) {
 		return QuestionGrade{}, err
 	}
+	if err := guardAutomaticRuleGradeTx(ctx, tx, tenantID, segmentID); err != nil {
+		return QuestionGrade{}, err
+	}
 	evidence, err := json.Marshal(map[string]any{"grader_type": grade.GraderType, "rule_version": grade.RuleVersion, "confidence": grade.Confidence, "matched_points": grade.MatchedPoints, "missing_points": grade.MissingPoints, "evidence": grade.Evidence, "risk_flags": grade.RiskFlags})
 	if err != nil {
 		return QuestionGrade{}, err
@@ -390,8 +521,8 @@ FOR UPDATE OF seg,ac`, tenantID, segmentID, candidateID).Scan(&examID, &submissi
 		}
 	}
 	row := tx.QueryRowContext(ctx, `INSERT INTO question_grade(tenant_id,exam_id,submission_id,question_id,answer_segment_id,scoring_run_id,exam_question_snapshot_id,answer_candidate_id,scoring_rule_id,source,status,score,max_score,evidence,version,supersedes_id,is_current,confirmed_by)
-VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,NULLIF($6,'')::uuid,(SELECT id FROM exam_question_snapshot WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$4::uuid),$7::uuid,$8::uuid,'rule_confirmed','confirmed',$9,$10,$11::jsonb,(SELECT COALESCE(MAX(version),0)+1 FROM question_grade WHERE tenant_id=$1::uuid AND answer_segment_id=$5::uuid),NULLIF($12,'')::uuid,true,$13::uuid)
-RETURNING id::text,answer_segment_id::text,question_id::text,score::float8,max_score::float8,source,version,evidence,created_at`, tenantID, examID, submissionID, questionID, segmentID, scoringRunID, candidateID, ruleID, grade.SuggestedScore, grade.MaxScore, evidence, priorID, actorID)
+VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,NULLIF($6,'')::uuid,$14::uuid,$7::uuid,$8::uuid,'rule_confirmed','confirmed',$9,$10,$11::jsonb,(SELECT COALESCE(MAX(version),0)+1 FROM question_grade WHERE tenant_id=$1::uuid AND answer_segment_id=$5::uuid),NULLIF($12,'')::uuid,true,$13::uuid)
+RETURNING id::text,answer_segment_id::text,question_id::text,score::float8,max_score::float8,source,version,evidence,created_at`, tenantID, examID, submissionID, questionID, segmentID, scoringRunID, candidateID, ruleID, grade.SuggestedScore, grade.MaxScore, evidence, priorID, actorID, snapshotID)
 	var out QuestionGrade
 	var evidenceRaw []byte
 	if err = row.Scan(&out.ID, &out.AnswerSegmentID, &out.QuestionID, &out.Score, &out.MaxScore, &out.Source, &out.Version, &evidenceRaw, &out.CreatedAt); err != nil {
@@ -403,34 +534,90 @@ RETURNING id::text,answer_segment_id::text,question_id::text,score::float8,max_s
 	return out, nil
 }
 
-func (s *PostgresStore) ApplyOMRFailure(ctx context.Context, tenantID, id, errorCode string, detail map[string]any, retryable bool) (OMRRun, error) {
-	// 可重试失败保留 retryable_error 供显式重试，终止失败写入完成时间；两种结果都在同一事务刷新运行汇总。
-	status := "terminal_error"
-	if retryable {
-		status = "retryable_error"
+// 自动规则结果不能替换教师已开始处理的工作。锁住现有任务后检查归属与草稿，
+// 使并发认领/保存必须等待本事务结束；已有人工成绩始终优先。
+func guardAutomaticRuleGradeTx(ctx context.Context, tx *sql.Tx, tenantID, segmentID string) error {
+	rows, err := tx.QueryContext(ctx, `SELECT id::text,assigned_to IS NOT NULL OR status IN ('assigned','in_progress') FROM review_task WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND status IN ('pending','assigned','in_progress','returned') AND deleted_at IS NULL ORDER BY id FOR UPDATE`, tenantID, segmentID)
+	if err != nil {
+		return err
 	}
+	claimed := false
+	for rows.Next() {
+		var id string
+		var owned bool
+		if err := rows.Scan(&id, &owned); err != nil {
+			rows.Close()
+			return err
+		}
+		claimed = claimed || owned
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	var protected bool
+	err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM question_grade WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND source='human' AND is_current AND deleted_at IS NULL) OR EXISTS(SELECT 1 FROM review_draft draft JOIN review_task task ON task.tenant_id=draft.tenant_id AND task.id=draft.review_task_id WHERE task.tenant_id=$1::uuid AND task.answer_segment_id=$2::uuid AND draft.deleted_at IS NULL AND task.deleted_at IS NULL)`, tenantID, segmentID).Scan(&protected)
+	if err != nil {
+		return err
+	}
+	if claimed || protected {
+		return ErrInvalidTransition
+	}
+	return nil
+}
+
+// ApplyOMRWorkerFailure 与完成回调一样先锁来源，再在同一事务校验并结束当前尝试。
+// 任何来源或汇总写入失败都回滚 runtime；否则终止失败会漏出评分工作区的重试列表。
+func (s *PostgresStore) ApplyOMRWorkerFailure(ctx context.Context, tenantID, id string, input OMRFailureInput) (OMRRun, string, error) {
+	raw, err := json.Marshal(input.ErrorDetail)
+	if err != nil {
+		return OMRRun{}, "", ErrInvalidInput
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return OMRRun{}, "", err
+	}
+	defer tx.Rollback()
+	var runtimeTaskID string
+	err = tx.QueryRowContext(ctx, `SELECT COALESCE(runtime_task_id::text,'') FROM omr_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, id).Scan(&runtimeTaskID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return OMRRun{}, "", ErrNotFound
+	}
+	if err != nil {
+		return OMRRun{}, "", err
+	}
+	if runtimeTaskID != input.TaskID {
+		return OMRRun{}, "", ErrInvalidTransition
+	}
+	task, err := workerruntime.FailTaskInTx(ctx, tx, tenantID, input.TaskID, workerruntime.FailInput{
+		LeaseToken: input.LeaseToken, Retryable: input.Retryable, ErrorCode: input.ErrorCode, ErrorDetail: input.ErrorDetail, DurationMS: input.DurationMS,
+	})
+	if err != nil {
+		return OMRRun{}, "", err
+	}
+	if task.SourceType != "omr_run" || task.SourceID != id {
+		return OMRRun{}, "", ErrInvalidTransition
+	}
+	if err = s.applyOMRFailureTx(ctx, tx, tenantID, id, input.ErrorCode, raw, task.Status == workerruntime.StatusQueued); err != nil {
+		return OMRRun{}, "", err
+	}
+	if err = tx.Commit(); err != nil {
+		return OMRRun{}, "", err
+	}
+	out, err := s.GetOMRRun(ctx, tenantID, id)
+	return out, task.Status, err
+}
+
+// ApplyOMRFailure 只保存领域失败，兼容已协调 runtime 的内部调用；Worker HTTP 回调使用上面的原子命令。
+func (s *PostgresStore) ApplyOMRFailure(ctx context.Context, tenantID, id, errorCode string, detail map[string]any, retryable bool) (OMRRun, error) {
 	raw, _ := json.Marshal(detail)
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return OMRRun{}, err
 	}
 	defer tx.Rollback()
-	var runID string
-	err = tx.QueryRowContext(ctx, `
-UPDATE omr_run o
-SET status=$3,error_code=$4,error_detail=$5::jsonb,updated_at=now(),
-  completed_at=CASE WHEN $3='terminal_error' THEN now() ELSE NULL END
-FROM scoring_run sr
-WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid AND o.status IN ('queued','processing','retryable_error')
-  AND sr.tenant_id=o.tenant_id AND sr.id=o.scoring_run_id AND sr.status='processing'
-RETURNING o.scoring_run_id::text`, tenantID, id, status, errorCode, raw).Scan(&runID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return OMRRun{}, ErrRevisionConflict
-	}
-	if err != nil {
-		return OMRRun{}, err
-	}
-	if _, err = s.refreshScoringRunTx(ctx, tx, tenantID, runID); err != nil {
+	if err = s.applyOMRFailureTx(ctx, tx, tenantID, id, errorCode, raw, retryable); err != nil {
 		return OMRRun{}, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -439,8 +626,33 @@ RETURNING o.scoring_run_id::text`, tenantID, id, status, errorCode, raw).Scan(&r
 	return s.GetOMRRun(ctx, tenantID, id)
 }
 
+func (s *PostgresStore) applyOMRFailureTx(ctx context.Context, tx *sql.Tx, tenantID, id, errorCode string, raw []byte, retryable bool) error {
+	// 可重试失败保留 retryable_error，终止失败写入完成时间；两种结果都刷新同一事务内的汇总。
+	status := "terminal_error"
+	if retryable {
+		status = "retryable_error"
+	}
+	var runID string
+	err := tx.QueryRowContext(ctx, `
+UPDATE omr_run o
+SET status=$3,error_code=$4,error_detail=$5::jsonb,updated_at=now(),
+  completed_at=CASE WHEN $3='terminal_error' THEN now() ELSE NULL END
+FROM scoring_run sr
+WHERE o.tenant_id=$1::uuid AND o.id=$2::uuid AND o.status IN ('queued','processing','retryable_error')
+  AND sr.tenant_id=o.tenant_id AND sr.id=o.scoring_run_id AND sr.status='processing'
+RETURNING o.scoring_run_id::text`, tenantID, id, status, errorCode, raw).Scan(&runID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrRevisionConflict
+	}
+	if err != nil {
+		return err
+	}
+	_, err = s.refreshScoringRunTx(ctx, tx, tenantID, runID)
+	return err
+}
+
 func (s *PostgresStore) ConfirmRuleGrade(ctx context.Context, tenantID, segmentID, actorID string, grade Grade) (QuestionGrade, error) {
-	if grade.AnswerSegmentID != segmentID || grade.NeedsHumanReview || !grade.AutoPass || grade.SuggestedScore < 0 || grade.SuggestedScore > grade.MaxScore {
+	if grade.AnswerSegmentID != segmentID || grade.NeedsHumanReview || !grade.AutoPass || math.IsNaN(grade.SuggestedScore) || math.IsInf(grade.SuggestedScore, 0) || math.IsNaN(grade.MaxScore) || math.IsInf(grade.MaxScore, 0) || grade.SuggestedScore < 0 || grade.SuggestedScore > grade.MaxScore {
 		return QuestionGrade{}, ErrInvalidInput
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -448,78 +660,31 @@ func (s *PostgresStore) ConfirmRuleGrade(ctx context.Context, tenantID, segmentI
 		return QuestionGrade{}, err
 	}
 	defer tx.Rollback()
-	// 先锁父运行再锁答题段；取消流程使用同一运行锁，迟到的规则结果不能写入正在取消或已取消的运行。
-	var expectedRunID sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT scoring_run_id::text FROM answer_candidate WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND is_current AND decision='confirmed' AND deleted_at IS NULL`, tenantID, segmentID).Scan(&expectedRunID)
+	// 父运行先于候选加锁；取消命令锁同一行，迟到的规则结果不能越过取消边界。
+	var expectedRunID, candidateID string
+	err = tx.QueryRowContext(ctx, `SELECT COALESCE(scoring_run_id::text,''),id::text FROM answer_candidate WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND is_current AND decision='confirmed' AND deleted_at IS NULL`, tenantID, segmentID).Scan(&expectedRunID, &candidateID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return QuestionGrade{}, ErrNotFound
 	}
 	if err != nil {
 		return QuestionGrade{}, err
 	}
-	if expectedRunID.Valid {
+	if expectedRunID != "" {
 		var runStatus string
-		if err = tx.QueryRowContext(ctx, `SELECT status FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, expectedRunID.String).Scan(&runStatus); err != nil {
+		if err := tx.QueryRowContext(ctx, `SELECT status FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, expectedRunID).Scan(&runStatus); err != nil {
 			return QuestionGrade{}, err
 		}
 		if runStatus != "queued" && runStatus != "processing" && runStatus != "needs_review" && runStatus != "failed" {
 			return QuestionGrade{}, ErrInvalidTransition
 		}
 	}
-	var examID, submissionID, questionID, candidateID, ruleID, runID string
-	err = tx.QueryRowContext(ctx, `
-SELECT sub.exam_id::text, seg.submission_id::text, seg.question_id::text,
-  ac.id::text, sr.id::text, COALESCE(ac.scoring_run_id::text,'')
-FROM answer_segment seg
-JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id AND sub.deleted_at IS NULL
-JOIN answer_candidate ac ON ac.tenant_id=seg.tenant_id AND ac.answer_segment_id=seg.id AND ac.is_current AND ac.decision='confirmed' AND ac.deleted_at IS NULL
-JOIN scoring_rule sr ON sr.tenant_id=seg.tenant_id AND sr.question_id=seg.question_id AND sr.status='published' AND sr.deleted_at IS NULL
-WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid AND seg.deleted_at IS NULL
-FOR UPDATE OF seg`, tenantID, segmentID).Scan(&examID, &submissionID, &questionID, &candidateID, &ruleID, &runID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return QuestionGrade{}, ErrNotFound
-	}
+	out, err := s.confirmRuleGradeForCandidateTx(ctx, tx, tenantID, segmentID, candidateID, actorID, grade)
 	if err != nil {
 		return QuestionGrade{}, err
 	}
-	if (expectedRunID.Valid && runID != expectedRunID.String) || (!expectedRunID.Valid && runID != "") {
-		return QuestionGrade{}, ErrRevisionConflict
-	}
-	var existing QuestionGrade
-	var existingEvidence []byte
-	err = tx.QueryRowContext(ctx, `SELECT id::text,answer_segment_id::text,question_id::text,score::float8,max_score::float8,source,version,evidence,created_at FROM question_grade WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND answer_candidate_id=$3::uuid AND scoring_rule_id=$4::uuid AND is_current AND deleted_at IS NULL`, tenantID, segmentID, candidateID, ruleID).Scan(&existing.ID, &existing.AnswerSegmentID, &existing.QuestionID, &existing.Score, &existing.MaxScore, &existing.Source, &existing.Version, &existingEvidence, &existing.CreatedAt)
-	if err == nil {
-		if decodeErr := decodeJSONB(existingEvidence, &existing.Evidence, questionGradeEvidenceColumn); decodeErr != nil {
-			return QuestionGrade{}, decodeErr
-		}
-		return existing, tx.Commit()
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return QuestionGrade{}, err
-	}
-	evidenceMap := map[string]any{"grader_type": grade.GraderType, "rule_version": grade.RuleVersion, "confidence": grade.Confidence, "matched_points": grade.MatchedPoints, "missing_points": grade.MissingPoints, "evidence": grade.Evidence, "risk_flags": grade.RiskFlags}
-	evidence, _ := json.Marshal(evidenceMap)
-	var priorID string
-	_ = tx.QueryRowContext(ctx, `SELECT id::text FROM question_grade WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND is_current AND deleted_at IS NULL FOR UPDATE`, tenantID, segmentID).Scan(&priorID)
-	if priorID != "" {
-		if _, err = tx.ExecContext(ctx, `UPDATE question_grade SET is_current=false,status='superseded' WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, priorID); err != nil {
+	if expectedRunID != "" {
+		if _, err := s.refreshScoringRunTx(ctx, tx, tenantID, expectedRunID); err != nil {
 			return QuestionGrade{}, err
-		}
-	}
-	row := tx.QueryRowContext(ctx, `INSERT INTO question_grade(tenant_id,exam_id,submission_id,question_id,answer_segment_id,scoring_run_id,exam_question_snapshot_id,answer_candidate_id,scoring_rule_id,source,status,score,max_score,evidence,version,supersedes_id,is_current,confirmed_by)
-VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,NULLIF($6,'')::uuid,(SELECT id FROM exam_question_snapshot WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$4::uuid),$7::uuid,$8::uuid,'rule_confirmed','confirmed',$9,$10,$11::jsonb,(SELECT COALESCE(MAX(version),0)+1 FROM question_grade WHERE tenant_id=$1::uuid AND answer_segment_id=$5::uuid),NULLIF($12,'')::uuid,true,$13::uuid)
-RETURNING id::text,answer_segment_id::text,question_id::text,score::float8,max_score::float8,source,version,evidence,created_at`, tenantID, examID, submissionID, questionID, segmentID, runID, candidateID, ruleID, grade.SuggestedScore, grade.MaxScore, evidence, priorID, actorID)
-	var out QuestionGrade
-	var evidenceRaw []byte
-	if err = row.Scan(&out.ID, &out.AnswerSegmentID, &out.QuestionID, &out.Score, &out.MaxScore, &out.Source, &out.Version, &evidenceRaw, &out.CreatedAt); err != nil {
-		return out, err
-	}
-	if err = decodeJSONB(evidenceRaw, &out.Evidence, questionGradeEvidenceColumn); err != nil {
-		return out, err
-	}
-	if runID != "" {
-		if _, err = tx.ExecContext(ctx, `UPDATE scoring_run SET auto_confirmed_count=auto_confirmed_count+1,status=CASE WHEN queued_count=0 AND failed_count=0 AND review_count=0 THEN 'completed' WHEN queued_count=0 AND review_count>0 THEN 'needs_review' ELSE status END,completed_at=CASE WHEN queued_count=0 AND review_count=0 AND failed_count=0 THEN now() ELSE completed_at END,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, runID); err != nil {
-			return out, err
 		}
 	}
 	return out, tx.Commit()

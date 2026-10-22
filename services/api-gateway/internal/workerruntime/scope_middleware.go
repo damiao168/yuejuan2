@@ -91,6 +91,16 @@ func RequireTaskFile(pathParam string) func(http.Handler) http.Handler {
 
 // TaskScope 从当前租约任务推导目标租户和资源范围；服务账号不能通过请求头选择租户。
 func TaskScope(store Store) func(http.Handler) http.Handler {
+	return taskScope(store, false)
+}
+
+// TaskCompletionScope 仅安装在完成回调。成功任务只允许原 worker 的原租约进入严格结果回放。
+// 文件访问、Execute、Fail 和 Heartbeat 仍使用 TaskScope，不因历史成功租约恢复操作权限。
+func TaskCompletionScope(store Store) func(http.Handler) http.Handler {
+	return taskScope(store, true)
+}
+
+func taskScope(store Store, completion bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := auth.UserFromContext(r.Context())
@@ -103,7 +113,7 @@ func TaskScope(store Store) func(http.Handler) http.Handler {
 				return
 			}
 
-			task, ok := authorizeTaskRequest(w, r, store)
+			task, ok := authorizeTaskRequestForCompletion(w, r, store, completion)
 			if !ok {
 				return
 			}
@@ -128,6 +138,10 @@ func TaskScope(store Store) func(http.Handler) http.Handler {
 
 // 先核对请求中的当前租约；已认证服务的队列白名单由 TaskScope 在成功后检查。
 func authorizeTaskRequest(w http.ResponseWriter, r *http.Request, store Store) (Task, bool) {
+	return authorizeTaskRequestForCompletion(w, r, store, false)
+}
+
+func authorizeTaskRequestForCompletion(w http.ResponseWriter, r *http.Request, store Store, completion bool) (Task, bool) {
 	taskID := strings.TrimSpace(r.Header.Get(TaskIDHeader))
 	leaseToken := strings.TrimSpace(r.Header.Get(TaskLeaseHeader))
 	workerService := strings.TrimSpace(r.Header.Get(WorkerServiceHeader))
@@ -141,6 +155,13 @@ func authorizeTaskRequest(w http.ResponseWriter, r *http.Request, store Store) (
 		return Task{}, false
 	}
 	task, err := store.AuthorizeLease(r.Context(), taskID, leaseToken, workerService, workerInstanceID, time.Now().UTC())
+	if err != nil && completion {
+		if replayStore, ok := store.(interface {
+			AuthorizeCompletedLease(context.Context, string, string, string, string) (Task, error)
+		}); ok {
+			task, err = replayStore.AuthorizeCompletedLease(r.Context(), taskID, leaseToken, workerService, workerInstanceID)
+		}
+	}
 	if err != nil {
 		httpx.Error(w, r, http.StatusForbidden, "worker_scope_forbidden", "worker task capability is invalid or expired")
 		return Task{}, false

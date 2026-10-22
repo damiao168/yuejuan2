@@ -78,7 +78,14 @@ func (h *Handler) ListIncidents(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_grader_drift_input", "incident status is invalid")
 		return
 	}
+	scope, hasScope := auth.AccessScopeFromContext(r.Context())
+	if !hasScope {
+		httpx.Error(w, r, http.StatusForbidden, "grader_drift_access_denied", "authenticated collection scope is required")
+		return
+	}
+	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
 	items, err := h.service.ListIncidents(r.Context(), user.TenantID, IncidentFilter{
+		Access: auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver},
 		ExamID: strings.TrimSpace(r.URL.Query().Get("exam_id")), QuestionID: strings.TrimSpace(r.URL.Query().Get("question_id")),
 		GraderID: strings.TrimSpace(r.URL.Query().Get("grader_id")), Status: status, Limit: parseLimit(r.URL.Query().Get("limit")),
 	})

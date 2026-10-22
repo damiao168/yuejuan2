@@ -23,10 +23,11 @@ vi.mock("antd", async () => {
 const OriginalURL = globalThis.URL;
 function scoringItem(overrides: Partial<ScoringRunItem> = {}): ScoringRunItem {
   return {
-    answer_segment_id: "segment-1", submission_id: "submission-1", submission_page_id: "page-1",
+    answer_segment_id: "segment-1", submission_page_id: "page-1",
     page_no: 1, page_file_asset_id: "", question_id: "question-1", question_no: "Q1", question_type: "short_answer",
     anonymous_code: "A", normalized_bbox: { x: 0.1, y: 0.2, width: 0.5, height: 0.1 }, state: "queued",
     ...overrides,
+    submission_id: overrides.submission_id ?? `submission-${overrides.anonymous_code ?? "A"}`,
   };
 }
 
@@ -59,7 +60,7 @@ describe("scoring paper monitor presentation and image lifecycle", () => {
   }
 
   it.each([
-    ["needs_review", "自动识别完成，等待教师确认"],
+    ["needs_review", "本批答卷有待处理或确认项"],
     ["completed", "本批答卷已处理完成"],
     ["running", "正在逐卷识别与评分"],
     [undefined, "正在逐卷识别与评分"],
@@ -90,7 +91,27 @@ describe("scoring paper monitor presentation and image lifecycle", () => {
     expect(buttons[0].querySelector("svg.danger")).not.toBeNull();
     expect(buttons[1].querySelector("svg.success")).not.toBeNull();
     expect(buttons[2].querySelector("svg.processing")).not.toBeNull();
-    expect(host.querySelector("[data-progress]")?.getAttribute("data-progress")).toBe("75");
+    expect(host.querySelector("[data-progress]")?.getAttribute("data-progress")).toBe("0");
+  });
+
+  it("keeps one submission together even when legacy segment fallback codes differ", async () => {
+    await render([
+      scoringItem({ anonymous_code: "old-segment-1", submission_id: "one-paper", state: "review", reason_code: "scoring_rule_missing" }),
+      scoringItem({ anonymous_code: "old-segment-2", submission_id: "one-paper", answer_segment_id: "segment-2", state: "review" }),
+    ], "needs_review");
+    expect(host.querySelectorAll(".scoring-candidate-item")).toHaveLength(1);
+    expect(host.textContent).toContain("0/2 已识别");
+    expect(host.textContent).toContain("本题尚无生效评分规则");
+    expect(host.querySelector("[data-progress]")?.getAttribute("data-progress")).toBe("0");
+  });
+
+  it("counts actual blank observations and zero-score suggestions separately from manual routing", async () => {
+    await render([
+      scoringItem({ recognition_completed: true, recognition_decision: "blank", state: "review", score: 0, max_score: 5, grade_source: "ai_suggestion" }),
+      scoringItem({ answer_segment_id: "s2", state: "review", recognition_completed: false }),
+    ]);
+    expect(host.querySelector(".scoring-monitor-progress")?.textContent).toContain("1/ 2 题已识别 · 1 题已生成分数或建议");
+    expect(host.querySelector("[data-progress]")?.getAttribute("data-progress")).toBe("50");
   });
 
   it("preserves failed, review and processing activity tones", async () => {

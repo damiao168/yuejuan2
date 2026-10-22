@@ -12,6 +12,7 @@ import { subjects, types } from "./questionBankOptions";
 import type { QuestionBankWorkspaceProps } from "./questionBankWorkspaceTypes";
 import { defaultExperience, pathForExperience } from "../../router/experience";
 import { hasPathAccess } from "../../router/navigation";
+import { InternalRouteButton } from "../../components/InternalRouteButton";
 
 const workflowLabels = { draft: "草稿", reviewing: "审核中", approved: "已批准", published: "已发布" };
 type SelectedProps = QuestionBankWorkspaceProps & Readonly<{ selected: QuestionBankVersion }>;
@@ -95,7 +96,9 @@ function QuestionBankReview(props: SelectedProps) {
   const contactsUnavailable = Boolean(members && (members.isLoading || members.isError || !reviewers.length));
   const canReview = !members || reviewers.some(person => person.user_id === user.id);
   const canPublish = !members || publishers.some(person => person.user_id === user.id);
-  const reviewLink = `${window.location.href.split("#")[0]}#/question-bank?bank=${encodeURIComponent(bank?.id ?? "")}&item=${encodeURIComponent(selected.item_id)}&version=${encodeURIComponent(selected.id)}`;
+  // 审核人可能使用不同角色入口；公共业务路径由接收人的登录身份选择对应端。
+  const reviewPath = `/question-bank?bank=${encodeURIComponent(bank?.id ?? "")}&item=${encodeURIComponent(selected.item_id)}&version=${encodeURIComponent(selected.id)}`;
+  const reviewLink = `${window.location.origin}${reviewPath}`;
   const examPath = pathForExperience("/exams", defaultExperience(user));
   async function copyReviewLink() {
     try { await navigator.clipboard.writeText(reviewLink); message.success("审核链接已复制，请发送给上方有权限的审核教师；系统不会自动通知。"); }
@@ -109,7 +112,7 @@ function QuestionBankReview(props: SelectedProps) {
       <p>审核通过后由以下人员发布：{publishers.map(person=>person.display_name).join("、") || "尚未配置，请联系题库负责人"}。此处列出实际有权限的人员，提交不会自动发送通知。</p>
     </>}
     {["reviewing", "approved"].includes(selected.workflow_status) ? <div><label>本题审核链接<Input aria-label="本题审核链接" value={reviewLink} readOnly /></label><Button onClick={()=>void copyReviewLink()}>复制本题审核链接</Button></div> : null}
-    {selected.workflow_status === "published" ? <Alert type="success" message="已发布到学校题库" description="下一步在考试的“小题与分值”页点击“从题库选题”。已有考试保留原版本；新版本不会自动替换考试中的题目。" action={hasPathAccess(user,examPath) ? <Button href={`#${examPath}`}>去考试中选题</Button> : undefined} /> : null}
+    {selected.workflow_status === "published" ? <Alert type="success" message="已发布到学校题库" description="下一步在考试的“小题与分值”页点击“从题库选题”。已有考试保留原版本；新版本不会自动替换考试中的题目。" action={hasPathAccess(user,examPath) ? <InternalRouteButton href={examPath}>去考试中选题</InternalRouteButton> : undefined} /> : null}
     <Input.TextArea aria-label="审核意见" value={comment} maxLength={2000} onChange={(event) => setComment(event.target.value)} placeholder="审核意见或退回原因" />
     <QuestionBankReviewActions {...props} contactsUnavailable={contactsUnavailable} canReview={canReview} canPublish={canPublish} />
     {reviews.isError ? <Alert type="error" message="审核记录加载失败" /> : <ol>{reviews.data?.reviews.map((review) => <li key={review.id}>{reviewDecisionLabel(review.decision)}{" "}· 修订 {review.content_revision} ·{" "}{new Date(review.created_at).toLocaleString("zh-CN")}<p>{review.comment || "无补充意见"}</p></li>)}</ol>}

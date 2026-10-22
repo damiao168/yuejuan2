@@ -471,6 +471,24 @@ func (tx *MemoryTx) Get(_ context.Context, tenantID string, taskID string) (Task
 	return tx.store.getLocked(tenantID, taskID)
 }
 
+// LockTaskForCompletion 在内存事务内检查租约；成功记录只允许进入后续的同结果回放检查。
+func (tx *MemoryTx) LockTaskForCompletion(_ context.Context, tenantID, taskID, leaseToken string) (Task, error) {
+	task, err := tx.store.getLocked(tenantID, taskID)
+	if err != nil {
+		return Task{}, err
+	}
+	if task.Status == StatusSucceeded {
+		if leaseToken == "" || task.LeaseToken != leaseToken {
+			return Task{}, ErrLeaseMismatch
+		}
+		return task, nil
+	}
+	if task.Status != StatusLeased && task.Status != StatusRunning {
+		return Task{}, ErrInvalidTransition
+	}
+	return tx.store.validateLease(task, leaseToken)
+}
+
 func (s *MemoryStore) getLocked(tenantID string, taskID string) (Task, error) {
 	task, ok := s.tasks[taskID]
 	if !ok || task.TenantID != tenantID {
@@ -635,11 +653,9 @@ func (s *MemoryStore) activeLease(tenantID string, taskID string, token string) 
 }
 
 func (s *MemoryStore) validateLease(task Task, token string) (Task, error) {
-	if token == "" || task.LeaseToken != token {
-		return Task{}, ErrLeaseMismatch
-	}
-	if task.LeaseExpiresAt == nil || task.LeaseExpiresAt.Before(time.Now().UTC()) {
-		return Task{}, ErrLeaseExpired
+	// 内存与 PostgreSQL 共用到期边界，避免相同令牌在执行授权与落库检查中得到相反结论。
+	if err := validateTaskLeaseAt(task, token, time.Now().UTC()); err != nil {
+		return Task{}, err
 	}
 	return task, nil
 }

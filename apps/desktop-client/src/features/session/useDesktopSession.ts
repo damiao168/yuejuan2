@@ -1,5 +1,8 @@
+import { useDesktopSessionVerification } from "./useDesktopSessionVerification";
+import { useDesktopLoginForm } from "./useDesktopLoginForm";
+import { useDesktopCredentialStore, loginCredentialPersistence, type CredentialPersistence } from "./useDesktopCredentialStore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getCurrentUser, login, logout } from "../../api/auth";
+import { login, logout } from "../../api/auth";
 import { DesktopApiClient, normalizeBaseUrl } from "../../api/client";
 import { getUserErrorMessage } from "../../api/userError";
 import { authorizeOfflineAccess, bindDurableSession, clearDurableSession, readOfflineAccess, revokeOfflineAccess, unlockOfflineAccess, type OfflineAccess } from "../../lib/durableStore";
@@ -7,21 +10,11 @@ import {
   deleteStoredCredentials,
   isTauriRuntime,
   loadStoredCredentials,
-  saveStoredCredentials,
   type StoredDesktopCredentials
 } from "../../lib/localRuntime";
 import type { AuthUser, LocalLogEntry, LoginResult } from "../../types";
 
 type LogEvent = (level: LocalLogEntry["level"], message: string, context?: string) => Promise<void>;
-type CredentialPersistence = "save" | "delete" | "none";
-
-function loginCredentialPersistence(rememberLogin: boolean, credentialStoreReady: boolean): CredentialPersistence {
-  // 选择保存优先于凭据库就绪标记；未选择保存时，仅凭据库可用才请求删除。
-  if (rememberLogin) return "save";
-  if (credentialStoreReady) return "delete";
-  return "none";
-}
-
 function logoutErrorMessage(clearError: string | null, revokeError: string | null): string | null {
   // 本机清理失败优先显示；退出流程仍用原有日志记录未完整完成。
   if (clearError) return "本地保存的会话清理失败，请检查本机凭据存储。";
@@ -30,17 +23,10 @@ function logoutErrorMessage(clearError: string | null, revokeError: string | nul
 }
 
 export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
-  const [serverUrl, setServerUrl] = useState(() => window.sessionStorage.getItem("edugrade.desktop.server_url") ?? defaultServer);
-  const [confirmedServerUrl, setConfirmedServerUrl] = useState(() => {
-    try { return normalizeBaseUrl(window.sessionStorage.getItem("edugrade.desktop.server_url") ?? defaultServer); }
-    catch { return normalizeBaseUrl(defaultServer); }
-  });
-  const [tenantCode, setTenantCode] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberLogin, setRememberLogin] = useState(false);
-  const [credentialStoreMessage, setCredentialStoreMessage] = useState<string | null>(null);
-  const [credentialStoreReady, setCredentialStoreReady] = useState(false);
+  const { serverUrl, setServerUrl, confirmedServerUrl, setConfirmedServerUrl, tenantCode, setTenantCode,
+    username, setUsername, password, setPassword, confirmServerUrl } = useDesktopLoginForm(defaultServer);
+  const { rememberLogin, setRememberLogin, credentialStoreMessage, setCredentialStoreMessage,
+    credentialStoreReady, setCredentialStoreReady, persistLoginCredentials } = useDesktopCredentialStore();
   const [token, setToken] = useState<string | null>(null);
   const [durableSessionKey, setDurableSessionKey] = useState<string | null>(null);
   const [authenticatedServerUrl, setAuthenticatedServerUrl] = useState<string | null>(null);
@@ -63,11 +49,6 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
 
   // 地址输入允许暂时为空或不完整；只有显式校验通过的地址才能改变网络客户端，避免渲染时抛错。
   const client = useMemo(() => new DesktopApiClient({ baseUrl: authenticatedServerUrl ?? confirmedServerUrl, getToken: () => token }), [authenticatedServerUrl, confirmedServerUrl, token]);
-  const confirmServerUrl = useCallback((value: string) => {
-    const normalized = normalizeBaseUrl(value);
-    setConfirmedServerUrl(normalized); setServerUrl(normalized);
-  }, []);
-
   const syncLoginOfflineAccess = useCallback(async (
     credentials: StoredDesktopCredentials,
     result: LoginResult,
@@ -98,27 +79,6 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
       setOfflineAccessMessage(getUserErrorMessage(error, "本机离线授权保存失败；重启后需联网登录。"));
     }
     return true;
-  }, []);
-
-  const persistLoginCredentials = useCallback(async (credentials: StoredDesktopCredentials, persistence: CredentialPersistence) => {
-    // 系统凭据保存或删除失败不回退到其他存储，也不撤销已经成功的在线登录。
-    if (persistence === "save") {
-      try {
-        await saveStoredCredentials(credentials);
-        setCredentialStoreReady(true);
-        setCredentialStoreMessage("登录信息已保存到当前 Windows 用户的系统凭据库。");
-      } catch (error) {
-        setCredentialStoreReady(false);
-        setCredentialStoreMessage(getUserErrorMessage(error, "系统凭据库保存失败；未写入其他本地存储。"));
-      }
-    } else if (persistence === "delete") {
-      try {
-        await deleteStoredCredentials();
-        setCredentialStoreMessage("未保存登录信息，已有系统凭据已清除。");
-      } catch (error) {
-        setCredentialStoreMessage(getUserErrorMessage(error, "系统凭据清除失败。"));
-      }
-    }
   }, []);
 
   const performLogin = useCallback(async (
@@ -174,7 +134,7 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
         setIsLoggingIn(false);
       }
     }
-  }, [enableOfflineAccess, logEvent, persistLoginCredentials, syncLoginOfflineAccess]);
+  }, [enableOfflineAccess, logEvent, persistLoginCredentials, syncLoginOfflineAccess, setConfirmedServerUrl, setPassword, setServerUrl, setTenantCode, setUsername]);
 
   const handleLogin = useCallback(() => logoutInProgressRef.current ? Promise.resolve(false) : performLogin(
     { server_url: serverUrl, tenant_code: tenantCode, username, password },
@@ -221,7 +181,7 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
         setCredentialStoreReady(false);
         setCredentialStoreMessage(getUserErrorMessage(error, "Windows 系统凭据库不可用；已停止自动登录。"));
       });
-  }, [performLogin]);
+  }, [performLogin, setCredentialStoreMessage, setCredentialStoreReady, setRememberLogin, setServerUrl, setTenantCode, setUsername]);
 
   const handleUnlockOffline = useCallback(async () => {
     if (!offlineAccess || isLoggingIn || logoutInProgressRef.current) return false;
@@ -243,7 +203,7 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
       if (attempt !== loginAttemptRef.current) return false;
       setAuthError(getUserErrorMessage(error, "本机解锁失败，请联网登录后续期。")); return false;
     } finally { if (attempt === loginAttemptRef.current) setIsLoggingIn(false); }
-  }, [isLoggingIn, offlineAccess]);
+  }, [isLoggingIn, offlineAccess, setServerUrl, setTenantCode, setUsername]);
 
   useEffect(() => {
     if (!offlineUnlocked || !offlineAccess) return;
@@ -302,7 +262,7 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
       renewalInProgressRef.current = false;
       if (attempt === loginAttemptRef.current) { setPassword(""); setIsLoggingIn(false); }
     }
-  }, [isLoggingIn, offlineAccess]);
+  }, [isLoggingIn, offlineAccess, setPassword]);
 
   const forgetStoredLogin = useCallback(async () => {
     try {
@@ -316,7 +276,7 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
     } catch (error) {
       setCredentialStoreMessage(getUserErrorMessage(error, "系统凭据清除失败。"));
     }
-  }, [offlineUnlocked]);
+  }, [offlineUnlocked, setCredentialStoreMessage, setRememberLogin]);
 
   const handleLogout = useCallback(async () => {
     if (logoutInProgressRef.current) return;
@@ -362,30 +322,8 @@ export function useDesktopSession(defaultServer: string, logEvent: LogEvent) {
     }
   }, [authenticatedServerUrl, logEvent, serverUrl, token]);
 
-  const checkSession = useCallback(async () => {
-    if (!token) { setAuthError("本机解锁不包含服务端登录权限，请联网登录后校验。"); return; }
-    const attempt = loginAttemptRef.current;
-    setAuthError(null);
-    try {
-      const result = await getCurrentUser(client);
-      if (attempt !== loginAttemptRef.current) return;
-      if (user && (result.user.id !== user.id || result.user.tenant_id !== user.tenant_id)) {
-        await clearDurableSession();
-        setToken(null);
-        setUser(null);
-        setDurableSessionKey(null);
-        setAuthenticatedServerUrl(null);
-        throw new Error("服务端身份已变化，本地账号数据已锁定；请重新登录。");
-      }
-      setUser(result.user);
-      await logEvent("info", "session verified", result.user.username);
-    } catch (error) {
-      if (attempt !== loginAttemptRef.current) return;
-      const message = getUserErrorMessage(error, "登录状态校验失败");
-      setAuthError(message);
-      await logEvent("warning", "session verification failed", message);
-    }
-  }, [client, logEvent, token, user]);
+  const checkSession = useDesktopSessionVerification({ client, token, user, loginAttemptRef, setAuthError,
+    setToken, setUser, setDurableSessionKey, setAuthenticatedServerUrl, logEvent });
 
   return {
     client, serverUrl, setServerUrl, confirmServerUrl, tenantCode, setTenantCode, username, setUsername,

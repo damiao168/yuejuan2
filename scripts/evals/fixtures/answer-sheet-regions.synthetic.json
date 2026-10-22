@@ -1,0 +1,102 @@
+{
+  "description": "Synthetic normalized regions representing fault classes; no student images or historical raw responses.",
+  "documents": [
+    {
+      "template_family": "synthetic-split-math-v1",
+      "split": "test",
+      "pages": [
+        {
+          "page_no": 1,
+          "ground_truth": [
+            {
+              "role": "answer",
+              "printed_question_label": "15",
+              "bbox": {
+                "x": 0.365,
+                "y": 0.08,
+                "width": 0.275,
+                "height": 0.83
+              }
+            },
+            {
+              "role": "answer",
+              "printed_question_label": "16",
+              "bbox": {
+                "x": 0.647,
+                "y": 0.08,
+                "width": 0.278,
+                "height": 0.83
+              }
+            },
+            {
+              "role": "objective_group",
+              "printed_question_label": null,
+              "bbox": {
+                "x": 0.067,
+                "y": 0.331,
+                "width": 0.281,
+                "height": 0.171
+              }
+            },
+            {
+              "role": "instruction",
+              "printed_question_label": null,
+              "bbox": {
+                "x": 0.14,
+                "y": 0.677,
+                "width": 0.109,
+                "height": 0.152
+              }
+            }
+          ],
+          "predictions": [
+            {
+              "role": "objective_group",
+              "printed_question_label": null,
+              "bbox": {
+                "x": 0.365,
+                "y": 0.08,
+                "width": 0.275,
+                "height": 0.83
+              },
+              "semantic_check": "supported"
+            },
+            {
+              "role": "objective_group",
+              "printed_question_label": null,
+              "bbox": {
+                "x": 0.647,
+                "y": 0.08,
+                "width": 0.278,
+                "height": 0.83
+              },
+              "semantic_check": "supported"
+            },
+            {
+              "role": "identity",
+              "printed_question_label": null,
+              "bbox": {
+                "x": 0.067,
+                "y": 0.331,
+                "width": 0.281,
+                "height": 0.171
+              },
+              "semantic_check": "supported"
+            },
+            {
+              "role": "identity",
+              "printed_question_label": null,
+              "bbox": {
+                "x": 0.14,
+                "y": 0.677,
+                "width": 0.109,
+                "height": 0.152
+              },
+              "semantic_check": "supported"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

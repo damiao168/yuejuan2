@@ -110,9 +110,8 @@ class PaperVisualParser:
             route="visual_model",
             message="原图识别已返回，正在校验页面来源和结构",
         )
-        # 旧的已保存测试样本使用持久化表示。保留回放
-        # 兼容性不会增加供应商流量；实时请求使用上面的
-        # 紧凑契约，并在此按确定规则展开。
+        # 旧测试样本保留持久化候选字段，回放时无需展开；实时响应使用上面的紧凑契约。
+        # 缺少候选字段时只在本地展开响应，此转换不会额外请求模型。
         if "question_candidates" not in output:
             output = self._expand_visual_output(output)
         self._normalize_visual_refs(output, documents, request_id)

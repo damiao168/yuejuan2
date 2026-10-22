@@ -55,7 +55,7 @@ function item(patch: Partial<SyncQueueItem> = {}): SyncQueueItem {
   } as SyncQueueItem;
 }
 
-describe("scan queue controller", () => {
+describe("scan queue file admission and replacement", () => {
   let root: Root;
   let container: HTMLDivElement;
   let current: ReturnType<typeof useScanQueue>;
@@ -111,17 +111,6 @@ describe("scan queue controller", () => {
     };
   }
 
-  it("restores the durable queue and archives only confirmed items", async () => {
-    mocks.listDurableScanQueue.mockResolvedValueOnce([item(), item({ id: "pending", status: "pending" })]);
-    await mount();
-    expect(current.queue.map((entry) => entry.id)).toEqual(["scan-1", "pending"]);
-    await act(async () => { await current.clearSucceededQueueItems(); });
-    expect(mocks.archiveDurableScanQueueItems).toHaveBeenCalledWith(["asset-1"], "test-server|test-tenant|test-user");
-    expect(current.queue.map((entry) => entry.id)).toEqual(["pending"]);
-    await current.durablePersistenceRef.current;
-    expect(mocks.persistDurableScanQueueItem).toHaveBeenCalledWith(expect.objectContaining({ id: "pending" }), "test-server|test-tenant|test-user");
-  });
-
   it("keeps a failed-quality original in durable storage without uploading it", async () => {
     mocks.inspectScanFile.mockResolvedValueOnce([{ status: "failed", code: "blur" }]);
     mocks.spoolScanAsset.mockResolvedValueOnce(item({ status: "pending" }));
@@ -166,42 +155,6 @@ describe("scan queue controller", () => {
     expect(current.fileImportError).toContain("已启动上传");
   });
 
-  it("does not discard a newly spooled file when durable restoration finishes late", async () => {
-    let finishRestore!: (items: SyncQueueItem[]) => void;
-    mocks.listDurableScanQueue.mockImplementationOnce(() => new Promise((resolve) => { finishRestore = resolve; }));
-    mocks.spoolScanAsset.mockResolvedValueOnce(item({ id: "new", status: "pending" }));
-    await mount();
-    // 恢复期间其它已启动的本机操作仍可能回填；同页重读不能丢掉这些当前项。
-    await act(async () => { current.updateQueue(() => [item({ id: "new", status: "pending" })]); });
-    expect(current.queue.map((entry) => entry.id)).toEqual(["new"]);
-    await act(async () => { finishRestore([item({ id: "old", status: "pending" })]); });
-    expect(current.queue.map((entry) => entry.id)).toEqual(["new", "old"]);
-  });
-
-  it("clears A's queue before showing B's records and ignores A's late restoration", async () => {
-    let finishA!: (items: SyncQueueItem[]) => void;
-    mocks.listDurableScanQueue.mockImplementationOnce(() => new Promise((resolve) => { finishA = resolve; }));
-    mocks.listDurableScanQueue.mockResolvedValueOnce([item({ id: "b-item", localAssetId: "b-asset" })]);
-    const switchScope = await mount("server|tenant|A");
-    await switchScope("server|tenant|B");
-    expect(current.queue.map((entry) => entry.id)).toEqual(["b-item"]);
-    await act(async () => { finishA([item({ id: "a-item", localAssetId: "a-asset" })]); });
-    expect(current.queue.map((entry) => entry.id)).toEqual(["b-item"]);
-  });
-
-  it("stops A's file selection if the account changes during inspection", async () => {
-    let finishInspection!: (checks: []) => void;
-    mocks.inspectScanFile.mockImplementationOnce(() => new Promise((resolve) => { finishInspection = resolve; }));
-    const switchScope = await mount("server|tenant|A");
-    const file = new File(["scan"], "scan.pdf", { type: "application/pdf" });
-    let selection!: Promise<void>;
-    await act(async () => { selection = current.handleFileSelection([file] as unknown as FileList); });
-    await switchScope("server|tenant|B");
-    await act(async () => { finishInspection([]); await selection; });
-    expect(mocks.spoolScanAsset).not.toHaveBeenCalled();
-    expect(current.queue).toEqual([]);
-  });
-
   it("recovers a non-durable item after the user reselects its file", async () => {
     mocks.hasDurableDesktopStore.mockReturnValue(false);
     mocks.readPersistedScanQueue.mockReturnValueOnce([item({
@@ -214,29 +167,6 @@ describe("scan queue controller", () => {
     expect(current.queue[0]).toMatchObject({ id: "scan-1", status: "pending", requiresReselect: false });
     expect(mocks.spoolScanAsset).not.toHaveBeenCalled();
     expect(current.importResults).toEqual([]);
-  });
-
-  it("stops A's selection when its durable spool finishes after switching to B", async () => {
-    let finishSpool!: (entry: SyncQueueItem) => void;
-    mocks.spoolScanAsset.mockImplementationOnce(() => new Promise((resolve) => { finishSpool = resolve; }));
-    mocks.listDurableScanQueue.mockResolvedValueOnce([item({ status: "pending", examId: "exam-a", captureBatchId: "batch-a" })]);
-    const switchScope = await mount("server|tenant|A");
-    const input = document.createElement("input");
-    const click = vi.spyOn(input, "click").mockImplementation(() => undefined);
-    current.fileInputRef.current = input;
-    await act(async () => { current.chooseReplacement("scan-1"); });
-    expect(click).toHaveBeenCalledOnce();
-    let selection!: Promise<void>;
-    await act(async () => { selection = current.handleFileSelection([new File(["scan"], "a.pdf")] as unknown as FileList); });
-    expect(mocks.spoolScanAsset).toHaveBeenCalledOnce();
-    await switchScope("server|tenant|B");
-    await act(async () => { finishSpool(item({ id: "a-item", status: "pending" })); await selection; });
-    expect(current.queue).toEqual([]);
-    expect(current.fileBufferRef.current.size).toBe(0);
-    expect(current.importResults).toEqual([]);
-    expect(current.fileImportError).toBeNull();
-    expect(mocks.removeUnstartedScanQueueItem).not.toHaveBeenCalled();
-    expect(logEvent).not.toHaveBeenCalledWith("info", "scan files queued", expect.anything());
   });
 
   it("continues with the second file after the first file inspection fails", async () => {
@@ -315,27 +245,6 @@ describe("scan queue controller", () => {
     }
   });
 
-  it("keeps restoration failure visible and blocks duplicate import until a successful reread", async () => {
-    mocks.listDurableScanQueue.mockRejectedValueOnce(new Error("磁盘读取失败"));
-    await mount();
-    expect(current.queueRestoreStatus).toBe("error"); expect(current.queueRestoreError).toContain("磁盘读取失败");
-    const file = new File(["scan"], "scan.pdf");
-    await act(async () => { await current.handleFileSelection([file] as unknown as FileList); });
-    expect(mocks.spoolScanAsset).not.toHaveBeenCalled(); expect(current.fileImportError).toContain("原队列尚未核实");
-    await act(async () => { current.updateQueue(() => [item({ id: "current", status: "pending", detail: "当前状态" })]); });
-    mocks.listDurableScanQueue.mockResolvedValueOnce([item({ id: "current", status: "failed", detail: "旧快照" }), item({ id: "restored", status: "pending" })]);
-    await act(async () => { await current.restoreQueue(); });
-    expect(current.queueRestoreStatus).toBe("ready"); expect(current.queueRestoreError).toBeNull();
-    expect(current.queue.map((entry) => entry.id)).toEqual(["current", "restored"]); expect(current.queue[0].detail).toBe("当前状态");
-  });
-
-  it("does not report a loading or locked native queue as an empty usable queue", async () => {
-    mocks.listDurableScanQueue.mockReturnValueOnce(new Promise(() => undefined));
-    const switchScope = await mount();
-    expect(current.queueRestoreStatus).toBe("loading");
-    await switchScope(""); expect(current.queueRestoreStatus).toBe("locked");
-  });
-
   it.each(["missing", "invalid"] as const)("refuses new import while the current template is %s", async (status) => {
     const context = scanContext(); context.template_status = status; delete context.template;
     await mount(undefined, false, context);
@@ -343,25 +252,5 @@ describe("scan queue controller", () => {
     expect(mocks.spoolScanAsset).not.toHaveBeenCalled(); expect(current.fileImportError).toContain("已核实的答题卡模板");
   });
 
-  it("refreshes old queue names from its original authorized batch and persists them without changing upload ownership", async () => {
-    mocks.listDurableScanQueue.mockResolvedValueOnce([item({ examId: "exam-a", captureBatchId: "batch-a", status: "pending" })]);
-    await mount(undefined, true);
-    expect(mocks.getCaptureScanContext).toHaveBeenCalledWith(expect.anything(), "batch-a");
-    expect(current.queue[0]).toMatchObject({ examId: "exam-a", captureBatchId: "batch-a", examName: "Exam A", captureBatchName: "上午扫描", captureBatchCreatedAt: "2026-10-10T01:00:00Z" });
-    await current.durablePersistenceRef.current;
-    expect(mocks.persistDurableScanQueueItem).toHaveBeenCalledWith(expect.objectContaining({ captureBatchName: "上午扫描", captureBatchCreatedAt: "2026-10-10T01:00:00Z" }), "test-server|test-tenant|test-user");
-    const mismatch = scanContext(); mismatch.batch.exam_id = "other-exam";
-    mocks.getCaptureScanContext.mockResolvedValueOnce(mismatch);
-    await act(async () => { await current.refreshQueueContext(); });
-    expect(current.queueContextError).toContain("归属不一致"); expect(current.queue[0].examId).toBe("exam-a"); expect(current.queue[0].captureBatchName).toBe("上午扫描");
-  });
 
-  it("keeps older queue names after a read error and allows same-page metadata retry", async () => {
-    mocks.listDurableScanQueue.mockResolvedValueOnce([item({ examId: "exam-a", captureBatchId: "batch-a", examName: "上次考试名称", captureBatchName: "上次批次名称" })]);
-    mocks.getCaptureScanContext.mockRejectedValueOnce(new Error("名称读取失败"));
-    await mount(undefined, true);
-    expect(current.queueContextError).toContain("名称读取失败"); expect(current.queue[0].captureBatchName).toBe("上次批次名称");
-    await act(async () => { await current.refreshQueueContext(); });
-    expect(current.queueContextError).toBeNull(); expect(current.queue[0].captureBatchName).toBe("上午扫描");
-  });
 });

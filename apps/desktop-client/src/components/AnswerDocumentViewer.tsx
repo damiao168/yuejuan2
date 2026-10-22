@@ -29,6 +29,7 @@ export function AnswerDocumentViewer({ document, onReadableChange }: Readonly<{
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const viewport = useRef<HTMLDivElement>(null);
   const dragging = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 更换答卷原件时重新初始化视图，缩放和失败状态不能沿用到另一份文件。
   useEffect(() => { setZoom(1); setRotation(0); setFailed(false); }, [document.url]);
   const pdf = document.contentType.toLowerCase().includes("pdf");
   const image = document.contentType.toLowerCase().startsWith("image/");
@@ -48,6 +49,7 @@ export function AnswerDocumentViewer({ document, onReadableChange }: Readonly<{
     return () => window.removeEventListener("resize", measure);
   }, [document.url, unsupported, failed]);
   const size = imageSize.url === document.url ? imageSize : { width: 0, height: 0 };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 新 URL 即使与旧图片尺寸相同也须先撤回可读回执，防止新原件解码前放行评分。
   useEffect(() => {
     // 下载到 Blob 不代表图片可显示；损坏、TIFF 和 PDF 均不能作为成功解码的图片放行评分。
     onReadableChange?.(!pdf && !unsupported && !failed && size.width > 0 && size.height > 0);

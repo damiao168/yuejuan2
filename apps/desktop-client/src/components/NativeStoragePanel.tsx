@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Button, InputNumber, List, Modal, Space } from "antd";
 import { cleanupArchivedOriginals, getDurableStorageUsage, hasDurableDesktopStore, listArchivedCleanupCandidates, type ArchivedCleanupCandidate, type DurableStorageUsage } from "../lib/durableStore";
 import { formatBytes, formatDate } from "../lib/scanFiles";
@@ -15,7 +15,7 @@ export function NativeStoragePanel({ scope }: Readonly<{ scope: string }>) {
   const operation = useRef(0);
   const inFlight = useRef(false);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     const request = ++operation.current;
     if (!scope || !hasDurableDesktopStore()) return;
     try {
@@ -24,11 +24,11 @@ export function NativeStoragePanel({ scope }: Readonly<{ scope: string }>) {
     } catch (error) {
       if (scopeRef.current === scope && request === operation.current) setMessage(getUserErrorMessage(error, "本机磁盘统计读取失败，请重新登录或刷新。"));
     }
-  };
+  }, [scope]);
   useEffect(() => {
     setUsage(null); setRetainDays(null); setCandidates(null); setMessage(null); setBusy(false); inFlight.current = false;
     void refresh();
-  }, [scope]);
+  }, [refresh]);
 
   const previewCleanup = async () => {
     if (!scope || retainDays === null || !Number.isInteger(retainDays) || retainDays < 1 || retainDays > 3650 || inFlight.current) return;

@@ -1,11 +1,21 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import math
 
 import cv2
 import numpy as np
+import pypdfium2 as pdfium
+from edugrade_worker_runtime.page_anchors import (
+    bbox_within_anchors,
+    detect_page_anchors,
+)
 
 from page_processing.decoder import DecodeError, decode_document
+from page_processing.region_visibility import (
+    RegionVisibilityError,
+    inspect_required_regions,
+)
 
 
 class RegistrationError(RuntimeError):
@@ -41,6 +51,8 @@ class RegistrationEvidence:
     inlier_ratio: float
     reprojection_error: float
     coverage: float
+    required_region_visibility: dict | None = None
+    anchor_evidence: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -61,6 +73,12 @@ class TemplateMatchCandidate:
     question_regions: list[dict]
     template_name: str = ""
     version_no: int = 0
+    grading_groups: list[dict] = field(default_factory=list)
+
+
+def required_template_regions(regions: list[dict], grading_groups: list[dict] | None = None) -> list[dict]:
+    """只供配准可见性与静态掩膜使用；整区不带 question_id，不能拿来生成伪单题 ROI。"""
+    return [*regions, *[{**group["bbox"], "id": f'grading-group:{group["group_id"]}'} for group in grading_groups or []]]
 
 
 @dataclass(frozen=True)
@@ -92,7 +110,7 @@ def match_template_candidates(
             source_content_type,
             candidate.data,
             candidate.content_type,
-            question_regions=candidate.question_regions,
+            question_regions=required_template_regions(candidate.question_regions, candidate.grading_groups),
             render_dpi=render_dpi,
             template_page_index=candidate.page_index,
         )
@@ -104,11 +122,13 @@ def match_template_candidates(
                 candidate.content_type,
                 render_dpi=render_dpi,
                 template_page_index=candidate.page_index,
+                required_regions=required_template_regions(candidate.question_regions, candidate.grading_groups),
             )
         except RegistrationError as exc:
             evidence_rows.append({
                 "template_id": candidate.template_id,
                 "template_content_hash": candidate.template_content_hash,
+                "template_page_index": candidate.page_index,
                 "template_name": candidate.template_name,
                 "version_no": candidate.version_no,
                 "score": round(0.30 * guard.score, 6),
@@ -123,6 +143,8 @@ def match_template_candidates(
         evidence_rows.append({
             "template_id": candidate.template_id,
             "template_content_hash": candidate.template_content_hash,
+            # 同一模板的正反面共用 ID 和哈希；返回页索引，后端才能持久化视觉确认的真实页码。
+            "template_page_index": candidate.page_index,
             "template_name": candidate.template_name,
             "version_no": candidate.version_no,
             "score": round(score, 6),
@@ -240,10 +262,17 @@ def register_page(
     render_dpi: int = 300,
     minimum_matches: int = 12,
     template_page_index: int = 1,
+    required_regions: list[dict] | None = None,
 ) -> RegistrationOutput:
     source_image = _decode_first(source, source_content_type, render_dpi)
     template_image = _decode_page(template, template_content_type, render_dpi, template_page_index)
     height, width = template_image.shape[:2]
+    template_anchors = detect_page_anchors(template_image)
+    # 模板内题区一旦落到定位点外，四点配准也不能承诺其稳定；不能改走 ORB 绕过边界。
+    if template_anchors is not None and any(
+        not bbox_within_anchors(region, template_anchors) for region in _required_region_boxes(required_regions)
+    ):
+        raise RegistrationError("registration_required_region_outside_anchor_area")
 
     if source_image.shape == template_image.shape:
         difference = float(np.mean(cv2.absdiff(source_image, template_image)))
@@ -264,11 +293,45 @@ def register_page(
                     inlier_ratio=1.0,
                     reprojection_error=0.0,
                     coverage=1.0,
+                    required_region_visibility=_required_visibility(matrix, source_image.shape, template_image.shape, required_regions),
+                    anchor_evidence=template_anchors.as_dict() if template_anchors is not None else None,
                 ),
             )
 
+    source_anchors = detect_page_anchors(source_image) if template_anchors is not None else None
+    if source_anchors is not None and all(source_mark["kind"] == target_mark["kind"]
+                                          for source_mark, target_mark in zip(source_anchors.marks, template_anchors.marks, strict=True)):
+        source_points = np.float32(source_anchors.points) * [source_image.shape[1], source_image.shape[0]]
+        target_points = np.float32(template_anchors.points) * [width, height]
+        matrix = cv2.getPerspectiveTransform(source_points.astype(np.float32), target_points.astype(np.float32))
+        if np.isfinite(matrix).all() and abs(float(np.linalg.det(matrix))) > 1e-10:
+            registered = cv2.warpPerspective(source_image, matrix, (width, height), flags=cv2.INTER_CUBIC,
+                                             borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
+            static_score = _aligned_static_score(registered, template_image, required_regions, template_anchors)
+            # 四角标只证明坐标对应，不证明拿对了模板；静态印刷布局不符时仍用原有特征证据。
+            if static_score >= .68:
+                visibility = _required_visibility(matrix, source_image.shape, template_image.shape, required_regions)
+                anchor_evidence = {"template": template_anchors.as_dict(), "source": source_anchors.as_dict(),
+                                   "aligned_static_score": round(static_score, 6)}
+                return RegistrationOutput(
+                    registered_png=_encode_png(registered), width=width, height=height,
+                    evidence=RegistrationEvidence(
+                        method="printed_four_point", confidence=min(source_anchors.confidence, template_anchors.confidence),
+                        source_to_template=matrix.tolist(), template_to_source=np.linalg.inv(matrix).tolist(),
+                        feature_count=0, match_count=4, inlier_count=4, inlier_ratio=1.0,
+                        reprojection_error=0.0,
+                        coverage=_coverage(matrix, source_image.shape[1], source_image.shape[0], width, height),
+                        required_region_visibility=visibility, anchor_evidence=anchor_evidence,
+                    ),
+                )
+
     source_gray = cv2.cvtColor(source_image, cv2.COLOR_RGB2GRAY)
     template_gray = cv2.cvtColor(template_image, cv2.COLOR_RGB2GRAY)
+    # 纸外批注和扫描黑边不属于模板基准；即使四点回退，也只从稳定模板内寻找特征对应。
+    if template_anchors is not None:
+        template_gray = _inside_anchor_image(template_gray, template_anchors)
+    if source_anchors is not None:
+        source_gray = _inside_anchor_image(source_gray, source_anchors)
     result = _feature_homography(source_gray, template_gray, "orb", minimum_matches)
     if result is None:
         result = _feature_homography(source_gray, template_gray, "akaze", minimum_matches)
@@ -283,6 +346,7 @@ def register_page(
     if inlier_count < 8 or inlier_ratio < 0.35 or reprojection_error > 8.0 or coverage < 0.55:
         raise RegistrationError("registration_low_confidence")
 
+    visibility = _required_visibility(matrix, source_image.shape, template_image.shape, required_regions)
     registered = cv2.warpPerspective(source_image, matrix, (width, height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
     inverse = np.linalg.inv(matrix)
     return RegistrationOutput(
@@ -300,8 +364,41 @@ def register_page(
             inlier_ratio=inlier_ratio,
             reprojection_error=reprojection_error,
             coverage=coverage,
+            required_region_visibility=visibility,
         ),
     )
+
+
+def _aligned_static_score(source: np.ndarray, template: np.ndarray, regions: list[dict] | None, anchors=None) -> float:
+    size = 128
+    source_gray = cv2.cvtColor(source, cv2.COLOR_RGB2GRAY)
+    template_gray = cv2.cvtColor(template, cv2.COLOR_RGB2GRAY)
+    if anchors is not None:
+        source_gray = _inside_anchor_image(source_gray, anchors)
+        template_gray = _inside_anchor_image(template_gray, anchors)
+    source_gray = cv2.resize(source_gray, (size, size), interpolation=cv2.INTER_AREA)
+    template_gray = cv2.resize(template_gray, (size, size), interpolation=cv2.INTER_AREA)
+    for region in regions or []:
+        x, y, w, h = (float(region[key]) for key in ("x", "y", "width", "height"))
+        left, top = max(0, int((x - .01) * size)), max(0, int((y - .01) * size))
+        right, bottom = min(size, int((x + w + .01) * size)), min(size, int((y + h + .01) * size))
+        source_gray[top:bottom, left:right] = 255
+        template_gray[top:bottom, left:right] = 255
+    hash_score = 1 - np.count_nonzero(_perceptual_hash(source_gray) != _perceptual_hash(template_gray)) / 63
+    source_edges = cv2.Canny(source_gray, 60, 160) > 0
+    template_edges = cv2.Canny(template_gray, 60, 160) > 0
+    total = int(source_edges.sum() + template_edges.sum())
+    edge_score = 1.0 if total == 0 else 2 * np.logical_and(source_edges, template_edges).sum() / total
+    return float(.7 * hash_score + .3 * edge_score)
+
+
+def _inside_anchor_image(gray, anchors):
+    mask = np.zeros(gray.shape[:2], np.uint8)
+    points = np.rint(np.float64(anchors.stable_quad) * [gray.shape[1], gray.shape[0]]).astype(np.int32)
+    cv2.fillConvexPoly(mask, points, 255)
+    output = gray.copy()
+    output[mask == 0] = 255
+    return output
 
 
 def register_page_manual(
@@ -314,6 +411,7 @@ def register_page_manual(
     *,
     render_dpi: int = 300,
     template_page_index: int = 1,
+    required_regions: list[dict] | None = None,
 ) -> RegistrationOutput:
     source_image = _decode_first(source, source_content_type, render_dpi)
     template_image = _decode_page(template, template_content_type, render_dpi, template_page_index)
@@ -335,6 +433,7 @@ def register_page_manual(
     coverage = _coverage(matrix, source_width, source_height, target_width, target_height)
     if coverage < 0.70 or coverage > 1.15:
         raise RegistrationError("manual_registration_coverage_invalid")
+    visibility = _required_visibility(matrix, source_image.shape, template_image.shape, required_regions)
     registered = cv2.warpPerspective(source_image, matrix, (target_width, target_height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
     inverse = np.linalg.inv(matrix)
     return RegistrationOutput(
@@ -344,8 +443,30 @@ def register_page_manual(
             source_to_template=matrix.tolist(), template_to_source=inverse.tolist(),
             feature_count=0, match_count=4, inlier_count=4, inlier_ratio=1.0,
             reprojection_error=0.0, coverage=coverage,
+            required_region_visibility=visibility,
         ),
     )
+
+
+def _required_visibility(matrix, source_shape, template_shape, regions):
+    try:
+        return inspect_required_regions(matrix, (source_shape[1], source_shape[0]),
+                                        (template_shape[1], template_shape[0]), _required_region_boxes(regions))
+    except RegionVisibilityError as exc:
+        raise RegistrationError(str(exc)) from exc
+
+
+def _required_region_boxes(regions):
+    boxes = list(regions or [])
+    # 合并批阅仍按各题记分，但教师会看到共享图；共享图也必须完整落在可见且稳定的范围内。
+    for region in regions or []:
+        if region.get("grading_group_id") and region.get("grading_bbox") is not None:
+            box = region["grading_bbox"]
+            if not isinstance(box, dict):
+                raise RegistrationError("invalid_template_region")
+            if box not in boxes:
+                boxes.append(box)
+    return boxes
 
 
 def _validated_quad(points: list[dict]) -> np.ndarray:
@@ -444,6 +565,8 @@ def _decode_first(data: bytes, content_type: str, render_dpi: int) -> np.ndarray
 def _decode_page(data: bytes, content_type: str, render_dpi: int, page_index: int) -> np.ndarray:
     if page_index < 1 or page_index > 100:
         raise RegistrationError("invalid_template_page")
+    if data.startswith(b"%PDF-"):
+        return _decode_pdf_page(data, render_dpi, page_index)
     try:
         pages, _ = decode_document(data, content_type, render_dpi=render_dpi, max_pages=100, max_page_pixels=60_000_000, max_total_pixels=600_000_000)
     except DecodeError as exc:
@@ -452,6 +575,47 @@ def _decode_page(data: bytes, content_type: str, render_dpi: int, page_index: in
         raise RegistrationError("template_page_missing")
     return _decode_png(pages[page_index - 1].png)
 
+
+
+def _decode_pdf_page(data: bytes, render_dpi: int, page_index: int) -> np.ndarray:
+    # 扫描图生成的 PDF 可能把像素数写成物理点数；固定 300 DPI 会把模板重复放大。
+    # 配准只需要目标页的版面比例，按目标 DPI 与像素预算中较小者渲染，题区仍按归一化坐标映射。
+    if not isinstance(render_dpi, int) or isinstance(render_dpi, bool) or not 36 <= render_dpi <= 600:
+        raise RegistrationError("render_dpi_out_of_range")
+    try:
+        document = pdfium.PdfDocument(data)
+        try:
+            if len(document) > 100:
+                raise RegistrationError("pdf_page_limit_exceeded")
+            if page_index > len(document):
+                raise RegistrationError("template_page_missing")
+            page = document[page_index - 1]
+            try:
+                width, height = page.get_size()
+                if not all(math.isfinite(value) and value > 0 for value in (width, height)):
+                    raise RegistrationError("invalid_pdf_page_size")
+                scale = min(render_dpi / 72.0, 4096 / max(width, height), math.sqrt(16_000_000 / (width * height)))
+                bitmap = page.render(scale=scale)
+                try:
+                    image = bitmap.to_pil()
+                    try:
+                        rgb = image.convert("RGB")
+                        try:
+                            return np.array(rgb)
+                        finally:
+                            rgb.close()
+                    finally:
+                        image.close()
+                finally:
+                    bitmap.close()
+            finally:
+                page.close()
+        finally:
+            document.close()
+    except RegistrationError:
+        raise
+    except Exception as exc:
+        raise RegistrationError("invalid_pdf") from exc
 
 def _decode_png(data: bytes) -> np.ndarray:
     encoded = np.frombuffer(data, np.uint8)

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
@@ -123,7 +123,7 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
     } catch (reason) { message.error(messageOf(reason)); } finally { invitationSavingRef.current = false; setSaving(false); }
   };
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(undefined);
     try {
@@ -150,11 +150,11 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   const completed = useMemo(() => {
     const hasBusinessUser = Boolean(data?.users.some((user) => user.status === "active" && user.roles.some((role) => BUSINESS_ROLES.has(role))));
@@ -193,17 +193,24 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
   const importRows = useMemo<ImportRow[]>(() => {
     const existing = new Set(data?.students.map((student) => student.student_no.toLowerCase()) ?? []);
     const seen = new Set<string>();
-    const classByCode = new Map(data?.classes.map((item) => [item.code.toLowerCase(), item]) ?? []);
+    // CSV只有班级代码；同码跨学校/年级时不能按列表顺序猜归属，须先消除歧义再导入。
+    const classesByCode = new Map<string, SchoolClass[]>();
+    for (const item of data?.classes ?? []) {
+      const code = item.code.trim().toLowerCase();
+      classesByCode.set(code, [...classesByCode.get(code) ?? [], item]);
+    }
     return csvRecords.map((record, index) => {
       const studentNo = (record[mapping.studentNo] ?? "").trim();
       const name = (record[mapping.name] ?? "").trim();
       const classCode = (record[mapping.classCode] ?? "").trim();
       const normalizedNo = studentNo.toLowerCase();
-      const targetClass = classByCode.get(classCode.toLowerCase());
+      const candidates = classesByCode.get(classCode.toLowerCase()) ?? [];
+      const targetClass = candidates.length === 1 ? candidates[0] : undefined;
       let rowError = "";
       if (!studentNo || !name || !classCode) rowError = "学号、姓名和班级代码不能为空";
       else if (existing.has(normalizedNo)) rowError = "学号已存在";
       else if (seen.has(normalizedNo)) rowError = "文件内学号重复";
+      else if (candidates.length > 1) rowError = "班级代码对应多个班级，请先使用唯一班级代码再导入";
       else if (!targetClass) rowError = "班级代码不存在";
       seen.add(normalizedNo);
       return {

@@ -11,6 +11,8 @@ const (
 	scoringRouteRuleInput    = "rule_input"
 	scoringRouteOMR          = "omr"
 	scoringRouteManualReview = "manual_review"
+	scoringRouteObserveRule  = "observe_rule"
+	scoringRouteImageAI      = "image_ai"
 
 	// reviewSourceHumanGraded 标记设计上由人工评分的工作，区别于等待确认的自动结果。
 	reviewSourceHumanGraded = "subjective_default_review"
@@ -39,6 +41,9 @@ func routeScoringSegment(questionType string, hasPublishedRule bool, hasRecorded
 	if isTextRule && hasPublishedRule && hasRecordedAnswer {
 		return scoringSegmentRoute{Kind: scoringRouteRuleInput}
 	}
+	if isTextRule && hasPublishedRule {
+		return scoringSegmentRoute{Kind: scoringRouteObserveRule}
+	}
 	if isOMR && hasPublishedRule && optionRegionCount >= 2 {
 		return scoringSegmentRoute{Kind: scoringRouteOMR}
 	}
@@ -62,7 +67,7 @@ func routeScoringSegmentForMode(questionType, mode string, hasPublishedRule, has
 		return scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceHumanGraded, Reason: "frozen_scoring_policy_requires_human"}
 	case assessment.ScoringAIAssist, assessment.ScoringAIFastConfirm:
 		if questionType == "short_answer" || questionType == "calculation" || questionType == "essay" || questionType == "discussion" {
-			return scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceRuleReview, Reason: "ai_assist_teacher_confirmation"}
+			return scoringSegmentRoute{Kind: scoringRouteImageAI}
 		}
 		return scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceHumanGraded, Reason: "ai_mode_unsupported_question_type"}
 	case assessment.ScoringRuleAuto:
@@ -70,6 +75,14 @@ func routeScoringSegmentForMode(questionType, mode string, hasPublishedRule, has
 	default:
 		return scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceHumanGraded, Reason: "frozen_scoring_policy_unavailable"}
 	}
+}
+
+func routeScoringSegmentForScope(questionType, mode, answerScope string, hasPublishedRule, hasRecordedAnswer bool, optionRegionCount int) scoringSegmentRoute {
+	// 共区先获取成员映射，不要求教师补子 ROI；每题仍独立按自己的冻结规则判分。
+	if answerScope == "grading_group" && mode == "RULE_AUTO" && hasPublishedRule && (questionType == "fill_blank" || questionType == "numeric") {
+		return scoringSegmentRoute{Kind: scoringRouteObserveRule}
+	}
+	return routeScoringSegmentForMode(questionType, mode, hasPublishedRule, hasRecordedAnswer, optionRegionCount)
 }
 
 // scoringRunStatusForCounts 表示启动操作产生的运行状态。所有片段都转成人工任务的运行仍算启动成功；只有无可评分内容的运行才失败。

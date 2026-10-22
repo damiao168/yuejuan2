@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import type { ReactNode } from "react";
+import { act, type ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LearningReportsPage } from "./LearningReportsPage";
+import { PageReadinessContext } from "../components/pageReadiness";
 const mocks = vi.hoisted(() => ({ exams: vi.fn(), questions: vi.fn(), overview: vi.fn(), classes: vi.fn() }));
 vi.mock("../api/exams", () => ({ listAllExams: mocks.exams }));
 vi.mock("../components/PageState", () => ({ EmptyState: ({ title }: { title: string }) => <p>{title}</p>, ErrorState: ({ message }: { message: string }) => <p>{message}</p>, LoadingState: ({ label }: { label: string }) => <p>{label}</p> }));
@@ -17,6 +18,33 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe("学情题目统计可解释与完整访问", () => {
+  it("切页等待从考试目录交接到报告首读，报告完成后解除阻塞", async () => {
+    let finishExams!: (value: { exams: { id: string; name: string; subject: string }[] }) => void;
+    let finishOverview!: (value: { overview: { student_count: number; stats: { distribution: never[] }; empty: { empty: boolean } } }) => void;
+    mocks.exams.mockReturnValue(new Promise((resolve) => { finishExams = resolve; }));
+    mocks.overview.mockReturnValue(new Promise((resolve) => { finishOverview = resolve; }));
+    mocks.questions.mockResolvedValue({ questions: [] });
+    const blockers = new Set<symbol>();
+    const readiness = { registerLoading: () => { const token = Symbol(); blockers.add(token); return () => { blockers.delete(token); }; } };
+    render(<PageReadinessContext.Provider value={readiness}><LearningReportsPage canRead canExport={false} /></PageReadinessContext.Provider>);
+    expect(blockers.size).toBeGreaterThan(0);
+    await act(async () => finishExams({ exams: [{ id: "exam", name: "考试一", subject: "math" }] }));
+    expect(mocks.overview).toHaveBeenCalledWith("exam");
+    expect(blockers.size).toBeGreaterThan(0);
+    await act(async () => finishOverview({ overview: { student_count: 10, stats: { distribution: [] }, empty: { empty: false } } }));
+    expect(blockers.size).toBe(0);
+  });
+
+  it.each([true, false])("读取失败与无权限均可结束切页，读取权限=%s", async (canRead) => {
+    mocks.exams.mockRejectedValue(new Error("考试目录无法读取"));
+    const blockers = new Set<symbol>();
+    const readiness = { registerLoading: () => { const token = Symbol(); blockers.add(token); return () => { blockers.delete(token); }; } };
+    render(<PageReadinessContext.Provider value={readiness}><LearningReportsPage canRead={canRead} canExport={false} /></PageReadinessContext.Provider>);
+    await screen.findByText("考试目录无法读取");
+    expect(blockers.size).toBe(0);
+    if (!canRead) expect(screen.getByText("无报告查看权限")).toBeTruthy();
+  });
+
   it("空报告与无权限提示可同时出现，不互相遮掉", async () => {
     mocks.exams.mockResolvedValue({ exams: [{ id: "exam", name: "考试一", subject: "biology" }] });
     mocks.questions.mockResolvedValue({ questions: [] });

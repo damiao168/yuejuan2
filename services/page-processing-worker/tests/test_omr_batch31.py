@@ -1,4 +1,5 @@
 import io
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -15,9 +16,13 @@ def controlled_marks(monkeypatch: pytest.MonkeyPatch, counts: dict[str, int], pr
     for label, x in positions.items():
         mask[1:49, x + 1:x + 49].flat[:counts.get(label, 0)] = 255
     regions = [{"label": label, "x": positions[label], "y": 0, "width": 50, "height": 50} for label in order]
-    # 固定前景掩码只隔离阈值化噪声；公开入口仍执行原坐标裁剪、测量和判定，保护取整边界。
-    monkeypatch.setattr(omr, "_foreground_mask", lambda _image: mask.copy())
-    return omr.extract_marks(output.getvalue(), regions, profile=profile, multiple=multiple)
+    # 在差分模式中固定学生新增墨量，隔离阈值化与印刷笔画过滤，专门保护阈值和取整边界。
+    foregrounds = iter((mask, np.zeros_like(mask)))
+    monkeypatch.setattr(omr, "_foreground_mask", lambda _image: next(foregrounds).copy())
+    difference_profile = replace(profile, mode="template_difference", version="opencv-template-difference-bubble-v1")
+    return omr.extract_marks(output.getvalue(), regions, profile=difference_profile, multiple=multiple,
+                             reference_image_bytes=output.getvalue(), reference_content_type="image/png",
+                             reference_question_region={"x": 0, "y": 0, "width": 1, "height": 1})
 
 
 def test_marked_threshold_uses_unrounded_fill_ratio(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -237,6 +237,7 @@ func assertReviewTaskContextSourceAndOpinion(t *testing.T, test reviewSecondOpin
 	value := reviewContext()
 	value.AssessmentSnapshot = taskContextSnapshot(test.risk, test.mode)
 	value.AISuggestion = test.suggestion
+	bindTaskSuggestionFixture(&value, "segment-38")
 	score, maximum := 4.0, 5.0
 	value.AutomationResult = &AutomationResult{Decision: "review", Score: &score, MaxScore: &maximum}
 	store.AddContext(tenantID, "segment-38", value)

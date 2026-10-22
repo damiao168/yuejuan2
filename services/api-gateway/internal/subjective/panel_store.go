@@ -72,6 +72,7 @@ func panelRunSnapshotMatches(panel GradingPanel, input CreateRunInput) bool {
 
 func runPanelIdentityMatches(run GradingRun, input CreateRunInput) bool {
 	return run.PanelID == input.PanelID && run.AgentRole == input.AgentRole &&
+		run.ExamQuestionSnapshotID == input.ExamQuestionSnapshotID &&
 		run.AnswerSegmentID == input.AnswerSegmentID && run.AnswerVersion == input.AnswerVersion &&
 		run.QuestionID == input.QuestionID && run.RubricVersion == input.RubricVersion
 }

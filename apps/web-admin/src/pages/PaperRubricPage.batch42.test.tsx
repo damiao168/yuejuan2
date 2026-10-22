@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   config: {} as Record<string, unknown>, importState: {} as Record<string, unknown>,
   viewContext: null as PaperRubricViewContext | null,
   loadConfig: vi.fn(), loadExams: vi.fn(), updateQuestion: vi.fn(), createQuestion: vi.fn(), deleteQuestion: vi.fn(),
-  createRubric: vi.fn(), listScoringRules: vi.fn(), fillRecognizedContent: vi.fn(),
+  createRubric: vi.fn(), listScoringRules: vi.fn(), listQuestionRubricDraftJobs: vi.fn(), fillRecognizedContent: vi.fn(),
   createScoringRule: vi.fn(), updateScoringRule: vi.fn(), publishScoringRule: vi.fn(),
   warning: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn(), confirm: vi.fn(),
 }));
@@ -24,6 +24,8 @@ vi.mock("antd", async importOriginal => {
 vi.mock("../api/papers", () => ({
   validatePaperConfig: vi.fn(), updateQuestion: mocks.updateQuestion, createQuestion: mocks.createQuestion,
   deleteQuestion: mocks.deleteQuestion, createRubric: mocks.createRubric, listScoringRules: mocks.listScoringRules,
+  listQuestionRubricDraftJobs: mocks.listQuestionRubricDraftJobs, createQuestionRubricDraftJob: vi.fn(),
+  getQuestionRubricDraftJob: vi.fn(), cancelQuestionRubricDraftJob: vi.fn(),
   createScoringRule: mocks.createScoringRule, updateScoringRule: mocks.updateScoringRule, publishScoringRule: mocks.publishScoringRule,
 }));
 vi.mock("../features/paper-import/usePaperConfigData", () => ({ usePaperConfigData: () => {
@@ -56,7 +58,10 @@ function question(type = "short_answer", id = "question-1", score = 5): Question
   };
 }
 
-describe("paper rubric page batch42 retry and changed scoring type", { timeout: 20_000 }, () => {
+// V8 插桩下，jsdom 计算真实 AntD 自动高度样式耗时较长；仅覆盖率模式沿用同页测试的 60 秒上限。
+// 普通回归仍限 20 秒，保存顺序、部分成功回执和评分配置的断言保持不变。
+const testTimeout = process.env.EDUGRADE_NATIVE_COVERAGE === "1" ? 60_000 : 20_000;
+describe("paper rubric page batch42 retry and changed scoring type", { timeout: testTimeout }, () => {
   let host: HTMLDivElement;
   let root: Root;
 
@@ -78,6 +83,7 @@ describe("paper rubric page batch42 retry and changed scoring type", { timeout: 
     mocks.createQuestion.mockResolvedValue({ question: { id: "new-question" } });
     mocks.createRubric.mockResolvedValue({});
     mocks.listScoringRules.mockResolvedValue({ scoring_rules: [] });
+    mocks.listQuestionRubricDraftJobs.mockResolvedValue({ jobs: [], concurrency: 5 });
     mocks.createScoringRule.mockResolvedValue({ scoring_rule: { id: "new-rule", status: "draft", revision: 1, config: {} } });
     mocks.fillRecognizedContent.mockResolvedValue(undefined);
     host = document.createElement("div");
@@ -90,8 +96,8 @@ describe("paper rubric page batch42 retry and changed scoring type", { timeout: 
     host.remove();
   });
 
-  async function render() {
-    await act(async () => root.render(<PaperRubricPage canManage canManageAssessment={false} mode="embedded" initialView="questions" fixedExamId="exam-1" />));
+  async function render(canManage = true) {
+    await act(async () => root.render(<PaperRubricPage canManage={canManage} canManageAssessment={false} mode="embedded" initialView="questions" fixedExamId="exam-1" />));
   }
 
   async function click(label: string) {
@@ -157,6 +163,28 @@ describe("paper rubric page batch42 retry and changed scoring type", { timeout: 
     expect(mocks.createQuestion).not.toHaveBeenCalled();
     expect(mocks.createRubric).not.toHaveBeenCalled();
     expect(mocks.publishScoringRule).not.toHaveBeenCalled();
+  });
+
+  it.each(["评分草稿变化", "题目答案草稿变化", "切换题目", "权限变为只读", "题目来源更新", "页面卸载"])("锁定确认期间%s，迟到确认不能写入", async boundary => {
+    mocks.config.questions = [question(), question("short_answer", "question-2")];
+    await render(); await click("评分配置"); await click("确认并锁定细则");
+    const confirmation = mocks.confirm.mock.lastCall![0];
+    if (boundary === "评分草稿变化") await edit(".paper-rubric-description textarea", "确认期间修改的条件");
+    if (boundary === "题目答案草稿变化") await edit("textarea#stem", "确认期间修改题目");
+    if (boundary === "切换题目") await act(async () => { mocks.viewContext!.config.setSelectedQuestionId("question-2"); });
+    if (boundary === "权限变为只读") await render(false);
+    if (boundary === "题目来源更新") {
+      mocks.config.questions = (mocks.config.questions as Question[]).map(item => item.id === "question-1" ? { ...item, stem: "新版本题干" } : item);
+      await render();
+    }
+    if (boundary === "页面卸载") {
+      await act(async () => root.unmount());
+      root = createRoot(host);
+    }
+    await act(async () => { await confirmation.onOk(); });
+    expect(mocks.createRubric).not.toHaveBeenCalled();
+    expect(mocks.loadConfig).not.toHaveBeenCalled();
+    expect(mocks.success).not.toHaveBeenCalled();
   });
 
   it.each([

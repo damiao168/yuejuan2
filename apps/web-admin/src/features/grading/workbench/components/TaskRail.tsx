@@ -8,6 +8,7 @@ import type { TaskFilter } from "../gradingWorkbench.types";
 import type { useGradingQueue } from "../hooks/useGradingQueue";
 import { examSubjectLabel } from "../../../../constants/examStatus";
 import "../teacher-product-ux.css";
+import { GradingAssignmentTable } from "./GradingAssignmentTable";
 
 export interface TaskRailProps {
   scope: Pick<ReturnType<typeof useGradingQueue>, "effectiveExamId" | "subjectFilter" | "questionFilter" | "unassignedOnly" | "subjectOptions" | "examOptions" | "questionOptions" | "matchedAggregate" | "unassignedCount" | "selectingAll" | "selectAllMatchingAssignments">;
@@ -48,7 +49,13 @@ export interface TaskRailProps {
   onLoadMoreTasks: () => Promise<ReviewTask[]>;
 }
 
-export function TaskRail({
+export function TaskRail(props: Readonly<TaskRailProps>) {
+  // 管理视图按表格分配；教师侧的任务导航继续使用紧凑列表，不能把分配表堆进阅卷正文。
+  if (props.canManageTasks && props.queueScope === "all") return <GradingAssignmentTable {...props} />;
+  return <ReviewTaskRail {...props} />;
+}
+
+function ReviewTaskRail({
   scope, fixedExam, onExamChange, onSubjectChange, onQuestionChange, onUnassignedChange,
   canManageTasks,
   canWork,

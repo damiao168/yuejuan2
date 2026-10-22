@@ -83,6 +83,7 @@ export function StudentScorePreviewDialog({ release, currentVersion, portalUrl, 
   const [detailRetry, setDetailRetry] = useState(0);
   const [previewRetry, setPreviewRetry] = useState(0);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: detailRetry 重读所选冻结发布版本的学生名单，不能用当前成绩代替该版本。
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -97,6 +98,7 @@ export function StudentScorePreviewDialog({ release, currentVersion, portalUrl, 
     return () => { active = false; controller.abort(); };
   }, [release.id, detailRetry]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: previewRetry 重读当前学生的冻结成绩；删除会使预览失败后的重试无效。
   useEffect(() => {
     if (!studentId) return;
     const controller = new AbortController();

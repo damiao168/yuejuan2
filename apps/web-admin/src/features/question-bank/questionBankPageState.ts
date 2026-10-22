@@ -1,6 +1,13 @@
 import type { CreateQuestionBankItemRequest, QuestionBankItem, QuestionBankVersion, UpdateQuestionBankVersionRequest, UpdateQuestionBankMetadataSchemaRequest } from "@edugrade/sdk";
 import type { MetadataSchemaFormValues } from "./questionBankTypes";
 
+export const transitionSuccessMessages = {
+	publish: "已发布到学校题库。请在考试的题目页选择此版本；已有考试不受影响。",
+	"submit-review": "已提交审核，请通知本题库的审核教师在题库中处理。",
+	approve: "审核已通过，下一步由有发布权限的教师发布到题库。",
+	"return-to-draft": "已退回草稿，可修改后重新提交审核。",
+};
+
 export const defaults: Omit<CreateQuestionBankItemRequest, "metadata"> & {metadata: Partial<CreateQuestionBankItemRequest["metadata"]>} = {
 	item_code: "",
 	question_type: "short_answer",

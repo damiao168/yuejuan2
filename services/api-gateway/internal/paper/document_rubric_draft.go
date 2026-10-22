@@ -222,14 +222,22 @@ func mathRubricDraftReviewIsCurrent(job PaperImportJob, generation int64, update
 }
 
 func (p *HTTPDocumentParser) SuggestMathRubricDraft(ctx context.Context, question QuestionCandidate, answer *AnswerCandidate, solution SolutionCandidate, model *DocumentModelConfig) (MathRubricDraftResponse, error) {
+	return p.suggestMathRubricDraft(ctx, question, answer, solution, model, nil)
+}
+
+func (p *HTTPDocumentParser) suggestMathRubricDraft(ctx context.Context, question QuestionCandidate, answer *AnswerCandidate, solution SolutionCandidate, model *DocumentModelConfig, reference *questionRubricReference) (MathRubricDraftResponse, error) {
 	if p == nil || p.baseURL == "" || len(p.token) < 32 {
 		return MathRubricDraftResponse{}, errors.New("AI service not configured")
 	}
-	body, err := json.Marshal(map[string]any{
+	payload := map[string]any{
 		"request_id": uuid.NewString(), "subject": "mathematics",
 		"question_candidate": question, "answer_candidate": answer,
 		"solution_candidate": solution, "managed_model": model,
-	})
+	}
+	if reference != nil {
+		payload["question_reference"] = reference
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return MathRubricDraftResponse{}, err
 	}
@@ -245,7 +253,19 @@ func (p *HTTPDocumentParser) SuggestMathRubricDraft(ctx context.Context, questio
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return MathRubricDraftResponse{}, fmt.Errorf("math rubric draft service returned %d", response.StatusCode)
+		status := response.StatusCode
+		// AI 服务将供应商限流封装为 502；只读取白名单错误码来安排重试，不保存供应商原文。
+		var failure struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+			Code string `json:"code"`
+		}
+		_ = json.NewDecoder(io.LimitReader(response.Body, 4096)).Decode(&failure)
+		if failure.Error.Code == "model_rate_limited" || failure.Code == "model_rate_limited" {
+			status = http.StatusTooManyRequests
+		}
+		return MathRubricDraftResponse{}, &rubricDraftHTTPError{Status: status}
 	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, maxMathRubricDraftResponseBytes+1))
 	if err != nil {
@@ -259,6 +279,9 @@ func (p *HTTPDocumentParser) SuggestMathRubricDraft(ctx context.Context, questio
 		return MathRubricDraftResponse{}, err
 	}
 	if err := validateMathRubricResponse(&result, question, solution); err != nil {
+		return MathRubricDraftResponse{}, err
+	}
+	if err := validateQuestionRubricReference(result, reference); err != nil {
 		return MathRubricDraftResponse{}, err
 	}
 	return result, nil

@@ -180,6 +180,7 @@ def test_passed_guard_registers_bound_template_without_downloading_fallback(monk
         "passed": True, "orientation_match": True, "aspect_ratio_delta": 0.0,
         "perceptual_hash_score": 1.0, "layout_score": 1.0, "score": 1.0,
         "profile_version": "static-layout-guard-v1",
+        "required_region_visibility": {"status": "not_evaluated", "region_count": 0},
     }
 
 

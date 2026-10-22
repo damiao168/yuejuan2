@@ -1,0 +1,77 @@
+.grading-management-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; border-bottom: 1px solid #e5e9ef; padding-bottom: 12px; }
+.grading-management-nav .ant-btn { height: 40px; padding-inline: 18px; font-size: 15px; }
+.grading-management-nav .is-active { color: #1677ff; background: #edf4ff; font-weight: 600; }
+.grading-management-settings { margin-left: auto; }
+.grading-management .grading-overview { padding: 28px 32px; border: 1px solid #e5e9ef; border-radius: 8px; background: #fff; }
+.grading-focus-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.grading-focus-heading h1 { margin: 0 0 10px; color: #132d4a; font-size: 26px; line-height: 1.4; font-weight: 650; }
+.grading-focus-heading p { margin: 0; color: #66788c; }
+.grading-next-actions { border-top: 1px solid #e9edf2; }
+.grading-next-actions > div { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 0; border-bottom: 1px solid #e9edf2; }
+.grading-next-action-end { display: flex; align-items: center; gap: 24px; flex-shrink: 0; }
+.grading-next-action-end > span { color: #53677f; font-size: 15px; min-width: 64px; text-align: right; }
+.grading-next-action-end .ant-btn { min-width: 104px; }
+.grading-results-workspace, .grading-settings-workspace { min-width: 0; padding: 28px; background: #fff; border: 1px solid #e5e9ef; border-radius: 8px; }
+.grading-results-heading { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 24px; }
+.grading-results-heading h1, .grading-settings-workspace h1 { font-size: 24px; margin: 0 0 8px; color: #17314f; }
+.grading-results-heading p { margin: 0; color: #6b7b8e; }
+.grading-results-workspace .automation-result-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.grading-results-workspace .automation-result-filters .ant-select { min-width: 140px; }
+.grading-results-workspace .automation-result-filters .ant-input-affix-wrapper { width: 240px; }
+.grading-results-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; color: #6b7b8e; font-size: 13px; }
+.grading-results-workspace .automation-result-cell > span { white-space: normal; }
+.grading-setting-item { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 0; border-bottom: 1px solid #e9edf2; }
+.grading-setting-item h2 { margin: 0 0 8px; color: #17314f; font-size: 17px; }
+.grading-setting-item p { margin: 0; color: #6b7b8e; }
+.grading-answer-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; padding-bottom: 24px; }
+.grading-answer-detail > div:last-child { grid-column: 1 / -1; }
+.grading-answer-detail > div > strong { display: block; margin-bottom: 8px; color: #6b7b8e; font-size: 13px; }
+.grading-next-actions strong { font-size: 17px; color: #17314f; }
+.grading-next-actions p { margin: 7px 0 0; color: #6b7b8e; font-size: 14px; }
+.grading-next-actions > div > span { flex-shrink: 0; font-size: 20px; font-weight: 600; color: #17314f; }
+.grading-focus-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+.grading-overview-secondary { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-top: 28px; color: #68788b; }
+.grading-options summary { padding: 6px 10px; cursor: pointer; }
+.grading-options[open] .ant-space { padding: 12px 0; }
+.grading-management .grading-management-workspace { display: block; height: auto; overflow: visible; }
+.grading-assignment-workspace { background: #fff; border: 1px solid #e5e9ef; border-radius: 8px; padding: 28px; }
+.grading-assignment-workspace > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.grading-assignment-workspace h1 { font-size: 24px; margin: 0 0 7px; color: #17314f; }
+.grading-assignment-workspace > header p { color: #6b7b8e; margin: 0; }
+.grading-assignment-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 24px 0 18px; }
+.grading-assignment-filters > .ant-select { min-width: 140px; }
+.grading-assignment-filters > .ant-input-affix-wrapper { width: 220px; }
+.grading-assignment-footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; padding-top: 22px; margin-top: 12px; border-top: 1px solid #e9edf2; }
+.grading-assignment-footer .ant-select { min-width: 180px; }
+.grading-assignment-status { display: flex; flex-direction: column; gap: 4px; }
+.grading-assignment-status strong { color: #17314f; font-weight: 500; }
+.grading-assignment-status span { color: #6b7b8e; font-size: 12px; }
+.grading-view-answer { white-space: nowrap; padding-inline: 8px; }
+.grading-reviewer-workspace { padding: 28px; background: #fff; border: 1px solid #e5e9ef; border-radius: 8px; }
+.grading-reviewer-workspace h1 { font-size: 24px; }
+.grading-reviewer-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(160px, 2fr) 130px 48px; align-items: center; gap: 28px; padding: 20px 0; border-top: 1px solid #e9edf2; color: #17314f; }
+.grading-reviewer-row > div:first-child { display: flex; flex-direction: column; gap: 6px; }
+.grading-reviewer-row > div:first-child span { color: #6b7b8e; font-size: 13px; }
+.grading-reviewer-row > strong { text-align: right; }
+/* 单题详情只占独立抽屉；主体不再随参考解答高度向下延伸。 */
+.grading-inspection-drawer .grading-main { min-width: 0; height: auto; overflow: visible; }
+.grading-inspection-drawer .grading-panels { grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); grid-template-areas: "answer inspector"; }
+.grading-inspection-drawer .grading-answer-viewport { min-height: 420px; }
+/* 证据由多个可折叠块组成，不能沿用旧固定两行网格把建议分推到屏幕外。 */
+.grading-inspection-drawer .grading-inspector, .grading-teacher-simple .grading-inspector { display: flex; flex-direction: column; gap: 12px; overflow: visible; }
+.grading-inspection-drawer .grading-reason-banner { padding: 12px 16px; margin-bottom: 16px; }
+/* 教师任务列表放进抽屉后，正文必须占满原来的两列，避免答卷被压缩到旧列表宽度。 */
+.grading-teacher-simple .grading-workspace { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 800px) {
+  .grading-management-nav .ant-btn { padding-inline: 12px; }
+  .grading-results-workspace, .grading-settings-workspace { padding: 20px 16px; }
+  .grading-next-action-end { gap: 10px; }
+  .grading-management .grading-overview { padding: 24px 20px; }
+  .grading-assignment-workspace { padding: 20px 16px; }
+  .grading-reviewer-workspace { padding: 20px 16px; }
+  .grading-reviewer-row { grid-template-columns: minmax(0, 1fr) 100px; gap: 14px; }
+  .grading-reviewer-row .ant-progress { grid-column: 1 / -1; grid-row: 2; }
+  .grading-reviewer-row > strong { display: none; }
+  .grading-focus-heading h1 { font-size: 22px; }
+  .grading-inspection-drawer .grading-panels { grid-template-columns: minmax(0, 1fr); grid-template-areas: "answer" "inspector"; }
+}

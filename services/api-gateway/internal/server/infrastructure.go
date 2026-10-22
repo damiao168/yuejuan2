@@ -247,3 +247,27 @@ func (i *Infrastructure) Close() {
 		_ = i.cleanup[index]()
 	}
 }
+
+// 建议任务与 HTTP 请求分离，停机时等待执行者保存中断状态。
+func (i *Infrastructure) startRubricDraftJobs(jobs *paper.RubricDraftJobs) {
+	if jobs == nil {
+		return
+	}
+	ctx, cancel := context.WithCancel(db.WithTenantMaintenance(context.Background()))
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		jobs.Run(ctx, func(err error) {
+			i.Logger.Error(context.Background(), "rubric draft task failed", map[string]any{"event": "rubric_draft_task_failed", "error": err.Error()})
+		})
+	}()
+	i.cleanup = append(i.cleanup, func() error {
+		cancel()
+		select {
+		case <-done:
+			return nil
+		case <-time.After(6 * time.Second):
+			return context.DeadlineExceeded
+		}
+	})
+}

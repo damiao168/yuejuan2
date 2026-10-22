@@ -48,9 +48,10 @@ class Runner:
                 # 模型执行期间可能丢失租约；写回前再次检查，不能把旧任务结果当作当前执行完成。
                 heartbeat.raise_if_failed()
                 self.api.complete(run_id, runtime_id, lease, output, int((time.monotonic() - started) * 1000))
-            except APIError:
+            except APIError as exc:
                 heartbeat.stop()
-                self.api.fail(run_id, runtime_id, lease, "subjective_agent_failed", True, int((time.monotonic() - started) * 1000))
+                if not exc.task_failure_recorded:
+                    self.api.fail(run_id, runtime_id, lease, exc.code, exc.retryable, int((time.monotonic() - started) * 1000))
 
 
 class _Heartbeat(LeaseHeartbeat):

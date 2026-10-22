@@ -5,8 +5,10 @@ import { StatusTag } from "../../components/StatusTag";
 import { createScoringExample, StructuredListEditor } from "../../components/StructuredTeacherFields";
 import { AssessmentProfileEditor } from "../../components/features/assessment/AssessmentProfileEditor";
 import { assessmentScoringGuidance } from "../../components/features/assessment/assessmentScoringDefaults";
-import { evidenceHasTarget, evidenceTargetPlaceholder, evidenceTypePatch, fixedScoringDescription, hasStandardAnswer, standardAnswerText } from "./paperQuestionPresentation";
-import { rubricStatusOptions } from "./paperPresentation";
+import { usesLegacyMultipleChoiceScoring } from "../paper-import/multipleChoiceScoring";
+import { evidenceHasTarget, evidenceTargetPlaceholder, evidenceTypePatch, fixedScoringDescription, hasStandardAnswer, rubricProgressLabel, standardAnswerText } from "./paperQuestionPresentation";
+import { PaperRubricAssistant } from "./PaperRubricAssistant";
+import { ReferenceMaterialEditor } from "./ReferenceMaterialEditor";
 import type { PaperRubricViewContext } from "./paperRubricViewTypes";
 
 type ViewProps = Readonly<{ context: PaperRubricViewContext }>;
@@ -21,15 +23,15 @@ const formulaEvidenceOptions: { label: string; value: RubricEvidenceRequirement[
 export function PaperScoringConfiguration({ context }: ViewProps) {
   const { selectedExam, selectedQuestion, options, access } = context;
   if (!selectedExam) return null;
-  // 主界面未读取已保存的评分模式，只展示不随模式改变的题型限制；与高级配置共用说明，避免折叠后遗漏人工要求。
+  // 题型限制独立于评分模式，读取配置前也要保留人工评分要求。
   const scoringGuidance = assessmentScoringGuidance(selectedQuestion?.question_type);
   return <>
     {selectedQuestion && selectedQuestion.score <= 0 && <Alert showIcon type="warning" message="请先核对并保存小题分值，再配置评分规则" />}
     {scoringGuidance && <Alert showIcon {...scoringGuidance} />}
-    <section className="paper-scoring-method"><h3>本题评分方式（开考前必填）</h3><p>选择谁来判分并保存。考试准备页可一次补齐未配置题目；高级证据设置保留在配置窗口中。</p>
-      <AssessmentProfileEditor examId={selectedExam.id} examSubject={selectedExam.subject} examStatus={selectedExam.status} examGradingMode={selectedExam.grading_mode}
-        question={selectedQuestion} canManage={options.canManageAssessment} onChanged={options.onExamChanged} />
-    </section>
+    <AssessmentProfileEditor examId={selectedExam.id} examSubject={selectedExam.subject} examStatus={selectedExam.status} examGradingMode={selectedExam.grading_mode}
+      question={selectedQuestion} canManage={options.canManageAssessment} onChanged={options.onExamChanged}
+      presentation="inline" active={context.state?.detailTab === "scoring"} />
+    {selectedQuestion && <ReferenceMaterialEditor examId={selectedExam.id} questionId={selectedQuestion.id} editable={options.canManage} onChanged={options.onExamChanged} />}
     <PaperFixedScoringEditor context={context} />
     {!access.editorUsesFixedScoring && <PaperRubricEditor context={context} />}
   </>;
@@ -47,11 +49,13 @@ function PaperFixedScoringEditor({ context }: ViewProps) {
     <div className="section-head"><div><h2>固定判分规则</h2><p>标准答案：{hasAnswer ? answer : "待补充"} · 满分 {selectedQuestion.score} 分</p></div>
       <Space>{scoringRuleWorkflow.publishedScoringRule ? <StatusTag tone="success">{`已发布 v${scoringRuleWorkflow.publishedScoringRule.version}`}</StatusTag> : <StatusTag tone="warning">未发布</StatusTag>}</Space>
     </div>
-    {hasAnswer ? <Alert type="info" showIcon message="全对得满分；错误得 0 分" description={fixedScoringDescription(access.objectiveRuleType)} />
+    {hasAnswer ? <Alert type="info" showIcon message={access.objectiveRuleType === "multiple_choice" ? "全对得满分" : "全对得满分；错误得 0 分"} description={fixedScoringDescription(access.objectiveRuleType)} />
       : <Alert type="warning" showIcon message="尚无标准答案，无法判分" description="请先在「题目与参考解答」中核对答案并保存。" />}
-    <PaperFixedScoringControls context={context} />
+    {scoringRuleWorkflow.scoringRulesError ? <Alert type="error" message="当前题目的评分规则读取失败，暂不能保存" description={scoringRuleWorkflow.scoringRulesError} action={<Button onClick={scoringRuleWorkflow.reloadScoringRules}>重新读取评分规则</Button>} /> : null}
+    {scoringRuleWorkflow.scoringRulesLoading ? <p>正在读取当前题目的评分规则…</p> : null}
+    <fieldset disabled={!scoringRuleWorkflow.scoringRulesReadable || scoringRuleWorkflow.savingScoringRule || access.questionDisabled} style={{ border: 0, padding: 0 }}><PaperFixedScoringControls context={context} /></fieldset>
     {(access.objectiveRuleType === "single_choice" || access.objectiveRuleType === "true_false") && <Alert type="info" showIcon
-      message="使用标准答案精确判定" description="空白、多涂、擦除或识别把握不足的答卷不会自动判零分，将转入人工确认。" />}
+      message="使用标准答案精确判定" description="填涂清晰时自动判分，清晰空白记 0 分；识别不清、明显涂改或遮挡时才需人工确认。" />}
   </section>;
 }
 
@@ -59,11 +63,17 @@ function PaperFixedScoringControls({ context }: ViewProps) {
   const { scoringRuleConfig: config, setRuleConfig } = context.scoringRuleWorkflow;
   const score = context.selectedQuestion?.score;
   switch (context.access.objectiveRuleType) {
-    case "multiple_choice": return <div className="scoring-rule-grid">
+    case "multiple_choice": return usesLegacyMultipleChoiceScoring(config) ? <>
+      <p>当前按正确选项数计分。<Button type="link" size="small" onClick={() => { setRuleConfig("partial_score", 0); setRuleConfig("wrong_answer_score", 0); }}>改为固定得分</Button></p>
+      <div className="scoring-rule-grid">
       <label><span>允许少选得分</span><Switch checked={Boolean(config.allow_partial)} onChange={(value) => setRuleConfig("allow_partial", value)} /></label>
       <label><span>每个正确选项分值</span><InputNumber min={0} max={score} precision={2} value={Number(config.score_per_correct_option ?? 0)} onChange={(value) => setRuleConfig("score_per_correct_option", Number(value ?? 0))} /></label>
       <label><span>每个错误选项扣分</span><InputNumber min={0} max={score} precision={2} value={Number(config.wrong_option_penalty ?? score)} onChange={(value) => setRuleConfig("wrong_option_penalty", Number(value ?? 0))} /></label>
       <label><span>最低得分</span><InputNumber min={0} max={score} precision={2} value={Number(config.minimum_score ?? 0)} onChange={(value) => setRuleConfig("minimum_score", Number(value ?? 0))} /></label>
+      </div>
+    </> : <div className="scoring-rule-grid">
+      <label><span>少选且无错选得分</span><InputNumber aria-label="少选且无错选得分" min={0} max={score} precision={2} value={Number(config.partial_score ?? 0)} onChange={(value) => setRuleConfig("partial_score", Number(value ?? 0))} /></label>
+      <label><span>有错选得分</span><InputNumber aria-label="有错选得分" min={0} max={score} precision={2} value={Number(config.wrong_answer_score ?? 0)} onChange={(value) => setRuleConfig("wrong_answer_score", Number(value ?? 0))} /></label>
     </div>;
     case "fill_blank": return <div className="scoring-rule-grid">
       <label><span>忽略大小写</span><Switch checked={Boolean(config.ignore_case)} onChange={(value) => setRuleConfig("ignore_case", value)} /></label>
@@ -81,15 +91,25 @@ function PaperFixedScoringControls({ context }: ViewProps) {
 
 function PaperRubricEditor({ context }: ViewProps) {
   const { selectedQuestion, access, rubricWorkflow: rubric } = context;
+  const unsaved = rubric.rubricDirty || rubric.assistantDirty;
   return <div className="rubric-editor">
     <div className="section-head"><div><h2>评分细则</h2>
-      <p>{selectedQuestion ? `采分点合计 ${rubric.pointTotal} / ${selectedQuestion.score} 分` : "先保存题目，再配置评分细则"}</p></div>
-      <Space><span className="muted">提交为</span>
-        <Select value={rubric.rubricStatus} options={rubricStatusOptions} disabled={access.questionDisabled} onChange={rubric.setRubricStatus} className="rubric-status-select" />
+      <p>{selectedQuestion ? `采分点合计 ${rubric.pointTotal} / ${selectedQuestion.score} 分` : "先保存题目，再配置评分细则"}</p>
+      <p role="status"><StatusTag tone={access.selectedLocked ? "success" : unsaved ? "warning" : "neutral"}>{access.selectedLocked ? "已确认并锁定" : rubricProgressLabel(selectedQuestion, unsaved)}</StatusTag></p>
+      <p>{access.selectedLocked ? "本题内容和评分细则已锁定，不可编辑。" : "保存草稿可稍后继续；核对采分点后，点击「确认并锁定细则」完成本题细则设置。"}</p>
+      {!access.selectedLocked && context.state?.formDirty && <p>题目与答案有未保存修改，请先保存，再确认细则。</p>}</div>
+      <Space>
         <Button icon={<Plus size={16} />} disabled={access.questionDisabled} onClick={rubric.addPoint}>添加采分点</Button>
       </Space>
     </div>
-    {rubric.scoreMismatch && <Alert type="error" showIcon message="评分细则分值不匹配" description="采分点总分必须等于题目分值，调整后才能保存。" />}
+    {selectedQuestion && ["math", "mathematics", "数学"].includes(context.selectedExam?.subject.toLowerCase().trim() ?? "")
+      && ["calculation", "short_answer", "essay", "discussion", "formula"].includes(selectedQuestion.question_type) && <PaperRubricAssistant
+        key={JSON.stringify([selectedQuestion, rubric.assistantResetVersion])} question={selectedQuestion}
+        disabled={access.questionDisabled || Boolean(context.state?.saveBusy || context.state?.saveRefreshPending)} contentDirty={Boolean(context.state?.formDirty)} hasExistingPoints={rubric.rubricPoints.length > 0}
+        dirty={rubric.assistantDirty} draftStore={rubric.assistantDraftStore} onDirtyChange={rubric.setAssistantDirty} onApply={rubric.replaceRubricPoints} />}
+    {rubric.scoreMismatch && <Alert type={rubric.rubricPoints.length ? "error" : "info"} showIcon
+      message={rubric.rubricPoints.length ? "评分细则分值不匹配" : "尚未划分本题采分点"}
+      description="采分点总分必须等于题目分值，核对后才能保存、锁定。" />}
     {access.showFormulaEvidence && <Alert type="info" showIcon message="公式与步骤证据只作阅卷提示"
       description="这些证据用于核对步骤、概念和单位，证据本身不会自动给分。核对结果时请结合原始作答和评分细则。" />}
     <div className="paper-rubric-points">{rubric.rubricPoints.map((point, index) => <PaperRubricPoint key={`${point.id}-${index}`} context={context} point={point} index={index} />)}</div>

@@ -208,10 +208,21 @@ func (s *PostgresStore) ListGrades(ctx context.Context, tenantID string, segment
 	if err := ensureSegmentExists(ctx, s.db, tenantID, segmentID); err != nil {
 		return nil, err
 	}
+	// 旧图像建议的教师依据从其运行时冻结上下文读取；不取当前可编辑量规，也不回写历史模型结果。
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id::text, tenant_id::text, answer_segment_id::text, question_id::text, question_no, question_type,
   answer_version, grader_type, rule_version, suggested_score::float8, max_score::float8, confidence::float8,
-  matched_points, missing_points, evidence, risk_flags, needs_human_review, auto_pass, mock, raw_output,
+  matched_points, missing_points, evidence, risk_flags, needs_human_review, auto_pass, mock,
+  CASE WHEN raw_output->>'schema_version'='grading-image-v3' AND NOT (raw_output ? 'scoring_basis') THEN raw_output || COALESCE((
+    SELECT jsonb_build_object('scoring_basis',jsonb_build_object(
+      'standard_answer',r.image_context_json->'ReferenceContext'->'standard_answer',
+      'solution_text',r.image_context_json->'ReferenceContext'->'solution_text',
+      'rubric_points',r.image_context_json->'Rubric'->'points'),
+      'model_version',ai_grade.model_version)
+    FROM subjective_grading_run r
+    WHERE r.tenant_id=ai_grade.tenant_id AND r.id=ai_grade.subjective_grading_run_id
+      AND r.input_version_id::text=ai_grade.answer_version AND r.deleted_at IS NULL
+  ),'{}'::jsonb) ELSE raw_output END,
   created_by::text, created_at
 FROM ai_grade
 WHERE tenant_id = $1 AND answer_segment_id::text = $2 AND deleted_at IS NULL

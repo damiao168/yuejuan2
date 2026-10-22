@@ -1,8 +1,10 @@
 package auth
 
 // IsPlatformWorker 识别平台所有、可处理学校租户后台任务的服务账户。产品用户不会获得此角色，平台管理员也不例外。
+// 跨租户认领不等于队列授权；页面处理与主观评分仍分别受各自 worker 身份白名单限制。
 func IsPlatformWorker(user User) bool {
-	return user.TenantID == PlatformTenantID && HasRole(user, "page_processing_worker")
+	return user.TenantID == PlatformTenantID &&
+		(HasRole(user, "page_processing_worker") || HasRole(user, "subjective_grading_worker"))
 }
 
 // ScopedStudentID 从内存测试使用的扁平 data_scope 或 PostgreSQL RBAC 关联返回的按角色索引 data_scope 中取得学生 ID。

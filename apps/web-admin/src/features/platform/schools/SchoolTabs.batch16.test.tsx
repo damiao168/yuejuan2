@@ -40,9 +40,10 @@ describe("学校详情局部展示", () => {
     { status: "success", connection: "正常", capability: "通过" },
     { status: "failed", connection: "异常", capability: "未通过" },
     { status: "unknown", connection: "未检测", capability: "未检测" },
+    { status: "temporary_unavailable", connection: "暂时无法验证", capability: "暂时无法验证" },
   ])("模型检测 $status 保留连接、能力与独立角色文案", async ({ status, connection, capability }) => {
     const response: SchoolModelHealthResponse = {
-      default_model: { status: "healthy", model_name: "model", connection_status: status, capability_status: status },
+      default_model: { status: "healthy", model_name: "model", connection_status: status, text_status: status, capability_status: status, capability_version: "structured-json-v4" },
       roles: [
         { agent_role: "primary_a", model_name: "主评模型", provider_key: "local", status: "healthy" },
         { agent_role: "primary_b", model_name: "停用模型", provider_key: "local", status: "disabled" },
@@ -53,7 +54,8 @@ describe("学校详情局部展示", () => {
     render(<SchoolModelsTab tenantId="tenant-16" />);
     await screen.findByRole("heading", { name: "日常对话默认模型" });
     expect(screen.getByText("API 连接").nextElementSibling?.textContent).toBe(connection);
-    expect(screen.getByText("能力检测").nextElementSibling?.textContent).toBe(capability);
+    expect(screen.getByText("普通回复").nextElementSibling?.textContent).toBe(capability);
+    expect(screen.getByText("结构化输出（评分/解析）").nextElementSibling?.textContent).toBe(capability);
     expect(screen.getByText("主评模型").parentElement?.textContent).toContain("正常");
     expect(screen.getByText("停用模型").parentElement?.textContent).toContain("已停用");
     expect(screen.getByText("待测模型").parentElement?.textContent).toContain("需检测");

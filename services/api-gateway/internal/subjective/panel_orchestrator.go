@@ -190,6 +190,27 @@ func (o *PanelOrchestrator) gradeWithConfig(ctx context.Context, tenantID, actor
 	if err != nil {
 		return PanelResult{}, err
 	}
+	// 终态面板会直接回放角色成绩；在回放之前仍须检查各来源运行的题目快照，不能只比较相同的量规版本。
+	for _, runID := range []string{panel.PrimaryARunID, panel.PrimaryBRunID, panel.ArbiterRunID} {
+		if runID == "" {
+			continue
+		}
+		run, err := o.store.GetRun(ctx, tenantID, runID)
+		if err != nil {
+			return PanelResult{}, err
+		}
+		if run.ExamQuestionSnapshotID != gradingContext.AssessmentSnapshot.ID {
+			return PanelResult{}, ErrIdempotencyConflict
+		}
+	}
+	if panel.Status == PanelHumanReview && panel.ReviewTaskID == "" {
+		// 人工状态已提交但交接尚未完成时，只补建幂等任务；不得重复调用模型或丢失已冻结的分歧事实。
+		result, err := o.loadTerminalPanelResult(ctx, tenantID, panel)
+		if err != nil {
+			return PanelResult{}, err
+		}
+		return o.routeHuman(ctx, tenantID, actorID, result, panelHumanReplayUpdate(panel))
+	}
 	if panel.Status == PanelHumanReview || panel.Status == PanelResolved || panel.Status == PanelFailed {
 		return o.loadTerminalPanelResult(ctx, tenantID, panel)
 	}
@@ -350,7 +371,8 @@ func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, act
 		return GradingRun{}, Grade{}, err
 	}
 	if run.ModelVersion != binding.Policy.ModelVersion || run.PromptVersion != binding.Policy.PromptVersion ||
-		run.MinConfidence != binding.Policy.MinConfidence || run.AnswerVersion != gradingContext.AnswerVersion {
+		run.MinConfidence != binding.Policy.MinConfidence || run.AnswerVersion != gradingContext.AnswerVersion ||
+		run.ExamQuestionSnapshotID != gradingContext.AssessmentSnapshot.ID {
 		return run, Grade{}, ErrIdempotencyConflict
 	}
 	if err := ensureRunMathBinding(run, gradingContext); err != nil {
@@ -394,12 +416,12 @@ func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, act
 	}
 	output, err := binding.Adapter.Grade(ctx, input)
 	if err != nil {
-		_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "panel_agent_failed"})
+		_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "panel_agent_failed", ExecutionDiagnostics: diagnosticsFromError(err, output)})
 		return run, Grade{}, fmt.Errorf("%w: %s", ErrPanelAgentFailure, role)
 	}
 	output.RequestID = requestID
 	if output.Mock || output.ModelVersion != binding.Policy.ModelVersion || output.PromptVersion != binding.Policy.PromptVersion {
-		_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "panel_model_binding_mismatch"})
+		_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "panel_model_binding_mismatch", ExecutionDiagnostics: diagnosticsFromOutput(output, "schema_invalid")})
 		return run, Grade{}, ErrInvalidModelOutput
 	}
 	if mathRun {
@@ -413,7 +435,7 @@ func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, act
 		}
 	}
 	if err != nil {
-		_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "invalid_model_output"})
+		_, _ = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunFailed, ErrorCode: "invalid_model_output", ExecutionDiagnostics: diagnosticsFromOutput(output, "schema_invalid")})
 		return run, Grade{}, ErrInvalidModelOutput
 	}
 	ApplyPromptGuard(&output, input.PromptGuard)
@@ -425,7 +447,7 @@ func (o *PanelOrchestrator) executeBlindAgent(ctx context.Context, tenantID, act
 	if err != nil {
 		return run, Grade{}, err
 	}
-	run, err = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunSucceeded, GradeID: grade.ID})
+	run, err = o.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: RunSucceeded, GradeID: grade.ID, ExecutionDiagnostics: diagnosticsFromOutput(output, "")})
 	return run, grade, err
 }
 
@@ -491,7 +513,7 @@ func newBlindPanelInput(requestID string, gradingContext Context, policy ModelPo
 }
 
 func (o *PanelOrchestrator) routeHuman(ctx context.Context, tenantID, actorID string, result PanelResult, update UpdatePanelInput) (PanelResult, error) {
-	// 先保存人工状态，再建任务并关联任务 ID；前两步失败返回空结果，关联失败仍返回已取得的成绩。
+	// 人工状态先冻结分歧事实；任务或关联写入失败后，终态回放会按 panel 身份补齐交接。
 	update.Status, update.ResolutionSource = PanelHumanReview, ResolutionHuman
 	panel, err := o.store.UpdatePanel(ctx, tenantID, result.Panel.ID, update)
 	if err != nil {
@@ -509,6 +531,14 @@ func (o *PanelOrchestrator) routeHuman(ctx context.Context, tenantID, actorID st
 	}
 	// 转交人工复核属于成功的受治理结果，不作为 agent 错误暴露给调用方；原因仍通过触发码表示。
 	return result, nil
+}
+
+func panelHumanReplayUpdate(panel GradingPanel) UpdatePanelInput {
+	return UpdatePanelInput{Status: PanelHumanReview, PrimaryARunID: panel.PrimaryARunID, PrimaryBRunID: panel.PrimaryBRunID,
+		ArbiterRunID: panel.ArbiterRunID, ScoreA: panel.ScoreA, ScoreB: panel.ScoreB, ScoreC: panel.ScoreC,
+		ScoreGap: panel.ScoreGap, CriterionGap: panel.CriterionGap, RequiredPointConflict: panel.RequiredPointConflict,
+		EvidenceConflict: panel.EvidenceConflict, ConfidenceConflict: panel.ConfidenceConflict, TriggerCodes: panel.TriggerCodes,
+		ResolutionSource: ResolutionHuman, ReviewTaskID: panel.ReviewTaskID}
 }
 
 func mergePanelUpdate(base, overlay UpdatePanelInput) UpdatePanelInput {

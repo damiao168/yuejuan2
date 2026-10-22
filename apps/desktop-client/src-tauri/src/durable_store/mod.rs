@@ -69,8 +69,9 @@ fn status_for_active_session(app: AppHandle) -> Result<DurableStoreStatus, Strin
         .path()
         .app_data_dir()
         .map_err(|error| error.to_string())?;
-    let legacy_data_present = legacy_store_exists(&data_dir)?;
     let root = store_root(&app)?;
+    // 恢复可能刚完成旧目录迁移，状态必须在恢复后采样，不能继续展示已经完成的认领。
+    let legacy_data_present = legacy_store_exists(&data_dir)?;
     let _ = master_key(&root)?;
     let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;

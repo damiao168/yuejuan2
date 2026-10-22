@@ -1,6 +1,6 @@
 import { Button, Descriptions, Space, Tag } from "antd";
 import type { ReviewTaskContext } from "../../../api/review";
-import { requiresExplicitSecondOpinion, subjectToolDescriptor } from "./reviewContext";
+import { isChoiceReview, requiresExplicitSecondOpinion, subjectToolDescriptor } from "./reviewContext";
 
 const subjectLabels: Record<string, string> = {
   chinese: "语文",
@@ -32,6 +32,7 @@ export function SubjectToolPanel({
 }>) {
   const tool = subjectToolDescriptor(context);
   const needsReveal = requiresExplicitSecondOpinion(context) && !secondOpinionVisible;
+  if (isChoiceReview(context)) return null;
   return (
     <section className="subject-tool-panel" aria-label="学科阅卷工具">
       <div className="panel-head">
@@ -39,31 +40,29 @@ export function SubjectToolPanel({
           <h2>{tool.label}</h2>
           <p>
             {subjectLabels[context.subject_tool_hints.subject_code] ?? "其他学科"}
-            {` · ${context.subject_tool_hints.archetype_code}`}
           </p>
         </div>
-        {needsReveal && context.ai_second_opinion?.available ? (
+        {needsReveal && !context.ai_failure && context.ai_second_opinion?.available ? (
           <Button onClick={onRevealSecondOpinion}>查看 AI 第二意见</Button>
         ) : null}
       </div>
       <Space wrap size={[4, 6]}>
         {tool.capabilities.map((item) => <Tag key={item}>{item}</Tag>)}
       </Space>
+      <details className="grading-reference-details"><summary>任务与评分版本详情</summary>
       <Descriptions size="small" column={1} colon={false} className="subject-tool-facts">
         <Descriptions.Item label="任务领取">
           {claimLabels[context.claim.state] ?? context.claim.state}
           {context.claim.expires_at ? ` · ${new Date(context.claim.expires_at).toLocaleTimeString()} 到期` : ""}
         </Descriptions.Item>
         <Descriptions.Item label="评分版本">
-          {`Rubric ${context.frozen_rubric.version} · 快照 ${context.question_snapshot.snapshot_version}`}
+          {`细则 ${context.frozen_rubric.version} · 快照 ${context.question_snapshot.snapshot_version}`}
         </Descriptions.Item>
         <Descriptions.Item label="证据类型">
           {context.subject_tool_hints.allowed_evidence_types.join("、") || "未配置"}
         </Descriptions.Item>
       </Descriptions>
-      <div className="annotation-entry-placeholder" data-review-task-id={context.task.id}>
-        批注将绑定本题评分点；默认仅教师可见
-      </div>
+      </details>
     </section>
   );
 }

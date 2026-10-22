@@ -99,7 +99,7 @@ const config: import("../api/modelApiConfig").ManagedModelAPIConfig = {
 	model_name: "model",
 	model_version: "v1",
 	last_capability_status: "success",
-	last_capability_probe_version: "structured-json-v3",
+	last_capability_probe_version: "structured-json-v4",
 };
 let host: HTMLDivElement, root: ReturnType<typeof createRoot>;
 function button(text: string) {
@@ -125,6 +125,23 @@ beforeEach(() => {
 afterEach(async () => {
 	await act(async () => root.unmount());
 	host.remove();
+});
+it("普通回复成功或旧结构化协议不能启用评分角色，当前结构化协议仍可选择", async () => {
+  m.list.mockResolvedValue({ bindings: [] });
+  const textOnly = { ...config, id: "text-only", last_text_status: "success" as const, last_capability_status: "failed" as const };
+  const legacy = { ...config, id: "legacy-json", last_text_status: "success" as const, last_capability_probe_version: "structured-json-v3" };
+  await act(async () => root.render(<PanelModelBindingsSection tenantID="school-a" configs={[textOnly, legacy, config]} />));
+  const select = host.querySelector<HTMLSelectElement>('select[aria-label="主评 A评分模型"]')!;
+  expect(select.querySelector<HTMLOptionElement>('option[value="text-only"]')!.disabled).toBe(true);
+  expect(select.querySelector<HTMLOptionElement>('option[value="legacy-json"]')!.disabled).toBe(true);
+  expect(select.querySelector<HTMLOptionElement>('option[value="model-a"]')!.disabled).toBe(false);
+  await act(async () => {
+    button("为 A/B/C 套用当前部署版本").click();
+    change(select, "text-only");
+  });
+  await act(async () => button("保存主评 A").click());
+  expect(m.save).not.toHaveBeenCalled();
+  expect(m.error).toHaveBeenLastCalledWith(expect.stringContaining("已通过结构化输出检测"));
 });
 it("读取失败时禁止修改和保存，成功重试后才允许创建绑定", async () => {
 	m.list
@@ -218,6 +235,45 @@ it("保存等待期间阻止刷新和重复提交，成功结果保留在当前�
 	).toBe("model-a");
 	expect(m.success).toHaveBeenCalledOnce();
 	expect(button("刷新绑定").disabled).toBe(false);
+});
+it.each([
+  ["主评 A", "primary_a"],
+  ["主评 B", "primary_b"],
+  ["仲裁 C", "arbiter"]
+])("%s 保存返回 500 时保留三个角色的未保存输入，原内容可直接重试", async (title, role) => {
+  const saved = vi.fn();
+  const dirty = vi.fn();
+  m.list.mockResolvedValue({ bindings: [] });
+  m.save.mockRejectedValueOnce(new ApiClientError(500, "panel_model_binding_failed", "pq: internal statement failure"))
+    .mockImplementationOnce(async (input) => ({ binding: { ...input, id: "saved-binding", revision: "saved-revision" } }));
+  await act(async () => root.render(<PanelModelBindingsSection tenantID="school-a"
+    configs={[config, { ...config, id: "model-b" }, { ...config, id: "model-c" }]} onSaved={saved} onDirtyChange={dirty} />));
+  await act(async () => {
+    button("为 A/B/C 套用当前部署版本").click();
+    for (const [roleTitle, modelID] of [["主评 A", "model-a"], ["主评 B", "model-b"], ["仲裁 C", "model-c"]]) {
+      change(host.querySelector<HTMLSelectElement>(`select[aria-label="${roleTitle}评分模型"]`)!, modelID);
+    }
+  });
+  await act(async () => button(`保存${title}`).click());
+  expect(m.error).toHaveBeenLastCalledWith("阅卷角色配置暂时无法保存，请稍后重试。");
+  expect(m.success).not.toHaveBeenCalled();
+  expect(saved).not.toHaveBeenCalled();
+  expect(dirty).toHaveBeenLastCalledWith(true);
+  expect(m.list).toHaveBeenCalledOnce();
+  expect(host.querySelectorAll(".platform-panel-role-dirty")).toHaveLength(3);
+  for (const [roleTitle, modelID] of [["主评 A", "model-a"], ["主评 B", "model-b"], ["仲裁 C", "model-c"]]) {
+    expect(host.querySelector<HTMLSelectElement>(`select[aria-label="${roleTitle}评分模型"]`)!.value).toBe(modelID);
+    expect(host.querySelector<HTMLSelectElement>(`select[aria-label="${roleTitle} Prompt 版本"]`)!.value).toBe("prompt-v1");
+    expect(button(`保存${roleTitle}`).disabled).toBe(false);
+  }
+  // 服务端明确拒绝后，只有重试成功的角色才从草稿转为已保存；其他角色仍需单独保存。
+  await act(async () => button(`保存${title}`).click());
+  expect(m.save).toHaveBeenCalledTimes(2);
+  expect(m.save.mock.calls[1][0]).toEqual(m.save.mock.calls[0][0]);
+  expect(m.save.mock.calls[1][0]).toMatchObject({ agent_role: role, expected_revision: "absent" });
+  expect(saved).toHaveBeenCalledOnce();
+  expect(m.success).toHaveBeenLastCalledWith(`${title} 已保存；不会改变日常对话模型`);
+  expect(host.querySelectorAll(".platform-panel-role-dirty")).toHaveLength(2);
 });
 it("相同范围刷新失败保留上次绑定和输入，重新读取成功才能保存", async () => {
 	const binding = {
@@ -397,4 +453,22 @@ it("启用开关只开放已存在的角色绑定，空绑定不会被误判为�
   expect(toggle("主评 A").checked).toBe(false);
   expect(toggle("主评 B").disabled).toBe(true);
   expect(toggle("仲裁 C").disabled).toBe(true);
+});
+
+it("表格带入的模型只填入用户选择的角色，保存后通知刷新用途摘要", async () => {
+  const saved = vi.fn();
+  m.list.mockResolvedValue({ bindings: [] });
+  m.save.mockImplementation(async (input) => ({ binding: { ...input, revision: "saved" } }));
+  await act(async () => root.render(<PanelModelBindingsSection tenantID="school-a" configs={[config]} suggestedModelID={config.id} onSaved={saved}
+    savedUses={[{ model_config_id: config.id, education_stage: "senior", subject_code: "physics", archetype_code: "short_answer", agent_role: "primary_b" }]} />));
+  await act(async () => button("高中 / 物理 / 简答题 / 主评 B").click());
+  expect(m.list).toHaveBeenLastCalledWith("school-a", "senior", "physics", "short_answer");
+  await act(async () => button("将 model 用于主评 B").click());
+  expect(host.querySelector<HTMLSelectElement>('select[aria-label="主评 A评分模型"]')!.value).toBe("");
+  expect(host.querySelector<HTMLSelectElement>('select[aria-label="主评 B评分模型"]')!.value).toBe(config.id);
+  expect(host.querySelector<HTMLSelectElement>('select[aria-label="仲裁 C评分模型"]')!.value).toBe("");
+  await act(async () => button("为 A/B/C 套用当前部署版本").click());
+  await act(async () => button("保存主评 B").click());
+  expect(m.save).toHaveBeenCalledWith(expect.objectContaining({ tenant_id: "school-a", education_stage: "senior", subject_code: "physics", archetype_code: "short_answer", agent_role: "primary_b", managed_model_api_config_id: config.id, expected_revision: "absent" }));
+  expect(saved).toHaveBeenCalledOnce();
 });

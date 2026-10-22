@@ -56,6 +56,7 @@ RETURNING `+studentSheetColumns, tenantID, sheetSerial, actorID, reason))
 	return out, tx.Commit()
 }
 
+// ReprintStudentSheet 在旧纸张锁下恢复原补印命令或创建替代品；新签发、旧序列撤销和扫描冲突一起提交。
 func (s *PostgresStore) ReprintStudentSheet(
 	ctx context.Context,
 	tenantID, sheetSerial, actorID string,
@@ -83,71 +84,17 @@ FOR UPDATE
 		return IssuedStudentBarcodes{}, err
 	}
 
-	var existingBatchID, existingSupersedes string
-	err = tx.QueryRowContext(ctx, `
-SELECT b.id::text,COALESCE(s.supersedes_sheet_id::text,'')
-FROM answer_sheet_print_batch b
-LEFT JOIN answer_sheet_print_sheet s
-  ON s.tenant_id=b.tenant_id AND s.print_batch_id=b.id
-WHERE b.tenant_id=$1 AND b.template_id=$2::uuid AND b.idempotency_key=$3
-`, tenantID, current.TemplateID, idempotencyKey).Scan(&existingBatchID, &existingSupersedes)
-	if err == nil {
-		if existingSupersedes != sheetSerial {
-			return IssuedStudentBarcodes{}, ErrConflict
-		}
-		out, loadErr := loadIssuedStudentBarcodesTx(ctx, tx, tenantID, existingBatchID)
-		if loadErr != nil {
-			return IssuedStudentBarcodes{}, loadErr
-		}
+	// 先恢复原命令，之后才检查当前模板和名册，已接受命令不受后续状态变化影响。
+	out, recovered, err := recoverStudentSheetReprintTx(ctx, tx, tenantID, sheetSerial, current.TemplateID, idempotencyKey)
+	if err != nil {
+		return IssuedStudentBarcodes{}, err
+	}
+	if recovered {
 		return out, tx.Commit()
 	}
-	if err != sql.ErrNoRows {
+	layout, contentHash, err := loadStudentSheetReprintLayoutTx(ctx, tx, tenantID, sheetSerial, current)
+	if err != nil {
 		return IssuedStudentBarcodes{}, err
-	}
-	var replacementBatchID string
-	err = tx.QueryRowContext(ctx, `
-SELECT print_batch_id::text
-FROM answer_sheet_print_sheet
-WHERE tenant_id=$1 AND supersedes_sheet_id=$2::uuid
-`, tenantID, sheetSerial).Scan(&replacementBatchID)
-	if err == nil {
-		return IssuedStudentBarcodes{}, ErrConflict
-	}
-	if err != sql.ErrNoRows {
-		return IssuedStudentBarcodes{}, err
-	}
-
-	var layoutRaw []byte
-	var contentHash string
-	if err = tx.QueryRowContext(ctx, `
-SELECT content_hash,layout
-FROM answer_sheet_template
-WHERE tenant_id=$1 AND id=$2::uuid AND exam_id=$3::uuid
-  AND status='locked' AND deleted_at IS NULL
-FOR SHARE
-`, tenantID, current.TemplateID, current.ExamID).Scan(&contentHash, &layoutRaw); err != nil {
-		return IssuedStudentBarcodes{}, ErrInvalidTransition
-	}
-	if contentHash != current.TemplateContentHash {
-		return IssuedStudentBarcodes{}, ErrInvalidTransition
-	}
-	var layout templateLayout
-	if json.Unmarshal(layoutRaw, &layout) != nil || len(layout.Pages) == 0 {
-		return IssuedStudentBarcodes{}, ErrInvalidTransition
-	}
-	var inRoster bool
-	if err = tx.QueryRowContext(ctx, `
-SELECT EXISTS (
-  SELECT 1
-  FROM exam_candidate_snapshot candidate
-  WHERE candidate.tenant_id=$1 AND candidate.exam_id=$2::uuid
-    AND candidate.student_id=$3::uuid
-)
-`, tenantID, current.ExamID, current.StudentID).Scan(&inRoster); err != nil {
-		return IssuedStudentBarcodes{}, err
-	}
-	if !inRoster {
-		return IssuedStudentBarcodes{}, ErrInvalidTransition
 	}
 	requestHash := studentBarcodeRequestHash([]string{current.StudentID})
 	var printBatchID string
@@ -179,23 +126,12 @@ VALUES ($1::uuid,$2,$3::uuid,$4::uuid,$5::uuid,$6,$7::uuid,1,$8::uuid)
 	set := IssuedStudentBarcodeSet{
 		StudentID: current.StudentID, SheetSerial: newSerial, Pages: []IssuedPageBarcode{},
 	}
-	for _, page := range layout.Pages {
-		nonce := uuid.NewString()
-		value, signErr := s.barcodeKeyring.Sign(BarcodeClaims{
-			TenantID: tenantID, ExamID: current.ExamID, TemplateID: current.TemplateID,
-			TemplateContentHash: contentHash, PageNo: page.PageNo, Nonce: nonce,
-			StudentID: current.StudentID, SheetSerial: newSerial,
-		})
-		if signErr != nil {
-			return IssuedStudentBarcodes{}, ErrInvalidTransition
-		}
-		if _, err = tx.ExecContext(ctx, `
-INSERT INTO answer_sheet_print_page (tenant_id,print_sheet_id,page_no,nonce,barcode_value)
-VALUES ($1,$2::uuid,$3,$4::uuid,$5)
-`, tenantID, newSerial, page.PageNo, nonce, value); err != nil {
-			return IssuedStudentBarcodes{}, err
-		}
-		set.Pages = append(set.Pages, IssuedPageBarcode{PageNo: page.PageNo, Value: value})
+	set.Pages, err = s.issueStudentBarcodePagesTx(ctx, tx, BarcodeClaims{
+		TenantID: tenantID, ExamID: current.ExamID, TemplateID: current.TemplateID,
+		TemplateContentHash: contentHash, StudentID: current.StudentID, SheetSerial: newSerial,
+	}, layout.Pages)
+	if err != nil {
+		return IssuedStudentBarcodes{}, err
 	}
 	if current.Status != "revoked" {
 		if _, err = tx.ExecContext(ctx, `
@@ -209,12 +145,84 @@ WHERE tenant_id=$1 AND id=$2::uuid
 	if err = s.reconcileSheetSerialTx(ctx, tx, tenantID, sheetSerial); err != nil {
 		return IssuedStudentBarcodes{}, err
 	}
-	out := IssuedStudentBarcodes{
+	out = IssuedStudentBarcodes{
 		PrintBatchID: printBatchID, TemplateID: current.TemplateID,
 		TemplateContentHash: contentHash, KeyID: s.barcodeKeyring.ActiveKeyID,
 		Students: []IssuedStudentBarcodeSet{set}, IssuedAt: issuedAt.UTC(),
 	}
 	return out, tx.Commit()
+}
+
+// 调用方持有旧纸张锁；同一幂等标识只有替代同一纸张时才能恢复，查不到原命令时返回 recovered=false。
+func recoverStudentSheetReprintTx(ctx context.Context, tx *sql.Tx, tenantID, sheetSerial, templateID, idempotencyKey string) (IssuedStudentBarcodes, bool, error) {
+	var existingBatchID, existingSupersedes string
+	err := tx.QueryRowContext(ctx, `
+SELECT b.id::text,COALESCE(s.supersedes_sheet_id::text,'')
+FROM answer_sheet_print_batch b
+LEFT JOIN answer_sheet_print_sheet s
+  ON s.tenant_id=b.tenant_id AND s.print_batch_id=b.id
+WHERE b.tenant_id=$1 AND b.template_id=$2::uuid AND b.idempotency_key=$3
+`, tenantID, templateID, idempotencyKey).Scan(&existingBatchID, &existingSupersedes)
+	if err == sql.ErrNoRows {
+		return IssuedStudentBarcodes{}, false, nil
+	}
+	if err != nil {
+		return IssuedStudentBarcodes{}, false, err
+	}
+	if existingSupersedes != sheetSerial {
+		return IssuedStudentBarcodes{}, false, ErrConflict
+	}
+	out, err := loadIssuedStudentBarcodesTx(ctx, tx, tenantID, existingBatchID)
+	return out, true, err
+}
+
+// 只为尚无替代品、模板哈希仍匹配且学生仍在考试名册内的纸张补印；模板共享锁保持到外层事务结束。
+func loadStudentSheetReprintLayoutTx(ctx context.Context, tx *sql.Tx, tenantID, sheetSerial string, current StudentSheet) (templateLayout, string, error) {
+	var replacementBatchID string
+	err := tx.QueryRowContext(ctx, `
+SELECT print_batch_id::text
+FROM answer_sheet_print_sheet
+WHERE tenant_id=$1 AND supersedes_sheet_id=$2::uuid
+`, tenantID, sheetSerial).Scan(&replacementBatchID)
+	if err == nil {
+		return templateLayout{}, "", ErrConflict
+	}
+	if err != sql.ErrNoRows {
+		return templateLayout{}, "", err
+	}
+	var layoutRaw []byte
+	var contentHash string
+	if err = tx.QueryRowContext(ctx, `
+SELECT content_hash,layout
+FROM answer_sheet_template
+WHERE tenant_id=$1 AND id=$2::uuid AND exam_id=$3::uuid
+  AND status='locked' AND deleted_at IS NULL
+FOR SHARE
+`, tenantID, current.TemplateID, current.ExamID).Scan(&contentHash, &layoutRaw); err != nil {
+		return templateLayout{}, "", ErrInvalidTransition
+	}
+	if contentHash != current.TemplateContentHash {
+		return templateLayout{}, "", ErrInvalidTransition
+	}
+	var layout templateLayout
+	if json.Unmarshal(layoutRaw, &layout) != nil || len(layout.Pages) == 0 {
+		return templateLayout{}, "", ErrInvalidTransition
+	}
+	var inRoster bool
+	if err = tx.QueryRowContext(ctx, `
+SELECT EXISTS (
+  SELECT 1
+  FROM exam_candidate_snapshot candidate
+  WHERE candidate.tenant_id=$1 AND candidate.exam_id=$2::uuid
+    AND candidate.student_id=$3::uuid
+)
+`, tenantID, current.ExamID, current.StudentID).Scan(&inRoster); err != nil {
+		return templateLayout{}, "", err
+	}
+	if !inRoster {
+		return templateLayout{}, "", ErrInvalidTransition
+	}
+	return layout, contentHash, nil
 }
 
 type sheetCapturePageState struct {

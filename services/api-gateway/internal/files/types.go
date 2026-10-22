@@ -153,6 +153,10 @@ type MissingObjectRecovery interface {
 }
 
 func AllowsAsset(scope auth.AccessScope, asset FileAsset) bool {
+	// 参考图只由精确题目/任务清单路由读取，学校或考试的大范围不能旁路。
+	if asset.OwnerType == "question_reference_crop" {
+		return false
+	}
 	if scope.TenantID == "" || asset.TenantID != scope.TenantID {
 		return false
 	}

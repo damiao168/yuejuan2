@@ -25,7 +25,7 @@ function MarkdownLink({ children, href, node, id }: Readonly<ComponentProps<"a">
       aria-describedby={`${prefix}footnote-label`}
       aria-label={node?.properties.dataFootnoteBackref !== undefined ? "返回引用" : "查看注释"}
       onClick={(event) => {
-        // 应用使用 hash 路由；只在当前内容内定位，不修改 location.hash。
+        // 脚注只在当前回复内定位，不改变业务地址或浏览器历史。
         event.preventDefault();
         const root = event.currentTarget.closest(".math-markdown");
         const target = root?.querySelector(`[id="${CSS.escape(href.slice(1))}"]`);

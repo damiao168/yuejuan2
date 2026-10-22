@@ -120,17 +120,18 @@ export function useOMRCalibration({ template, enabled, message, formatError }: O
     return invalidateRequests;
   }, [enabled, reload, template?.id]);
 
+  const selectedAnswerSegmentId = selectedCase?.answer_segment_id;
   useEffect(() => {
     let active = true;
     if (imageObjectUrlRef.current) URL.revokeObjectURL(imageObjectUrlRef.current);
     imageObjectUrlRef.current = undefined;
     setImageUrl(undefined);
-    if (!selectedCase) {
+    if (!selectedAnswerSegmentId) {
       setImageLoading(false);
       return () => { active = false; };
     }
     setImageLoading(true);
-    void downloadOMRCalibrationCaseImage(selectedCase.answer_segment_id)
+    void downloadOMRCalibrationCaseImage(selectedAnswerSegmentId)
       .then((download) => {
         if (!active) return;
         const url = URL.createObjectURL(download.blob);
@@ -146,9 +147,10 @@ export function useOMRCalibration({ template, enabled, message, formatError }: O
       if (imageObjectUrlRef.current) URL.revokeObjectURL(imageObjectUrlRef.current);
       imageObjectUrlRef.current = undefined;
     };
-  }, [formatError, message, selectedCase?.answer_segment_id]);
+  }, [formatError, message, selectedAnswerSegmentId]);
 
   // 每份样本重新盲标，不能把上份选项作为下一份的默认答案。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 每份校准样本必须重新盲标；不能把上一份选项直接带到下一份。
   useEffect(() => setExpectedOptions([]), [selectedCase?.id]);
 
   const open = useCallback(async (calibrationId: string) => {

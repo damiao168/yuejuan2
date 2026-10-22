@@ -308,15 +308,21 @@ func TestBatch6ManagedProbeCapabilityPersistence(t *testing.T) {
 	result.CapabilityCheck.Code, result.CapabilityCheck.Message = "invalid", ""
 	result.Message = strings.Repeat("x", 300)
 	values = managedProbePersistence(&result)
-	if !values.UpdateCapability || values.Status != "success" || values.CapabilityStatus != "failed" || values.CapabilityMessage != values.Message || len(values.Message) > 256 {
+	if !values.UpdateCapability || values.Status != "success" || values.CapabilityStatus != "failed" || values.CapabilityMessage != strings.Repeat("x", 256) || len(values.Message) > 256 {
 		t.Fatalf("deterministic failure not persisted: %#v", values)
 	}
 }
 
 type batch6UpdateProber struct {
-	full, quick int
-	seen        ManagedAPIConnection
-	result      ManagedAPIProbeResult
+	full, quick, text int
+	seen              ManagedAPIConnection
+	result            ManagedAPIProbeResult
+}
+
+func (p *batch6UpdateProber) ProbeText(_ context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult {
+	p.text++
+	p.seen = connection
+	return managedTextProbeFixture(p.result)
 }
 
 func (p *batch6UpdateProber) Probe(_ context.Context, connection ManagedAPIConnection) ManagedAPIProbeResult {
@@ -338,12 +344,12 @@ type batch6ManagedUpdateCase struct {
 	wantStatus int
 }
 
-// 默认模型更换必须先完整能力探测，备用模型仅快速探测；失败后旧配置和密钥必须保留。
+// 默认聊天模型更换必须先验证文本生成，备用模型仅快速探测；失败后旧配置和密钥必须保留。
 // 检查探测模式、调用次数和被探测的新连接，随后才读取最终存储状态。
 func verifyBatch6ManagedUpdateProbe(t *testing.T, response *httptest.ResponseRecorder, prober *batch6UpdateProber, test batch6ManagedUpdateCase, update ManagedAPIConfigUpdateInput) {
 	t.Helper()
-	if response.Code != test.wantStatus || (test.isDefault && (prober.full != 1 || prober.quick != 0)) || (!test.isDefault && (prober.full != 0 || prober.quick != 1)) || prober.seen.APIKey != update.APIKey || prober.seen.Config.ModelName != update.ModelName {
-		t.Fatalf("status=%d full=%d quick=%d seen=%#v body=%s", response.Code, prober.full, prober.quick, prober.seen.Config, response.Body.String())
+	if response.Code != test.wantStatus || prober.full != 0 || (test.isDefault && (prober.text != 1 || prober.quick != 0)) || (!test.isDefault && (prober.text != 0 || prober.quick != 1)) || prober.seen.APIKey != update.APIKey || prober.seen.Config.ModelName != update.ModelName {
+		t.Fatalf("status=%d full=%d text=%d quick=%d seen=%#v body=%s", response.Code, prober.full, prober.text, prober.quick, prober.seen.Config, response.Body.String())
 	}
 }
 
@@ -387,7 +393,7 @@ func exerciseBatch6ManagedUpdate(t *testing.T, test batch6ManagedUpdateCase) {
 	}
 	wantMode := "quick"
 	if test.isDefault {
-		wantMode = "capability"
+		wantMode = "text"
 	}
 	if connection.APIKey != update.APIKey || connection.Config.ModelName != update.ModelName || connection.Config.LastProbeMode != wantMode {
 		t.Fatalf("successful update incomplete: %#v", connection.Config)
@@ -397,7 +403,7 @@ func exerciseBatch6ManagedUpdate(t *testing.T, test batch6ManagedUpdateCase) {
 func TestBatch6ManagedUpdateProbesBeforeSaving(t *testing.T) {
 	for _, test := range []batch6ManagedUpdateCase{
 		{name: "default failure retains prior secret", isDefault: true, wantStatus: http.StatusUnprocessableEntity},
-		{name: "default success full capability", isDefault: true, ok: true, wantStatus: http.StatusOK},
+		{name: "default success text generation", isDefault: true, ok: true, wantStatus: http.StatusOK},
 		{name: "backup success quick only", ok: true, wantStatus: http.StatusOK},
 	} {
 		t.Run(test.name, func(t *testing.T) {

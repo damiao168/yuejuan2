@@ -27,7 +27,7 @@ function policy(version: number): TenantModelPolicy {
   return { id: "policy", tenant_id: "school-a", policy_key: "default", display_name: "学校使用策略", mode: "local_only", external_enabled: false, text_export_enabled: false, image_export_enabled: false, allowed_deployments: [], allowed_model_config_ids: [], max_cost_micros_per_question: 1000000, max_cost_micros_per_exam: 100000000, fallback_mode: "manual_only", status: "active", version, updated_at: "" };
 }
 beforeEach(() => {
-  vi.clearAllMocks(); window.location.hash = "/model-api-configs?tenant_id=school-a&view=policy";
+  vi.clearAllMocks(); window.history.replaceState({ preserved: true }, "", "/admin/platform/model-config?tenant_id=school-a&tab=governance&view=policy");
   mocks.form.values = {};
   mocks.form.setFieldsValue.mockImplementation((values: Record<string, unknown>) => Object.assign(mocks.form.values, values));
   mocks.form.validateFields.mockImplementation(async () => ({ ...mocks.form.values }));
@@ -36,6 +36,19 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("学校使用策略实际提交", () => {
+  it("切换治理视图保留学校、范围参数和浏览历史状态，地址不含 #", async () => {
+    window.history.replaceState({ preserved: true }, "", "/admin/platform/model-config?tenant_id=school-a&tab=governance&view=policy&subject=english");
+    render(<ManagedGovernanceWorkspace tenantID="school-a" configs={[]} />);
+    await screen.findByText("学校使用策略");
+    fireEvent.change(screen.getByLabelText("治理视图"), { target: { value: "prompts" } });
+    expect(window.location.pathname).toBe("/admin/platform/model-config");
+    expect(window.location.hash).toBe("");
+    expect(new URLSearchParams(window.location.search).get("tenant_id")).toBe("school-a");
+    expect(new URLSearchParams(window.location.search).get("subject")).toBe("english");
+    expect(new URLSearchParams(window.location.search).get("view")).toBe("prompts");
+    expect(window.history.state).toEqual({ preserved: true });
+  });
+
   it("美元输入精确保存；另一报告刷新不覆盖正在编辑的原策略版本，关闭外部模型提交空名单", async () => {
     const onSaving = vi.fn();
     render(<ManagedGovernanceWorkspace tenantID="school-a" configs={[]} onSavingChange={onSaving} />);

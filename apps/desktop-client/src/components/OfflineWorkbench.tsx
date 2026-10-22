@@ -818,6 +818,7 @@ function PackageView({ pkg, imagePreview, onImageReadableChange }: Readonly<{
   onImageReadableChange: (preview: OfflineAnswerPreview, readable: boolean) => void;
 }>) {
   const [revealedSecondOpinion, setRevealedSecondOpinion] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 换题或重新下载材料都撤回第二意见展示，避免新独立评分沿用上一份材料的已揭示状态。
   useEffect(() => { setRevealedSecondOpinion(false); }, [pkg?.task.id, pkg?.downloadedAt]);
   const reportImageReadability = useCallback((readable: boolean) => {
     if (imagePreview) onImageReadableChange(imagePreview, readable);

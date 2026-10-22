@@ -3,6 +3,7 @@ import { getPaperImportUserMessage } from "../../api/client";
 import type { PaperImportIssue, PaperImportJob, Question } from "../../api/papers";
 import { hasBlockingImportIssues, hasNoExamContentDetected, paperImportTeacherProgress, paperImportSummary } from "./materials";
 import { PaperImportReviewPanel } from "./PaperImportReviewPanel";
+import { PaperImportRecognitionPreview } from "./PaperImportRecognitionPreview";
 import { importExcludedPageFurniture, importProgressTiming, importRetainedDraftDescription, importReviewDescription, importVisibleIssues, isImportStructureConfirmed } from "./paperImportPresentation";
 import type { usePaperImportWorkflow } from "./usePaperImportWorkflow";
 
@@ -145,6 +146,13 @@ function VisibleIssueAlert({ job }: Readonly<{ job: PaperImportJob }>) {
     </li>)}</ul>} />;
 }
 
+function EmptyResultsNotice({ job, workflow }: Readonly<{ job: PaperImportJob; workflow: ImportWorkflow }>) {
+  if (job.status === "processing" || job.status === "applied" || isImportStructureConfirmed(job)
+    || workflow.reviewDrafts.length || hasNoExamContentDetected(job)) return null;
+  return <Alert type={job.status === "failed" ? "warning" : "info"} showIcon message="暂无可展示的题目识别结果"
+    description={job.status === "failed" ? "本次识别未得到可用题目。请查看失败提示和资料来源，再决定是否重试。" : "当前任务没有题目草稿，请查看资料来源并核对题目、答案和解析是否完整。"} />;
+}
+
 export function PaperImportResults({ job, workflow, existingQuestions, onReview }: Readonly<{
   job: PaperImportJob; workflow: ImportWorkflow; existingQuestions?: Question[]; onReview: () => void;
 }>) {
@@ -156,6 +164,8 @@ export function PaperImportResults({ job, workflow, existingQuestions, onReview 
     <PaperImportProgress job={job} />
     <RetainedDraftNotice job={job} count={workflow.reviewDrafts.length} />
     <DraftResults job={job} workflow={workflow} existingQuestions={existingQuestions} />
+    {job.status === "applied" || isImportStructureConfirmed(job) ? <PaperImportRecognitionPreview key={`${job.id}:${job.generation}`} job={job} onOpenSource={(fileAssetID, pageNo) => void workflow.openImportSource(fileAssetID, pageNo)} /> : null}
+    <EmptyResultsNotice job={job} workflow={workflow} />
     <ExcludedFurniture job={job} onOpenSource={workflow.openImportSource} />
     <AppliedResult job={job} onReview={onReview} />
     <VisibleIssueAlert job={job} />

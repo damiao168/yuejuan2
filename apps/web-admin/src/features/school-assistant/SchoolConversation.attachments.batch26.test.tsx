@@ -39,7 +39,7 @@ const user: SessionUser = {
 
 function file(name: string) { return new File([`正文 ${name}`], name, { type: "text/plain" }); }
 function attachment(input: File): SchoolChatAttachment {
-  return { name: input.name, media_type: input.type, size: input.size, content: `正文 ${input.name}` };
+  return { name: input.name, media_type: input.type, size: input.size, content: input.type.startsWith("image/") ? "data:image/png;base64,iVBORw==" : `正文 ${input.name}` };
 }
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -74,12 +74,84 @@ describe("学校对话附件批次边界", () => {
     target.dispatchEvent(new Event("change", { bubbles: true }));
   }
   async function select(files: File[]) { await act(async () => dispatchFiles(files)); }
+  function paste(files: File[], text = "", filesOnly = false) {
+    const event = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "clipboardData", { value: {
+      items: filesOnly ? [] : files.map(file => ({ kind: "file", type: file.type, getAsFile: () => file })),
+      files, getData: (type: string) => type === "text/plain" ? text : "<img src='https://example.invalid/private.png'>"
+    } });
+    host.querySelector("textarea")!.dispatchEvent(event);
+    return event;
+  }
+  const image = (name = "截图.png") => new File(["image"], name, { type: "image/png" });
   function names() { return [...host.querySelectorAll(".school-chat-attachments b")].map((item) => item.textContent); }
   async function click(name: string) {
     const button = [...host.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.getAttribute("aria-label") === name || item.textContent === name);
     if (!button) throw new Error(`Missing button: ${name}`);
     await act(async () => button.click());
   }
+
+  it.each([false, true])("粘贴图片先预览，只有点击发送才提交图片（filesOnly=%s）", async filesOnly => {
+    const selected = image();
+    await render();
+    let event!: Event;
+    await act(async () => { event = paste([selected], "", filesOnly); });
+    expect(event.defaultPrevented).toBe(true);
+    expect(mocks.attachment.mock.calls.map(([file]) => file)).toEqual([selected]);
+    expect(host.querySelector<HTMLImageElement>(".school-chat-attachments img")?.alt).toBe("截图.png");
+    expect(mocks.stream).not.toHaveBeenCalled();
+    await click("发送消息");
+    expect(mocks.stream.mock.calls[0][0][0]).toMatchObject({ role: "user", content: "", attachments: [attachment(selected)] });
+  });
+
+  it("普通文字粘贴不被拦截，图文混合粘贴保留文字且不重复读取同一张图片", async () => {
+    await render();
+    let plain!: Event;
+    await act(async () => { plain = paste([], "纯文本"); });
+    expect(plain.defaultPrevented).toBe(false);
+    await act(async () => { paste([image()], "看看这道题"); });
+    expect(host.querySelector("textarea")?.value).toBe("看看这道题");
+    expect(mocks.attachment).toHaveBeenCalledTimes(1);
+    await click("移除附件：截图.png");
+    expect(names()).toEqual([]);
+    expect(host.querySelector("textarea")?.value).toBe("看看这道题");
+    await click("发送消息");
+    expect(mocks.stream.mock.calls[0][0][0].attachments).toBeUndefined();
+  });
+
+  it("粘贴图片与文件共用三个附件名额", async () => {
+    await render(); await select([file("资料.txt"), file("补充.txt")]);
+    await act(async () => { paste([image("第一.png"), image("第二.png")]); });
+    expect(names()).toEqual(["资料.txt", "补充.txt", "第一.png"]);
+    expect(mocks.warning).toHaveBeenCalledWith("每次最多上传 3 个文件");
+    await act(async () => { paste([image("满额.png")]); });
+    expect(mocks.attachment).toHaveBeenCalledTimes(3);
+  });
+
+  it("粘贴后立即发送不会漏掉仍在读取的图片，切换新对话丢弃晚到图片", async () => {
+    const pending = deferred<SchoolChatAttachment>();
+    const selected = image();
+    mocks.attachment.mockReturnValueOnce(pending.promise);
+    await render();
+    await act(async () => {
+      const input = host.querySelector("textarea")!;
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(input, "请看这张图片");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => {
+      paste([selected]);
+      host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      paste([image("重复.png")]);
+    });
+    expect(mocks.stream).not.toHaveBeenCalled();
+    expect(mocks.attachment).toHaveBeenCalledTimes(1);
+    const signal = mocks.attachment.mock.calls[0][1] as AbortSignal;
+    await click("开启新对话");
+    expect(signal.aborted).toBe(true);
+    await act(async () => { pending.resolve(attachment(selected)); });
+    expect(names()).toEqual([]);
+    expect(mocks.error).not.toHaveBeenCalled();
+  });
 
   it("超出总名额只读取前三份，保持选择顺序并提示限制", async () => {
     const files = [file("第一份.txt"), file("第二份.txt"), file("第三份.txt"), file("第四份.txt")];

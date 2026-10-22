@@ -212,19 +212,28 @@ func (s *MemoryStore) ListAnswerRegions(_ context.Context, tenantID string, subm
 	return []AnswerRegion{}, nil
 }
 
-func (s *MemoryStore) ApplyPageQualityResult(_ context.Context, tenantID string, input ApplyPageQualityInput) (SubmissionPage, error) {
+func (s *MemoryStore) ApplyPageQualityResult(ctx context.Context, tenantID string, input ApplyPageQualityInput) (SubmissionPage, error) {
+	page, _, err := s.ApplyPageQualityProjection(ctx, tenantID, input)
+	return page, err
+}
+
+// ApplyPageQualityProjection 在同锁内核对来源与冻结状态；false 表示只接收运行历史、不推进当前页面。
+func (s *MemoryStore) ApplyPageQualityProjection(_ context.Context, tenantID string, input ApplyPageQualityInput) (SubmissionPage, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.submissions[input.SubmissionID]
 	if !ok || item.TenantID != tenantID {
-		return SubmissionPage{}, ErrNotFound
+		return SubmissionPage{}, false, ErrNotFound
 	}
 	page, ok := s.pages[input.PageID]
 	if !ok || page.TenantID != tenantID || page.SubmissionID != input.SubmissionID {
-		return SubmissionPage{}, ErrNotFound
+		return SubmissionPage{}, false, ErrNotFound
 	}
 	if input.QualityStatus != "passed" && input.QualityStatus != "review" && input.QualityStatus != "failed" {
-		return SubmissionPage{}, ErrInvalidInput
+		return SubmissionPage{}, false, ErrInvalidInput
+	}
+	if item.Status == "ready_for_ocr" || item.Status == "rejected" || input.SourceFileAssetID != "" && page.FileAssetID != input.SourceFileAssetID || input.LatestQualityRunID != "" && page.LatestQualityRunID == input.LatestQualityRunID {
+		return page, false, nil
 	}
 	page.LatestQualityRunID = input.LatestQualityRunID
 	page.NormalizedFileAssetID = input.NormalizedFileAssetID
@@ -232,7 +241,7 @@ func (s *MemoryStore) ApplyPageQualityResult(_ context.Context, tenantID string,
 	page.QualityIssues = append([]QualityIssue{}, input.QualityIssues...)
 	s.pages[input.PageID] = page
 	s.aggregateQualityLocked(tenantID, input.SubmissionID)
-	return page, nil
+	return page, true, nil
 }
 
 func (s *MemoryStore) OverridePageQuality(_ context.Context, tenantID string, pageID string, actorID string, input OverridePageQualityInput) (SubmissionPage, error) {
@@ -354,6 +363,9 @@ func (s *MemoryStore) pagesForLocked(tenantID string, submissionID string) []Sub
 func (s *MemoryStore) aggregateQualityLocked(tenantID string, submissionID string) {
 	item, ok := s.submissions[submissionID]
 	if !ok || item.TenantID != tenantID {
+		return
+	}
+	if item.Status == "ready_for_ocr" || item.Status == "rejected" {
 		return
 	}
 	pages := s.pagesForLocked(tenantID, submissionID)

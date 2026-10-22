@@ -4,12 +4,16 @@ import { getPaperImportUserMessage } from "../../api/client";
 import { EmptyState, ErrorState, LoadingState } from "../../components/PageState";
 import { PaperImportWorkspace } from "../paper-import/PaperImportWorkspace";
 import { PaperStructurePanel } from "../paper-import/PaperStructurePanel";
-import { BankQuestionPicker } from "../question-bank/BankQuestionPicker";
+import { PaperMaterialsConfirmation } from "../paper-import/PaperMaterialsConfirmation";
 import { HistoryQuestionImporter } from "../question-bank/HistoryQuestionImporter";
 import { PaperQuestionIndex } from "./PaperQuestionIndex";
 import { PaperQuestionDetail } from "./PaperQuestionDetail";
-import { questionEditorToggleLabel, questionSummary } from "./paperQuestionPresentation";
+import { PaperGroupedQuestionScores } from "./PaperGroupedQuestionScores";
+import { PaperQuestionConfirmation } from "./PaperQuestionConfirmation";
+import { PaperQuestionIssues } from "./PaperQuestionIssues";
+import { questionEditorToggleLabel, questionNeedsAnswer, questionNeedsRubric } from "./paperQuestionPresentation";
 import type { PaperRubricViewContext } from "./paperRubricViewTypes";
+import { PaperRubricJobsButton, PaperRubricJobsProvider } from "./PaperRubricJobs";
 
 type ViewProps = Readonly<{ context: PaperRubricViewContext }>;
 
@@ -18,12 +22,12 @@ function paperContentReady({ config, selectedExam }: PaperRubricViewContext) {
 }
 
 export function PaperRubricView({ context }: ViewProps) {
-  return <div className="page-stack">
+  return <PaperRubricJobsProvider context={context}><div className="page-stack">
     {!paperContentReady(context) && <Form form={context.questionWorkflow.form} component={false} />}
     <PaperStandaloneHeader context={context} />
     <PaperRubricContent context={context} />
     <PaperSourceDrawer context={context} />
-  </div>;
+  </div></PaperRubricJobsProvider>;
 }
 
 function PaperStandaloneHeader({ context }: ViewProps) {
@@ -51,9 +55,6 @@ function PaperBankActions({ context }: ViewProps) {
   const { options, selectedExam, config, actions } = context;
   if (!selectedExam) return null;
   const editableExam = selectedExam.status === "draft" || selectedExam.status === "configured";
-  if (editableExam && options.canManage && options.canReadQuestionBank) {
-    return <BankQuestionPicker key={`${options.questionBankScope}:${selectedExam.id}`} scopeKey={options.questionBankScope} examId={selectedExam.id} nextOrder={config.questions.length + 1} onCopied={actions.onBankCopied} />;
-  }
   if (!editableExam && options.canImportQuestionBank && config.questions.length) {
     const openBank = options.onNavigate ? (path?: string) => options.onNavigate?.(path ?? "/question-bank") : undefined;
     return <HistoryQuestionImporter key={`${options.questionBankScope}:${selectedExam.id}`} scopeKey={options.questionBankScope}
@@ -79,7 +80,7 @@ function PaperReadyContent({ context }: ViewProps) {
   const showEditor = options.initialView === "questions" || questionWorkflow.showQuestionEditor;
   return <>
     <PaperMaterialContent context={context} />
-    {showQuestions && <><PaperValidationNotice context={context} /><PaperQuestionSummary context={context} /></>}
+    {showQuestions && <><PaperQuestionTools context={context} /><PaperValidationNotice context={context} /></>}
     {showQuestions && showEditor && <section className="paper-workbench" id="paper-question-workbench">
       <PaperQuestionIndex context={context} /><PaperQuestionDetail context={context} />
     </section>}
@@ -89,15 +90,25 @@ function PaperReadyContent({ context }: ViewProps) {
 function PaperMaterialContent({ context }: ViewProps) {
   const { options, config, latestPaperImport, state, importWorkflow, actions, questionWorkflow, selectedExam } = context;
   const suggestUpload = options.mode === "embedded" && options.initialView === "questions" && !config.papers.length && !config.paperImports.length;
+  const canConfirmMaterials = options.canManage && (selectedExam?.status === "draft" || selectedExam?.status === "configured");
+  const materialOperationBusy = state.unsavedWork || state.saveBusy || state.saveRefreshPending || importWorkflow.reviewDirty
+    || importWorkflow.parsing || importWorkflow.updatingImportSources || importWorkflow.savingImportReview || importWorkflow.fillingImportContent;
+  const adoptedMaterials = latestPaperImport?.status === "applied" || Boolean(latestPaperImport && latestPaperImport.structure_confirmed_generation === latestPaperImport.generation);
+  // 登记状态随资料标题展示；已有登记只恢复读取，不重复采用题目结构。
+  const materialConfirmation = latestPaperImport && adoptedMaterials ? <PaperMaterialsConfirmation
+    job={latestPaperImport} papers={config.papers} canManage={canConfirmMaterials} disabled={materialOperationBusy}
+    disabledReason={state.saveRefreshPending ? "请先重新读取保存结果，再确认考试资料。" : state.unsavedWork || importWorkflow.reviewDirty ? "请先保存当前修改，再确认考试资料。" : undefined}
+    onConfirmed={actions.onStructureAdopted} /> : undefined;
   return <>
     {suggestUpload && <Alert type="info" showIcon message="尚未上传考试资料"
       description="推荐先上传试卷、答案或评分标准，系统可自动识别题目和分值；也可以继续手动添加题目。"
       action={options.onNavigate && selectedExam ? <Button size="small" onClick={() => options.onNavigate?.(`/exams/${encodeURIComponent(selectedExam.id)}/paper`)}>上传资料</Button> : undefined} />}
+    {latestPaperImport?.status === "review_required" && !adoptedMaterials && canConfirmMaterials && <PaperStructurePanel
+      job={latestPaperImport} papers={config.papers} disabled={materialOperationBusy} onAdopted={actions.onStructureAdopted} />}
     {options.initialView === "materials" && <PaperImportWorkspace canManage={options.canManage} latestPaperImport={latestPaperImport}
+      headerStatus={materialConfirmation}
       existingQuestions={config.questions} workflow={importWorkflow} setShowQuestionEditor={questionWorkflow.setShowQuestionEditor}
       initialExamId={options.fixedExamId ?? options.initialExamId} onNavigate={options.onNavigate} connectionError={config.importConnectionError} onRecheck={config.retryImportConnection} />}
-    {latestPaperImport?.status === "review_required" && options.canManage && <PaperStructurePanel job={latestPaperImport}
-      disabled={state.unsavedWork || importWorkflow.reviewDirty} onAdopted={actions.onStructureAdopted} />}
   </>;
 }
 
@@ -114,29 +125,37 @@ function PaperValidationNotice({ context }: ViewProps) {
     message={validation.valid ? "试卷配置完整" : `配置检查发现 ${validation.issues.length} 项问题`} description={description} />;
 }
 
-function PaperQuestionSummary({ context }: ViewProps) {
-  const { config, latestPaperImport, structureConfirmed, pendingDrafts, importWorkflow, options, state, questionWorkflow } = context;
-  const summary = questionSummary(config.questions, latestPaperImport, structureConfirmed);
-  return <section id="paper-question-summary" className="workspace-section paper-question-summary">
-    <div className="paper-question-summary-title"><span className="preparation-kicker">题目配置</span><h2>小题与分值</h2>{options.mode === "embedded" ? <PaperBankActions context={context} /> : null}</div>
-    <div className="paper-question-summary-facts" aria-label="题目配置概览">
-      <span><strong>{config.questions.length}</strong> 道{structureConfirmed || !latestPaperImport ? "正式" : "已配置"}题目</span>
-      <span>{summary.pendingScoreCount ? "已确认分值 " : ""}<strong>{summary.totalScore}</strong> 分</span>
-      {summary.pendingScoreCount > 0 && <span className="needs-attention">分值待确认 <strong>{summary.pendingScoreCount}</strong></span>}
-      <span className={summary.needsAnswerCount ? "needs-attention" : ""}>待补答案 <strong>{summary.needsAnswerCount}</strong></span>
-      <span className={summary.needsRubricCount ? "needs-attention" : ""}>待锁定评分细则 <strong>{summary.needsRubricCount}</strong></span>
-      {pendingDrafts.length > 0 && <span className="needs-attention">识别候选 <strong>{pendingDrafts.length}</strong></span>}
-      {summary.unmatchedPlaceholderCount > 0 && <span className="needs-attention">待核对预设占位 <strong>{summary.unmatchedPlaceholderCount}</strong></span>}
-    </div>
-    {latestPaperImport?.status === "review_required" && structureConfirmed && config.questions.length > 0 && <Button
-      loading={importWorkflow.fillingImportContent} disabled={!options.canManage || state.unsavedWork || importWorkflow.reviewDirty}
-      onClick={() => void importWorkflow.fillRecognizedContent(latestPaperImport)}>自动填入识别内容</Button>}
-    {options.initialView === "materials" && <Button onClick={() => questionWorkflow.setShowQuestionEditor((current) => !current)}>
+function PaperQuestionTools({ context }: ViewProps) {
+  const { config, latestPaperImport, structureConfirmed, importWorkflow, options, state, questionWorkflow, selectedExam, actions, groupedScores } = context;
+  function openIssue(code: string) {
+    if (code === "material_structure" && selectedExam && options.onNavigate) {
+      options.onNavigate(`/exams/${encodeURIComponent(selectedExam.id)}/paper`);
+      return;
+    }
+    const target = config.questions.find(question => code === "answer_keys" ? questionNeedsAnswer(question)
+      : code === "rubrics" ? questionNeedsRubric(question) : code === "question_scores" ? question.score <= 0 : true);
+    if (target) actions.openQuestionIssue(target, code === "answer_keys" ? "answer" : code === "rubrics" ? "rubric" : "score");
+  }
+  const tools = <>
+    <PaperRubricJobsButton />
+    <PaperGroupedQuestionScores key={selectedExam?.id} context={context} />
+    <PaperQuestionIssues key={`issues:${selectedExam?.id}`} context={context} />
+    <PaperBankActions context={context} />
+    {options.initialView === "materials" && <Button onClick={() => questionWorkflow.setShowQuestionEditor(current => !current)}>
       {questionEditorToggleLabel(questionWorkflow.showQuestionEditor, config.questions.length)}
     </Button>}
+  </>;
+  return <section id="paper-question-tools" className="paper-question-tools" aria-label="题目工具">
+    {options.initialView === "questions" && selectedExam ? <PaperQuestionConfirmation compact
+      examId={selectedExam.id}
+      configurationKey={JSON.stringify([selectedExam.revision, selectedExam.total_score, config.questions, latestPaperImport?.id, latestPaperImport?.generation, structureConfirmed])}
+      canManage={options.canManage && (selectedExam.status === "draft" || selectedExam.status === "configured")}
+      disabled={state.unsavedWork || groupedScores.dirty || state.saveBusy || state.saveRefreshPending || importWorkflow.reviewDirty || importWorkflow.parsing || importWorkflow.fillingImportContent || importWorkflow.savingImportReview || importWorkflow.updatingImportSources}
+      disabledReason={state.saveRefreshPending ? "请先重新读取保存结果，再检查题目配置。" : groupedScores.dirty ? "请先保存或恢复批量分值修改，再检查题目配置。" : state.unsavedWork || importWorkflow.reviewDirty ? "请先保存当前修改，再检查题目配置。" : "请等待保存和资料处理完成。"}
+      actions={tools} onOpenCheck={check => openIssue(check.code)} onChecked={() => options.onExamChanged?.()} />
+      : <div className="paper-step-toolbar">{tools}</div>}
   </section>;
 }
-
 function PaperSourceDrawer({ context }: ViewProps) {
   const { selectedQuestion, state, actions, options, selectedExam } = context;
   return <Drawer title={selectedQuestion ? `第 ${selectedQuestion.question_no} 题 · 来源与答题区域` : "来源与答题区域"}

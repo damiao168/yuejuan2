@@ -86,6 +86,17 @@ describe("school conversation ownership and evidence", () => {
     expect(JSON.parse(serializeConversationThreads([{ id: "pending", title: "考试问题", updatedAt: 1, messages: [{ role: "user", content: "这场考试如何？" }] }]))).toEqual([]);
   });
 
+  it("preserves completed general history during an unfinished followup without saving the new question", () => {
+    const completed = [
+      { role: "user" as const, content: "你能做什么" },
+      { role: "assistant" as const, content: "可以帮助你整理材料。", reasoning_content: "先说明可用能力。" }
+    ];
+    const thread = { id: "general", title: "你能做什么", updatedAt: 2, messages: [...completed, { role: "user" as const, content: "查看这场考试的进度" }] };
+    // 刷新发生在追问未完成时，恢复之前的一般问答；若已开始调用业务工具，继续遵守整段不落盘的边界。
+    expect(parseConversationThreads(JSON.parse(serializeConversationThreads([thread])))).toEqual([{ ...thread, messages: completed }]);
+    expect(JSON.parse(serializeConversationThreads([{ ...thread, business: true }]))).toEqual([]);
+  });
+
   it("clears the followup exam when sources no longer have one resolved scope", () => {
     const previous = { exam_id: "e1", origin_module: "exam_workspace" };
     const source = { id: "source", kind: "workspace" as const, status: "available" as const, label: "工作区", read_at: "2026-10-02T00:00:00Z", consistency: "source_local" as const, scope_label: "考试" };

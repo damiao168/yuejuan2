@@ -56,6 +56,7 @@ export function createPaperImportPollController({
 }
 
 export function usePaperImportPolling({ examId, importId, intervalMs = 1000, onProgress, onSettled, onConnectionError, retryKey }: PaperImportPollingOptions) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: retryKey 用于主动重建同一任务的轮询控制器；删除会阻止重试恢复连接。
   useEffect(() => {
     if (!examId || !importId) return;
     const controller = createPaperImportPollController({ examId, importId, onProgress, onSettled, onConnectionError });

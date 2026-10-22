@@ -19,7 +19,7 @@ func TestScoringCapabilityMatrixSurvivesConfigurationAndFreeze(t *testing.T) {
 	}
 	human := scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceHumanGraded, Reason: "frozen_scoring_policy_requires_human"}
 	unsupportedAI := scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceHumanGraded, Reason: "ai_mode_unsupported_question_type"}
-	aiConfirmation := scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceRuleReview, Reason: "ai_assist_teacher_confirmation"}
+	aiConfirmation := scoringSegmentRoute{Kind: scoringRouteImageAI}
 	unsupportedRule := scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceRuleReview, Reason: "rule_review_required"}
 	manualType := scoringSegmentRoute{Kind: scoringRouteManualReview, Source: reviewSourceHumanGraded, Reason: "manual_only_question_type"}
 	omr := [6]scoringSegmentRoute{{Kind: scoringRouteOMR}, unsupportedAI, unsupportedAI, human, human, human}

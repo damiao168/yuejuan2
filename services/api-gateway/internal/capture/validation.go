@@ -1,6 +1,9 @@
 package capture
 
-import "strings"
+import (
+	"github.com/google/uuid"
+	"strings"
+)
 
 // 来源类型是持久化枚举；未知值直接拒绝，避免后续处理器收到无法识别的批次。
 var validSourceTypes = map[string]bool{
@@ -23,6 +26,20 @@ func validateRegisterFile(input *RegisterFileInput, asset FileAssetSnapshot) err
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	if input.FileAssetID == "" || input.IdempotencyKey == "" || asset.ID != input.FileAssetID || asset.SizeBytes <= 0 || asset.SHA256 == "" {
 		return ErrInvalidInput
+	}
+	if input.UploadGroupID == "" {
+		if input.UploadGroupFileCount != 0 || input.UploadGroupFileIndex != 0 || input.PagesPerStudent != 0 {
+			return ErrInvalidInput
+		}
+	} else {
+		groupID, err := uuid.Parse(input.UploadGroupID)
+		if err != nil {
+			return ErrInvalidInput
+		}
+		input.UploadGroupID = groupID.String()
+		if input.UploadGroupFileCount < 1 || input.UploadGroupFileCount > 1000 || input.UploadGroupFileIndex < 1 || input.UploadGroupFileIndex > input.UploadGroupFileCount || input.PagesPerStudent < 1 || input.PagesPerStudent > 20 {
+			return ErrInvalidInput
+		}
 	}
 	return nil
 }

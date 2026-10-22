@@ -2,7 +2,7 @@
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ForbiddenState } from "./PageState";
+import { ForbiddenState, LoadingState } from "./PageState";
 
 vi.mock("antd", () => ({
   Alert: () => null,
@@ -26,6 +26,13 @@ describe("无权限页面的职责联系人", () => {
   afterEach(async () => {
     await act(async () => { root.unmount(); });
     host.remove();
+  });
+
+  it("加载时显示内容轮廓，仅向读屏播报实际加载状态", async () => {
+    await act(async () => { root.render(<LoadingState label="正在加载学生名单" />); });
+    expect(host.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(host.querySelector('[role="status"]')?.textContent).toBe("正在加载学生名单");
+    expect(host.querySelector('.page-loading-skeleton[aria-hidden="true"]')?.children.length).toBeGreaterThan(0);
   });
 
   it.each([

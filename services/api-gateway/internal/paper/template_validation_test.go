@@ -2,6 +2,26 @@ package paper
 
 import "testing"
 
+func TestTemplateOptionCoordinateSpaceValidationAndReuse(t *testing.T) {
+	store, scope, source := templateLibraryFixture(t)
+	source.Layout.Pages[0].QuestionRegions[0].OptionCoordinateSpace = "question_relative"
+	store.templates[source.ID] = source
+	published := publishLibraryFixture(t, store, scope, source)
+	reused, err := instantiateLibraryLayout(published, []Question{{ID: "new-q", QuestionNo: "17", QuestionType: "calculation"}})
+	if err != nil || reused.Pages[0].QuestionRegions[0].OptionCoordinateSpace != "question_relative" {
+		t.Fatalf("library reuse lost option coordinate space: %#v, %v", reused, err)
+	}
+	before := readinessRegionSnapshots(source.Layout.Pages[0].QuestionRegions)
+	source.Layout.Pages[0].QuestionRegions[0].OptionCoordinateSpace = ""
+	if stableContentHash(before) == stableContentHash(readinessRegionSnapshots(source.Layout.Pages[0].QuestionRegions)) {
+		t.Fatal("coordinate interpretation must change the readiness snapshot")
+	}
+	source.Layout.Pages[0].QuestionRegions[0].OptionCoordinateSpace = "page_relative"
+	if err := ValidateTemplateInput(source.Name, source.PageCount, source.Layout); err == nil {
+		t.Fatal("unknown option coordinate space accepted")
+	}
+}
+
 func TestValidateTemplateOptionRegions(t *testing.T) {
 	valid := TemplateLayout{Pages: []TemplatePage{{
 		PageNo: 1, Width: 1000, Height: 1400,

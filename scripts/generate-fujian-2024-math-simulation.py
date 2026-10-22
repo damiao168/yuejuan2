@@ -263,6 +263,7 @@ def handwriting_patch(
 ) -> None:
     if not text:
         return
+    # 固定种子只用于复现仿真笔迹的颜色与角度，不生成任何安全凭据。
     rng = random.Random(seed)
     fnt = font(FONT_HAND if seed % 2 == 0 else FONT_KAI, size)
     scratch = Image.new("RGBA", (1100, size * 2 + 30), (255, 255, 255, 0))
@@ -322,7 +323,8 @@ def _draw_choice_answers(
             draw.ellipse((cx - 17, cy - 17, cx + 17, cy + 17), outline=(70, 70, 70), width=2)
             draw_centered(draw, (cx, cy - 14), option, font(FONT_SANS, 20), (70, 70, 70))
             if option in selected_options:
-                # 每个选项独立取种子并画七笔；合并随机源会改变其他题目的仿真外观。
+                # 每个选项独立取种子并画七笔；这里只改变仿真外观，不参与身份或评分判定。
+                # 合并随机源会改变其他题目的仿真外观，须保留独立种子和调用顺序。
                 rng = random.Random(candidate_index * 100 + index * 9 + option_index)
                 for _ in range(7):
                     dx = rng.randint(-13, 13)
@@ -437,6 +439,7 @@ def page_two(candidate: dict[str, Any], candidate_index: int) -> tuple[Image.Ima
 
 
 def apply_scan_effects(image: Image.Image, scan: dict[str, float], seed: int) -> Image.Image:
+    # 固定种子只复现噪点的位置和亮度，图像可重复性是仿真验收的前提。
     rng = random.Random(seed)
     rgb = image.convert("RGB")
     rgb = ImageEnhance.Contrast(rgb).enhance(float(scan["contrast"]))

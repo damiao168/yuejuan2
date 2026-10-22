@@ -29,11 +29,8 @@ func (s *PostgresStore) setPageDeleted(ctx context.Context, tenantID, pageID, ac
 	if err = ensureBatchWritableTx(ctx, tx, tenantID, current.CaptureBatchID); err != nil {
 		return Page{}, err
 	}
-	if current.Revision != input.Revision {
-		return Page{}, ErrConflict
-	}
-	if deleting && current.Status == "deleted" || !deleting && current.Status != "deleted" {
-		return Page{}, ErrInvalidTransition
+	if err = validatePageDeletionTransition(current, input.Revision, deleting); err != nil {
+		return Page{}, err
 	}
 	status := "needs_review"
 	op := "restore"
@@ -49,18 +46,8 @@ func (s *PostgresStore) setPageDeleted(ctx context.Context, tenantID, pageID, ac
 	if err = invalidatePageTx(ctx, tx, tenantID, pageID); err != nil {
 		return Page{}, err
 	}
-	if current.SheetSerial != "" {
-		if err = s.reconcileSheetSerialTx(ctx, tx, tenantID, current.SheetSerial); err != nil {
-			return Page{}, err
-		}
-		out, err = scanPage(tx.QueryRowContext(ctx, `
-SELECT `+pageColumns+`
-FROM capture_page
-WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
-`, tenantID, pageID))
-		if err != nil {
-			return Page{}, err
-		}
+	if out, err = s.reconcileDeletedPageTx(ctx, tx, tenantID, pageID, current, out); err != nil {
+		return Page{}, err
 	}
 	before, _ := json.Marshal(current)
 	after, _ := json.Marshal(out)
@@ -72,6 +59,31 @@ WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
 		return Page{}, err
 	}
 	return out, tx.Commit()
+}
+
+func validatePageDeletionTransition(current Page, revision int, deleting bool) error {
+	if current.Revision != revision {
+		return ErrConflict
+	}
+	if deleting && current.Status == "deleted" || !deleting && current.Status != "deleted" {
+		return ErrInvalidTransition
+	}
+	return nil
+}
+
+// 删除或恢复可能改变同流水号页的归组；审计和响应使用本事务重新归组后的页面状态。
+func (s *PostgresStore) reconcileDeletedPageTx(ctx context.Context, tx *sql.Tx, tenantID, pageID string, previous, updated Page) (Page, error) {
+	if previous.SheetSerial == "" {
+		return updated, nil
+	}
+	if err := s.reconcileSheetSerialTx(ctx, tx, tenantID, previous.SheetSerial); err != nil {
+		return Page{}, err
+	}
+	return scanPage(tx.QueryRowContext(ctx, `
+SELECT `+pageColumns+`
+FROM capture_page
+WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL
+`, tenantID, pageID))
 }
 
 func (s *PostgresStore) SplitSubmission(ctx context.Context, tenantID, batchID, actorID string, input SplitSubmissionInput) (MatchingQueue, error) {
@@ -130,28 +142,9 @@ func (s *PostgresStore) MergeSubmissions(ctx context.Context, tenantID, batchID,
 	if err = ensureBatchWritableTx(ctx, tx, tenantID, batchID); err != nil {
 		return MatchingQueue{}, err
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT id::text FROM capture_page WHERE tenant_id=$1 AND capture_batch_id=$2::uuid AND submission_id=$3::uuid AND status<>'deleted' AND deleted_at IS NULL ORDER BY sequence_no FOR UPDATE`, tenantID, batchID, input.SourceSubmissionID)
+	ids, err := lockMergeSourcePagesTx(ctx, tx, tenantID, batchID, input.SourceSubmissionID)
 	if err != nil {
 		return MatchingQueue{}, err
-	}
-	ids := []string{}
-	for rows.Next() {
-		var id string
-		if err = rows.Scan(&id); err != nil {
-			rows.Close()
-			return MatchingQueue{}, err
-		}
-		ids = append(ids, id)
-	}
-	if err = rows.Err(); err != nil {
-		rows.Close()
-		return MatchingQueue{}, err
-	}
-	if err = rows.Close(); err != nil {
-		return MatchingQueue{}, err
-	}
-	if len(ids) == 0 {
-		return MatchingQueue{}, ErrNotFound
 	}
 	if err = movePagesTx(ctx, tx, tenantID, batchID, input.SourceSubmissionID, input.TargetSubmissionID, ids); err != nil {
 		return MatchingQueue{}, err
@@ -173,6 +166,34 @@ func (s *PostgresStore) MergeSubmissions(ctx context.Context, tenantID, batchID,
 		return MatchingQueue{}, err
 	}
 	return s.GetMatchingQueue(ctx, tenantID, batchID)
+}
+
+// 合并只移动当前租户、批次和来源答卷的有效页；先按原页序加锁，后续移动沿用同一顺序。
+func lockMergeSourcePagesTx(ctx context.Context, tx *sql.Tx, tenantID, batchID, submissionID string) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT id::text FROM capture_page WHERE tenant_id=$1 AND capture_batch_id=$2::uuid AND submission_id=$3::uuid AND status<>'deleted' AND deleted_at IS NULL ORDER BY sequence_no FOR UPDATE`, tenantID, batchID, submissionID)
+	if err != nil {
+		return nil, err
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	if err = rows.Close(); err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, ErrNotFound
+	}
+	return ids, nil
 }
 
 // 拆合答卷后重新排页并清空双方身份绑定；旧配准与切片失效，不能沿用原答卷的识别结论。

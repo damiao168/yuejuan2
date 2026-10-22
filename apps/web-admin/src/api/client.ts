@@ -149,7 +149,10 @@ export class ApiClient {
     const retryAfterSeconds = parseRetryAfterSeconds(response.headers.get("Retry-After"));
     try {
       const payload = (await response.json()) as ApiErrorPayload;
-      const code = payload.error?.code ?? payload.code ?? "request_failed";
+      const originalCode = payload.error?.code ?? payload.code ?? "request_failed";
+      // 兼容尚未升级的网关，仅识别其固定路由错误；业务记录的 404 仍保留原有含义。
+      const code = response.status === 404 && originalCode === "not_found"
+        && (payload.error?.message ?? payload.message) === "route not found" ? "route_not_found" : originalCode;
       if (response.status === 428 && code === "recent_auth_required" && typeof window !== "undefined") {
         window.dispatchEvent(new Event(RECENT_AUTH_REQUIRED_EVENT));
       }

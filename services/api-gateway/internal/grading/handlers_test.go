@@ -213,6 +213,9 @@ func testRouter(authStore *auth.MemoryStore, gradingStore grading.Store, runtime
 		stores.Grading.Grading = gradingStore
 		if len(runtimeStores) > 0 {
 			stores.Capture.WorkerRuntime = runtimeStores[0]
+			if recovery, ok := gradingStore.(*scoringRecoveryTestStore); ok {
+				recovery.runtime = runtimeStores[0]
+			}
 		}
 	})
 }
@@ -220,6 +223,7 @@ func testRouter(authStore *auth.MemoryStore, gradingStore grading.Store, runtime
 // 此替身验证 HTTP 处理器与 runtime 的协作；状态直接在内存改变，不覆盖生产数据库事务和并发。
 type scoringRecoveryTestStore struct {
 	*grading.MemoryStore
+	runtime              workerruntime.Store
 	run                  grading.ScoringRun
 	readiness            grading.ScoringReadiness
 	startErr             error
@@ -322,6 +326,19 @@ func (s *scoringRecoveryTestStore) PrepareOMRRetry(_ context.Context, _ string, 
 
 func (s *scoringRecoveryTestStore) RestoreOMRRetry(_ context.Context, _ string, _ string) error {
 	return nil
+}
+
+// 替身的来源准备只查询内存样本；这里验证新协调接口与 Memory runtime 的协作，不模拟 PostgreSQL 事务。
+func (s *scoringRecoveryTestStore) RetryOMRTask(ctx context.Context, tenantID, omrRunID string) (grading.FailedOMRTask, error) {
+	item, err := s.PrepareOMRRetry(ctx, tenantID, omrRunID)
+	if err != nil {
+		return grading.FailedOMRTask{}, err
+	}
+	if s.runtime == nil {
+		return grading.FailedOMRTask{}, grading.ErrInvalidTransition
+	}
+	_, err = s.runtime.Requeue(ctx, tenantID, item.RuntimeTaskID)
+	return item, err
 }
 
 func (s *scoringRecoveryTestStore) RefreshScoringRun(_ context.Context, _ string, _ string) (grading.ScoringRun, error) {

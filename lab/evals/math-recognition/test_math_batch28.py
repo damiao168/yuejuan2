@@ -249,7 +249,7 @@ def test_evaluate_aggregates_counts_and_keeps_repeated_sample_order(tmp_path: Pa
     expected_metrics.update(
         formula_exact_accuracy=2 / 3, ast_exact_accuracy=1.0,
         symbols_precision=0.5, symbols_recall=2 / 3, symbols_f1=pytest.approx(4 / 7),
-        equivalence_precision=0.0, equivalence_recall=0.0,
+        equivalence_precision=0.0, equivalence_recall=0.0, equivalence_f1=0.0,
         unsafe_suggestion_rate=1 / 3, risky_case_recall=0.0,
     )
     assert report == {

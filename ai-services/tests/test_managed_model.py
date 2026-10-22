@@ -33,7 +33,7 @@ class ManagedPaperModelTests(unittest.TestCase):
         self.assertNotEqual(a.settings.model_api_key, b.settings.model_api_key)
         self.assertIs(paper_model(self.app, {}), self.app.model)
         schema = {"type": "object", "required": ["ok"], "properties": {"ok": {"type": "boolean"}}}
-        with patch("grading_agent.managed_model.public_json_transport", return_value={"choices": [{"message": {"content": '{"ok":true}'}}]}) as send:
+        with patch("grading_agent.managed_model.public_json_transport", return_value={"choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": '{"ok":true}'}}]}) as send:
             self.assertEqual(a.request_structured("request-a", [{"role": "user", "content": "synthetic exam"}], schema, "paper"), {"ok": True})
             url, body, headers, _ = send.call_args.args
             self.assertEqual(url, "https://models.example.test/v1/chat/completions")
@@ -44,7 +44,7 @@ class ManagedPaperModelTests(unittest.TestCase):
 
     def test_managed_output_still_requires_schema_validation(self):
         model = paper_model(self.app, {"managed_model": config()})
-        with patch("grading_agent.managed_model.public_json_transport", return_value={"choices": [{"message": {"content": '{}'}}]}):
+        with patch("grading_agent.managed_model.public_json_transport", return_value={"choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": '{}'}}]}):
             with self.assertRaises(AgentError) as error:
                 model.request_structured("test", [], {"type": "object", "required": ["ok"]}, "test")
             self.assertEqual(error.exception.code, "model_output_invalid")
@@ -67,7 +67,7 @@ class ManagedPaperModelTests(unittest.TestCase):
         ]}]
         schema = {"type": "object", "required": ["ok"], "properties": {"ok": {"type": "boolean"}}}
         with patch("grading_agent.managed_model.public_json_transport", return_value={
-            "choices": [{"message": {"content": '{"ok":true}'}}],
+            "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": '{"ok":true}'}}],
             "usage": {
                 "prompt_tokens": 2400, "completion_tokens": 600, "total_tokens": 3000,
                 "prompt_tokens_details": {"cached_tokens": 120},
@@ -84,7 +84,7 @@ class ManagedPaperModelTests(unittest.TestCase):
         self.assertEqual(body["max_tokens"], 8_192)
         self.assertEqual(model.last_usage(), {
             "input_tokens": 2400, "cached_input_tokens": 180,
-            "output_tokens": 600, "reasoning_tokens": 0, "total_tokens": 3000,
+            "output_tokens": 600, "total_tokens": 3000,
         })
 
     def test_deepseek_visual_request_explicitly_disables_default_thinking(self):
@@ -95,7 +95,7 @@ class ManagedPaperModelTests(unittest.TestCase):
         }
         model = paper_model(self.app, {"managed_model": deepseek})
         schema = {"type": "object", "required": ["ok"], "properties": {"ok": {"type": "boolean"}}}
-        with patch("grading_agent.managed_model.public_json_transport", return_value={"choices": [{"message": {"content": '{"ok":true}'}}]}) as send:
+        with patch("grading_agent.managed_model.public_json_transport", return_value={"choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": '{"ok":true}'}}]}) as send:
             model.request_structured("deepseek-visual", [{"role": "user", "content": "exam"}], schema, "visual")
 
         body = send.call_args.args[1]
@@ -118,7 +118,7 @@ class ManagedPaperModelTests(unittest.TestCase):
                 original = copy.deepcopy(messages)
                 model = paper_model(self.app, {"managed_model": config()})
                 with patch("grading_agent.managed_model.public_json_transport", return_value={
-                    "choices": [{"message": {"content": '{"ok":true}'}}]
+                    "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": '{"ok":true}'}}]
                 }) as send:
                     model.request_structured("prefix", messages, schema, "paper")
                 body = send.call_args.args[1]
@@ -138,7 +138,7 @@ class ManagedPaperModelTests(unittest.TestCase):
         model = paper_model(self.app, {"managed_model": managed_config})
         managed_config["model_name"] = "deepseek-fixture"
         with patch("grading_agent.managed_model.public_json_transport", return_value={
-            "choices": [{"message": {"content": '{}'}}]
+            "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": '{}'}}]
         }) as send:
             model.request_structured("reference", [], {"type": "object"}, "paper")
         body = send.call_args.args[1]
@@ -155,7 +155,7 @@ class ManagedPaperModelTests(unittest.TestCase):
 
     def test_native_adapter_uses_native_generation_protocol(self):
         native = {**config(), "adapter_type": "dashscope_native", "base_url": "https://dashscope.aliyuncs.com/api/v1"}
-        with patch("grading_agent.managed_model.public_json_transport", return_value={"output": {"choices": [{"message": {"content": '{}'}}]}}) as send:
+        with patch("grading_agent.managed_model.public_json_transport", return_value={"output": {"choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": '{}'}}]}}) as send:
             model = paper_model(self.app, {"managed_model": native})
             model.request_structured("test", [], {"type": "object"}, "test")
             self.assertTrue(send.call_args.args[0].endswith("/services/aigc/text-generation/generation"))

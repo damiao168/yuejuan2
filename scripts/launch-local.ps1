@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch]$Build,
     [switch]$SkipLocalModel,
@@ -21,6 +21,7 @@ $envExampleFile = Join-Path $composeDirectory ".env.example"
 $envFile = Join-Path $composeDirectory ".env"
 $installMarker = Join-Path $composeDirectory ".env.local-install-complete"
 $initScript = Join-Path $composeDirectory "scripts\init.ps1"
+$prepareTlsScript = Join-Path $composeDirectory "scripts\prepare-internal-tls.ps1"
 $smokeScript = Join-Path $composeDirectory "scripts\smoke-test.ps1"
 $syncModelKeyScript = Join-Path $composeDirectory "scripts\sync-local-grading-model-key.ps1"
 $prepareModelScript = Join-Path $repositoryRoot "lab\scripts\prepare-local-runtime.ps1"
@@ -220,6 +221,7 @@ foreach ($requiredFile in @(
     $composeFile,
     $envExampleFile,
     $initScript,
+    $prepareTlsScript,
     $smokeScript,
     $syncModelKeyScript,
     $prepareModelScript,
@@ -270,8 +272,11 @@ if (-not $envExists) {
     Write-Warning "An existing .env was found. It will be preserved; preflight will reject missing required values."
 }
 
+Write-Step "Preparing and validating internal TLS certificates"
+& $prepareTlsScript -EnvFile $envFile -ComposeDirectory $composeDirectory
+
 if (-not $SkipLocalModel) {
-    $manifest = Get-Content -Raw -LiteralPath $modelManifestFile | ConvertFrom-Json
+    $manifest = Get-Content -Raw -LiteralPath $modelManifestFile -Encoding utf8 | ConvertFrom-Json
     $labRoot = Join-Path $repositoryRoot "lab"
     $runtimeBinary = Join-Path (Join-Path $labRoot $manifest.runtime.install_dir) $manifest.runtime.server_binary
     $modelFile = Join-Path $labRoot $manifest.model.model_path

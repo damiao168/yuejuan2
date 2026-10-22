@@ -33,6 +33,7 @@ func scanTask(row taskScanner) (ReviewTask, error) {
 		&out.CreatedBy,
 		&out.CreatedAt,
 		&out.UpdatedAt,
+		&out.ReasonCode,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ReviewTask{}, ErrNotFound

@@ -38,6 +38,20 @@ func (h *Handler) CreateBatch(w http.ResponseWriter, r *http.Request) {
 		httpx.JSON(w, http.StatusCreated, map[string]any{"batch": recovered.Batch})
 		return
 	}
+	if input.ScoringRunID != "" {
+		if trials, ok := h.store.(TrialPersistence); ok {
+			items, err := trials.ListScoringTrials(r.Context(), user.TenantID, input.ScoringRunID, h.trialPolicy())
+			if err != nil {
+				writeTrialError(w, r, err)
+				return
+			}
+			// 已建立试改资源的运行只允许由批准事务创建批次，不能绕过同题范围另建全场批次。
+			if len(items) > 0 {
+				writeTrialError(w, r, ErrTrialConflict)
+				return
+			}
+		}
+	}
 	contexts, err := loadBatchContexts(r.Context(), h.store, user.TenantID, segments)
 	if err != nil {
 		writeStoreError(w, r, err)
@@ -82,13 +96,22 @@ func (h *Handler) GetBatch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"batch": batch})
+	batches := []GradingBatch{batch}
+	if err := attachBatchFailureSummaries(r.Context(), h.store, user.TenantID, batches); err != nil {
+		writeStoreError(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"batch": batches[0]})
 }
 
 func (h *Handler) ListScoringRunBatches(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	batches, err := h.store.ListScoringRunBatches(r.Context(), user.TenantID, r.PathValue("runId"))
 	if err != nil {
+		writeStoreError(w, r, err)
+		return
+	}
+	if err := attachBatchFailureSummaries(r.Context(), h.store, user.TenantID, batches); err != nil {
 		writeStoreError(w, r, err)
 		return
 	}
@@ -124,30 +147,20 @@ func (h *Handler) EnqueueBatch(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, ErrBatchCancelled)
 		return
 	}
-	plan, err := h.store.GetEnqueuePlan(r.Context(), user.TenantID, user.ID, batch.ID)
-	if errors.Is(err, ErrNotFound) {
-		plan, err = h.newBatchEnqueuePlan(r.Context(), user.TenantID, batch)
-		if err != nil {
-			writeStoreError(w, r, err)
+	if trials, ok := h.store.(TrialPersistence); ok {
+		if err := trials.AuthorizeTrialBatch(r.Context(), user.TenantID, batch.ID, h.trialPolicy()); err != nil {
+			writeTrialError(w, r, err)
 			return
 		}
-		plan, err = h.store.SaveEnqueuePlan(r.Context(), user.TenantID, user.ID, plan)
 	}
+	plan, err := h.loadOrCreateBatchEnqueuePlan(r.Context(), user.TenantID, user.ID, batch)
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
 	}
 	// 保存时可能取回并发请求的旧计划，后续只使用持久化返回的冻结运行输入。
 	tasks, failures, counts := h.enqueueBatchRuns(r.Context(), user.TenantID, user.ID, batch.ID, plan.Runs)
-	status := "processing"
-	if counts.SucceededCount+counts.FailedCount == batch.TotalCount {
-		if counts.FailedCount > 0 {
-			status = "failed"
-		} else {
-			status = "completed"
-		}
-	}
-	counts.Status = status
+	counts.Status = batchEnqueueStatus(counts, batch.TotalCount)
 	updated, err := h.store.UpdateBatch(r.Context(), user.TenantID, batch.ID, counts)
 	if err != nil {
 		writeStoreError(w, r, err)
@@ -177,7 +190,30 @@ func (h *Handler) EnqueueBatch(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"batch": updated, "tasks": tasks, "enqueue_result": result})
 }
 
+func (h *Handler) loadOrCreateBatchEnqueuePlan(ctx context.Context, tenantID, actorID string, batch GradingBatch) (BatchEnqueuePlan, error) {
+	plan, err := h.store.GetEnqueuePlan(ctx, tenantID, actorID, batch.ID)
+	if !errors.Is(err, ErrNotFound) {
+		return plan, err
+	}
+	plan, err = h.newBatchEnqueuePlan(ctx, tenantID, batch)
+	if err != nil {
+		return plan, err
+	}
+	return h.store.SaveEnqueuePlan(ctx, tenantID, actorID, plan)
+}
+
+func batchEnqueueStatus(counts UpdateBatchInput, totalCount int) string {
+	if counts.SucceededCount+counts.FailedCount != totalCount {
+		return "processing"
+	}
+	if counts.FailedCount > 0 {
+		return "failed"
+	}
+	return "completed"
+}
+
 func (h *Handler) newBatchEnqueuePlan(ctx context.Context, tenantID string, batch GradingBatch) (BatchEnqueuePlan, error) {
+	ctx = withReferencePreflightCache(ctx)
 	policy := NormalizePolicy(ModelPolicy{})
 	if governed, ok := h.adapter.(GovernedPolicyProvider); ok {
 		policy = governed.Policy()

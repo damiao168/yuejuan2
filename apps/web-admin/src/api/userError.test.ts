@@ -13,6 +13,18 @@ function response(body: unknown, status: number, statusText = "") {
 
 describe("user-facing API errors", () => {
   it.each([
+    ["ai_output_incomplete", "AI 建议未完成，请人工评分。"],
+    ["template_vision_model_required", "尚未配置可用的答题卡多模态模型，请平台管理员在学校模型库分配答题卡识别用途。"],
+    ["answer_sheet_model_required", "请选择已启用且已配置密钥的模型，用于答题卡多模态识别。"],
+    ["answer_sheet_model_selection_changed", "答题卡模型分配已被更新，请刷新学校配置后重新操作。"],
+    ["managed_model_credential_source_disabled", "密钥来源配置已停用，请先启用该配置，再使用已保存的密钥获取模型列表或添加模型。"],
+    ["managed_model_credential_origin_changed", "更换 API 域名或端口时，请重新输入 API Key（可以使用原密钥）。"],
+    ["managed_model_text_required", "请先通过普通回复检测，再设为日常对话模型。"],
+    ["managed_model_capability_required", "请先通过结构化输出检测，再用于评分或试卷解析。"],
+    ["panel_model_binding_unavailable", "阅卷角色配置服务暂不可用，请稍后重试。"],
+    ["invalid_panel_model_binding", "阅卷角色配置不完整或已失效，请核对范围、评分模型和评分规则版本，必要时刷新绑定后重试。"],
+    ["panel_model_capability_required", "请选择本校已启用且通过结构化输出检测的模型，再保存阅卷角色配置。"],
+    ["panel_model_binding_changed", "阅卷角色配置已被其他管理员更新，请刷新绑定、核对新配置后重新操作。"],
     ["backmark_preview_stale", "回标范围或原评分已变化，请重新预览影响范围后再创建。"],
     ["managed_user_access_conflict", "该成员的职责或班级已被更新，请刷新后重新核对授权，当前填写内容已保留。"],
     ["readiness_configuration_changed", "考试准备内容已变化，请重新核对名单和评分方式后确认。"],
@@ -31,6 +43,23 @@ describe("user-facing API errors", () => {
   it("uses the HTTP fallback for an unknown conflict code", () => {
     expect(getUserErrorMessage(new ApiClientError(409, "new_conflict", "resource changed")))
       .toBe("当前数据状态已发生变化，请刷新后重试。");
+  });
+
+  it.each([
+    [409, "answer_sheet_source_in_use", "此答题卡已锁定、已收录到模板库或已用于正式处理，不能删除。"],
+    [503, "answer_sheet_source_delete_unavailable", "答题卡文件删除服务暂不可用，请稍后重试；当前文件和草稿已保留。"],
+    [503, "answer_sheet_page_order_unavailable", "答题卡自动页序分析暂不可用，请稍后重试，或上传按正确页序排列的单个 PDF。"],
+    [502, "answer_sheet_page_order_failed", "答题卡自动页序分析未完成，请重试，或上传按正确页序排列的单个 PDF。"],
+    [409, "exam_frozen", "考试准备已确认并冻结，不能再修改答题卡文件或模板设置。"]
+  ])("describes answer-sheet boundary %s %s without exposing upstream details", (status, code, expected) => {
+    const error = new ApiClientError(status as number, code as string, "internal detail: token=private-value");
+    expect(getUserErrorMessage(error)).toBe(expected);
+    expect(getUserErrorMessage(error)).not.toContain("private-value");
+  });
+
+  it("identifies role save failures before applying the generic 5xx message", () => {
+    expect(getUserErrorMessage(new ApiClientError(500, "panel_model_binding_failed", "pq: internal statement failure")))
+      .toBe("阅卷角色配置暂时无法保存，请稍后重试。");
   });
 
   it("never exposes raw 5xx messages or status text", async () => {

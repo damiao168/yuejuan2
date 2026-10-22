@@ -65,7 +65,14 @@ func (h *Handler) ListObservations(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	scope, hasScope := auth.AccessScopeFromContext(r.Context())
+	if !hasScope {
+		httpx.Error(w, r, http.StatusForbidden, "seed_quality_access_denied", "authenticated collection scope is required")
+		return
+	}
+	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
 	items, err := h.service.ListObservations(r.Context(), user.TenantID, ObservationFilter{
+		Access: auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver},
 		ExamID: strings.TrimSpace(r.URL.Query().Get("exam_id")), QuestionID: strings.TrimSpace(r.URL.Query().Get("question_id")),
 		GraderID: strings.TrimSpace(r.URL.Query().Get("grader_id")),
 	})

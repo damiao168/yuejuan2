@@ -54,7 +54,8 @@ type exceptionPresentationConn struct {
 func (exceptionPresentationConn) Prepare(string) (driver.Stmt, error) {
 	return nil, errors.New("unexpected mutation")
 }
-func (exceptionPresentationConn) Close() error { return nil }
+func (exceptionPresentationConn) Close() error                             { return nil }
+func (exceptionPresentationConn) CheckNamedValue(*driver.NamedValue) error { return nil }
 func (exceptionPresentationConn) Begin() (driver.Tx, error) {
 	return nil, errors.New("unexpected mutation")
 }

@@ -150,26 +150,36 @@ VALUES ($1::uuid,$2,$3::uuid,$4::uuid,$5::uuid,$6,$7::uuid,$8)
 			return IssuedStudentBarcodes{}, err
 		}
 		set := IssuedStudentBarcodeSet{StudentID: studentID, SheetSerial: serial, Pages: []IssuedPageBarcode{}}
-		for _, page := range layout.Pages {
-			nonce := uuid.NewString()
-			value, err := s.barcodeKeyring.Sign(BarcodeClaims{
-				TenantID: tenantID, ExamID: examID, TemplateID: templateID, TemplateContentHash: contentHash,
-				PageNo: page.PageNo, Nonce: nonce, StudentID: studentID, SheetSerial: serial,
-			})
-			if err != nil {
-				return IssuedStudentBarcodes{}, ErrInvalidTransition
-			}
-			if _, err = tx.ExecContext(ctx, `
-INSERT INTO answer_sheet_print_page (tenant_id,print_sheet_id,page_no,nonce,barcode_value)
-VALUES ($1,$2::uuid,$3,$4::uuid,$5)
-`, tenantID, serial, page.PageNo, nonce, value); err != nil {
-				return IssuedStudentBarcodes{}, err
-			}
-			set.Pages = append(set.Pages, IssuedPageBarcode{PageNo: page.PageNo, Value: value})
+		set.Pages, err = s.issueStudentBarcodePagesTx(ctx, tx, BarcodeClaims{
+			TenantID: tenantID, ExamID: examID, TemplateID: templateID, TemplateContentHash: contentHash,
+			StudentID: studentID, SheetSerial: serial,
+		}, layout.Pages)
+		if err != nil {
+			return IssuedStudentBarcodes{}, err
 		}
 		out.Students = append(out.Students, set)
 	}
 	return out, tx.Commit()
+}
+
+// 调用方已创建纸张记录并持有模板共享锁；条码页与签发批次在同一事务内保存，失败由调用方回滚。
+func (s *PostgresStore) issueStudentBarcodePagesTx(ctx context.Context, tx *sql.Tx, claims BarcodeClaims, pages []templateLayoutPage) ([]IssuedPageBarcode, error) {
+	out := []IssuedPageBarcode{}
+	for _, page := range pages {
+		claims.PageNo, claims.Nonce = page.PageNo, uuid.NewString()
+		value, err := s.barcodeKeyring.Sign(claims)
+		if err != nil {
+			return nil, ErrInvalidTransition
+		}
+		if _, err = tx.ExecContext(ctx, `
+INSERT INTO answer_sheet_print_page (tenant_id,print_sheet_id,page_no,nonce,barcode_value)
+VALUES ($1,$2::uuid,$3,$4::uuid,$5)
+`, claims.TenantID, claims.SheetSerial, page.PageNo, claims.Nonce, value); err != nil {
+			return nil, err
+		}
+		out = append(out, IssuedPageBarcode{PageNo: page.PageNo, Value: value})
+	}
+	return out, nil
 }
 
 // 先转为标准 UUID 再查重；同一学生的不同文本写法也不能生成两张纸。
@@ -265,44 +275,15 @@ func (s *PostgresStore) evaluateBarcodesTx(ctx context.Context, tx *sql.Tx, tena
 	out := barcodeEvaluation{Evidence: []any{}, Candidates: []any{}}
 	unique := map[string]BarcodeClaims{}
 	for _, observation := range observations {
-		sum := sha256.Sum256([]byte(observation.Text))
-		evidence := map[string]any{
-			"format": observation.Format, "value_sha256": "sha256:" + hex.EncodeToString(sum[:]),
-			"polygon": observation.Polygon, "orientation": observation.Orientation,
-		}
-		if !strings.HasPrefix(observation.Text, controlledBarcodePrefix+".") {
-			evidence["status"] = "ignored"
-			evidence["code"] = "not_controlled"
-			out.Evidence = append(out.Evidence, evidence)
-			continue
-		}
-		claims, err := s.barcodeKeyring.Verify(observation.Text)
-		if err != nil {
-			evidence["status"] = "rejected"
-			evidence["code"] = barcodeRejectionCode(err)
-			out.NeedsReview = true
-			out.Evidence = append(out.Evidence, evidence)
-			continue
-		}
-		code := s.validateBarcodeOwnershipTx(ctx, tx, tenantID, examID, claims)
-		if code != "" {
-			evidence["status"] = "rejected"
-			evidence["code"] = code
-			out.NeedsReview = true
-			out.Evidence = append(out.Evidence, evidence)
-			continue
-		}
-		evidence["status"] = "verified"
-		evidence["kid"] = claims.KeyID
-		evidence["template_id"] = claims.TemplateID
-		evidence["template_content_hash"] = claims.TemplateContentHash
-		evidence["page_no"] = claims.PageNo
-		if claims.boundToStudent() {
-			evidence["student_id"] = claims.StudentID
-			evidence["sheet_serial"] = claims.SheetSerial
-		}
+		evidence, claims, needsReview := s.evaluateBarcodeObservationTx(ctx, tx, tenantID, examID, observation)
 		out.Evidence = append(out.Evidence, evidence)
-		unique[claims.TemplateID+":"+claims.TemplateContentHash+":"+strconv.Itoa(claims.PageNo)+":"+claims.StudentID+":"+claims.SheetSerial] = claims
+		if needsReview {
+			out.NeedsReview = true
+		}
+		if claims == nil {
+			continue
+		}
+		unique[claims.TemplateID+":"+claims.TemplateContentHash+":"+strconv.Itoa(claims.PageNo)+":"+claims.StudentID+":"+claims.SheetSerial] = *claims
 	}
 	keys := make([]string, 0, len(unique))
 	for key := range unique {
@@ -345,6 +326,41 @@ func (s *PostgresStore) evaluateBarcodesTx(ctx context.Context, tx *sql.Tx, tena
 		out.NeedsReview = true
 	}
 	return out
+}
+
+// 非受控条码只留证据；受控条码验证失败才要求人工复核，且不能进入身份候选集合。
+func (s *PostgresStore) evaluateBarcodeObservationTx(ctx context.Context, tx *sql.Tx, tenantID, examID string, observation BarcodeObservation) (map[string]any, *BarcodeClaims, bool) {
+	sum := sha256.Sum256([]byte(observation.Text))
+	evidence := map[string]any{
+		"format": observation.Format, "value_sha256": "sha256:" + hex.EncodeToString(sum[:]),
+		"polygon": observation.Polygon, "orientation": observation.Orientation,
+	}
+	if !strings.HasPrefix(observation.Text, controlledBarcodePrefix+".") {
+		evidence["status"] = "ignored"
+		evidence["code"] = "not_controlled"
+		return evidence, nil, false
+	}
+	claims, err := s.barcodeKeyring.Verify(observation.Text)
+	if err != nil {
+		evidence["status"] = "rejected"
+		evidence["code"] = barcodeRejectionCode(err)
+		return evidence, nil, true
+	}
+	if code := s.validateBarcodeOwnershipTx(ctx, tx, tenantID, examID, claims); code != "" {
+		evidence["status"] = "rejected"
+		evidence["code"] = code
+		return evidence, nil, true
+	}
+	evidence["status"] = "verified"
+	evidence["kid"] = claims.KeyID
+	evidence["template_id"] = claims.TemplateID
+	evidence["template_content_hash"] = claims.TemplateContentHash
+	evidence["page_no"] = claims.PageNo
+	if claims.boundToStudent() {
+		evidence["student_id"] = claims.StudentID
+		evidence["sheet_serial"] = claims.SheetSerial
+	}
+	return evidence, &claims, false
 }
 
 // 签名正确只证明内容来自持钥方；还需核对当前考试、锁定模板、名册和纸张撤销状态。

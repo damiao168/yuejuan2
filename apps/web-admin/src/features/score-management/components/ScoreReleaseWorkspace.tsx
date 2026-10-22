@@ -3,6 +3,7 @@ import { GitCompareArrows } from "lucide-react";
 import { getSafeUserText } from "../../../api/client";
 import type { RegradeJob, ScoreRelease, ScoreReleaseGate } from "../../../api/scoreReleases";
 import { StatusTag } from "../../../components/StatusTag";
+import { InternalRouteButton } from "../../../components/InternalRouteButton";
 import type { StatusTone } from "../../../types";
 import type { useRegradeWorkflow } from "../hooks/useRegradeWorkflow";
 import type { useScoreReleaseWorkflow } from "../hooks/useScoreReleaseWorkflow";
@@ -106,8 +107,8 @@ export function ScoreReleaseWorkspace({
         <div className="score-release-gate-row">
           <StatusTag tone={issue.blocking ? "danger" : "warning"}>{issue.blocking ? "阻断" : "提醒"}</StatusTag>
           <div><strong>{getSafeUserText(issue.message, "成绩质量检查未通过")}</strong><span>{issue.count} 项 · {issue.code}</span></div>
-          {issue.action_route === "quality" ? <Button size="small" href={selectedExamId ? `#/admin/exams/${encodeURIComponent(selectedExamId)}/quality` : undefined}>查看质量</Button> : null}
-          {issue.action_route === "questions" ? <Button size="small" href={selectedExamId ? `#/admin/exams/${encodeURIComponent(selectedExamId)}/questions` : undefined}>配置题目</Button> : null}
+          {issue.action_route === "quality" ? <InternalRouteButton size="small" href={selectedExamId ? `/admin/exams/${encodeURIComponent(selectedExamId)}/quality` : undefined}>查看质量</InternalRouteButton> : null}
+          {issue.action_route === "questions" ? <InternalRouteButton size="small" href={selectedExamId ? `/admin/exams/${encodeURIComponent(selectedExamId)}/questions` : undefined}>配置题目</InternalRouteButton> : null}
           {issue.action_route === "regrade" ? <Button size="small" onClick={openRegradeModal}>查看复评</Button> : null}
         </div>
       </List.Item>}

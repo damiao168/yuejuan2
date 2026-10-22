@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 func (s *PostgresStore) SetExamDoubleMarkPolicy(ctx context.Context, tenantID string, examID string, actorID string, input SetDoubleMarkPolicyInput) (DoubleMarkPolicy, error) {
@@ -76,6 +78,11 @@ RETURNING id::text, tenant_id::text, exam_id::text, COALESCE(question_id::text, 
 }
 
 func (s *PostgresStore) ListDoubleMarkPolicies(ctx context.Context, tenantID string, filter PolicyFilter) ([]DoubleMarkPolicy, error) {
+	scopeArgs, err := filter.Access.SQLArgs(tenantID)
+	if err != nil {
+		return nil, err
+	}
+	args := append([]any{tenantID, filter.ExamID, filter.QuestionID}, scopeArgs...)
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id::text, tenant_id::text, exam_id::text, COALESCE(question_id::text, ''),
   enabled, threshold::float8, resolution_strategy, allow_same_arbitrator, created_by::text, created_at, updated_at
@@ -83,8 +90,9 @@ FROM double_mark_policy
 WHERE tenant_id = $1 AND deleted_at IS NULL
   AND ($2 = '' OR exam_id::text = $2)
   AND ($3 = '' OR COALESCE(question_id::text, '') = $3)
+  AND `+auth.ExamCollectionPredicate("double_mark_policy.exam_id", 4)+`
 ORDER BY exam_id, question_id NULLS FIRST, created_at
-`, tenantID, filter.ExamID, filter.QuestionID)
+`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +181,11 @@ RETURNING id::text, tenant_id::text, exam_id::text, question_id::text, question_
 }
 
 func (s *PostgresStore) ListDoubleMarkSessions(ctx context.Context, tenantID string, filter DoubleMarkSessionFilter) ([]DoubleMarkSession, error) {
+	scopeArgs, err := filter.Access.SQLArgs(tenantID)
+	if err != nil {
+		return nil, err
+	}
+	args := append([]any{tenantID, filter.Status, filter.AnswerSegmentID, filter.ExamID, filter.QuestionID}, scopeArgs...)
 	rows, err := s.db.QueryContext(ctx, `
 SELECT id::text, tenant_id::text, exam_id::text, question_id::text, question_no,
   answer_segment_id::text, submission_id::text, anonymous_code,
@@ -186,8 +199,9 @@ WHERE tenant_id = $1 AND deleted_at IS NULL
    AND ($3 = '' OR answer_segment_id::text = $3)
    AND ($4 = '' OR exam_id::text = $4)
    AND ($5 = '' OR question_id::text = $5)
+   AND `+auth.ExamCollectionPredicate("double_mark_session.exam_id", 6)+`
 ORDER BY created_at DESC
-	`, tenantID, filter.Status, filter.AnswerSegmentID, filter.ExamID, filter.QuestionID)
+	`, args...)
 	if err != nil {
 		return nil, err
 	}

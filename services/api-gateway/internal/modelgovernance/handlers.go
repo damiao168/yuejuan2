@@ -1,6 +1,7 @@
 package modelgovernance
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -20,6 +21,7 @@ const (
 )
 
 type Handler struct {
+	gradingModelProbe       func(context.Context, string, string) (json.RawMessage, error)
 	store                   Store
 	audit                   auth.AuditRecorder
 	secrets                 SecretReferenceResolver
@@ -356,7 +358,7 @@ func (h *Handler) validatePolicyManagedConfigs(w http.ResponseWriter, r *http.Re
 	eligible := make(map[string]bool, len(configs))
 	for _, config := range configs {
 		eligible[config.ID] = config.TenantID == tenantID && config.Status == "active" &&
-			config.LastCapabilityStatus == "success" && config.LastCapabilityVersion == "structured-json-v3"
+			config.LastCapabilityStatus == "success" && config.LastCapabilityVersion == "structured-json-v4"
 	}
 	for _, id := range ids {
 		if !eligible[id] {
@@ -708,6 +710,18 @@ func (h *Handler) targetTenant(w http.ResponseWriter, r *http.Request, requested
 	}
 	httpx.Error(w, r, http.StatusForbidden, "tenant_scope_forbidden", "target tenant is outside the caller scope")
 	return "", false
+}
+
+// 学校模型接口按本次操作的细分权限选择学校；不能把读取或面板权限扩展到其他治理接口。
+// 旧治理权限沿用原范围检查，外层路由仍负责角色、操作权限和资源边界。
+func (h *Handler) targetManagedTenant(w http.ResponseWriter, r *http.Request, requested, permission string) (string, bool) {
+	user := mustUser(r)
+	requested = strings.TrimSpace(requested)
+	if requested != "" && requested != user.TenantID && user.TenantID == auth.PlatformTenantID &&
+		auth.HasRole(user, "platform_admin") && hasPermission(user, permission) {
+		return requested, true
+	}
+	return h.targetTenant(w, r, requested)
 }
 
 func (h *Handler) auditAction(r *http.Request, action string, targetType string, targetID string, reason string, after map[string]any) {

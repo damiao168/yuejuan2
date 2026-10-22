@@ -4,6 +4,7 @@ import { CheckCircle2, CircleAlert, Clock3, FileStack, RefreshCw } from "lucide-
 import { downloadFileBlob } from "../api/files";
 import type { ScoringRun, ScoringRunItem } from "../api/review";
 import { StatusTag } from "./StatusTag";
+import { hasObservedAnswer, hasScoringResult, scoringProgressLabel, scoringReasonLabels } from "../features/grading/workbench/scoringProgress";
 
 interface ScoringPaperMonitorProps {
   run?: ScoringRun;
@@ -13,6 +14,7 @@ interface ScoringPaperMonitorProps {
 }
 
 interface CandidateGroup {
+  id: string;
   code: string;
   items: ScoringRunItem[];
   processed: number;
@@ -36,6 +38,7 @@ const stateLabel: Record<string, string> = {
 };
 
 const activityDetailLabels: Record<string, string> = {
+  ...scoringReasonLabels,
   answer_low_confidence: "识别把握不足，转人工",
   low_confidence: "识别把握不足，转人工",
   rule_not_auto_confirmed: "评分细则未确认，转人工",
@@ -61,11 +64,13 @@ const activityDetailLabels: Record<string, string> = {
 };
 
 function activityDetail(item: ScoringRunItem): { label: string; raw?: string } {
+  const progressLabel = scoringProgressLabel(item);
   const raw = item.reason_code || item.error_code || item.runtime_status || item.review_status || "";
   const mapped = raw ? activityDetailLabels[raw.toLowerCase()] : undefined;
   if (mapped) {
     return { label: mapped, raw };
   }
+  if (progressLabel) return { label: progressLabel, raw: raw || undefined };
   if (item.state === "failed") {
     return { label: "处理失败，可重试", raw: raw || undefined };
   }
@@ -78,15 +83,18 @@ function activityDetail(item: ScoringRunItem): { label: string; raw?: string } {
 function groupCandidates(items: ScoringRunItem[]) {
   const grouped = new Map<string, ScoringRunItem[]>();
   for (const item of items) {
-    const current = grouped.get(item.anonymous_code) ?? [];
+    // 匿名码是显示名称；答卷身份由 submission_id 决定，不能把同一学生的每道题拆成一卷。
+    const id = item.submission_id || item.anonymous_code;
+    const current = grouped.get(id) ?? [];
     current.push(item);
-    grouped.set(item.anonymous_code, current);
+    grouped.set(id, current);
   }
   return [...grouped.entries()]
-    .map(([code, candidateItems]): CandidateGroup => ({
-      code,
+    .map(([id, candidateItems]): CandidateGroup => ({
+      id,
+      code: candidateItems[0].anonymous_code,
       items: candidateItems,
-      processed: candidateItems.filter((item) => item.state !== "queued" && item.state !== "processing").length,
+      processed: candidateItems.filter(hasObservedAnswer).length,
       confirmed: candidateItems.filter((item) => item.state === "confirmed").length,
       review: candidateItems.filter((item) => item.state === "review").length,
       failed: candidateItems.filter((item) => item.state === "failed").length,
@@ -110,7 +118,7 @@ function formatScoreValue(value: number) {
 }
 
 function runHeading(run?: ScoringRun) {
-  if (run?.status === "needs_review") return "自动识别完成，等待教师确认";
+  if (run?.status === "needs_review") return "本批答卷有待处理或确认项";
   if (run?.status === "completed") return "本批答卷已处理完成";
   return "正在逐卷识别与评分";
 }
@@ -139,12 +147,12 @@ export function ScoringPaperMonitor({ run, items, loading, onRefresh }: Readonly
       setSelectedCode("");
       return;
     }
-    if (!candidates.some((candidate) => candidate.code === selectedCode)) {
-      setSelectedCode(candidates[0].code);
+    if (!candidates.some((candidate) => candidate.id === selectedCode)) {
+      setSelectedCode(candidates[0].id);
     }
   }, [candidates, selectedCode]);
 
-  const selected = candidates.find((candidate) => candidate.code === selectedCode) ?? candidates[0];
+  const selected = candidates.find((candidate) => candidate.id === selectedCode) ?? candidates[0];
   const pages = useMemo(() => {
     const unique = new Map<string, { pageNo: number; assetId: string }>();
     for (const item of selected?.items ?? []) {
@@ -154,7 +162,6 @@ export function ScoringPaperMonitor({ run, items, loading, onRefresh }: Readonly
     }
     return [...unique.values()].sort((left, right) => left.pageNo - right.pageNo);
   }, [selected]);
-  const pageKey = pages.map((page) => page.assetId).join("|");
 
   // 切卷或卸载后忽略迟到的下载；只回收本轮创建的 URL，旧影像不能进入新卷。
   useEffect(() => {
@@ -194,10 +201,10 @@ export function ScoringPaperMonitor({ run, items, loading, onRefresh }: Readonly
       disposed = true;
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [pageKey]);
+  }, [pages]);
 
-  // 此进度统计离开排队/处理中的项目，包含待人工和失败，不能作为成绩已确认比例。
-  const processed = items.filter((item) => item.state !== "queued" && item.state !== "processing").length;
+  const processed = items.filter(hasObservedAnswer).length;
+  const scored = items.filter(hasScoringResult).length;
   const progress = items.length ? Math.round((processed / items.length) * 100) : 0;
   const activeItems = (selected?.items ?? [])
     .filter((item) => item.state !== "confirmed")
@@ -217,7 +224,7 @@ export function ScoringPaperMonitor({ run, items, loading, onRefresh }: Readonly
           <p>红色批注标记已确认得分；“≈”表示 AI 建议分，需要教师确认。</p>
         </div>
         <div className="scoring-monitor-progress">
-          <div><strong>{processed}</strong><span>/ {items.length} 题已识别 · {run?.review_count ?? 0} 题待确认</span></div>
+          <div><strong>{processed}</strong><span>/ {items.length} 题已识别 · {scored} 题已生成分数或建议</span></div>
           <Progress percent={progress} showInfo={false} strokeColor="#1677ff" trailColor="#e8edf5" />
           <Button icon={<RefreshCw size={15} />} loading={loading} onClick={onRefresh}>刷新</Button>
         </div>
@@ -230,14 +237,14 @@ export function ScoringPaperMonitor({ run, items, loading, onRefresh }: Readonly
             return (
               <button
                 type="button"
-                key={candidate.code}
-                className={`scoring-candidate-item ${candidate.code === selected?.code ? "active" : ""}`}
-                onClick={() => setSelectedCode(candidate.code)}
+                key={candidate.id}
+                className={`scoring-candidate-item ${candidate.id === selected?.id ? "active" : ""}`}
+                onClick={() => setSelectedCode(candidate.id)}
               >
                 <span className="scoring-candidate-index">{String(index + 1).padStart(2, "0")}</span>
                 <span className="scoring-candidate-copy">
                   <strong>{candidate.code}</strong>
-                  <small>{candidate.processed}/{candidate.items.length} 已识别 · {candidate.review} 待确认</small>
+                  <small>{candidate.processed}/{candidate.items.length} 已识别 · {candidate.review} 待处理或确认</small>
                 </span>
                 {candidateStatusIcon(candidate)}
               </button>

@@ -53,9 +53,11 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 	identity := NewIdentityModule(dependencies.Config, stores.Identity, dependencies.LoginGuard)
 	processingService := processing.NewService(stores.Capture.Processing, stores.Capture.WorkerRuntime)
 	examModule := NewExamPreparationModule(dependencies.Config, stores.Exam, ExamPreparationDependencies{
+		DB:        dependencies.DB,
 		AuthStore: identity.AuthStore, ObjectStore: dependencies.ObjectStore, Reconciliation: dependencies.Reconciliation,
 		Reviews: stores.Grading.Review, Processing: processingService,
-		DocumentModelResolver: newDocumentModelResolver(stores.AIGovernance.ModelGovernance),
+		DocumentModelResolver:  newDocumentModelResolver(stores.AIGovernance.ModelGovernance),
+		TemplateVisionResolver: newTemplateVisionResolver(stores.AIGovernance.ModelGovernance),
 	})
 	captureDependencies := CaptureProcessingDependencies{
 		Auth: identity.AuthStore, Exams: stores.Exam.Exam, Files: stores.Exam.Files,
@@ -73,7 +75,11 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 	}
 	aiFoundation := NewAIFoundation(stores.AIFoundation)
 	gradingQuality := NewGradingQualityModule(dependencies.Config, stores.Grading, GradingQualityDependencies{
-		DB: dependencies.DB, Auth: identity.AuthStore, Files: stores.Exam.Files, Objects: dependencies.ObjectStore,
+		ImageModelResolver:     newImageGradingModelResolver(stores.AIGovernance.ModelGovernance),
+		ImageModelByIDResolver: newImageGradingModelByIDResolver(stores.AIGovernance.ModelGovernance),
+		ModelGovernance:        stores.AIGovernance.ModelGovernance,
+		DB:                     dependencies.DB, Auth: identity.AuthStore, Files: stores.Exam.Files, Objects: dependencies.ObjectStore,
+		Exams: stores.Exam.Exam, Schools: stores.Identity.Org,
 		Segments: stores.Exam.Segments, Assessments: stores.Exam.Assessments,
 		WorkerRuntime: captureModule.WorkerRuntimeStore, Processing: captureModule.ProcessingService,
 		Eligibility: aiFoundation.EligibilityService, EvaluationEvidence: aiFoundation.GradingEvaluationService,
@@ -94,6 +100,7 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 		EligibilityHandler: aiFoundation.EligibilityHandler, GradingEvaluationHandler: aiFoundation.GradingEvaluationHandler,
 		ModelCalibrationHandler: aiFoundation.ModelCalibrationHandler, DisagreementHandler: aiFoundation.DisagreementHandler,
 	})
+	aiGovernance.ModelGovernanceHandler.WithGradingModelProbe(gradingQuality.SubjectiveHandler.ProbeImageModel)
 	resourceResolver, _ := identity.AuthStore.(auth.ResourceBoundaryResolver)
 	managedModels, _ := stores.AIGovernance.ModelGovernance.(modelgovernance.ManagedAPIConfigStore)
 	modelUsage, _ := stores.AIGovernance.ModelGovernance.(modelgovernance.UsageLedger)
@@ -122,14 +129,32 @@ func NewPostgresApplicationModules(infra *Infrastructure) (ApplicationModules, e
 	}, stores)
 }
 
-// 只有托管配置存储支持按租户解析模型；内存或旧实现没有该能力时返回 nil，让调用方继续走本地模型路径。
+// 存储不支持托管配置时返回 nil，让调用方继续走本地模型路径。
 func newDocumentModelResolver(store modelgovernance.Store) func(context.Context, string) (*paper.DocumentModelConfig, error) {
 	managed, ok := store.(modelgovernance.ManagedAPIConfigStore)
 	if !ok {
 		return nil
 	}
 	return func(ctx context.Context, tenantID string) (*paper.DocumentModelConfig, error) {
-		connection, err := modelgovernance.ResolveDefaultManagedAPI(ctx, managed, tenantID)
+		connection, err := modelgovernance.ResolveDocumentManagedAPI(ctx, managed, tenantID)
+		if err != nil || connection == nil {
+			return nil, err
+		}
+		return &paper.DocumentModelConfig{
+			AdapterType: connection.Config.AdapterType, ProviderKey: connection.Config.ProviderKey, BaseURL: connection.Config.BaseURL,
+			APIKey: connection.APIKey, ModelName: connection.Config.ModelName, ModelVersion: connection.Config.ModelVersion,
+		}, nil
+	}
+}
+
+// 视觉模型按学校独立分配，不因学校更换聊天默认项而自动改变答题卡识别所用供应商。
+func newTemplateVisionResolver(store modelgovernance.Store) func(context.Context, string) (*paper.DocumentModelConfig, error) {
+	managed, ok := store.(modelgovernance.ManagedAPIConfigStore)
+	if !ok {
+		return nil
+	}
+	return func(ctx context.Context, tenantID string) (*paper.DocumentModelConfig, error) {
+		connection, err := modelgovernance.ResolveAnswerSheetManagedAPI(ctx, managed, tenantID)
 		if err != nil || connection == nil {
 			return nil, err
 		}

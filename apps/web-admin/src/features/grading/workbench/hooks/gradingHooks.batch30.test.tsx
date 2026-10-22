@@ -55,8 +55,10 @@ describe("第30批队列标签与深链范围", () => {
   let queue: ReturnType<typeof useGradingQueue>;
   async function mount(options: Partial<Parameters<typeof useGradingQueue>[0]> = {}) {
     function Probe() {
-      queue = useGradingQueue({ canManageTasks: true, canWork: true, currentUserId: "teacher", initialExamId: "", personalScope: false, onInfo: api.info, ...options });
-      useEffect(() => { void queue.loadTasks(); }, [queue.loadTasks]);
+      const currentQueue = useGradingQueue({ canManageTasks: true, canWork: true, currentUserId: "teacher", initialExamId: "", personalScope: false, onInfo: api.info, ...options });
+      queue = currentQueue;
+      const { loadTasks } = currentQueue;
+      useEffect(() => { void loadTasks(); }, [loadTasks]);
       return null;
     }
     await act(async () => { root.render(<Probe />); });

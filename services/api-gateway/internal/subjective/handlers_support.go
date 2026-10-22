@@ -82,7 +82,26 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 }
 
 func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
+	var materialErr *GradingAgentError
+	if errors.As(err, &materialErr) {
+		// 只公开固定材料错误；不能把供应商或数据库返回的任意 code/message 转成 HTTP 内容。
+		messages := map[string]string{
+			"reference_material_unavailable":            "冻结参考材料当前不可用，请核对撤回或文件状态",
+			"reference_material_capability_unavailable": "当前评分实例尚未具备参考图调用能力，请联系管理员核对配置",
+			"reference_material_image_not_authorized":   "当前部署或图像外发尚未获准，请核对图像审批范围",
+		}
+		if message, allowed := messages[materialErr.Code]; allowed {
+			httpx.Error(w, r, http.StatusUnprocessableEntity, materialErr.Code, message)
+			return
+		}
+	}
 	switch {
+	case errors.Is(err, ErrTrialConflict):
+		httpx.Error(w, r, http.StatusConflict, "scoring_trial_conflict", "trial state, scope, revision or frozen versions no longer permit this operation")
+	case errors.Is(err, ErrTrialIndependentSamplesRequired):
+		httpx.Error(w, r, http.StatusBadRequest, "scoring_trial_independent_samples_required", "choose at least five samples without prior AI exposure; continue manual review when too few remain")
+	case errors.Is(err, ErrTrialExpansionLimitExceeded):
+		httpx.Error(w, r, http.StatusBadRequest, "scoring_trial_expansion_limit_exceeded", "单题扩批最多 1000 份；本次剩余答卷超过上限，请继续人工处理。")
 	case isMathRevisionConflict(err):
 		httpx.Error(w, r, http.StatusConflict, "math_evidence_version_conflict", "math evidence no longer matches the current crop or artifact revision")
 	case errors.Is(err, ErrActiveCropUnavailable):

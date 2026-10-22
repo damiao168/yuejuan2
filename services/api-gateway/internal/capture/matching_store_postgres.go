@@ -55,12 +55,6 @@ WHERE cp.tenant_id=$1 AND cp.capture_batch_id=$2::uuid AND cp.deleted_at IS NULL
 		if x.IdentityEvidence == nil {
 			x.IdentityEvidence = map[string]any{}
 		}
-		pages, pageErr := s.listSubmissionCapturePages(ctx, tenantID, batchID, x.ID)
-		if pageErr != nil {
-			subs.Close()
-			return MatchingQueue{}, pageErr
-		}
-		x.Pages = pages
 		queue.Submissions = append(queue.Submissions, x)
 	}
 	if err = subs.Err(); err != nil {
@@ -69,6 +63,14 @@ WHERE cp.tenant_id=$1 AND cp.capture_batch_id=$2::uuid AND cp.deleted_at IS NULL
 	}
 	if err = subs.Close(); err != nil {
 		return MatchingQueue{}, err
+	}
+	// 先读完并关闭答卷行集，归还连接后再读子页；单连接池也不能等待本请求自己释放连接。
+	for i := range queue.Submissions {
+		pages, pageErr := s.listSubmissionCapturePages(ctx, tenantID, batchID, queue.Submissions[i].ID)
+		if pageErr != nil {
+			return MatchingQueue{}, pageErr
+		}
+		queue.Submissions[i].Pages = pages
 	}
 	if queue.Candidates == nil {
 		queue.Candidates = []StudentCandidate{}

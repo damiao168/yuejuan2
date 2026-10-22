@@ -114,6 +114,11 @@ ORDER BY sort_order, question_no
 		} else if ok {
 			out[index].Solution = &solution
 		}
+		materials, err := loadReferenceMaterials(ctx, queryer, tenantID, examID, out[index].ID, "")
+		if err != nil {
+			return nil, err
+		}
+		out[index].ReferenceMaterials = referenceMaterialBinding(materials)
 	}
 	return out, nil
 }

@@ -145,7 +145,7 @@ def test_large_angle_is_not_treated_as_small_deskew_and_requires_review(
 
 
 @pytest.mark.parametrize("rotation", [90.0, 270.0])
-def test_quarter_turn_requires_review_without_automatic_rotation(
+def test_quarter_turn_records_landscape_without_assuming_content_orientation(
     rotation: float,
 ) -> None:
     with Image.open(io.BytesIO(make_clear_answer_like_image())) as source:
@@ -156,8 +156,8 @@ def test_quarter_turn_requires_review_without_automatic_rotation(
     geometry = result.quality_report["geometry"]
     assert geometry["coarse_orientation"] == "landscape"
     assert geometry["skew_correction_applied"] is False
-    assert result.quality_status in {"review", "failed"}
-    assert any(
+    # 画布长宽比无法区分正常横版与转了四分之一圈的竖版，不据此承诺识别内容方向。
+    assert not any(
         issue["code"] == "large_rotation_risk" for issue in result.quality_issues
     )
 

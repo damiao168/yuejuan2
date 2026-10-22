@@ -35,10 +35,13 @@ def test_extracts_one_clear_mark() -> None:
     assert result["overlay_png"].startswith(b"\x89PNG")
 
 
-def test_blank_and_multiple_route_to_review() -> None:
+def test_explicit_blank_has_quality_while_single_choice_multiple_routes_to_review() -> None:
     blank = extract_marks(sheet(), REGIONS)
     assert blank["decision"] == "blank"
-    assert blank["needs_human_review"] is True
+    # Worker 只报告提取质量；blank 能否自动记零仍由服务端的模板、校准和置信度决定。
+    assert blank["needs_human_review"] is False
+    assert blank["thresholds"]["quality"]["classification"] == "blank"
+    assert blank["confidence"] >= 0.98
 
     multiple = extract_marks(sheet("A", "C"), REGIONS)
     assert multiple["decision"] == "multiple"
@@ -49,6 +52,31 @@ def test_multiple_choice_preserves_clear_set() -> None:
     result = extract_marks(sheet("A", "C"), REGIONS, multiple=True)
     assert result["decision"] == "selected"
     assert result["selected"] == ["A", "C"]
+    assert result["needs_human_review"] is False
+    assert result["thresholds"]["quality"]["classification"] == "clear"
+    assert result["confidence"] >= 0.98
+
+
+def test_gray_erasure_is_distinct_from_blank() -> None:
+    image = Image.open(io.BytesIO(sheet()))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((27, 27, 43, 43), fill=(200, 200, 200))
+    output = io.BytesIO()
+    image.save(output, format="PNG")
+    result = extract_marks(output.getvalue(), REGIONS, multiple=True)
+    assert result["needs_human_review"] is True
+    assert result["thresholds"]["quality"]["classification"] == "possible_erasure"
+
+
+def test_unreadable_input_does_not_appear_as_full_multiple_choice_set() -> None:
+    image = Image.new("RGB", (180, 70), "black")
+    output = io.BytesIO()
+    image.save(output, format="PNG")
+    result = extract_marks(output.getvalue(), REGIONS, multiple=True)
+    assert result["decision"] == "ambiguous"
+    assert result["selected"] == []
+    assert result["thresholds"]["quality"]["classification"] == "unreadable"
+    assert result["needs_human_review"] is True
 
 
 def test_rejects_missing_or_unsafe_regions() -> None:

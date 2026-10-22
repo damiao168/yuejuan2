@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { App, Button, Form, Input, Modal, Select, Upload, type TableColumnsType } from "antd";
+import { App, Button, Dropdown, Form, Input, Modal, Segmented, Select, Space, Upload, type MenuProps, type TableColumnsType } from "antd";
 import { Download, Plus, RefreshCw, Search, Upload as UploadIcon } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
 import {
   createStudent,
+  deleteStudent,
   importStudentsCSV,
   listClasses,
   listGrades,
   listStudents,
   updateStudentStatus,
+  updateStudent,
+  transferStudent,
   type Grade,
   type SchoolClass,
   type Student,
@@ -17,6 +20,7 @@ import {
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
+import { isStepUpCancelledError, useStepUp } from "../auth/stepUpContext";
 import { prepareStudentImport, remapStudentImportError } from "../features/members/students/studentImport";
 
 interface StudentFormValues {
@@ -71,6 +75,7 @@ async function loadAllStudents() {
 
 export function StudentManagementPage() {
   const { message, modal } = App.useApp();
+  const { runWithStepUp } = useStepUp();
   const [form] = Form.useForm<StudentFormValues>();
   const [students, setStudents] = useState<Student[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
@@ -83,6 +88,9 @@ export function StudentManagementPage() {
   const [classId, setClassId] = useState("all");
   const [status, setStatus] = useState("active");
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [transferringStudent, setTransferringStudent] = useState<Student | null>(null);
+  const [transferClassId, setTransferClassId] = useState<string>();
   const [importOpen, setImportOpen] = useState(false);
   const [csv, setCSV] = useState("");
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
@@ -135,11 +143,23 @@ export function StudentManagementPage() {
     { title: "班级", width: 150, render: (_, item) => classById.get(item.class_id)?.name ?? "-" },
     { title: "状态", dataIndex: "status", width: 100, render: (value: string) => <StatusTag tone={value === "active" ? "success" : "neutral"}>{value === "active" ? "在籍" : "停用"}</StatusTag> },
     {
-      title: "操作", key: "actions", width: 110, fixed: "right", render: (_, item) => (
+      title: "操作", key: "actions", width: 180, fixed: "right", render: (_, item) => {
+        const busy = loading || saving || Boolean(actioning);
+        const moreItems: MenuProps["items"] = [{ key: "transfer", label: "调整班级", onClick: () => { setTransferringStudent(item); setTransferClassId(item.class_id); } }];
+        if (item.status === "inactive") moreItems.push({ key: "delete", label: "彻底删除", danger: true, onClick: () => confirmDelete(item) });
+        return (
+        <Space size={0}>
+        <Button type="link" size="small" disabled={busy} onClick={() => {
+          setEditingStudent(item);
+          form.resetFields();
+          form.setFieldsValue({ class_id: item.class_id, student_no: item.student_no, name: item.name, gender: item.gender || undefined });
+          setCreateOpen(true);
+        }}>编辑</Button>
         <Button
           type="link"
           size="small"
           loading={actioning === item.id}
+          disabled={busy}
           onClick={() => modal.confirm({
             title: item.status === "active" ? "停用学生" : "恢复学生",
             content: item.status === "active" ? `停用后，${item.name} 不会进入新考试的在籍学生范围。` : `恢复 ${item.name} 的在籍状态？`,
@@ -148,29 +168,65 @@ export function StudentManagementPage() {
             onOk: async () => {
               setActioning(item.id);
               try {
-                await updateStudentStatus(item.id, item.status === "active" ? "inactive" : "active");
-                await load();
+                const result = await updateStudentStatus(item.id, item.status === "active" ? "inactive" : "active");
+                setStudents((current) => current.map((student) => student.id === result.student.id ? result.student : student));
+                message.success(item.status === "active" ? "学生已停用，可在“已停用”中恢复或删除" : "学生已恢复，可在“在籍”中查看");
               } catch (error_) {
                 message.error(errorText(error_));
+                throw error_;
               } finally {
                 setActioning("");
               }
             }
           })}
         >{item.status === "active" ? "停用" : "恢复"}</Button>
-      )
+        <Dropdown trigger={["click"]} menu={{ items: moreItems }} disabled={busy}><Button type="link" size="small" disabled={busy} aria-label={`更多操作：${item.name}`}>更多</Button></Dropdown>
+        </Space>
+      ); }
     }
   ];
 
-  const submitStudent = async () => {
-    const values = await form.validateFields();
+  function confirmDelete(student: Student) {
+    modal.confirm({
+      title: `彻底删除学生“${student.name}”？`,
+      content: <><p>学号：{student.student_no}</p><p>删除后无法恢复。系统只会删除没有考试、答卷、成绩或账号等关联记录的停用学生。</p></>,
+      okText: "彻底删除",
+      okButtonProps: { danger: true },
+      cancelText: "取消",
+      maskClosable: false,
+      onOk: async () => {
+        setActioning(student.id);
+        try {
+          await runWithStepUp({
+            reason: `彻底删除学生“${student.name}”`,
+            description: "此操作永久删除学生名册和学籍，无法恢复。已有业务关联的学生会保留。",
+            action: () => deleteStudent(student.id)
+          });
+          // 仅在远端确认删除后移除本地记录，失败时继续保留恢复入口。
+          setStudents((current) => current.filter((item) => item.id !== student.id));
+          message.success("学生已彻底删除");
+        } catch (reason) {
+          if (!isStepUpCancelledError(reason)) message.error(errorText(reason));
+          throw reason;
+        } finally { setActioning(""); }
+      }
+    });
+  }
+
+  const submitStudent = async (values: StudentFormValues) => {
     const schoolClass = classById.get(values.class_id);
-    if (!schoolClass) return;
+    if (!editingStudent && !schoolClass) {
+      message.error("所选班级已不可用，请刷新后重新选择");
+      return;
+    }
     setSaving(true);
     try {
-      await createStudent({ ...values, school_id: schoolClass.school_id });
-      message.success("学生已添加");
+      // 基本资料编辑不直接覆盖班级；转班单独走学籍接口，保留原班记录。
+      if (editingStudent) await updateStudent(editingStudent.id, { student_no: values.student_no.trim(), name: values.name.trim(), gender: values.gender ?? "" });
+      else if (schoolClass) await createStudent({ ...values, student_no: values.student_no.trim(), name: values.name.trim(), school_id: schoolClass.school_id });
+      message.success(editingStudent ? "学生信息已修改" : "学生已添加");
       setCreateOpen(false);
+      setEditingStudent(null);
       form.resetFields();
       await load();
     } catch (error_) {
@@ -178,6 +234,19 @@ export function StudentManagementPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const submitTransfer = async () => {
+    if (!transferringStudent || !transferClassId || transferClassId === transferringStudent.class_id) return;
+    setSaving(true);
+    try {
+      await transferStudent(transferringStudent.id, transferClassId);
+      message.success("学生班级已调整");
+      setTransferringStudent(null);
+      await load();
+    } catch (reason) {
+      message.error(errorText(reason));
+    } finally { setSaving(false); }
   };
 
   const submitImport = async () => {
@@ -210,8 +279,8 @@ export function StudentManagementPage() {
     }
   };
 
-  // 数量只统计折叠区域中的非默认筛选，班级和搜索词不计入。
-  const advancedFilterCount = [academicYear !== "all", gradeId !== "all", status !== "active"].filter(Boolean).length;
+  // 状态直接展示在名册上方；折叠筛选数量只计算学年和年级。
+  const advancedFilterCount = [academicYear !== "all", gradeId !== "all"].filter(Boolean).length;
   let advancedFilterLabel = "更多筛选";
   if (advancedFiltersOpen) {
     advancedFilterLabel = "收起筛选";
@@ -227,9 +296,9 @@ export function StudentManagementPage() {
       <section className="member-management-heading">
         <div><h1>学生管理</h1><p>维护日常学生名册；考试创建时直接选择班级范围。</p></div>
         <div>
-          <Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>刷新</Button>
+          <Button icon={<RefreshCw size={16} />} loading={loading} disabled={saving || Boolean(actioning)} onClick={() => void load()}>刷新</Button>
           <Button icon={<UploadIcon size={16} />} onClick={() => setImportOpen(true)}>导入学生</Button>
-          <Button type="primary" icon={<Plus size={16} />} onClick={() => setCreateOpen(true)}>新增学生</Button>
+          <Button type="primary" icon={<Plus size={16} />} onClick={() => { setEditingStudent(null); form.resetFields(); setCreateOpen(true); }}>新增学生</Button>
         </div>
       </section>
 
@@ -253,25 +322,26 @@ export function StudentManagementPage() {
           <span>年级</span>
           <Select value={gradeId} options={[{ value: "all", label: "全部年级" }, ...visibleGrades.map((item) => ({ value: item.id, label: gradeBusinessLabel(item) }))]} onChange={(value) => { setGradeId(value); setClassId("all"); }} />
         </label>
-        <label className="student-filter-field student-filter-status">
-          <span>状态</span>
-          <Select value={status} options={[{ value: "active", label: "在籍" }, { value: "inactive", label: "停用" }, { value: "all", label: "全部状态" }]} onChange={setStatus} />
-        </label>
         </div> : null}
       </section>
 
       <section className="student-management-table">
-        <div className="section-head"><div><h2>学生名册</h2><p>{filtered.length} 名学生</p></div></div>
-        <ResponsiveTable className="dense-data-table" rowKey="id" size="small" columns={columns} dataSource={filtered} scroll={{ x: 760 }} pagination={{ size: "small", pageSize: 20, showSizeChanger: true }} locale={{ emptyText: <EmptyState title="暂无学生" description="可新增学生，或下载模板后批量导入。" /> }} />
+        <div className="student-roster-toolbar"><div className="section-head"><div><h2>学生名册</h2><p>{filtered.length} 名学生</p></div></div><Segmented aria-label="学生状态" value={status} onChange={setStatus} options={[{ value: "active", label: "在籍" }, { value: "inactive", label: "已停用" }, { value: "all", label: "全部" }]} /></div>
+        <ResponsiveTable className="dense-data-table" rowKey="id" size="small" columns={columns} dataSource={filtered} scroll={{ x: 760 }} pagination={{ size: "small", pageSize: 20, showSizeChanger: true }} locale={{ emptyText: <EmptyState title={status === "inactive" ? "暂无已停用学生" : "暂无学生"} description={status === "inactive" ? "停用学生会显示在这里，可恢复或彻底删除。" : "可新增学生，或下载模板后批量导入。"} /> }} />
       </section>
 
-      <Modal title="新增学生" open={createOpen} okText="保存" cancelText="取消" confirmLoading={saving} onOk={() => void submitStudent()} onCancel={() => { setCreateOpen(false); form.resetFields(); }}>
-        <Form form={form} layout="vertical" requiredMark={false}>
-          <Form.Item name="class_id" label="班级" rules={[{ required: true, message: "请选择班级" }]}><Select showSearch optionFilterProp="label" options={classes.map((item) => ({ value: item.id, label: `${gradeBusinessLabel(gradeById.get(item.grade_id))} · ${item.name}` }))} /></Form.Item>
-          <Form.Item name="student_no" label="学号" rules={[{ required: true, message: "请输入学号" }]}><Input maxLength={50} /></Form.Item>
-          <Form.Item name="name" label="姓名" rules={[{ required: true, message: "请输入姓名" }]}><Input maxLength={80} /></Form.Item>
+      <Modal title={editingStudent ? "编辑学生" : "新增学生"} open={createOpen} okText="保存" cancelText="取消" confirmLoading={saving} maskClosable={!saving} closable={!saving} cancelButtonProps={{ disabled: saving }} onOk={() => form.submit()} onCancel={() => { if (!saving) { setCreateOpen(false); setEditingStudent(null); form.resetFields(); } }}>
+        <Form form={form} layout="vertical" requiredMark={false} disabled={saving} onFinish={(values) => void submitStudent(values)}>
+          <Form.Item name="class_id" label="班级" extra={editingStudent ? "如需转班，请使用列表中的“调整班级”。" : undefined} rules={editingStudent ? [] : [{ required: true, message: "请选择班级" }]}><Select disabled={Boolean(editingStudent)} showSearch optionFilterProp="label" options={classes.map((item) => ({ value: item.id, label: `${gradeBusinessLabel(gradeById.get(item.grade_id))} · ${item.name}` }))} /></Form.Item>
+          <Form.Item name="student_no" label="学号" rules={[{ required: true, whitespace: true, message: "请输入学号" }]}><Input maxLength={64} /></Form.Item>
+          <Form.Item name="name" label="姓名" rules={[{ required: true, whitespace: true, message: "请输入姓名" }]}><Input maxLength={120} /></Form.Item>
           <Form.Item name="gender" label="性别（可选）"><Select allowClear options={[{ value: "male", label: "男" }, { value: "female", label: "女" }, { value: "unknown", label: "未填写" }]} /></Form.Item>
         </Form>
+      </Modal>
+
+      <Modal title={transferringStudent ? `调整班级 · ${transferringStudent.name}` : "调整班级"} open={Boolean(transferringStudent)} okText="保存" cancelText="取消" confirmLoading={saving} okButtonProps={{ disabled: !transferClassId || transferClassId === transferringStudent?.class_id }} cancelButtonProps={{ disabled: saving }} maskClosable={!saving} closable={!saving} onOk={() => void submitTransfer()} onCancel={() => { if (!saving) setTransferringStudent(null); }}>
+        <p>当前班级：{classById.get(transferringStudent?.class_id ?? "")?.name ?? "未分班"}。调整后保留原班学籍记录。</p>
+        <label>目标班级<Select aria-label="目标班级" style={{ width: "100%", marginTop: 8 }} disabled={saving} value={transferClassId} showSearch optionFilterProp="label" onChange={setTransferClassId} options={classes.filter((item) => item.school_id === transferringStudent?.school_id && item.status === "active").map((item) => ({ value: item.id, label: `${gradeBusinessLabel(gradeById.get(item.grade_id))} · ${item.name}` }))} /></label>
       </Modal>
 
       <Modal title="批量导入学生" open={importOpen} okText={importResult ? "完成" : "开始导入"} cancelText="取消" okButtonProps={{ disabled: !csv.trim() && !importResult }} confirmLoading={saving} onOk={() => { if (importResult) { setImportOpen(false); setCSV(""); setImportResult(null); } else void submitImport(); }} onCancel={() => { setImportOpen(false); setCSV(""); setImportResult(null); }}>

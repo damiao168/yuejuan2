@@ -4,8 +4,10 @@ import type { Question } from "../../../../api/papers";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
 import { examSubjectLabel } from "../../../../constants/examStatus";
 import "../teacher-product-ux.css";
+import { FrozenReferenceImages } from "../../../paper-rubric/FrozenReferenceImages";
 
 const referenceLabels: Record<string, string> = {
+  stem: "题干",
   description: "说明", label: "说明", rule: "规则", reason: "依据", score: "分值", max_score: "满分",
   answer: "答案", answers: "答案", standard_answer: "参考答案", equivalent_answers: "等价答案",
   text: "内容", raw_text: "内容", solution: "解法", expected: "标准", condition: "条件", conditions: "条件",
@@ -67,9 +69,9 @@ export function FrozenQuestionReference({ context }: Readonly<{ context: Workben
   const question = context.question;
   if (!question) return null;
   return <section className="frozen-question-reference" aria-label="本任务题目与完整评分依据">
-    <strong>{context.task.exam_name || `考试 ${context.task.exam_id.slice(0, 8)}`} · {examSubjectLabel(context.task.subject || context.reviewContext.subject_tool_hints.subject_code || "")} · 第 {context.task.question_no} 题</strong>
+    <strong>{context.task.exam_name || "本次考试"} · {examSubjectLabel(context.task.subject || context.reviewContext.subject_tool_hints.subject_code || "")} · 第 {context.task.question_no} 题</strong>
     <Tabs size="small" items={[
-      { key: "question", label: "题目与参考解答", children: <QuestionReferenceContent question={question} /> },
+      { key: "question", label: "题目与参考解答", children: <><QuestionReferenceContent question={question} />{question.reference_materials && <FrozenReferenceImages taskId={context.task.id}/>}</> },
       { key: "rules", label: "完整评分依据", children: <div>{question.rubric?.status === "missing" ? <Alert type="warning" showIcon message="本任务的冻结评分细则缺失" description="请联系考试管理员核对历史评分依据。当前题库的细则不会替代本任务的冻结版本。" /> : <p>任务冻结细则：{question.rubric?.version || "未记录版本"}；此处只供核对，给分请在最终评分区操作。</p>}
         <h3>评分点</h3><ReferenceList values={question.rubric?.points ?? []} empty="本题没有评分点" />
         <h3>扣分与例外规则</h3><ReferenceList values={question.rubric?.deductions ?? []} empty="冻结细则未提供扣分或例外规则" />

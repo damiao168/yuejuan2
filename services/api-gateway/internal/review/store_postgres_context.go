@@ -21,6 +21,10 @@ type queryer interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
+// 当前可采纳的建议及最多 20 条历史只取同一答案、快照和冻结量规；旧版本仍保存在成绩管理历史中。
+// 图像链以当前有效计划的 input_version 为答案身份，不能拿旧 OCR 答案 ID 过滤或展示它的建议。
+// 旧建议的 nil 列表曾保存为 JSON null；读取时仅将 null 转为空数组，其它错误类型保留给契约校验拒绝。
+// 历史单模型没有 panel_execution；只在原记录存在时投影，避免补成 null 后被误判为汇总失败。
 func (s *PostgresStore) loadContextScanner(ctx context.Context, q queryer, tenantID string, segmentID string) (Context, error) {
 	row := q.QueryRowContext(ctx, `
 SELECT
@@ -35,13 +39,18 @@ SELECT
   COALESCE(qr.id::text, ''), COALESCE(qr.question_id::text, ''), COALESCE(rv.version, ''),
   COALESCE(qr.status, ''), COALESCE(qr.max_score::float8, 0), COALESCE(qr.points, '[]'::jsonb),
   COALESCE(qr.deductions, '[]'::jsonb), COALESCE(qr.examples, '[]'::jsonb),
-  COALESCE(ans.answer_text, ''), COALESCE(ans.source, ''),
+  CASE WHEN image_input.input_version_id IS NOT NULL THEN '' ELSE COALESCE(ans.answer_text, '') END,
+  CASE WHEN image_input.input_version_id IS NOT NULL THEN 'image' ELSE COALESCE(ans.source, '') END,
   COALESCE(ag.ai_suggestion, 'null'::jsonb),
-  q.options, to_jsonb(reference_key), to_jsonb(reference_solution)
+  q.options, to_jsonb(reference_key), to_jsonb(reference_solution), COALESCE(image_input.input_version_id::text, ans.id::text, '')
 FROM answer_segment seg
 JOIN submission sub ON sub.tenant_id = seg.tenant_id AND sub.id = seg.submission_id
 JOIN question q ON q.tenant_id = seg.tenant_id AND q.id = seg.question_id
-JOIN exam_question_snapshot eqs ON eqs.tenant_id = q.tenant_id AND eqs.exam_id = q.exam_id AND eqs.question_id = q.id
+JOIN LATERAL (
+  SELECT * FROM exam_question_snapshot snapshot
+  WHERE snapshot.tenant_id=q.tenant_id AND snapshot.exam_id=q.exam_id AND snapshot.question_id=q.id
+  ORDER BY snapshot.snapshot_version DESC, snapshot.id DESC LIMIT 1
+) eqs ON true
 LEFT JOIN LATERAL (
   SELECT id,question_id,answer_version,standard_answer,equivalent_answers,tolerance
   FROM question_answer_key
@@ -63,12 +72,28 @@ LEFT JOIN LATERAL (
 ) qr ON true
 LEFT JOIN rubric_version rv ON rv.tenant_id = q.tenant_id AND rv.id = qr.rubric_version_id
 LEFT JOIN LATERAL (
-  SELECT answer_text, source
+  SELECT id, answer_text, source
   FROM answer_segment_answer
   WHERE tenant_id = seg.tenant_id AND answer_segment_id = seg.id AND deleted_at IS NULL
-  ORDER BY created_at DESC
+  ORDER BY created_at DESC, id DESC
   LIMIT 1
 ) ans ON true
+LEFT JOIN LATERAL (
+  SELECT item.input_version_id,item.subjective_run_id,iv.crop_sha256,ai.input_protocol,ai.status AS run_status
+  FROM scoring_run_item item
+  JOIN scoring_run run ON run.tenant_id=item.tenant_id AND run.id=item.scoring_run_id
+    AND run.status NOT IN ('cancelling','cancelled') AND run.deleted_at IS NULL
+  JOIN answer_input_version iv ON iv.tenant_id=item.tenant_id AND iv.id=item.input_version_id
+    AND iv.crop_file_asset_id=seg.crop_file_asset_id AND iv.crop_sha256=seg.crop_sha256
+  JOIN subjective_grading_run ai ON ai.tenant_id=item.tenant_id AND ai.id=item.subjective_run_id
+    AND ai.input_mode='image' AND ai.input_version_id=item.input_version_id
+    AND ai.answer_segment_id=seg.id AND ai.question_id=q.id AND ai.exam_question_snapshot_id=eqs.id
+    AND ai.deleted_at IS NULL
+  WHERE item.tenant_id=seg.tenant_id AND item.answer_segment_id=seg.id
+    AND item.route='image_ai' AND item.assessment_snapshot_id=eqs.id
+    AND item.processing_status NOT IN ('superseded','cancelled')
+  ORDER BY run.created_at DESC,item.plan_generation DESC LIMIT 1
+) image_input ON true
 LEFT JOIN LATERAL (
   SELECT (array_agg(ai_suggestion ORDER BY created_at DESC, id DESC))[1]
     || jsonb_build_object('suggestion_history',jsonb_agg(ai_suggestion ORDER BY created_at DESC, id DESC)) AS ai_suggestion
@@ -79,9 +104,31 @@ LEFT JOIN LATERAL (
     'tenant_id', tenant_id::text,
     'answer_segment_id', answer_segment_id::text,
     'question_id', question_id::text,
+    'exam_question_snapshot_id', exam_question_snapshot_id::text,
     'question_no', question_no,
     'question_type', question_type,
     'answer_version', answer_version,
+    'input_binding', CASE WHEN image_input.input_version_id IS NOT NULL THEN jsonb_build_object(
+      'input_mode','image','input_protocol',image_input.input_protocol,
+      'input_version_id',image_input.input_version_id::text,'crop_sha256',image_input.crop_sha256,
+      'assessment_snapshot_id',eqs.id::text,'answer_segment_id',seg.id::text,'question_id',q.id::text,
+      'subjective_run_id',image_input.subjective_run_id::text
+    ) ELSE NULL END,
+    'raw_output', CASE WHEN image_input.input_version_id IS NOT NULL THEN jsonb_build_object(
+      'schema_version',raw_output->'schema_version','input_version_id',raw_output->'input_version_id',
+      'assessment_snapshot_id',raw_output->'assessment_snapshot_id',
+      'observation',raw_output->'observation','judgments',raw_output->'judgments',
+      'score_prefill_allowed',raw_output->'score_prefill_allowed',
+      'scoring_basis',COALESCE(raw_output->'scoring_basis',(
+        SELECT jsonb_build_object(
+          'standard_answer',basis_run.image_context_json->'ReferenceContext'->'standard_answer',
+          'solution_text',basis_run.image_context_json->'ReferenceContext'->'solution_text',
+          'rubric_points',basis_run.image_context_json->'Rubric'->'points')
+        FROM subjective_grading_run basis_run
+        WHERE basis_run.tenant_id=ai_grade.tenant_id AND basis_run.id=ai_grade.subjective_grading_run_id
+          AND basis_run.input_version_id::text=ai_grade.answer_version AND basis_run.deleted_at IS NULL
+      ))
+    ) || CASE WHEN raw_output ? 'panel_execution' THEN jsonb_build_object('panel_execution',raw_output->'panel_execution') ELSE '{}'::jsonb END ELSE NULL END,
     'grader_type', grader_type,
     'rule_version', rule_version,
     'model_version', model_version,
@@ -95,10 +142,10 @@ LEFT JOIN LATERAL (
     'suggested_score', suggested_score,
     'max_score', max_score,
     'confidence', confidence,
-    'matched_points', matched_points,
-    'missing_points', missing_points,
-    'evidence', evidence,
-    'risk_flags', risk_flags,
+    'matched_points', CASE WHEN matched_points='null'::jsonb THEN '[]'::jsonb ELSE matched_points END,
+    'missing_points', CASE WHEN missing_points='null'::jsonb THEN '[]'::jsonb ELSE missing_points END,
+    'evidence', CASE WHEN evidence='null'::jsonb THEN '[]'::jsonb ELSE evidence END,
+    'risk_flags', CASE WHEN risk_flags='null'::jsonb THEN '[]'::jsonb ELSE risk_flags END,
     'needs_human_review', needs_human_review,
     'auto_pass', auto_pass,
     'mock', mock,
@@ -110,8 +157,11 @@ LEFT JOIN LATERAL (
     'created_at', created_at
   ) AS ai_suggestion
   FROM ai_grade
-  WHERE tenant_id = seg.tenant_id AND answer_segment_id = seg.id AND deleted_at IS NULL
-  ORDER BY created_at DESC
+  WHERE tenant_id = seg.tenant_id AND answer_segment_id = seg.id AND question_id=q.id AND deleted_at IS NULL
+    AND answer_version=COALESCE(image_input.input_version_id::text, ans.id::text) AND exam_question_snapshot_id=eqs.id
+    AND rubric_version=eqs.rubric_snapshot_json->>'version'
+    AND (image_input.input_version_id IS NULL OR (subjective_grading_run_id=image_input.subjective_run_id AND status='succeeded' AND image_input.run_status='succeeded'))
+  ORDER BY created_at DESC, id DESC
   LIMIT 20
   ) suggestions
 ) ag ON true
@@ -155,7 +205,7 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL AND su
 		&out.RawAnswer,
 		&answerSource,
 		&aiSuggestionRaw,
-		&optionsRaw, &referenceKeyRaw, &referenceSolutionRaw,
+		&optionsRaw, &referenceKeyRaw, &referenceSolutionRaw, &out.AnswerVersion,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Context{}, ErrNotFound
@@ -191,7 +241,7 @@ WHERE seg.tenant_id = $1 AND seg.id::text = $2 AND seg.deleted_at IS NULL AND su
 	if err := decodeJSONB(examplesRaw, &rubric.Examples, "rubric.examples"); err != nil {
 		return Context{}, err
 	}
-	// 当前题库细则不是历史阅卷依据；快照缺失时明确返回缺失，不能偷偷换成后来修改的细则。
+	// 工作台与评分服务都选当前最新冻结快照；量规仍从该快照读取，不能换成后来编辑的题库细则。
 	rubric = taskFrozenRubric(out.AssessmentSnapshot.RubricSnapshot, question.ID, question.Score)
 	if answerSource == "ocr_text" {
 		out.OCRText = out.RawAnswer

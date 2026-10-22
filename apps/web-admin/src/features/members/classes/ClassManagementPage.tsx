@@ -3,7 +3,7 @@ import { App, Button, Form, Input, InputNumber, Modal, Select } from "antd";
 import type { TableColumnsType } from "antd";
 import { Plus, RefreshCw } from "lucide-react";
 import { getUserErrorMessage } from "../../../api/client";
-import { createClass, createGrade, listClasses, listGrades, listSchools, listStudents, type Grade, type School, type SchoolClass, type Student } from "../../../api/org";
+import { createClass, createGrade, updateClass, updateGrade, listClasses, listGrades, listSchools, listStudents, type Grade, type School, type SchoolClass, type Student } from "../../../api/org";
 import { ErrorState, LoadingState } from "../../../components/PageState";
 import { ResponsiveTable } from "../../../components/ResponsiveTable";
 import { StatusTag } from "../../../components/StatusTag";
@@ -40,6 +40,8 @@ export function ClassManagementPage() {
   const [scopeSchoolId, setScopeSchoolId] = useState("");
   const [scopeYear, setScopeYear] = useState("");
   const [dialog, setDialog] = useState<"grade" | "class" | null>(null);
+  const [editTarget, setEditTarget] = useState<{ kind: "grade"; value: Grade } | { kind: "class"; value: SchoolClass } | null>(null);
+  const [editForm] = Form.useForm<{ name: string; code?: string }>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -75,8 +77,33 @@ export function ClassManagementPage() {
       // 分页统计未完成时，尚未出现的班级不能按零人展示。
       return "未统计全量";
     } },
-    { title: "状态", dataIndex: "status", width: 100, render: (status: string) => <StatusTag tone={status === "active" ? "success" : "neutral"}>{status === "active" ? "启用" : "停用"}</StatusTag> }
+    { title: "状态", dataIndex: "status", width: 100, render: (status: string) => <StatusTag tone={status === "active" ? "success" : "neutral"}>{status === "active" ? "启用" : "停用"}</StatusTag> },
+    { title: "操作", key: "actions", width: 76, render: (_, item) => <Button type="link" size="small" disabled={saving} onClick={() => openEdit({ kind: "class", value: item })}>编辑</Button> }
   ];
+
+  function openEdit(target: NonNullable<typeof editTarget>) {
+    editForm.resetFields();
+    editForm.setFieldsValue({ name: target.value.name, code: target.kind === "class" ? target.value.code : undefined });
+    setEditTarget(target);
+  }
+
+  async function saveEdit(values: { name: string; code?: string }) {
+    if (!editTarget) return;
+    setSaving(true);
+    try {
+      // 只修正名称和代码；学校、学年和届别关系仍由原记录保留。
+      if (editTarget.kind === "grade") {
+        const result = await updateGrade(editTarget.value.id, { name: values.name.trim() });
+        setGrades((current) => current.map((item) => item.id === result.grade.id ? result.grade : item));
+      } else {
+        const result = await updateClass(editTarget.value.id, { name: values.name.trim(), code: values.code?.trim() ?? "" });
+        setClasses((current) => current.map((item) => item.id === result.class.id ? result.class : item));
+      }
+      message.success(editTarget.kind === "grade" ? "年级信息已修改" : "班级信息已修改");
+      setEditTarget(null);
+    } catch (reason) { message.error(getUserErrorMessage(reason, "修改失败，填写内容已保留")); }
+    finally { setSaving(false); }
+  }
 
   async function submitGrade(values: Pick<Grade, "school_id" | "name" | "level_no" | "academic_year" | "education_stage">) {
     setSaving(true);
@@ -96,7 +123,14 @@ export function ClassManagementPage() {
   return <div className="member-management-page class-management-page">
     <section className="member-management-heading"><div><h1>年级与班级</h1><p>维护考试学生范围所依赖的年级、班级和班级代码。</p></div><div><Button icon={<RefreshCw size={15} />} loading={loading} onClick={() => void load()}>刷新</Button><Button onClick={() => setDialog("grade")}>新增年级</Button><Button type="primary" icon={<Plus size={15} />} disabled={!selectedGrade} onClick={() => setDialog("class")}>新增班级</Button></div></section>
     <div className="class-management-scope" aria-label="班级范围"><label>学校<Select value={currentSchoolId || undefined} options={schools.map((school) => ({ value: school.id, label: school.name }))} onChange={(id) => { setScopeSchoolId(id); setScopeYear(""); setGradeId(grades.find((grade) => grade.school_id === id && grade.status === "active")?.id ?? grades.find((grade) => grade.school_id === id)?.id ?? ""); }} /></label><label>学年<Select value={currentYear || undefined} options={[...new Set(grades.filter((grade) => grade.school_id === currentSchoolId).map((grade) => grade.academic_year))].sort((left, right) => right.localeCompare(left)).map((year) => ({ value: year, label: `${year}学年` }))} onChange={(year) => { setScopeYear(year); setGradeId(grades.find((grade) => grade.school_id === currentSchoolId && grade.academic_year === year)?.id ?? ""); }} /></label><label>年级<Select value={gradeId || undefined} options={visibleGrades.map((grade) => ({ value: grade.id, label: gradeBusinessLabel(grade) }))} onChange={setGradeId} /></label></div>
-    <div className="class-management-layout"><aside><h2>当前学年年级</h2>{visibleGrades.map((grade) => <button type="button" key={grade.id} className={grade.id === gradeId ? "active" : ""} onClick={() => setGradeId(grade.id)}><strong>{gradeBusinessLabel(grade)}</strong><span>{grade.academic_year}学年</span></button>)}</aside><section className="member-table-section"><div className="section-head"><div><h2>{gradeBusinessLabel(selectedGrade)}</h2><p>{selectedGrade ? `${schools.find((school) => school.id === selectedGrade.school_id)?.name ?? "当前学校"} · ${selectedGrade.academic_year}学年` : "请选择年级"}</p></div><span>{visibleClasses.length} 个班级</span></div><ResponsiveTable className="dense-data-table" rowKey="id" size="small" columns={columns} dataSource={visibleClasses} pagination={{ pageSize: 20, showSizeChanger: false }} /></section></div>
+    <div className="class-management-layout"><aside><h2>当前学年年级</h2>{visibleGrades.map((grade) => <button type="button" key={grade.id} className={grade.id === gradeId ? "active" : ""} onClick={() => setGradeId(grade.id)}><strong>{gradeBusinessLabel(grade)}</strong><span>{grade.academic_year}学年</span></button>)}</aside><section className="member-table-section"><div className="section-head"><div><h2>{gradeBusinessLabel(selectedGrade)}</h2><p>{selectedGrade ? `${schools.find((school) => school.id === selectedGrade.school_id)?.name ?? "当前学校"} · ${selectedGrade.academic_year}学年` : "请选择年级"}</p></div><div>{selectedGrade ? <Button type="link" size="small" disabled={saving} onClick={() => openEdit({ kind: "grade", value: selectedGrade })}>编辑年级</Button> : null}<span>{visibleClasses.length} 个班级</span></div></div><ResponsiveTable className="dense-data-table" rowKey="id" size="small" columns={columns} dataSource={visibleClasses} pagination={{ pageSize: 20, showSizeChanger: false }} /></section></div>
+    <Modal title={editTarget?.kind === "grade" ? "编辑年级" : "编辑班级"} open={Boolean(editTarget)} okText="保存" cancelText="取消" confirmLoading={saving} maskClosable={!saving} closable={!saving} cancelButtonProps={{ disabled: saving }} onOk={() => editForm.submit()} onCancel={() => { if (!saving) setEditTarget(null); }}>
+      <p>{editTarget ? schools.find((school) => school.id === editTarget.value.school_id)?.name ?? "当前学校" : ""} · {editTarget?.kind === "grade" ? editTarget.value.academic_year : grades.find((grade) => grade.id === (editTarget?.kind === "class" ? editTarget.value.grade_id : ""))?.name}</p>
+      <Form form={editForm} layout="vertical" disabled={saving} requiredMark={false} onFinish={(values) => void saveEdit(values)}>
+        <Form.Item name="name" label={editTarget?.kind === "grade" ? "年级名称" : "班级名称"} rules={[{ required: true, whitespace: true, message: "请输入名称" }]}><Input maxLength={120} /></Form.Item>
+        {editTarget?.kind === "class" ? <Form.Item name="code" label="班级代码" extra="修改后，学生导入文件需使用新的班级代码。" rules={[{ required: true, whitespace: true, message: "请输入班级代码" }]}><Input maxLength={64} /></Form.Item> : null}
+      </Form>
+    </Modal>
     <Modal title="新增年级" open={dialog === "grade"} footer={null} destroyOnHidden onCancel={() => setDialog(null)}><Form layout="vertical" onFinish={(values) => void submitGrade(values)} initialValues={{ school_id: currentSchoolId || schools[0]?.id, academic_year: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`, education_stage: "senior", level_no: 10 }}><Form.Item name="school_id" label="学校" rules={[{ required: true }]}><Select options={schools.map((item) => ({ value: item.id, label: item.name }))} /></Form.Item><Form.Item name="education_stage" label="学段" rules={[{ required: true }]}><Select options={[{ value: "junior", label: "初中" }, { value: "senior", label: "高中" }]} /></Form.Item><Form.Item name="academic_year" label="学年" rules={[{ required: true, message: "请输入学年" }]}><Input /></Form.Item><Form.Item name="name" label="年级名称" rules={[{ required: true, message: "请输入年级名称" }]}><Input placeholder="例如：高二" /></Form.Item><Form.Item name="level_no" label="年级序号" rules={[{ required: true, message: "请输入年级序号" }]}><InputNumber min={1} max={20} /></Form.Item><Button type="primary" htmlType="submit" loading={saving}>新增年级</Button></Form></Modal>
     <Modal title="新增班级" open={dialog === "class"} footer={null} destroyOnHidden onCancel={() => setDialog(null)}><Form layout="vertical" onFinish={(values) => void submitClass(values)} initialValues={{ school_id: selectedGrade?.school_id, grade_id: gradeId }}><Form.Item name="school_id" hidden><Input /></Form.Item><Form.Item name="grade_id" label="所属年级" rules={[{ required: true }]}><Select options={visibleGrades.map((item) => ({ value: item.id, label: `${item.name} · ${item.academic_year}` }))} /></Form.Item><Form.Item name="name" label="班级名称" rules={[{ required: true, message: "请输入班级名称" }]}><Input placeholder="例如：高二（1）班" /></Form.Item><Form.Item name="code" label="班级代码" extra="学生 CSV 导入会使用班级代码进行匹配。" rules={[{ required: true, message: "请输入班级代码" }]}><Input placeholder="例如：G11-01" /></Form.Item><Button type="primary" htmlType="submit" loading={saving}>新增班级</Button></Form></Modal>
   </div>;

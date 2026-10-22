@@ -148,7 +148,7 @@ func TestManagedChatUsesTenantDefaultWithoutExposingCredential(t *testing.T) {
 		t.Fatalf("unexpected forwarded messages: %#v", chatter.messages)
 	}
 	providerMessages := managedChatProviderMessages(chatter.messages)
-	if !strings.Contains(providerMessages[0]["content"], "计划.md") || !strings.Contains(providerMessages[0]["content"], "第一周复习函数") {
+	if !strings.Contains(providerMessages[0].Content, "计划.md") || !strings.Contains(providerMessages[0].Content, "第一周复习函数") {
 		t.Fatalf("attachment was not included in the provider prompt: %#v", providerMessages)
 	}
 	otherSchool := performHandlerRequest(t, auth.User{ID: "other-admin", TenantID: "school-b", Roles: []string{"school_admin"}}, http.MethodPost,

@@ -2,6 +2,7 @@ package review
 
 import (
 	"context"
+	"math"
 	"strings"
 	"time"
 
@@ -29,17 +30,28 @@ type TaskContext struct {
 	Draft            *ReviewDraft                    `json:"draft"`
 	SubjectToolHints SubjectToolHints                `json:"subject_tool_hints"`
 	AutomationResult *AutomationResult               `json:"automation_result,omitempty"`
+	// AIFailure 只标记当前版本的 AI 建议不可用；失败正文和供应商细节不进入教师载荷。
+	AIFailure *AIFailure `json:"ai_failure,omitempty"`
+}
+
+type AIFailure struct {
+	FailureKind string `json:"failure_kind"`
 }
 
 type AnswerArtifact struct {
-	AnswerSegmentID  string   `json:"answer_segment_id"`
-	Source           string   `json:"source,omitempty"`
-	RawAnswer        string   `json:"raw_answer,omitempty"`
-	OCRText          string   `json:"ocr_text,omitempty"`
-	Status           string   `json:"status"`
-	Confidence       *float64 `json:"confidence,omitempty"`
-	SegmentImageURL  string   `json:"segment_image_url"`
-	OriginalImageURL string   `json:"original_image_url,omitempty"`
+	AnswerScope             string                `json:"answer_scope"`
+	AnswerSegmentID         string                `json:"answer_segment_id"`
+	Source                  string                `json:"source,omitempty"`
+	RawAnswer               string                `json:"raw_answer,omitempty"`
+	OCRText                 string                `json:"ocr_text,omitempty"`
+	Status                  string                `json:"status"`
+	Confidence              *float64              `json:"confidence,omitempty"`
+	SegmentImageURL         string                `json:"segment_image_url"`
+	OriginalImageURL        string                `json:"original_image_url,omitempty"`
+	GradingGroupID          string                `json:"grading_group_id,omitempty"`
+	GradingGroupImageURL    string                `json:"grading_group_image_url,omitempty"`
+	GradingGroupQuestionIDs []string              `json:"grading_group_question_ids,omitempty"`
+	GradingGroupTasks       []GradingGroupTaskRef `json:"grading_group_tasks,omitempty"`
 }
 
 type AnswerCandidate struct {
@@ -96,6 +108,7 @@ func taskContextFromWorkspace(workspace Workspace) TaskContext {
 		QuestionSnapshot: snapshot,
 		Question:         workspace.Context.Question,
 		AnswerArtifact: AnswerArtifact{
+			AnswerScope:     "question",
 			AnswerSegmentID: workspace.Task.AnswerSegmentID,
 			RawAnswer:       workspace.Context.RawAnswer, OCRText: workspace.Context.OCRText,
 			Status: workspace.SegmentStatus, Confidence: workspace.SegmentConfidence,
@@ -119,8 +132,41 @@ func taskContextFromWorkspace(workspace Workspace) TaskContext {
 	} else if workspace.Context.RawAnswer != "" {
 		out.AnswerArtifact.Source = "answer_segment_answer"
 	}
-	out.AISecondOpinion = aiSecondOpinionFromSuggestion(workspace.Context.AISuggestion, allowsAIScorePrefill(snapshot))
+	// 当前建议及其可采纳历史必须属于同一答案、快照和冻结量规；旧版本仍保存在管理端成绩历史中。
+	out.AISecondOpinion = aiSecondOpinionFromSuggestion(currentTaskAISuggestion(workspace.Context), allowsAIScorePrefill(snapshot))
 	return out
+}
+
+func currentTaskAISuggestion(value Context) map[string]any {
+	if value.AnswerVersion == "" || value.AssessmentSnapshot.ID == "" || value.Rubric.Version == "" {
+		return nil
+	}
+	matches := func(item map[string]any) bool {
+		return item["answer_segment_id"] == value.AnswerSegmentID && item["question_id"] == value.Question.ID &&
+			item["answer_version"] == value.AnswerVersion && item["exam_question_snapshot_id"] == value.AssessmentSnapshot.ID &&
+			item["rubric_version"] == value.Rubric.Version
+	}
+	history := []any{}
+	if entries, ok := value.AISuggestion["suggestion_history"].([]any); ok {
+		for _, entry := range entries {
+			if item, valid := entry.(map[string]any); valid && matches(item) {
+				history = append(history, cloneMap(item))
+				if len(history) == 20 {
+					break
+				}
+			}
+		}
+	}
+	var current map[string]any
+	if matches(value.AISuggestion) {
+		current = cloneMap(value.AISuggestion)
+	} else if len(history) > 0 {
+		current = cloneMap(history[0].(map[string]any))
+	} else {
+		return nil
+	}
+	current["suggestion_history"] = history
+	return current
 }
 
 // aiSecondOpinionFromSuggestion 在副本上整理建议；R3 HUMAN_PRIMARY 的材料不能带可预填分数字段。
@@ -150,9 +196,28 @@ func aiSecondOpinionFromSuggestion(suggestion map[string]any, prefillAllowed boo
 	}
 	return &AISecondOpinion{
 		Available: true, Presentation: "explicit_second_opinion",
-		ScorePrefillAllowed: prefillAllowed, Metadata: metadata,
+		ScorePrefillAllowed: prefillAllowed && imageSuggestionHasFinalScore(suggestion), Metadata: metadata,
 		History: history,
 	}
+}
+
+// 多模型有成功角色但未形成汇总时仍可查看角色依据；该候选分不能预填为本题建议分。
+// 历史单模型没有 panel_execution，继续沿用其原有评分政策。
+func imageSuggestionHasFinalScore(suggestion map[string]any) bool {
+	raw, ok := suggestion["raw_output"].(map[string]any)
+	if !ok || raw["schema_version"] != "grading-image-v3" {
+		return true
+	}
+	value, exists := raw["panel_execution"]
+	if !exists {
+		return true
+	}
+	panel, ok := value.(map[string]any)
+	if !ok {
+		return false
+	}
+	final, ok := panel["final_score"].(float64)
+	return ok && !math.IsNaN(final) && !math.IsInf(final, 0)
 }
 
 // R3 且以人工评分为主时，AI 只能提供辅助材料，不能提供可预填的分数字段。

@@ -123,8 +123,11 @@
 }
 
 .side-menu {
+  --navigation-edge-padding: 6px;
+  --navigation-item-margin: 4px;
+  --navigation-icon-start: calc((var(--sidebar-collapsed-width) - 1px) / 2 - 8px);
   border-inline-end: 0 !important;
-  padding: 5px 6px 10px;
+  padding: 5px var(--navigation-edge-padding) 10px;
 }
 
 .side-menu .ant-menu-item {
@@ -133,8 +136,13 @@
   line-height: 36px;
 }
 
+/* 以折叠栏扣除边框后的中心和组件 16px 图标占位为基准，只调整展开缩进；分组小字共用这条左边线。 */
+.side-menu:not(.ant-menu-inline-collapsed) .ant-menu-item {
+  padding-inline: calc(var(--navigation-icon-start) - var(--navigation-edge-padding) - var(--navigation-item-margin)) !important;
+}
+
 .side-menu .ant-menu-item-group-title {
-  padding: 8px 12px 3px;
+  padding: 8px calc(var(--navigation-icon-start) - var(--navigation-edge-padding)) 3px;
   font-size: 12px;
 }
 

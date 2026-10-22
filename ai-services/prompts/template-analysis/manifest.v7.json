@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "generated_by": "python scripts/evals/check_template_analysis_prompt_manifest.py --write",
+  "default_prompt_variant": "v7-evidence",
+  "system_prompt_encoding": "UTF-8",
+  "reference_schema": {
+    "scope": "reference_only_not_per_request",
+    "candidate_ids": [],
+    "page_no": 1,
+    "canonical_json": {
+      "ensure_ascii": false,
+      "sort_keys": true,
+      "separators": [
+        ",",
+        ":"
+      ],
+      "allow_nan": false
+    },
+    "per_request_digest": "AnalysisTrace.metadata.request_contract.model_output_schema_sha256"
+  },
+  "variants": {
+    "v6": {
+      "prompt_version": "answer-sheet-full-page-layout-v6",
+      "system_prompt_sha256": "088644693ed68bc951f1dfdee34351a8b55ef73f61cc99341be846873262a5ee",
+      "system_prompt_utf8_bytes": 4340,
+      "include_observations": false,
+      "reference_model_output_schema_sha256": "d7eeb854d3705f6c37f1499877cbe85c315489916811f1e365e763bdd804b79e"
+    },
+    "v7-text": {
+      "prompt_version": "answer-sheet-full-page-layout-v7-text-auto-map",
+      "system_prompt_sha256": "03d0f58675ea5f54803fa7872221ed345abb1cf0685d185f420a4091c79834d1",
+      "system_prompt_utf8_bytes": 7475,
+      "include_observations": false,
+      "reference_model_output_schema_sha256": "d7eeb854d3705f6c37f1499877cbe85c315489916811f1e365e763bdd804b79e"
+    },
+    "v7-evidence": {
+      "prompt_version": "answer-sheet-full-page-layout-v7-evidence-auto-map",
+      "system_prompt_sha256": "975fce4a14cc0ae69b5df087dde1423e94a49aaceb4b91e94e7362787f13a387",
+      "system_prompt_utf8_bytes": 11817,
+      "include_observations": true,
+      "reference_model_output_schema_sha256": "b2bc99468c35b5650f643453e3dae29165d4ec0b664854a9fc9c3a2c05b09796"
+    },
+    "v8-layout": {
+      "prompt_version": "answer-sheet-layout-v8-coarse-to-local",
+      "system_prompt_sha256": "6eb1cd105b0647a126f63ffcf7869cffd60f9bfdc7a3e6f3963f96390bc67d6a",
+      "system_prompt_utf8_bytes": 3368,
+      "include_observations": true,
+      "reference_model_output_schema_sha256": "4dcbd14cc40fe8c292c875a5e0baf715d3dafc1daee16fe593425e801350a957"
+    }
+  }
+}

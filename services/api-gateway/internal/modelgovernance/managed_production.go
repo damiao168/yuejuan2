@@ -14,30 +14,39 @@ func (s *PostgresStore) ValidateManagedProductionReadiness(ctx context.Context) 
 	}
 	rows, err := s.db.QueryContext(ctx, `
 SELECT config.tenant_id::text, config.id::text, config.base_url,
-       config.model_version, config.region, config.status, config.deleted_at IS NULL, config.last_test_status,
-       config.last_capability_status, config.last_capability_probe_version,
+       config.model_version, config.region, config.status, config.deleted_at IS NULL,
+       config.is_default, config.last_text_status,
+       EXISTS (
+          SELECT 1 FROM model_role_binding required_binding
+          WHERE required_binding.tenant_id=config.tenant_id
+            AND required_binding.managed_model_api_config_id=config.id
+            AND required_binding.status='active'
+       ), config.last_capability_status, config.last_capability_probe_version,
        config.credential_ciphertext, config.credential_nonce
 FROM managed_model_api_config config
 WHERE config.is_default OR EXISTS (
     SELECT 1 FROM model_role_binding binding
     WHERE binding.tenant_id=config.tenant_id
       AND binding.managed_model_api_config_id=config.id AND binding.status='active'
-  ))`)
+  )`)
 	if err != nil {
 		return err
 	}
+	// 候选校验提前失败时也要归还连接，避免启动重试耗尽连接池。
+	defer rows.Close()
 	for rows.Next() {
-		var tenantID, id, endpoint, version, region, status, connection, capability, probeVersion string
-		var present bool
+		var tenantID, id, endpoint, version, region, status, textStatus, capability, probeVersion string
+		var present, isDefault, structuredRequired bool
 		var ciphertext, nonce []byte
 		if err := rows.Scan(&tenantID, &id, &endpoint, &version, &region, &status, &present,
-			&connection, &capability, &probeVersion, &ciphertext, &nonce); err != nil {
+			&isDefault, &textStatus, &structuredRequired, &capability, &probeVersion, &ciphertext, &nonce); err != nil {
 			return err
 		}
 		key, decryptErr := s.credentialCipher.Decrypt(ciphertext, nonce, tenantID, id)
 		if err := validateManagedProductionCandidate(managedProductionCandidate{
 			ID: id, Endpoint: endpoint, ModelVersion: version, Region: region,
-			Status: status, Present: present, ConnectionStatus: connection,
+			Status: status, Present: present, TextStatus: textStatus,
+			IsDefault: isDefault, StructuredRequired: structuredRequired,
 			CapabilityStatus: capability, CapabilityVersion: probeVersion,
 		}, key, decryptErr); err != nil {
 			return err
@@ -54,25 +63,28 @@ WHERE config.is_default OR EXISTS (
 }
 
 type managedProductionCandidate struct {
-	ID                string
-	Endpoint          string
-	ModelVersion      string
-	Region            string
-	Status            string
-	Present           bool
-	ConnectionStatus  string
-	CapabilityStatus  string
-	CapabilityVersion string
+	ID                 string
+	Endpoint           string
+	ModelVersion       string
+	Region             string
+	Status             string
+	Present            bool
+	IsDefault          bool
+	TextStatus         string
+	StructuredRequired bool
+	CapabilityStatus   string
+	CapabilityVersion  string
 }
 
-// 生产候选必须能解密出足够强的密钥，并通过能力探测、默认绑定和角色范围校验。
+// 默认模型只需文本证据；评分角色必须有当前结构化证据。同一模型承担两种用途时，两项都要满足。
+// 最近一次 /models 或临时故障不覆盖独立生成证据，生产门槛不能依赖 last_test_status。
 func validateManagedProductionCandidate(item managedProductionCandidate, apiKey string, decryptErr error) error {
 	parsed, parseErr := url.Parse(item.Endpoint)
 	if parseErr != nil || parsed.Scheme != "https" || parsed.Host == "" ||
 		item.Status != "active" || !item.Present ||
 		strings.TrimSpace(item.ModelVersion) == "" || strings.TrimSpace(item.Region) == "" ||
-		item.ConnectionStatus != "success" || item.CapabilityStatus != "success" ||
-		item.CapabilityVersion != ManagedCapabilityProbeVersion ||
+		(item.IsDefault && item.TextStatus != "success") ||
+		(item.StructuredRequired && (item.CapabilityStatus != "success" || item.CapabilityVersion != ManagedCapabilityProbeVersion)) ||
 		decryptErr != nil || strings.TrimSpace(apiKey) == "" {
 		return fmt.Errorf("%w: managed model %s is not ready", ErrProductionUnsafe, item.ID)
 	}

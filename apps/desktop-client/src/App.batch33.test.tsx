@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { act, useEffect, useState, type ReactNode } from "react";
+import { act, useEffect, useState, type ReactNode, type ComponentProps } from "react";
+import type { OfflineLeaveGuard } from "./components/OfflineWorkbench";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -8,7 +9,7 @@ const data = vi.hoisted(() => ({
   serviceStatus: null as null | { status: string; service: string; environment: string; generated_at: string; dependencies: unknown[] },
   logs: [] as { id: string; at: string; level: string; message: string }[],
   native: false, requestLeave: vi.fn(), shouldBlockClose: vi.fn(), closeRequested: undefined as undefined | ((event: { preventDefault: () => void }) => Promise<void>),
-  session: {} as Record<string, unknown>, renew: vi.fn(), editScore: undefined as undefined | ((value: string) => void), editorLease: ""
+  session: {} as Record<string, unknown>, renew: vi.fn(), setOfflineDraftCount: vi.fn(), editScore: undefined as undefined | ((value: string) => void), editorLease: ""
 }));
 
 vi.mock("@edugrade/design-tokens", () => ({ readReadingSize: () => "standard", applyReadingSize: vi.fn() }));
@@ -16,25 +17,25 @@ vi.mock("antd", () => {
   const Wrapper = ({ children }: { children: ReactNode }) => <div>{children}</div>;
   return {
     ConfigProvider: Wrapper, Form: Object.assign(Wrapper, { Item: Wrapper }), Space: Wrapper, Tooltip: Wrapper,
-    Button: ({ children, onClick, disabled }: any) => <button onClick={onClick} disabled={disabled}>{children}</button>,
-    Tag: ({ children, color }: any) => <span data-color={color}>{children}</span>,
-    Alert: ({ message }: any) => <p>{message}</p>, Empty: ({ description }: any) => <p>{description}</p>,
-    Input: Object.assign(({ value, onChange }: any) => <input value={value} onChange={onChange} />, {
-      Password: ({ value, onChange }: any) => <input value={value} onChange={onChange} />
+    Button: ({ children, onClick, disabled }: ComponentProps<"button">) => <button onClick={onClick} disabled={disabled}>{children}</button>,
+    Tag: ({ children, color }: { children?: ReactNode; color?: string }) => <span data-color={color}>{children}</span>,
+    Alert: ({ message }: { message?: ReactNode }) => <p>{message}</p>, Empty: ({ description }: { description?: ReactNode }) => <p>{description}</p>,
+    Input: Object.assign(({ value, onChange }: ComponentProps<"input">) => <input value={value} onChange={onChange} />, {
+      Password: ({ value, onChange }: ComponentProps<"input">) => <input value={value} onChange={onChange} />
     }),
-    Checkbox: ({ children }: any) => <span>{children}</span>, Table: Wrapper
+    Checkbox: ({ children }: { children?: ReactNode }) => <span>{children}</span>, Table: Wrapper
   };
 });
 vi.mock("framer-motion", () => ({ motion: { div: ({ children }: { children: ReactNode }) => <div>{children}</div> } }));
-vi.mock("./components/OfflineWorkbench", () => ({ OfflineWorkbench: ({ registerLeaveGuard, durableScopeKey }: any) => {
+vi.mock("./components/OfflineWorkbench", () => ({ OfflineWorkbench: ({ registerLeaveGuard, durableScopeKey }: { registerLeaveGuard: (guard: OfflineLeaveGuard | null) => void; durableScopeKey: string }) => {
   const [score, setScore] = useState("初始评分"); data.editScore = setScore; data.editorLease = durableScopeKey;
   useEffect(() => { registerLeaveGuard({ requestLeave: data.requestLeave, shouldBlockClose: data.shouldBlockClose }); return () => registerLeaveGuard(null); }, [registerLeaveGuard]);
   return <div>离线工作台内容<input aria-label="工作台未保存输入" value={score} readOnly /></div>;
 } }));
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => ({ onCloseRequested: async (handler: typeof data.closeRequested) => { data.closeRequested = handler; return vi.fn(); } }) }));
 vi.mock("./components/DesktopStatusViews", () => ({
-  SectionHead: ({ title, action }: any) => <div><h3>{title}</h3>{action}</div>,
-  StatusLine: ({ label, value, tone }: any) => <div data-status-line={label} data-tone={tone}>{value}</div>,
+  SectionHead: ({ title, action }: { title: string; action?: ReactNode }) => <div><h3>{title}</h3>{action}</div>,
+  StatusLine: ({ label, value, tone }: { label: string; value: string; tone: "ready" | "warning" | "idle" }) => <div data-status-line={label} data-tone={tone}>{value}</div>,
   CapabilityTag: () => null, QueueList: () => null, ScanQueueRecovery: () => null
 }));
 vi.mock("./lib/durableStore", () => ({ claimLegacyDurableStore: vi.fn(), hasDurableDesktopStore: () => data.native }));
@@ -63,7 +64,8 @@ vi.mock("./features/scanner/useScannerController", () => ({ useScannerController
   scannerPreflight: null, setExpectedTemplatePreset: vi.fn(), setScannerPreflight: vi.fn()
 }) }));
 vi.mock("./features/scan-queue/useScanQueue", () => ({ useScanQueue: () => ({
-  queue: [], offlineDraftCount: 0, setOfflineDraftCount: vi.fn(), queueRestoreStatus: "ready", queueRestoreError: null,
+  // 生产 hook 返回稳定的 React setter；不能每次 mock 渲染换函数而制造同步队列读取循环。
+  queue: [], offlineDraftCount: 0, setOfflineDraftCount: data.setOfflineDraftCount, queueRestoreStatus: "ready", queueRestoreError: null,
   restoreQueue: vi.fn(), queueContextError: null, loadingQueueContext: false, refreshQueueContext: vi.fn()
 }) }));
 vi.mock("./features/upload/useUploadSync", () => ({ useUploadSync: () => ({}) }));

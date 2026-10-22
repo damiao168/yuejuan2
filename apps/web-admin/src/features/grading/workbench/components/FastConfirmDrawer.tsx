@@ -45,6 +45,7 @@ export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged
   const previewRequest = useRef(0);
   const submitLock = useRef(false);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 查询域包括考试、身份和会话代次；变化后旧快捷确认批次及图片必须失效。
   useEffect(() => {
     previewRequest.current++;
     submitLock.current = false;
@@ -125,7 +126,10 @@ export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged
 
   let candidateContent: ReactNode;
   if (loading) candidateContent = <Spin />;
-  else if (items.length === 0) candidateContent = <Empty description="当前队列前 20 份没有符合快捷确认条件的任务" />;
+  else if (items.length === 0) candidateContent = <Empty description={<>
+    <p>本次检查的任务中，暂无可批量确认的 AI 建议分</p>
+    <p className="muted">仅检查分配给你的前 20 份待处理任务。数学题、需要逐项核对评分细则的题目，请在阅卷页面逐份评分。</p>
+  </>}><Button onClick={() => setOpen(false)}>返回阅卷页面</Button></Empty>;
   else {
     candidateContent = <>
       <div className="fast-confirm-summary"><strong>符合条件 {items.length} 份</strong><span>已核对 {inspected.length} 份</span><span>未勾选的任务不会提交</span></div>
@@ -154,13 +158,15 @@ export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged
 
   return <>
     <div className="fast-confirm-entry">
-      <div><strong>AI 快捷确认</strong><span>逐份核对原图与建议，批量提交已确认分数</span></div>
-      <Button disabled={loading || submitting} onClick={() => { setOpen(true); void load(); }}>查看候选任务</Button>
+      <div><strong>批量确认 AI 建议分</strong><span>逐份核对学生作答与评分依据，勾选认可的建议分后一起提交。</span></div>
+      <Button disabled={loading || submitting} onClick={() => { setOpen(true); void load(); }}>查看待确认的建议分</Button>
     </div>
-    <Drawer title="AI 快捷确认 · 教师逐份核对" width="min(860px, 100vw)" open={open} closable={!submitting} maskClosable={!submitting} keyboard={!submitting} onClose={() => { if (!submitting) setOpen(false); }}>
-      <p>检查当前队列前 20 份已分配给你的任务；仅列出低风险、置信度至少 95%、无风险标记且证据完整的建议。包含评分细则或数学证据的题目请在完整工作台评分。</p>
-      <ol className="fast-confirm-steps"><li>选择一份并查看原图</li><li>核对建议分与证据</li><li>逐份勾选后提交</li></ol>
-      <Button size="small" disabled={loading || submitting} onClick={() => void load()}>刷新候选任务</Button>
+    <Drawer title="批量确认 AI 建议分" width="min(860px, 100vw)" open={open} closable={!submitting} maskClosable={!submitting} keyboard={!submitting} onClose={() => { if (!submitting) setOpen(false); }}>
+      <p>AI 已给出建议分。请逐份核对，认可后勾选，再一次提交多份。需要改分时，请返回阅卷页面评分。</p>
+      <ol className="fast-confirm-steps"><li>查看学生作答原图</li><li>核对 AI 建议分和评分依据</li><li>勾选认可的分数后一起提交</li></ol>
+      <p className="muted">提交后进入质检，不会直接发布成绩。</p>
+      <details className="fast-confirm-help"><summary>哪些任务会显示在这里？</summary><p>仅检查分配给你的前 20 份待处理任务，并筛选已启用批量确认、风险较低、无风险标记且评分依据完整的 AI 建议。置信度须达到本题要求，且不低于 95%。数学题、有逐项评分细则、已填写评分草稿或 AI 建议不可用的任务，请在阅卷页面处理。</p></details>
+      <Button size="small" disabled={loading || submitting} onClick={() => void load()}>刷新建议分列表</Button>
       {issue ? <Alert showIcon type={issue.startsWith("已") ? "success" : "warning"} message={issue} /> : null}
       {candidateContent}
     </Drawer>

@@ -3,6 +3,7 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NativeStoragePanel } from "./NativeStoragePanel";
+import type { ArchivedCleanupCandidate } from "../lib/durableStore";
 const mocks = vi.hoisted(() => ({ usage: vi.fn(), candidates: vi.fn(), cleanup: vi.fn(), confirm: vi.fn(), changeDays: undefined as undefined | ((value: number) => void) }));
 vi.mock("../lib/durableStore", () => ({ hasDurableDesktopStore: () => true, getDurableStorageUsage: mocks.usage, listArchivedCleanupCandidates: mocks.candidates, cleanupArchivedOriginals: mocks.cleanup }));
 vi.mock("../lib/scanFiles", () => ({ formatBytes: (value: number) => `${value} B`, formatDate: (value: string) => value }));
@@ -11,7 +12,7 @@ vi.mock("antd", () => {
   return { Alert: ({ message }: { message: string }) => <p>{message}</p>, Space: Box,
     Button: ({ children, disabled, onClick }: { children: ReactNode; disabled?: boolean; onClick: () => void }) => <button disabled={disabled} onClick={onClick}>{children}</button>,
     InputNumber: ({ onChange }: { onChange: (value: number) => void }) => { mocks.changeDays = onChange; return <input />; },
-    List: Object.assign(({ dataSource, renderItem }: any) => <>{dataSource.map(renderItem)}</>, { Item: Box }), Modal: { confirm: mocks.confirm } };
+    List: Object.assign(({ dataSource, renderItem }: { dataSource: ArchivedCleanupCandidate[]; renderItem: (item: ArchivedCleanupCandidate, index: number) => ReactNode }) => <>{dataSource.map(renderItem)}</>, { Item: Box }), Modal: { confirm: mocks.confirm } };
 });
 describe("controlled archived-original cleanup", () => {
   let root: Root; let container: HTMLDivElement; let decision: { onOk: () => void; onCancel: () => void };

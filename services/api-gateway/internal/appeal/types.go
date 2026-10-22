@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 var (
@@ -117,6 +119,8 @@ type CloseAppealInput struct {
 }
 
 type ListFilter struct {
+	// AccessScope 只接收认证中间件派生的边界；nil 留给可信的内部调用，HTTP 集合入口必须提供。
+	AccessScope     *auth.AccessScope
 	ExamID          string
 	StudentID       string
 	Status          string
@@ -127,7 +131,8 @@ type ListFilter struct {
 }
 
 type StatisticsFilter struct {
-	ExamID string
+	AccessScope *auth.AccessScope
+	ExamID      string
 }
 
 type AppealStatistics struct {

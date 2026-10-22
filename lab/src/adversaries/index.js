@@ -23,6 +23,7 @@ function baseRubric() {
 
 function baseEvidenceCase(index = 0) {
   const input = {
+    synthetic: true,
     request_id: `adversarial-evidence-${index}`,
     question_id: `adversarial-q-${index}`,
     answer_segment_id: `adversarial-a-${index}`,
@@ -176,7 +177,12 @@ export class EvidenceIntegrityAdversary {
     );
     const controlMutations = [
       ["base", () => {}],
-      ["punctuation", (testCase) => { testCase.input.answer_text = "because, the temperature rose; therefore, the ice melted"; }],
+      ["punctuation", (testCase) => {
+        testCase.input.answer_text = "because, the temperature rose; therefore, the ice melted";
+        // 正对照引用真实标点；省略或增加标点属于另一个引文，不能靠宽松归一化抹平。
+        testCase.output.evidence[0].text_excerpt = "because, the temperature rose";
+        testCase.output.evidence[1].text_excerpt = "therefore, the ice melted";
+      }],
       ["single-point", (testCase) => {
         testCase.output.suggested_score = 1;
         testCase.output.matched_points = [testCase.output.matched_points[0]];

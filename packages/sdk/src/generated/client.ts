@@ -3,6 +3,7 @@
 import type { ApiTransport } from "../runtime";
 import { appendQuery, fillPath } from "../runtime";
 import type {
+  QuestionMathRubricDraftRequest,
   RegradeReviewContextResponse,
   AnswerGroupMemberContextResponse,
   WorkflowActorsResponse,
@@ -25,6 +26,9 @@ import type {
   PlatformSchoolUsageResponse,
   PlatformSchoolModelHealthResponse,
   PlatformSchoolActivityResponse,
+  DocumentModelSelection,
+  DocumentModelSelectionInput,
+  ModelApplications,
   PanelModelRoleBindingInput,
   PanelModelRoleBindingList,
   PanelModelRoleBindingResponse,
@@ -253,6 +257,10 @@ import type {
   ScoringRunRetryResponse,
   ScoringCommandRecovery,
   SubjectiveAIGradeRequest,
+  CreateScoringTrialRequest,
+  DecideScoringTrialRequest,
+  ScoringTrialResponse,
+  ScoringTrialListResponse,
   SubjectiveAIGradeResponse,
   SubjectiveGradingBatch,
   SubjectiveBatchResponse,
@@ -320,10 +328,66 @@ import type {
   ConfirmExamReadinessRequest,
   ExamReadinessConfirmationResponse,
   QuestionAppealReviewOpinionRequest,
-  CaptureScanContextResponse
+  CaptureScanContextResponse,
+  ExamTemplateBindingState,
+  ExamTemplateBindingMutationResponse,
+  BindExamTemplateRequest,
+  UnbindExamTemplateRequest,
+  CreateQuestionRubricDraftJobRequest,
+  QuestionRubricDraftJobResponse,
+  QuestionRubricDraftJobListResponse,
+  AnswerSheetTemplateResponse,
+  LockAnswerSheetTemplateRequest,
+  PublishAnswerSheetTemplateRequest,
+  AnswerSheetTemplateLibraryResponse,
+  AnswerSheetTemplateLibraryListResponse,
+  AnswerSheetTemplateLibraryInstance,
+  ResolveAnswerSheetTemplateRequest,
+  AnswerSheetTemplateLibraryResolution,
+  AnalyzeAnswerSheetPageRequest,
+  AnalyzeAnswerSheetPageResponse,
+  AnswerSheetModelSelection,
+  AnswerSheetModelSelectionInput,
+  AnalyzeAnswerSheetObjectiveGridRequest,
+  AnalyzeAnswerSheetObjectiveGridResponse,
+  AnalyzeAnswerSheetPageOrderRequest,
+  AnalyzeAnswerSheetPageOrderResponse,
+  DeleteAnswerSheetSourceResponse,
+  ChatModelAccess,
+  ChatModelAccessInput,
+  UpdateOrganizationGradeRequest,
+  UpdateOrganizationClassRequest,
+  UpdateOrganizationStudentRequest,
+  OrganizationGradeResponse,
+  OrganizationClassResponse,
+  OrganizationStudentResponse,
+  UpdateManagedUserProfileRequest,
+  ManagedUserProfileResponse,
+  DeleteOrganizationStudentResponse,
+  PersonalReviewBookmarkStateResponse,
+  PersonalReviewBookmarkPut,
+  PersonalReviewBookmarkDelete,
+  PersonalReviewBookmarkAcknowledgement,
+  PersonalReviewBookmarkCleanupResponse,
+  PersonalReviewBookmarkListResponse,
+  PersonalReviewBookmarkContext,
+  ReferenceMaterialCropRequest,
+  SaveReferenceMaterialsRequest,
+  WithdrawReferenceMaterialsRequest,
+  ReferenceMaterialsResponse,
+  ReferenceMaterialSourcesResponse,
+  ReferenceMaterialCropResponse,
+  ReferenceMaterialCommandResponse,
+  MaterialPermitRecordRequest,
+  MaterialPermitRecordResponse,
+  CaptureFileRegisterRequest,
+  CaptureFileResponse
 } from "./types";
 
 export interface operations {
+  "suggestQuestionMathRubricDraft": { args: { path: { "examId": string; "questionId": string; }; body: QuestionMathRubricDraftRequest; signal?: AbortSignal; }; response: MathRubricDraftResponse; };
+  "getPlatformModelApplications": { args: { query: { "tenant_id": string; }; signal?: AbortSignal; }; response: ModelApplications; };
+  "savePlatformDocumentModelSelection": { args: { body: DocumentModelSelectionInput; signal?: AbortSignal; }; response: { "selection": DocumentModelSelection; }; };
   "getRegradeItemReviewContext": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: RegradeReviewContextResponse; };
   "downloadRegradeItemReviewImage": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
   "getAnswerGroupMemberContext": { args: { path: { "groupId": string; "segmentId": string; }; signal?: AbortSignal; }; response: AnswerGroupMemberContextResponse; };
@@ -349,6 +413,10 @@ export interface operations {
   "updateScoringRule": { args: { path: { "id": string; }; body: { "config": Record<string, unknown>; "expected_revision": number; }; signal?: AbortSignal; }; response: { "scoring_rule": ScoringRule; }; };
   "publishScoringRule": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: { "scoring_rule": ScoringRule; }; };
   "getScoringRun": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringRunDetailResponse; };
+  "listScoringRunAITrials": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringTrialListResponse; };
+  "createScoringRunAITrial": { args: { path: { "runId": string; }; body: CreateScoringTrialRequest; signal?: AbortSignal; }; response: ScoringTrialResponse; };
+  "enqueueScoringRunAITrial": { args: { path: { "runId": string; "trialId": string; }; signal?: AbortSignal; }; response: BatchEnqueueResponse; };
+  "decideScoringRunAITrial": { args: { path: { "runId": string; "trialId": string; }; body: DecideScoringTrialRequest; signal?: AbortSignal; }; response: ScoringTrialResponse; };
   "listScoringRunAIBatches": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: { "batches": Array<SubjectiveGradingBatch>; }; };
   "getFailedSubjectiveBatchSegments": { args: { path: { "batchId": string; }; signal?: AbortSignal; }; response: { "segment_ids": Array<string>; }; };
   "cancelScoringRun": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringRunResponse; };
@@ -622,10 +690,74 @@ export interface operations {
   "getStudentPublishedPaperPageImage": { args: { path: { "examId": string; "questionId": string; }; query?: { "variant"?: "high_score"; "expected_release_id"?: string; }; signal?: AbortSignal; }; response: unknown; };
   "submitQuestionAppealReviewOpinion": { args: { path: { "id": string; }; body: QuestionAppealReviewOpinionRequest; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
   "getCaptureScanContext": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: CaptureScanContextResponse; };
+  "getExamTemplateBinding": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ExamTemplateBindingState; };
+  "bindExamTemplate": { args: { path: { "examId": string; }; body: BindExamTemplateRequest; signal?: AbortSignal; }; response: ExamTemplateBindingMutationResponse; };
+  "unbindExamTemplate": { args: { path: { "examId": string; }; body: UnbindExamTemplateRequest; signal?: AbortSignal; }; response: ExamTemplateBindingMutationResponse; };
+  "createQuestionRubricDraftJob": { args: { path: { "examId": string; "questionId": string; }; headers?: { "Idempotency-Key"?: string; }; body: CreateQuestionRubricDraftJobRequest; signal?: AbortSignal; }; response: QuestionRubricDraftJobResponse; };
+  "listQuestionRubricDraftJobs": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: QuestionRubricDraftJobListResponse; };
+  "getQuestionRubricDraftJob": { args: { path: { "examId": string; "jobId": string; }; signal?: AbortSignal; }; response: QuestionRubricDraftJobResponse; };
+  "cancelQuestionRubricDraftJob": { args: { path: { "examId": string; "jobId": string; }; headers?: { "Idempotency-Key"?: string; }; signal?: AbortSignal; }; response: QuestionRubricDraftJobResponse; };
+  "lockAnswerSheetTemplate": { args: { path: { "id": string; }; body?: LockAnswerSheetTemplateRequest; signal?: AbortSignal; }; response: AnswerSheetTemplateResponse; };
+  "publishAnswerSheetTemplateToLibrary": { args: { path: { "id": string; }; body: PublishAnswerSheetTemplateRequest; signal?: AbortSignal; }; response: AnswerSheetTemplateLibraryResponse; };
+  "listAnswerSheetTemplateLibrary": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: AnswerSheetTemplateLibraryListResponse; };
+  "instantiateAnswerSheetTemplateLibrary": { args: { path: { "examId": string; "libraryId": string; }; signal?: AbortSignal; }; response: AnswerSheetTemplateLibraryInstance; };
+  "resolveAnswerSheetTemplateLibrary": { args: { path: { "examId": string; }; body: ResolveAnswerSheetTemplateRequest; signal?: AbortSignal; }; response: AnswerSheetTemplateLibraryResolution; };
+  "analyzeAnswerSheetTemplatePage": { args: { path: { "id": string; }; body: AnalyzeAnswerSheetPageRequest; signal?: AbortSignal; }; response: AnalyzeAnswerSheetPageResponse; };
+  "savePlatformAnswerSheetModelSelection": { args: { body: AnswerSheetModelSelectionInput; signal?: AbortSignal; }; response: { "selection": AnswerSheetModelSelection; }; };
+  "analyzeAnswerSheetObjectiveGrid": { args: { path: { "id": string; }; body: AnalyzeAnswerSheetObjectiveGridRequest; signal?: AbortSignal; }; response: AnalyzeAnswerSheetObjectiveGridResponse; };
+  "deleteAnswerSheetSource": { args: { path: { "examId": string; "id": string; }; signal?: AbortSignal; }; response: DeleteAnswerSheetSourceResponse; };
+  "analyzeAnswerSheetPageOrder": { args: { path: { "examId": string; }; body: AnalyzeAnswerSheetPageOrderRequest; signal?: AbortSignal; }; response: AnalyzeAnswerSheetPageOrderResponse; };
+  "getPlatformChatModelAccess": { args: { query: { "tenant_id": string; }; signal?: AbortSignal; }; response: { "access": ChatModelAccess; }; };
+  "savePlatformChatModelAccess": { args: { body: ChatModelAccessInput; signal?: AbortSignal; }; response: { "access": ChatModelAccess; }; };
+  "updateOrganizationGrade": { args: { path: { "id": string; }; body: UpdateOrganizationGradeRequest; signal?: AbortSignal; }; response: OrganizationGradeResponse; };
+  "updateOrganizationClass": { args: { path: { "id": string; }; body: UpdateOrganizationClassRequest; signal?: AbortSignal; }; response: OrganizationClassResponse; };
+  "updateOrganizationStudent": { args: { path: { "id": string; }; body: UpdateOrganizationStudentRequest; signal?: AbortSignal; }; response: OrganizationStudentResponse; };
+  "deleteOrganizationStudent": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: DeleteOrganizationStudentResponse; };
+  "updateManagedUserProfile": { args: { path: { "id": string; }; body: UpdateManagedUserProfileRequest; signal?: AbortSignal; }; response: ManagedUserProfileResponse; };
+  "listPersonalReviewBookmarks": { args: { query?: { "exam_id"?: string; "question_id"?: string; "subject"?: string; "state"?: "all" | "processable" | "submitted"; "q"?: string; "cursor"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: PersonalReviewBookmarkListResponse; };
+  "getPersonalReviewBookmarkState": { args: { path: { "taskId": string; }; signal?: AbortSignal; }; response: PersonalReviewBookmarkStateResponse; };
+  "putPersonalReviewBookmark": { args: { path: { "taskId": string; }; headers: { "Idempotency-Key": string; }; body: PersonalReviewBookmarkPut; signal?: AbortSignal; }; response: PersonalReviewBookmarkAcknowledgement; };
+  "deletePersonalReviewBookmark": { args: { path: { "bookmarkId": string; }; headers: { "Idempotency-Key": string; }; body: PersonalReviewBookmarkDelete; signal?: AbortSignal; }; response: PersonalReviewBookmarkAcknowledgement; };
+  "listUnavailablePersonalReviewBookmarks": { args: { signal?: AbortSignal; }; response: PersonalReviewBookmarkCleanupResponse; };
+  "getPersonalReviewBookmarkContext": { args: { path: { "bookmarkId": string; }; signal?: AbortSignal; }; response: PersonalReviewBookmarkContext; };
+  "getPersonalReviewBookmarkImage": { args: { path: { "bookmarkId": string; }; query: { "version": string; }; signal?: AbortSignal; }; response: unknown; };
+  "listReferenceMaterialSources": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ReferenceMaterialSourcesResponse; };
+  "getReferenceMaterialSourceImage": { args: { path: { "examId": string; "pageRef": string; }; signal?: AbortSignal; }; response: unknown; };
+  "createReferenceMaterialCrop": { args: { path: { "examId": string; "questionId": string; }; body: ReferenceMaterialCropRequest; signal?: AbortSignal; }; response: ReferenceMaterialCropResponse; };
+  "getReferenceMaterialCropImage": { args: { path: { "examId": string; "questionId": string; "cropRef": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getQuestionReferenceMaterials": { args: { path: { "examId": string; "questionId": string; }; signal?: AbortSignal; }; response: ReferenceMaterialsResponse; };
+  "saveQuestionReferenceMaterials": { args: { path: { "examId": string; "questionId": string; }; body: SaveReferenceMaterialsRequest; signal?: AbortSignal; }; response: ReferenceMaterialsResponse; };
+  "withdrawQuestionReferenceMaterials": { args: { path: { "examId": string; "questionId": string; "manifestId": string; }; body: WithdrawReferenceMaterialsRequest; signal?: AbortSignal; }; response: ReferenceMaterialsResponse; };
+  "recoverReferenceMaterialCommand": { args: { path: { "examId": string; "commandId": string; }; signal?: AbortSignal; }; response: ReferenceMaterialCommandResponse; };
+  "getTaskReferenceMaterials": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ReferenceMaterialsResponse; };
+  "getTaskReferenceMaterialImage": { args: { path: { "id": string; "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getScoringReferenceMaterials": { args: { path: { "runId": string; "questionId": string; }; signal?: AbortSignal; }; response: ReferenceMaterialsResponse; };
+  "getScoringReferenceMaterialImage": { args: { path: { "runId": string; "questionId": string; "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "recordMaterialExecutionFact": { args: { path: { "runId": string; "permitId": string; }; body: MaterialPermitRecordRequest; signal?: AbortSignal; }; response: MaterialPermitRecordResponse; };
+  "resumeReferenceMaterialCommand": { args: { path: { "examId": string; "questionId": string; "commandId": string; }; signal?: AbortSignal; }; response: ReferenceMaterialCommandResponse; };
+  "registerCaptureFile": { args: { path: { "id": string; }; body: CaptureFileRegisterRequest; signal?: AbortSignal; }; response: CaptureFileResponse; };
+  "resumeScoringRun": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringRunRetryResponse; };
+  "savePlatformGradingModelSelection": { args: { body: AnswerSheetModelSelectionInput; signal?: AbortSignal; }; response: { "selection": AnswerSheetModelSelection; }; };
+  "probePlatformGradingModelSelection": { args: { body: { "tenant_id": string; "request_id": string; }; signal?: AbortSignal; }; response: { "capability": { "visual_supported": boolean; "model_version"?: string; "model_binding"?: string; }; }; };
 }
 
 export class EduGradeApi {
   constructor(private readonly transport: ApiTransport) {}
+
+  suggestQuestionMathRubricDraft(args: operations["suggestQuestionMathRubricDraft"]["args"]): Promise<operations["suggestQuestionMathRubricDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/rubric-draft", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getPlatformModelApplications(args: operations["getPlatformModelApplications"]["args"]): Promise<operations["getPlatformModelApplications"]["response"]> {
+    const requestPath = appendQuery("/api/v1/platform/model-applications", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  savePlatformDocumentModelSelection(args: operations["savePlatformDocumentModelSelection"]["args"]): Promise<operations["savePlatformDocumentModelSelection"]["response"]> {
+    const requestPath = "/api/v1/platform/document-model-selection";
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
 
   getRegradeItemReviewContext(args: operations["getRegradeItemReviewContext"]["args"]): Promise<operations["getRegradeItemReviewContext"]["response"]> {
     const requestPath = fillPath("/api/v1/regrade-items/{itemId}/review-context", args.path);
@@ -750,6 +882,26 @@ export class EduGradeApi {
   getScoringRun(args: operations["getScoringRun"]["args"]): Promise<operations["getScoringRun"]["response"]> {
     const requestPath = fillPath("/api/v1/scoring-runs/{runId}", args.path);
     return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listScoringRunAITrials(args: operations["listScoringRunAITrials"]["args"]): Promise<operations["listScoringRunAITrials"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}/ai-trials", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  createScoringRunAITrial(args: operations["createScoringRunAITrial"]["args"]): Promise<operations["createScoringRunAITrial"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}/ai-trials", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  enqueueScoringRunAITrial(args: operations["enqueueScoringRunAITrial"]["args"]): Promise<operations["enqueueScoringRunAITrial"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}/ai-trials/{trialId}/enqueue", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+  }
+
+  decideScoringRunAITrial(args: operations["decideScoringRunAITrial"]["args"]): Promise<operations["decideScoringRunAITrial"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}/ai-trials/{trialId}/decision", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 
   listScoringRunAIBatches(args: operations["listScoringRunAIBatches"]["args"]): Promise<operations["listScoringRunAIBatches"]["response"]> {
@@ -2115,5 +2267,250 @@ export class EduGradeApi {
   getCaptureScanContext(args: operations["getCaptureScanContext"]["args"]): Promise<operations["getCaptureScanContext"]["response"]> {
     const requestPath = fillPath("/api/v1/capture-batches/{id}/scan-context", args.path);
     return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getExamTemplateBinding(args: operations["getExamTemplateBinding"]["args"]): Promise<operations["getExamTemplateBinding"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/answer-sheet-template-binding", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  bindExamTemplate(args: operations["bindExamTemplate"]["args"]): Promise<operations["bindExamTemplate"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/answer-sheet-template-binding", args.path);
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  unbindExamTemplate(args: operations["unbindExamTemplate"]["args"]): Promise<operations["unbindExamTemplate"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/answer-sheet-template-binding", args.path);
+    return this.transport.request(requestPath, { method: "DELETE", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  createQuestionRubricDraftJob(args: operations["createQuestionRubricDraftJob"]["args"]): Promise<operations["createQuestionRubricDraftJob"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/rubric-draft-jobs", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  listQuestionRubricDraftJobs(args: operations["listQuestionRubricDraftJobs"]["args"]): Promise<operations["listQuestionRubricDraftJobs"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/rubric-draft-jobs", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getQuestionRubricDraftJob(args: operations["getQuestionRubricDraftJob"]["args"]): Promise<operations["getQuestionRubricDraftJob"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/rubric-draft-jobs/{jobId}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  cancelQuestionRubricDraftJob(args: operations["cancelQuestionRubricDraftJob"]["args"]): Promise<operations["cancelQuestionRubricDraftJob"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/rubric-draft-jobs/{jobId}/cancel", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  lockAnswerSheetTemplate(args: operations["lockAnswerSheetTemplate"]["args"]): Promise<operations["lockAnswerSheetTemplate"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-templates/{id}/lock", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  publishAnswerSheetTemplateToLibrary(args: operations["publishAnswerSheetTemplateToLibrary"]["args"]): Promise<operations["publishAnswerSheetTemplateToLibrary"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-templates/{id}/library", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  listAnswerSheetTemplateLibrary(args: operations["listAnswerSheetTemplateLibrary"]["args"]): Promise<operations["listAnswerSheetTemplateLibrary"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/answer-sheet-template-library", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  instantiateAnswerSheetTemplateLibrary(args: operations["instantiateAnswerSheetTemplateLibrary"]["args"]): Promise<operations["instantiateAnswerSheetTemplateLibrary"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/answer-sheet-template-library/{libraryId}/instantiate", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+  }
+
+  resolveAnswerSheetTemplateLibrary(args: operations["resolveAnswerSheetTemplateLibrary"]["args"]): Promise<operations["resolveAnswerSheetTemplateLibrary"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/answer-sheet-template-library/resolve", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  analyzeAnswerSheetTemplatePage(args: operations["analyzeAnswerSheetTemplatePage"]["args"]): Promise<operations["analyzeAnswerSheetTemplatePage"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-templates/{id}/analyze-page", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  savePlatformAnswerSheetModelSelection(args: operations["savePlatformAnswerSheetModelSelection"]["args"]): Promise<operations["savePlatformAnswerSheetModelSelection"]["response"]> {
+    const requestPath = "/api/v1/platform/answer-sheet-model-selection";
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  analyzeAnswerSheetObjectiveGrid(args: operations["analyzeAnswerSheetObjectiveGrid"]["args"]): Promise<operations["analyzeAnswerSheetObjectiveGrid"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-templates/{id}/analyze-objective-grid", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  deleteAnswerSheetSource(args: operations["deleteAnswerSheetSource"]["args"]): Promise<operations["deleteAnswerSheetSource"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/papers/{id}", args.path);
+    return this.transport.request(requestPath, { method: "DELETE", signal: args.signal });
+  }
+
+  analyzeAnswerSheetPageOrder(args: operations["analyzeAnswerSheetPageOrder"]["args"]): Promise<operations["analyzeAnswerSheetPageOrder"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/answer-sheet-page-order", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getPlatformChatModelAccess(args: operations["getPlatformChatModelAccess"]["args"]): Promise<operations["getPlatformChatModelAccess"]["response"]> {
+    const requestPath = appendQuery("/api/v1/platform/chat-model-access", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  savePlatformChatModelAccess(args: operations["savePlatformChatModelAccess"]["args"]): Promise<operations["savePlatformChatModelAccess"]["response"]> {
+    const requestPath = "/api/v1/platform/chat-model-access";
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  updateOrganizationGrade(args: operations["updateOrganizationGrade"]["args"]): Promise<operations["updateOrganizationGrade"]["response"]> {
+    const requestPath = fillPath("/api/v1/grades/{id}", args.path);
+    return this.transport.request(requestPath, { method: "PATCH", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  updateOrganizationClass(args: operations["updateOrganizationClass"]["args"]): Promise<operations["updateOrganizationClass"]["response"]> {
+    const requestPath = fillPath("/api/v1/classes/{id}", args.path);
+    return this.transport.request(requestPath, { method: "PATCH", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  updateOrganizationStudent(args: operations["updateOrganizationStudent"]["args"]): Promise<operations["updateOrganizationStudent"]["response"]> {
+    const requestPath = fillPath("/api/v1/students/{id}", args.path);
+    return this.transport.request(requestPath, { method: "PATCH", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  deleteOrganizationStudent(args: operations["deleteOrganizationStudent"]["args"]): Promise<operations["deleteOrganizationStudent"]["response"]> {
+    const requestPath = fillPath("/api/v1/students/{id}", args.path);
+    return this.transport.request(requestPath, { method: "DELETE", signal: args.signal });
+  }
+
+  updateManagedUserProfile(args: operations["updateManagedUserProfile"]["args"]): Promise<operations["updateManagedUserProfile"]["response"]> {
+    const requestPath = fillPath("/api/v1/users/{id}/profile", args.path);
+    return this.transport.request(requestPath, { method: "PATCH", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  listPersonalReviewBookmarks(args: operations["listPersonalReviewBookmarks"]["args"] = {}): Promise<operations["listPersonalReviewBookmarks"]["response"]> {
+    const requestPath = appendQuery("/api/v1/me/review-bookmarks", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getPersonalReviewBookmarkState(args: operations["getPersonalReviewBookmarkState"]["args"]): Promise<operations["getPersonalReviewBookmarkState"]["response"]> {
+    const requestPath = fillPath("/api/v1/me/review-bookmarks/by-task/{taskId}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  putPersonalReviewBookmark(args: operations["putPersonalReviewBookmark"]["args"]): Promise<operations["putPersonalReviewBookmark"]["response"]> {
+    const requestPath = fillPath("/api/v1/me/review-bookmarks/by-task/{taskId}", args.path);
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  deletePersonalReviewBookmark(args: operations["deletePersonalReviewBookmark"]["args"]): Promise<operations["deletePersonalReviewBookmark"]["response"]> {
+    const requestPath = fillPath("/api/v1/me/review-bookmarks/{bookmarkId}", args.path);
+    return this.transport.request(requestPath, { method: "DELETE", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  listUnavailablePersonalReviewBookmarks(args: operations["listUnavailablePersonalReviewBookmarks"]["args"] = {}): Promise<operations["listUnavailablePersonalReviewBookmarks"]["response"]> {
+    const requestPath = "/api/v1/me/review-bookmarks/cleanup";
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getPersonalReviewBookmarkContext(args: operations["getPersonalReviewBookmarkContext"]["args"]): Promise<operations["getPersonalReviewBookmarkContext"]["response"]> {
+    const requestPath = fillPath("/api/v1/me/review-bookmarks/{bookmarkId}/context", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getPersonalReviewBookmarkImage(args: operations["getPersonalReviewBookmarkImage"]["args"]): Promise<operations["getPersonalReviewBookmarkImage"]["response"]> {
+    const requestPath = appendQuery(fillPath("/api/v1/me/review-bookmarks/{bookmarkId}/image", args.path), args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listReferenceMaterialSources(args: operations["listReferenceMaterialSources"]["args"]): Promise<operations["listReferenceMaterialSources"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/reference-material-sources", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getReferenceMaterialSourceImage(args: operations["getReferenceMaterialSourceImage"]["args"]): Promise<operations["getReferenceMaterialSourceImage"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/reference-material-sources/{pageRef}/image", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  createReferenceMaterialCrop(args: operations["createReferenceMaterialCrop"]["args"]): Promise<operations["createReferenceMaterialCrop"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/reference-material-crops", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getReferenceMaterialCropImage(args: operations["getReferenceMaterialCropImage"]["args"]): Promise<operations["getReferenceMaterialCropImage"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/reference-material-crops/{cropRef}/image", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getQuestionReferenceMaterials(args: operations["getQuestionReferenceMaterials"]["args"]): Promise<operations["getQuestionReferenceMaterials"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/reference-materials", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  saveQuestionReferenceMaterials(args: operations["saveQuestionReferenceMaterials"]["args"]): Promise<operations["saveQuestionReferenceMaterials"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/reference-materials", args.path);
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  withdrawQuestionReferenceMaterials(args: operations["withdrawQuestionReferenceMaterials"]["args"]): Promise<operations["withdrawQuestionReferenceMaterials"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/reference-materials/{manifestId}/withdraw", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  recoverReferenceMaterialCommand(args: operations["recoverReferenceMaterialCommand"]["args"]): Promise<operations["recoverReferenceMaterialCommand"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/reference-material-commands/{commandId}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getTaskReferenceMaterials(args: operations["getTaskReferenceMaterials"]["args"]): Promise<operations["getTaskReferenceMaterials"]["response"]> {
+    const requestPath = fillPath("/api/v1/review-tasks/{id}/reference-materials", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getTaskReferenceMaterialImage(args: operations["getTaskReferenceMaterialImage"]["args"]): Promise<operations["getTaskReferenceMaterialImage"]["response"]> {
+    const requestPath = fillPath("/api/v1/review-tasks/{id}/reference-materials/{itemId}/image", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getScoringReferenceMaterials(args: operations["getScoringReferenceMaterials"]["args"]): Promise<operations["getScoringReferenceMaterials"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}/questions/{questionId}/reference-materials", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getScoringReferenceMaterialImage(args: operations["getScoringReferenceMaterialImage"]["args"]): Promise<operations["getScoringReferenceMaterialImage"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}/questions/{questionId}/reference-materials/{itemId}/image", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  recordMaterialExecutionFact(args: operations["recordMaterialExecutionFact"]["args"]): Promise<operations["recordMaterialExecutionFact"]["response"]> {
+    const requestPath = fillPath("/api/v1/internal/subjective-grading/runs/{runId}/material-permits/{permitId}/record", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  resumeReferenceMaterialCommand(args: operations["resumeReferenceMaterialCommand"]["args"]): Promise<operations["resumeReferenceMaterialCommand"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/reference-material-commands/{commandId}/resume", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+  }
+
+  registerCaptureFile(args: operations["registerCaptureFile"]["args"]): Promise<operations["registerCaptureFile"]["response"]> {
+    const requestPath = fillPath("/api/v1/capture-batches/{id}/files", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  resumeScoringRun(args: operations["resumeScoringRun"]["args"]): Promise<operations["resumeScoringRun"]["response"]> {
+    const requestPath = fillPath("/api/v1/scoring-runs/{runId}/resume", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+  }
+
+  savePlatformGradingModelSelection(args: operations["savePlatformGradingModelSelection"]["args"]): Promise<operations["savePlatformGradingModelSelection"]["response"]> {
+    const requestPath = "/api/v1/platform/grading-model-selection";
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  probePlatformGradingModelSelection(args: operations["probePlatformGradingModelSelection"]["args"]): Promise<operations["probePlatformGradingModelSelection"]["response"]> {
+    const requestPath = "/api/v1/platform/grading-model-selection/probe";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 }

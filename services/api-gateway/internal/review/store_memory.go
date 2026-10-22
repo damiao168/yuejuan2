@@ -188,7 +188,7 @@ func aggregateReviewTasks(tasks []ReviewTask) TaskAggregate {
 		completed := task.Status == "submitted" || task.Status == "completed"
 		if completed {
 			aggregate.CompletedCount++
-		} else {
+		} else if isRemainingReviewTask(task.Status) {
 			aggregate.RemainingCount++
 		}
 		if task.AssignedTo == "" {
@@ -202,7 +202,7 @@ func aggregateReviewTasks(tasks []ReviewTask) TaskAggregate {
 		reviewer.TotalCount++
 		if completed {
 			reviewer.CompletedCount++
-		} else {
+		} else if isRemainingReviewTask(task.Status) {
 			reviewer.RemainingCount++
 		}
 	}
@@ -215,6 +215,11 @@ func aggregateReviewTasks(tasks []ReviewTask) TaskAggregate {
 		aggregate.Reviewers = append(aggregate.Reviewers, *reviewers[id])
 	}
 	return aggregate
+}
+
+// 已取消任务保留在全状态历史和状态计数中，但不再占用待阅工作量。
+func isRemainingReviewTask(status string) bool {
+	return status == "pending" || status == "assigned" || status == "in_progress" || status == "returned"
 }
 
 func containsString(values []string, target string) bool {
@@ -342,6 +347,9 @@ func (s *MemoryStore) SubmitGrade(requestCtx context.Context, tenantID string, i
 	if err := validateSubmit(input, ctx); err != nil {
 		return SubmitResult{}, err
 	}
+	if err := requireSubmissionQualification(requestCtx, tenantID, reviewerID, task, ctx); err != nil {
+		return SubmitResult{}, err
+	}
 	now := time.Now().UTC()
 	grade := HumanGrade{
 		ID:               s.id("human-grade"),
@@ -448,7 +456,10 @@ func (s *MemoryStore) SetQuestionDoubleMarkPolicy(_ context.Context, tenantID st
 	return clonePolicy(s.upsertPolicyLocked(tenantID, examID, questionID, actorID, input)), nil
 }
 
-func (s *MemoryStore) ListDoubleMarkPolicies(_ context.Context, tenantID string, filter PolicyFilter) ([]DoubleMarkPolicy, error) {
+func (s *MemoryStore) ListDoubleMarkPolicies(ctx context.Context, tenantID string, filter PolicyFilter) ([]DoubleMarkPolicy, error) {
+	if err := filter.Access.Validate(tenantID); err != nil {
+		return nil, err
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := []DoubleMarkPolicy{}
@@ -460,6 +471,13 @@ func (s *MemoryStore) ListDoubleMarkPolicies(_ context.Context, tenantID string,
 			continue
 		}
 		if filter.QuestionID != "" && policy.QuestionID != filter.QuestionID {
+			continue
+		}
+		allowed, err := filter.Access.Allows(ctx, tenantID, "exam", policy.ExamID, policy.ExamID)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
 			continue
 		}
 		out = append(out, clonePolicy(policy))
@@ -536,7 +554,10 @@ func (s *MemoryStore) CreateDoubleMarkSession(_ context.Context, tenantID string
 	return cloneSession(session), nil
 }
 
-func (s *MemoryStore) ListDoubleMarkSessions(_ context.Context, tenantID string, filter DoubleMarkSessionFilter) ([]DoubleMarkSession, error) {
+func (s *MemoryStore) ListDoubleMarkSessions(ctx context.Context, tenantID string, filter DoubleMarkSessionFilter) ([]DoubleMarkSession, error) {
+	if err := filter.Access.Validate(tenantID); err != nil {
+		return nil, err
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := []DoubleMarkSession{}
@@ -554,6 +575,13 @@ func (s *MemoryStore) ListDoubleMarkSessions(_ context.Context, tenantID string,
 			continue
 		}
 		if filter.QuestionID != "" && session.QuestionID != filter.QuestionID {
+			continue
+		}
+		allowed, err := filter.Access.Allows(ctx, tenantID, "exam", session.ExamID, session.ExamID)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
 			continue
 		}
 		out = append(out, cloneSession(session))

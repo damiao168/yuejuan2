@@ -1,6 +1,9 @@
 package paper
 
-import "math"
+import (
+	"math"
+	"strings"
+)
 
 var validQuestionTypes = map[string]bool{
 	"single_choice":   true,
@@ -37,6 +40,19 @@ func SumRubricPoints(points []RubricPoint) float64 {
 		total += point.Score
 	}
 	return total
+}
+
+// ValidRubricPointIdentities 检查同一细则中稳定、唯一的采分点标识。
+// ID 会被评分证据引用，空值、首尾空格或重复值会让证据无法明确对应到一个采分点。
+func ValidRubricPointIdentities(points []RubricPoint) bool {
+	seen := make(map[string]bool, len(points))
+	for _, point := range points {
+		if point.ID == "" || point.ID != strings.TrimSpace(point.ID) || seen[point.ID] {
+			return false
+		}
+		seen[point.ID] = true
+	}
+	return true
 }
 
 func ValidRubricEvidenceRequirements(points []RubricPoint) bool {

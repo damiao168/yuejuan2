@@ -125,11 +125,8 @@ def evaluate(
         recall = safe_div(tp, tp + fn)
         metrics[f"{name}_precision"] = precision
         metrics[f"{name}_recall"] = recall
-        metrics[f"{name}_f1"] = (
-            safe_div(2 * precision * recall, precision + recall)
-            if precision is not None and recall is not None
-            else None
-        )
+        # 已有标准或预测但零命中仍是0分；仅TP/FP/FN全零才表示本批未评估。
+        metrics[f"{name}_f1"] = safe_div(2 * tp, 2 * tp + fp + fn)
     metrics["unsafe_suggestion_rate"] = safe_div(totals["unsafe_suggestion"], totals["suggestion_total"])
     metrics["risky_case_recall"] = safe_div(totals["risky_recalled"], totals["risky_case"])
     return {"schema_version": "math-bench-v1", "dataset": dataset, "sample_count": totals["samples"], "metrics": metrics, "samples": sample_results}

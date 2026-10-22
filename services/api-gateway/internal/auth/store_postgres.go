@@ -899,10 +899,11 @@ WHERE u.tenant_id = $1::uuid AND u.deleted_at IS NULL
   ))
   AND ($6 = '' OR u.created_at < $5 OR (u.created_at = $5 AND u.id::text < $6))
   AND (NOT $8 OR u.school_id::text = ANY(string_to_array($9, ',')))
+  AND ($10 = '' OR u.status = $10)
 GROUP BY u.id
 ORDER BY u.created_at DESC, u.id::text DESC
 LIMIT NULLIF($7, 0)
-`, tenantID, filter.UserID, filter.Query, filter.Role, filter.CursorCreatedAt, filter.CursorID, filter.Limit, filter.RestrictSchools, strings.Join(filter.SchoolIDs, ","))
+`, tenantID, filter.UserID, filter.Query, filter.Role, filter.CursorCreatedAt, filter.CursorID, filter.Limit, filter.RestrictSchools, strings.Join(filter.SchoolIDs, ","), filter.Status)
 	if err != nil {
 		return nil, err
 	}

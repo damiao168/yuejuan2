@@ -64,6 +64,18 @@ describe("batch30 candidate presentation boundaries", () => {
     expect(screen.queryByText(/ENGINE_SECRET/)).toBeNull();
   });
 
+  it.each([false, true])("does not expose old metadata or candidates after a current failure (revealed=%s)", (visible) => {
+    const context = panelContext(true);
+    context.ai_failure = { failure_kind: "output_truncated" };
+    const onReveal = vi.fn();
+    render(<AIContextPanel context={context} visible={visible} onReveal={onReveal} />);
+    expect(screen.queryByText("MODEL_SECRET")).toBeNull();
+    expect(screen.queryByText(/ENGINE_SECRET/)).toBeNull();
+    expect(screen.queryByText(/评分证据/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "查看第二意见" })).toBeNull();
+    expect(onReveal).not.toHaveBeenCalled();
+  });
+
   it.each([[false, false], [false, true], [true, false], [true, true]])(
     "keeps candidate/metadata presence distinct: candidates=%s metadata=%s", (hasCandidates, hasMetadata) => {
       const context = panelContext();

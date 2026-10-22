@@ -24,6 +24,8 @@ type DocumentImportService struct {
 	parseMu       sync.Mutex
 	activeParses  map[string]*paperImportParse
 	modelResolver func(context.Context, string) (*DocumentModelConfig, error)
+	// 答题卡图片使用平台单独分配的多模态模型，不借用聊天或试卷文本解析配置。
+	templateVisionResolver func(context.Context, string) (*DocumentModelConfig, error)
 }
 
 // DocumentModelConfig 只随经过认证的内部解析请求传递。
@@ -39,6 +41,11 @@ type DocumentModelConfig struct {
 
 func (s *DocumentImportService) WithModelResolver(resolve func(context.Context, string) (*DocumentModelConfig, error)) *DocumentImportService {
 	s.modelResolver = resolve
+	return s
+}
+
+func (s *DocumentImportService) WithTemplateVisionResolver(resolve func(context.Context, string) (*DocumentModelConfig, error)) *DocumentImportService {
+	s.templateVisionResolver = resolve
 	return s
 }
 

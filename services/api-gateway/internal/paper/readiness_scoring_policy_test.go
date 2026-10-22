@@ -108,7 +108,7 @@ func TestReadinessConfirmationRollsBackClassTransferDuringRebuild(t *testing.T) 
 		paperBatch10Step{kind: "exec", fragment: "INSERT INTO exam_candidate_snapshot", result: driver.RowsAffected(1)},
 		paperBatch10Step{kind: "query", fragment: "FROM exam_candidate_snapshot candidate", columns: 2, rows: [][]driver.Value{{"student-1", "class-2"}}},
 	)
-	store, script := openPaperBatch10Store(t, steps)
+	store, script := openPaperBatch10Store(t, withObjectiveConfirmationLockSteps(steps))
 	result, err := store.ConfirmReadiness(context.Background(), "tenant-1", "exam-1", "admin-1", ConfirmReadinessInput{})
 	if !errors.Is(err, ErrReadinessChanged) || !result.Ready || result.Confirmed {
 		t.Fatalf("changed class was frozen: %#v %v", result, err)
@@ -117,7 +117,7 @@ func TestReadinessConfirmationRollsBackClassTransferDuringRebuild(t *testing.T) 
 }
 
 func TestReadinessConfirmationRejectsStalePolicyHashBeforeRebuild(t *testing.T) {
-	store, script := openPaperBatch10Store(t, readinessReviewedConfigurationSteps(t))
+	store, script := openPaperBatch10Store(t, withObjectiveConfirmationLockSteps(readinessReviewedConfigurationSteps(t)))
 	result, err := store.ConfirmReadiness(context.Background(), "tenant-1", "exam-1", "admin-1", ConfirmReadinessInput{ExpectedConfigurationHash: "stale-before-policy-change"})
 	if !errors.Is(err, ErrReadinessChanged) || !result.Ready || result.Confirmed {
 		t.Fatalf("stale policy was frozen: %#v %v", result, err)
@@ -135,7 +135,7 @@ func TestReadinessConfirmationKeepsIdentityCheckWhenClassProjectionOmitsCandidat
 		paperBatch10Step{kind: "exec", fragment: "INSERT INTO exam_candidate_snapshot", result: driver.RowsAffected(0)},
 		paperBatch10Step{kind: "query", fragment: "FROM exam_candidate_snapshot candidate", columns: 2},
 	)
-	store, script := openPaperBatch10Store(t, steps)
+	store, script := openPaperBatch10Store(t, withObjectiveConfirmationLockSteps(steps))
 	result, err := store.ConfirmReadiness(context.Background(), "tenant-1", "exam-1", "admin-1", ConfirmReadinessInput{})
 	if !errors.Is(err, ErrReadinessChanged) || !result.Ready || result.Confirmed {
 		t.Fatalf("mismatched identity list was frozen: %#v %v", result, err)
@@ -163,6 +163,7 @@ func readinessReviewedConfigurationSteps(t *testing.T) []paperBatch10Step {
 		{kind: "query", fragment: "FROM question_answer_key", columns: 9, rows: [][]driver.Value{{"answer-1", "question-1", "v1", []byte(`"A"`), []byte(`[]`), []byte(`null`), "", "", []byte(`[]`)}}},
 		{kind: "query", fragment: "FROM question_rubric", columns: 11},
 		{kind: "query", fragment: "FROM question_solution", columns: 8},
+		{kind: "query", fragment: "FROM question_reference_manifest", columns: 8},
 		{kind: "query", fragment: "FROM answer_sheet_template", columns: 16, rows: [][]driver.Value{{"template-1", "tenant-1", "exam-1", "paper-1", int64(1), int64(1), "template", "locked", int64(1), layout, "content-hash", "admin-1", "admin-1", now, now, now}}},
 		{kind: "query", fragment: "FROM paper_import_job", columns: 4},
 		{kind: "query", fragment: "config.scoring_policy_json", columns: 2, rows: [][]driver.Value{{"question-1", readinessFactJSON(t, `{"mode":"DUAL_HUMAN","require_evidence":true,"human_review_below_confidence":true}`)}}},
@@ -171,6 +172,15 @@ func readinessReviewedConfigurationSteps(t *testing.T) []paperBatch10Step {
 }
 
 func boolPointer(value bool) *bool { return &value }
+
+func withObjectiveConfirmationLockSteps(steps []paperBatch10Step) []paperBatch10Step {
+	result := append([]paperBatch10Step(nil), steps[:2]...)
+	result = append(result,
+		paperBatch10Step{kind: "query", fragment: "SELECT id FROM question", columns: 1},
+		paperBatch10Step{kind: "query", fragment: "SELECT id FROM scoring_rule", columns: 1},
+	)
+	return append(result, steps[2:]...)
+}
 
 func scriptedAssessmentReadinessHash(t *testing.T, status, policy string, legacy *bool) ReadinessResult {
 	t.Helper()

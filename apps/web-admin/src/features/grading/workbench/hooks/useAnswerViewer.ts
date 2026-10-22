@@ -155,7 +155,7 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
 
   const loadPreview = useCallback(async () => {
     const requestId = ++requestRef.current;
-    if (!context || mode === "ocr" || (mode === "original" && (!canViewOriginalImage || !context.originalImageUrl)) || (mode === "segment" && !context.segmentImageUrl)) {
+    if (!context || mode === "ocr" || (mode === "original" && (!canViewOriginalImage || !context.originalImageUrl)) || (mode === "segment" && !context.segmentImageUrl) || (mode === "group" && !context.gradingGroupImageUrl)) {
       setPreview(null);
       setPreviewLoading(false);
       setImageSize(null);
@@ -169,7 +169,7 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
     setImageSize(null);
     setAutoFit(true);
     try {
-      const imagePath = mode === "segment" ? context.segmentImageUrl : context.originalImageUrl!;
+      const imagePath = mode === "group" ? context.gradingGroupImageUrl! : mode === "segment" ? context.segmentImageUrl : context.originalImageUrl!;
       // 标注内容已有修订时必须重取图片；按任务预取的旧图不含这个修订。
       const cachedPreview = mode === "segment" && !contentRevision ? prefetchedPreviewRef.current.get(context.task.id) : undefined;
       if (mode === "segment") prefetchedPreviewRef.current.delete(context.task.id);

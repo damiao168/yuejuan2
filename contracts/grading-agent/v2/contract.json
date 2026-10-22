@@ -1,7 +1,7 @@
 {
   "schema_version": "grading-agent-contract-v2",
   "capability_profile": "internal-image-contract-v2",
-  "deployment_mode": "unreachable_fixture_only",
+  "deployment_mode": "multimodal_compatibility_path_pending_native_validation",
   "request_schema": "request.schema.json",
   "response_schema": "response.schema.json",
   "error_schema": "error.schema.json",
@@ -10,9 +10,15 @@
   "maximum_media_pixels": 12000000,
   "maximum_source_bbox_area": 0.9,
   "allowed_media_count": 1,
-  "allowed_media_types": ["image/png"],
-  "allowed_media_kinds": ["answer_segment_crop"],
-  "allowed_media_encodings": ["base64"],
+  "allowed_media_types": [
+    "image/png"
+  ],
+  "allowed_media_kinds": [
+    "answer_segment_crop"
+  ],
+  "allowed_media_encodings": [
+    "base64"
+  ],
   "binding_algorithm": "sha256-length-prefixed-v1",
   "binding_parts": [
     "schema_version",
@@ -28,9 +34,26 @@
   "final_grade_publication_allowed": false,
   "student_visible": false,
   "human_review_required": true,
-  "allowed_grade_levels": ["junior", "senior"],
-  "allowed_subjects": ["chinese", "mathematics", "english", "physics", "chemistry", "biology", "history", "geography", "ethics_politics"],
-  "allowed_agent_roles": ["single", "primary", "arbiter"],
+  "allowed_grade_levels": [
+    "junior",
+    "senior"
+  ],
+  "allowed_subjects": [
+    "chinese",
+    "mathematics",
+    "english",
+    "physics",
+    "chemistry",
+    "biology",
+    "history",
+    "geography",
+    "ethics_politics"
+  ],
+  "allowed_agent_roles": [
+    "single",
+    "primary",
+    "arbiter"
+  ],
   "http_route_enabled": false,
   "external_provider_enabled": false,
   "forbidden_request_fields": [
@@ -48,5 +71,23 @@
     "bucket",
     "storage_key",
     "url"
-  ]
+  ],
+  "optional_extensions": {
+    "material-input-v1": {
+      "required_features": ["material-input-v1"],
+      "reference_material_roles": ["question_diagram", "reference_solution"],
+      "maximum_reference_media_count": 4,
+      "maximum_reference_media_per_role": 2,
+      "maximum_reference_media_bytes": 1048576,
+      "maximum_reference_media_pixels": 4000000,
+      "maximum_total_media_count": 5,
+      "maximum_total_decoded_media_bytes": 5242880,
+      "maximum_total_media_pixels": 12000000,
+      "maximum_provider_requests_per_permit": 1,
+      "automatic_repair_allowed": false,
+      "persistent_execution_permit_required": true,
+      "external_provider_enabled": false,
+      "production_enablement_verified": false
+    }
+  }
 }

@@ -1,6 +1,7 @@
+import { useCaptureScanContext } from "./useCaptureScanContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DesktopApiClient } from "../../api/client";
-import { getCaptureBatchDetail, getCaptureScanContext, listCaptureBatches, listExams, type CaptureBatch, type CaptureBatchProcessingDetail, type CaptureScanContext } from "../../api/exams";
+import { getCaptureBatchDetail, listCaptureBatches, listExams, type CaptureBatch, type CaptureBatchProcessingDetail } from "../../api/exams";
 import { getUserErrorMessage } from "../../api/userError";
 import type { Exam, LocalLogEntry, WorkspaceKey } from "../../types";
 
@@ -26,10 +27,6 @@ export function useExamCaptureContext({
   const queueFocusRef = useRef(queueFocus);
   queueFocusRef.current = queueFocus;
   const processingRequest = useRef(0);
-  const scanContextRequest = useRef(0);
-  const [scanContextSnapshot, setScanContextSnapshot] = useState<{ owner: typeof selection; context: CaptureScanContext } | null>(null);
-  const [scanContextError, setScanContextError] = useState<string | null>(null);
-  const [loadingScanContext, setLoadingScanContext] = useState(false);
   const captureBatchLoadRef = useRef(0);
   const examLoadRef = useRef(0);
   const scopeRef = useRef(durableScopeKey);
@@ -38,10 +35,10 @@ export function useExamCaptureContext({
     [durableScopeKey, token, selectedExamId, captureBatchId, client]);
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
+  const { scanContext, scanContextError, loadingScanContext, handleRefreshScanContext } = useCaptureScanContext(selection, selectionRef, workspace);
   const [processingSnapshot, setProcessingSnapshot] = useState<{ owner: typeof selection; detail: CaptureBatchProcessingDetail } | null>(null);
   // 同一账号也可能切换考试或批次；渲染直接核对归属，不等待 effect 才隐藏旧答卷。
   const processingDetail = processingSnapshot?.owner === selection ? processingSnapshot.detail : null;
-  const scanContext = scanContextSnapshot?.owner === selection ? scanContextSnapshot.context : null;
   const linkedSubmissionIds = [...new Set((processingDetail?.pages ?? []).map((page) => page.submission_id).filter((id): id is string => Boolean(id)))];
 
   const clearProcessing = useCallback(() => {
@@ -138,29 +135,6 @@ export function useExamCaptureContext({
     clearProcessing();
     return () => { processingRequest.current += 1; };
   }, [selection, clearProcessing]);
-  const handleRefreshScanContext = async () => {
-    const owner = selectionRef.current;
-    if (!owner.token || !owner.scope || !owner.batchId || !owner.examId) return;
-    const request = ++scanContextRequest.current;
-    setScanContextSnapshot(null); setScanContextError(null); setLoadingScanContext(true);
-    const isCurrent = () => selectionRef.current === owner && request === scanContextRequest.current;
-    try {
-      const context = await getCaptureScanContext(owner.client, owner.batchId);
-      if (!isCurrent()) return;
-      if (context.batch.id !== owner.batchId || context.batch.exam_id !== owner.examId || context.exam.id !== owner.examId) throw new Error("模板信息与当前考试或批次不一致，请重新读取。");
-      setScanContextSnapshot({ owner, context });
-    } catch (error) {
-      if (isCurrent()) setScanContextError(getUserErrorMessage(error, "当前批次答题卡模板读取失败，请在本页重新读取。"));
-    } finally { if (isCurrent()) setLoadingScanContext(false); }
-  };
-  // 选择变化即撤下旧模板；A→B→A 的迟到响应也不能沿用，归属使用整次选择快照。
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 自动读取由 selection 驱动，刷新函数读取当前 ref。
-  useEffect(() => {
-    scanContextRequest.current += 1;
-    setScanContextSnapshot(null); setScanContextError(null); setLoadingScanContext(false);
-    if (workspace === "scan") void handleRefreshScanContext();
-    return () => { scanContextRequest.current += 1; };
-  }, [selection, workspace]);
   const handleRefreshProcessing = async () => {
     const owner = selectionRef.current;
     if (!owner.token || !owner.scope || !owner.batchId || !owner.examId) return;

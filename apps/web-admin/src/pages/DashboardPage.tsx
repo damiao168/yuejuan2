@@ -197,6 +197,7 @@ export function DashboardPage({ user, onNavigate }: Readonly<{ user: SessionUser
       {data.warnings.map((warning) => <Alert key={warning} type="warning" showIcon message={getSafeUserText(warning, "部分统计暂时不可用")} description="其他统计仍可使用，请稍后刷新。" />)}
 
       <SchoolDashboard
+        schoolName={user.school}
         organizationStatistics={data.organization_statistics}
         statistics={stats}
         activeExamCount={stats.active_exam_count}

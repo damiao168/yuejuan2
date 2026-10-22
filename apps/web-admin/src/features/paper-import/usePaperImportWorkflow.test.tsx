@@ -50,16 +50,7 @@ function twoQuestionReview(): PaperImportJob {
   })) } as PaperImportJob;
 }
 
-function readFileText(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsText(file);
-  });
-}
-
-describe("paper import workflow controller", () => {
+describe("paper import review confirmation", () => {
   let root: Root;
   let container: HTMLDivElement;
   let current: ReturnType<typeof usePaperImportWorkflow>;
@@ -116,6 +107,20 @@ describe("paper import workflow controller", () => {
     expect(mocks.warning).toHaveBeenCalledWith("资料已更新，请核对当前识别结果后再确认");
   });
 
+  it("重复采分点标识不能保存核对稿或确认为正式题目", async () => {
+    const review = twoQuestionReview();
+    review.questions[0].rubric!.points = [
+      { id: "duplicate", description: "步骤一", score: 2, required: true },
+      { id: "duplicate", description: "步骤二", score: 3, required: true }
+    ];
+    await mount(review);
+    await act(async () => { await current.saveImportReview(review); });
+    expect(mocks.savePaperImportReview).not.toHaveBeenCalled();
+    expect(mocks.error).toHaveBeenCalledWith(expect.stringContaining("采分点标识重复"));
+    await act(async () => { await current.confirmPaperImport(review); });
+    expect(mocks.applyPaperImport).not.toHaveBeenCalled();
+  });
+
   it("does not apply a saved review after the active generation changes", async () => {
     const review = { ...job("review_required"), questions: [{ question_no: "1", question_type: "fill_blank", score: 2, stem: "原题", human_confirmed_fields: ["question_no", "question_type", "score", "stem"] }] } as PaperImportJob;
     let resolveSave!: () => void;
@@ -127,175 +132,6 @@ describe("paper import workflow controller", () => {
     await act(async () => { resolveSave(); await confirmation; });
     expect(mocks.applyPaperImport).not.toHaveBeenCalled();
     expect(mocks.warning).toHaveBeenCalledWith("资料已更新，本轮核对结果未导入，请核对最新结果");
-  });
-
-  it("fills recognized content with the expected generation without confirming the review", async () => {
-    const review = job("review_required");
-    mocks.fillPaperImportContent.mockResolvedValueOnce({ filled_questions: ["1"], missing_answers: ["2"], skipped: [] });
-    await mount(review);
-    await act(async () => { await current.fillRecognizedContent(review); });
-    expect(mocks.fillPaperImportContent).toHaveBeenCalledWith("import-1", 7);
-    expect(mocks.savePaperImportReview).not.toHaveBeenCalled();
-    expect(mocks.applyPaperImport).not.toHaveBeenCalled();
-    expect(mocks.loadConfig).toHaveBeenCalledWith("exam-1", { silent: true });
-    expect(current.contentFillResult?.missing_answers).toEqual(["2"]);
-  });
-
-  it("discards a content-fill response when the active generation changes", async () => {
-    const review = job("review_required");
-    let resolveFill!: (value: { filled_questions: string[]; missing_answers: string[]; skipped: [] }) => void;
-    mocks.fillPaperImportContent.mockReturnValueOnce(new Promise((resolve) => { resolveFill = resolve; }));
-    await mount(review);
-    let fill!: Promise<void>;
-    act(() => { fill = current.fillRecognizedContent(review); });
-    await mount({ ...review, generation: 8 });
-    await act(async () => { resolveFill({ filled_questions: ["1"], missing_answers: [], skipped: [] }); await fill; });
-    expect(mocks.loadConfig).not.toHaveBeenCalled();
-    expect(mocks.success).not.toHaveBeenCalled();
-    expect(current.contentFillResult).toBeNull();
-  });
-
-  it("requires saving local review edits before source changes restart recognition", async () => {
-    const review = { ...job("review_required"), questions: [{ question_no: "1", question_type: "fill_blank", score: 2, stem: "原题" }] } as PaperImportJob;
-    await mount(review);
-    act(() => current.updateReviewDraft(0, "stem", { stem: "人工修改" }));
-    await act(async () => { await current.replaceImportSources(review, review.sources); });
-    await act(async () => { await current.importPastedText("## 第 1 题\n\n已知 $x^2=4$，求 $x$ 的值，并写出完整步骤。", "question"); });
-    expect(mocks.replacePaperImportSources).not.toHaveBeenCalled();
-    expect(mocks.uploadFile).not.toHaveBeenCalled();
-    expect(current.reviewDrafts[0].stem).toBe("人工修改");
-    expect(mocks.warning).toHaveBeenCalledTimes(2);
-  });
-
-  it("retries only a failed parse with its current generation", async () => {
-    const failed = job("failed");
-    await mount(failed);
-    await act(async () => { await current.retryImportParse(failed); });
-    expect(mocks.retryPaperImportParse).toHaveBeenCalledWith("import-1", 7);
-    expect(mocks.loadConfig).toHaveBeenCalledWith("exam-1", { silent: true });
-  });
-
-  it("cancels processing only after confirmation, preserving the generation", async () => {
-    const processing = job("processing");
-    await mount(processing);
-    act(() => { current.stopPaperImport(processing); });
-    expect(mocks.cancelPaperImport).not.toHaveBeenCalled();
-    const confirmation = mocks.confirm.mock.calls[0][0] as { onOk: () => Promise<void> };
-    await act(async () => { await confirmation.onOk(); });
-    expect(mocks.cancelPaperImport).toHaveBeenCalledWith("import-1", 7, expect.any(String));
-    expect(mocks.loadConfig).toHaveBeenCalledWith("exam-1", { silent: true });
-  });
-
-  it("sends the expected generation when replacing sources and reports a conflict", async () => {
-    const review = job("review_required");
-    mocks.replacePaperImportSources.mockRejectedValueOnce(new Error("stale generation"));
-    await mount(review);
-    await act(async () => { await current.replaceImportSources(review, review.sources); });
-    expect(mocks.replacePaperImportSources).toHaveBeenCalledWith(
-      "import-1", 7,
-      [{ id: "source-1", document_index: 0, role_hint: "auto" }],
-      expect.any(String)
-    );
-    expect(mocks.error).toHaveBeenCalled();
-    expect(current.updatingImportSources).toBe(false);
-  });
-
-  it("does not start an import after a partial material upload failure", async () => {
-    mocks.uploadFile.mockResolvedValueOnce({ file: { id: "asset-1" } })
-      .mockRejectedValueOnce(new Error("upload failed"));
-    await mount(job("review_required"));
-    const first = Object.assign(new File(["a"], "one.pdf", { type: "application/pdf" }), { uid: "file-1" });
-    const second = Object.assign(new File(["b"], "two.pdf", { type: "application/pdf" }), { uid: "file-2" });
-    await act(async () => {
-      current.uploadProps.beforeUpload?.(first as never, [first, second] as never);
-      await vi.waitFor(() => expect(mocks.uploadFile).toHaveBeenCalledTimes(2));
-      await vi.waitFor(() => expect(mocks.error).toHaveBeenCalled());
-    });
-    expect(current.parsing).toBe(false);
-    expect(mocks.createPaperImport).not.toHaveBeenCalled();
-    expect(mocks.addPaperImportSources).not.toHaveBeenCalled();
-    expect(mocks.loadConfig).toHaveBeenCalledWith("exam-1", { silent: true });
-    expect(mocks.error).toHaveBeenCalled();
-  });
-
-  it("uploads pasted Markdown as a text source and preserves its role hint", async () => {
-    const review = job("review_required");
-    mocks.uploadFile.mockResolvedValueOnce({ file: { id: "markdown-asset" } });
-    mocks.addPaperImportSources.mockResolvedValueOnce({ import: { ...review, status: "processing" } });
-    await mount(review);
-    const markdown = "## 第 1 题\n\n已知 $x^2=4$，求 $x$ 的值，并写出完整步骤。";
-    let imported = false;
-    await act(async () => { imported = await current.importPastedText(markdown, "question"); });
-    expect(imported).toBe(true);
-    const uploaded = mocks.uploadFile.mock.calls[0][0] as File;
-    expect(uploaded.name).toMatch(/^pasted-material-\d{8}-\d{6}\.md$/);
-    expect(uploaded.type).toBe("text/markdown");
-    expect(await readFileText(uploaded)).toBe(markdown);
-    expect(mocks.addPaperImportSources).toHaveBeenCalledWith(
-      "import-1",
-      7,
-      [{ file_asset_id: "markdown-asset", document_index: 1, role_hint: "question" }],
-      expect.any(String)
-    );
-  });
-
-  it("does not restart recognition when the uploaded content is already attached", async () => {
-    const review = {
-      ...job("review_required"),
-      sources: [{ id: "source-1", file_asset_id: "markdown-asset", document_index: 0, role_hint: "auto" }]
-    } as PaperImportJob;
-    mocks.uploadFile.mockResolvedValueOnce({ file: { id: "markdown-asset" } });
-    await mount(review);
-
-    let imported = false;
-    await act(async () => {
-      imported = await current.importPastedText("## 第 1 题\n\n已知 $x^2=4$，求 $x$ 的值，并写出完整步骤。", "question");
-    });
-
-    expect(imported).toBe(true);
-    expect(mocks.addPaperImportSources).not.toHaveBeenCalled();
-    expect(mocks.createPaperImport).not.toHaveBeenCalled();
-    expect(mocks.info).toHaveBeenCalledWith("这份资料已在当前识别任务中，无需重复添加");
-  });
-
-  it("adds only new assets when a batch contains existing and repeated files", async () => {
-    const review = {
-      ...job("review_required"),
-      sources: [{ id: "source-1", file_asset_id: "asset-existing", document_index: 0, role_hint: "auto" }]
-    } as PaperImportJob;
-    mocks.uploadFile
-      .mockResolvedValueOnce({ file: { id: "asset-existing" } })
-      .mockResolvedValueOnce({ file: { id: "asset-new" } })
-      .mockResolvedValueOnce({ file: { id: "asset-new" } });
-    mocks.addPaperImportSources.mockResolvedValueOnce({ import: { ...review, status: "processing" } });
-    await mount(review);
-    const files = [
-      Object.assign(new File(["a"], "old.pdf", { type: "application/pdf" }), { uid: "old" }),
-      Object.assign(new File(["b"], "new.pdf", { type: "application/pdf" }), { uid: "new" }),
-      Object.assign(new File(["b"], "new-copy.pdf", { type: "application/pdf" }), { uid: "new-copy" })
-    ];
-
-    await act(async () => {
-      current.uploadProps.beforeUpload?.(files[0] as never, files as never);
-      await vi.waitFor(() => expect(mocks.addPaperImportSources).toHaveBeenCalled());
-    });
-
-    expect(mocks.addPaperImportSources).toHaveBeenCalledWith(
-      "import-1",
-      7,
-      [{ file_asset_id: "asset-new", document_index: 1, role_hint: "auto" }],
-      expect.any(String)
-    );
-    expect(mocks.success).toHaveBeenCalledWith("已忽略 2 份重复资料，新增 1 份并开始识别");
-  });
-
-  it("rejects pasted text that is too short before uploading", async () => {
-    await mount(job("review_required"));
-    let imported = true;
-    await act(async () => { imported = await current.importPastedText("第 1 题", "auto"); });
-    expect(imported).toBe(false);
-    expect(mocks.uploadFile).not.toHaveBeenCalled();
-    expect(mocks.error).toHaveBeenCalledWith("请至少粘贴 20 个字符的考试资料");
   });
 
   it("rejects a review whose rubric total disagrees with the question score", async () => {
@@ -430,134 +266,5 @@ describe("paper import workflow controller", () => {
     expect(current.savingImportReview).toBe(false); expect(current.reviewDirty).toBe(false);
   });
 
-  it("preserves edits made after the request snapshot in both the current and another question", async () => {
-    const review = twoQuestionReview(); await mount(review);
-    act(() => current.updateReviewDraft(0, "stem", { stem: "本轮提交内容" }));
-    let finish!: (result: { import: PaperImportJob }) => void;
-    mocks.savePaperImportReview.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
-    let saving!: Promise<void>; act(() => { saving = current.saveImportReview(review, 0); });
-    act(() => {
-      current.updateReviewDraft(0, "stem", { stem: "请求期间本题的新修改" });
-      current.updateReviewDraft(1, "stem", { stem: "请求期间另一题的新修改" });
-      current.setReviewJsonText("1:examples", "另一题未完成列表[", "无法读取");
-    });
-    const payload = mocks.savePaperImportReview.mock.calls[0][2];
-    expect(payload[0].stem).toBe("本轮提交内容"); expect(payload[1]).toEqual(review.questions[1]);
-    await act(async () => { finish({ import: { ...review, questions: payload } }); await saving; });
-    expect(current.reviewDrafts.map(draft => draft.stem)).toEqual(["请求期间本题的新修改", "请求期间另一题的新修改"]);
-    expect(current.reviewJsonTexts["1:examples"]).toBe("另一题未完成列表["); expect(current.invalidReviewJson).toBe(true); expect(current.reviewDirty).toBe(true);
-  });
 
-  it("keeps saved confirmation and other drafts when refresh fails, and discards only to the latest receipt", async () => {
-    const review = twoQuestionReview(); await mount(review);
-    act(() => { current.updateReviewDraft(0, "stem", { stem: "确已保存的第一题" }); current.updateReviewDraft(1, "stem", { stem: "未保存的第二题" }); });
-    mocks.loadConfig.mockRejectedValueOnce(new Error("read failed"));
-    await act(async () => { await current.saveImportReview(review, 0); });
-    expect(mocks.success).not.toHaveBeenCalled(); expect(mocks.warning).toHaveBeenCalledWith(expect.stringContaining("本题已确认并保存"));
-    expect(current.reviewDrafts[1].stem).toBe("未保存的第二题"); expect(current.reviewDirty).toBe(true); expect(current.confirmedReviewCount).toBe(1);
-    act(() => current.discardImportReviewDraft());
-    expect(current.reviewDrafts[0].stem).toBe("确已保存的第一题"); expect(current.reviewDrafts[1]).toEqual(review.questions[1]);
-    expect(current.reviewDirty).toBe(false); expect(current.confirmedReviewCount).toBe(1);
-  });
-
-  it("keeps both local drafts unconfirmed when the write request fails", async () => {
-    const review = twoQuestionReview(); await mount(review);
-    act(() => { current.updateReviewDraft(0, "stem", { stem: "本题待保存" }); current.updateReviewDraft(1, "stem", { stem: "另一题待保存" }); });
-    mocks.savePaperImportReview.mockRejectedValueOnce(new Error("write failed"));
-    await act(async () => { await current.saveImportReview(review, 0); });
-    expect(mocks.error).toHaveBeenCalledTimes(1); expect(mocks.success).not.toHaveBeenCalled(); expect(mocks.warning).not.toHaveBeenCalled();
-    expect(mocks.loadConfig).not.toHaveBeenCalled(); expect(current.confirmedReviewCount).toBe(0); expect(current.reviewDirty).toBe(true);
-    expect(current.reviewDrafts.map(draft => draft.stem)).toEqual(["本题待保存", "另一题待保存"]); expect(current.savingImportReview).toBe(false);
-  });
-
-  it.each(["generation", "source_revision", "exam", "status"])("does not merge a late saved receipt after %s changes", async boundary => {
-    const review = twoQuestionReview(); await mount(review);
-    let finish!: (result: { import: PaperImportJob }) => void;
-    mocks.savePaperImportReview.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
-    let saving!: Promise<void>; act(() => { saving = current.saveImportReview(review, 0); });
-    const changed = { ...review, ...(boundary === "generation" ? { generation: 8 } : boundary === "source_revision" ? { source_revision: "sources-next" } : boundary === "exam" ? { exam_id: "exam-other" } : { status: "applied" as const }) };
-    await mount(changed); act(() => current.updateReviewDraft(1, "stem", { stem: "切换后本地草稿" }));
-    await act(async () => { finish({ import: { ...review, questions: mocks.savePaperImportReview.mock.calls[0][2] } }); await saving; });
-    expect(current.reviewDrafts[1].stem).toBe("切换后本地草稿"); expect(current.reviewDirty).toBe(true);
-    expect(mocks.loadConfig).not.toHaveBeenCalled(); expect(mocks.success).not.toHaveBeenCalled(); expect(current.savingImportReview).toBe(false);
-  });
-
-  it.each([
-    ["2026-10-08T14:00:02Z", "2026-10-08T14:00:01Z"],
-    ["2026-10-08T14:00:02.123456Z", "2026-10-08T14:00:02.123123Z"]
-  ])("ignores an older same-generation poll after saved timestamp %s", async (savedTime, pollTime) => {
-    const review = twoQuestionReview(); await mount(review);
-    mocks.savePaperImportReview.mockImplementationOnce(async (_id, _generation, questions) => ({ import: { ...review, questions, updated_at: savedTime } }));
-    await act(async () => { await current.saveImportReview(review, 0); });
-    expect(current.confirmedReviewCount).toBe(1);
-    await mount({ ...review, questions: structuredClone(review.questions), updated_at: pollTime });
-    expect(current.confirmedReviewCount).toBe(1); expect(current.reviewDirty).toBe(false);
-  });
-
-  it("tracks dirty candidate and JSON fields across authoritative reordering", async () => {
-    const review = twoQuestionReview(); await mount(review);
-    act(() => { current.updateReviewDraft(1, "stem", { stem: "第二候选本地草稿" }); current.setReviewJsonText("1:examples", "未完成[", "列表格式错误"); });
-    const reordered = { ...review, updated_at: "2026-10-08T14:00:01Z", questions: [...review.questions].reverse() };
-    await mount(reordered);
-    expect(current.reviewDrafts[0].candidate_id).toBe("candidate-2"); expect(current.reviewDrafts[0].stem).toBe("第二候选本地草稿");
-    expect(current.reviewJsonTexts["0:examples"]).toBe("未完成[");
-    await act(async () => { await current.saveImportReview(review, 1); });
-    expect(mocks.savePaperImportReview).not.toHaveBeenCalled();
-    await compareLatest(reordered);
-    await act(async () => { await current.saveImportReview(review, 1); });
-    const payload = mocks.savePaperImportReview.mock.calls[0][2];
-    expect(payload[0]).toEqual(reordered.questions[0]); expect(payload[1].candidate_id).toBe("candidate-1");
-    expect(current.reviewDrafts[0].stem).toBe("第二候选本地草稿"); expect(current.invalidReviewJson).toBe(true); expect(current.reviewDirty).toBe(true);
-  });
-
-  it("preserves local drafts when a save receipt has missing candidates", async () => {
-    const review = twoQuestionReview(); await mount(review);
-    act(() => current.updateReviewDraft(0, "stem", { stem: "不能丢失的本题修改" }));
-    mocks.savePaperImportReview.mockResolvedValueOnce({ import: { ...review, questions: [] } });
-    await act(async () => { await current.saveImportReview(review, 0); });
-    expect(mocks.error).toHaveBeenCalledWith(expect.stringContaining("候选题目不完整")); expect(mocks.success).not.toHaveBeenCalled();
-    expect(current.reviewDrafts[0].stem).toBe("不能丢失的本题修改"); expect(current.reviewDirty).toBe(true);
-  });
-
-  it.each([0, 1])("does not roll back a newer poll when an old receipt arrives, refresh fails and question %i is next saved", async nextIndex => {
-    const review = twoQuestionReview(); await mount(review);
-    act(() => { current.updateReviewDraft(0, "stem", { stem: "t1 本轮提交内容" }); current.updateReviewDraft(1, "stem", { stem: "另一题未存草稿" }); });
-    let finish!: (result: { import: PaperImportJob }) => void;
-    mocks.savePaperImportReview.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
-    let saving!: Promise<void>; act(() => { saving = current.saveImportReview(review, 0); });
-    const t1 = { ...review, updated_at: "2026-10-08T14:00:01Z", questions: mocks.savePaperImportReview.mock.calls[0][2] };
-    const t2 = { ...review, updated_at: "2026-10-08T14:00:02Z", questions: [
-      { ...t1.questions[0], stem: "t2 第一题最新服务器事实" },
-      { ...review.questions[1], stem: "t2 第二题最新服务器事实", human_confirmed_fields: ["score"] }
-    ] };
-    await mount(t2);
-    mocks.loadConfig.mockRejectedValueOnce(new Error("refresh failed"));
-    await act(async () => { finish({ import: t1 }); await saving; });
-    expect(current.reviewDrafts[0]).toEqual(t2.questions[0]); expect(current.reviewDrafts[1].stem).toBe("另一题未存草稿");
-    expect(current.confirmedReviewCount).toBe(1); expect(current.reviewDirty).toBe(true);
-    expect(mocks.warning).toHaveBeenCalledWith(expect.stringContaining("本题已确认并保存"));
-    await act(async () => { await current.saveImportReview(review, nextIndex); });
-    expect(mocks.savePaperImportReview).toHaveBeenCalledTimes(1);
-    await compareLatest(t2);
-    await act(async () => { await current.saveImportReview(review, nextIndex); });
-    const nextPayload = mocks.savePaperImportReview.mock.calls[1][2] as PaperImportJob["questions"];
-    expect(nextPayload[1 - nextIndex]).toEqual(t2.questions[1 - nextIndex]);
-    expect(nextPayload[nextIndex].stem).toBe(nextIndex === 0 ? t2.questions[0].stem : "另一题未存草稿");
-  });
-
-  it("clears only the submitted candidate JSON when a poll reorders equal raw texts during saving", async () => {
-    const review = twoQuestionReview(); await mount(review);
-    act(() => { current.setReviewJsonText("0:examples", "[]"); current.setReviewJsonText("1:examples", "[]"); });
-    let finish!: (result: { import: PaperImportJob }) => void;
-    mocks.savePaperImportReview.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
-    let saving!: Promise<void>; act(() => { saving = current.saveImportReview(review, 0); });
-    await mount({ ...review, updated_at: "2026-10-08T14:00:01Z", questions: [...review.questions].reverse() });
-    expect(current.reviewDrafts[0].candidate_id).toBe("candidate-2");
-    const receipt = { ...review, updated_at: "2026-10-08T14:00:02Z", questions: mocks.savePaperImportReview.mock.calls[0][2] };
-    await act(async () => { finish({ import: receipt }); await saving; });
-    const savedIndex = current.reviewDrafts.findIndex(draft => draft.candidate_id === "candidate-1");
-    const otherIndex = current.reviewDrafts.findIndex(draft => draft.candidate_id === "candidate-2");
-    expect(current.reviewJsonTexts[`${savedIndex}:examples`]).toBeUndefined(); expect(current.reviewJsonTexts[`${otherIndex}:examples`]).toBe("[]");
-    expect(current.reviewDirty).toBe(true); expect(current.confirmedReviewCount).toBe(1);
-  });
 });

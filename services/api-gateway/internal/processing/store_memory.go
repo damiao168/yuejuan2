@@ -118,14 +118,46 @@ func (s *MemoryStore) Summary(_ context.Context, tenantID, examID string) (Summa
 	return result, nil
 }
 
-func (s *MemoryStore) ListExceptions(_ context.Context, tenantID string, filter ExceptionFilter) (ListResult, error) {
-	// 此测试实现按时间和 ID 倒序截取首页，尚未应用传入的游标或学科筛选。
+func (s *MemoryStore) ListExceptions(ctx context.Context, tenantID string, filter ExceptionFilter) (ListResult, error) {
+	// 先按真实考试边界筛选，再排序和分页；学校管理员不需要额外维护考试白名单。
+	// 该测试投影未保存学科，学科筛选仍由 PostgreSQL 实现。
+	if err := filter.Access.Validate(tenantID); err != nil {
+		return ListResult{}, err
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	items := []Exception{}
+	allowedExams := map[string]bool{}
+	allowsExam := func(examID string) (bool, error) {
+		if allowed, found := allowedExams[examID]; found {
+			return allowed, nil
+		}
+		allowed, err := filter.Access.Allows(ctx, tenantID, "exam", examID, examID)
+		if err == nil {
+			allowedExams[examID] = allowed
+		}
+		return allowed, err
+	}
+	for key := range s.projectedAt {
+		if !strings.HasPrefix(key, tenantID+":") {
+			continue
+		}
+		examID := strings.TrimPrefix(key, tenantID+":")
+		_, err := allowsExam(examID)
+		if err != nil {
+			return ListResult{}, err
+		}
+	}
 	for _, item := range s.exceptions {
 		state, ok := s.states[stateKey(tenantID, item.PageID)]
 		if !ok || !exceptionMatchesFilter(item, state, filter) {
+			continue
+		}
+		allowed, err := allowsExam(item.ExamID)
+		if err != nil {
+			return ListResult{}, err
+		}
+		if !allowed {
 			continue
 		}
 		items = append(items, cloneException(item))
@@ -140,7 +172,8 @@ func (s *MemoryStore) ListExceptions(_ context.Context, tenantID string, filter 
 		filter.Limit = 25
 	}
 	result := ListResult{Exceptions: items}
-	latest := s.latestProjectionTimeLocked(tenantID, filter.ExamID)
+	// 投影时间同样属于考试元数据；不能用未授权考试的更新时间提示其处理活动。
+	latest := s.latestProjectionTimeLocked(tenantID, filter.ExamID, allowedExams)
 	if !latest.IsZero() {
 		value := latest
 		result.ProjectedAt = &value
@@ -166,13 +199,19 @@ func exceptionMatchesFilter(item Exception, state PageState, filter ExceptionFil
 	if filter.Status != "" && item.Status != filter.Status {
 		return false
 	}
+	if !filter.CursorAt.IsZero() && (item.CreatedAt.After(filter.CursorAt) || (item.CreatedAt.Equal(filter.CursorAt) && item.ID >= filter.CursorID)) {
+		return false
+	}
 	return filter.Stage == "" || state.CurrentStage == filter.Stage
 }
 
-func (s *MemoryStore) latestProjectionTimeLocked(tenantID, examID string) time.Time {
-	// 调用方持有读锁；投影时间按租户/考试取最大值，不只看已筛出的异常。
+func (s *MemoryStore) latestProjectionTimeLocked(tenantID, examID string, allowedExams map[string]bool) time.Time {
+	// 调用方持有读锁；取授权考试的最大投影时间，不受异常状态或分页影响。
 	var latest time.Time
 	for key, projectedAt := range s.projectedAt {
+		if !allowedExams[strings.TrimPrefix(key, tenantID+":")] {
+			continue
+		}
 		if (examID == "" && strings.HasPrefix(key, tenantID+":")) || key == tenantID+":"+examID {
 			if projectedAt.After(latest) {
 				latest = projectedAt

@@ -260,31 +260,9 @@ func (s *PostgresStore) VerifyMFAChallenge(ctx context.Context, proof MFAProof) 
 	if challenge.VerifiedAt != nil || proof.CredentialID != record.ID {
 		return ErrMFAInvalid
 	}
-	method := "totp"
-	if proof.RecoveryHash != "" {
-		if challenge.Operation != MFAOperationDisable {
-			return ErrMFAInvalid
-		}
-		result, err := tx.ExecContext(ctx, `UPDATE auth_mfa_recovery_code SET used_at=$5::timestamptz WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND credential_id=$3::uuid AND code_hash=$4 AND used_at IS NULL`, record.TenantID, record.UserID, record.ID, proof.RecoveryHash, proof.Now)
-		if err != nil {
-			return err
-		}
-		count, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if count != 1 {
-			return ErrMFAInvalid
-		}
-		method = "recovery_code"
-	} else {
-		if proof.Step <= record.LastUsedStep {
-			return ErrMFAInvalid
-		}
-		_, err = tx.ExecContext(ctx, `UPDATE auth_totp SET last_used_step=$4,updated_at=$5::timestamptz WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND id=$3::uuid`, record.TenantID, record.UserID, record.ID, proof.Step, proof.Now)
-		if err != nil {
-			return err
-		}
+	method, err := consumeMFAProofSQL(ctx, tx, record, challenge, proof)
+	if err != nil {
+		return err
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE auth_mfa_challenge SET verified_at=$5::timestamptz,verified_method=$6 WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND session_hash=$3 AND token_hash=$4`, proof.TenantID, proof.UserID, proof.SessionHash, proof.ChallengeHash, proof.Now, method)
 	if err != nil {
@@ -296,6 +274,32 @@ func (s *PostgresStore) VerifyMFAChallenge(ctx context.Context, proof MFAProof) 
 		}
 	}
 	return tx.Commit()
+}
+
+// 调用方已按主体、会话、凭据、挑战的顺序加锁，并负责将证明消费与挑战验证一起提交。
+func consumeMFAProofSQL(ctx context.Context, tx *sql.Tx, record TOTPRecord, challenge MFAChallenge, proof MFAProof) (string, error) {
+	if proof.RecoveryHash != "" {
+		if challenge.Operation != MFAOperationDisable {
+			return "", ErrMFAInvalid
+		}
+		result, err := tx.ExecContext(ctx, `UPDATE auth_mfa_recovery_code SET used_at=$5::timestamptz WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND credential_id=$3::uuid AND code_hash=$4 AND used_at IS NULL`, record.TenantID, record.UserID, record.ID, proof.RecoveryHash, proof.Now)
+		if err != nil {
+			return "", err
+		}
+		count, err := result.RowsAffected()
+		if err != nil {
+			return "", err
+		}
+		if count != 1 {
+			return "", ErrMFAInvalid
+		}
+		return "recovery_code", nil
+	}
+	if proof.Step <= record.LastUsedStep {
+		return "", ErrMFAInvalid
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE auth_totp SET last_used_step=$4,updated_at=$5::timestamptz WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND id=$3::uuid`, record.TenantID, record.UserID, record.ID, proof.Step, proof.Now)
+	return "totp", err
 }
 
 func (s *PostgresStore) FinishMFACommand(ctx context.Context, proof MFAProof, operation string, hashes []string) error {
@@ -321,20 +325,7 @@ func (s *PostgresStore) FinishMFACommand(ctx context.Context, proof MFAProof, op
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE auth_mfa_challenge SET consumed_at=$5::timestamptz WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND session_hash=$3 AND token_hash=$4`, proof.TenantID, proof.UserID, proof.SessionHash, proof.ChallengeHash, proof.Now)
 	case MFAOperationDisable:
-		// 凭据删除、安全版本更新及会话/设备撤销一起提交，关闭 MFA 不留下旧登录权限。
-		_, err = tx.ExecContext(ctx, `DELETE FROM auth_totp WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND id=$3::uuid`, record.TenantID, record.UserID, record.ID)
-		if err != nil {
-			return err
-		}
-		_, err = tx.ExecContext(ctx, `UPDATE app_user SET security_epoch=security_epoch+1,updated_at=$3::timestamptz WHERE tenant_id=$1::uuid AND id=$2::uuid`, proof.TenantID, proof.UserID, proof.Now)
-		if err != nil {
-			return err
-		}
-		_, err = tx.ExecContext(ctx, `UPDATE auth_session SET revoked_at=$3::timestamptz WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND revoked_at IS NULL`, proof.TenantID, proof.UserID, proof.Now)
-		if err != nil {
-			return err
-		}
-		_, err = tx.ExecContext(ctx, `UPDATE auth_trusted_device SET revoked_at=$3::timestamptz,updated_at=$3::timestamptz WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND revoked_at IS NULL`, proof.TenantID, proof.UserID, proof.Now)
+		err = disableTOTPAndRevokeCredentialsSQL(ctx, tx, record, proof)
 	default:
 		return ErrMFAInvalid
 	}
@@ -349,4 +340,19 @@ func (s *PostgresStore) FinishMFACommand(ctx context.Context, proof MFAProof, op
 		return err
 	}
 	return tx.Commit()
+}
+
+// 调用方已锁定主体和凭据；删除、安全版本更新及会话/设备撤销由外层事务一起提交。
+func disableTOTPAndRevokeCredentialsSQL(ctx context.Context, tx *sql.Tx, record TOTPRecord, proof MFAProof) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM auth_totp WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND id=$3::uuid`, record.TenantID, record.UserID, record.ID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE app_user SET security_epoch=security_epoch+1,updated_at=$3::timestamptz WHERE tenant_id=$1::uuid AND id=$2::uuid`, proof.TenantID, proof.UserID, proof.Now); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE auth_session SET revoked_at=$3::timestamptz WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND revoked_at IS NULL`, proof.TenantID, proof.UserID, proof.Now); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE auth_trusted_device SET revoked_at=$3::timestamptz,updated_at=$3::timestamptz WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND revoked_at IS NULL`, proof.TenantID, proof.UserID, proof.Now)
+	return err
 }

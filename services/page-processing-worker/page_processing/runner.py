@@ -14,6 +14,7 @@ from page_processing.api import APIError, Client
 from page_processing.barcode import detect_barcodes
 from page_processing.config import Config
 from page_processing.decoder import DecodeError, decode_document
+from page_processing.grading_groups import grading_group_crops
 from page_processing.omr import OMRExtractionError, OMRProfile, extract_marks
 from page_processing.registration import (
     RegistrationError,
@@ -25,6 +26,7 @@ from page_processing.registration import (
     match_template_candidates,
     register_page,
     register_page_manual,
+    required_template_regions,
 )
 
 _RESULT_HASH_PREFIX = "sha256:"
@@ -217,14 +219,15 @@ class Runner:
                 str(payload.get("template_content_type") or ""),
                 render_dpi=int(payload.get("render_dpi") or 300),
                 template_page_index=int(payload.get("template_page_index") or 1),
+                required_regions=required_template_regions(list(payload.get("question_regions") or []), payload.get("grading_groups")),
             )
         run_id = str(payload["registration_run_id"])
+        guard_report["required_region_visibility"] = output.evidence.required_region_visibility or {"status": "not_evaluated", "region_count": 0}
+        if output.evidence.anchor_evidence is not None:
+            guard_report["registration_anchors"] = output.evidence.anchor_evidence
         registered = self.client.upload_asset(task, "page_registration_output", run_id, "registered.png", output.registered_png)
-        segments = []
-        for index, crop in enumerate(crop_regions(output.registered_png, list(payload.get("question_regions") or [])), start=1):
-            heartbeat.raise_if_failed()
-            asset = self.client.upload_asset(task, "answer_segment_crop", run_id, f"segment-{index:04d}.png", crop.pop("png"))
-            segments.append({**crop, "file_asset_id": asset["id"], "sha256": asset["hash_sha256"]})
+        segments = self._upload_segment_crops(task, output.registered_png, list(payload.get("question_regions") or []),
+                                             "answer_segment_crop", run_id, heartbeat, payload.get("grading_groups"))
         evidence = output.evidence
         result_version = _RESULT_HASH_PREFIX + hashlib.sha256(json.dumps({"registered": registered["hash_sha256"], "segments": segments}, sort_keys=True).encode()).hexdigest()
         # 先停止后台续租，再提交结果；已停止的续租错误不在这里重抛，提交仍由服务端校验租约。
@@ -240,6 +243,31 @@ class Runner:
             "segments": segments,
         })
 
+    def _upload_segment_crops(self, task, registered_png, regions, owner_type, owner_id, heartbeat, grading_groups=None):
+        # 每题保持独立答案身份；整区只上传一次，缺子题位置时明确使用整区上下文。
+        groups = grading_group_crops(registered_png, regions, grading_groups)
+        for index, (group_id, group) in enumerate(groups.items(), start=1):
+            heartbeat.raise_if_failed()
+            asset = self.client.upload_asset(task, owner_type, owner_id, f"grading-group-{index:04d}.png", group.pop("png"))
+            group.update({"id": group_id, "file_asset_id": asset["id"], "sha256": asset["hash_sha256"]})
+        by_question = {question_id: group for group in groups.values() for question_id in group["question_ids"]}
+        segments = []
+        for index, crop in enumerate(crop_regions(registered_png, regions), start=1):
+            heartbeat.raise_if_failed()
+            asset = self.client.upload_asset(task, owner_type, owner_id, f"segment-{index:04d}.png", crop.pop("png"))
+            if crop.get("question_id") in by_question:
+                crop["normalized_bbox"]["grading_group"] = by_question[crop["question_id"]]
+            segments.append({**crop, "file_asset_id": asset["id"], "sha256": asset["hash_sha256"]})
+        present = {row["question_id"] for row in segments}
+        for question_id, group in by_question.items():
+            if question_id in present:
+                continue
+            # bbox 描述实际共享图片的来源范围，answer_scope 区分它与精确单题 ROI；不生成或上传伪子图。
+            segments.append({"question_id": question_id, "label": "", "normalized_bbox": {
+                **group["normalized_bbox"], "answer_scope": "grading_group", "grading_group": group},
+                "pixel_bbox": dict(group["pixel_bbox"]), "file_asset_id": group["file_asset_id"], "sha256": group["sha256"]})
+        return segments
+
     def _guarded_registration(
         self, payload: dict, source: bytes, template: bytes,
         heartbeat: _Heartbeat,
@@ -251,7 +279,7 @@ class Runner:
             str(payload.get("source_content_type") or _PNG_CONTENT_TYPE),
             template,
             str(payload.get("template_content_type") or ""),
-            question_regions=list(payload.get("question_regions") or []),
+            question_regions=required_template_regions(list(payload.get("question_regions") or []), payload.get("grading_groups")),
             render_dpi=int(payload.get("render_dpi") or 300),
             template_page_index=int(payload.get("template_page_index") or 1),
         )
@@ -278,6 +306,7 @@ class Runner:
             content_type=str(payload.get("template_content_type") or ""),
             page_index=int(payload.get("template_page_index") or 1),
             question_regions=list(payload.get("question_regions") or []),
+            grading_groups=list(payload.get("grading_groups") or []),
         )]
         for raw in payload.get("fallback_templates") or []:
             if not isinstance(raw, dict):
@@ -322,6 +351,7 @@ class Runner:
             content_type=str(raw.get("template_content_type") or ""),
             page_index=int(raw.get("template_page_index") or 1),
             question_regions=list(raw.get("question_regions") or []),
+            grading_groups=list(raw.get("grading_groups") or []),
             template_name=str(raw.get("template_name") or ""),
             version_no=int(raw.get("version_no") or 0),
         )
@@ -383,14 +413,12 @@ class Runner:
             list(payload.get("source_points") or []), list(payload.get("template_points") or []),
             render_dpi=int(payload.get("render_dpi") or 300),
             template_page_index=int(payload.get("template_page_index") or 1),
+            required_regions=required_template_regions(list(payload.get("question_regions") or []), payload.get("grading_groups")),
         )
         correction_id = str(payload["correction_id"])
         registered = self.client.upload_asset(task, "page_registration_correction_preview", correction_id, "registered-preview.png", output.registered_png)
-        segments = []
-        for index, crop in enumerate(crop_regions(output.registered_png, list(payload.get("question_regions") or [])), start=1):
-            heartbeat.raise_if_failed()
-            asset = self.client.upload_asset(task, "page_registration_correction_preview", correction_id, f"segment-preview-{index:04d}.png", crop.pop("png"))
-            segments.append({**crop, "file_asset_id": asset["id"], "sha256": asset["hash_sha256"]})
+        segments = self._upload_segment_crops(task, output.registered_png, list(payload.get("question_regions") or []),
+                                             "page_registration_correction_preview", correction_id, heartbeat, payload.get("grading_groups"))
         evidence = output.evidence
         result_version = _RESULT_HASH_PREFIX + hashlib.sha256(json.dumps({"registered": registered["hash_sha256"], "segments": segments}, sort_keys=True).encode()).hexdigest()
         heartbeat.stop(raise_on_error=False)
@@ -402,7 +430,8 @@ class Runner:
             "source_to_template_matrix": evidence.source_to_template,
             "template_to_source_matrix": evidence.template_to_source,
             "coverage": evidence.coverage, "reprojection_error": evidence.reprojection_error,
-            "validation_report": {"passed": True, "orientation_valid": True, "regions_in_bounds": True, "coverage_valid": True},
+            "validation_report": {"passed": True, "orientation_valid": True, "regions_in_bounds": True, "coverage_valid": True,
+                                  "required_region_visibility": evidence.required_region_visibility or {"status": "not_evaluated", "region_count": 0}},
             "segments": segments,
         })
 

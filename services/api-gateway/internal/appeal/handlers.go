@@ -58,6 +58,10 @@ func (h *Handler) CreateAppeal(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListAppeals(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
+	scope, ok := collectionAccessScope(w, r)
+	if !ok {
+		return
+	}
 	limit, err := pagination.Limit(r.URL.Query().Get("limit"), 50, 200)
 	if err != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_pagination", "limit must be between 1 and 200")
@@ -69,6 +73,7 @@ func (h *Handler) ListAppeals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter := ListFilter{
+		AccessScope:     &scope,
 		ExamID:          r.URL.Query().Get("exam_id"),
 		StudentID:       r.URL.Query().Get("student_id"),
 		Status:          r.URL.Query().Get("status"),
@@ -230,12 +235,27 @@ func (h *Handler) CloseAppeal(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Statistics(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	stats, err := h.store.Statistics(r.Context(), user.TenantID, StatisticsFilter{ExamID: r.URL.Query().Get("exam_id")})
+	scope, ok := collectionAccessScope(w, r)
+	if !ok {
+		return
+	}
+	stats, err := h.store.Statistics(r.Context(), user.TenantID, StatisticsFilter{AccessScope: &scope, ExamID: r.URL.Query().Get("exam_id")})
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"statistics": stats})
+}
+
+func collectionAccessScope(w http.ResponseWriter, r *http.Request) (auth.AccessScope, bool) {
+	// appeal:manage 决定能否管理申诉，不会把学校管理员提升为租户范围。
+	// 集合没有对象 ID，必须把当前服务端边界传入存储，在分页和统计前筛选。
+	scope, ok := auth.AccessScopeFromContext(r.Context())
+	if !ok || scope.TenantID != mustUser(r).TenantID {
+		httpx.Error(w, r, http.StatusForbidden, "access_scope_required", "access scope is required")
+		return auth.AccessScope{}, false
+	}
+	return scope, true
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {

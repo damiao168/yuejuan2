@@ -53,7 +53,7 @@ func (m *HTTPAgentModel) Complete(ctx context.Context, connection ManagedAPIConn
 		return AgentResponse{}, ErrAgentInvalidResponse
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return AgentResponse{}, agentProviderError(response.StatusCode, body, len(request.Tools) > 0)
+		return AgentResponse{}, agentProviderError(response.StatusCode, body, len(request.Tools) > 0, agentHasImages(request.Messages))
 	}
 	return parseAgentCompletion(connection, body)
 }
@@ -68,7 +68,11 @@ func (m *HTTPAgentModel) send(ctx context.Context, connection ManagedAPIConnecti
 	}
 	endpoint, err := managedCompletionEndpoint(connection.Config.BaseURL)
 	if dashscope {
-		endpoint, err = managedEndpoint(connection.Config.BaseURL, "services/aigc/text-generation/generation")
+		path := "services/aigc/text-generation/generation"
+		if agentHasImages(request.Messages) {
+			path = "services/aigc/multimodal-generation/generation"
+		}
+		endpoint, err = managedEndpoint(connection.Config.BaseURL, path)
 	}
 	if err != nil {
 		return nil, err
@@ -96,8 +100,8 @@ func (m *HTTPAgentModel) send(ctx context.Context, connection ManagedAPIConnecti
 }
 
 func applyAgentThinkingPolicy(parameters map[string]any, config ManagedAPIConfig, dashscope bool) {
-	// 沿用已检测的混合思考模型兼容规则，避免工具规划走仅支持流式的思考模式。
-	// 不向其他供应商发送专有字段，也不改变现有普通聊天的模式。
+	// 仅供非流式规划和探针调用，避免已知混合模型的思考模式要求流式响应。
+	// 其他供应商及专用推理模型不接收这些关闭参数。
 	if !managedModelSupportsThinkingDisable(config.ProviderKey, config.ModelName) {
 		return
 	}
@@ -115,7 +119,10 @@ func applyAgentThinkingPolicy(parameters map[string]any, config ManagedAPIConfig
 
 func agentProviderPayload(config ManagedAPIConfig, request AgentRequest, stream, dashscope bool) map[string]any {
 	parameters := map[string]any{"temperature": 0.2, "max_tokens": 4096}
-	applyAgentThinkingPolicy(parameters, config, dashscope)
+	// 规划与最终回答按是否流式区分；最终阶段不覆盖供应商的默认思考模式。
+	if !stream {
+		applyAgentThinkingPolicy(parameters, config, dashscope)
+	}
 	if len(request.Tools) > 0 {
 		parameters["tools"] = agentProviderTools(request.Tools)
 		if request.ToolChoice != "" {
@@ -130,12 +137,22 @@ func agentProviderPayload(config ManagedAPIConfig, request AgentRequest, stream,
 		}
 		return map[string]any{
 			"model":      config.ModelName,
-			"input":      map[string]any{"messages": agentProviderMessages(request.Messages)},
+			"input":      map[string]any{"messages": agentProviderMessages(request.Messages, true)},
 			"parameters": parameters,
 		}
 	}
 	parameters["model"] = config.ModelName
-	parameters["messages"] = agentProviderMessages(request.Messages)
+	messages := agentProviderMessages(request.Messages)
+	if stream && config.ProviderKey == "deepseek" {
+		for index := range messages {
+			message := &messages[index]
+			// DeepSeek 最终思考轮要求历史工具调用的思考字段存在；空字符串如实表示规划阶段没有输出思考。
+			if message.Role == "assistant" && len(message.ToolCalls) > 0 && message.ReasoningContent == "" {
+				message.IncludeEmptyReasoning = true
+			}
+		}
+	}
+	parameters["messages"] = messages
 	parameters["stream"] = stream
 	if stream {
 		parameters["stream_options"] = map[string]any{"include_usage": true}
@@ -153,20 +170,26 @@ type agentProviderToolCall struct {
 }
 
 type agentProviderMessage struct {
-	Role             string                  `json:"role"`
-	Content          string                  `json:"content"`
-	ReasoningContent string                  `json:"reasoning_content,omitempty"`
-	ToolCallID       string                  `json:"tool_call_id,omitempty"`
-	Name             string                  `json:"name,omitempty"`
-	ToolCalls        []agentProviderToolCall `json:"tool_calls,omitempty"`
+	Role                  string                  `json:"role"`
+	Content               string                  `json:"content"`
+	ReasoningContent      string                  `json:"reasoning_content,omitempty"`
+	ToolCallID            string                  `json:"tool_call_id,omitempty"`
+	Name                  string                  `json:"name,omitempty"`
+	ToolCalls             []agentProviderToolCall `json:"tool_calls,omitempty"`
+	Images                []ManagedChatAttachment `json:"-"`
+	NativeImages          bool                    `json:"-"`
+	IncludeEmptyReasoning bool                    `json:"-"`
 }
 
-func agentProviderMessages(messages []AgentMessage) []agentProviderMessage {
+func agentProviderMessages(messages []AgentMessage, native ...bool) []agentProviderMessage {
 	result := make([]agentProviderMessage, 0, len(messages))
+	// 原生视觉接口要求普通文字也使用 text 片段；纯文本模型仍沿用字符串协议。
+	nativeImages := len(native) > 0 && native[0] && agentHasImages(messages)
 	for _, message := range messages {
 		item := agentProviderMessage{
 			Role: message.Role, Content: message.Content, ReasoningContent: message.ReasoningContent,
 			ToolCallID: message.ToolCallID, Name: message.Name,
+			Images: message.Images, NativeImages: nativeImages,
 		}
 		for _, call := range message.ToolCalls {
 			wire := agentProviderToolCall{ID: call.ID, Type: "function"}
@@ -296,8 +319,24 @@ func validateAgentRequest(request AgentRequest) error {
 
 func validateAgentTranscript(messages []AgentMessage) error {
 	contentBytes := 0
+	imageBytes := int64(0)
 	pending := make(map[string]bool)
 	for _, message := range messages {
+		if len(message.Images) > 0 && message.Role != "user" {
+			return ErrAgentInvalidRequest
+		}
+		if len(message.Images) > managedChatMaxAttachments {
+			return ErrAgentInvalidRequest
+		}
+		for _, attachment := range message.Images {
+			if err := validateChatImage(attachment); err != nil {
+				return err
+			}
+			imageBytes += attachment.Size
+		}
+		if imageBytes > managedChatMaxImageTotalBytes {
+			return ErrManagedChatImageBudget
+		}
 		contentBytes += len(message.Content) + len(message.ReasoningContent)
 		if contentBytes > managedAgentMaxContentBytes || len(message.ToolCalls) > managedAgentMaxToolCalls {
 			return ErrAgentInvalidRequest
@@ -353,9 +392,10 @@ func validateAgentAssistantCalls(message AgentMessage, pending map[string]bool) 
 	return argumentBytes, nil
 }
 
-func agentProviderError(status int, body []byte, sentTools bool) error {
+func agentProviderError(status int, body []byte, sentTools bool, sentImages ...bool) error {
 	// 只返回稳定错误分类，不回传供应商正文；正文可能含凭据或对话内容。
-	if sentTools && (status == http.StatusBadRequest || status == http.StatusUnprocessableEntity) {
+	hasImages := len(sentImages) > 0 && sentImages[0]
+	if (sentTools || hasImages) && (status == http.StatusBadRequest || status == http.StatusUnprocessableEntity) {
 		var envelope struct {
 			Code    string `json:"code"`
 			Message string `json:"message"`
@@ -369,7 +409,10 @@ func agentProviderError(status int, body []byte, sentTools bool) error {
 			text := strings.ToLower(fmt.Sprintf("%s %s %s %s %s", envelope.Code, envelope.Message, envelope.Error.Code, envelope.Error.Param, envelope.Error.Message))
 			toolRelated := strings.Contains(text, "tools") || strings.Contains(text, "tool_choice") || strings.Contains(text, "function calling") || strings.Contains(text, "tool calling")
 			unsupported := strings.Contains(text, "unsupported") || strings.Contains(text, "not support") || strings.Contains(text, "unknown parameter") || strings.Contains(text, "unrecognized")
-			if toolRelated && unsupported {
+			if hasImages && unsupported && (strings.Contains(text, "image") || strings.Contains(text, "vision") || strings.Contains(text, "multimodal")) {
+				return ErrAgentImagesUnsupported
+			}
+			if sentTools && toolRelated && unsupported {
 				return ErrAgentToolsUnsupported
 			}
 		}

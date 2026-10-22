@@ -338,6 +338,44 @@ func TestHTTPManagedAPIQuickProbeListsModelsWithoutGenerating(t *testing.T) {
 	}
 }
 
+func TestHTTPManagedAPIModelDiscoveryEmptyListSerializesAsArray(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		body string
+	}{
+		{name: "empty data", body: `{"data":[]}`},
+		{name: "null data", body: `{"data":null}`},
+		{name: "blank model ids", body: `{"data":[{"id":""},{"id":"  "}]}`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet || r.URL.Path != "/v1/models" {
+					t.Errorf("model discovery sent unexpected request %s %s", r.Method, r.URL.Path)
+					http.Error(w, "unexpected request", http.StatusBadRequest)
+					return
+				}
+				_, _ = io.WriteString(w, test.body)
+			}))
+			defer server.Close()
+
+			prober := newTestHTTPManagedAPIProber(server.Client())
+			list, result := prober.ListModels(context.Background(), ManagedAPIConnection{
+				Config: ManagedAPIConfig{ProviderKey: "school-provider", AdapterType: "openai_compatible", BaseURL: server.URL + "/v1"},
+				APIKey: "school-probe-secret",
+			})
+			if !result.OK || !result.CredentialCheck.OK || list.Models == nil || len(list.Models) != 0 {
+				t.Fatalf("empty discovery result must be a successful non-nil list: %#v %#v", list, result)
+			}
+
+			// handler 直接序列化 Models；确认空结果输出 []，避免 HTTP 成功后触发前端渲染异常。
+			body, err := json.Marshal(list)
+			if err != nil || !strings.Contains(string(body), `"models":[]`) {
+				t.Fatalf("empty models must serialize as an array: %s, error=%v", body, err)
+			}
+		})
+	}
+}
+
 type managedCredentialFailureCase struct {
 	name               string
 	status             int
@@ -622,7 +660,7 @@ func TestManagedAPIConfigCannotPromoteDisabledUnverifiedModelToDefault(t *testin
 	response := httptest.NewRecorder()
 	handler.UpdateManagedAPIConfig(response, request)
 
-	if response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), "managed_model_capability_required") || prober.calls != 0 {
+	if response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), "managed_model_text_required") || prober.calls != 0 {
 		t.Fatalf("unverified disabled model was promoted: status=%d probeCalls=%d body=%s", response.Code, prober.calls, response.Body.String())
 	}
 	items, err := store.ListManagedAPIConfigs(context.Background(), tenantID)

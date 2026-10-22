@@ -5,7 +5,6 @@
 .school-conversation-suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; margin-top: 25px; }
 .school-conversation-suggestions button { border: 0; padding: 5px 0; background: transparent; color: var(--primary); font: inherit; font-size: 13px; cursor: pointer; }
 .school-conversation-suggestions button:hover { text-decoration: underline; }
-.school-conversation-history-note { margin: 10px 14px 4px; color: var(--text-muted); font-size: 11px; line-height: 1.6; }
 .school-conversation-evidence { margin: 0 0 12px; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
 .school-conversation-tools { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
 .school-conversation-tools li { display: flex; align-items: center; gap: 7px; }
@@ -22,6 +21,18 @@
 .school-conversation-failure { margin-left: 43px; }
 .school-conversation-failure .school-chat-send-error { margin-left: 0; }
 .school-conversation-shell .school-chat-waiting { align-items: flex-start; }
+.school-chat-attachments > .is-image { display: block; position: relative; width: 80px; height: 80px; padding: 4px; overflow: hidden; }
+.school-chat-attachments .is-image > b,
+.school-chat-attachments .is-image > small { display: none; }
+.school-chat-attachments .is-image > button:not(.school-conversation-image) { position: absolute; top: 2px; right: 2px; background: rgba(255, 255, 255, .94); }
+.school-chat-message-files > .school-conversation-image { width: 160px; height: 160px; }
+/* 缩略图按钮和附件移除按钮分别定尺寸，避免输入区通用按钮样式把图片压成 22px。 */
+.school-conversation-image, .school-chat-attachments .school-conversation-image { display: block; width: 100%; height: 100%; padding: 4px; overflow: hidden; border: 1px solid #dce3ec; border-radius: 8px; background: #fff; cursor: zoom-in; }
+.school-conversation-image:hover, .school-chat-attachments .school-conversation-image:hover { border-color: #82a9df; background: #f7f9fc; }
+.school-conversation-image:focus-visible { outline: 2px solid #397acb; outline-offset: 2px; }
+.school-conversation-image img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 5px; }
+.school-conversation-image-preview .ant-modal-body { display: flex; justify-content: center; }
+.school-conversation-image-preview .ant-modal-body > img { display: block; max-width: 100%; max-height: calc(100dvh - 160px); object-fit: contain; }
 .school-conversation-shell.is-compact { grid-template-columns: minmax(0, 1fr); height: 100%; min-height: 0; }
 .school-conversation-shell.is-compact > .school-chat-history { display: none; }
 .school-conversation-shell.is-compact .school-chat-mobile-menu { display: inline-flex; }

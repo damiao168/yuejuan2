@@ -161,6 +161,8 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
 
   const loadTasks = useCallback(async () => {
     const requestId = ++taskRequestRef.current;
+    // 新筛选接管结果集时解除旧分页等待；被淘汰的请求不能负责清理新结果集状态。
+    setLoadingMoreTasks(false);
     setLoadingTasks(true);
     setTaskError(null);
     try {

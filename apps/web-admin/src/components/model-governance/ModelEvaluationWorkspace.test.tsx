@@ -58,7 +58,7 @@ const availableConfig: ManagedModelAPIConfig = {
   id: "available", tenant_id: "school", provider_key: "cloud", display_name: "可用模型", adapter_type: "openai_compatible",
   base_url: "https://example.test/v1", model_name: "model", model_version: "v1", region: "global", credential_configured: true,
   status: "active", is_default: false, last_test_status: "success", last_capability_status: "success",
-  last_capability_probe_version: "structured-json-v3", config_source: "auto", created_at: "", updated_at: ""
+  last_capability_probe_version: "structured-json-v4", config_source: "auto", created_at: "", updated_at: ""
 };
 
 beforeEach(() => { vi.clearAllMocks(); mocks.form.validateFields.mockResolvedValue({ reason: "人工核对证据" }); });

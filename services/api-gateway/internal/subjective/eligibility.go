@@ -52,10 +52,12 @@ func (h *Handler) decideEligibility(ctx context.Context, tenantID, runID string,
 		parserQuality = quality
 	}
 	decision, err := h.eligibility.Decide(ctx, tenantID, aieligibility.DecisionInput{
-		RunItemID:          runID,
-		AssessmentSnapshot: value.AssessmentSnapshot,
-		RequestedMode:      requestedScoringMode(value),
-		OCRQuality:         value.OCRConfidence,
+		InputProtocol: imageInputProtocol(value), InputVersionID: value.InputVersionID,
+		StudentObservationAvailable: value.InputVersionID != "" && value.Observation != nil,
+		RunItemID:                   runID,
+		AssessmentSnapshot:          value.AssessmentSnapshot,
+		RequestedMode:               requestedScoringMode(value),
+		OCRQuality:                  value.OCRConfidence,
 		// 缺失时保持 nil，让 A14 安全地放弃判断，而不将通用 OCR 信号视为专用解析器结果的证据。
 		ParserQuality:     parserQuality,
 		RubricComplete:    rubricIsComplete(value),
@@ -101,6 +103,16 @@ func hasRequiredMaterialEvidence(value Context) bool {
 // recordCalibrationCandidate 将原始模型置信度与成绩事实分开保存，并应用 A15 基于经验风险覆盖率的弃权规则。
 // 它只在响应通过结构和证据校验后运行；所有分支返回的建议仍只供教师复核。
 func (h *Handler) recordCalibrationCandidate(ctx context.Context, tenantID, runID string, value Context, policy ModelPolicy, decision aieligibility.Decision, output *AdapterOutput) error {
+	if value.InputVersionID != "" && output != nil {
+		// 新视觉提示词尚无校准时仍可提供教师建议；不写入旧文本置信度候选，也不授予自动确认资格。
+		output.NeedsHumanReview = true
+		for _, item := range decision.Reasons {
+			if item.Code == "suggestion_uncalibrated" || item.Code == "suggestion_evaluation_unapproved" {
+				output.RiskFlags = appendFlag(output.RiskFlags, item.Code)
+			}
+		}
+		return nil
+	}
 	if h.calibration == nil || output == nil || !decision.CanCallExternalAI() {
 		return nil
 	}

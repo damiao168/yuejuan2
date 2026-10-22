@@ -3,9 +3,13 @@
 .platform-model-schoolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 18px 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
 .platform-model-school-select { display: grid; gap: 7px; min-width: min(420px, 100%); }
 .platform-model-school-select label { color: #334155; font-size: var(--eg-font-body); font-weight: 650; }
-.platform-model-school-summary { display: flex; align-items: center; gap: 20px; color: #64748b; font-size: var(--eg-font-body); }
+.platform-model-school-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; min-width: 0; color: #64748b; font-size: var(--eg-font-body); }
+.platform-model-conversation-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
 .platform-model-school-summary span, .platform-model-secret { display: inline-flex; align-items: center; gap: 7px; }
 .platform-model-security-note { border-color: #bae6fd; background: #f7fcff; }
+.platform-model-usage-guide { display: grid; gap: 4px; line-height: 1.6; }
+.platform-model-usage-guide p { margin: 0; }
+.platform-model-usage-guide small { color: var(--eg-color-muted); }
 .platform-model-section-title { margin: 2px 0 -10px; color: #0f172a; font-size: 19px; }
 .platform-model-library-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .platform-model-library-heading .platform-model-section-title { margin: 0; }
@@ -32,13 +36,47 @@
 .platform-model-identity > span.active { color: #0f766e; background: #ecfdf5; }
 .platform-model-identity > span.disabled { color: #475569; background: #f1f5f9; }
 .platform-model-identity div, .platform-model-endpoint, .platform-model-probe { display: grid; gap: 3px; }
-.platform-model-identity strong { color: #0f172a; font-weight: 650; }
+.platform-model-identity strong { min-width: 0; color: #0f172a; font-weight: 650; overflow-wrap: anywhere; }
+.platform-model-provider { color: #334155; }
+.platform-model-check-cell { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.platform-model-check-cell .ant-tag { margin-inline-end: 0; }
+.platform-model-check-action.ant-btn { height: 28px; padding-inline: 2px; font-size: var(--eg-font-caption); }
+.platform-model-status-button { display: inline-flex; padding: 0; color: inherit; background: transparent; border: 0; border-radius: 4px; cursor: pointer; }
+.platform-model-status-button:hover .ant-tag { text-decoration: underline; text-underline-offset: 3px; }
+.platform-model-status-button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.platform-model-conversation-choice { display: inline-flex; align-items: center; }
+.platform-model-applications { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 6px; white-space: nowrap; }
+.platform-model-purpose { padding: 3px 5px; border: 1px solid #e2e8f0; border-radius: 4px; background: #fff; color: #475569; font: inherit; font-size: var(--eg-font-caption); white-space: nowrap; cursor: pointer; }
+.platform-model-purpose:not(:disabled):not(:has(input:disabled)):hover { color: var(--primary); border-color: var(--primary); }
+.platform-model-purpose.is-selected { color: #08979c; border-color: #87e8de; background: #e6fffb; }
+.platform-model-purpose:disabled { color: #94a3b8; background: #f8fafc; cursor: not-allowed; }
+.platform-model-purpose:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.platform-document-model-form { display: grid; gap: 16px; }
+.platform-document-model-form p { margin: 0; }
+.platform-document-model-form label { display: flex; gap: 8px; align-items: center; }
+.platform-document-model-form small { color: var(--eg-color-muted); }
+.platform-document-model-form > .ant-btn { justify-self: start; }
+.platform-panel-suggested-model { margin-bottom: 12px; }
+.platform-model-saved-uses { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.platform-model-dialogue { position: relative; }
+.platform-model-dialogue input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.platform-model-dialogue:has(input:disabled) { color: #94a3b8; background: #f8fafc; cursor: not-allowed; }
+.platform-model-dialogue:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* 共享表格会压缩宽度并允许操作换行；本表保留最小宽度，窄窗口在表格内横向滚动。 */
+.responsive-desktop-table.platform-model-table table { min-width: 1225px !important; max-width: none; }
+.platform-model-row-actions { display: inline-flex; align-items: center; flex-wrap: nowrap; gap: 10px; white-space: nowrap; }
+.platform-model-row-actions > .ant-btn { flex: none; min-width: 36px; padding-inline: 2px; white-space: nowrap; }
+.platform-model-row-actions > .ant-btn.platform-model-disable:not(:disabled) { color: var(--warning); }
+.platform-model-row-actions > .ant-btn.platform-model-enable:not(:disabled) { color: var(--success-text); }
+.platform-model-reuse-key { display: grid; justify-items: start; gap: 6px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+.platform-model-reuse-key small { color: var(--eg-color-muted); }
 .platform-model-identity small, .platform-model-endpoint small, .platform-model-probe small { color: var(--eg-color-muted); font-size: var(--eg-font-caption); }
 .platform-model-endpoint span { max-width: 360px; overflow: hidden; color: #334155; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: var(--eg-font-caption); text-overflow: ellipsis; white-space: nowrap; }
 .platform-model-secret { color: #475569; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: var(--eg-font-caption); }
 .platform-model-form-grid, .platform-model-switches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .platform-model-switches { padding: 14px 16px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 7px; }
 .platform-model-field-help { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.platform-model-field-help > .ant-btn { flex-shrink: 0; white-space: nowrap; }
 .platform-model-readonly-details { display: grid; gap: 6px; margin-top: 8px; padding: 14px 16px; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 7px; font-size: var(--eg-font-caption); overflow-wrap: anywhere; }
 .platform-model-detail-link { width: fit-content; height: auto; padding: 0; font-size: var(--eg-font-caption); }
 .platform-model-diagnostic { display: grid; gap: 14px; padding-top: 6px; color: #475569; }

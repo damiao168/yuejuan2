@@ -14,6 +14,9 @@ describe("exam preparation steps", () => {
 });
 
 describe("readiness check routes", () => {
+  it("routes exam information problems to the existing exam editing entry", () => {
+    expect(readinessCheckRoute("exam-1", "exam")).toBe("/exams");
+  });
   it.each(["students", "paper", "questions", "template"])("routes %s checks to the existing exam workspace section", (section) => {
     expect(readinessCheckRoute("exam/一", section)).toBe(`/exams/exam%2F%E4%B8%80/${section}`);
   });

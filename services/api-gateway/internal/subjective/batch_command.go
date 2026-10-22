@@ -85,22 +85,8 @@ func (s *PostgresStore) SaveEnqueuePlan(ctx context.Context, tenantID, actorID s
 	if !errors.Is(err, sql.ErrNoRows) {
 		return plan, err
 	}
-	// 保留迁移前的运行，不按当前策略生成新 ID。
-	for i := range plan.Runs {
-		input := &plan.Runs[i]
-		var count int
-		if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM subjective_grading_run WHERE tenant_id=$1::uuid AND batch_id=$2::uuid AND answer_segment_id=$3::uuid`, tenantID, plan.BatchID, input.AnswerSegmentID).Scan(&count); err != nil {
-			return plan, err
-		}
-		if count > 1 {
-			return plan, ErrIdempotencyConflict
-		}
-		if count == 1 {
-			err = tx.QueryRowContext(ctx, `SELECT answer_version,question_id::text,rubric_version,model_version,prompt_version,min_confidence::float8,request_id,COALESCE(math_artifact_id::text,''),math_artifact_version,math_correction_revision,math_scoring_version FROM subjective_grading_run WHERE tenant_id=$1::uuid AND batch_id=$2::uuid AND answer_segment_id=$3::uuid`, tenantID, plan.BatchID, input.AnswerSegmentID).Scan(&input.AnswerVersion, &input.QuestionID, &input.RubricVersion, &input.ModelVersion, &input.PromptVersion, &input.MinConfidence, &input.RequestID, &input.MathArtifactID, &input.MathArtifactVersion, &input.MathCorrectionRevision, &input.MathScoringVersion)
-			if err != nil {
-				return plan, err
-			}
-		}
+	if err = preserveExistingBatchRunsTx(ctx, tx, tenantID, &plan); err != nil {
+		return plan, err
 	}
 	raw, err := json.Marshal(plan.Runs)
 	if err != nil {
@@ -111,6 +97,28 @@ func (s *PostgresStore) SaveEnqueuePlan(ctx context.Context, tenantID, actorID s
 		return plan, err
 	}
 	return plan, tx.Commit()
+}
+
+// 迁移前已有运行时保留其版本和请求 ID；同片段存在多个运行时拒绝猜测应复用哪一个。
+// 调用方持有批次 advisory lock，并负责提交计划或在失败时整笔回滚。
+func preserveExistingBatchRunsTx(ctx context.Context, tx *sql.Tx, tenantID string, plan *BatchEnqueuePlan) error {
+	for i := range plan.Runs {
+		input := &plan.Runs[i]
+		var count int
+		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM subjective_grading_run WHERE tenant_id=$1::uuid AND batch_id=$2::uuid AND answer_segment_id=$3::uuid`, tenantID, plan.BatchID, input.AnswerSegmentID).Scan(&count); err != nil {
+			return err
+		}
+		if count > 1 {
+			return ErrIdempotencyConflict
+		}
+		if count == 1 {
+			err := tx.QueryRowContext(ctx, `SELECT answer_version,question_id::text,rubric_version,model_version,prompt_version,min_confidence::float8,request_id,COALESCE(math_artifact_id::text,''),math_artifact_version,math_correction_revision,math_scoring_version,COALESCE(exam_question_snapshot_id::text,'') FROM subjective_grading_run WHERE tenant_id=$1::uuid AND batch_id=$2::uuid AND answer_segment_id=$3::uuid`, tenantID, plan.BatchID, input.AnswerSegmentID).Scan(&input.AnswerVersion, &input.QuestionID, &input.RubricVersion, &input.ModelVersion, &input.PromptVersion, &input.MinConfidence, &input.RequestID, &input.MathArtifactID, &input.MathArtifactVersion, &input.MathCorrectionRevision, &input.MathScoringVersion, &input.ExamQuestionSnapshotID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (s *MemoryStore) RecoverBatchCommand(_ context.Context, tenantID, actorID, commandID string) (BatchCommandRecovery, error) {

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, StrictMode, type ReactNode } from "react";
+import { act, lazy, StrictMode, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser, LoginResponse } from "./api/auth";
@@ -7,6 +7,7 @@ import type { LoginFormValues } from "./pages/LoginPage";
 import type { SessionUser } from "./auth/session";
 import { executeBusinessCommand, getBusinessCommandSession } from "./api/businessCommand";
 import { AppShell } from "./AppShell";
+import type { RouteRenderingContext } from "./router/pageRendering";
 
 type LoginProps = { onLogin: (values: LoginFormValues) => Promise<void>; onWechatLogin: (response: LoginResponse) => void; loading: boolean; error?: string };
 type LayoutProps = { user: SessionUser; onLogout: () => void; onLockSession: () => Promise<void>; onReauthenticate: (password: string) => Promise<void>; children: ReactNode };
@@ -14,11 +15,12 @@ const state = vi.hoisted(() => ({
   me: vi.fn(), login: vi.fn(), logout: vi.fn(), lock: vi.fn(), reauthenticate: vi.fn(),
   push: vi.fn(), replace: vi.fn(), clear: vi.fn(), cancelQueries: vi.fn(),
   loginProps: null as LoginProps | null, layoutProps: null as LayoutProps | null,
+  path: "/admin/dashboard", renderContent: vi.fn(),
 }));
 vi.mock("./api/auth", () => ({ getCurrentUser: state.me, login: state.login, logout: state.logout, lockCurrentSession: state.lock, reauthenticate: state.reauthenticate }));
 vi.mock("./api/org", () => ({ listSchools: vi.fn(async () => ({ schools: [] })) }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ clear: state.clear, cancelQueries: state.cancelQueries }) }));
-vi.mock("@tanstack/react-router", () => ({ useRouter: () => ({ history: { push: state.push, replace: state.replace } }), useRouterState: () => "/admin/dashboard" }));
+vi.mock("@tanstack/react-router", () => ({ useRouter: () => ({ history: { push: state.push, replace: state.replace } }), useRouterState: () => state.path }));
 vi.mock("antd", async () => {
   const { createElement } = await import("react");
   const wrapper = ({ children }: { children?: ReactNode }) => createElement("div", null, children);
@@ -36,14 +38,15 @@ vi.mock("./pages/ActivationPage", () => ({ ActivationPage: () => null }));
 vi.mock("./pages/RecoveryPage", () => ({ RecoveryPage: () => null }));
 vi.mock("./components/PageState", async () => {
   const { createElement } = await import("react");
-  return { LoadingState: ({ label }: { label: string }) => createElement("span", null, label) };
+  const { usePageLoading } = await import("./components/pageReadiness");
+  return { LoadingState: ({ label }: { label: string }) => { usePageLoading(); return createElement("span", null, label); } };
 });
 vi.mock("./components/ErrorBoundary", () => ({ ErrorBoundary: ({ children }: { children: ReactNode }) => children }));
 vi.mock("./auth/stepUpContext", () => ({ StepUpProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock("./features/school-assistant/SchoolAssistantProvider", () => ({ SchoolAssistantProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock("./features/onboarding/OnboardingGate", () => ({ OnboardingGate: () => null }));
 vi.mock("./components/PendingBusinessCommands", () => ({ PendingBusinessCommands: () => null }));
-vi.mock("./router/pageRendering", () => ({ renderAppRouteContent: () => null }));
+vi.mock("./router/pageRendering", () => ({ renderAppRouteContent: state.renderContent }));
 
 function authUser(id: string, publicComputer = false): AuthUser {
   return { id, tenant_id: "school", tenant_code: "school", username: id, display_name: id, status: "active", roles: ["school_admin"], permissions: [], data_scope: {}, current_session_type: publicComputer ? "public_device" : "standard" };
@@ -64,6 +67,8 @@ describe("AppShell session boundaries", () => {
     for (const mock of [state.me, state.login, state.logout, state.lock, state.reauthenticate, state.push, state.replace, state.clear, state.cancelQueries]) mock.mockReset();
     state.loginProps = null;
     state.layoutProps = null;
+    state.path = "/admin/dashboard";
+    state.renderContent.mockReset().mockReturnValue(null);
     state.me.mockRejectedValue(new Error("not logged in"));
     state.logout.mockResolvedValue({ status: "logged_out" });
     state.lock.mockResolvedValue({ status: "locked" });
@@ -170,5 +175,39 @@ describe("AppShell session boundaries", () => {
     await act(async () => state.loginProps!.onLogin(form("A")));
     await act(async () => state.layoutProps!.onLogout());
     expect(window.localStorage.getItem(key)).toBeNull();
+  });
+
+  it("keeps the current page visible while the next navigation module loads", async () => {
+    const nextPage = deferred<{ default: () => ReactNode }>();
+    const Students = lazy(() => nextPage.promise);
+    state.me.mockResolvedValue({ user: authUser("A") });
+    state.renderContent.mockImplementation(({ path }: RouteRenderingContext) => path.includes("/members/students")
+      ? <Students /> : <div data-current-page>工作台内容</div>);
+    await act(async () => root.render(<AppShell />));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+    const previous = host.querySelector("[data-current-page]");
+    state.path = "/admin/members/students";
+    await act(async () => root.render(<AppShell />));
+    expect(host.querySelector("[data-current-page]")).toBe(previous);
+    expect(host.querySelector(".route-content-stage")?.hasAttribute("inert")).toBe(true);
+    expect(host.querySelector(".route-content-stage:not(.route-content-stage-pending)")?.textContent).not.toContain("正在加载页面");
+    await act(async () => { nextPage.resolve({ default: () => <h1>学生名单</h1> }); });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+    expect(host.querySelector("[data-current-page]")).toBeNull();
+    expect(host.querySelector("h1")?.textContent).toBe("学生名单");
+    expect(host.querySelector(".route-content-stage")?.hasAttribute("inert")).toBe(false);
+  });
+
+  it("does not discard the displayed page when the same account locks and unlocks", async () => {
+    state.me.mockResolvedValue({ user: authUser("A", true) });
+    state.renderContent.mockImplementation(() => <input aria-label="未保存内容" defaultValue="当前草稿" />);
+    await act(async () => root.render(<AppShell />));
+    const draft = host.querySelector<HTMLInputElement>("input")!;
+    draft.value = "尚未提交的编辑";
+    // 锁定会推进会话代次，但未改变身份或授权；外层锁屏负责遮挡，路由边界不能销毁草稿。
+    await act(async () => { await state.layoutProps!.onLockSession(); });
+    await act(async () => { await state.layoutProps!.onReauthenticate("test-password"); });
+    expect(host.querySelector("input")).toBe(draft);
+    expect(draft.value).toBe("尚未提交的编辑");
   });
 });

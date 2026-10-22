@@ -30,6 +30,17 @@ func TestCropRelativeOptionRegionsPreservesAlreadyRelativeCoordinates(t *testing
 	}
 }
 
+func TestCropRelativeOptionRegionsExplicitSpaceOverridesAmbiguousGeometry(t *testing.T) {
+	// 相对题区的坐标恰好也落在页面题区内，不能按历史页面坐标规则再换算一次。
+	area := map[string]any{"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "option_coordinate_space": "question_relative"}
+	options := []any{map[string]any{"label": "A", "x": 0.2, "y": 0.2, "width": 0.1, "height": 0.1}}
+	result := cropRelativeOptionRegions(area, options)
+	option := result[0].(map[string]any)
+	if option["x"] != 0.2 || option["width"] != 0.1 {
+		t.Fatalf("explicit question-relative coordinates were converted: %#v", option)
+	}
+}
+
 func TestOMRAutoConfirmationRequiresServerEligibility(t *testing.T) {
 	input := OMRResultInput{Decision: "selected", Selected: []string{"A"}, Confidence: 0.99, NeedsHumanReview: false}
 	if omrResultCanAutoConfirm(input, false, 0.9) {

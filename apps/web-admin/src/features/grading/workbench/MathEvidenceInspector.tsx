@@ -83,6 +83,9 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
   const [mergePrimary, setMergePrimary] = useState("");
   const [mergeSecondary, setMergeSecondary] = useState("");
   const [saving, setSaving] = useState(false);
+  const saveBusy = useRef(false);
+  // 回执只确认发出时的操作；保存/读取期间冻结所有结构编辑，不能把后续操作一起清为已存。
+  const editingDisabled = disabled || loading || saving;
   const [error, setError] = useState("");
   const [saveNotice, setSaveNotice] = useState("");
   const currentSegment = useRef(segmentId);
@@ -122,6 +125,7 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
   }, [data, segmentId]);
 
   // 片段切换时清掉旧提示并收起详情；此 effect 只由 segmentId 的变化触发。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 答题片段切换后关闭上份证据详情和保存提示；同内容也属于不同片段。
   useEffect(() => {
     setExpanded(false);
     setError("");
@@ -140,7 +144,8 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
   if (!enabled) return null;
 
   const save = async () => {
-    if (!artifact || !baseArtifact || changedFormulas.length + pendingOperations.length === 0) return;
+    if (disabled || loading || saveBusy.current || !artifact || !baseArtifact || changedFormulas.length + pendingOperations.length === 0) return;
+    saveBusy.current = true;
     const correctedFormulas = formulas.map((formula) => {
       const id = text(formula.id);
       return id && formulaDrafts[id] !== undefined
@@ -193,6 +198,7 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
       const message = getUserErrorMessage(cause, "保存校正失败");
       setError(/409|revision|冲突/i.test(message) ? "识别结果已更新，请刷新后重新校正。" : message);
     } finally {
+      saveBusy.current = false;
       if (currentSegment.current === segmentId) setSaving(false);
     }
   };
@@ -202,6 +208,7 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
   };
 
   const moveStep = (index: number, offset: -1 | 1) => {
+    if (editingDisabled || saveBusy.current) return;
     const target = index + offset;
     if (target < 0 || target >= steps.length) return;
     const next = [...steps];
@@ -212,12 +219,14 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
   };
 
   const deleteEdge = (index: number) => {
+    if (editingDisabled || saveBusy.current) return;
     const edge = edges[index];
     setEdgeDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index));
     recordOperation({ type: "delete_edge", target_id: `${text(edge.from_step_id)}:${text(edge.to_step_id)}`, payload: { edge } });
   };
 
   const connectEdge = () => {
+    if (editingDisabled || saveBusy.current) return;
     if (!edgeFrom || !edgeTo || edgeFrom === edgeTo || edges.some((edge) => text(edge.from_step_id) === edgeFrom && text(edge.to_step_id) === edgeTo)) return;
     const edge = { from_step_id: edgeFrom, to_step_id: edgeTo, kind: "derives" };
     setEdgeDrafts((current) => [...current, edge]);
@@ -227,11 +236,13 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
   };
 
   const restoreBlock = (blockId: string) => {
+    if (editingDisabled || saveBusy.current) return;
     setBlockDrafts((current) => current.map((block) => text(block.id) === blockId ? { ...block, status: "active" } : block));
     recordOperation({ type: "restore_block", target_id: blockId, payload: { status: "active" } });
   };
 
   const mergeBlocks = () => {
+    if (editingDisabled || saveBusy.current) return;
     if (!mergePrimary || !mergeSecondary || mergePrimary === mergeSecondary) return;
     const secondary = blocks.find((block) => text(block.id) === mergeSecondary);
     setBlockDrafts((current) => current.map((block) => {
@@ -247,6 +258,7 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
   };
 
   const splitStep = (index: number) => {
+    if (editingDisabled || saveBusy.current) return;
     const step = steps[index];
     const blockIds = strings(step.block_ids);
     if (blockIds.length < 2) return;
@@ -259,7 +271,14 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
     recordOperation({ type: "split_step", target_id: text(step.id), payload: { created_step_id: splitId, split_after_block: blockIds[midpoint - 1] } });
   };
 
-  const renderDetails = () => (
+  // 无编辑权限或当前证据不可修改时，仍可查看和定位原证据，但不挂载校正编辑器。
+  const renderDetails = () => disabled ? (
+    <div className="math-evidence-body">
+      {formulas.map((formula, index) => <p key={text(formula.id)}><strong>公式 {index + 1}</strong> {text(formula.canonical_latex) || text(formula.raw_latex)}</p>)}
+      {steps.map((step, index) => <div className="math-step-row" key={text(step.id)}><Button type="link" size="small" aria-label={`定位步骤 ${text(step.id)}`} onClick={() => onSelectStep(text(step.id))}>查看步骤 {index + 1}</Button><span>{text(step.normalized_text) || "图像步骤"}</span></div>)}
+      {rubricEvidence.map((item) => <p key={text(item.id)}>{text(item.explanation) || "证据待教师确认"}</p>)}
+    </div>
+  ) : (
     <div className="math-evidence-body">
           <div className="math-evidence-meta">
             <Tag>{subjectLabel(subjectCode)}</Tag>
@@ -277,7 +296,7 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
                 </div>
                 <Input
                   value={formulaDrafts[id] ?? ""}
-                  disabled={disabled || loading || saving}
+                  disabled={editingDisabled || loading || saving}
                   aria-label={`校正公式 ${id}`}
                   onChange={(event) => setFormulaDrafts((current) => ({ ...current, [id]: event.target.value }))}
                 />
@@ -290,34 +309,34 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
                 <Button type="link" size="small" onClick={() => onSelectStep(text(step.id))} aria-label={`定位步骤 ${text(step.id)}`}>{text(step.id)}</Button>
                 <span>{text(step.normalized_text) || strings(step.formula_ids).join(" → ") || "图像步骤"}</span>
                 <Tag color={number(step.confidence) < 0.7 ? "orange" : "blue"}>{Math.round(number(step.confidence) * 100)}%</Tag>
-                <Button size="small" type="text" aria-label="上移步骤" disabled={disabled || index === 0} icon={<ArrowUp size={13} />} onClick={() => moveStep(index, -1)} />
-                <Button size="small" type="text" aria-label="下移步骤" disabled={disabled || index === steps.length - 1} icon={<ArrowDown size={13} />} onClick={() => moveStep(index, 1)} />
-                <Button size="small" type="text" aria-label="拆分步骤" disabled={disabled || strings(step.block_ids).length < 2} icon={<Split size={13} />} onClick={() => splitStep(index)} />
+                <Button size="small" type="text" aria-label="上移步骤" disabled={editingDisabled || index === 0} icon={<ArrowUp size={13} />} onClick={() => moveStep(index, -1)} />
+                <Button size="small" type="text" aria-label="下移步骤" disabled={editingDisabled || index === steps.length - 1} icon={<ArrowDown size={13} />} onClick={() => moveStep(index, 1)} />
+                <Button size="small" type="text" aria-label="拆分步骤" disabled={editingDisabled || strings(step.block_ids).length < 2} icon={<Split size={13} />} onClick={() => splitStep(index)} />
               </div>
             ))}
             {edges.map((edge, index) => (
               <div className="math-edge-row" key={`${text(edge.from_step_id)}-${text(edge.to_step_id)}-${index}`}>
                 <span>{text(edge.from_step_id)} → {text(edge.to_step_id)} · {text(edge.kind)}</span>
-                <Button size="small" type="text" danger disabled={disabled} icon={<Unlink size={13} />} onClick={() => deleteEdge(index)}>删除关系</Button>
+                <Button size="small" type="text" danger disabled={editingDisabled} icon={<Unlink size={13} />} onClick={() => deleteEdge(index)}>删除关系</Button>
               </div>
             ))}
             <Space.Compact block>
-              <Select placeholder="起始步骤" value={edgeFrom || undefined} options={steps.map((step) => ({ label: text(step.id), value: text(step.id) }))} onChange={setEdgeFrom} />
-              <Select placeholder="后续步骤" value={edgeTo || undefined} options={steps.map((step) => ({ label: text(step.id), value: text(step.id) }))} onChange={setEdgeTo} />
-              <Button disabled={disabled || !edgeFrom || !edgeTo || edgeFrom === edgeTo} onClick={connectEdge}>连接</Button>
+              <Select disabled={editingDisabled} placeholder="起始步骤" value={edgeFrom || undefined} options={steps.map((step) => ({ label: text(step.id), value: text(step.id) }))} onChange={setEdgeFrom} />
+              <Select disabled={editingDisabled} placeholder="后续步骤" value={edgeTo || undefined} options={steps.map((step) => ({ label: text(step.id), value: text(step.id) }))} onChange={setEdgeTo} />
+              <Button disabled={editingDisabled || !edgeFrom || !edgeTo || edgeFrom === edgeTo} onClick={connectEdge}>连接</Button>
             </Space.Compact>
           </div>
           {blocks.filter((block) => text(block.status) === "crossed_out").map((block) => (
             <div className="math-crossed-block" key={text(block.id)}>
               <span>{text(block.id)} · 已划除：{text(block.text) || text(block.normalized) || "图像内容"}</span>
-              <Button size="small" disabled={disabled} icon={<Undo2 size={13} />} onClick={() => restoreBlock(text(block.id))}>恢复参与推断</Button>
+              <Button size="small" disabled={editingDisabled} icon={<Undo2 size={13} />} onClick={() => restoreBlock(text(block.id))}>恢复参与推断</Button>
             </div>
           ))}
           {blocks.length > 1 ? (
             <Space.Compact block>
-              <Select placeholder="保留块" value={mergePrimary || undefined} options={blocks.filter((block) => text(block.status) !== "crossed_out").map((block) => ({ label: text(block.id), value: text(block.id) }))} onChange={setMergePrimary} />
-              <Select placeholder="合并块" value={mergeSecondary || undefined} options={blocks.filter((block) => text(block.status) !== "crossed_out").map((block) => ({ label: text(block.id), value: text(block.id) }))} onChange={setMergeSecondary} />
-              <Button disabled={disabled || !mergePrimary || !mergeSecondary || mergePrimary === mergeSecondary} onClick={mergeBlocks}>合并块</Button>
+              <Select disabled={editingDisabled} placeholder="保留块" value={mergePrimary || undefined} options={blocks.filter((block) => text(block.status) !== "crossed_out").map((block) => ({ label: text(block.id), value: text(block.id) }))} onChange={setMergePrimary} />
+              <Select disabled={editingDisabled} placeholder="合并块" value={mergeSecondary || undefined} options={blocks.filter((block) => text(block.status) !== "crossed_out").map((block) => ({ label: text(block.id), value: text(block.id) }))} onChange={setMergeSecondary} />
+              <Button disabled={editingDisabled || !mergePrimary || !mergeSecondary || mergePrimary === mergeSecondary} onClick={mergeBlocks}>合并块</Button>
             </Space.Compact>
           ) : null}
           {rubricEvidence.length ? (
@@ -337,7 +356,7 @@ export function MathEvidenceInspector({ segmentId, subjectCode, disabled = false
             </div>
           ) : null}
           <Space className="math-evidence-actions">
-            <Button type="primary" icon={<Save size={14} />} disabled={disabled || loading || !dirty} loading={saving} onClick={() => void save()}>
+            <Button type="primary" icon={<Save size={14} />} disabled={editingDisabled || loading || !dirty} loading={saving} onClick={() => void save()}>
               保存结构校正{changedFormulas.length + pendingOperations.length ? `（${changedFormulas.length + pendingOperations.length}）` : ""}
             </Button>
             <span>校正保存为当前数学证据，不直接改分。</span>

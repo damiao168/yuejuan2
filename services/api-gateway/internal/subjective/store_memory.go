@@ -3,6 +3,7 @@ package subjective
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,20 +12,30 @@ import (
 )
 
 type MemoryStore struct {
-	mu            sync.RWMutex
-	next          int
-	contexts      map[string]Context
-	grades        map[string][]Grade
-	runs          map[string]GradingRun
-	panels        map[string]GradingPanel
-	panelPolicies map[string]PanelPolicy
-	panelReviews  map[string]string
-	batches       map[string]GradingBatch
-	enqueuePlans  map[string]memoryEnqueuePlan
+	mu               sync.RWMutex
+	next             int
+	contexts         map[string]Context
+	grades           map[string][]Grade
+	runs             map[string]GradingRun
+	panels           map[string]GradingPanel
+	panelPolicies    map[string]PanelPolicy
+	panelReviews     map[string]string
+	batches          map[string]GradingBatch
+	enqueuePlans     map[string]memoryEnqueuePlan
+	reviewTaskRuns   map[string]string
+	trials           map[string]ScoringTrial
+	trialRunSegments map[string][]string
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{next: 1, contexts: map[string]Context{}, grades: map[string][]Grade{}, runs: map[string]GradingRun{}, panels: map[string]GradingPanel{}, panelPolicies: map[string]PanelPolicy{}, panelReviews: map[string]string{}, batches: map[string]GradingBatch{}, enqueuePlans: map[string]memoryEnqueuePlan{}}
+	return &MemoryStore{next: 1, contexts: map[string]Context{}, grades: map[string][]Grade{}, runs: map[string]GradingRun{}, panels: map[string]GradingPanel{}, panelPolicies: map[string]PanelPolicy{}, panelReviews: map[string]string{}, batches: map[string]GradingBatch{}, enqueuePlans: map[string]memoryEnqueuePlan{}, reviewTaskRuns: map[string]string{}}
+}
+
+// BindReviewTaskRun 仅供内存集成夹具绑定复核任务与评分工作单元；生产 PostgreSQL 实现从 review_task.scoring_run_id 读取。
+func (s *MemoryStore) BindReviewTaskRun(tenantID, taskID, scoringRunID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.reviewTaskRuns[key(tenantID, taskID)] = scoringRunID
 }
 
 func (s *MemoryStore) AddContext(tenantID string, segmentID string, ctx Context) {
@@ -72,11 +83,16 @@ func (s *MemoryStore) LoadContexts(_ context.Context, tenantID string, segmentID
 
 // 适配器请求 ID 是成绩幂等键：相同事实返回旧成绩，事实不同则拒绝覆盖历史证据。
 func (s *MemoryStore) CreateGrade(_ context.Context, tenantID string, actorID string, grade Grade) (Grade, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.createGradeLocked(tenantID, actorID, grade)
+}
+
+func (s *MemoryStore) createGradeLocked(tenantID string, actorID string, grade Grade) (Grade, error) {
 	if grade.AnswerSegmentID == "" || grade.QuestionID == "" {
 		return Grade{}, ErrInvalidInput
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	grade = s.markTrialSampleLocked(tenantID, grade)
 	if grade.AdapterRequestID != "" {
 		for _, existing := range s.grades[key(tenantID, grade.AnswerSegmentID)] {
 			if existing.AdapterRequestID == grade.AdapterRequestID {
@@ -123,6 +139,9 @@ func (s *MemoryStore) GetOrCreateRun(_ context.Context, tenantID string, _ strin
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.validateTrialRunLocked(tenantID, input); err != nil {
+		return GradingRun{}, err
+	}
 	if input.AgentRole == "" {
 		input.AgentRole = AgentRoleSingle
 	}
@@ -135,7 +154,7 @@ func (s *MemoryStore) GetOrCreateRun(_ context.Context, tenantID string, _ strin
 	}
 	runKey := key(tenantID, input.RequestID)
 	if existing, ok := s.runs[runKey]; ok {
-		if input.PanelID != "" && !runPanelIdentityMatches(existing, input) {
+		if existing.ExamQuestionSnapshotID != input.ExamQuestionSnapshotID || input.PanelID != "" && !runPanelIdentityMatches(existing, input) {
 			return GradingRun{}, ErrIdempotencyConflict
 		}
 		return existing, nil
@@ -151,7 +170,8 @@ func (s *MemoryStore) GetOrCreateRun(_ context.Context, tenantID string, _ strin
 		attemptCount = 0
 	}
 	run := GradingRun{ID: s.id("subjective-run"), TenantID: tenantID, AnswerSegmentID: input.AnswerSegmentID, BatchID: input.BatchID, AnswerVersion: input.AnswerVersion, QuestionID: input.QuestionID, RubricVersion: input.RubricVersion, ModelVersion: input.ModelVersion, PromptVersion: input.PromptVersion, MinConfidence: input.MinConfidence, RequestID: input.RequestID, PanelID: input.PanelID, AgentRole: input.AgentRole,
-		MathArtifactID: input.MathArtifactID, MathArtifactVersion: input.MathArtifactVersion, MathCorrectionRevision: input.MathCorrectionRevision, MathScoringVersion: input.MathScoringVersion,
+		ExamQuestionSnapshotID: input.ExamQuestionSnapshotID,
+		MathArtifactID:         input.MathArtifactID, MathArtifactVersion: input.MathArtifactVersion, MathCorrectionRevision: input.MathCorrectionRevision, MathScoringVersion: input.MathScoringVersion,
 		Status: status, AttemptCount: attemptCount, StartedAt: startedAt, CreatedAt: now, UpdatedAt: now}
 	s.runs[runKey] = run
 	return run, nil
@@ -209,8 +229,13 @@ func validRunPanelRole(panelID, role string) bool {
 func (s *MemoryStore) GetRun(_ context.Context, tenantID string, runID string) (GradingRun, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	return s.getRunLocked(tenantID, runID)
+}
+
+func (s *MemoryStore) getRunLocked(tenantID string, runID string) (GradingRun, error) {
 	for _, run := range s.runs {
 		if run.TenantID == tenantID && run.ID == runID {
+			run.ExecutionDiagnostics = cloneExecutionDiagnostics(run.ExecutionDiagnostics)
 			return run, nil
 		}
 	}
@@ -220,6 +245,13 @@ func (s *MemoryStore) GetRun(_ context.Context, tenantID string, runID string) (
 func (s *MemoryStore) UpdateRun(_ context.Context, tenantID string, runID string, input UpdateRunInput) (GradingRun, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.updateRunLocked(tenantID, runID, input)
+}
+
+func (s *MemoryStore) updateRunLocked(tenantID string, runID string, input UpdateRunInput) (GradingRun, error) {
+	if err := validateExecutionDiagnostics(input.ExecutionDiagnostics); err != nil {
+		return GradingRun{}, err
+	}
 	for runKey, run := range s.runs {
 		if run.TenantID != tenantID || run.ID != runID {
 			continue
@@ -229,6 +261,7 @@ func (s *MemoryStore) UpdateRun(_ context.Context, tenantID string, runID string
 		}
 		run = applyMemoryRunUpdate(run, input)
 		s.runs[runKey] = run
+		run.ExecutionDiagnostics = cloneExecutionDiagnostics(run.ExecutionDiagnostics)
 		return run, nil
 	}
 	return GradingRun{}, ErrNotFound
@@ -236,6 +269,10 @@ func (s *MemoryStore) UpdateRun(_ context.Context, tenantID string, runID string
 
 func applyMemoryRunUpdate(run GradingRun, input UpdateRunInput) GradingRun {
 	run.Status = input.Status
+	// 旧协议成功响应没有诊断时清掉上次失败；处理中仍保留最近已知失败事实供管理端查看。
+	if input.ExecutionDiagnostics != nil || input.Status == RunSucceeded {
+		run.ExecutionDiagnostics = cloneExecutionDiagnostics(input.ExecutionDiagnostics)
+	}
 	// 空关联字段和非正尝试次数表示本次不更新，不能清掉之前保存的运行事实。
 	if input.GradeID != "" {
 		run.GradeID = input.GradeID
@@ -272,6 +309,19 @@ func (s *MemoryStore) CreateBatch(_ context.Context, tenantID string, actorID st
 			return GradingBatch{}, ErrIdempotencyConflict
 		}
 		return existing, nil
+	}
+	// 显式绑定的新运行需要走试改事务；省略 run ID 也不能借同一片段绕过。
+	for runKey, ids := range s.trialRunSegments {
+		if !strings.HasPrefix(runKey, key(tenantID, "")) {
+			continue
+		}
+		for _, segmentID := range segments {
+			for _, id := range ids {
+				if id == segmentID {
+					return GradingBatch{}, ErrTrialConflict
+				}
+			}
+		}
 	}
 	now := time.Now().UTC()
 	batch := GradingBatch{ID: s.id("subjective-batch"), TenantID: tenantID, IdempotencyKey: input.IdempotencyKey, ScoringRunID: input.ScoringRunID, Status: "planned", SegmentIDs: cloneStrings(segments), TotalCount: len(segments), CreatedBy: actorID, CreatedAt: now, UpdatedAt: now}
@@ -491,18 +541,27 @@ func cloneMap(in map[string]any) map[string]any {
 }
 
 func cloneStrings(in []string) []string {
+	if in == nil {
+		return nil
+	}
 	out := make([]string, len(in))
 	copy(out, in)
 	return out
 }
 
 func clonePoints(in []grading.PointResult) []grading.PointResult {
+	if in == nil {
+		return nil
+	}
 	out := make([]grading.PointResult, len(in))
 	copy(out, in)
 	return out
 }
 
 func cloneEvidence(in []grading.Evidence) []grading.Evidence {
+	if in == nil {
+		return nil
+	}
 	out := make([]grading.Evidence, len(in))
 	copy(out, in)
 	return out

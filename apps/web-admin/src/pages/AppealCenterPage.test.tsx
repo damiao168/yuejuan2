@@ -216,4 +216,24 @@ describe("appeal detail selection", () => {
     expect(mocks.assignAppeal).toHaveBeenCalledWith("A", "other", 1);
     expect(host.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe("");
   });
+
+  it.each([true, false])("老筛选迟到=%s时保留当前申诉筛选、选择和详情", async late => {
+    let releaseOld!: (value: { appeals: Appeal[] }) => void;
+    const initial = appeal("A");
+    const filtered = { ...appeal("C"), status: "need_more_info" };
+    mocks.getAppeal.mockImplementation(async (id: string) => ({ appeal: id === "C" ? filtered : initial }));
+    mocks.listAppeals.mockImplementation(async (query: { status?: string }) => {
+      if (query.status === "need_more_info") return { appeals: [filtered] };
+      if (late) return await new Promise<{ appeals: Appeal[] }>(resolve => { releaseOld = resolve; });
+      return { appeals: [initial] };
+    });
+    await act(async () => root.render(<AppealCenterPage mode="teacher" canRead canManage={false} canWork canReadIdentities={false} canReadExams={false} currentUser={{ id: "teacher" } as SessionUser} />));
+    const status = host.querySelectorAll<HTMLSelectElement>("select")[1];
+    await act(async () => { status.value = "need_more_info"; status.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(host.querySelector(".appeal-task-item.active")?.textContent).toContain("考试 C");
+    if (late) await act(async () => releaseOld({ appeals: [initial] }));
+    expect(status.value).toBe("need_more_info");
+    expect(host.querySelector(".appeal-task-item.active")?.textContent).toContain("考试 C");
+    expect(mocks.listAppeals.mock.calls.map(call => call[0].status)).toEqual([undefined, "need_more_info"]);
+  });
 });

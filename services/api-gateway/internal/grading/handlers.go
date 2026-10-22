@@ -1,6 +1,7 @@
 package grading
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -18,11 +19,12 @@ const (
 )
 
 type Handler struct {
-	store   Store
-	engine  *Engine
-	audit   auth.AuditRecorder
-	runtime workerruntime.Store
-	files   filespkg.Store
+	store          Store
+	engine         *Engine
+	audit          auth.AuditRecorder
+	runtime        workerruntime.Store
+	files          filespkg.Store
+	gradingAIProbe func(context.Context, string, GradingAIModel, string, bool) (GradingVisionProbe, error)
 }
 
 func NewHandler(store Store, engine *Engine, audit auth.AuditRecorder) *Handler {
@@ -396,6 +398,11 @@ func (h *Handler) RetryFailedScoringRun(w http.ResponseWriter, r *http.Request) 
 		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
 		return
 	}
+	commands, ok := h.store.(OMRRetryCommandStore)
+	if !ok {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
+		return
+	}
 	runID := r.PathValue("runId")
 	failed, err := store.ListFailedOMRTasks(r.Context(), user.TenantID, runID)
 	if err != nil {
@@ -405,18 +412,23 @@ func (h *Handler) RetryFailedScoringRun(w http.ResponseWriter, r *http.Request) 
 	requeued := 0
 	skipped := 0
 	for _, failedTask := range failed {
-		prepared, prepareErr := store.PrepareOMRRetry(r.Context(), user.TenantID, failedTask.OMRRunID)
-		if prepareErr != nil {
-			skipped++
-			continue
-		}
-		// 数据库重试准备和 runtime 入队分开提交；入队失败时尽力恢复，不能视为原子操作。
-		if _, requeueErr := h.runtime.Requeue(r.Context(), user.TenantID, prepared.RuntimeTaskID); requeueErr != nil {
-			_ = store.RestoreOMRRetry(r.Context(), user.TenantID, prepared.OMRRunID)
+		// 每个来源命令连同入队和汇总一起提交，故障时仍保留可再次枚举的终止失败项。
+		if _, retryErr := commands.RetryOMRTask(r.Context(), user.TenantID, failedTask.OMRRunID); retryErr != nil {
 			skipped++
 			continue
 		}
 		requeued++
+	}
+	if coordinator, supported := h.store.(interface {
+		ResumeScoringRun(context.Context, string, string, bool) (ScoringRun, int, int, error)
+	}); supported {
+		_, extra, extraSkipped, resumeErr := coordinator.ResumeScoringRun(r.Context(), user.TenantID, runID, true)
+		if resumeErr != nil {
+			writeStoreError(w, r, resumeErr)
+			return
+		}
+		requeued += extra
+		skipped += extraSkipped
 	}
 	run, err := store.RefreshScoringRun(r.Context(), user.TenantID, runID)
 	if err != nil {
@@ -424,6 +436,24 @@ func (h *Handler) RetryFailedScoringRun(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	h.auditAction(r, "grading.scoring_run_retry_failed", "scoring_run", run.ID, "requeue failed OMR worker tasks")
+	httpx.JSON(w, http.StatusOK, map[string]any{"scoring_run": run, "requeued": requeued, "skipped": skipped})
+}
+
+func (h *Handler) ResumeScoringRun(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(r)
+	store, ok := h.store.(interface {
+		ResumeScoringRun(context.Context, string, string, bool) (ScoringRun, int, int, error)
+	})
+	if !ok {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
+		return
+	}
+	run, requeued, skipped, err := store.ResumeScoringRun(r.Context(), user.TenantID, r.PathValue("runId"), false)
+	if err != nil {
+		writeStoreError(w, r, err)
+		return
+	}
+	h.auditAction(r, "grading.scoring_run_resumed", "scoring_run", run.ID, "resume frozen scoring plan")
 	httpx.JSON(w, http.StatusOK, map[string]any{"scoring_run": run, "requeued": requeued, "skipped": skipped})
 }
 
@@ -503,6 +533,11 @@ func (h *Handler) FailOMR(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_dependencies_unavailable", "OMR result dependencies are unavailable")
 		return
 	}
+	commands, ok := h.store.(OMRFailureCommandStore)
+	if !ok {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_dependencies_unavailable", "OMR result dependencies are unavailable")
+		return
+	}
 	var input OMRFailureInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -517,18 +552,18 @@ func (h *Handler) FailOMR(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusConflict, "omr_task_mismatch", "worker task does not belong to this OMR run")
 		return
 	}
-	updated, err := h.runtime.Fail(r.Context(), user.TenantID, input.TaskID, workerruntime.FailInput{LeaseToken: input.LeaseToken, Retryable: input.Retryable, ErrorCode: input.ErrorCode, ErrorDetail: input.ErrorDetail, DurationMS: input.DurationMS})
+	// 来源写入失败时不能先消费租约或结束 attempt；同一租约可在事务回滚后再次提交。
+	out, taskStatus, err := commands.ApplyOMRWorkerFailure(r.Context(), user.TenantID, run.ID, input)
 	if err != nil {
-		httpx.Error(w, r, http.StatusConflict, "omr_task_failure_rejected", "OMR task failure is no longer valid")
-		return
-	}
-	out, err := h.scoringStore().ApplyOMRFailure(r.Context(), user.TenantID, run.ID, input.ErrorCode, input.ErrorDetail, updated.Status == workerruntime.StatusQueued)
-	if err != nil {
+		if isOMRRuntimeCompletionError(err) || errors.Is(err, ErrRevisionConflict) {
+			httpx.Error(w, r, http.StatusConflict, "omr_task_failure_rejected", "OMR task failure is no longer valid")
+			return
+		}
 		writeStoreError(w, r, err)
 		return
 	}
 	h.auditAction(r, "grading.omr_failed", "omr_run", out.ID, input.ErrorCode)
-	httpx.JSON(w, http.StatusOK, map[string]any{"omr_run": out, "task_status": updated.Status})
+	httpx.JSON(w, http.StatusOK, map[string]any{"omr_run": out, "task_status": taskStatus})
 }
 
 func (h *Handler) ruleStore() RuleStore {
@@ -569,16 +604,29 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 	var readinessErr *ScoringReadinessError
 	if errors.As(err, &readinessErr) {
+		code, message := "scoring_not_ready", "考试尚未满足评分启动条件"
+		for _, check := range readinessErr.Readiness.Checks {
+			if !check.Passed && (check.Code == "grading_ai_plan_confirmation_required" || check.Code == "grading_ai_threshold_required" || check.Code == "grading_model_required") {
+				code, message = check.Code, check.Message
+				break
+			}
+		}
 		httpx.JSON(w, http.StatusConflict, map[string]any{
 			"error": map[string]any{
-				"code":    "scoring_not_ready",
-				"message": "考试尚未满足评分启动条件",
+				"code":    code,
+				"message": message,
 			},
 			"scoring_readiness": readinessErr.Readiness,
 		})
 		return
 	}
 	switch {
+	case errors.Is(err, ErrGradingAIModelRequired):
+		httpx.Error(w, r, http.StatusBadRequest, "grading_model_required", "请学校管理员至少配置一个本校可用的 AI 阅卷模型")
+	case errors.Is(err, ErrGradingAIPlanConfirmationRequired):
+		httpx.Error(w, r, http.StatusConflict, "grading_ai_plan_confirmation_required", "请学校管理员在阅卷前确认本场大题 AI 评分方案")
+	case errors.Is(err, ErrGradingAIThresholdRequired):
+		httpx.Error(w, r, http.StatusBadRequest, "grading_ai_threshold_required", "请学校管理员手动填写大题主评分差和教师复核允许分差（单位：分）")
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "grading_resource_not_found", "grading resource not found")
 	case errors.Is(err, ErrInvalidInput):
@@ -587,6 +635,8 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusConflict, "invalid_scoring_run_transition", "scoring run operation is not allowed in its current state")
 	case errors.Is(err, ErrCommandConflict):
 		httpx.Error(w, r, http.StatusConflict, "scoring_command_conflict", "command ID is already associated with another request")
+	case errors.Is(err, ErrScoringPlanChanged):
+		httpx.Error(w, r, http.StatusConflict, "scoring_plan_changed", "评分计划已变化，请重新检查当前答案、规则和答卷输入")
 	case errors.Is(err, ErrForbidden):
 		httpx.Error(w, r, http.StatusForbidden, "grading_action_forbidden", "grading action is not permitted for this user")
 	case errors.Is(err, ErrAnswerMissing):

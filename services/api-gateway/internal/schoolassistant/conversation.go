@@ -43,7 +43,7 @@ const conversationInstructions = `你是学校管理员的 AI 助手。管理员
 工具不可用、部分可用、权限不足和无记录必须区分，不能解释成零个问题或状态正常。不同来源未冻结同一快照时应说明限制。
 结果中的 sources、facts、blocks 是业务依据；给出简洁自然的中文回答，说明原因和下一步。程序统计是数值依据，不编造计数、操作人或因果关系。
 本期工具只读，不会发布、改分、处理申诉或修改人员。处理入口由系统的 actions 展示，不要生成任意业务链接或声称已完成业务修改。
-只使用提供的工具，不自行构造租户、权限或未取得的资源 ID。`
+只使用提供的工具，不自行构造租户、权限或未取得的资源 ID。` + "\n\n" + conversationAnswerFormatting
 
 func (s *ConversationService) prepare(ctx context.Context, input ConversationRequest) (preparedConversation, error) {
 	user, access, err := principal(ctx)
@@ -51,6 +51,12 @@ func (s *ConversationService) prepare(ctx context.Context, input ConversationReq
 		return preparedConversation{}, err
 	}
 	messages, err := modelgovernance.NormalizeAgentUserMessages(input.Messages)
+	if errors.Is(err, modelgovernance.ErrManagedChatInvalidImage) {
+		return preparedConversation{}, reject(400, "ai_chat_invalid_image", "图片无效或超过限制，请使用每张不超过 3 MB、2000 万像素的 PNG 或 JPEG 图片。")
+	}
+	if errors.Is(err, modelgovernance.ErrManagedChatImageBudget) {
+		return preparedConversation{}, reject(400, "ai_chat_image_budget", "本段对话的图片总大小不能超过 9 MB，请开启新对话后发送。")
+	}
 	if err != nil {
 		return preparedConversation{}, reject(400, "invalid_ai_chat_request", "对话内容为空、过长或格式不正确。")
 	}
@@ -76,7 +82,7 @@ func (s *ConversationService) prepare(ctx context.Context, input ConversationReq
 	if s.deps.Models == nil {
 		return preparedConversation{}, reject(503, "ai_chat_model_unavailable", "当前没有可用的学校对话模型，请联系平台管理员。")
 	}
-	connection, err := modelgovernance.ResolveDefaultManagedAPI(ctx, s.deps.Models, user.TenantID)
+	connection, err := modelgovernance.ResolveChatManagedAPI(ctx, s.deps.Models, user.TenantID, input.ModelConfigID)
 	if err != nil || connection == nil {
 		return preparedConversation{}, reject(503, "ai_chat_model_unavailable", "当前没有可用的学校对话模型，请联系平台管理员。")
 	}
@@ -181,7 +187,7 @@ func (s *ConversationService) planConversation(ctx context.Context, p preparedCo
 		}
 		if len(response.Message.ToolCalls) == 0 {
 			// 规划轮决定是否还需工具；最终回答另用真实流式调用，规划文本不会伪装成逐字生成。
-			p.messages = append(p.messages, response.Message, modelgovernance.AgentMessage{Role: "system", Content: "刚才的消息是回答草稿。请现在面向用户生成最终回答，保持草稿中已经确定的追问和范围，不再调用工具。当前业务状态只引用本轮工具结果；证据不足时追问或说明不足。一般问题可直接回答。"})
+			p.messages = append(p.messages, response.Message, modelgovernance.AgentMessage{Role: "system", Content: "刚才的消息是回答草稿。请现在面向用户生成最终回答，保持草稿中已经确定的追问和范围，不再调用工具。当前业务状态只引用本轮工具结果；证据不足时追问或说明不足。一般问题可直接回答。\n\n" + conversationAnswerFormatting})
 			return s.answer(ctx, p, modelCount+1, total, send)
 		}
 		if callCount+len(response.Message.ToolCalls) > conversationMaxToolCalls {
@@ -318,7 +324,9 @@ func (e *conversationEvidence) add(callID string, result Result) {
 }
 
 func (s *ConversationService) answer(ctx context.Context, p preparedConversation, step int, total modelgovernance.ManagedAPIProbeUsage, send func(ConversationEvent) error) error {
-	request := modelgovernance.AgentRequest{Messages: p.messages, Tools: p.tools, ToolChoice: "none"}
+	// 最终轮只读取已有工具结果，不重新开放工具；none 仍作为内部禁止调用的约束。
+	// 避免把非思考规划历史送入思考工具协议，触发 reasoning_content 必填校验。
+	request := modelgovernance.AgentRequest{Messages: p.messages, ToolChoice: "none"}
 	var response modelgovernance.AgentResponse
 	var err error
 	if streamer, ok := s.deps.Model.(modelgovernance.AgentStreamModel); ok {

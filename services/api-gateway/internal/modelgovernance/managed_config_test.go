@@ -327,24 +327,28 @@ func TestManagedConfigConnectionChangeClearsOldProbeEvidence(t *testing.T) {
 	update.ModelVersion = "deepseek-reasoner"
 	transient := ManagedAPIProbeResult{ProbeMode: "quick", ErrorCode: "provider_timeout", Message: "timed out"}
 	update.InitialProbe = &transient
+	update.ExpectedUpdatedAt = item.UpdatedAt
 	item, err = store.UpdateManagedAPIConfig(ctx, "school-a", item.ID, update)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if item.LastTestStatus != "temporary_unavailable" || item.LastTestedAt == nil ||
 		item.LastSuccessfulTestedAt != nil || item.LastCapabilityStatus != "untested" ||
-		item.LastCapabilityTestedAt != nil || item.LastCapabilityVersion != "" {
+		item.LastCapabilityTestedAt != nil || item.LastCapabilityVersion != "" ||
+		item.LastTextStatus != "untested" || item.LastTextTestedAt != nil || item.LastTextUsage.TotalTokens != 0 {
 		t.Fatalf("changed connection inherited old verification: %#v", item)
 	}
 
 	// 替换密钥而未重新检查时，连接仍为未验证。
 	update.APIKey = "rotated-secret-at-least-16"
 	update.InitialProbe = nil
+	update.ExpectedUpdatedAt = item.UpdatedAt
 	item, err = store.UpdateManagedAPIConfig(ctx, "school-a", item.ID, update)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if item.LastTestStatus != "untested" || item.LastTestedAt != nil || item.LastSuccessfulTestedAt != nil {
+	if item.LastTestStatus != "untested" || item.LastTestedAt != nil || item.LastSuccessfulTestedAt != nil ||
+		item.LastTextStatus != "untested" || item.LastTextTestedAt != nil {
 		t.Fatalf("key rotation retained old probe status: %#v", item)
 	}
 }
@@ -456,6 +460,17 @@ func (p splitManagedProber) ProbeQuick(_ context.Context, connection ManagedAPIC
 
 func (p staticManagedProber) Probe(_ context.Context, _ ManagedAPIConnection) ManagedAPIProbeResult {
 	return p.result
+}
+
+func (p staticManagedProber) ProbeText(_ context.Context, _ ManagedAPIConnection) ManagedAPIProbeResult {
+	return managedTextProbeFixture(p.result)
+}
+
+func managedTextProbeFixture(result ManagedAPIProbeResult) ManagedAPIProbeResult {
+	result.ProbeMode, result.GeneratedRequest = "text", true
+	result.TextCheck = ManagedAPICheckResult{OK: result.OK, Code: result.ErrorCode}
+	result.CapabilityCheck = ManagedAPICheckResult{Code: "not_run"}
+	return result
 }
 
 func (p staticManagedProber) ProbeQuick(_ context.Context, _ ManagedAPIConnection) ManagedAPIProbeResult {

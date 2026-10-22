@@ -1,6 +1,6 @@
 # Desktop Client
 
-EduGrade Enterprise Windows EXE 客户端骨架。
+EduGrade Enterprise Windows 桌面客户端。
 
 ## 技术路线
 
@@ -17,9 +17,10 @@ EduGrade Enterprise Windows EXE 客户端骨架。
 - 保存登录与自动登录：仅 Windows Tauri 运行时可用。勾选后，服务地址、租户、账号和密码由当前 Windows 用户的 Credential Manager 保护；启动时读取并自动换取新的短期访问令牌。系统凭据库不可用时明确失败，不降级写入 `localStorage`、配置文件或日志。
 - Session 校验：调用真实 `GET /api/v1/auth/me`。
 - 任务列表：调用真实 `GET /api/v1/review-tasks`，无 token 或无权限时显示真实错误。
-- 扫描工作站：不实现假扫描仪；支持选择真实考试、批量选择 PDF/图片、上传前预览、本地质量检查、可恢复队列元数据、断网检测、联网后继续当前会话可上传项、失败重试、真实 `POST /api/v1/files`、submission page 关联和服务端质量门禁入口。
+- 扫描工作站：支持选择真实考试、批量选择 PDF/图片、上传前预览、本地质量检查、失败重试、真实 `POST /api/v1/files`、submission page 关联和服务端质量门禁入口。Windows 原生运行时使用 SQLite 队列与加密 spool 保存已入队文件，可在重启并登录同一账号后恢复；浏览器模式只恢复队列元数据，文件需重新选择。
+- 扫描器：Windows 原生运行时通过 WIA 枚举驱动，并提供账号隔离的设备配置与扫描预检；发现驱动不等于已验证直接采集能力，真实设备须完成现场兼容性验证后才可启用采集。
 - 离线阅卷：获取当前教师 review_task，聚合 answer_segment、submission page、OCR、Rubric、AI 建议分和当前会话答案图片预览；支持本地离线密钥、Web Crypto 加密草稿、联网同步提交、冲突检测、同步重试和过期缓存清理。
-- 同步队列：展示当前客户端产生的上传任务；离线阅卷同步未配置/待接入。
+- 同步队列：展示答卷上传和本机评分草稿的真实状态；评分草稿可打开离线工作区继续同步或核对回执，失败与冲突保留待处理记录。
 - 系统诊断：显示 Tauri/浏览器运行时、本地能力状态和后端 `/health` 检查入口。
 - 本地日志：记录客户端侧关键操作并在前端、原生命令两层脱敏认证字段；Tauri 运行时不再向 WebView `localStorage` 写日志副本，并支持删除当前/轮转日志。这不是后端 `audit_log`。
 
@@ -27,12 +28,11 @@ EduGrade Enterprise Windows EXE 客户端骨架。
 
 以下能力在界面中必须显示“未配置/待接入”，不得冒充真实能力：
 
-- 真实扫描仪驱动、扫描仪发现和 TWAIN/WIA 接入。
+- TWAIN 或厂商 SDK 采集、未经现场兼容性验证的 WIA 直接采集。
 - 设备绑定后端接口、设备吊销和绑定校验。
-- Stronghold、加密 SQLite 缓存。登录凭据已接 Windows Credential Manager，但离线草稿仍不属于企业安全存储。
-- 专用离线包后端 API、Stronghold/SQLite/DPAPI 持久安全存储、复杂冲突合并、图片二进制长期离线缓存。
+- Stronghold、SQLite 整库加密、专用离线包后端 API 和复杂冲突自动合并。现有本地持久化使用 SQLite 元数据、加密草稿与加密 spool，并由当前 Windows 用户的系统凭据保护密钥；这不代表已取得企业安全存储认证。
 - 自动更新源、签名校验和灰度发布。
-- 跨应用重启后的文件二进制自动续传；当前只恢复队列元数据，文件句柄需要重新选择。
+- 浏览器运行时的原生耐久文件恢复；没有 Windows 原生存储时，重启后仍需重新选择源文件。
 
 ## 开发命令
 

@@ -68,7 +68,7 @@ flowchart LR
 
 ### 推荐：一键安装与启动
 
-电脑只需预先安装 Git 和 Docker Desktop。下载仓库后，在仓库根目录执行同一条命令：
+电脑需预先安装 Git、Docker Desktop、Python 3.11+ 和 OpenSSL。Python 与 OpenSSL 用于首次生成及每次启动前验证内部 TLS 证书；`python` 必须在 PATH 中，OpenSSL 不在 PATH 时设置 `$env:EDUGRADE_TEST_OPENSSL` 为已安装可执行文件的绝对路径。下载仓库后，在仓库根目录执行同一条命令：
 
 ```powershell
 .\start-edugrade.cmd
@@ -78,12 +78,15 @@ flowchart LR
 
 1. 启动并等待 Docker Desktop，确认使用 Linux containers。
 2. 从 Compose 样例创建 `infra/docker-compose/.env`，自动生成数据库、Redis、MinIO、Qdrant、内部服务和 Worker 随机密钥。
-3. 下载并校验固定版本的 llama.cpp 与 Qwen3-4B 模型，启动本地模型并同步 API Key。
-4. 执行部署预检、数据库迁移、MinIO 初始化、核心镜像构建和健康检查。
-5. 只提示一次 `platform_admin` 管理员密码，创建管理员并完成带登录的 smoke test。
-6. 自动打开 `http://127.0.0.1:8088`。
+3. 在默认 `certs` 目录完全不存在时生成两天有效的本地测试 CA 和内部服务证书，验证证书、私钥配对、有效期、信任链和调用主机名。
+4. 下载并校验固定版本的 llama.cpp 与 Qwen3-4B 模型，启动本地模型并同步 API Key。
+5. 执行部署预检、数据库迁移、MinIO 初始化、核心镜像构建和健康检查。
+6. 只提示一次 `platform_admin` 管理员密码，创建管理员并完成带登录的 smoke test。
+7. 自动打开 `http://127.0.0.1:8088`。
 
 以后每天启动仍然执行同一条 `.\start-edugrade.cmd`；脚本会识别已经安装的环境，复用配置、数据、模型和镜像，不会重新生成密钥。首次安装需要下载约 2.4 GiB 的本地模型以及 Docker 镜像，实际耗时取决于网络。
+
+证书缺失、过期、不匹配或未通过 CA/主机名校验时，脚本会在模型下载和服务构建前停止。已有或自定义证书目录均保留；按[本地内部 TLS 说明](infra/docker-compose/README.md#本地内部-tls)在新目录生成并修改未提交 `.env` 的三个证书目录，不能覆盖正在使用的密钥。两天测试证书仅供隔离开发与验收；长期使用应配置组织签发的有效证书。
 
 常用参数：
 
@@ -121,8 +124,9 @@ flowchart LR
 - [Git for Windows](https://git-scm.com/download/win)。
 - [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)，切换到 Linux containers，并确保 WSL 2 或 Hyper-V 后端可以正常运行。
 - PowerShell 7，或 Windows 自带的 Windows PowerShell 5.1。
+- Python 3.11+，确保 `python --version` 可用；OpenSSL，确保 `openssl version` 可用，或设置 `$env:EDUGRADE_TEST_OPENSSL` 指向其绝对路径。
 
-只按 Docker Compose 部署时，宿主机**不需要**另行安装 Node.js、Go、Python、PostgreSQL、Redis、MinIO 或 Qdrant；这些组件由 Docker 镜像提供。只有进行源码开发时才需要 README 后面的开发工具链。
+只按 Docker Compose 部署时，宿主机不需要另行安装 Node.js、Go、PostgreSQL、Redis、MinIO 或 Qdrant；这些组件由 Docker 镜像提供。宿主机的 Python 和 OpenSSL 只用于内部证书准备与启动前校验，源码开发还需要 README 后面的开发工具链。
 
 安装后打开 Docker Desktop，等待状态变为 Running，再在 PowerShell 中逐项检查：
 
@@ -317,7 +321,7 @@ try {
 }
 ```
 
-`init.ps1` 会依次执行预检、启动 PostgreSQL/Redis/MinIO/Qdrant、运行数据库迁移、初始化 MinIO、构建并启动 `grading-agent`、API、Web、Nginx、创建首个平台管理员并执行 smoke test。首次构建需要下载基础镜像，耗时取决于网络和电脑性能；迁移运行时不要关闭终端或 Docker Desktop。
+`init.ps1` 会先准备并验证内部 TLS 证书，再执行预检、启动 PostgreSQL/Redis/MinIO/Qdrant、运行数据库迁移、初始化 MinIO、构建并启动 `grading-agent`、API、Web、Nginx、创建首个平台管理员并执行 smoke test。首次构建需要下载基础镜像，耗时取决于网络和电脑性能；迁移运行时不要关闭终端或 Docker Desktop。
 
 如果命令因网络或构建失败中断，修复原因后可重新运行；迁移和 MinIO 初始化被设计为可重复执行。已经成功创建平台管理员后，不要再次添加 `-BootstrapAdmin`。
 
@@ -377,7 +381,7 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8088/health
 如启用了本地阅卷模型，再检查容器内的模型就绪状态：
 
 ```powershell
-docker compose --env-file .env -f docker-compose.yml exec grading-agent wget -q -O - http://127.0.0.1:8100/ready
+docker compose --env-file .env -f docker-compose.yml exec grading-agent python -c "import os,ssl,urllib.request; print(urllib.request.urlopen(os.environ['EDUGRADE_GRADING_AGENT_HEALTH_URL'].removesuffix('/health')+'/ready',context=ssl.create_default_context(cafile=os.environ['SSL_CERT_FILE']),timeout=5).read().decode())"
 ```
 
 默认访问地址如下：

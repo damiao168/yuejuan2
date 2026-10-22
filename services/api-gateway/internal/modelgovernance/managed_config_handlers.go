@@ -37,13 +37,20 @@ func (h *Handler) recordManagedProbeUsage(ctx context.Context, tenantID string, 
 	if result.OK {
 		status = "succeeded"
 	}
+	httpRequestID := logger.RequestID(ctx)
+	usageRequestID := result.generationRequestID
+	// 合并请求的所有调用者（含发起者）都会标记 Coalesced，不能据此全部跳过；账本按实际生成去重。
+	// 自定义 prober 没有生成身份时沿用原请求键，HTTP 来源继续留在元数据与各自审计中。
+	if usageRequestID == "" {
+		usageRequestID = httpRequestID
+	}
 	h.recordUsage(ctx, ModelUsageEvent{
-		TenantID: tenantID, RequestID: logger.RequestID(ctx), Feature: "model_probe",
+		TenantID: tenantID, RequestID: usageRequestID, Feature: "model_probe",
 		ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName,
 		InputTokens: result.Usage.InputTokens, OutputTokens: result.Usage.OutputTokens,
 		CachedInputTokens: result.Usage.CachedInputTokens, ReasoningTokens: result.Usage.ReasoningTokens,
 		TotalTokens: result.Usage.TotalTokens, Status: status,
-		Metadata: map[string]any{"operation": operation, "probe_mode": result.ProbeMode, "error_code": result.ErrorCode},
+		Metadata: map[string]any{"operation": operation, "probe_mode": result.ProbeMode, "error_code": result.ErrorCode, "http_request_id": httpRequestID},
 	})
 }
 
@@ -57,7 +64,7 @@ func (h *Handler) ListManagedAPIConfigs(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	tenantID, ok := h.targetTenant(w, r, r.URL.Query().Get("tenant_id"))
+	tenantID, ok := h.targetManagedTenant(w, r, r.URL.Query().Get("tenant_id"), "model:read")
 	if !ok {
 		return
 	}
@@ -81,7 +88,7 @@ func (h *Handler) CreateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 	if !decodeStrictJSON(w, r, &input) {
 		return
 	}
-	tenantID, ok := h.targetTenant(w, r, input.TenantID)
+	tenantID, ok := h.targetManagedTenant(w, r, input.TenantID, "model:managed_api:manage")
 	if !ok {
 		return
 	}
@@ -148,7 +155,7 @@ func (h *Handler) ValidateManagedAPIConfig(w http.ResponseWriter, r *http.Reques
 	if !decodeStrictJSON(w, r, &input) {
 		return
 	}
-	tenantID, ok := h.targetTenant(w, r, input.TenantID)
+	tenantID, ok := h.targetManagedTenant(w, r, input.TenantID, "model:managed_api:manage")
 	if !ok || !managedSchoolTenant(w, r, tenantID) {
 		return
 	}
@@ -175,7 +182,7 @@ func (h *Handler) ListAvailableManagedAPIModels(w http.ResponseWriter, r *http.R
 	if !decodeStrictJSON(w, r, &input) {
 		return
 	}
-	tenantID, ok := h.targetTenant(w, r, input.TenantID)
+	tenantID, ok := h.targetManagedTenant(w, r, input.TenantID, "model:managed_api:manage")
 	if !ok || !managedSchoolTenant(w, r, tenantID) {
 		return
 	}
@@ -211,7 +218,7 @@ func (h *Handler) AutoCreateManagedAPIConfig(w http.ResponseWriter, r *http.Requ
 	if !decodeStrictJSON(w, r, &input) {
 		return
 	}
-	tenantID, ok := h.targetTenant(w, r, input.TenantID)
+	tenantID, ok := h.targetManagedTenant(w, r, input.TenantID, "model:managed_api:manage")
 	if !ok || !managedSchoolTenant(w, r, tenantID) {
 		return
 	}
@@ -244,7 +251,7 @@ func (h *Handler) UpdateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 	if !decodeStrictJSON(w, r, &input) {
 		return
 	}
-	tenantID, ok := h.targetTenant(w, r, r.URL.Query().Get("tenant_id"))
+	tenantID, ok := h.targetManagedTenant(w, r, r.URL.Query().Get("tenant_id"), "model:managed_api:manage")
 	if !ok {
 		return
 	}
@@ -262,6 +269,7 @@ func (h *Handler) UpdateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 		h.writeManagedAPIError(w, r, err)
 		return
 	}
+	input.ExpectedUpdatedAt = current.UpdatedAt
 	if connectionChanged {
 		connection, result, connectionErr := h.probeManagedAPIUpdate(r, store, tenantID, current, input)
 		if connectionErr != nil {
@@ -286,7 +294,7 @@ func (h *Handler) UpdateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 	httpx.JSON(w, http.StatusOK, map[string]any{"config": item})
 }
 
-// 先查当前配置，再判断备份能否升为默认；未经能力验证的备份不能靠本次更新绕过晋升边界。
+// 先查当前配置再判断备份能否升为默认；普通回复证据必须属于本次保存的连接身份。
 func resolveManagedAPIUpdateTarget(ctx context.Context, store ManagedAPIConfigStore, tenantID, id string, input ManagedAPIConfigUpdateInput) (*ManagedAPIConfig, bool, error) {
 	items, err := store.ListManagedAPIConfigs(ctx, tenantID)
 	if err != nil {
@@ -296,11 +304,14 @@ func resolveManagedAPIUpdateTarget(ctx context.Context, store ManagedAPIConfigSt
 	if current == nil {
 		return nil, false, ErrNotFound
 	}
+	// 版本和区域也属于存储会使能力证据失效的连接身份；默认模型不能跳过检测再保存。
+	// 展示名称变化不影响连接，沿用原有验证结果。
 	connectionChanged := current.AdapterType != input.AdapterType || current.BaseURL != input.BaseURL ||
-		current.ModelName != input.ModelName || strings.TrimSpace(input.APIKey) != ""
-	capabilityVerified := current.LastCapabilityStatus == "success" && current.LastCapabilityVersion == ManagedCapabilityProbeVersion
-	if input.IsDefault && !current.IsDefault && (!capabilityVerified || connectionChanged) {
-		return nil, false, ErrManagedCapabilityRequired
+		current.ModelName != input.ModelName || current.ModelVersion != input.ModelVersion ||
+		current.Region != input.Region || strings.TrimSpace(input.APIKey) != ""
+	textVerified := managedTextVerified(*current)
+	if input.IsDefault && !current.IsDefault && (!textVerified || connectionChanged) {
+		return nil, false, ErrManagedTextRequired
 	}
 	return current, connectionChanged, nil
 }
@@ -319,6 +330,14 @@ func (h *Handler) probeManagedAPIUpdate(r *http.Request, store ManagedAPIConfigS
 	if err != nil {
 		return ManagedAPIConnection{}, ManagedAPIProbeResult{}, err
 	}
+	// 元数据查询和密钥读取之间也可能被其他请求更新，不能检测混合版本的连接。
+	if !connection.Config.UpdatedAt.Equal(current.UpdatedAt) {
+		return ManagedAPIConnection{}, ManagedAPIProbeResult{}, ErrManagedProbeStale
+	}
+	// 同域改路径仍使用保存的密钥；跨域或换端口必须显式输入，不能把解密后的旧密钥自动发送到新服务。
+	if input.APIKey == "" && !sameManagedAPIOrigin(connection.Config.BaseURL, input.BaseURL) {
+		return ManagedAPIConnection{}, ManagedAPIProbeResult{}, ErrManagedCredentialOriginChanged
+	}
 	connection.Config.DisplayName = input.DisplayName
 	connection.Config.AdapterType = input.AdapterType
 	connection.Config.BaseURL = input.BaseURL
@@ -333,12 +352,9 @@ func (h *Handler) probeManagedAPIUpdate(r *http.Request, store ManagedAPIConfigS
 		prober = NewHTTPManagedAPIProber(0)
 	}
 	var result ManagedAPIProbeResult
-	// 当前默认模型更换连接时，完整能力探测成功后才允许保存，失败继续保留旧连接。
+	// 当前默认模型更换连接时，只需证明文本生成可用；评分角色的结构化门槛由角色绑定单独校验。
 	if current.IsDefault && input.IsDefault {
-		result = prober.Probe(r.Context(), connection)
-		if result.ProbeMode == "" {
-			result.ProbeMode = "capability"
-		}
+		result = managedTextProbe(r.Context(), prober, connection)
 	} else {
 		result = managedQuickProbe(r.Context(), prober, connection)
 	}
@@ -350,7 +366,7 @@ func (h *Handler) DeleteManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	tenantID, ok := h.targetTenant(w, r, r.URL.Query().Get("tenant_id"))
+	tenantID, ok := h.targetManagedTenant(w, r, r.URL.Query().Get("tenant_id"), "model:managed_api:manage")
 	if !ok || !managedSchoolTenant(w, r, tenantID) {
 		return
 	}
@@ -370,7 +386,7 @@ func (h *Handler) ProbeManagedAPIConfig(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	tenantID, ok := h.targetTenant(w, r, r.URL.Query().Get("tenant_id"))
+	tenantID, ok := h.targetManagedTenant(w, r, r.URL.Query().Get("tenant_id"), "model:managed_api:manage")
 	if !ok {
 		return
 	}
@@ -390,7 +406,7 @@ func (h *Handler) ProbeManagedAPIConfig(w http.ResponseWriter, r *http.Request) 
 	if mode == "" {
 		mode = "quick"
 	}
-	if mode != "quick" && mode != "capability" {
+	if mode != "quick" && mode != "text" && mode != "structured" && mode != "capability" {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_probe_mode", "检测模式无效")
 		return
 	}
@@ -404,13 +420,15 @@ func (h *Handler) ProbeManagedAPIConfig(w http.ResponseWriter, r *http.Request) 
 				ProbeMode: "quick", Provider: connection.Config.ProviderKey, Model: connection.Config.ModelName,
 			}, "quick_probe_unsupported", "当前适配器不支持零生成 Token 快速检查", "credential")
 		}
-		result.ProbeMode = "quick"
+		result.ProbeMode = string(ManagedAPIProbeQuick)
+	} else if mode == "text" {
+		result = managedTextProbe(r.Context(), prober, connection)
 	} else if !force && connection.Config.LastCapabilityStatus == "success" && connection.Config.LastCapabilityVersion == ManagedCapabilityProbeVersion {
 		result = reusedManagedCapabilityProbe(connection)
 	} else {
 		result = prober.Probe(r.Context(), connection)
-		result.ProbeMode = "capability"
 	}
+	result.ProbeMode = mode
 	if !result.Reused {
 		h.observeManagedProbe(mode, result)
 	}
@@ -461,7 +479,8 @@ func managedProbeErrorCategory(value string, ok bool) string {
 	switch value {
 	case "provider_timeout", "provider_unavailable", "provider_rate_limited", "provider_error",
 		"provider_invalid_response", "credential_invalid", "model_permission_denied", "model_not_found",
-		"invalid_endpoint", "invalid_json", "no_choices", "response_format_unsupported",
+		"invalid_endpoint", "invalid_json", "no_choices", "empty_content", "output_truncated", "content_filtered",
+		"schema_mismatch", "semantic_mismatch", "response_format_unsupported", "text_probe_unsupported",
 		"quick_probe_unsupported":
 		return value
 	default:
@@ -489,6 +508,18 @@ func reusedManagedCapabilityProbe(connection ManagedAPIConnection) ManagedAPIPro
 	}
 }
 
+func managedTextProbe(ctx context.Context, prober ManagedAPIProber, connection ManagedAPIConnection) ManagedAPIProbeResult {
+	if textProber, ok := prober.(ManagedAPITextProber); ok {
+		result := textProber.ProbeText(ctx, connection)
+		result.ProbeMode = string(ManagedAPIProbeText)
+		return result
+	}
+	// 不支持独立文本探测时直接说明限制，不能偷偷改发更严格的 JSON 生成请求。
+	return failedManagedProbe(ManagedAPIProbeResult{
+		ProbeMode: "text", Provider: connection.Config.ProviderKey, Model: connection.Config.ModelName,
+	}, "text_probe_unsupported", "当前适配器不支持普通回复检测", "text")
+}
+
 func managedSchoolTenant(w http.ResponseWriter, r *http.Request, tenantID string) bool {
 	if tenantID == "" || tenantID == auth.PlatformTenantID {
 		httpx.Error(w, r, http.StatusBadRequest, "school_tenant_required", "请选择要配置的学校")
@@ -513,11 +544,17 @@ func (h *Handler) writeManagedAPIError(w http.ResponseWriter, r *http.Request, e
 	case errors.Is(err, ErrManagedDefaultMutation):
 		httpx.Error(w, r, http.StatusConflict, "managed_model_current_active_required", "当前使用的模型必须保持启用，请先切换模型或切回本地模型")
 	case errors.Is(err, ErrManagedConfigInUse):
-		httpx.Error(w, r, http.StatusConflict, "managed_model_in_use", "该模型正在被评分智能体使用，请先更换 Primary A / Primary B / Arbiter 的模型绑定")
+		httpx.Error(w, r, http.StatusConflict, "managed_model_in_use", "该模型正在被阅卷角色、试卷解析或治理配置引用，请先调整用途后删除")
 	case errors.Is(err, ErrManagedCapabilityRequired):
-		httpx.Error(w, r, http.StatusConflict, "managed_model_capability_required", "请先通过完整能力检测，再设为当前使用")
+		httpx.Error(w, r, http.StatusConflict, "managed_model_capability_required", "该功能需要先通过结构化输出检测")
+	case errors.Is(err, ErrManagedTextRequired):
+		httpx.Error(w, r, http.StatusConflict, "managed_model_text_required", "请先通过普通回复检测，再设为当前使用")
 	case errors.Is(err, ErrManagedProbeStale):
 		httpx.Error(w, r, http.StatusConflict, "managed_model_probe_stale", "检测期间配置已发生变化，请重新检测")
+	case errors.Is(err, ErrManagedCredentialSourceDisabled):
+		httpx.Error(w, r, http.StatusConflict, "managed_model_credential_source_disabled", "密钥来源配置已停用，请先启用该配置，再获取模型列表或添加模型")
+	case errors.Is(err, ErrManagedCredentialOriginChanged):
+		httpx.Error(w, r, http.StatusBadRequest, "managed_model_credential_origin_changed", "更换 API 域名或端口时，请重新输入 API Key（可以使用原密钥）")
 	case errors.Is(err, ErrInvalidManagedConfig):
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_managed_model_api", "第三方模型 API 配置不完整或不安全")
 	case errors.Is(err, ErrNotFound):

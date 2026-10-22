@@ -1,10 +1,11 @@
 import {
-  createHashHistory,
+  createBrowserHistory,
   createRootRoute,
   createRoute,
   createRouter
 } from "@tanstack/react-router";
 import { AppShell } from "../AppShell";
+import { listenForLegacyHashRoutes, migrateLegacyHashRoute } from "./location";
 
 const rootRoute = createRootRoute({
   component: AppShell,
@@ -45,11 +46,17 @@ const routeTree = rootRoute.addChildren([
   compatibilityRoute
 ]);
 
+migrateLegacyHashRoute();
+
 export const appRouter = createRouter({
   routeTree,
-  history: createHashHistory(),
+  history: createBrowserHistory(),
   defaultPreload: "intent"
 });
+
+// 监听随模块生效，不受 React StrictMode 重挂载影响；热更新前注销，避免重复迁移同一次导航。
+const stopLegacyHashListener = listenForLegacyHashRoutes();
+import.meta.hot?.dispose(stopLegacyHashListener);
 
 declare module "@tanstack/react-router" {
   interface Register {

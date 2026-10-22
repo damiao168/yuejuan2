@@ -6,6 +6,13 @@ import re
 from .errors import AgentError
 from .paper_schema import FORMULA_SUBJECTS, QUESTION_TYPES, ROLES
 
+_MAX_QUESTION_NUMBER_CHARS = 64
+_MAX_QUESTION_NUMBER_COMPONENT = (1 << 63) - 1
+_QUESTION_NUMBER_FIELDS = (
+    "question_no_raw", "question_no_normalized", "question_no_hint",
+    "parent_question_no", "subquestion_no", "subquestion_no_hint",
+)
+
 # 模型仍可能把应用题中的得分误认为考试分值。
 # 这个保守的直接文本检查仅在所有引用文档都没有
 # 明确的题目或分节分值标记时，才清除建议分值。
@@ -149,10 +156,25 @@ def _validate_paper_candidate(candidate, candidate_ids, documents_by_id, request
     if not refs:
         raise AgentError("model_output_invalid", "candidate provenance was not grounded", status=502, request_id=request_id)
     validate_refs(refs, documents_by_id, request_id)
+    _validate_question_number_bounds(candidate, request_id)
     evidence_confidences = [ref["ocr_confidence"] for ref in refs if ref.get("ocr_confidence") is not None]
     # 候选可信度不能高于其依赖的最低 OCR 证据可信度。
     if evidence_confidences:
         candidate["confidence"] = min(confidence, *evidence_confidences)
+
+
+def _validate_question_number_bounds(candidate, request_id):
+    # 与Go协调入口使用同一边界；保留中文、子题和稀疏编号，不允许异常数字进入缺题枚举。
+    for field in _QUESTION_NUMBER_FIELDS:
+        value = candidate.get(field)
+        if value is None:
+            continue
+        if not isinstance(value, str) or len(value) > _MAX_QUESTION_NUMBER_CHARS:
+            raise AgentError("model_output_invalid", "question number must be text of at most 64 characters", status=502, request_id=request_id)
+        compact = "".join(char for char in value if not char.isspace()).replace("第", "").replace("题", "")
+        if any(int(digits) > _MAX_QUESTION_NUMBER_COMPONENT for digits in re.findall(r"[0-9]+", compact)):
+            # 错误说明不回显模型长数字，避免把异常输入再次放大到响应和日志。
+            raise AgentError("model_output_invalid", "question number numeric component exceeds non-negative int64 range", status=502, request_id=request_id)
 
 
 def _validate_paper_rubric(rubric, request_id):

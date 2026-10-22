@@ -15,21 +15,21 @@ test("schema references retain nullable and precedence over sibling type modifie
   assert.equal(schemaToType({ $ref: "#/components/schemas/Referenced", nullable: false }), "Referenced");
   assert.equal(schemaToType({ const: null, enum: ["ignored"], type: "string", nullable: true }), "null | null");
   assert.equal(schemaToType({ enum: [], oneOf: [{ type: "string" }], type: "string" }), "never");
-  assert.equal(schemaToType({ oneOf: [], anyOf: [{ type: "string" }], type: "boolean" }), "");
-  assert.equal(schemaToType({ anyOf: [{ type: "integer" }, { type: "boolean" }], type: "string" }), "number | boolean");
+  assert.equal(schemaToType({ oneOf: [], anyOf: [{ type: "string" }], type: "boolean" }), "never");
+  assert.equal(schemaToType({ anyOf: [{ type: "integer" }, { type: "boolean" }], type: "string" }), "(string) & (number | boolean)");
 });
 
 test("nullable references survive nested properties, arrays and schema compositions", () => {
   const nullableReference = { $ref: "#/components/schemas/Referenced", nullable: true };
   const cases = [
     [{ type: "object", required: ["draft"], properties: { draft: nullableReference } }, '{ "draft": Referenced | null; }'],
-    [{ type: "object", additionalProperties: nullableReference }, "(Record<string, never> & Record<string, Referenced | null>)"],
+    [{ type: "object", additionalProperties: nullableReference }, "Record<string, Referenced | null>"],
     [{ type: "array", items: nullableReference }, "Array<Referenced | null>"],
     [{ type: "array", items: nullableReference, nullable: true }, "Array<Referenced | null> | null"],
     [{ oneOf: [nullableReference, { type: "string" }] }, "Referenced | null | string"],
     [{ anyOf: [nullableReference, { type: "boolean" }] }, "Referenced | null | boolean"],
-    [{ type: "object", allOf: [nullableReference] }, "(Record<string, never>) & (Referenced | null)"],
-    [{ enum: ["ready"], oneOf: [nullableReference], nullable: true }, '"ready" | null'],
+    [{ type: "object", allOf: [nullableReference] }, "(Record<string, unknown>) & (Referenced | null)"],
+    [{ enum: ["ready"], oneOf: [nullableReference], nullable: true }, '("ready") & (Referenced | null) | null'],
   ];
   for (const [schema, expected] of cases) assert.equal(schemaToType(schema), expected, JSON.stringify(schema));
 });
@@ -59,10 +59,10 @@ test("object schemas preserve required keys, property order and additional-prope
     allOf: [{ $ref: "#/components/schemas/Extra" }, { type: "string" }],
     nullable: true,
   };
-  assert.equal(schemaToType(schema), '(({ "id": number; "quoted\\\"key"?: Blob | ArrayBuffer | Uint8Array; } & Record<string, boolean | null>)) & (Extra) & (string) | null');
-  assert.equal(schemaToType({ type: "object" }), "Record<string, never>");
+  assert.equal(schemaToType(schema), '(({ "id": number; "quoted\\\"key"?: Blob | ArrayBuffer | Uint8Array; } & Record<string, boolean | null | number | Blob | ArrayBuffer | Uint8Array>)) & (Extra) & (string) | null');
+  assert.equal(schemaToType({ type: "object" }), "Record<string, unknown>");
   assert.equal(schemaToType({ additionalProperties: true }), "Record<string, unknown>");
-  assert.equal(schemaToType({ additionalProperties: { type: "integer" } }), "(Record<string, never> & Record<string, number>)");
+  assert.equal(schemaToType({ additionalProperties: { type: "integer" } }), "Record<string, number>");
   assert.equal(schemaToType({ properties: { id: { type: "string" } }, additionalProperties: true }), '({ "id"?: string; } & Record<string, unknown>)');
 });
 
@@ -71,8 +71,8 @@ test("schema fallback boundaries retain primitive, inferred-object and array out
     [null, "unknown"],
     ["string", "unknown"],
     [{}, "unknown"],
-    [{ additionalProperties: false }, "unknown"],
-    [{ properties: {} }, "Record<string, never>"],
+    [{ additionalProperties: false }, "Record<string, never>"],
+    [{ properties: {} }, "Record<string, unknown>"],
     [{ type: "string", format: "binary", nullable: true }, "Blob | ArrayBuffer | Uint8Array | null"],
     [{ type: "string" }, "string"],
     [{ type: "integer" }, "number"],
@@ -81,7 +81,7 @@ test("schema fallback boundaries retain primitive, inferred-object and array out
     [{ type: "null" }, "null"],
     [{ type: "other", nullable: true }, "unknown | null"],
     [{ type: "array" }, "Array<unknown>"],
-    [{ allOf: [{ type: "string" }], nullable: true }, "(unknown) & (string) | null"],
+    [{ allOf: [{ type: "string" }], nullable: true }, "string | null"],
   ];
   for (const [schema, expected] of cases) assert.equal(schemaToType(schema), expected, JSON.stringify(schema));
 });

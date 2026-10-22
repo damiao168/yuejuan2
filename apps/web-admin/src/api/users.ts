@@ -81,6 +81,22 @@ export function updateManagedUserAccess(id: string, payload: UpdateManagedUserAc
   });
 }
 
+export interface UpdateManagedUserProfilePayload {
+  display_name: string;
+  employee_no: string;
+  // 手机号仅在主动更换时发送；不能把名单中的脱敏号码作为原值回写。
+  phone?: string;
+  expected_display_name: string;
+  expected_employee_no: string;
+  expected_phone_masked: string;
+}
+
+export function updateManagedUserProfile(id: string, payload: UpdateManagedUserProfilePayload) {
+  return apiClient.request<{ user: ManagedUser; login_identity_changed: boolean }>(`/api/v1/users/${encodeURIComponent(id)}/profile`, {
+    method: "PATCH", body: JSON.stringify(payload)
+  });
+}
+
 export async function listAllActiveGraders(): Promise<ManagedUser[]> {
   const users = new Map<string, ManagedUser>();
   const seenCursors = new Set<string>();

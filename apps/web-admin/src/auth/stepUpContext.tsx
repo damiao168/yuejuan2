@@ -157,7 +157,7 @@ export function StepUpProvider({ children, onReauthenticate }: Readonly<{ childr
 
   const value = useMemo<StepUpContextValue>(() => ({
     runWithStepUp, open, reason, description, password, loading, error, canResume, feedback, setPassword, complete, cancel
-  }), [runWithStepUp, open, reason, description, password, loading, error, canResume, feedback, setPassword, complete, cancel]);
+  }), [runWithStepUp, open, reason, description, password, loading, error, canResume, feedback, complete, cancel]);
 
   return (
     <StepUpContext.Provider value={value}>

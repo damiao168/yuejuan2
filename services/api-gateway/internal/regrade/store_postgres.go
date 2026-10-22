@@ -334,13 +334,15 @@ func (s *PostgresStore) Claim(ctx context.Context, tenantID, itemID, actorID str
 	if item.AssignedTo != "" && item.AssignedTo != actorID {
 		return Item{}, ErrAssignmentForbidden
 	}
-	if item.Status == ItemClaimed && item.ClaimedBy == actorID {
+	if item.Status == ItemClaimed && item.ClaimedBy == actorID && item.AssignedTo != "" {
 		return item, nil
 	}
-	if item.Status != ItemPending {
+	if item.Status != ItemPending && !(item.Status == ItemClaimed && item.ClaimedBy == actorID) {
 		return Item{}, ErrStateConflict
 	}
-	item, err = scanItem(tx.QueryRowContext(ctx, `UPDATE regrade_item SET status='claimed',claimed_by=$3::uuid,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING `+itemReturning, tenantID, itemID, actorID))
+	// 父作业和条目已锁定；首次领取同时记录分配人，材料读取不能看到领取成功但身份缺失的中间态。
+	// 本人重领旧的未分配记录会补齐身份；已有分配不因重试改变。
+	item, err = scanItem(tx.QueryRowContext(ctx, `UPDATE regrade_item SET status='claimed',assigned_to=COALESCE(assigned_to,$3::uuid),claimed_by=$3::uuid,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING `+itemReturning, tenantID, itemID, actorID))
 	if err != nil {
 		return Item{}, err
 	}
@@ -443,9 +445,12 @@ func (s *PostgresStore) Review(ctx context.Context, tenantID, itemID, actorID st
 		query = `UPDATE regrade_item SET reviewed_by=$3::uuid,reviewed_grade_id=NULLIF($4,'')::uuid,reviewed_score=$6,delta=$6-old_score,status='resolved',review_note=$5,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING ` + itemReturning
 	case ReviewReject:
 		// 驳回只是结束这项复核，清空新分数后，发布计划会保留原分数。
-		query = `UPDATE regrade_item SET reviewed_by=$3::uuid,reviewed_grade_id=NULL,reviewed_score=NULL,delta=NULL,status='resolved',review_note=$5,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING ` + itemReturning
+		args = []any{tenantID, itemID, actorID, input.Note}
+		query = `UPDATE regrade_item SET reviewed_by=$3::uuid,reviewed_grade_id=NULL,reviewed_score=NULL,delta=NULL,status='resolved',review_note=$4,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING ` + itemReturning
 	case ReviewException:
-		query = `UPDATE regrade_item SET reviewed_by=$3::uuid,status='exception',review_note=$5,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING ` + itemReturning
+		// 异常条目保留待处理事实并阻止作业完成；参数只绑定本分支实际使用的字段。
+		args = []any{tenantID, itemID, actorID, input.Note}
+		query = `UPDATE regrade_item SET reviewed_by=$3::uuid,status='exception',review_note=$4,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING ` + itemReturning
 	default:
 		return Item{}, ErrInvalidInput
 	}

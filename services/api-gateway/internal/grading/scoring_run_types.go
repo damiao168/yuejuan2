@@ -6,26 +6,28 @@ import (
 )
 
 type ScoringRun struct {
-	ID                  string     `json:"id"`
-	TenantID            string     `json:"tenant_id"`
-	ExamID              string     `json:"exam_id"`
-	IdempotencyKey      string     `json:"idempotency_key"`
-	Status              string     `json:"status"`
-	TotalCount          int        `json:"total_count"`
-	QueuedCount         int        `json:"queued_count"`
-	AutoConfirmedCount  int        `json:"auto_confirmed_count"`
-	HumanConfirmedCount int        `json:"human_confirmed_count"`
-	ReviewCount         int        `json:"review_count"`
-	FailedCount         int        `json:"failed_count"`
-	StartedBy           string     `json:"started_by"`
-	StartedAt           *time.Time `json:"started_at,omitempty"`
-	CompletedAt         *time.Time `json:"completed_at,omitempty"`
-	CreatedAt           time.Time  `json:"created_at"`
-	UpdatedAt           time.Time  `json:"updated_at"`
+	AIPlan              *GradingAIPlan `json:"ai_plan,omitempty"`
+	ID                  string         `json:"id"`
+	TenantID            string         `json:"tenant_id"`
+	ExamID              string         `json:"exam_id"`
+	IdempotencyKey      string         `json:"idempotency_key"`
+	Status              string         `json:"status"`
+	TotalCount          int            `json:"total_count"`
+	QueuedCount         int            `json:"queued_count"`
+	AutoConfirmedCount  int            `json:"auto_confirmed_count"`
+	HumanConfirmedCount int            `json:"human_confirmed_count"`
+	ReviewCount         int            `json:"review_count"`
+	FailedCount         int            `json:"failed_count"`
+	StartedBy           string         `json:"started_by"`
+	StartedAt           *time.Time     `json:"started_at,omitempty"`
+	CompletedAt         *time.Time     `json:"completed_at,omitempty"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
 }
 
 type StartScoringRunInput struct {
-	IdempotencyKey string `json:"idempotency_key"`
+	IdempotencyKey   string `json:"idempotency_key"`
+	ExpectedPlanHash string `json:"expected_plan_hash,omitempty"`
 }
 
 type ScoringQuestionSummary struct {
@@ -54,6 +56,8 @@ type ScoringReadinessCheck struct {
 }
 
 type ScoringReadiness struct {
+	PlanHash               string                  `json:"plan_hash,omitempty"`
+	RouteCounts            map[string]int          `json:"route_counts,omitempty"`
 	Ready                  bool                    `json:"ready"`
 	ExamStatus             string                  `json:"exam_status"`
 	TotalQuestions         int                     `json:"total_questions"`
@@ -67,6 +71,17 @@ type ScoringReadiness struct {
 
 // ScoringRunItem 是运行中单个答案片段面向操作员的状态，不包含学生身份；只有评分工作区将匿名任务解析为受保护答案资源。
 type ScoringRunItem struct {
+	InputVersionID        string             `json:"input_version_id,omitempty"`
+	Route                 string             `json:"route,omitempty"`
+	Stage                 string             `json:"stage,omitempty"`
+	ProcessingStatus      string             `json:"processing_status,omitempty"`
+	DecisionStatus        string             `json:"decision_status,omitempty"`
+	NextAction            string             `json:"next_action,omitempty"`
+	Revision              int64              `json:"revision,omitempty"`
+	RecognitionCompleted  bool               `json:"recognition_completed"`
+	ModelInvoked          *bool              `json:"model_invoked,omitempty"`
+	Retryable             bool               `json:"retryable"`
+	ArtifactIDs           []string           `json:"artifact_ids,omitempty"`
 	AnswerSegmentID       string             `json:"answer_segment_id"`
 	SubmissionID          string             `json:"submission_id"`
 	SubmissionPageID      string             `json:"submission_page_id"`
@@ -174,6 +189,16 @@ type ScoringRunStore interface {
 	ApplyOMRFailure(context.Context, string, string, string, map[string]any, bool) (OMRRun, error)
 	ConfirmRuleGrade(context.Context, string, string, string, Grade) (QuestionGrade, error)
 	ProcessRuleCandidates(context.Context, string, string, string, *Engine) error
+}
+
+// OMRFailureCommandStore 将失败尝试、OMR 状态和评分汇总一起提交；不能只提交运行时失败。
+type OMRFailureCommandStore interface {
+	ApplyOMRWorkerFailure(context.Context, string, string, OMRFailureInput) (OMRRun, string, error)
+}
+
+// OMRRetryCommandStore 将来源重试准备、运行时重新入队和评分汇总放在同一事务内。
+type OMRRetryCommandStore interface {
+	RetryOMRTask(context.Context, string, string) (FailedOMRTask, error)
 }
 
 // ScoringRecoveryStore 包含协调评分事实与 Worker Runtime 恢复的操作，与常规评分操作分开，避免调用方通过基础存储意外触发恢复行为。

@@ -67,6 +67,7 @@ describe("Batch8 equivalent student portal behavior", () => {
 
   it.each([
     ["/exams/exam-1", "exam-1"],
+    ["/exams/exam-1?view=detail", "exam-1"],
     ["/exams/%E6%95%B0%E5%AD%A6%20%2F%20A", "数学 / A"],
     ["/exams/percent%252Fid", "percent%2Fid"]
   ] as const)("decodes exactly one exam route segment %s", async (hash, examID) => {
@@ -79,7 +80,7 @@ describe("Batch8 equivalent student portal behavior", () => {
     expect(calls.every((call) => call.init.credentials === "include")).toBe(true);
   });
 
-  it.each(["", "/", "/exams/", "/exams/exam-1/extra", "/exams/exam-1?view=detail", "/exams/%E0%A4%A"])("returns malformed or non-exam route %s to home", async (hash) => {
+  it.each(["", "/", "/exams/", "/exams/exam-1/extra", "/exams/%E0%A4%A"])("returns malformed or non-exam route %s to home", async (hash) => {
     window.history.replaceState(null, "", `/#${hash}`);
     const calls = installApi();
     render(<App />);

@@ -96,7 +96,7 @@ function renderExamWorkspaceModule(context: Readonly<RouteRenderingContext>, rea
       case "questions":
         return <PaperRubricPage canManage={writeAllows(["exam:manage", "file:manage"])} canReadQuestionBank={hasEveryPermission(user,["question_bank:read"])} canImportQuestionBank={writeAllows(["question_bank:read","question_bank:create","question_bank:edit"])} questionBankScope={`${user.tenant}:${user.id}`} canManageAssessment={adminAllows(["exam:manage"])} fixedExamId={examId} mode="embedded" initialView={examWorkspace.section === "questions" ? "questions" : "materials"} onExamChanged={refreshWorkspace} onNavigate={navigate} />;
       case "template":
-        return <AnswerSheetTemplatePage key={`${user.tenant}:${user.id}:${examId}`} examId={examId} canManage={adminAllows(["exam:manage", "file:manage"])} canCalibrate={adminAllows(["grading:manage"])} onExamChanged={refreshWorkspace} />;
+        return <AnswerSheetTemplatePage key={`${user.tenant}:${user.id}:${examId}`} scopeKey={`${user.tenant}:${user.id}`} examId={examId} canManage={adminAllows(["exam:manage", "file:manage"])} canCalibrate={adminAllows(["grading:manage"])} onExamChanged={refreshWorkspace} />;
       case "settings":
         return <ExamReadinessPage examId={examId} canManage={writeAllows(["exam:manage"])} canManageAssessment={adminAllows(["exam:manage"])} onNavigate={navigate} onExamChanged={refreshWorkspace} />;
       case "capture":

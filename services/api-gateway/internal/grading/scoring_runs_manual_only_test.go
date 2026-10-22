@@ -37,7 +37,7 @@ func TestRouteScoringSegmentKeepsAutomatedRoutes(t *testing.T) {
 		{name: "rule input queued", kind: "fill_blank", rule: true, answer: true, wantKind: scoringRouteRuleInput},
 		{name: "omr without rule", kind: "multiple_choice", options: 4, wantKind: scoringRouteManualReview, wantReason: "scoring_rule_missing"},
 		{name: "omr without option regions", kind: "true_false", rule: true, options: 1, wantKind: scoringRouteManualReview, wantReason: "omr_option_regions_missing"},
-		{name: "rule input without answer", kind: "numeric", rule: true, wantKind: scoringRouteManualReview, wantReason: "rule_review_required"},
+		{name: "rule input without answer", kind: "numeric", rule: true, wantKind: scoringRouteObserveRule},
 		{name: "ai assisted subjective", kind: "essay", rule: true, answer: true, wantKind: scoringRouteManualReview, wantReason: "rule_review_required"},
 	}
 	for _, tt := range tests {
@@ -60,8 +60,8 @@ func TestFrozenScoringModeOverridesAvailableRule(t *testing.T) {
 			t.Fatalf("mode %s must not auto-confirm via a published rule: %#v", mode, route)
 		}
 	}
-	if route := routeScoringSegmentForMode("essay", "AI_ASSIST", true, true, 0); route.Kind != scoringRouteManualReview || route.Reason != "ai_assist_teacher_confirmation" {
-		t.Fatalf("AI suggestion must remain teacher-review-only: %#v", route)
+	if route := routeScoringSegmentForMode("essay", "AI_ASSIST", true, true, 0); route.Kind != scoringRouteImageAI {
+		t.Fatalf("AI must first produce an image suggestion: %#v", route)
 	}
 	if route := routeScoringSegmentForMode("fill_blank", "RULE_AUTO", true, true, 0); route.Kind != scoringRouteRuleInput {
 		t.Fatalf("frozen rule mode must retain rule path: %#v", route)

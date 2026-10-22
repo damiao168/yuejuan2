@@ -30,6 +30,7 @@ export interface ScoreEditorProps {
   onSubmit: (nominateAsGold?: boolean) => Promise<void>;
   quickSubmit?: boolean;
   onQuickSubmitChange?: (value: boolean) => void;
+  hidePrimarySubmit?: boolean;
 }
 
 export function ScoreEditor({
@@ -50,10 +51,12 @@ export function ScoreEditor({
   onMarkDispute,
   onSubmit,
   quickSubmit = false,
-  onQuickSubmitChange
+  onQuickSubmitChange,
+  hidePrimarySubmit = false
 }: Readonly<ScoreEditorProps>) {
   const { enabled: singleKeyShortcutsEnabled, setEnabled: setSingleKeyShortcutsEnabled } = useSingleKeyShortcuts();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 切任务后收起上一份答卷的反馈编辑区，不能跨答卷沿用展开状态。
   useEffect(() => { setFeedbackOpen(false); }, [context.task.id]);
   const previewScore = () => {
     if (!selectedGrade) return;
@@ -71,11 +74,21 @@ export function ScoreEditor({
         <strong>内部备注（教师与授权管理员可见）</strong><p>{selectedGrade.teacher_note ?? "没有建议，保留原文"}</p></div>,
       onOk: () => { onAdoptAiFeedback(); setFeedbackOpen(true); } });
   };
+  // 管理端查看和不可编辑任务只展示已有记录；草稿分不能冒充已确认成绩，也不展示无法执行的评分按钮。
+  if (!canEditDraft) return <section className="score-panel" aria-label="本题评分记录">
+    <div className="panel-head"><div><h2>评分记录</h2><p>满分 {maxScore || "—"}</p></div><StatusTag tone="neutral">只读</StatusTag></div>
+    <p>{draft.score === null ? "当前没有可展示的评分草稿。" : `评分草稿：${draft.score} / ${maxScore}`}</p>
+    {draft.comments || draft.studentFeedback || draft.privateNote ? <details className="grading-more-fields"><summary>评语与备注</summary><div className="grading-more-fields-body">
+      {draft.comments ? <p>教师评语：{draft.comments}</p> : null}
+      {draft.studentFeedback ? <p>学生反馈：{draft.studentFeedback}</p> : null}
+      {draft.privateNote ? <p>内部备注：{draft.privateNote}</p> : null}
+    </div></details> : null}
+  </section>;
   return (
     <section className="score-panel">
       <div className="panel-head">
         <div>
-          <h2>最终评分</h2>
+          <h2>本题评分</h2>
           <p>满分 {maxScore || "—"}</p>
         </div>
         {/* 高风险独立评分只开放第二意见展示，不从此入口采纳预填分数。 */}
@@ -159,11 +172,11 @@ export function ScoreEditor({
             提交并提名标准卷
           </Button>
         ) : null}
-        <Tooltip title={quickSubmit ? "Enter（连续阅卷）" : "Ctrl / ⌘ + Enter"}>
+        {!hidePrimarySubmit ? <Tooltip title={quickSubmit ? "Enter（连续阅卷）" : "Ctrl / ⌘ + Enter"}>
           <Button type="primary" icon={<CheckCircle2 size={16} />} disabled={!canSubmit || context.task.status === "submitted"} loading={actioning === "submit"} onClick={() => void onSubmit()}>
             提交并下一份
           </Button>
-        </Tooltip>
+        </Tooltip> : null}
       </Space>
     </section>
   );

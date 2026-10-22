@@ -4,7 +4,7 @@ import type { AiGrade } from "../../../api/review";
 import { createDraftSnapshot, createInitialDraft } from "./gradingWorkbench.model";
 import type { WorkbenchContext } from "./gradingWorkbench.types";
 import { mathEvidenceBinding, type MathStepSelection, type MathWorkbenchEvidence } from "./mathWorkbenchEvidence";
-import { canAdoptWorkbenchGrade, reviewDraftState, selectWorkbenchGrade, visibleMathSelection } from "./workbenchReviewState";
+import { canAdoptWorkbenchGrade, imageSuggestionState, reviewDraftState, selectWorkbenchGrade, visibleMathSelection } from "./workbenchReviewState";
 
 function context(): WorkbenchContext {
   return {
@@ -82,6 +82,55 @@ describe("batch8 review derived state (new helpers only)", () => {
     ctx.reviewContext.question_snapshot.risk_tier = "R3";
     ctx.reviewContext.question_snapshot.scoring_policy_snapshot.mode = "HUMAN_PRIMARY";
     expect(canAdoptWorkbenchGrade(grade, ctx, false, "mathematics", state, false)).toBe(false);
+  });
+
+  it("blocks old AI adoption after a current failure while keeping manual zero-score submission available", () => {
+    const { grade, state } = mathFixture();
+    const input = options();
+    input.ctx.reviewContext.ai_failure = { failure_kind: "output_truncated" };
+    input.snapshot.draft.score = 0;
+    expect(canAdoptWorkbenchGrade(grade, input.ctx, false, "history", state, false)).toBe(false);
+    expect(canAdoptWorkbenchGrade(grade, input.ctx, false, "mathematics", state, false)).toBe(false);
+    expect(reviewDraftState(input)).toMatchObject({ canEditDraft: true, canSubmit: true });
+    expect(input.snapshot.draft.score).toBe(0);
+  });
+
+  it("allows a current image-v3 suggestion without v2 math artifacts but rejects changed input, crop, question and snapshot bindings", () => {
+    const { grade: mathGrade, state } = mathFixture();
+    const crop = "a".repeat(64);
+    const grade: AiGrade = { ...mathGrade, id: "image-grade", answer_version: "input-v3", raw_output: {
+      schema_version: "grading-image-v3", input_version_id: "input-v3", assessment_snapshot_id: "snapshot",
+      observation: { input_version_id: "input-v3", crop_sha256: crop, members: [{ question_id: "question" }] }
+    }, math_artifact_id: undefined, math_artifact_version: undefined, math_correction_revision: undefined, math_scoring_version: undefined };
+    const ctx = context();
+    Object.assign(ctx.task, { answer_segment_id: "segment", question_id: "question" });
+    Object.assign(ctx.reviewContext.question_snapshot, { id: "snapshot" });
+    ctx.reviewContext.question = { id: "question", score: 2 } as WorkbenchContext["reviewContext"]["question"];
+    ctx.reviewContext.frozen_rubric = { version: "rubric" } as WorkbenchContext["reviewContext"]["frozen_rubric"];
+    ctx.reviewContext.ai_second_opinion = { available: true, presentation: "explicit_second_opinion", score_prefill_allowed: true,
+      metadata: { ...grade, input_binding: { input_mode: "image", input_protocol: "grading-image-v3", input_version_id: "input-v3",
+        crop_sha256: crop, assessment_snapshot_id: "snapshot", answer_segment_id: "segment", question_id: "question", subjective_run_id: "run" } } };
+    const unavailable = { ...state, phase: "unavailable" as const, score: null, understanding: null };
+    expect(imageSuggestionState(grade, ctx).current).toBe(true);
+    expect(canAdoptWorkbenchGrade(grade, ctx, false, "mathematics", unavailable, false)).toBe(true);
+    // 有成功角色不代表已有汇总；失败角色不能被当成零分，也不能把父候选分直接预填。
+    const incomplete = { ...grade, raw_output: { ...grade.raw_output, panel_execution: { decision: "teacher_review", role_results: [{ role: "primary_a", status: "succeeded", score: 2 }] } } };
+    expect(imageSuggestionState(incomplete, ctx).current).toBe(false);
+    expect(canAdoptWorkbenchGrade(incomplete, ctx, false, "mathematics", unavailable, false)).toBe(false);
+    const aggregateZero = { ...grade, suggested_score: 0, raw_output: { ...grade.raw_output, panel_execution: { decision: "primary_consensus", final_score: 0 } } };
+    expect(canAdoptWorkbenchGrade(aggregateZero, ctx, false, "mathematics", unavailable, false)).toBe(true);
+    expect(selectWorkbenchGrade([{ ...mathGrade, created_at: "2026-10-01" }, grade], "mathematics", state, false, ctx)).toBe(grade);
+    for (const field of ["input_version_id", "crop_sha256", "question_id", "assessment_snapshot_id"]) {
+      const changed = structuredClone(ctx);
+      (changed.reviewContext.ai_second_opinion!.metadata.input_binding as Record<string, unknown>)[field] = "changed";
+      expect(canAdoptWorkbenchGrade(grade, changed, false, "mathematics", unavailable, false)).toBe(false);
+    }
+    const duplicate = { ...grade, raw_output: { ...grade.raw_output, observation: { input_version_id: "input-v3", crop_sha256: crop, members: [{ question_id: "question" }, { question_id: "question" }] } } };
+    expect(canAdoptWorkbenchGrade(duplicate, ctx, false, "mathematics", unavailable, false)).toBe(false);
+    expect(canAdoptWorkbenchGrade(grade, ctx, false, "mathematics", unavailable, true)).toBe(false);
+    ctx.reviewContext.question_snapshot.risk_tier = "R3";
+    ctx.reviewContext.question_snapshot.scoring_policy_snapshot.mode = "HUMAN_PRIMARY";
+    expect(canAdoptWorkbenchGrade(grade, ctx, false, "mathematics", unavailable, false)).toBe(false);
   });
 
   it.each(["conflict", "loading", "unavailable"] as const)("clears step selection while %s", (phase) => {

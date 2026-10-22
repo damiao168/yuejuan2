@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"edugrade-enterprise/services/api-gateway/internal/assessment"
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/config"
@@ -37,6 +38,7 @@ type ExamPreparationModule struct {
 	SegmentStore       segment.Store
 	AssessmentStore    assessment.Store
 	PaperImportService *paper.DocumentImportService
+	RubricDraftJobs    *paper.RubricDraftJobs
 
 	ExamHandler         *exam.Handler
 	PaperHandler        *paper.Handler
@@ -53,12 +55,14 @@ type ExamPreparationModule struct {
 }
 
 type ExamPreparationDependencies struct {
-	AuthStore             auth.Store
-	ObjectStore           files.ObjectStorage
-	Reconciliation        files.ReconciliationReader
-	Reviews               review.Store
-	Processing            workspace.ProcessingReader
-	DocumentModelResolver func(context.Context, string) (*paper.DocumentModelConfig, error)
+	DB                     *sql.DB
+	AuthStore              auth.Store
+	ObjectStore            files.ObjectStorage
+	Reconciliation         files.ReconciliationReader
+	Reviews                review.Store
+	Processing             workspace.ProcessingReader
+	DocumentModelResolver  func(context.Context, string) (*paper.DocumentModelConfig, error)
+	TemplateVisionResolver func(context.Context, string) (*paper.DocumentModelConfig, error)
 }
 
 // 试卷导入、分段图片和工作区共享同一组文件/对象存储；这样读到的资源边界与写入导入状态保持一致。
@@ -66,10 +70,17 @@ func NewExamPreparationModule(cfg config.Config, stores ExamPreparationStores, d
 	fileHandler := files.NewHandler(stores.Files, dependencies.ObjectStore, dependencies.AuthStore, cfg.Files).WithReconciliationReader(dependencies.Reconciliation)
 	segmentHandler := segment.NewHandler(stores.Segments, stores.Paper, stores.Submissions, dependencies.AuthStore, stores.Files, dependencies.ObjectStore)
 	paperImportService := paper.NewDocumentImportService(stores.Paper, stores.Files, dependencies.ObjectStore, cfg.AIService.URL, cfg.AIService.Token, cfg.AIService.Timeout)
-	paperHandler := paper.NewHandler(stores.Paper, dependencies.AuthStore).WithDocumentImport(paperImportService)
+	paperHandler := paper.NewHandler(stores.Paper, dependencies.AuthStore).WithDocumentImport(paperImportService).WithQuestionRubricExams(stores.Exam).WithTemplateLibraryExams(stores.Exam)
+	paperHandler.WithTemplateLibraryVisualMatcher(paper.NewTemplateLibraryVisualMatcher(paperImportService, dependencies.ObjectStore))
+	paperHandler.WithReferenceMaterials(paper.NewReferenceMaterialsService(dependencies.DB, stores.Files, dependencies.ObjectStore, cfg.Files.Bucket))
 	if dependencies.DocumentModelResolver != nil {
 		paperHandler.WithDocumentModelResolver(dependencies.DocumentModelResolver)
 	}
+	if dependencies.TemplateVisionResolver != nil {
+		paperHandler.WithTemplateVisionResolver(dependencies.TemplateVisionResolver)
+	}
+	rubricDraftJobs := paper.NewRubricDraftJobs(stores.Paper, stores.Exam, paperImportService, cfg.AIService.Timeout)
+	paperHandler.WithRubricDraftJobs(rubricDraftJobs)
 	// 同一读服务同时承接工作区和助手；助手只解释投影，不另写考试进度规则。
 	workspaceService := workspace.NewService(workspace.Dependencies{
 		Exams: stores.Exam, Papers: stores.Paper, PaperImports: stores.Paper, Submissions: stores.Submissions, Assessments: stores.Assessments,
@@ -84,6 +95,7 @@ func NewExamPreparationModule(cfg config.Config, stores ExamPreparationStores, d
 		SegmentStore:        stores.Segments,
 		AssessmentStore:     stores.Assessments,
 		PaperImportService:  paperImportService,
+		RubricDraftJobs:     rubricDraftJobs,
 		ExamHandler:         exam.NewHandler(stores.Exam, dependencies.AuthStore),
 		PaperHandler:        paperHandler,
 		FileHandler:         fileHandler,

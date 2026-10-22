@@ -1,0 +1,18 @@
+# 此可选层复用已经构建并审核的 OCR 镜像，不重新安装或覆盖主进程的 NumPy/OpenCV。
+# 两个参数必须指向兼容的 Python 3.11 / x86_64 镜像；发布时记录实际镜像摘要。
+ARG GRADING_AGENT_IMAGE
+ARG TEMPLATE_OCR_IMAGE
+FROM ${TEMPLATE_OCR_IMAGE} AS template-ocr-runtime
+RUN python -c "import platform,sys; assert sys.version_info[:2] == (3,11) and platform.machine() == 'x86_64'"
+FROM ${GRADING_AGENT_IMAGE}
+
+USER root
+COPY --from=template-ocr-runtime /usr/local/lib/python3.11/site-packages/ /opt/template-ocr/site-packages/
+COPY --from=template-ocr-runtime /usr/lib/x86_64-linux-gnu/libGL.so.1* /opt/template-ocr/lib/
+COPY --from=template-ocr-runtime /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0* /opt/template-ocr/lib/
+COPY --from=template-ocr-runtime /usr/lib/x86_64-linux-gnu/libGLX.so.0* /opt/template-ocr/lib/
+
+# 静态标签模型由只读卷提供；模型缺失时返回待核对，不触发下载或调用业务 OCR 队列。
+RUN python -c "import platform,sys; assert sys.version_info[:2] == (3,11) and platform.machine() == 'x86_64'" \
+    && mkdir -p /opt/template-ocr/models
+USER edugrade

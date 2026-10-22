@@ -1,9 +1,10 @@
-/* 学校运营仪表盘：三个等宽且占满可用宽度的业务区块。 */
+/* 成员概况固定在窄栏，考试表格使用剩余宽度；窄屏再按阅读顺序折行。 */
 .school-dashboard { gap: 16px; font-variant-numeric: tabular-nums; }
 .school-dashboard .dashboard-heading { min-height: 48px; padding: 0; }
 .school-dashboard .dashboard-heading h1 { margin: 0; font-size: 1.25rem; font-weight: 600; line-height: 28px; }
 .school-dashboard .dashboard-heading p { margin: 0; font-size: var(--eg-font-caption); line-height: 20px; }
 .school-dashboard-sections { display: grid; gap: 16px; }
+.school-dashboard-overview { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 1fr); gap: 16px; align-items: stretch; }
 
 .school-dashboard-section {
   min-width: 0;
@@ -39,19 +40,23 @@
 
 .member-summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   border-top: 1px solid #e5e6eb;
 }
+
+.member-school-name { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 4px 10px; color: #646a73; }
+.member-school-name svg { flex: 0 0 auto; }
+.member-school-name strong { min-width: 0; color: #1f2329; font-size: var(--eg-font-body); font-weight: 500; overflow-wrap: anywhere; }
 
 .member-summary-grid > button {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  min-height: 82px;
-  padding: 12px 16px;
+  min-height: 76px;
+  padding: 8px 4px;
   border: 0;
-  border-right: 1px solid #e5e6eb;
+  border-bottom: 1px solid #e5e6eb;
   background: transparent;
   color: #1f2329;
   text-align: left;
@@ -59,14 +64,13 @@
   transition: background-color 140ms ease;
 }
 
-.member-summary-grid > button:first-child { padding-left: 4px; }
-.member-summary-grid > button:last-child { border-right: 0; }
+.member-summary-grid > button:last-child { border-bottom: 0; }
 .member-summary-grid > button:hover { background: #f5f7fa; }
 .member-summary-grid > button:focus-visible { outline: 2px solid #1677ff; outline-offset: -2px; }
 .member-summary-icon { color: #646a73; }
 .member-summary-copy { display: grid; min-width: 0; }
 .member-summary-copy small { color: #646a73; font-size: var(--eg-font-caption); line-height: 20px; }
-.member-summary-copy strong { overflow: hidden; color: #1f2329; font-size: var(--eg-font-section); font-weight: 600; line-height: 26px; text-overflow: ellipsis; white-space: nowrap; }
+.member-summary-copy strong { color: #1f2329; font-size: var(--eg-font-reading); font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
 .member-summary-copy em { color: var(--eg-color-muted); font-size: var(--eg-font-caption); font-style: normal; line-height: 20px; }
 .member-summary-action { display: inline-flex; align-items: center; gap: 4px; color: #1677ff; font-size: var(--eg-font-body); font-weight: 500; white-space: nowrap; }
 
@@ -78,11 +82,17 @@
 .dashboard-operation-table tbody tr:hover { background: #f5f7fa; }
 .dashboard-operation-table .number-cell { text-align: right; }
 .dashboard-operation-table .has-issue { color: #cf1322; font-weight: 600; }
-.exam-operation-table th:first-child { width: 31%; }
-.exam-operation-table th:nth-child(2) { width: 12%; }
-.exam-operation-table th:nth-child(3) { width: 15%; }
-.exam-operation-table th:nth-child(4), .exam-operation-table th:nth-child(5) { width: 10%; }
+.exam-operation-table { min-width: 530px; }
+.exam-operation-table th, .exam-operation-table td { padding: 7px 8px; }
+.exam-operation-table th { height: 36px; }
+.exam-operation-table td { height: 42px; }
+.exam-operation-table th:first-child { width: 34%; }
+.exam-operation-table th:nth-child(2) { width: 9%; }
+.exam-operation-table th:nth-child(3) { width: 16%; }
+.exam-operation-table th:nth-child(4) { width: 10%; }
+.exam-operation-table th:nth-child(5) { width: 9%; }
 .exam-operation-table th:last-child { width: 22%; }
+.exam-operation-table .table-action-link { white-space: nowrap; }
 
 .table-primary-link, .table-action-link { border: 0; background: transparent; cursor: pointer; }
 .table-primary-link { display: block; overflow: hidden; max-width: 100%; padding: 0; color: #1f2329; font-size: var(--eg-font-body); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
@@ -114,10 +124,11 @@
 .dashboard-inline-empty strong { color: #1f2329; font-size: var(--eg-font-body); font-weight: 500; line-height: 22px; }
 .dashboard-inline-empty small { color: #646a73; font-size: var(--eg-font-caption); line-height: 20px; }
 
-@media (max-width: 900px) {
-  .member-summary-grid { grid-template-columns: 1fr; }
-  .member-summary-grid > button, .member-summary-grid > button:first-child { min-height: 72px; padding: 10px 4px; border-right: 0; border-bottom: 1px solid #e5e6eb; }
-  .member-summary-grid > button:last-child { border-bottom: 0; }
+@media (max-width: 1050px) {
+  .school-dashboard-overview { grid-template-columns: 1fr; }
+  .member-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .member-summary-grid > button { border-bottom: 0; }
+  .member-summary-grid > button + button { padding-left: 12px; border-left: 1px solid #e5e6eb; }
 }
 
 @media (max-width: 620px) {
@@ -125,6 +136,9 @@
   .school-dashboard-section-head { align-items: flex-start; }
   .school-dashboard-section-title p { display: none; }
   .member-summary-action { font-size: var(--eg-font-body); }
+  .member-summary-grid { grid-template-columns: 1fr; }
+  .member-summary-grid > button { min-height: 70px; border-bottom: 1px solid #e5e6eb; }
+  .member-summary-grid > button + button { padding-left: 4px; border-left: 0; }
   .grading-metric-strip { justify-content: space-between; }
   .grading-metric-strip > span { display: grid; min-width: 0; padding: 8px 12px; }
   .grading-metric-strip > span:first-child { padding-left: 4px; }

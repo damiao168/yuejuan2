@@ -82,7 +82,7 @@ fn disk_bytes(path: &Path) -> Result<u64, String> {
 }
 
 // 空闲容量必须取当前账号 spool 所在卷，不能用其它盘的空闲量作保证；不可读取时明确返回未知。
-fn volume_free_bytes(root: &Path) -> Option<u64> {
+pub(crate) fn volume_free_bytes(root: &Path) -> Option<u64> {
     #[cfg(windows)]
     {
         use std::os::windows::ffi::OsStrExt;

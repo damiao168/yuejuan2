@@ -18,6 +18,12 @@ describe("fast confirmation eligibility", () => {
   it("allows an assigned low-risk evidence-backed suggestion", () => {
     expect(fastConfirmCandidate(context(), "grader")?.score).toBe(8);
   });
+  it("rejects an old successful grade when the current execution failed even without warnings", () => {
+    const failed = context();
+    failed.reviewContext.ai_failure = { failure_kind: "output_truncated" };
+    expect(failed.warnings).toEqual([]);
+    expect(fastConfirmCandidate(failed, "grader")).toBeNull();
+  });
   it("requires current ownership, a strict confidence floor and complete evidence", () => {
     const owned = context();
     expect(fastConfirmCandidate(owned, "another-grader")).toBeNull();

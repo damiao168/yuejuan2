@@ -2,6 +2,7 @@ import { ApiClientError, getUserErrorMessage } from "../../../api/client";
 import type { RubricPoint } from "../../../api/papers";
 import type { AiGrade, ReviewDraft, ScoringRunItem } from "../../../api/review";
 import type { StatusTone } from "../../../types";
+import { scoringProgressLabel, scoringReasonLabels } from "./scoringProgress";
 import type {
   DraftFallbackSnapshot,
   ScoreDraft,
@@ -108,6 +109,8 @@ export const recognitionSourceLabels: Record<string, string> = {
 };
 
 export const riskFlagLabels: Record<string, string> = {
+  trial_sample: "试改样本，需完整人工复核",
+  evidence_incomplete: "证据不完整",
   low_confidence: "置信度低",
   ocr_low_confidence: "识别把握不足",
   ocr_text_empty_review_required: "未识别到作答内容",
@@ -133,6 +136,7 @@ export const evidenceTypeLabels: Record<string, string> = {
 };
 
 export const reasonLabels: Record<string, string> = {
+  ...scoringReasonLabels,
   rule_not_auto_confirmed: "规则未能自动确认",
   rule_review_required: "规则评分需人工确认",
   grading_failure: "评分处理失败",
@@ -195,6 +199,8 @@ export function formatAnswer(value: unknown): string {
 export function resultState(item: ScoringRunItem): { label: string; tone: StatusTone } {
   if (item.state === "confirmed" && item.grade_source === "rule_confirmed") return { label: "自动确认", tone: "success" };
   if (item.state === "confirmed") return { label: "人工完成", tone: "success" };
+  const progressLabel = scoringProgressLabel(item);
+  if (progressLabel) return { label: progressLabel, tone: ["blocked", "succeeded"].includes(item.processing_status ?? "") ? "warning" : "processing" };
   if (item.state === "review") return { label: "待人工复核", tone: "warning" };
   if (item.state === "failed") return { label: "处理失败", tone: "danger" };
   return { label: scoringItemStateLabels[item.state] ?? "处理中", tone: "processing" };
@@ -251,16 +257,16 @@ export interface ServerDraftSnapshot {
 }
 
 /** 将权威 API 草稿转换为与内存回退草稿相同的结构。 */
-export function serverDraftSnapshot(initial: ScoreDraft, draft: ReviewDraft | null, canViewOriginalImage: boolean): ServerDraftSnapshot {
+export function serverDraftSnapshot(initial: ScoreDraft, draft: ReviewDraft | null, canViewOriginalImage: boolean, defaultMode: ViewerMode = "segment"): ServerDraftSnapshot {
   if (!draft) {
     return {
-      snapshot: createDraftSnapshot(initial, "segment", 1, 0, { x: 0, y: 0 }, true),
+      snapshot: createDraftSnapshot(initial, defaultMode, 1, 0, { x: 0, y: 0 }, true),
       revision: 0,
       updatedAt: 0
     };
   }
   const viewer = draft.viewer_state;
-  const savedMode = ["segment", "original", "ocr"].includes(String(viewer.mode)) ? viewer.mode as ViewerMode : "segment";
+  const savedMode = ["segment", "group", "original", "ocr"].includes(String(viewer.mode)) ? viewer.mode as ViewerMode : defaultMode;
   const mode = savedMode === "original" && !canViewOriginalImage ? "segment" : savedMode;
   const scale = Number(viewer.scale ?? 1);
   const rotation = Number(viewer.rotation ?? 0);
@@ -273,6 +279,7 @@ export function serverDraftSnapshot(initial: ScoreDraft, draft: ReviewDraft | nu
         comments: draft.comments,
         privateNote: draft.private_note,
         studentFeedback: draft.student_feedback,
+        reason: typeof viewer.grading_reason === "string" ? viewer.grading_reason : initial.reason,
         rubricSelections: Object.fromEntries(draft.rubric_selections.map((item) => [item.point_id, item.score]))
       },
       mode,
@@ -296,7 +303,7 @@ export function fallbackSnapshot(value: unknown, initial: ScoreDraft): DraftFall
   const selections = fallbackRubricSelections(cachedDraft, initial);
   const rawOffset = cachedViewer.offset && typeof cachedViewer.offset === "object" ? cachedViewer.offset as { x?: unknown; y?: unknown } : {};
   const score = typeof cachedDraft.score === "number" && Number.isFinite(cachedDraft.score) ? cachedDraft.score : null;
-  const mode = cachedViewer.mode === "original" || cachedViewer.mode === "ocr" || cachedViewer.mode === "segment" ? cachedViewer.mode : "segment";
+  const mode = cachedViewer.mode === "original" || cachedViewer.mode === "ocr" || cachedViewer.mode === "segment" || cachedViewer.mode === "group" ? cachedViewer.mode : "segment";
   const scale = typeof cachedViewer.scale === "number" && Number.isFinite(cachedViewer.scale) ? Math.min(4, Math.max(0.25, cachedViewer.scale)) : 1;
   const rotation = typeof cachedViewer.rotation === "number" && Number.isFinite(cachedViewer.rotation) ? cachedViewer.rotation : 0;
   const fit = cachedViewer.fit !== false;

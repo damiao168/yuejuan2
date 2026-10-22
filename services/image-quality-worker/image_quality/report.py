@@ -39,7 +39,18 @@ def build_quality_report(
     measurements: QualityMeasurements,
     assessment: QualityReportDecision,
 ) -> dict[str, Any]:
-    # 这里只汇总测量与既有决策，不在报告组装时重新评分或修改证据。
+    # 纸边分数仍保留为诊断值；缺少模板配准证据时，不能将它展示成答题区完整性已通过或失败。
+    dimensions = measurements.dimensions
+    if isinstance(dimensions.get("completeness"), dict):
+        dimensions = {
+            **dimensions,
+            "completeness": {
+                **dimensions["completeness"],
+                "status": "not_evaluated",
+                "reason": "template_registration_not_available_at_quality_stage",
+            },
+        }
+    # 原始测量和既有决策保持不变，报告不在这里重新评分。
     return {
         "metric_schema_version": METRIC_SCHEMA_VERSION,
         "report_schema_version": REPORT_SCHEMA_VERSION,
@@ -59,7 +70,7 @@ def build_quality_report(
         "illumination": measurements.illumination,
         "occlusion_reflection": measurements.occlusion,
         "noise_compression": measurements.degradation,
-        "dimensions": measurements.dimensions,
+        "dimensions": dimensions,
         "hard_gates": assessment.hard_gates,
         "quality_score": assessment.quality_score,
         "decision": assessment.decision,
@@ -72,7 +83,8 @@ def build_quality_report(
         },
         "predictor": {
             "kind": "weighted_rules",
-            "version": "weighted-rules-v2",
+            # 规则版本区分旧纸边误拒绝与待配准诊断，报告字段结构仍沿用 v2。
+            "version": "weighted-rules-v2.1",
             "calibration_status": "awaiting_real_answer_sheet_samples",
             "future_model": "xgboost_ocr_failure_probability",
         },

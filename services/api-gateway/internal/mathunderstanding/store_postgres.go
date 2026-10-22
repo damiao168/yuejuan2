@@ -20,6 +20,21 @@ func (s *PostgresStore) CreateArtifact(ctx context.Context, tenantID string, inp
 		return Artifact{}, err
 	}
 	defer tx.Rollback()
+	item, err := s.createArtifactInTx(ctx, tx, tenantID, input)
+	if err != nil {
+		return Artifact{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Artifact{}, err
+	}
+	return item, nil
+}
+
+func (s *PostgresStore) createArtifactInTx(ctx context.Context, tx *sql.Tx, tenantID string, input CreateArtifactInput) (Artifact, error) {
+	if tenantID == "" || ValidateCreateArtifact(input) != nil {
+		return Artifact{}, ErrInvalidInput
+	}
+	var err error
 	var lockedSegmentID string
 	// 先核实题块与考试快照的归属，并锁住题块；并发写入同一题块时串行分配版本、切换当前记录。
 	if err = tx.QueryRowContext(ctx, `
@@ -40,8 +55,7 @@ WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid AND snap.id=$3::uuid
 	var existingID string
 	err = tx.QueryRowContext(ctx, `SELECT id::text FROM math_understanding_artifact WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND input_hash=$3 AND stage='recognition' ORDER BY version DESC LIMIT 1`, tenantID, input.AnswerSegmentID, input.InputHash).Scan(&existingID)
 	if err == nil {
-		_ = tx.Rollback()
-		return s.GetArtifact(ctx, tenantID, existingID)
+		return s.getArtifact(ctx, tx, tenantID, "id=$2::uuid", existingID)
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return Artifact{}, err
@@ -67,9 +81,6 @@ VALUES($1::uuid,$2,$3::uuid,$4::uuid,$5,$6,$7,$8::jsonb,$9::jsonb,$10::jsonb,$11
 RETURNING id::text,created_at`, tenantID, input.SubjectCode, input.AnswerSegmentID, input.ExamQuestionSnapshotID, version, input.InputHash, input.EngineVersion, blocks, formulas, relations, graph, checks, evidence)
 	item := Artifact{TenantID: tenantID, AnswerSegmentID: input.AnswerSegmentID, ExamQuestionSnapshotID: input.ExamQuestionSnapshotID, Version: version, InputHash: input.InputHash, EngineVersion: input.EngineVersion, IsCurrent: true, Stage: "recognition", QualitySummary: map[string]any{}, CreateArtifactInput: cloneInput(input)}
 	if err = row.Scan(&item.ID, &item.CreatedAt); err != nil {
-		return Artifact{}, err
-	}
-	if err = tx.Commit(); err != nil {
 		return Artifact{}, err
 	}
 	return item, nil

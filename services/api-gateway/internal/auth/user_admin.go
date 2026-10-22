@@ -73,21 +73,9 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "invalid user fields")
 		return
 	}
-	input.Username = strings.TrimSpace(input.Username)
-	input.Phone = strings.TrimSpace(input.Phone)
-	input.EmployeeNo = strings.TrimSpace(input.EmployeeNo)
-	input.DisplayName = strings.TrimSpace(input.DisplayName)
-	input.RoleCode = strings.TrimSpace(input.RoleCode)
-	input.RoleCodes = uniqueSortedIDs(input.RoleCodes)
-	input.SchoolID = strings.TrimSpace(input.SchoolID)
-	input.ClassIDs = uniqueSortedIDs(input.ClassIDs)
-	if input.Phone != "" {
-		normalizedPhone, err := NormalizePhone(input.Phone)
-		if err != nil {
-			httpx.Error(w, r, http.StatusBadRequest, "invalid_phone", "phone must be a valid mobile number")
-			return
-		}
-		input.Phone = normalizedPhone
+	if err := normalizeManagedUserInput(&input); err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_phone", "phone must be a valid mobile number")
+		return
 	}
 	invited := input.Password == ""
 	if input.DisplayName == "" || (input.RoleCode == "" && len(input.RoleCodes) == 0) || (invited && input.Phone == "" && input.EmployeeNo == "") || (!invited && input.Username == "") {
@@ -148,6 +136,26 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	httpx.JSON(w, http.StatusCreated, response)
+}
+
+func normalizeManagedUserInput(input *CreateManagedUserInput) error {
+	input.Username = strings.TrimSpace(input.Username)
+	input.Phone = strings.TrimSpace(input.Phone)
+	input.EmployeeNo = strings.TrimSpace(input.EmployeeNo)
+	input.DisplayName = strings.TrimSpace(input.DisplayName)
+	input.RoleCode = strings.TrimSpace(input.RoleCode)
+	input.RoleCodes = uniqueSortedIDs(input.RoleCodes)
+	input.SchoolID = strings.TrimSpace(input.SchoolID)
+	input.ClassIDs = uniqueSortedIDs(input.ClassIDs)
+	if input.Phone == "" {
+		return nil
+	}
+	normalizedPhone, err := NormalizePhone(input.Phone)
+	if err != nil {
+		return err
+	}
+	input.Phone = normalizedPhone
+	return nil
 }
 
 func writeManagedUserCreateError(w http.ResponseWriter, r *http.Request, err error) {

@@ -80,7 +80,7 @@ func TestManagedRoutingRefactorFiltersBeforeChoosingStableIdentity(t *testing.T)
 		AllowedModelConfigIDs: []string{firstID, secondID, thirdID}, FallbackMode: "manual_only"}
 	base := ManagedAPIConfig{TenantID: policy.TenantID, ProviderKey: "vendor", ModelName: "same", ModelVersion: "frozen-v1",
 		Status: "active", Modalities: []string{"text"}, LastTestStatus: "success",
-		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3"}
+		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v4"}
 	first, second, third := base, base, base
 	first.ID, first.LastTestStatus = firstID, "failed"
 	second.ID = secondID
@@ -173,7 +173,7 @@ func TestPolicyRefactorPreservesValidationOrderAndFailureAtomicity(t *testing.T)
 func TestPolicyRefactorKeepsLastDuplicateEligibilityAndDoesNotRequireConnectionTest(t *testing.T) {
 	const modelID = "11111111-1111-4111-8111-111111111111"
 	valid := ManagedAPIConfig{ID: modelID, TenantID: "school", Status: "active", LastTestStatus: "failed",
-		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3"}
+		LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v4"}
 	disabled := valid
 	disabled.Status = "disabled"
 	body := `{"mode":"cloud_suggestion","external_enabled":true,"text_export_enabled":true,"allowed_model_config_ids":["` + modelID + `"],"fallback_mode":"manual_only","expected_version":1,"reason":"review"}`
@@ -308,7 +308,7 @@ func TestEvaluationCandidateRefactorPreservesErrorOrderAndFailureState(t *testin
 		t.Run(tt.name, func(t *testing.T) {
 			store := NewMemoryStore()
 			store.evaluations[run.ID] = run
-			store.managedConfigs["model"] = ManagedAPIConfig{ID: "model", TenantID: "school", Status: "active", Modalities: []string{"text", "image"}, LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v3"}
+			store.managedConfigs["model"] = ManagedAPIConfig{ID: "model", TenantID: "school", Status: "active", Modalities: []string{"text", "image"}, LastCapabilityStatus: "success", LastCapabilityVersion: "structured-json-v4"}
 			candidate := EvaluationCandidate{ID: "candidate", RunID: run.ID, TenantID: run.TenantID, ModelConfigID: "model", ModelVersion: "frozen-v1"}
 			store.candidates[candidate.ID] = candidate
 			request := input

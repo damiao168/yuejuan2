@@ -60,11 +60,14 @@ type ModelHealth struct {
 	CredentialHint         string     `json:"credential_hint,omitempty"`
 	ConnectionStatus       string     `json:"connection_status,omitempty"`
 	ConnectionMessage      string     `json:"connection_message,omitempty"`
+	TextStatus             string     `json:"text_status,omitempty"`
+	TextMessage            string     `json:"text_message,omitempty"`
 	CapabilityStatus       string     `json:"capability_status,omitempty"`
 	CapabilityVersion      string     `json:"capability_version,omitempty"`
 	CapabilityMessage      string     `json:"capability_message,omitempty"`
 	LatencyMS              int64      `json:"latency_ms,omitempty"`
 	LastTestedAt           *time.Time `json:"last_tested_at,omitempty"`
+	LastTextTestedAt       *time.Time `json:"last_text_tested_at,omitempty"`
 	LastCapabilityTestedAt *time.Time `json:"last_capability_tested_at,omitempty"`
 }
 

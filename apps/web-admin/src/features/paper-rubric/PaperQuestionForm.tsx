@@ -9,18 +9,13 @@ import type { PaperRubricViewContext } from "./paperRubricViewTypes";
 type ViewProps = Readonly<{ context: PaperRubricViewContext }>;
 
 export function PaperQuestionForm({ context }: ViewProps) {
-  const { questionWorkflow, access, selectedQuestion, actions } = context;
+  const { questionWorkflow, access, selectedQuestion } = context;
   const watchedType = context.state.watchedQuestionType;
   const answerOptions = Form.useWatch("options", questionWorkflow.form) ?? selectedQuestion?.options ?? [];
-  return <Form form={questionWorkflow.form} layout="vertical" disabled={access.questionDisabled} onValuesChange={actions.markQuestionDirty}>
-    <div className="form-grid paper-question-basics">
-      <Form.Item label="题号" name="question_no" rules={[{ required: true, message: "请输入题号" }]}><Input placeholder="Q1" /></Form.Item>
-      <Form.Item label="题型" name="question_type" rules={[{ required: true, message: "请选择题型" }]}><Select options={questionTypeOptions} /></Form.Item>
-      <Form.Item label="分值" name="score" rules={[{ required: true, message: "请输入分值" }]}><InputNumber min={0.5} precision={1} className="full-width-control" /></Form.Item>
-    </div>
+  return <>
     <Form.Item label="题干" name="stem"><Input.TextArea autoSize={{ minRows: 3, maxRows: 9 }} placeholder="上传资料识别后自动填充，或在此录入题干" /></Form.Item>
     {(watchedType === "single_choice" || watchedType === "multiple_choice") && <Form.List name="options">{renderQuestionOptions}</Form.List>}
-    <Form.Item label="标准答案" name="standard_answer" rules={[{ required: true, message: "请输入标准答案" }]}>
+    <Form.Item className="paper-question-answer-target" label="标准答案" name="standard_answer" rules={[{ required: true, message: "请输入标准答案" }]}>
       <StructuredAnswerEditor questionType={watchedType} options={answerOptions} disabled={access.questionDisabled} />
     </Form.Item>
     {access.isFillBlank && <Alert type={hasStandardAnswer(selectedQuestion) ? "info" : "warning"} showIcon
@@ -34,7 +29,15 @@ export function PaperQuestionForm({ context }: ViewProps) {
         <Form.Item label="允许相对误差（%）" name="tolerance_relative"><InputNumber min={0} className="full-width-control" /></Form.Item>
       </div></Form.Item>}
     </details>
-  </Form>;
+  </>;
+}
+
+export function PaperQuestionBasics() {
+  return <div className="paper-question-basics paper-question-basics-compact">
+    <Form.Item label="题号" name="question_no" rules={[{ required: true, message: "请输入题号" }]}><Input placeholder="Q1" /></Form.Item>
+    <Form.Item label="题型" name="question_type" rules={[{ required: true, message: "请选择题型" }]}><Select options={questionTypeOptions} /></Form.Item>
+    <Form.Item className="paper-question-score-target" label="分值" name="score" rules={[{ required: true, message: "请输入分值" }]}><InputNumber min={0.5} precision={1} className="full-width-control" /></Form.Item>
+  </div>;
 }
 
 function renderQuestionOptions(fields: FormListFieldData[], { add, remove }: FormListOperation) {

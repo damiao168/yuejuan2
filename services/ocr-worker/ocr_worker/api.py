@@ -36,9 +36,10 @@ def _open_request(req: request.Request, *, timeout: float) -> Any:
 
 
 class APIError(RuntimeError):
-    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+    def __init__(self, message: str, *, status_code: int | None = None, retryable: bool | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.retryable = retryable
 
 
 class AuthenticationError(APIError):
@@ -287,8 +288,11 @@ class EduGradeClient:
             if exc.code == 401:
                 raise AuthenticationError(f"download unauthorized: {exc.code}") from exc
             raise APIError(f"download failed: {exc.code}", status_code=exc.code) from exc
-        except (OSError, ResponseValidationError) as exc:
-            raise APIError("download failed") from exc
+        except ResponseValidationError as exc:
+            # 响应过大或内容不合法不会因重试而变有效；与暂时网络故障分别标记。
+            raise APIError("download response is invalid", retryable=False) from exc
+        except OSError as exc:
+            raise APIError("download failed", retryable=True) from exc
 
     def _request(
         self,
@@ -359,7 +363,7 @@ def _trusted_service_url(base_url: str, path_or_url: str) -> str:
             target.port or default_ports.get(target.scheme.lower()),
         )
     except ValueError as exc:
-        raise APIError("service URL is invalid") from exc
+        raise APIError("service URL is invalid", retryable=False) from exc
     if (
         target.scheme.lower() not in default_ports
         or target_origin != base_origin
@@ -367,5 +371,5 @@ def _trusted_service_url(base_url: str, path_or_url: str) -> str:
         or target.password is not None
         or target.fragment
     ):
-        raise APIError("service URL must remain on the configured API origin")
+        raise APIError("service URL must remain on the configured API origin", retryable=False)
     return candidate

@@ -147,6 +147,21 @@ func TestEngineNumericFractionPercentAndRelativeTolerance(t *testing.T) {
 	}
 }
 
+func TestEngineRejectsZeroDenominatorInsteadOfParsingNumerator(t *testing.T) {
+	for _, answer := range []string{"1/0", "1/-0", "1/", "1//2", "1/2/3", "1+2", "1/1e309", "1e308/1e-308"} {
+		t.Run(answer, func(t *testing.T) {
+			ctx := gradingContext("numeric", 1, nil, map[string]any{"absolute": 0}, answer, nil)
+			grade, err := grading.NewEngine().Grade(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if grade.SuggestedScore != 0 || grade.AutoPass || !grade.NeedsHumanReview || !contains(grade.RiskFlags, "numeric_parse_failed") {
+				t.Fatalf("invalid fraction must not become a passing prefix: %#v", grade)
+			}
+		})
+	}
+}
+
 func gradingContext(kind string, standard any, equiv []any, tolerance any, answerText string, payload map[string]any) grading.Context {
 	if payload == nil {
 		payload = map[string]any{}

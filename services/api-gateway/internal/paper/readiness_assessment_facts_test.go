@@ -121,7 +121,7 @@ func TestReadinessConfirmationRejectsChangedRiskBeforeRosterWrites(t *testing.T)
 		data, _ := json.Marshal(fact)
 		steps[index].rows = [][]driver.Value{{fact.QuestionID, data}}
 	}
-	store, proof := openPaperBatch10Store(t, steps)
+	store, proof := openPaperBatch10Store(t, withObjectiveConfirmationLockSteps(steps))
 	result, err := store.ConfirmReadiness(context.Background(), "tenant-1", "exam-1", "admin-1", ConfirmReadinessInput{ExpectedConfigurationHash: reviewed.ConfigurationHash})
 	if !errors.Is(err, ErrReadinessChanged) || !result.Ready || result.Confirmed {
 		t.Fatalf("risk change was frozen: %#v %v", result, err)
@@ -140,7 +140,7 @@ func TestReadinessConfirmationRollsBackTemplateChangeObservedByFreezeTrigger(t *
 		paperBatch10Step{kind: "query", fragment: "FROM exam_candidate_snapshot candidate", columns: 2, rows: [][]driver.Value{{"student-1", "class-1"}}},
 	)
 	// 确认逻辑会再次读取题目来建立导入伴随快照。
-	questionReads := readinessReviewedConfigurationSteps(t)[4:11]
+	questionReads := readinessReviewedConfigurationSteps(t)[4:12]
 	steps = append(steps, questionReads...)
 	var frozen readinessAssessmentFact
 	if err := json.Unmarshal(readinessFactJSON(t, `{"mode":"DUAL_HUMAN","require_evidence":true,"human_review_below_confidence":true}`), &frozen); err != nil {
@@ -153,7 +153,7 @@ func TestReadinessConfirmationRollsBackTemplateChangeObservedByFreezeTrigger(t *
 		paperBatch10Step{kind: "exec", fragment: "UPDATE exam SET status = 'ready'", result: driver.RowsAffected(1)},
 		paperBatch10Step{kind: "query", fragment: "FROM exam_question_snapshot snapshot", columns: 2, rows: [][]driver.Value{{frozen.QuestionID, data}}},
 	)
-	store, proof := openPaperBatch10Store(t, steps)
+	store, proof := openPaperBatch10Store(t, withObjectiveConfirmationLockSteps(steps))
 	result, err := store.ConfirmReadiness(context.Background(), "tenant-1", "exam-1", "admin-1", ConfirmReadinessInput{})
 	if !errors.Is(err, ErrReadinessChanged) || !result.Ready || result.Confirmed {
 		t.Fatalf("unreviewed template was frozen: %#v %v", result, err)

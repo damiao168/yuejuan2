@@ -15,7 +15,7 @@ const tenantRuntimeRole = "edugrade_tenant_runtime"
 const tenantUnscopedSetting = "unscoped"
 const tenantMaintenanceSetting = "maintenance"
 
-// WithTenant 将已认证租户绑定到使用此上下文发出的数据库操作。租户作用域为空或缺失时，对 RLS 保护的数据拒绝放行。
+// WithTenant 为数据库操作绑定租户。跨租户请求须先在业务入口校验目标租户授权；作用域缺失时，RLS 拒绝放行。
 func WithTenant(ctx context.Context, tenantID string) context.Context {
 	return context.WithValue(ctx, tenantContextKey{}, tenantID)
 }

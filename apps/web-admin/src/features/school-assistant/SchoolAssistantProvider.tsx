@@ -26,6 +26,7 @@ function AccountAssistant({ user, accountKey, onNavigate, locationKey, children 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { cancel } = assistant;
   // 页面位置变化后关闭并取消本轮助手，避免旧模块的查询范围继续显示在新页面。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 页面位置变化时关闭并取消旧助手查询，不能把旧模块范围显示在新页面。
   useEffect(() => { setDrawerOpen(false); cancel(); }, [locationKey, cancel]);
   const close = useCallback(() => { setDrawerOpen(false); cancel(); }, [cancel]);
   const value = useMemo<AssistantValue>(() => ({

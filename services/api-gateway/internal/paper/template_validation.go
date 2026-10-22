@@ -22,6 +22,9 @@ func ValidateTemplateInput(name string, pageCount int, layout TemplateLayout) er
 	if err := ValidateTemplateOMRProfile(layout.OMRProfile); err != nil {
 		return err
 	}
+	if err := validateTemplateEditorState(layout.EditorState, pageCount); err != nil {
+		return err
+	}
 	if pageCount < 1 || pageCount > maxTemplatePages || len(layout.Pages) != pageCount {
 		return fmt.Errorf("page_count must match 1-%d layout pages", maxTemplatePages)
 	}
@@ -38,7 +41,7 @@ func ValidateTemplateInput(name string, pageCount int, layout TemplateLayout) er
 	if regions > maxTemplateRegions {
 		return fmt.Errorf("layout exceeds %d regions", maxTemplateRegions)
 	}
-	return nil
+	return validateTemplateGradingGroups(layout, nil)
 }
 
 // 页码和题目引用跨页判重；各页仍先校验定位区、身份区，再校验题目和选项，保留首个错误。
@@ -57,6 +60,9 @@ func validateTemplatePage(page TemplatePage, pageCount int, pageNos map[int]bool
 		return 0, err
 	}
 	count := len(page.RegistrationMarks) + len(page.IdentityRegions) + len(page.QuestionRegions)
+	for _, group := range page.GradingGroups {
+		count += 1 + len(group.QuestionIDs)
+	}
 	for _, region := range page.QuestionRegions {
 		if err := validateTemplateQuestionRegion(region, questionIDs); err != nil {
 			return 0, err
@@ -78,6 +84,9 @@ func validateTemplateRegions(regions []LayoutRegion) error {
 func validateTemplateQuestionRegion(region LayoutRegion, questionIDs map[string]bool) error {
 	if err := validateRegion(region); err != nil {
 		return err
+	}
+	if region.OptionCoordinateSpace != "" && region.OptionCoordinateSpace != "question_relative" {
+		return errors.New("option_coordinate_space must be question_relative when supplied")
 	}
 	if strings.TrimSpace(region.QuestionID) == "" {
 		return errors.New("question region must reference question_id")
@@ -110,6 +119,9 @@ func validateOptionRegion(region OptionRegion) error {
 
 // 坐标和宽高均已归一化；右、下边界的微小余量用于容纳浮点计算误差。
 func validateRegion(region LayoutRegion) error {
+	if err := validateTemplateRegionMetadata(region); err != nil {
+		return err
+	}
 	values := []float64{region.X, region.Y, region.Width, region.Height}
 	for _, value := range values {
 		if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -169,7 +181,7 @@ func buildReadinessForScope(total float64, classIDs, candidateIDs []string, pape
 		}
 	}
 	configuration := newReadinessConfigurationSnapshot(total, classIDs, candidateIDs, papers, questions, locked)
-	return ReadinessResult{Ready: ready, ConfigurationHash: stableContentHash(configuration), Checks: checks, Advisories: buildReadinessAdvisories(questions)}
+	return ReadinessResult{Ready: ready, ConfigurationHash: stableContentHash(configuration), Checks: checks, Advisories: buildReadinessAdvisories(questions), ScoringPreview: []ReadinessScoringPreview{}}
 }
 
 // 这是就绪检查的题目统计结果；原题目顺序同时决定缺失项提示的顺序，不携带执行依赖。
@@ -274,6 +286,11 @@ func templateCoversReadinessQuestions(locked *AnswerSheetTemplate, questions []Q
 	for _, page := range locked.Layout.Pages {
 		for _, region := range page.QuestionRegions {
 			covered[region.QuestionID] = true
+		}
+		for _, group := range page.GradingGroups {
+			for _, id := range group.QuestionIDs {
+				covered[id] = true
+			}
 		}
 	}
 	coverageOK := len(questions) > 0

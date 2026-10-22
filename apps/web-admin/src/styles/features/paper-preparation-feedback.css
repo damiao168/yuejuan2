@@ -1,0 +1,205 @@
+.paper-question-summary.is-checkable {
+  display: block;
+  padding: 14px 16px;
+}
+
+.paper-question-tools { min-width: 0; }
+.paper-question-tools .paper-step-toolbar { gap: 8px 16px; }
+.paper-step-check-action { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.paper-question-issue-list { margin: 0; padding: 0; list-style: none; }
+.paper-question-issue-list > li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.paper-question-issue-list > li > strong { flex: 0 0 auto; font-size: 14px; }
+.paper-question-issue-list > li > div { display: flex; justify-content: flex-end; flex-wrap: wrap; }
+[data-paper-issue-focus="true"] { border-radius: 6px; outline: 2px solid #1677ff; outline-offset: 4px; animation: paper-issue-locate 2.4s ease-out; }
+@keyframes paper-issue-locate { from { background-color: #e6f4ff; } to { background-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { [data-paper-issue-focus="true"] { animation: none; } }
+
+.paper-step-toolbar,
+.paper-step-heading,
+.paper-source-title,
+.paper-material-status-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.paper-step-toolbar {
+  justify-content: space-between;
+}
+
+.paper-step-heading .paper-question-summary-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.paper-step-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.paper-question-summary.is-checkable .paper-question-summary-facts {
+  margin-top: 8px;
+}
+
+.paper-question-summary.is-checkable > .ant-btn {
+  margin-top: 8px;
+}
+
+.paper-check-status {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 1 auto;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #f2f4f7;
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.paper-check-status[data-tone="success"] {
+  color: #166534;
+  background: #edf7ef;
+}
+
+.paper-check-status[data-tone="warning"] {
+  color: #854d0e;
+  background: #fff7e6;
+}
+
+.paper-check-status[data-tone="error"] {
+  color: #b42318;
+  background: #fff1f0;
+}
+
+.paper-check-explanation {
+  margin: 8px 0 0;
+  color: #854d0e;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.paper-check-explanation[role="alert"] {
+  color: #b42318;
+}
+
+.paper-check-explanation p {
+  margin: 0;
+}
+
+.paper-check-details,
+.paper-material-details {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.paper-check-details {
+  margin-top: 6px;
+}
+
+.paper-check-details summary,
+.paper-material-details summary {
+  cursor: pointer;
+  width: fit-content;
+}
+
+.paper-check-details p,
+.paper-material-details p {
+  margin: 6px 0 0;
+  max-width: 580px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.paper-check-issues {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paper-check-issues li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-left: 2px solid #d97706;
+  background: #fffaf0;
+}
+
+.paper-check-issues .ant-btn {
+  flex-shrink: 0;
+}
+
+.paper-summary-filter {
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.paper-summary-filter:hover {
+  text-decoration: underline;
+}
+
+.paper-summary-filter:focus-visible,
+.paper-check-details summary:focus-visible,
+.paper-material-details summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.paper-source-heading {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.paper-source-heading > p {
+  margin-top: 6px;
+}
+
+.paper-material-confirmation {
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .paper-workbench .question-index-head { flex-direction: row; align-items: center; }
+
+  .paper-source-files .ant-list-item-action {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 100%;
+    gap: 4px;
+  }
+
+  .paper-source-files .ant-list-item-action > li {
+    padding: 0;
+  }
+
+  .paper-source-files .ant-list-item-action-split {
+    display: none;
+  }
+
+  .paper-step-toolbar {
+    align-items: flex-start;
+  }
+
+  .paper-source-title {
+    align-items: flex-start;
+  }
+
+  .paper-check-issues li {
+    align-items: flex-start;
+  }
+}

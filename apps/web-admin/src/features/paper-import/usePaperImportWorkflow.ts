@@ -1,117 +1,25 @@
+import { usePaperImportContentFill } from "./usePaperImportContentFill";
 import { createElement, useCallback, useEffect, useRef, useState } from "react";
-import { App, type UploadProps } from "antd";
-import { ApiClientError, getPaperImportUserMessage, getUserErrorMessage } from "../../api/client";
-import type { Exam } from "../../api/exams";
-import { downloadFileBlob } from "../../api/files";
+import { App } from "antd";
+import { ApiClientError, getUserErrorMessage } from "../../api/client";
 import {
-  addPaperImportSources,
   applyPaperImport,
-  cancelPaperImport,
-  createPaperImport,
-  fillPaperImportContent,
   getPaperImport,
-  replacePaperImportSources,
-  retryPaperImportParse,
   savePaperImportReview,
-  uploadFile,
   type PaperImportDraftQuestion,
   type PaperImportJob,
-  type PaperImportRole,
-  type PaperVersion
 } from "../../api/papers";
-import {
-  filesFromClipboard,
-  isSupportedPaperImportFile,
-  isTextPasteTarget,
-  MAX_PASTED_MATERIAL_CHARS,
-  markImportFieldConfirmed,
-  normalizePastedMarkdown,
-  orderedSourcesAfterRemoval,
-  pastedMarkdownFile
-} from "./materials";
-import { importAnswerShapeError, resolveImportAnswerValue } from "./answerShape";
-import { isReviewQuestionConfirmed, mergeDirtyReviewDrafts, olderReviewTimestamp, remapReviewJsonFields, reviewConfirmationFields, reviewDraftIndex, sameReviewValue } from "./reviewConfirmation";
+import { markImportFieldConfirmed } from "./materials";
+import { importAnswerShapeError } from "./answerShape";
+import { isReviewQuestionConfirmed, mergeDirtyReviewDrafts, olderReviewTimestamp, remapReviewJsonFields, reviewDraftIndex, sameReviewValue } from "./reviewConfirmation";
 import { PaperImportReviewComparison } from "./PaperImportReviewComparison";
+import { confirmedImportDrafts, remainingReviewJson, reviewJobKey, reviewRubricHasScoreMismatch,
+  reviewValidationNotice, type ReviewSubmission, type ReviewReceiptDecision } from "./paperImportReview.model";
+import { usePaperImportMaterials } from "./usePaperImportMaterials";
+import type { PaperImportWorkflowOptions } from "./paperImportWorkflow.types";
 
 function formatError(error: unknown) {
   return getUserErrorMessage(error, "操作失败，请稍后重试");
-}
-
-function pointTotal(points: NonNullable<PaperImportDraftQuestion["rubric"]>["points"]) {
-  return points.reduce((sum, point) => sum + (Number(point.score) || 0), 0);
-}
-
-function reviewRubricHasScoreMismatch(draft: PaperImportDraftQuestion) {
-  if (draft.question_type === "fill_blank") return false;
-  return Boolean(draft.rubric
-    && (Math.abs(draft.rubric.max_score - draft.score) > 0.0001
-      || Math.abs(pointTotal(draft.rubric.points) - draft.score) > 0.0001));
-}
-
-function reviewJobKey(job?: PaperImportJob) {
-  return job ? `${job.exam_id}:${job.id}:${job.generation}:${job.source_revision ?? ""}` : null;
-}
-
-function reviewJsonKeyMatches(key: string, index: number, draft: PaperImportDraftQuestion) {
-  return key.startsWith(`${index}:`) || Boolean(draft.candidate_id && key.startsWith(`${draft.candidate_id}:`));
-}
-
-function confirmedImportDrafts(drafts: PaperImportDraftQuestion[], originalDrafts: PaperImportDraftQuestion[], confirmedIndex?: number) {
-  return drafts.map((draft, index) => {
-    const original = originalDrafts.find((item) => item.candidate_id && item.candidate_id === draft.candidate_id) ?? originalDrafts[index];
-    // 填空题按答案评分；不能把解析建议误存成已确认的主观题评分细则。
-    const answerKeyOnly = draft.question_type === "fill_blank";
-    const fields = new Set(draft.human_confirmed_fields ?? []);
-    if (answerKeyOnly) fields.delete("rubric");
-    if (index === confirmedIndex) for (const field of reviewConfirmationFields(draft)) fields.add(field);
-    return {
-      ...draft,
-      answer_key: draft.answer_key ? {
-        ...draft.answer_key,
-        standard_answer: resolveImportAnswerValue(draft.answer_key.standard_answer, original?.answer_key?.standard_answer)
-      } : undefined,
-      rubric_candidate_id: answerKeyOnly ? undefined : draft.rubric_candidate_id,
-      rubric: answerKeyOnly ? undefined : draft.rubric,
-      human_confirmed_fields: [...fields]
-    };
-  });
-}
-
-type ReviewValidationNotice = Readonly<{ level: "error" | "warning"; text: string }>;
-type ReviewSubmission = Readonly<{
-  local: PaperImportDraftQuestion[];
-  selected?: PaperImportDraftQuestion;
-  texts: Record<string, string>;
-  errors: Record<string, string>;
-  payload: PaperImportDraftQuestion[];
-  receiptBaseline: PaperImportDraftQuestion[];
-  baseline: PaperImportDraftQuestion[];
-  expectedUpdatedAt: string;
-}>;
-type ReviewReceiptDecision = { kind: "accepted"; job: PaperImportJob } | { kind: "refresh" } | { kind: "ignored" };
-
-function reviewValidationNotice(
-  local: PaperImportDraftQuestion[], authority: PaperImportDraftQuestion[], selected: PaperImportDraftQuestion | undefined,
-  confirmedIndex: number | undefined, errors: Record<string, string>, apply: boolean
-): ReviewValidationNotice | undefined {
-  const checking = selected ? [selected] : local;
-  // 本题确认只检查本题；整卷保存检查全卷，遇到首个错误就停止。
-  if (selected && (!Number.isFinite(selected.score) || selected.score <= 0)) return { level: "error", text: `第${selected.question_no}题分值必须大于 0，不能确认` };
-  const invalidRubric = checking.find(reviewRubricHasScoreMismatch);
-  if (invalidRubric) return { level: "error", text: `第${invalidRubric.question_no}题评分细则分值不一致，不能确认` };
-  if (Object.keys(errors).some(key => !selected || reviewJsonKeyMatches(key, confirmedIndex!, selected))) return { level: "error", text: "高级评分数据包含无效 JSON，请先修正" };
-  const invalidAnswer = checking.find(draft => importAnswerShapeError(draft.answer_key?.standard_answer,
-    authority[reviewDraftIndex(authority, draft, local.indexOf(draft))]?.answer_key?.standard_answer));
-  if (invalidAnswer) return { level: "error", text: `第${invalidAnswer.question_no}题标准答案格式不正确，不能保存` };
-  if (!apply) return undefined;
-  const unconfirmed = local.filter(draft => !isReviewQuestionConfirmed(draft));
-  if (unconfirmed.length) return { level: "warning", text: `还有 ${unconfirmed.length} 道题未确认，请逐题核对并点击“确认并保存本题”后导入。` };
-  return undefined;
-}
-
-function remainingReviewJson(values: Record<string, string>, submitted: Record<string, string>, selected: PaperImportDraftQuestion | undefined, currentIndex: number) {
-  return Object.fromEntries(Object.entries(values)
-    .filter(([key, value]) => selected && !reviewJsonKeyMatches(key, currentIndex, selected) || value !== submitted[key]));
 }
 
 export function usePaperImportWorkflow({
@@ -121,16 +29,8 @@ export function usePaperImportWorkflow({
   paperImports,
   loadConfig,
   onChanged
-}: {
-  canManage: boolean;
-  selectedExam?: Exam;
-  papers: PaperVersion[];
-  paperImports: PaperImportJob[];
-  loadConfig: (examId: string, options?: { silent?: boolean; propagateError?: boolean }) => Promise<void>;
-  onChanged?: () => void;
-}) {
+}: PaperImportWorkflowOptions) {
   const { message, modal } = App.useApp();
-  const materialUploadRef = useRef<(files: File[]) => void>(() => undefined);
   const [parsing, setParsing] = useState(false);
   const [reviewDrafts, setReviewDrafts] = useState<PaperImportDraftQuestion[]>([]);
   const [reviewDirty, setReviewDirty] = useState(false);
@@ -156,13 +56,6 @@ export function usePaperImportWorkflow({
   const reviewConflictRef = useRef<{ key: string | null; baseline: PaperImportDraftQuestion[] } | undefined>(undefined);
   const comparisonPromptOpen = useRef(false);
   const [savingImportReview, setSavingImportReview] = useState(false);
-  const [fillingImportContent, setFillingImportContent] = useState(false);
-  const fillingContentRef = useRef(false);
-  const [contentFillResult, setContentFillResult] = useState<Awaited<ReturnType<typeof fillPaperImportContent>> | null>(null);
-  const [updatingImportSources, setUpdatingImportSources] = useState(false);
-  const [stoppingImport, setStoppingImport] = useState(false);
-  const [retryingParse, setRetryingParse] = useState(false);
-
   const replaceReviewState = useCallback((drafts: PaperImportDraftQuestion[], texts: Record<string, string>, errors: Record<string, string>) => {
     reviewDraftsRef.current = drafts; reviewJsonTextsRef.current = texts; reviewJsonErrorsRef.current = errors;
     setReviewDrafts(drafts); setReviewJsonTexts(texts); setReviewJsonErrors(errors);
@@ -178,7 +71,6 @@ export function usePaperImportWorkflow({
     const previous = authoritativeReviewRef.current;
     const sameJob = activeReviewJobKey === loadedReviewJobKey.current;
     if (!sameJob) { reviewConflictRef.current = undefined; reviewEditBaselineRef.current = undefined; }
-    if (!sameJob) setContentFillResult(null);
     // 写入回执可能先于旧轮询返回；已知时间更早的同代次结果不能撤销刚保存的确认事实。
     if (sameJob && olderReviewTimestamp(activeReviewJob?.updated_at, previous?.updated_at)) return;
     const current = reviewDraftsRef.current;
@@ -189,203 +81,13 @@ export function usePaperImportWorkflow({
     replaceReviewState(drafts, sameJob ? remapReviewJsonFields(reviewJsonTextsRef.current, current, drafts) : {}, sameJob ? remapReviewJsonFields(reviewJsonErrorsRef.current, current, drafts) : {});
   }, [activeReviewJob, activeReviewJobKey, replaceReviewState]);
 
-  useEffect(() => {
-    const onPaste = (event: ClipboardEvent) => {
-      if (isTextPasteTarget(event.target)) return;
-      const files = filesFromClipboard(event.clipboardData);
-      if (!files.length || !selectedExam || !canManage) return;
-      event.preventDefault();
-      materialUploadRef.current(files);
-    };
-    window.addEventListener("paste", onPaste);
-    return () => window.removeEventListener("paste", onPaste);
-  }, [canManage, selectedExam]);
+  const materials = usePaperImportMaterials({ canManage, selectedExam, papers, paperImports, loadConfig,
+    reviewDirty, setParsing });
 
-  const handleMaterialFiles = async (files: File[], roleHint: PaperImportRole = "auto") => {
-    if (!selectedExam || !files.length) { message.error("请先选择考试，再添加考试资料"); return false; }
-    if (reviewDirty) { message.warning("请先保存人工核对，再添加资料，避免重新识别覆盖未保存修改"); return false; }
-    if (paperImports.some((item) => item.status === "processing")) { message.warning("当前资料仍在识别，请完成后再继续添加"); return false; }
-    const supportedFiles = files.filter(isSupportedPaperImportFile);
-    if (supportedFiles.length !== files.length) message.warning("已忽略不支持的文件，仅接受 PDF、Word、图片、Markdown 或 TXT");
-    if (!supportedFiles.length) return false;
-    setParsing(true);
-    try {
-      const uploaded = [];
-      for (const file of supportedFiles) {
-        uploaded.push((await uploadFile(file, {
-          owner_type: "import",
-          owner_id: selectedExam.id,
-          exam_id: selectedExam.id,
-          school_id: selectedExam.school_id
-        })).file);
-      }
-      const activeImport = paperImports.find((item) => ["review_required", "failed", "cancelled"].includes(item.status));
-      // 上传端可能复用同一文件资产；新增资料需同时排除历史来源与本批重复资产。
-      const existingAssetIDs = new Set(activeImport?.sources.map((source) => source.file_asset_id).filter(Boolean) ?? []);
-      const acceptedAssetIDs = new Set<string>();
-      const newAssets = uploaded.filter((file) => {
-        if (existingAssetIDs.has(file.id) || acceptedAssetIDs.has(file.id)) return false;
-        acceptedAssetIDs.add(file.id);
-        return true;
-      });
-      const duplicateCount = uploaded.length - newAssets.length;
-      if (activeImport && newAssets.length === 0) {
-        message.info("这份资料已在当前识别任务中，无需重复添加");
-        return true;
-      }
-      const startIndex = activeImport?.sources.length ?? 0;
-      const sources = newAssets.map((file, index) => ({
-        file_asset_id: file.id,
-        document_index: startIndex + index,
-        role_hint: roleHint
-      }));
-      const commandId = crypto.randomUUID();
-      const result = activeImport
-        ? await addPaperImportSources(activeImport.id, activeImport.generation, sources, commandId)
-        : await createPaperImport(selectedExam.id, {
-            exam_paper_id: papers[0]?.id,
-            subject: selectedExam.subject,
-            sources
-          }, commandId);
-      if (result.import.status === "failed") {
-        message.error(getPaperImportUserMessage(result.import.issues[0], "考试资料识别失败，请检查资料后重试"));
-      } else if (duplicateCount > 0) {
-        message.success(`已忽略 ${duplicateCount} 份重复资料，新增 ${newAssets.length} 份并开始识别`);
-      } else {
-        message.success(`已添加 ${newAssets.length} 份资料，系统正在识别和匹配`);
-      }
-      await loadConfig(selectedExam.id, { silent: true });
-      return true;
-    } catch (error) {
-      await loadConfig(selectedExam.id, { silent: true }).catch(() => undefined);
-      message.error(formatError(error));
-      return false;
-    } finally {
-      setParsing(false);
-    }
-  };
-  materialUploadRef.current = (files) => { void handleMaterialFiles(files); };
-
-  const importPastedText = async (value: string, roleHint: PaperImportRole) => {
-    const content = normalizePastedMarkdown(value);
-    if (content.length < 20) {
-      message.error("请至少粘贴 20 个字符的考试资料");
-      return false;
-    }
-    if (content.length > MAX_PASTED_MATERIAL_CHARS) {
-      message.error(`粘贴内容不能超过 ${MAX_PASTED_MATERIAL_CHARS.toLocaleString("zh-CN")} 个字符`);
-      return false;
-    }
-    return handleMaterialFiles([pastedMarkdownFile(content)], roleHint);
-  };
-
-  const uploadProps: UploadProps = {
-    showUploadList: false,
-    multiple: true,
-    accept: ".pdf,.docx,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/tiff,text/plain,text/markdown",
-    beforeUpload: (file, fileList) => {
-      if (file.uid === fileList[0]?.uid) void handleMaterialFiles(fileList as File[]);
-      return false;
-    }
-  };
-
-  const replaceImportSources = async (job: PaperImportJob, sources: PaperImportJob["sources"]) => {
-    if (!["processing", "review_required", "failed", "cancelled"].includes(job.status)) return;
-    if (reviewDirty) { message.warning("请先保存人工核对，再调整资料，避免重新识别覆盖未保存修改"); return; }
-    setUpdatingImportSources(true);
-    try {
-      await replacePaperImportSources(job.id, job.generation, sources.map((source, documentIndex) => ({
-        id: source.id,
-        document_index: documentIndex,
-        role_hint: source.role_hint
-      })), crypto.randomUUID());
-      message.success(sources.length ? "资料顺序或类型已更新，系统正在重新匹配" : "已删除全部考试资料，请重新上传正确的资料");
-      if (selectedExam) await loadConfig(selectedExam.id, { silent: true });
-    } catch (error) {
-      message.error(formatError(error));
-    } finally {
-      setUpdatingImportSources(false);
-    }
-  };
-
-  const stopPaperImport = (job: PaperImportJob) => {
-    if (job.status !== "processing" || stoppingImport) return;
-    modal.confirm({
-      title: "停止当前识别？",
-      content: "系统会停止尚未完成的文字识别和 AI 解析；已上传资料会保留，之后可以重新识别。",
-      okText: "停止识别",
-      cancelText: "继续识别",
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        setStoppingImport(true);
-        try {
-          await cancelPaperImport(job.id, job.generation, crypto.randomUUID());
-          message.success("已停止识别，上传资料仍然保留");
-          if (selectedExam) await loadConfig(selectedExam.id, { silent: true });
-        } catch (error) {
-          message.error(formatError(error));
-        } finally {
-          setStoppingImport(false);
-        }
-      }
-    });
-  };
-
-  const retryImportParse = async (job: PaperImportJob) => {
-    const retryable = (job.status === "failed" && job.error_code === "ai_parse_failed") || job.status === "cancelled";
-    if (!retryable || retryingParse) return;
-    setRetryingParse(true);
-    try {
-      await retryPaperImportParse(job.id, job.generation);
-      message.success("已复用本次新增资料，正在重新解析题目结构");
-      if (selectedExam) await loadConfig(selectedExam.id, { silent: true });
-    } catch (error) {
-      message.error(formatError(error));
-    } finally {
-      setRetryingParse(false);
-    }
-  };
-
-  const removeImportSource = async (job: PaperImportJob, sourceID: string) => {
-    await replaceImportSources(job, orderedSourcesAfterRemoval(job.sources, sourceID));
-  };
-
-  const openImportSource = async (fileAssetID: string, pageNo?: number) => {
-    try {
-      const file = await downloadFileBlob(fileAssetID);
-      const url = URL.createObjectURL(file.blob);
-      window.open(pageNo && pageNo > 0 ? `${url}#page=${pageNo}` : url, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (error) {
-      message.error(formatError(error));
-    }
-  };
-
+  const { fillingImportContent, fillRecognizedContent, contentFillResult } = usePaperImportContentFill({
+    canManage, selectedExam, loadConfig, onChanged, activeReviewJobKey, activeReviewJobKeyRef
+  });
   const confirmPaperImport = async (job: PaperImportJob) => { await saveReview(job, undefined, true); };
-
-  const fillRecognizedContent = async (job: PaperImportJob, quiet = false) => {
-    if (!canManage || !selectedExam || fillingContentRef.current) return;
-    const jobKey = reviewJobKey(job);
-    if (activeReviewJobKeyRef.current !== jobKey) return;
-    fillingContentRef.current = true;
-    setFillingImportContent(true);
-    try {
-      const result = await fillPaperImportContent(job.id, job.generation);
-      // 旧资料请求可完成服务端写入，但不能把结果或提示放到新资料的编辑页面。
-      if (activeReviewJobKeyRef.current !== jobKey) return;
-      setContentFillResult(result);
-      if (result.filled_questions.length) {
-        message.success(`已自动填入 ${result.filled_questions.length} 道题的识别内容，请核对答案与评分配置`);
-        await loadConfig(selectedExam.id, { silent: true });
-        onChanged?.();
-      } else if (!quiet) message.info("现有内容已保留；未能自动匹配的题目请查看提示");
-    } catch (error) {
-      if (activeReviewJobKeyRef.current === jobKey) message.error(formatError(error));
-    } finally {
-      fillingContentRef.current = false;
-      setFillingImportContent(false);
-    }
-  };
 
   const prepareReviewSubmission = (jobKey: string | null, examId: string, confirmedIndex?: number, apply = false): ReviewSubmission | undefined => {
     if (!ownsReviewRequest(jobKey, examId) || loadedReviewJobKey.current !== jobKey || activeReviewJobRef.current?.status !== "review_required") {
@@ -612,14 +314,13 @@ export function usePaperImportWorkflow({
       ?? paperImports[0]?.questions[index]?.answer_key?.standard_answer));
 
   return {
-    uploadProps, parsing, reviewDrafts, reviewDirty, discardImportReviewDraft, savingImportReview, updatingImportSources,
+    ...materials, parsing, reviewDrafts, reviewDirty, discardImportReviewDraft, savingImportReview,
     fillingImportContent, fillRecognizedContent, contentFillResult,
-    stoppingImport, retryingParse, confirmedReviewCount: reviewDrafts.filter(isReviewQuestionConfirmed).length,
+    confirmedReviewCount: reviewDrafts.filter(isReviewQuestionConfirmed).length,
     invalidReviewRubric: reviewDrafts.some(reviewRubricHasScoreMismatch),
     invalidReviewScore: reviewDrafts.some((draft) => !Number.isFinite(draft.score) || draft.score <= 0),
     invalidReviewAnswer, invalidReviewJson: Object.keys(reviewJsonErrors).length > 0,
     reviewJsonTexts, setReviewJsonText, clearReviewJsonTexts,
-    replaceImportSources, stopPaperImport, retryImportParse, removeImportSource,
-    openImportSource, confirmPaperImport, saveImportReview, updateReviewDraft, importPastedText
+    confirmPaperImport, saveImportReview, updateReviewDraft
   };
 }

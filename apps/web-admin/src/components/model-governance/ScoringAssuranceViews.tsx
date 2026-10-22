@@ -64,10 +64,10 @@ export function EligibilityPolicyPanel({
 }
 
 export function EvaluationDetail({
-  selectedEvaluation, actioning, qualitySummary, sliceMetrics, responseDifficulty, onOpenObservation,
+  selectedEvaluation, actioning, evidenceReady = true, qualitySummary, sliceMetrics, responseDifficulty, onOpenObservation,
   transitionEvaluation, onCreateCalibration
 }: Readonly<{
-  selectedEvaluation?: GradingEvaluationRun; actioning: boolean; qualitySummary?: GradingEvaluationQualitySummary;
+  selectedEvaluation?: GradingEvaluationRun; actioning: boolean; evidenceReady?: boolean; qualitySummary?: GradingEvaluationQualitySummary;
   sliceMetrics: GradingEvaluationSliceMetric[]; responseDifficulty: GradingEvaluationResponseDifficulty[];
   onOpenObservation: () => void; transitionEvaluation: (kind: "complete" | "invalidate") => Promise<void>; onCreateCalibration: () => void;
 }>) {
@@ -75,9 +75,9 @@ export function EvaluationDetail({
   return <section className="model-assurance-detail">
           <Divider orientation="left">{selectedEvaluation.display_name}</Divider>
           <Space wrap>
-            {selectedEvaluation.status === "draft" ? <><Button onClick={onOpenObservation}>录入对齐观察</Button><Button type="primary" loading={actioning} disabled={selectedEvaluation.observation_count === 0} onClick={() => void transitionEvaluation("complete")}>冻结评测</Button></> : null}
-            {selectedEvaluation.status !== "invalidated" ? <Button danger loading={actioning} onClick={() => void transitionEvaluation("invalidate")}>标记失效</Button> : null}
-            <Button onClick={onCreateCalibration} disabled={selectedEvaluation.status !== "completed"}>基于评测创建校准</Button>
+            {selectedEvaluation.status === "draft" ? <><Button disabled={!evidenceReady || actioning} onClick={onOpenObservation}>录入对齐观察</Button><Button type="primary" loading={actioning} disabled={!evidenceReady || selectedEvaluation.observation_count === 0} onClick={() => void transitionEvaluation("complete")}>冻结评测</Button></> : null}
+            {selectedEvaluation.status !== "invalidated" ? <Button danger loading={actioning} disabled={!evidenceReady} onClick={() => void transitionEvaluation("invalidate")}>标记失效</Button> : null}
+            <Button onClick={onCreateCalibration} disabled={!evidenceReady || actioning || selectedEvaluation.status !== "completed"}>基于评测创建校准</Button>
           </Space>
           <EvaluationMetrics qualitySummary={qualitySummary} sliceMetrics={sliceMetrics} responseDifficulty={responseDifficulty} />
         </section>;
@@ -102,25 +102,25 @@ function EvaluationMetrics({ qualitySummary, sliceMetrics, responseDifficulty }:
 }
 
 export function CalibrationDetail({
-  selectedCalibration, calibrationEvidence, actioning, evidenceForm, transitionCalibration, addCalibrationEvidence
+  selectedCalibration, calibrationEvidence, actioning, evidenceReady = true, evidenceForm, transitionCalibration, addCalibrationEvidence
 }: Readonly<{
-  selectedCalibration?: ModelCalibration; calibrationEvidence: ModelCalibrationEvidence[]; actioning: boolean;
+  selectedCalibration?: ModelCalibration; calibrationEvidence: ModelCalibrationEvidence[]; actioning: boolean; evidenceReady?: boolean;
   evidenceForm: FormInstance<AddModelCalibrationEvidenceRequest>;
   transitionCalibration: (kind: "complete" | "approve" | "invalidate") => Promise<void>; addCalibrationEvidence: () => Promise<void>;
 }>) {
   if (!selectedCalibration) return null;
-  // 只有草稿显示证据表单；完成、批准和失效状态沿用原有操作入口。
+  // 只有草稿显示证据表单；当前对象的证据尚未读成功时禁用操作，不能用旧对象的条数放行。
   return <section className="model-assurance-detail">
           <Space wrap><Typography.Text>方法：{selectedCalibration.method}</Typography.Text><Typography.Text>证据：{calibrationEvidence.length} 条</Typography.Text><Typography.Text>工件：{selectedCalibration.artifact_sha256 ? shortID(selectedCalibration.artifact_sha256) : "尚未生成"}</Typography.Text></Space>
           <Space wrap style={{ marginTop: 12 }}>
-            {selectedCalibration.status === "draft" ? <><Button onClick={() => evidenceForm.resetFields()} disabled={actioning}>添加置信度证据</Button><Button type="primary" loading={actioning} disabled={calibrationEvidence.length === 0} onClick={() => void transitionCalibration("complete")}>完成校准</Button></> : null}
-            {selectedCalibration.status === "completed" ? <Button type="primary" icon={<CheckCircle2 size={15} />} loading={actioning} onClick={() => void transitionCalibration("approve")}>批准校准</Button> : null}
-            {selectedCalibration.status !== "invalidated" ? <Button danger loading={actioning} onClick={() => void transitionCalibration("invalidate")}>标记失效</Button> : null}
+            {selectedCalibration.status === "draft" ? <><Button onClick={() => evidenceForm.resetFields()} disabled={!evidenceReady || actioning}>添加置信度证据</Button><Button type="primary" loading={actioning} disabled={!evidenceReady || calibrationEvidence.length === 0} onClick={() => void transitionCalibration("complete")}>完成校准</Button></> : null}
+            {selectedCalibration.status === "completed" ? <Button type="primary" icon={<CheckCircle2 size={15} />} loading={actioning} disabled={!evidenceReady} onClick={() => void transitionCalibration("approve")}>批准校准</Button> : null}
+            {selectedCalibration.status !== "invalidated" ? <Button danger loading={actioning} disabled={!evidenceReady} onClick={() => void transitionCalibration("invalidate")}>标记失效</Button> : null}
           </Space>
-          {selectedCalibration.status === "draft" ? <Form form={evidenceForm} layout="inline" className="model-assurance-inline-form" onFinish={() => void addCalibrationEvidence()}>
+          {selectedCalibration.status === "draft" ? <Form form={evidenceForm} disabled={!evidenceReady || actioning} layout="inline" className="model-assurance-inline-form" onFinish={() => void addCalibrationEvidence()}>
             <Form.Item name="response_key" rules={[{ required: true, pattern: /^[a-z0-9][a-z0-9._-]{0,127}$/ }]}><Input placeholder="脱敏答卷键" /></Form.Item>
             <Form.Item name="raw_confidence" rules={[{ required: true }]}><InputNumber min={0} max={1} step={0.01} placeholder="模型置信度" /></Form.Item>
-            <Button htmlType="submit" loading={actioning}>加入证据</Button>
+            <Button htmlType="submit" loading={actioning} disabled={!evidenceReady}>加入证据</Button>
           </Form> : null}
         </section>;
 }

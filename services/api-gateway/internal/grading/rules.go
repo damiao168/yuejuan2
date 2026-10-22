@@ -240,6 +240,21 @@ func validateRuleConfig(ruleType string, config map[string]any) error {
 	var keys []string
 	switch ruleType {
 	case "multiple_choice":
+		_, partial := config["partial_score"]
+		_, wrong := config["wrong_answer_score"]
+		if partial || wrong {
+			// 固定模式必须把两种情况写全；切换前留下的按项设置不再影响本次规则。
+			if err := validateRuleNumericOptions(config, []string{"partial_score", "wrong_answer_score", "max_score"}); err != nil {
+				return err
+			}
+			maxScore, maxOK := floatValue(config["max_score"])
+			partialScore, partialOK := floatValue(config["partial_score"])
+			wrongScore, wrongOK := floatValue(config["wrong_answer_score"])
+			if !maxOK || !partialOK || !wrongOK || maxScore <= 0 || partialScore > maxScore || wrongScore > maxScore {
+				return ErrInvalidInput
+			}
+			return nil
+		}
 		keys = []string{"score_per_correct_option", "wrong_option_penalty", "minimum_score"}
 	case "numeric":
 		keys = []string{"absolute", "relative"}

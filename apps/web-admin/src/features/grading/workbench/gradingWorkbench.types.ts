@@ -4,14 +4,15 @@ import type {
   AutomationResult,
   EvidenceJob,
   ReviewTask,
+  ScoringRunItem,
   ReviewTaskContext
 } from "../../../api/review";
 import type { AnswerSegment, OcrResult, OcrTask, SubmissionPage } from "../../../api/submissions";
 
 export type TaskFilter = "all" | "active" | "pending" | "assigned" | "in_progress" | "returned" | "submitted";
-export type ViewerMode = "segment" | "original" | "ocr";
-export type DraftSaveStatus = "idle" | "saving" | "saved" | "offline" | "conflict" | "error" | "readonly";
-export type ScoringResultType = "all" | "choice" | "fill";
+export type ViewerMode = "segment" | "group" | "original" | "ocr";
+export type DraftSaveStatus = "idle" | "pending" | "saving" | "saved" | "offline" | "conflict" | "error" | "readonly";
+export type ScoringResultType = "all" | "choice" | "fill" | "subjective";
 export type ScoringResultState = "all" | "confirmed" | "review" | "failed" | "processing";
 
 export interface WorkbenchContext {
@@ -29,6 +30,9 @@ export interface WorkbenchContext {
   warnings: string[];
   ocrText: string;
   segmentImageUrl: string;
+  answerScope?: "question" | "grading_group";
+  gradingGroupImageUrl?: string;
+  gradingGroupId?: string;
   originalImageUrl?: string;
 }
 
@@ -41,6 +45,7 @@ export interface PreviewState {
 
 export interface ScoringImagePreview extends PreviewState {
   title: string;
+  item?: ScoringRunItem;
 }
 
 export interface PrefetchedTaskBundle {

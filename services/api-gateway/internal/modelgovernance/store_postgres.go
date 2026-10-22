@@ -374,7 +374,7 @@ FROM managed_model_api_config config
 WHERE config.tenant_id = $1::uuid AND config.id::text = $3
   AND config.deleted_at IS NULL AND config.status = 'active'
   AND config.last_capability_status = 'success'
-  AND config.last_capability_probe_version = 'structured-json-v3'
+  AND config.last_capability_probe_version = 'structured-json-v4'
 `, tenantID, item.ID, id)
 		if err != nil {
 			return TenantPolicy{}, mapStoreError(err)
@@ -819,7 +819,7 @@ JOIN managed_model_api_config config
  AND config.deleted_at IS NULL
  AND config.status = 'active'
  AND config.last_capability_status = 'success'
- AND config.last_capability_probe_version = 'structured-json-v3'
+ AND config.last_capability_probe_version = 'structured-json-v4'
  AND config.modalities ? evaluation.modality
 WHERE evaluation.tenant_id = $1 AND evaluation.id::text = $2
   AND evaluation.status = 'draft'

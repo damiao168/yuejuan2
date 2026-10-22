@@ -1,0 +1,10 @@
+.rubric-job-list { display: grid; gap: 0; margin-top: 16px; }
+.rubric-job-row { display: grid; gap: 10px; padding: 16px 0; border-bottom: 1px solid var(--border-color, #e2e7ed); }
+.rubric-job-row > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rubric-job-row p { margin: 0; }
+.question-index-cell .rubric-job-marker { position: absolute; top: 3px; right: 3px; color: #61758e; display: inline-flex; }
+.rubric-job-marker.is-running, .rubric-job-marker.is-cancelling { color: #1677ff; animation: rubric-job-spin 1.5s linear infinite; }
+.rubric-job-marker.is-succeeded { color: #32976d; }
+.rubric-job-marker.is-failed, .rubric-job-marker.is-stale { color: #c67c28; }
+@keyframes rubric-job-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rubric-job-marker { animation: none !important; } }

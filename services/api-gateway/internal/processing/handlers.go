@@ -62,6 +62,13 @@ func (h *Handler) ListExceptions(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, ErrInvalidInput)
 		return
 	}
+	scope, exists := auth.AccessScopeFromContext(r.Context())
+	if !exists || scope.TenantID != user.TenantID || scope.ActorID != user.ID {
+		httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "processing exception scope is unavailable")
+		return
+	}
+	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
+	filter.Access = auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver}
 	out, err := h.service.ListExceptions(r.Context(), user.TenantID, filter)
 	if err != nil {
 		writeError(w, r, err)
@@ -179,6 +186,8 @@ func processingUser(w http.ResponseWriter, r *http.Request) (auth.User, bool) {
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, auth.ErrForbidden):
+		httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "processing resource is outside the current data access scope")
 	case errors.Is(err, ErrInvalidInput):
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_processing_input", "processing request is invalid")
 	case errors.Is(err, ErrNotFound):

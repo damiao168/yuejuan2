@@ -3,6 +3,7 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -112,6 +113,56 @@ class EvaluationMetricsTest(unittest.TestCase):
         synthetic_sample = sample('s1', 5, 5)
         with self.assertRaisesRegex(ValueError, 'must be explicitly synthetic'):
             evaluate.validate_samples([{**synthetic_sample, 'synthetic': False}])
+
+    def test_rejects_invalid_numbers_in_samples_and_predictions(self):
+        for value in (float("nan"), float("inf"), -float("inf"), "NaN", "Infinity", "5", True, 10**1000):
+            for field in ("human_score", "max_score"):
+                with self.subTest(value=repr(value), field=field):
+                    record = sample("s1", 5, 5)
+                    if field == "max_score":
+                        record["question"][field] = value
+                    else:
+                        record[field] = value
+                    with self.assertRaisesRegex(ValueError, "finite number"):
+                        evaluate.validate_samples([record])
+            samples = evaluate.validate_samples([sample("s1", 5, 5)])
+            for field in ("suggested_score", "confidence"):
+                with self.subTest(value=repr(value), field=field):
+                    record = prediction("s1", "m", "p", 5, .9, False)
+                    record[field] = value
+                    with self.assertRaisesRegex(ValueError, "finite number"):
+                        evaluate.validate_predictions([record], samples)
+
+    def test_jsonl_rejects_nonstandard_constants_with_source_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "records.jsonl"
+            for value in ("NaN", "Infinity", "-Infinity"):
+                path.write_text('\n{"score":' + value + '}\n', encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, ":2 is not valid JSON"):
+                    evaluate.load_jsonl(path)
+
+    def test_cli_and_empty_metrics_reject_invalid_configuration(self):
+        cases = (("low-confidence-threshold", "nan"), ("low-confidence-threshold", "1.1"),
+                 ("adjacent-tolerance", "inf"), ("adjacent-tolerance", "-1"),
+                 ("exact-tolerance", "nan"), ("exact-tolerance", "-1"))
+        for option, value in cases:
+            with self.subTest(option=option, value=value), patch.object(sys, "argv", ["evaluate", "--samples", "missing", "--predictions", "missing", f"--{option}={value}"]), patch("sys.stderr"):
+                with self.assertRaises(SystemExit) as error:
+                    evaluate.parse_args()
+                self.assertEqual(error.exception.code, 2)
+        with self.assertRaisesRegex(ValueError, "finite number"):
+            evaluate.compute_metrics([], low_confidence_threshold=.8, adjacent_tolerance=1, exact_tolerance=float("nan"))
+
+    def test_invalid_report_preserves_existing_outputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            outputs = [directory / "ai_evaluation_report.json", directory / "ai_evaluation_report.md"]
+            for path in outputs:
+                path.write_text("previous report", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                evaluate.write_reports({"metric": float("nan")}, directory)
+            for path in outputs:
+                self.assertEqual(path.read_text(encoding="utf-8"), "previous report")
 
 
 def sample(sample_id, human_score, max_score):

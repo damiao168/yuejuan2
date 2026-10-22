@@ -3,19 +3,24 @@ package grading
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 )
 
-const scoringRunSelect = `SELECT id::text,tenant_id::text,exam_id::text,idempotency_key,status,total_count,queued_count,auto_confirmed_count,human_confirmed_count,review_count,failed_count,started_by::text,started_at,completed_at,created_at,updated_at FROM scoring_run`
+const scoringRunSelect = `SELECT id::text,tenant_id::text,exam_id::text,idempotency_key,status,total_count,queued_count,auto_confirmed_count,human_confirmed_count,review_count,failed_count,started_by::text,started_at,completed_at,created_at,updated_at,COALESCE(rule_snapshot->'ai_plan','null'::jsonb) FROM scoring_run`
 
 func scanScoringRun(row ruleScanner) (ScoringRun, error) {
 	var out ScoringRun
 	var started, completed sql.NullTime
-	err := row.Scan(&out.ID, &out.TenantID, &out.ExamID, &out.IdempotencyKey, &out.Status, &out.TotalCount, &out.QueuedCount, &out.AutoConfirmedCount, &out.HumanConfirmedCount, &out.ReviewCount, &out.FailedCount, &out.StartedBy, &started, &completed, &out.CreatedAt, &out.UpdatedAt)
+	var aiPlan []byte
+	err := row.Scan(&out.ID, &out.TenantID, &out.ExamID, &out.IdempotencyKey, &out.Status, &out.TotalCount, &out.QueuedCount, &out.AutoConfirmedCount, &out.HumanConfirmedCount, &out.ReviewCount, &out.FailedCount, &out.StartedBy, &started, &completed, &out.CreatedAt, &out.UpdatedAt, &aiPlan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ScoringRun{}, ErrNotFound
 	}
 	if err != nil {
+		return ScoringRun{}, err
+	}
+	if err := json.Unmarshal(aiPlan, &out.AIPlan); err != nil {
 		return ScoringRun{}, err
 	}
 	if started.Valid {
@@ -64,6 +69,7 @@ WHERE q.tenant_id=$1::uuid AND q.exam_id=$2::uuid AND q.deleted_at IS NULL GROUP
 	return summary, rows.Err()
 }
 
+// GetScoringRunDetail 展示每题最新有效来源；同一计划内重建 OMR 后，历史仍留在原运行中供审计。
 func (s *PostgresStore) GetScoringRunDetail(ctx context.Context, tenantID, runID string) (ScoringRunDetail, error) {
 	run, err := scanScoringRun(s.db.QueryRowContext(ctx, scoringRunSelect+` WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL`, tenantID, runID))
 	if err != nil {
@@ -73,23 +79,31 @@ func (s *PostgresStore) GetScoringRunDetail(ctx context.Context, tenantID, runID
 	rows, err := s.db.QueryContext(ctx, `
 SELECT seg.id::text,seg.submission_id::text,seg.submission_page_id::text,sp.page_no,
   COALESCE(pr.registered_file_asset_id,sp.normalized_file_asset_id,sp.file_asset_id)::text,
-  q.id::text,q.question_no,q.question_type,eqs.id::text,COALESCE(NULLIF(sub.candidate_no,''),seg.id::text),seg.normalized_bbox,
+  q.id::text,q.question_no,q.question_type,eqs.id::text,COALESCE(NULLIF(sub.candidate_no,''),sub.id::text),seg.normalized_bbox,
   COALESCE(ac.source,''),COALESCE(ac.display_text,''),COALESCE(ac.decision,''),ac.confidence::float8,
-  COALESCE(ak.standard_answer,'null'::jsonb),COALESCE(sr.rule_type,''),g.score::float8,g.max_score::float8,COALESCE(g.source,''),
+  COALESCE(scoring_header.rule_snapshot->'questions'->(q.id::text)->'answer_key'->'standard_answer',ak.standard_answer,'null'::jsonb),COALESCE(scoring_header.rule_snapshot->'questions'->(q.id::text)->'rule'->>'rule_type',sr.rule_type,''),
+  COALESCE(g.score,ag.suggested_score,CASE WHEN jsonb_typeof(ac.evidence->'rule_suggestion'->'suggested_score')='number' THEN (ac.evidence->'rule_suggestion'->>'suggested_score')::numeric END)::float8,
+  COALESCE(g.max_score,ag.max_score,CASE WHEN jsonb_typeof(ac.evidence->'rule_suggestion'->'max_score')='number' THEN (ac.evidence->'rule_suggestion'->>'max_score')::numeric END)::float8,
+  COALESCE(g.source,CASE WHEN ag.id IS NOT NULL THEN 'ai_suggestion' WHEN ac.evidence->'rule_suggestion' IS NOT NULL THEN 'rule_suggestion' ELSE '' END),
   COALESCE(o.id::text,''),COALESCE(o.status,''),COALESCE(o.runtime_task_id::text,''),COALESCE(wt.status,''),COALESCE(o.error_code,''),
   COALESCE(rt.id::text,''),CASE WHEN pending_arb.id IS NOT NULL THEN 'needs_arbitration' ELSE COALESCE(rt.status,'') END,
   CASE WHEN pending_arb.id IS NOT NULL THEN 'double_mark_disagreement' ELSE COALESCE(rt.reason_code,'') END,COALESCE(g.id::text,'')
 FROM answer_segment seg
+JOIN scoring_run scoring_header ON scoring_header.tenant_id=seg.tenant_id AND scoring_header.id=$3::uuid
 JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id AND sub.deleted_at IS NULL
 JOIN submission_page sp ON sp.tenant_id=seg.tenant_id AND sp.id=seg.submission_page_id AND sp.deleted_at IS NULL
 LEFT JOIN page_registration_run pr ON pr.tenant_id=seg.tenant_id AND pr.id=seg.registration_run_id AND pr.deleted_at IS NULL
 JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id AND q.deleted_at IS NULL
 JOIN exam_question_snapshot eqs ON eqs.tenant_id=q.tenant_id AND eqs.exam_id=q.exam_id AND eqs.question_id=q.id
-LEFT JOIN omr_run o ON o.tenant_id=seg.tenant_id AND o.scoring_run_id=$3::uuid AND o.answer_segment_id=seg.id AND o.deleted_at IS NULL
+LEFT JOIN LATERAL (
+  SELECT id,status,runtime_task_id,error_code FROM omr_run
+  WHERE tenant_id=seg.tenant_id AND scoring_run_id=$3::uuid AND answer_segment_id=seg.id AND status<>'invalidated' AND deleted_at IS NULL
+  ORDER BY created_at DESC,id DESC LIMIT 1
+) o ON true
 LEFT JOIN agent_worker_task wt ON wt.tenant_id=seg.tenant_id AND wt.id=o.runtime_task_id
 LEFT JOIN LATERAL (
-  SELECT source,display_text,decision,confidence FROM answer_candidate
-  WHERE tenant_id=seg.tenant_id AND scoring_run_id=$3::uuid AND answer_segment_id=seg.id AND deleted_at IS NULL
+  SELECT source,display_text,decision,confidence,evidence FROM answer_candidate
+  WHERE tenant_id=seg.tenant_id AND scoring_run_id=$3::uuid AND answer_segment_id=seg.id AND is_current AND deleted_at IS NULL
   ORDER BY created_at DESC LIMIT 1
 ) ac ON true
 LEFT JOIN LATERAL (
@@ -120,12 +134,19 @@ LEFT JOIN LATERAL (
   WHERE tenant_id=seg.tenant_id AND scoring_run_id=$3::uuid AND answer_segment_id=seg.id AND is_current AND deleted_at IS NULL
   ORDER BY created_at DESC LIMIT 1
 ) g ON true
+LEFT JOIN LATERAL (
+  SELECT ag.id,CASE WHEN ag.raw_output ? 'panel_execution' AND COALESCE(jsonb_typeof(ag.raw_output->'panel_execution'->'final_score'),'null')<>'number' THEN NULL ELSE ag.suggested_score END AS suggested_score,ag.max_score FROM ai_grade ag
+  JOIN scoring_run_item plan ON plan.tenant_id=ag.tenant_id AND plan.subjective_run_id=ag.subjective_grading_run_id
+  WHERE ag.tenant_id=seg.tenant_id AND ag.answer_segment_id=seg.id AND plan.scoring_run_id=$3::uuid AND ag.status='succeeded' AND ag.deleted_at IS NULL
+  ORDER BY ag.created_at DESC LIMIT 1
+) ag ON true
 WHERE seg.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND seg.deleted_at IS NULL
   AND (
     EXISTS (SELECT 1 FROM omr_run run_omr WHERE run_omr.tenant_id=seg.tenant_id AND run_omr.scoring_run_id=$3::uuid AND run_omr.answer_segment_id=seg.id AND run_omr.deleted_at IS NULL)
     OR EXISTS (SELECT 1 FROM answer_candidate run_candidate WHERE run_candidate.tenant_id=seg.tenant_id AND run_candidate.scoring_run_id=$3::uuid AND run_candidate.answer_segment_id=seg.id AND run_candidate.deleted_at IS NULL)
     OR EXISTS (SELECT 1 FROM review_task run_review WHERE run_review.tenant_id=seg.tenant_id AND run_review.scoring_run_id=$3::uuid AND run_review.answer_segment_id=seg.id AND run_review.deleted_at IS NULL)
     OR EXISTS (SELECT 1 FROM question_grade run_grade WHERE run_grade.tenant_id=seg.tenant_id AND run_grade.scoring_run_id=$3::uuid AND run_grade.answer_segment_id=seg.id AND run_grade.deleted_at IS NULL)
+    OR EXISTS (SELECT 1 FROM scoring_run_item plan_item WHERE plan_item.tenant_id=seg.tenant_id AND plan_item.scoring_run_id=$3::uuid AND plan_item.answer_segment_id=seg.id)
   )
 ORDER BY q.sort_order,seg.created_at`, tenantID, run.ExamID, runID)
 	if err != nil {
@@ -139,7 +160,13 @@ ORDER BY q.sort_order,seg.created_at`, tenantID, run.ExamID, runID)
 		}
 		detail.Items = append(detail.Items, item)
 	}
-	return detail, rows.Err()
+	if err = rows.Err(); err != nil {
+		return detail, err
+	}
+	if err = rows.Close(); err != nil {
+		return detail, err
+	}
+	return detail, s.decorateScoringPlanItems(ctx, tenantID, runID, run.ExamID, detail.Items)
 }
 
 // GetExamAutomationResults 返回当前全考试的客观题评分事实，不依赖特定编排运行。
@@ -149,12 +176,13 @@ func (s *PostgresStore) GetExamAutomationResults(ctx context.Context, tenantID, 
 	rows, err := s.db.QueryContext(ctx, `
 SELECT seg.id::text,seg.submission_id::text,seg.submission_page_id::text,sp.page_no,
   COALESCE(pr.registered_file_asset_id,sp.normalized_file_asset_id,sp.file_asset_id)::text,
-  q.id::text,q.question_no,q.question_type,eqs.id::text,COALESCE(NULLIF(sub.candidate_no,''),seg.id::text),seg.normalized_bbox,
+  q.id::text,q.question_no,q.question_type,eqs.id::text,COALESCE(NULLIF(sub.candidate_no,''),sub.id::text),seg.normalized_bbox,
   COALESCE(NULLIF(ac.source,''),ans.source,''),COALESCE(NULLIF(ac.display_text,''),ans.answer_text,''),
   COALESCE(NULLIF(ac.decision,''),CASE WHEN ans.id IS NOT NULL THEN 'confirmed' ELSE '' END),COALESCE(ac.confidence,ans.confidence)::float8,
   COALESCE(ak.standard_answer,'null'::jsonb),COALESCE(sr.rule_type,q.question_type),
-  COALESCE(g.score,ag.suggested_score)::float8,COALESCE(g.max_score,ag.max_score)::float8,
-  COALESCE(g.source,CASE WHEN ag.id IS NOT NULL THEN 'ai_suggestion' ELSE '' END),
+  COALESCE(g.score,ag.suggested_score,CASE WHEN jsonb_typeof(ac.evidence->'rule_suggestion'->'suggested_score')='number' THEN (ac.evidence->'rule_suggestion'->>'suggested_score')::numeric END)::float8,
+  COALESCE(g.max_score,ag.max_score,CASE WHEN jsonb_typeof(ac.evidence->'rule_suggestion'->'max_score')='number' THEN (ac.evidence->'rule_suggestion'->>'max_score')::numeric END)::float8,
+  COALESCE(g.source,CASE WHEN ag.id IS NOT NULL THEN 'ai_suggestion' WHEN ac.evidence->'rule_suggestion' IS NOT NULL THEN 'rule_suggestion' ELSE '' END),
   COALESCE(o.id::text,''),COALESCE(o.status,CASE WHEN ag.status='failed' THEN 'terminal_error' ELSE '' END),
   COALESCE(o.runtime_task_id::text,''),COALESCE(wt.status,''),
   COALESCE(o.error_code,CASE WHEN ag.status='failed' THEN ag.failure_reason ELSE '' END,''),
@@ -166,7 +194,7 @@ LEFT JOIN page_registration_run pr ON pr.tenant_id=seg.tenant_id AND pr.id=seg.r
 JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id AND q.deleted_at IS NULL
 JOIN exam_question_snapshot eqs ON eqs.tenant_id=q.tenant_id AND eqs.exam_id=q.exam_id AND eqs.question_id=q.id
 LEFT JOIN LATERAL (
-  SELECT id,source,display_text,decision,confidence FROM answer_candidate
+  SELECT id,source,display_text,decision,confidence,evidence FROM answer_candidate
   WHERE tenant_id=seg.tenant_id AND answer_segment_id=seg.id AND is_current AND deleted_at IS NULL
   ORDER BY created_at DESC LIMIT 1
 ) ac ON true
@@ -191,14 +219,14 @@ LEFT JOIN LATERAL (
   ORDER BY created_at DESC LIMIT 1
 ) g ON true
 LEFT JOIN LATERAL (
-  SELECT id,suggested_score,max_score,status,failure_reason FROM ai_grade
+  SELECT id,CASE WHEN raw_output ? 'panel_execution' AND COALESCE(jsonb_typeof(raw_output->'panel_execution'->'final_score'),'null')<>'number' THEN NULL ELSE suggested_score END AS suggested_score,max_score,status,failure_reason FROM ai_grade
   WHERE tenant_id=seg.tenant_id AND answer_segment_id=seg.id AND deleted_at IS NULL
   ORDER BY created_at DESC LIMIT 1
 ) ag ON true
 LEFT JOIN LATERAL (
   SELECT id,status,runtime_task_id,error_code FROM omr_run
-  WHERE tenant_id=seg.tenant_id AND answer_segment_id=seg.id AND deleted_at IS NULL
-  ORDER BY created_at DESC LIMIT 1
+  WHERE tenant_id=seg.tenant_id AND answer_segment_id=seg.id AND status<>'invalidated' AND deleted_at IS NULL
+  ORDER BY created_at DESC,id DESC LIMIT 1
 ) o ON true
 LEFT JOIN agent_worker_task wt ON wt.tenant_id=seg.tenant_id AND wt.id=o.runtime_task_id
 LEFT JOIN LATERAL (
@@ -207,7 +235,7 @@ LEFT JOIN LATERAL (
   ORDER BY created_at DESC LIMIT 1
 ) rt ON true
 WHERE seg.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND seg.deleted_at IS NULL
-ORDER BY COALESCE(NULLIF(sub.candidate_no,''),seg.id::text),q.sort_order,seg.created_at`, tenantID, examID)
+ORDER BY COALESCE(NULLIF(sub.candidate_no,''),sub.id::text),q.sort_order,seg.created_at`, tenantID, examID)
 	if err != nil {
 		return out, err
 	}
@@ -219,7 +247,13 @@ ORDER BY COALESCE(NULLIF(sub.candidate_no,''),seg.id::text),q.sort_order,seg.cre
 		}
 		out.Items = append(out.Items, item)
 	}
-	return out, rows.Err()
+	if err = rows.Err(); err != nil {
+		return out, err
+	}
+	if err = rows.Close(); err != nil {
+		return out, err
+	}
+	return out, s.decorateScoringPlanItems(ctx, tenantID, "", examID, out.Items)
 }
 
 func scanScoringRunItem(row ruleScanner, runStatus string) (ScoringRunItem, error) {

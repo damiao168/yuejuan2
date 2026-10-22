@@ -1,12 +1,11 @@
 {
   "schema_version": 1,
   "registered": 506,
-  "max_registered_gaps": 248,
+  "max_registered_gaps": 245,
   "max_legacy_public_read": 85,
   "max_legacy_public_command": 119,
   "allowed_public_command_gaps": [
     "DELETE /api/v1/auth/sessions/{id}",
-    "DELETE /api/v1/exams/{examId}/answer-sheet-template-binding",
     "DELETE /api/v1/files/{id}",
     "DELETE /api/v1/platform/model-api-configs/{id}",
     "DELETE /api/v1/questions/{id}",
@@ -122,7 +121,6 @@
     "POST /api/v1/submissions/{id}/student-match/confirm",
     "POST /api/v1/submissions/{id}/student-match/unknown",
     "POST /api/v1/tenants",
-    "PUT /api/v1/exams/{examId}/answer-sheet-template-binding",
     "PUT /api/v1/exams/{examId}/double-mark-policy",
     "PUT /api/v1/exams/{examId}/questions/{questionId}/seed-policy",
     "PUT /api/v1/exams/{examId}/roster/{studentId}/attendance",

@@ -16,17 +16,23 @@ const (
 // MemoryStore 以进程内锁维护状态，不提供数据库事务回滚或跨进程任务租约。
 // 用它验证业务分支时，不能据此推断 PostgreSQL 的并发提交和持久化恢复行为。
 type MemoryStore struct {
-	mu         sync.RWMutex
-	next       int
-	examTotals map[string]float64
-	papers     map[string]Paper
-	questions  map[string]Question
-	rubrics    map[string][]Rubric
-	templates  map[string]AnswerSheetTemplate
-	bindings   map[string]ExamTemplateBinding
-	readiness  map[string]ReadinessResult
-	imports    map[string]PaperImportJob
-	examState  map[string]memoryExamState
+	mu               sync.RWMutex
+	next             int
+	examTotals       map[string]float64
+	papers           map[string]Paper
+	questions        map[string]Question
+	rubrics          map[string][]Rubric
+	templates        map[string]AnswerSheetTemplate
+	bindings         map[string]ExamTemplateBinding
+	bindingRevisions map[string]int
+	readiness        map[string]ReadinessResult
+	imports          map[string]PaperImportJob
+	examState        map[string]memoryExamState
+	rubricDraftJobs  map[string]rubricDraftJobRecord
+	templateLibrary  map[string]AnswerSheetTemplateLibraryVersion
+	librarySources   map[string]templateLibrarySource
+	libraryInstances map[string]string
+	libraryExams     QuestionRubricExamReader
 }
 
 type memoryExamState struct {
@@ -46,16 +52,21 @@ func (s *MemoryStore) ensureExamPaperMutableLocked(examID string) error {
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		next:       1,
-		examTotals: map[string]float64{},
-		papers:     map[string]Paper{},
-		questions:  map[string]Question{},
-		rubrics:    map[string][]Rubric{},
-		templates:  map[string]AnswerSheetTemplate{},
-		bindings:   map[string]ExamTemplateBinding{},
-		readiness:  map[string]ReadinessResult{},
-		imports:    map[string]PaperImportJob{},
-		examState:  map[string]memoryExamState{},
+		next:             1,
+		examTotals:       map[string]float64{},
+		papers:           map[string]Paper{},
+		questions:        map[string]Question{},
+		rubrics:          map[string][]Rubric{},
+		templates:        map[string]AnswerSheetTemplate{},
+		bindings:         map[string]ExamTemplateBinding{},
+		bindingRevisions: map[string]int{},
+		readiness:        map[string]ReadinessResult{},
+		imports:          map[string]PaperImportJob{},
+		examState:        map[string]memoryExamState{},
+		rubricDraftJobs:  map[string]rubricDraftJobRecord{},
+		templateLibrary:  map[string]AnswerSheetTemplateLibraryVersion{},
+		librarySources:   map[string]templateLibrarySource{},
+		libraryInstances: map[string]string{},
 	}
 }
 
@@ -401,6 +412,9 @@ func validateMemoryImportDraft(draft *PaperImportDraftQuestion) error {
 	if err := validateQuestionInput(draft.QuestionNo, draft.QuestionType, draft.Score); err != nil {
 		return ErrInvalidInput
 	}
+	if draft.Rubric != nil && !ValidRubricPointIdentities(draft.Rubric.Points) {
+		return ErrInvalidInput
+	}
 	if draft.Rubric != nil && (!scoreEqual(SumRubricPoints(draft.Rubric.Points), draft.Score) || !scoreEqual(draft.Rubric.MaxScore, draft.Score)) {
 		return ErrRubricMismatch
 	}
@@ -546,7 +560,16 @@ func (s *MemoryStore) CreatePaper(_ context.Context, tenantID string, examID str
 		return Paper{}, err
 	}
 	if exists {
+		item.Duplicate = true
 		return item, nil
+	}
+	if purpose == PaperPurposeAnswerSheet && input.File.HashSHA256 != "" {
+		for _, item := range s.papers {
+			if item.TenantID == tenantID && item.ExamID == examID && item.Purpose == purpose && item.File.HashSHA256 == input.File.HashSHA256 {
+				item.Duplicate = true
+				return item, nil
+			}
+		}
 	}
 	version := 1
 	for _, item := range s.papers {
@@ -723,6 +746,9 @@ func (s *MemoryStore) DeleteQuestion(_ context.Context, tenantID string, id stri
 }
 
 func (s *MemoryStore) CreateRubric(_ context.Context, tenantID string, questionID string, _ string, input RubricInput) (Rubric, error) {
+	if !ValidRubricPointIdentities(input.Points) {
+		return Rubric{}, ErrInvalidInput
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	question, ok := s.questions[questionID]

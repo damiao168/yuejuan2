@@ -98,8 +98,16 @@ export function AppealCenterPage({
   const detailRequestRef = useRef(0);
   // 点击列表时先同步记录目标，迟到请求和提交不能沿用上一条申诉。
   const selectedIdRef = useRef("");
+  const listRequestRef = useRef(0);
+  const listScope = JSON.stringify([currentUser.tenant, currentUser.id, canRead, canManage, canReadIdentities, canReadExams, examFilter, statusFilter]);
+  const listScopeRef = useRef(listScope);
+  listScopeRef.current = listScope;
 
   const load = useCallback(async () => {
+    if (listScopeRef.current !== listScope) return;
+    const requestId = ++listRequestRef.current;
+    // 列表及随附身份资料属于同一筛选范围；详情的ID守卫不能阻止旧列表重新选择旧任务。
+    const isCurrent = () => requestId === listRequestRef.current && listScopeRef.current === listScope;
     if (!canRead) {
       setLoading(false);
       return;
@@ -113,6 +121,7 @@ export function AppealCenterPage({
         status: statusFilter === "all" ? undefined : statusFilter,
         limit: 100,
       });
+      if (!isCurrent()) return;
       const studentIds = Array.from(new Set(response.appeals.map((item) => item.student_id).filter(Boolean)));
       // 身份与管理数据按能力单独请求，教师匿名复核不依赖学生姓名或管理员统计。
       const [studentResult, classResult, examResult, statsResult, workerResult] = await Promise.all([
@@ -126,6 +135,7 @@ export function AppealCenterPage({
           : Promise.resolve({ statistics: null }),
         canManage ? listManagedUsers({ limit: 200 }) : Promise.resolve({ users: [] }),
       ]);
+      if (!isCurrent()) return;
       const nextSelectedId = response.appeals.some((item) => item.id === selectedIdRef.current)
         ? selectedIdRef.current
         : (response.appeals[0]?.id ?? "");
@@ -145,14 +155,18 @@ export function AppealCenterPage({
         ),
       );
     } catch (error_) {
+      if (!isCurrent()) return;
       setError(formatError(error_));
       setAppeals([]);
+      selectedIdRef.current = "";
+      setSelectedId("");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [canManage, canRead, canReadExams, canReadIdentities, examFilter, statusFilter]);
+  }, [canManage, canRead, canReadExams, canReadIdentities, examFilter, statusFilter, listScope]);
   useEffect(() => {
     void load();
+    return () => { listRequestRef.current += 1; };
   }, [load]);
   useEffect(() => {
     const requestId = ++detailRequestRef.current;

@@ -19,17 +19,18 @@ WORKDIR /app
 # FormulaRecognition 在 LaTeX 后处理中延迟导入 ftfy，
 # 受保护的公式路径使用 MathText 回渲染验证。这两项必须在
 # Paddle 条件分支外安装，以支持 INSTALL_PADDLEOCR=false。
+# 任意安装命令失败都终止这一层；不能让后续if或基础依赖安装掩盖Paddle/HPI失败。
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
-    python -m pip install --index-url "$PIP_INDEX_URL" \
+    set -e; python -m pip install --index-url "$PIP_INDEX_URL" \
       "pip==26.1.2" "setuptools==83.0.0" \
-    && if [ "$INSTALL_PADDLEOCR" = "true" ]; then \
+    ; if [ "$INSTALL_PADDLEOCR" = "true" ]; then \
       python -m pip install --index-url "$PIP_INDEX_URL" \
         "paddleocr==3.7.0" "paddlepaddle==3.3.1" "tokenizers==0.22.1" "Pillow>=10,<12" "matplotlib>=3.9,<4"; \
       if [ "$INSTALL_PADDLEOCR_HPI" = "true" ]; then \
         paddlex --install hpi-cpu; \
       fi; \
-    fi \
-    && python -m pip install --index-url "$PIP_INDEX_URL" "ftfy==6.3.1" "matplotlib>=3.9,<4"
+    fi; \
+    python -m pip install --index-url "$PIP_INDEX_URL" "ftfy==6.3.1" "matplotlib>=3.9,<4"
 
 # 系统库的变化频率远低于应用源码。把此步骤
 # 放在源码 COPY 前，避免修改 OCR 工作进程时使 apt 层缓存失效，

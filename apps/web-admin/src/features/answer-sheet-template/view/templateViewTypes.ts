@@ -8,6 +8,7 @@ import type { useStudentPrinting } from "../printing/useStudentPrinting";
 import type { useTemplatePreview } from "../editor/useTemplatePreview";
 import type { useTemplateEditor } from "../editor/useTemplateEditor";
 import type { useAnswerSheetSourceUpload } from "../editor/useAnswerSheetSourceUpload";
+import type { useAnswerSheetSourceDelete } from "../editor/useAnswerSheetSourceDelete";
 
 // 子视图只消费本次渲染的状态与动作；保存、上传和请求代次仍由原控制器管理。
 export type TemplatePageViewState = Readonly<{
@@ -21,10 +22,11 @@ export type TemplatePageViewState = Readonly<{
 	selectedTemplateId: string;
 	setSelectedTemplateId: Dispatch<SetStateAction<string>>;
 	selectedTemplate?: AnswerSheetTemplate;
-	questionPaneOpen: boolean;
-	setQuestionPaneOpen: Dispatch<SetStateAction<boolean>>;
+  settingsOpen: boolean;
+  setSettingsOpen: Dispatch<SetStateAction<boolean>>;
 	templateDirty: boolean;
 	canEditSources: boolean;
+  sourceRecognitionBlocked?: boolean;
 	uploadProps: UploadProps;
 	confirmDiscardTemplate: (action: () => void) => void;
 	loadData: () => Promise<void>;
@@ -33,6 +35,7 @@ export type TemplatePageViewState = Readonly<{
 	previewController: ReturnType<typeof useTemplatePreview>;
 	calibration: ReturnType<typeof useOMRCalibration>;
 	sourceUpload: ReturnType<typeof useAnswerSheetSourceUpload>;
+  sourceManagement?: ReturnType<typeof useAnswerSheetSourceDelete>;
 	editor: ReturnType<typeof useTemplateEditor>;
 }>;
 

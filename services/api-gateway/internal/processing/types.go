@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/assessment"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 var (
@@ -188,6 +189,8 @@ type ExceptionFilter struct {
 	Limit    int
 	CursorAt time.Time
 	CursorID string
+	// Access 由 HTTP 认证范围派生；请求筛选只能缩小范围，不能把班级继承的学校 ID 当成全校权限。
+	Access auth.ExamCollectionAccess
 }
 
 type ListResult struct {

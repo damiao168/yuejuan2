@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setBusinessCommandScope } from "../../../../api/businessCommand";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
@@ -50,17 +50,28 @@ describe("快捷确认的页面作用域和提交代次", () => {
   function tree(value: Parameters<typeof FastConfirmDrawer>[0]) {
     return <QueryClientProvider client={client}><FastConfirmDrawer {...value} /></QueryClientProvider>;
   }
-  async function open() { await act(async () => fireEvent.click(screen.getByRole("button", { name: "查看候选任务" }))); }
+  async function open(waitForLoaded = true) {
+    fireEvent.click(screen.getByRole("button", { name: "查看待确认的建议分" }));
+    if (waitForLoaded) await waitFor(() => expect(screen.queryByText("加载中")).toBeNull());
+  }
   async function inspect(index: number) {
-    await act(async () => fireEvent.click(screen.getAllByRole("button", { name: "核对原图与证据" })[index]));
+    fireEvent.click(screen.getAllByRole("button", { name: "核对原图与证据" })[index]);
+    await screen.findByRole("img", { name: "待核对的学生答题原图" });
     fireEvent.load(screen.getByRole("img", { name: "待核对的学生答题原图" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "已核对原图、证据并确认此分数" }));
   }
-  async function submit(count: number) { await act(async () => fireEvent.click(screen.getByRole("button", { name: `提交已核对的 ${count} 份` }))); }
+  async function submit(count: number, waitForSubmission = true) {
+    const previousSubmissions = mocks.submit.mock.calls.length;
+    const previousLoads = mocks.load.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: `提交已核对的 ${count} 份` }));
+    // 延迟复核用例只等待读取开始；其他用例等待真正提交，避免依赖 act 顺便冲刷网络微任务。
+    if (waitForSubmission) await waitFor(() => expect(mocks.submit).toHaveBeenCalledTimes(previousSubmissions + 1));
+    else await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(previousLoads + 1));
+  }
 
   it("切考试后旧候选加载结果不能覆盖新列表，使用当前Provider的QueryClient", async () => {
     const old = deferred<WorkbenchContext>(); mocks.load.mockReturnValueOnce(old.promise);
-    const mounted = render(tree(props("exam-A", ["A-1"]))); await open();
+    const mounted = render(tree(props("exam-A", ["A-1"]))); await open(false);
     mounted.rerender(tree(props("exam-B", ["B-1"]))); await open();
     expect(screen.getByText("1 · 匿名卷 匿名B-1")).toBeDefined();
     await act(async () => old.resolve(context("A-1")));
@@ -95,7 +106,7 @@ describe("快捷确认的页面作用域和提交代次", () => {
   it("卸载后迟到的提交前复核结果不能再发送评分", async () => {
     const pending = deferred<WorkbenchContext>();
     const mounted = render(tree(props("exam-A", ["A-1"]))); await open(); await inspect(0);
-    mocks.load.mockReturnValueOnce(pending.promise); await submit(1); mounted.unmount();
+    mocks.load.mockReturnValueOnce(pending.promise); await submit(1, false); mounted.unmount();
     await act(async () => pending.resolve(context("A-1")));
     expect(mocks.submit).not.toHaveBeenCalled(); expect(mocks.tasksChanged).not.toHaveBeenCalled(); expect(mocks.scoringChanged).not.toHaveBeenCalled();
   });

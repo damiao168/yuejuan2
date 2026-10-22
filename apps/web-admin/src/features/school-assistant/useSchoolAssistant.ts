@@ -35,6 +35,7 @@ export function useSchoolAssistant(accountKey: string) {
     active.current.controller = undefined;
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 账号键变化即清空旧查询并递增代次，即使网络取消较晚也不能泄露旧账户事实。
   useEffect(() => {
     // 同一组件可能换账户；即使网络层没有及时终止，旧账户事件也不能进入新的页面状态。
     invalidate();
@@ -42,6 +43,7 @@ export function useSchoolAssistant(accountKey: string) {
     return invalidate;
   }, [accountKey, invalidate]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: capabilityRevision 是用户主动重读权限列表的触发键，不能因不是参数而删除。
   useEffect(() => {
     const controller = new AbortController();
     let live = true;

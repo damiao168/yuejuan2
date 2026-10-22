@@ -113,7 +113,9 @@ export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Rea
   const [actorAttempt, setActorAttempt] = useState(0);
   const [actorLoading, setActorLoading] = useState(false);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 换考试必须关闭原考试的分派、处理和材料窗口，不能沿用旧目标。
   useEffect(() => { setAssigning(null); setResolving(null); setViewing(null); }, [examId]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: actorAttempt 触发用户重试同一考试的人员目录；不是请求参数。
   useEffect(() => {
     if (!assigning || !canManage) return;
     let active = true;

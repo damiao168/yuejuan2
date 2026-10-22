@@ -2,6 +2,7 @@ package seedquality
 
 import (
 	"context"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
 	"errors"
 	"time"
@@ -118,6 +119,7 @@ type Observation struct {
 }
 
 type ObservationFilter struct {
+	Access     auth.ExamCollectionAccess
 	ExamID     string
 	QuestionID string
 	GraderID   string

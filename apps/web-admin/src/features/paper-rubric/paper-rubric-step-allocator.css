@@ -1,0 +1,27 @@
+.paper-rubric-step-allocator { display: grid; gap: 14px; }
+.paper-rubric-step-help { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.paper-rubric-solution-lines { padding: 0; margin: 0; list-style: none; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.paper-rubric-solution-lines > li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 14px; }
+.paper-rubric-solution-lines > li + li { border-top: 1px solid var(--border); }
+.paper-rubric-solution-lines > li.is-selected { background: #edf5ff; }
+.paper-rubric-solution-lines > li.is-assigned.is-group-0 { background: #f0f8f3; }
+.paper-rubric-solution-lines > li.is-assigned.is-group-1 { background: #f0f5fb; }
+.paper-rubric-solution-lines > li.is-group-end { border-bottom: 2px solid #b7d7c3; }
+.paper-rubric-line-number { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.paper-rubric-line-content { min-width: 0; }
+.paper-rubric-line-content > :first-child { margin-top: 0; }
+.paper-rubric-line-content > :last-child { margin-bottom: 0; }
+.paper-rubric-line-action { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; color: var(--text-muted); font-size: 12px; }
+.paper-rubric-line-selection { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.paper-rubric-assigned-score { color: #276442; font-size: 12px; }
+.paper-rubric-selection-controls, .paper-rubric-step-group, .paper-rubric-step-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; }
+.paper-rubric-step-allocator .paper-rubric-score-input { width: 145px; }
+.paper-rubric-step-groups { display: grid; gap: 10px; border-top: 1px solid var(--border); padding-top: 14px; }
+.paper-rubric-step-remaining { margin-left: 14px; color: var(--text-muted); }
+.paper-rubric-step-footer { border-top: 1px solid var(--border); padding-top: 14px; }
+.paper-rubric-step-footer p { margin: 6px 0 0; font-size: 12px; color: var(--text-muted); }
+@media (max-width: 640px) {
+  .paper-rubric-solution-lines > li { grid-template-columns: 20px minmax(0, 1fr); gap: 8px; padding: 12px 10px; }
+  .paper-rubric-line-action { grid-column: 2; flex-direction: row; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
+  .paper-rubric-step-footer > .ant-btn { width: 100%; }
+}

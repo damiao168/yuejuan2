@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from .omr import extract_marks
 
@@ -52,8 +52,9 @@ def build_synthetic_acceptance_cases() -> list[SyntheticOMRCase]:
     for index in range(18):
         add(1, "multiple_choice", multiple_answers[index % len(multiple_answers)], True, False, "clear")
 
-    # 有风险的情况必须交由人工处理，不能自动判为零分。
-    add(15, "single_choice", (), False, True, "blank")
+    # 清晰空白是独立观察事实；提取器可给出可信 blank，正式记零仍需服务端校准授权。
+    add(15, "single_choice", (), False, False, "blank")
+    # 多涂和判定带内的弱涂点必须复核，不能当作清晰空白。
     add(10, "single_choice", ("A", "C"), False, True, "clear")
     for index in range(15):
         add(1, "true_false", (("A", "B")[index % 2],), False, True, "light")
@@ -73,6 +74,8 @@ def render_synthetic_case(case: SyntheticOMRCase) -> bytes:
         height = int(region["height"])
         box = (x, y, x + width, y + height)
         draw.rectangle(box, outline="black", width=2)
+        # 未填选项也包含印刷字母，验收不能只靠完全空白的方框掩盖文字误报。
+        draw.text((x + 10, y + 6), region["label"], fill="black", font=ImageFont.load_default(size=14))
         if region["label"] not in case.marked:
             continue
         if case.mark_style == "light":
@@ -126,7 +129,7 @@ def evaluate_synthetic_acceptance() -> dict[str, Any]:
                 review_recalled += 1
         elif actual_review:
             false_zero_routed += 1
-        elif result["decision"] == "blank":
+        elif result["decision"] == "blank" and case.marked:
             silent_zero_count += 1
         elif selected != case.marked:
             wrong_auto_selection += 1
@@ -146,7 +149,7 @@ def evaluate_synthetic_acceptance() -> dict[str, Any]:
     ordered = sorted(durations_ms)
     p95_index = max(0, int(np.ceil(len(ordered) * 0.95)) - 1)
     return {
-        "suite": "story056-synthetic-omr-v1",
+        "suite": "story056-synthetic-omr-v3",
         "fixture_kind": "synthetic",
         "total_submissions": len(cases),
         "question_type_counts": {

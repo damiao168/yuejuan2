@@ -128,8 +128,8 @@ describe("质量看板展示职责回归", () => {
     mocks.preview.mockResolvedValue({ preview: { affected_count: 1, selector_hash: "hash", time_range: {}, score_bands: [] } });
     mocks.recompute.mockResolvedValue({});
     mocks.incidents.mockResolvedValue({ incidents: [] });
-    mocks.seed.mockResolvedValue({ policy: { rate: .1, min_interval: 10, max_interval: 30, status: "active", revision: 3 } });
-    mocks.saveSeed.mockResolvedValue({ policy: { rate: .1, min_interval: 10, max_interval: 30, status: "paused", revision: 4 } });
+    mocks.seed.mockResolvedValue({ policy: { exam_id: "exam", question_id: "q1", rate: .1, min_interval: 10, max_interval: 30, status: "active", revision: 3 } });
+    mocks.saveSeed.mockResolvedValue({ policy: { exam_id: "exam", question_id: "q1", rate: .1, min_interval: 10, max_interval: 30, status: "paused", revision: 4 } });
     host = document.createElement("div"); document.body.append(host); root = createRoot(host);
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); });
@@ -318,5 +318,29 @@ describe("质量看板展示职责回归", () => {
 
   it.each([["核对本题标准卷", "gold"], ["处理标定", "calibration"], ["复核分组样本", "groups"]])("%s 直接打开本题材料工作区", async (label, material) => {
     await render(); await click(label); expect(host.querySelector(`[data-material="${material}"]`)?.textContent).toBe("exam:q1");
+  });
+
+  it.each([true, false])("盲测切题读取失败=%s时只能保存当前题已成功读取的策略", async failed => {
+    const value = dashboard(); value.questions.push({ ...value.questions[0], question: { ...value.questions[0].question, id: "q2", question_no: "Q2" } });
+    mocks.dashboard.mockResolvedValue({ dashboard: value });
+    mocks.seed.mockImplementation(async (_exam: string, question: string) => {
+      if (question === "q2" && failed) throw new Error("second question policy unavailable");
+      return { policy: { exam_id: "exam", question_id: question, rate: question === "q1" ? .1 : .7, min_interval: question === "q1" ? 10 : 20, max_interval: question === "q1" ? 30 : 50, status: "active", revision: 3 } };
+    });
+    mocks.saveSeed.mockImplementation(async (_exam: string, question: string, body: Record<string, unknown>) => ({ policy: { ...body, exam_id: "exam", question_id: question, revision: 4 } }));
+    await render(); await click("盲测策略");
+    const pane = host.querySelector('[data-drawer="盲测策略"]')!;
+    const select = pane.querySelector<HTMLSelectElement>("select")!;
+    await act(async () => { select.value = "q2"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(select.value).toBe("q2"); expect(button("保存", pane).disabled).toBe(failed);
+    await click("保存", pane);
+    if (failed) {
+      expect(mocks.saveSeed).not.toHaveBeenCalled();
+      expect(pane.textContent).toContain("当前题目的盲测策略读取失败，暂不能保存");
+      expect(mocks.forms[1].getFieldsValue().rate).toBeUndefined();
+    } else {
+      expect(mocks.saveSeed).toHaveBeenCalledWith("exam", "q2", { rate: .7, min_interval: 20, max_interval: 50, status: "active", expected_revision: 3 });
+      expect(mocks.message.success).toHaveBeenCalledWith("盲测策略已保存");
+    }
   });
 });

@@ -19,8 +19,30 @@ describe("attachment loading boundaries", () => {
   it("validates type and byte limits before loading PDF code", async () => {
     const { readChatAttachment } = await import("./conversationAttachments");
     await expect(readChatAttachment(file("large.pdf", "", 10 * 1024 * 1024 + 1, "application/pdf"))).rejects.toThrow("10 MB");
-    await expect(readChatAttachment(file("image.png", "", 4, "image/png"))).rejects.toThrow("仅支持 PDF");
+    await expect(readChatAttachment(file("image.webp", "", 4, "image/webp"))).rejects.toThrow("支持 PNG");
     expect(mocks.loads).toBe(0);
+  });
+
+  it("reads a pasted PNG as image input without loading PDF or extracting it as text", async () => {
+    const { readChatAttachment } = await import("./conversationAttachments");
+    const image = new File([new Uint8Array([137, 80, 78, 71])], "截图.png", { type: "image/png" });
+    expect(await readChatAttachment(image)).toEqual({ name: "截图.png", media_type: "image/png", size: 4, content: "data:image/png;base64,iVBORw==" });
+    expect(mocks.loads).toBe(0);
+  });
+
+  it("rejects oversized and empty images before reading", async () => {
+    const { readChatAttachment } = await import("./conversationAttachments");
+    await expect(readChatAttachment(file("large.png", "", 3 * 1024 * 1024 + 1, "image/png"))).rejects.toThrow("3 MB");
+    await expect(readChatAttachment(new File([], "empty.jpg", { type: "image/jpeg" }))).rejects.toThrow("图片为空");
+    expect(mocks.loads).toBe(0);
+  });
+
+  it("cancels an in-progress image read", async () => {
+    const { readChatAttachment } = await import("./conversationAttachments");
+    const controller = new AbortController();
+    const pending = readChatAttachment(new File(["image"], "截图.png", { type: "image/png" }), controller.signal);
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
   });
 
   it("loads PDF on demand and passes the owning cancellation signal", async () => {

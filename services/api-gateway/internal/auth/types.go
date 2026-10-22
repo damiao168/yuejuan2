@@ -7,21 +7,22 @@ import (
 )
 
 var (
-	ErrInvalidCredentials        = errors.New("invalid credentials")
-	ErrUnauthenticated           = errors.New("unauthenticated")
-	ErrForbidden                 = errors.New("forbidden")
-	ErrUsernameExists            = errors.New("username already exists")
-	ErrIdentityExists            = errors.New("login identity already exists")
-	ErrRoleNotFound              = errors.New("role not found")
-	ErrRoleAssignment            = errors.New("role assignment is not allowed")
-	ErrOrganizationScope         = errors.New("organization scope is not allowed")
-	ErrInvalidRoleBinding        = errors.New("role organization binding is invalid")
-	ErrManagedUserNotFound       = errors.New("managed user not found")
-	ErrUserStatusForbidden       = errors.New("managed user status change is not allowed")
-	ErrLastSchoolAdmin           = errors.New("last active school administrator cannot be disabled")
-	ErrManagedUserAccessConflict = errors.New("managed user access changed")
-	ErrActivationInvalid         = errors.New("activation token is invalid or expired")
-	ErrRecoveryInvalid           = errors.New("recovery token is invalid or expired")
+	ErrInvalidCredentials         = errors.New("invalid credentials")
+	ErrUnauthenticated            = errors.New("unauthenticated")
+	ErrForbidden                  = errors.New("forbidden")
+	ErrUsernameExists             = errors.New("username already exists")
+	ErrIdentityExists             = errors.New("login identity already exists")
+	ErrRoleNotFound               = errors.New("role not found")
+	ErrRoleAssignment             = errors.New("role assignment is not allowed")
+	ErrOrganizationScope          = errors.New("organization scope is not allowed")
+	ErrInvalidRoleBinding         = errors.New("role organization binding is invalid")
+	ErrManagedUserNotFound        = errors.New("managed user not found")
+	ErrUserStatusForbidden        = errors.New("managed user status change is not allowed")
+	ErrLastSchoolAdmin            = errors.New("last active school administrator cannot be disabled")
+	ErrManagedUserAccessConflict  = errors.New("managed user access changed")
+	ErrManagedUserProfileConflict = errors.New("managed user profile changed")
+	ErrActivationInvalid          = errors.New("activation token is invalid or expired")
+	ErrRecoveryInvalid            = errors.New("recovery token is invalid or expired")
 )
 
 const PlatformTenantID = "00000000-0000-0000-0000-000000000001"
@@ -85,6 +86,7 @@ type ManagedUser struct {
 type ManagedUserFilter struct {
 	Query           string
 	Role            string
+	Status          string
 	UserID          string
 	RestrictSchools bool
 	SchoolIDs       []string
@@ -151,6 +153,16 @@ type UpdateManagedUserAccessInput struct {
 	ExpectedRoles    []string `json:"expected_roles"`
 	ExpectedClassIDs []string `json:"expected_class_ids"`
 	Reason           string   `json:"reason"`
+}
+
+// UpdateManagedUserProfileInput 只修改基本资料；手机号省略时保留现值，工号允许显式清空。
+type UpdateManagedUserProfileInput struct {
+	DisplayName         string  `json:"display_name"`
+	EmployeeNo          string  `json:"employee_no"`
+	Phone               *string `json:"phone,omitempty"`
+	ExpectedDisplayName string  `json:"expected_display_name"`
+	ExpectedEmployeeNo  string  `json:"expected_employee_no"`
+	ExpectedPhoneMasked string  `json:"expected_phone_masked"`
 }
 
 type Session struct {
@@ -323,6 +335,7 @@ type UserAdministrationRepository interface {
 	CreateManagedUser(ctx context.Context, actor User, actorScope AccessScope, input CreateManagedUserInput, passwordHash string) (ManagedUser, error)
 	UpdateManagedUserStatus(ctx context.Context, actor User, actorScope AccessScope, userID string, status string) (ManagedUser, string, error)
 	UpdateManagedUserAccess(ctx context.Context, actor User, actorScope AccessScope, userID string, input UpdateManagedUserAccessInput) (ManagedUser, error)
+	UpdateManagedUserProfile(ctx context.Context, actor User, actorScope AccessScope, userID string, input UpdateManagedUserProfileInput) (ManagedUser, bool, error)
 }
 
 type ActivationRepository interface {

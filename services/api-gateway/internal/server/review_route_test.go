@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/review"
+	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
 
 const reviewTenantID = "00000000-0000-0000-0000-000000000002"
@@ -487,7 +489,8 @@ func TestReviewWorkbenchClaimDraftRefreshSubmitAndNext(t *testing.T) {
 	secondContext.SubmissionID = "submission-2"
 	reviewStore.AddContext(reviewTenantID, "segment-1", firstContext)
 	reviewStore.AddContext(reviewTenantID, "segment-2", secondContext)
-	router := reviewRouter(authStore, reviewStore)
+	// 上下文预取会核对作答范围；该夹具登记相同的单题范围，不虚构裁图或评估快照。
+	router := reviewRouter(authStore, reviewStore, reviewRouteScopeSegments{Store: segment.NewMemoryStore()})
 	managerToken := reviewLogin(t, router, "review_manager")
 	graderToken := reviewLogin(t, router, "review_grader")
 
@@ -1123,7 +1126,16 @@ func reviewSubmitBlindDoubleMarks(t *testing.T, router http.Handler, firstID, se
 
 }
 
-func reviewRouter(authStore *auth.MemoryStore, reviewStore review.Store) http.Handler {
+type reviewRouteScopeSegments struct{ segment.Store }
+
+func (s reviewRouteScopeSegments) GetEvidence(_ context.Context, tenant, id string) (segment.SegmentEvidence, error) {
+	if tenant != reviewTenantID || (id != "segment-1" && id != "segment-2") {
+		return segment.SegmentEvidence{}, segment.ErrNotFound
+	}
+	return segment.SegmentEvidence{SegmentID: id, ExamID: "exam-1", QuestionID: "question-1", NormalizedBBox: map[string]any{"answer_scope": "question"}}, nil
+}
+
+func reviewRouter(authStore *auth.MemoryStore, reviewStore review.Store, segments ...segment.Store) http.Handler {
 	cfg := config.Config{
 		Service: config.ServiceConfig{Name: "test", Environment: "test", ReadinessTimeout: time.Millisecond},
 		Auth:    config.AuthConfig{SessionTTL: time.Hour},
@@ -1131,6 +1143,9 @@ func reviewRouter(authStore *auth.MemoryStore, reviewStore review.Store) http.Ha
 	return NewMemoryRouter(cfg, loggerForReviewTest(), nil, files.NewMemoryObjectStorage(), func(stores *ApplicationStores) {
 		stores.Identity.Auth = authStore
 		stores.Grading.Review = reviewStore
+		if len(segments) > 0 {
+			stores.Exam.Segments = segments[0]
+		}
 	})
 }
 

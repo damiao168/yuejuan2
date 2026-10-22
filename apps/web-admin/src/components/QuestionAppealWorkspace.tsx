@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, App, Button, Drawer, Typography } from "antd";
+import { usePageLoading, usePageVisible } from "./pageReadiness";
 import {
   decideQuestionAppeal,
   getQuestionAppealAnswerImage,
@@ -66,6 +67,9 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
   const [selectedId, setSelectedId] = useState("");
   const [context, setContext] = useState<PublishedQuestionAppealContext | null>(null);
   const [contextError, setContextError] = useState("");
+  const pageVisible = usePageVisible();
+  // 列表会自动打开首条申请；先等其依据或失败说明，不能把空队列和详情占位当作就绪。
+  usePageLoading(canRead && (loading || Boolean(selectedId && !context && !contextError)));
   const [actioning, setActioning] = useState(false);
   const [assignedTo, setAssignedTo] = useState("");
   const [regradeJobID, setRegradeJobID] = useState("");
@@ -93,6 +97,7 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
   useUnsavedChangesGuard({ dirty: draftTouched, busy: actioning, description: "复核意见、给学生的回复或本题复评选择尚未提交，离开后无法恢复。" });
   useEffect(() => { onEditorStateChange?.({ dirty: draftTouched, busy: actioning }); }, [draftTouched, actioning, onEditorStateChange]);
   useEffect(() => () => { refreshRequestRef.current += 1; summaryRequestRef.current++; }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 切申诉使旧汇总读取失效，不能让上一条申请的迟到结果结束本条加载。
   useEffect(() => { summaryRequestRef.current++; setSummaryLoading(false); }, [selectedId]);
 
   const changeSelection = (next: () => void) => {
@@ -137,6 +142,7 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
     }).catch((cause) => { if (active) setIdentityError(messageFor(cause)); });
     return () => { active = false; };
   }, [appeals, canReadIdentities, personalScope]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: contextRevision 只负责重新读取当前申诉；删除后操作成功也不会刷新详情。
   useEffect(() => {
     if (!selectedId) { setContext(null); return; }
     // 选择或刷新版本变化后，上一轮详情不能覆盖当前申诉和分派选择。
@@ -165,6 +171,7 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
     return () => { active = false; if (objectURL) URL.revokeObjectURL(objectURL); };
   }, [context?.appeal.id, context?.answer_image_ready]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: regradeRevision 只重读复评任务，不触发当前申诉的未提交回复重置。
   useEffect(() => {
     if (!canManageScores || !context) { setRegradeJobs([]); return; }
     // regradeRevision 只重读任务列表，保留同一申请的公开回复；不能随列表刷新重置详情草稿。
@@ -273,7 +280,8 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
   return <section className="question-appeal-workspace" aria-labelledby="question-appeal-title">
     <QuestionAppealSummary appeals={appeals} loading={loading} actioning={actioning} error={error} identityError={identityError} examLabels={examLabels} onRefresh={() => changeSelection(() => { void refreshSelected(); })} />
     <QuestionAppealQueue appeals={appeals} selectedId={selectedId} personalScope={personalScope} examLabels={examLabels} studentLabels={studentLabels} onSelect={(id) => changeSelection(() => setSelectedId(id))} />
-    <Drawer width={760} open={Boolean(selectedId)} title={selected ? `${questionAppealBusinessSummary(selected, examLabels)}复核材料` : "复核材料"} onClose={() => changeSelection(() => setSelectedId(""))}>
+    {/* Drawer 默认挂到 body；候选页面尚未显示时保持关闭，避免绕过隐藏容器提前弹出材料。 */}
+    <Drawer width={760} open={pageVisible && Boolean(selectedId)} title={selected ? `${questionAppealBusinessSummary(selected, examLabels)}复核材料` : "复核材料"} onClose={() => changeSelection(() => setSelectedId(""))}>
       {contextError ? <Alert type="error" showIcon message="无法处理此申诉" description={contextError} /> : null}
       {!context && !contextError ? <Typography.Text type="secondary">正在加载发布版本依据…</Typography.Text> : null}
       {context ? <div className="question-appeal-context">

@@ -21,6 +21,16 @@ const baseProps: Props = {
 };
 
 describe("score release gate rendering", () => {
+  it("uses clean deep links for question and quality issues without requiring router context", () => {
+    const gate = { ...baseGate, passed: false, blocking: [
+      { code: "quality", message: "待复核", count: 1, blocking: true, action_route: "quality" as const },
+      { code: "questions", message: "待配置", count: 1, blocking: true, action_route: "questions" as const },
+    ] };
+    const html = renderToStaticMarkup(<ScoreReleaseWorkspace {...baseProps} selectedExamId="exam/1" releaseGate={gate} />);
+    expect(html).toContain('href="/admin/exams/exam%2F1/quality"');
+    expect(html).toContain('href="/admin/exams/exam%2F1/questions"');
+    expect(html).not.toContain('href="#');
+  });
   it("keeps an unread gate separate from a passed gate", () => {
     const html = renderToStaticMarkup(<ScoreReleaseWorkspace {...baseProps} />);
     expect(html).toContain("门禁待读取");

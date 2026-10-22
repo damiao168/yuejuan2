@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, App, Button, Form, Input, Modal, Select, Space, Tabs } from "antd";
-import type { TableColumnsType } from "antd";
+import { Alert, App, Button, Dropdown, Form, Input, Modal, Select, Space, Tabs } from "antd";
+import type { MenuProps, TableColumnsType } from "antd";
 import { getUserErrorMessage } from "../../../api/client";
 import { listClasses, listGrades, listSchools, type Grade, type School, type SchoolClass } from "../../../api/org";
 import {
@@ -19,8 +19,18 @@ import { ErrorState, LoadingState } from "../../../components/PageState";
 import { ResponsiveTable } from "../../../components/ResponsiveTable";
 import { isStepUpCancelledError, useStepUp } from "../../../auth/stepUpContext";
 import { AdministratorConfigurationNotice, MemberCreationFields, MemberManagementHeading, MemberStatus, recentUsage, roleLabels, teacherRoles, type CreateMode } from "./TeacherManagementViews";
+import { MemberProfileDialog } from "./MemberProfileDialog";
 
 type MemberView = "teachers" | "administrators";
+
+// 状态和操作保留完整单行所需宽度，其余列分配剩余空间，避免固定列宽之和撑出横向滚动。
+const memberColumnWidths = {
+  phone: "12%",
+  employee: "10%",
+  recent: "16%",
+  status: 80,
+  actions: 144
+};
 
 function memberDialogPresentation(editingUser: ManagedUser | null, createMode: CreateMode) {
   // 编辑已有人员时，文案不能沿用上一次新增管理员时留下的模式。
@@ -42,6 +52,7 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
   const [createMode, setCreateMode] = useState<CreateMode>("teacher");
   const [open, setOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
+  const [profileUser, setProfileUser] = useState<ManagedUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [updatingUserID, setUpdatingUserID] = useState("");
@@ -96,28 +107,37 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
 
   const renderActions = (user: ManagedUser) => {
     if (!canManageUser(user)) return "-";
-    const accessButton = <Button type="link" disabled={loading || Boolean(error) || saving} onClick={() => openAccess(user)}>职责与班级</Button>;
-    if (user.status === "invited") return <Space size={2}>{accessButton}<Button type="link" loading={updatingUserID === user.id} onClick={() => void reissueActivation(user)}>重新生成邀请</Button></Space>;
-    return <Space size={2}>{accessButton}{user.status === "active" ? <Button type="link" loading={updatingUserID === user.id} onClick={() => void createRecovery(user)}>协助恢复</Button> : null}<Button type="link" danger={user.status === "active"} loading={updatingUserID === user.id} onClick={() => confirmStatusChange(user)}>{user.status === "active" ? "停用" : "恢复"}</Button></Space>;
+    const busy = loading || Boolean(error) || saving || Boolean(updatingUserID);
+    const items: MenuProps["items"] = [{ key: "access", label: "职责与班级", onClick: () => openAccess(user) }];
+    if (user.status === "invited") items.push({ key: "invite", label: "重新生成邀请", onClick: () => void reissueActivation(user) });
+    else {
+      if (user.status === "active") items.push({ key: "recovery", label: "协助恢复", onClick: () => void createRecovery(user) });
+      items.push({ key: "status", label: user.status === "active" ? "停用" : "恢复", danger: user.status === "active", onClick: () => confirmStatusChange(user) });
+    }
+    // 日常资料编辑直接可见，低频权限和账号操作收进菜单，避免操作列挤出横向滚动。
+    return <Space size={2}>
+      <Button type="link" disabled={busy} onClick={() => { if (canManageUser(user)) setProfileUser(user); }}>编辑资料</Button>
+      <Dropdown menu={{ items }} trigger={["click"]} disabled={busy}><Button type="link" loading={updatingUserID === user.id} disabled={busy} aria-label={`更多操作：${user.display_name}`}>更多</Button></Dropdown>
+    </Space>;
   };
 
   const teacherColumns: TableColumnsType<ManagedUser> = [
-    { title: "姓名", dataIndex: "display_name", width: 160 },
-    { title: "手机号", dataIndex: "phone_masked", width: 150, render: (value?: string) => value || "-" },
-    { title: "教职工号", dataIndex: "employee_no", width: 140, render: (value?: string) => value || "-" },
+    { title: "姓名", dataIndex: "display_name" },
+    { title: "手机号", dataIndex: "phone_masked", width: memberColumnWidths.phone, render: (value?: string) => value || "-" },
+    { title: "教职工号", dataIndex: "employee_no", width: memberColumnWidths.employee, render: (value?: string) => value || "-" },
     { title: "工作职责", dataIndex: "roles", render: (items: string[]) => items.map((item) => roleLabels[item]).filter(Boolean).join("、") || "-" },
-    { title: "状态", dataIndex: "status", width: 100, render: (status: string) => <MemberStatus status={status} /> },
-    { title: "最近使用", key: "last_login_at", width: 175, render: (_, user) => recentUsage(user) },
-    { title: "操作", key: "actions", width: 270, render: (_, item) => renderActions(item) }
+    { title: "状态", dataIndex: "status", width: memberColumnWidths.status, render: (status: string) => <MemberStatus status={status} /> },
+    { title: "最近使用", key: "last_login_at", width: memberColumnWidths.recent, render: (_, user) => recentUsage(user) },
+    { title: "操作", key: "actions", width: memberColumnWidths.actions, render: (_, item) => renderActions(item) }
   ];
   const administratorColumns: TableColumnsType<ManagedUser> = [
-    { title: "姓名", dataIndex: "display_name", width: 160 },
-    { title: "手机号", dataIndex: "phone_masked", width: 150, render: (value?: string) => value || "-" },
-    { title: "教职工号", dataIndex: "employee_no", width: 140, render: (value?: string) => value || "-" },
+    { title: "姓名", dataIndex: "display_name" },
+    { title: "手机号", dataIndex: "phone_masked", width: memberColumnWidths.phone, render: (value?: string) => value || "-" },
+    { title: "教职工号", dataIndex: "employee_no", width: memberColumnWidths.employee, render: (value?: string) => value || "-" },
     { title: "所属学校", dataIndex: "school_id", render: (schoolID?: string) => schoolID ? schoolNames.get(schoolID) ?? "学校信息已变更" : "未标明学校" },
-    { title: "状态", dataIndex: "status", width: 100, render: (status: string) => <MemberStatus status={status} /> },
-    { title: "最近使用", key: "last_login_at", width: 175, render: (_, user) => recentUsage(user) },
-    { title: "操作", key: "actions", width: 170, render: (_, item) => renderActions(item) }
+    { title: "状态", dataIndex: "status", width: memberColumnWidths.status, render: (status: string) => <MemberStatus status={status} /> },
+    { title: "最近使用", key: "last_login_at", width: memberColumnWidths.recent, render: (_, user) => recentUsage(user) },
+    { title: "操作", key: "actions", width: memberColumnWidths.actions, render: (_, item) => renderActions(item) }
   ];
 
   async function reissueActivation(user: ManagedUser) {
@@ -272,8 +292,12 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
       ]} />
       {!isTeacherView ? <AdministratorConfigurationNotice schoolsNeedingBackup={schoolsNeedingBackup} canCreateAdministrator={canCreateAdministrator} /> : null}
       <div className="member-management-filters"><Input.Search allowClear value={query} placeholder="搜索姓名、手机号或工号" onChange={(event) => setQuery(event.target.value)} /><span>共 {visible.length} 人</span></div>
-      <ResponsiveTable className="dense-data-table" rowKey="id" size="small" columns={isTeacherView ? teacherColumns : administratorColumns} dataSource={visible} pagination={{ pageSize: 20 }} scroll={{ x: 930 }} />
+      <ResponsiveTable className="dense-data-table member-management-table" rowKey="id" size="small" columns={isTeacherView ? teacherColumns : administratorColumns} dataSource={visible} pagination={{ pageSize: 20 }} />
     </section>
+    {profileUser ? <MemberProfileDialog key={profileUser.id} user={profileUser} onCancel={() => setProfileUser(null)} onSaved={(user) => {
+      setUsers((current) => current.map((item) => item.id === user.id ? user : item));
+      setProfileUser(null);
+    }} /> : null}
     <Modal title={dialog.title} open={open} footer={null} destroyOnHidden maskClosable={!saving} closable={!saving} onCancel={() => { if (!saving) { setOpen(false); setEditingUser(null); } }}>
       <Form form={form} layout="vertical" disabled={saving} onFinish={(values) => editingUser ? void saveAccess(values) : void submit(values)}>
         {editingUser ? <>

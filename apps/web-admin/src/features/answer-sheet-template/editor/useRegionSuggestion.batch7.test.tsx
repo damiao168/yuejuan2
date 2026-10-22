@@ -108,7 +108,7 @@ describe("PDF region suggestion boundaries against the original hook", () => {
 			{ question_id: "later", y: 0.69, height: 0.258 }
 		]);
 		expect(mocks.message.success).toHaveBeenCalledWith(
-			"已生成 3 道题的候选区域；请逐题核对并调整，另有 1 道题未识别"
+      "已自动对应 3 道题；发现错误可直接修改，另有 1 道题未识别"
 		);
 		expect(current.suggestingRegions).toBe(false);
 	});
@@ -128,7 +128,7 @@ describe("PDF region suggestion boundaries against the original hook", () => {
 		]);
 		expect(regions().has(2)).toBe(false);
 		expect(mocks.message.success).toHaveBeenCalledWith(
-			"已生成 2 道题的候选区域；请逐题核对并调整"
+      "已自动对应 2 道题；发现错误可直接修改"
 		);
 	});
 

@@ -25,10 +25,14 @@ function compareSchemaProperties(before, after, location, failures) {
 }
 
 function compareSchemaMetadata(before, after, location, failures) {
-  if (before.type && before.type !== after.type) failures.push(`changed type for ${location}`);
+  if (before.type && JSON.stringify(before.type) !== JSON.stringify(after.type)) failures.push(`changed type for ${location}`);
   if (before.$ref && before.$ref !== after.$ref) failures.push(`changed ref for ${location}`);
+  // 组合和开放属性变更保守阻断，语义兼容的调整也须明确评审，不能丢约束后让门禁通过。
+  for (const key of ["format", "nullable", "const", "additionalProperties", "oneOf", "anyOf", "allOf"]) {
+    if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) failures.push(`changed ${key} constraint for ${location}`);
+  }
   for (const value of Array.isArray(before.enum) ? before.enum : []) {
-    if (!after.enum?.includes(value)) failures.push(`removed enum value ${JSON.stringify(value)} from ${location}`);
+    if (!after.enum?.some((candidate) => JSON.stringify(candidate) === JSON.stringify(value))) failures.push(`removed enum value ${JSON.stringify(value)} from ${location}`);
   }
 }
 
@@ -74,7 +78,7 @@ function compareParameters(operation, candidate, key, failures) {
 function compareOperationPayloads(operation, candidate, key, failures) {
   if (operation.requestBody && !candidate.requestBody) failures.push(`removed request body from ${key}`);
   if (!operation.requestBody?.required && candidate.requestBody?.required) failures.push(`made request body required in ${key}`);
-  if (operation.requestBody?.schema && candidate.requestBody?.schema) {
+  if (operation.requestBody?.schema && candidate.requestBody) {
     compareSchema(operation.requestBody.schema, candidate.requestBody.schema, `${key} request`, failures);
   }
   if (operation.response && candidate.response) {

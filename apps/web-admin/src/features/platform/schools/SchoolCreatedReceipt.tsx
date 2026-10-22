@@ -9,7 +9,8 @@ export interface SchoolDelivery {
 }
 
 export function schoolLoginURL(code: string, location: Pick<Location, "origin" | "pathname">): string {
-  return `${location.origin}${location.pathname}?tenant=${encodeURIComponent(code)}`;
+  // 交接入口固定在登录页，不能沿用当前平台管理页的路径。
+  return `${location.origin}/?tenant=${encodeURIComponent(code)}`;
 }
 
 export function SchoolCreatedReceipt({ delivery, onDone }: Readonly<{ delivery: SchoolDelivery; onDone: () => void }>) {

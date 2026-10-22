@@ -27,6 +27,7 @@ export function useRuntimeDiagnostics(
   const healthBusy = useRef(false);
   const currentContext = useRef({ serverUrl, durableScopeKey });
   currentContext.current = { serverUrl, durableScopeKey };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 地址或账号是请求失效边界；必须递增代次并清空旧连接结果，即使这里只读取 ref。
   useEffect(() => {
     healthRequest.current += 1; healthBusy.current = false; setIsCheckingHealth(false); setHealthResult(null);
     // 地址、账号或页面已变化时，迟到的连接结果不能回填到新表单。

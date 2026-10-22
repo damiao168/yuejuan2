@@ -53,10 +53,16 @@ FOR UPDATE
 				return Paper{}, ErrInvalidInput
 			}
 			existing.File = fileInput
+			existing.Duplicate = true
 			return existing, nil
 		}
 		if !errors.Is(err, sql.ErrNoRows) {
 			return Paper{}, err
+		}
+		if existing, found, err := duplicateAnswerSheetPaperTx(ctx, tx, tenantID, examID, purpose, fileInput.HashSHA256); err != nil {
+			return Paper{}, err
+		} else if found {
+			return existing, nil
 		}
 		if _, err := tx.ExecContext(ctx, `
 UPDATE file_asset
@@ -66,6 +72,11 @@ WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 			return Paper{}, err
 		}
 	} else {
+		if existing, found, err := duplicateAnswerSheetPaperTx(ctx, tx, tenantID, examID, purpose, fileInput.HashSHA256); err != nil {
+			return Paper{}, err
+		} else if found {
+			return existing, nil
+		}
 		if err := tx.QueryRowContext(ctx, `SELECT gen_random_uuid()::text`).Scan(&fileID); err != nil {
 			return Paper{}, err
 		}
@@ -90,6 +101,29 @@ RETURNING id::text, tenant_id::text, exam_id::text, file_asset_id::text, version
 		return Paper{}, err
 	}
 	return out, nil
+}
+
+func duplicateAnswerSheetPaperTx(ctx context.Context, tx *sql.Tx, tenantID, examID, purpose, hash string) (Paper, bool, error) {
+	if purpose != PaperPurposeAnswerSheet || hash == "" {
+		return Paper{}, false, nil
+	}
+	// 考试行锁已由调用方持有；不同上传资产但字节内容相同也只能登记一个答题卡来源。
+	var existing Paper
+	err := tx.QueryRowContext(ctx, `SELECT p.id::text,p.tenant_id::text,p.exam_id::text,p.file_asset_id::text,p.version_no,p.status,p.purpose,
+ f.original_name,f.content_type,f.size_bytes,f.hash_sha256,f.storage_bucket,f.storage_key
+FROM exam_paper p JOIN file_asset f ON f.tenant_id=p.tenant_id AND f.id=p.file_asset_id
+WHERE p.tenant_id=$1 AND p.exam_id=$2::uuid AND p.purpose='answer_sheet' AND p.deleted_at IS NULL
+ AND f.deleted_at IS NULL AND f.hash_sha256=$3 ORDER BY p.version_no LIMIT 1`, tenantID, examID, hash).Scan(
+		&existing.ID, &existing.TenantID, &existing.ExamID, &existing.FileAssetID, &existing.VersionNo, &existing.Status, &existing.Purpose,
+		&existing.File.OriginalName, &existing.File.ContentType, &existing.File.SizeBytes, &existing.File.HashSHA256, &existing.File.StorageBucket, &existing.File.StorageKey)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Paper{}, false, nil
+	}
+	if err != nil {
+		return Paper{}, false, err
+	}
+	existing.Duplicate = true
+	return existing, true, nil
 }
 
 func (s *PostgresStore) ListPapers(ctx context.Context, tenantID string, examID string) ([]Paper, error) {

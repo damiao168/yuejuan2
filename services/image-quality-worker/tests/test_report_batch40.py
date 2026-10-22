@@ -58,6 +58,7 @@ def test_report_preserves_measurement_references_and_dpi_presence(report_values,
     assert report["roi_completeness"]["status"] == "unavailable"
     assert report["roi_completeness"]["required_roi_visible_ratio"] is None
     assert report["predictor"]["calibration_status"] == "awaiting_real_answer_sheet_samples"
+    assert report["predictor"]["version"] == "weighted-rules-v2.1"
 
 
 @pytest.mark.parametrize(
@@ -79,3 +80,19 @@ def test_report_fast_gate_does_not_replace_existing_quality_decision(
     assert report["decision"] == "REVIEW"
     assert report["stages"]["fast_gate"]["status"] == fast_gate_status
     assert report["stages"]["post_registration_roi_assessment"]["status"] == "awaiting_template_registration"
+
+
+def test_border_diagnostic_keeps_score_without_claiming_template_completeness(report_values):
+    values = report_values["measurements"]
+    values.dimensions["completeness"] = {"score": 47.3, "status": "failed"}
+    values.metrics["border_completeness_score"] = 0.473
+
+    report = build_quality_report(source_dpi=None, **report_values)
+
+    assert report["metrics"] is values.metrics
+    assert report["dimensions"]["completeness"] == {
+        "score": 47.3,
+        "status": "not_evaluated",
+        "reason": "template_registration_not_available_at_quality_stage",
+    }
+    assert values.dimensions["completeness"] == {"score": 47.3, "status": "failed"}

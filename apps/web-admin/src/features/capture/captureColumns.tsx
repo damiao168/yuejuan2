@@ -7,8 +7,22 @@ import { statusLabels, statusTone } from "./capturePresentation";
 
 export const errorLabels: Record<string, string> = {
   pdf_decode_failed: "PDF 无法解析，请重新导出后再导入",
+  invalid_pdf: "PDF 无法解析，请重新导出后再导入",
   unsupported_type: "文件格式不支持，请转为 PDF 或图片",
+  unsupported_or_invalid_image: "图片无法解析，请检查文件是否完整后重新导入",
+  invalid_tiff: "TIFF 无法解析，请重新导出后再导入",
+  source_download_failed: "服务暂时无法读取已上传文件，请重试原文件；仍失败请联系管理员",
+  source_download_forbidden: "后台读取文件的授权失败，请联系管理员",
+  source_not_found: "已上传文件无法找到，请联系管理员检查文件存储",
+  decoded_page_upload_failed: "页面保存失败，请重试原文件；仍失败请联系管理员",
+  api_request_failed: "后台服务请求失败，请重试原文件；仍失败请联系管理员",
 };
+
+export function captureFileErrorLabel(code?: string): string {
+  // 下载或服务失败不能归因于图片损坏；两处文件列表统一提示，保留原文件供重试。
+  return errorLabels[code ?? ""] ?? errorLabels[code?.split(":")[0] ?? ""]
+    ?? "处理失败，请重试原文件；仍失败请联系管理员";
+}
 
 const contentTypeLabels: Record<string, string> = {
   "application/pdf": "PDF",
@@ -50,7 +64,7 @@ export function captureFileColumns(): TableColumnsType<CaptureFile> {
           return (
             <Tooltip title={item.error_code}>
               <span>
-                {errorLabels[item.error_code] ?? "处理失败，请删除后重新导入"}
+                {captureFileErrorLabel(item.error_code)}
               </span>
             </Tooltip>
           );

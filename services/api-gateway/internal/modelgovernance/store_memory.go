@@ -12,31 +12,38 @@ import (
 )
 
 type MemoryStore struct {
-	mu             sync.RWMutex
-	providers      map[string]Provider
-	deployments    map[string]Deployment
-	policies       map[string]TenantPolicy
-	approvals      map[string]SandboxApproval
-	evaluations    map[string]EvaluationRun
-	candidates     map[string]EvaluationCandidate
-	modelApprovals map[string]ModelApproval
-	managedConfigs map[string]ManagedAPIConfig
-	managedSecrets map[string]string
-	roleBindings   map[string]ModelRoleBinding
+	mu                    sync.RWMutex
+	providers             map[string]Provider
+	deployments           map[string]Deployment
+	policies              map[string]TenantPolicy
+	approvals             map[string]SandboxApproval
+	evaluations           map[string]EvaluationRun
+	candidates            map[string]EvaluationCandidate
+	modelApprovals        map[string]ModelApproval
+	managedConfigs        map[string]ManagedAPIConfig
+	managedSecrets        map[string]string
+	roleBindings          map[string]ModelRoleBinding
+	documentSelections    map[string]DocumentModelSelection
+	answerSheetSelections map[string]DocumentModelSelection
+	gradingSelections     map[string]DocumentModelSelection
+	chatAccess            map[string]ChatModelAccess
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		providers:      map[string]Provider{},
-		deployments:    map[string]Deployment{},
-		policies:       map[string]TenantPolicy{},
-		approvals:      map[string]SandboxApproval{},
-		evaluations:    map[string]EvaluationRun{},
-		candidates:     map[string]EvaluationCandidate{},
-		modelApprovals: map[string]ModelApproval{},
-		managedConfigs: map[string]ManagedAPIConfig{},
-		managedSecrets: map[string]string{},
-		roleBindings:   map[string]ModelRoleBinding{},
+		providers:             map[string]Provider{},
+		deployments:           map[string]Deployment{},
+		policies:              map[string]TenantPolicy{},
+		approvals:             map[string]SandboxApproval{},
+		evaluations:           map[string]EvaluationRun{},
+		candidates:            map[string]EvaluationCandidate{},
+		modelApprovals:        map[string]ModelApproval{},
+		managedConfigs:        map[string]ManagedAPIConfig{},
+		managedSecrets:        map[string]string{},
+		roleBindings:          map[string]ModelRoleBinding{},
+		documentSelections:    map[string]DocumentModelSelection{},
+		answerSheetSelections: map[string]DocumentModelSelection{},
+		gradingSelections:     map[string]DocumentModelSelection{},
 	}
 }
 
@@ -290,9 +297,7 @@ func (s *MemoryStore) UpdatePolicy(_ context.Context, tenantID string, _ string,
 	}
 	for _, id := range input.AllowedModelConfigIDs {
 		config, exists := s.managedConfigs[id]
-		if !exists || config.TenantID != tenantID || config.Status != "active" ||
-			config.LastCapabilityStatus != "success" ||
-			config.LastCapabilityVersion != "structured-json-v3" {
+		if !exists || config.TenantID != tenantID || config.Status != "active" || !managedCapabilityVerified(config) {
 			return TenantPolicy{}, ErrInvalidPolicy
 		}
 	}
@@ -589,7 +594,7 @@ func (s *MemoryStore) evaluationCandidateTargetLocked(tenantID string, run Evalu
 		managed, ok = s.managedConfigs[input.ModelConfigID]
 		if !ok || managed.TenantID != tenantID || managed.Status != "active" ||
 			managed.LastCapabilityStatus != "success" ||
-			managed.LastCapabilityVersion != "structured-json-v3" || run.Modality != "text" {
+			managed.LastCapabilityVersion != "structured-json-v4" || run.Modality != "text" {
 			return EvaluationCandidate{}, ErrNotFound
 		}
 	} else {

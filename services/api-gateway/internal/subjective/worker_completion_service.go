@@ -36,6 +36,10 @@ type WorkerCompletionResult struct {
 	Task  workerruntime.Task
 }
 
+type atomicWorkerCompletionStore interface {
+	CompleteWorkerAtomic(context.Context, string, string, WorkerExecutionContext, WorkerResultInput, Grade, workerCompletionRuntime) (WorkerCompletionResult, error)
+}
+
 type WorkerFailureResult struct {
 	Run  GradingRun
 	Task workerruntime.Task
@@ -45,61 +49,75 @@ func NewWorkerCompletionService(store workerCompletionStore, runtime workerCompl
 	return &WorkerCompletionService{store: store, runtime: runtime}
 }
 
-// 完成顺序是成绩幂等写入、租约完成、运行落终态；租约失败时不应把运行标成成功。
+// Complete 把当前租约、成绩和运行终态作为一次提交；任一步失败都不能留下旧 worker 的成绩。
 func (s *WorkerCompletionService) Complete(ctx context.Context, tenantID, actorID string, prepared WorkerExecutionContext, input WorkerResultInput, output AdapterOutput) (WorkerCompletionResult, error) {
-	grade, err := s.store.GetGradeByAdapterRequestID(ctx, tenantID, prepared.Run.RequestID)
-	if errors.Is(err, ErrNotFound) {
-		grade, err = s.store.CreateGrade(ctx, tenantID, actorID, successfulGrade(prepared.Context, prepared.Policy, prepared.Run.ID, output))
+	if result, replay, err := s.Replay(ctx, tenantID, actorID, prepared.Run.ID, input); replay || err != nil {
+		return result, err
 	}
-	if err != nil {
-		return WorkerCompletionResult{}, err
+	store, ok := s.store.(atomicWorkerCompletionStore)
+	if !ok {
+		return WorkerCompletionResult{}, errors.Join(ErrWorkerCompletionRejected, ErrInvalidInput)
 	}
-	completed, err := s.runtime.Complete(ctx, tenantID, input.TaskID, workerruntime.CompleteInput{
-		LeaseToken: input.LeaseToken, ResultSchemaVersion: input.ResultSchemaVersion,
-		Result: map[string]any{"run_id": prepared.Run.ID, "grade_id": grade.ID}, DurationMS: input.DurationMS,
-	})
-	if err != nil {
-		return WorkerCompletionResult{}, errors.Join(ErrWorkerCompletionRejected, err)
-	}
-	updated, err := s.store.UpdateRun(ctx, tenantID, prepared.Run.ID, UpdateRunInput{Status: RunSucceeded, GradeID: grade.ID, AttemptCount: completed.AttemptCount})
-	if err != nil {
-		return WorkerCompletionResult{}, err
-	}
-	return WorkerCompletionResult{Run: updated, Grade: grade, Task: completed}, nil
+	return store.CompleteWorkerAtomic(ctx, tenantID, actorID, prepared, input, successfulGrade(prepared.Context, prepared.Policy, prepared.Run.ID, output), s.runtime)
 }
 
-// Reject 记录不可重试的结算失败。调用方在此有意忽略存储失败，保留此前的尽力而为行为。
-func (s *WorkerCompletionService) Reject(ctx context.Context, tenantID string, prepared WorkerExecutionContext, input WorkerResultInput, runStatus, code string, cause error) {
+// Replay 只用于完成入口。已接受的相同结果沿用保存成绩，不重新调用模型或改写冻结证据。
+func (s *WorkerCompletionService) Replay(ctx context.Context, tenantID, actorID, runID string, input WorkerResultInput) (WorkerCompletionResult, bool, error) {
+	task, err := s.runtime.Get(ctx, tenantID, input.TaskID)
+	if err != nil {
+		return WorkerCompletionResult{}, false, err
+	}
+	if task.Status != workerruntime.StatusSucceeded {
+		return WorkerCompletionResult{}, false, nil
+	}
+	run, err := s.store.GetRun(ctx, tenantID, runID)
+	if err != nil {
+		return WorkerCompletionResult{}, true, err
+	}
+	if input.LeaseToken == "" || task.LeaseToken != input.LeaseToken || task.SourceType != "subjective_grading_run" || task.SourceID != run.ID {
+		return WorkerCompletionResult{}, true, errors.Join(ErrWorkerCompletionRejected, workerruntime.ErrLeaseMismatch)
+	}
+	grade, err := s.store.GetGradeByAdapterRequestID(ctx, tenantID, run.RequestID)
+	if err != nil {
+		return WorkerCompletionResult{}, true, err
+	}
+	prepared := WorkerExecutionContext{Run: run, Task: task}
+	if err := validateWorkerCompletion(run, task, prepared, input, grade); err != nil {
+		return WorkerCompletionResult{}, true, err
+	}
+	store, ok := s.store.(atomicWorkerCompletionStore)
+	if !ok {
+		return WorkerCompletionResult{}, true, ErrInvalidInput
+	}
+	result, err := store.CompleteWorkerAtomic(ctx, tenantID, actorID, prepared, input, grade, s.runtime)
+	return result, true, err
+}
+
+// Reject 原子记录不可重试的结算失败；调用方只有在返回 nil 后才能宣称已记录任务失败。
+func (s *WorkerCompletionService) Reject(ctx context.Context, tenantID string, prepared WorkerExecutionContext, input WorkerResultInput, runStatus, code string, cause error) error {
 	detail := map[string]any{}
+	kind := "schema_invalid"
+	if errors.Is(cause, ErrMathHumanReviewRequired) || isMathRevisionConflict(cause) {
+		kind = "evidence_invalid"
+	}
+	if diagnostics := diagnosticsFromOutput(input.Output, kind); diagnostics != nil {
+		detail["execution_diagnostics"] = diagnostics
+	}
 	if cause != nil {
 		detail["reason"] = cause.Error()
 	}
-	_, _ = s.runtime.Fail(ctx, tenantID, input.TaskID, workerruntime.FailInput{LeaseToken: input.LeaseToken, Retryable: false, ErrorCode: code, ErrorDetail: detail, DurationMS: input.DurationMS})
-	_, _ = s.store.UpdateRun(ctx, tenantID, prepared.Run.ID, UpdateRunInput{Status: runStatus, ErrorCode: code, AttemptCount: prepared.Task.AttemptCount})
+	if store, ok := s.store.(atomicWorkerFailureStore); ok {
+		_, err := store.FailWorkerAtomic(ctx, tenantID, prepared.Run.ID, WorkerFailureInput{TaskID: input.TaskID,
+			LeaseToken: input.LeaseToken, ErrorCode: code, ErrorDetail: detail, DurationMS: input.DurationMS}, runStatus, s.runtime)
+		return err
+	}
+	return ErrInvalidInput
 }
 
 func (s *WorkerCompletionService) Fail(ctx context.Context, tenantID, runID string, input WorkerFailureInput) (WorkerFailureResult, error) {
-	run, err := s.store.GetRun(ctx, tenantID, runID)
-	if err != nil {
-		return WorkerFailureResult{}, err
+	store, ok := s.store.(atomicWorkerFailureStore)
+	if !ok {
+		return WorkerFailureResult{}, ErrInvalidInput
 	}
-	task, err := s.runtime.Get(ctx, tenantID, input.TaskID)
-	if err != nil || task.SourceType != "subjective_grading_run" || task.SourceID != run.ID {
-		return WorkerFailureResult{}, ErrWorkerTaskMismatch
-	}
-	updatedTask, err := s.runtime.Fail(ctx, tenantID, input.TaskID, workerruntime.FailInput{LeaseToken: input.LeaseToken, Retryable: input.Retryable, ErrorCode: input.ErrorCode, ErrorDetail: input.ErrorDetail, DurationMS: input.DurationMS})
-	if err != nil {
-		return WorkerFailureResult{}, errors.Join(ErrWorkerFailureRejected, err)
-	}
-	status := RunQueued
-	if updatedTask.Status == workerruntime.StatusFailed || updatedTask.Status == workerruntime.StatusDeadLetter {
-		status = RunFailed
-	} else if updatedTask.Status == workerruntime.StatusLeased || updatedTask.Status == workerruntime.StatusRunning {
-		status = RunProcessing
-	}
-	updatedRun, err := s.store.UpdateRun(ctx, tenantID, run.ID, UpdateRunInput{Status: status, ErrorCode: input.ErrorCode, AttemptCount: updatedTask.AttemptCount})
-	if err != nil {
-		return WorkerFailureResult{}, err
-	}
-	return WorkerFailureResult{Run: updatedRun, Task: updatedTask}, nil
+	return store.FailWorkerAtomic(ctx, tenantID, runID, input, "", s.runtime)
 }

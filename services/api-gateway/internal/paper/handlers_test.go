@@ -3,6 +3,7 @@ package paper_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -102,6 +103,12 @@ func TestExamTemplateBindingUsesExistingLockedTemplateEndpoint(t *testing.T) {
 	if lockRec.Code != http.StatusOK {
 		t.Fatalf("lock template: %d %s", lockRec.Code, lockRec.Body.String())
 	}
+	initialRec := httptest.NewRecorder()
+	router.ServeHTTP(initialRec, authedRequest(http.MethodGet, "/api/v1/exams/exam-1/answer-sheet-template-binding", nil, token))
+	var initial paper.ExamTemplateBindingState
+	if err := json.Unmarshal(initialRec.Body.Bytes(), &initial); err != nil || initialRec.Code != http.StatusOK || initial.Binding != nil || initial.Revision != 0 {
+		t.Fatalf("initial cursor: %d %s err=%v", initialRec.Code, initialRec.Body.String(), err)
+	}
 
 	bindReq := authedRequest(http.MethodPut, "/api/v1/exams/exam-1/answer-sheet-template-binding", bytes.NewBufferString(`{"template_id":"`+created.Template.ID+`","mode":"locked_with_guard","expected_revision":0}`), token)
 	bindRec := httptest.NewRecorder()
@@ -110,12 +117,13 @@ func TestExamTemplateBindingUsesExistingLockedTemplateEndpoint(t *testing.T) {
 		t.Fatalf("bind template: %d %s", bindRec.Code, bindRec.Body.String())
 	}
 	var bound struct {
-		Binding paper.ExamTemplateBinding `json:"binding"`
+		Binding  paper.ExamTemplateBinding `json:"binding"`
+		Revision int                       `json:"revision"`
 	}
 	if err := json.Unmarshal(bindRec.Body.Bytes(), &bound); err != nil {
 		t.Fatal(err)
 	}
-	if bound.Binding.TemplateID != created.Template.ID || bound.Binding.Mode != "locked_with_guard" {
+	if bound.Binding.TemplateID != created.Template.ID || bound.Binding.Mode != "locked_with_guard" || bound.Binding.Revision != 1 || bound.Revision != 1 {
 		t.Fatalf("unexpected binding: %#v", bound.Binding)
 	}
 
@@ -125,11 +133,53 @@ func TestExamTemplateBindingUsesExistingLockedTemplateEndpoint(t *testing.T) {
 	if unbindRec.Code != http.StatusOK {
 		t.Fatalf("unbind template: %d %s", unbindRec.Code, unbindRec.Body.String())
 	}
+	var removed struct {
+		Binding  paper.ExamTemplateBinding `json:"binding"`
+		Revision int                       `json:"revision"`
+	}
+	// DELETE 为兼容旧调用方保留被移除的绑定，同时返回下一次提交需要的新游标。
+	if err := json.Unmarshal(unbindRec.Body.Bytes(), &removed); err != nil || removed.Binding.ID != bound.Binding.ID || removed.Binding.Revision != 1 || removed.Revision != 2 {
+		t.Fatalf("removed binding and post-delete cursor: %s err=%v", unbindRec.Body.String(), err)
+	}
 	getReq := authedRequest(http.MethodGet, "/api/v1/exams/exam-1/answer-sheet-template-binding", nil, token)
 	getRec := httptest.NewRecorder()
 	router.ServeHTTP(getRec, getReq)
 	if getRec.Code != http.StatusOK || !strings.Contains(getRec.Body.String(), `"binding":null`) {
 		t.Fatalf("expected unbound response, got %d %s", getRec.Code, getRec.Body.String())
+	}
+	var unbound paper.ExamTemplateBindingState
+	if err := json.Unmarshal(getRec.Body.Bytes(), &unbound); err != nil || unbound.Revision != 2 || unbound.Binding != nil {
+		t.Fatalf("unbound state must retain revision 2: %#v err=%v", unbound, err)
+	}
+	// 初次读取的 0 和解绑前的 1 都不能复用；合法重建必须使用 GET 返回的空绑定游标。
+	for _, stale := range []int{0, 1} {
+		staleBody := fmt.Sprintf(`{"template_id":%q,"expected_revision":%d}`, created.Template.ID, stale)
+		staleRec := httptest.NewRecorder()
+		router.ServeHTTP(staleRec, authedRequest(http.MethodPut, "/api/v1/exams/exam-1/answer-sheet-template-binding", bytes.NewBufferString(staleBody), token))
+		if staleRec.Code != http.StatusConflict {
+			t.Fatalf("stale revision %d: %d %s", stale, staleRec.Code, staleRec.Body.String())
+		}
+	}
+	rebindRec := httptest.NewRecorder()
+	rebindBody := fmt.Sprintf(`{"template_id":%q,"expected_revision":%d}`, created.Template.ID, unbound.Revision)
+	router.ServeHTTP(rebindRec, authedRequest(http.MethodPut, "/api/v1/exams/exam-1/answer-sheet-template-binding", bytes.NewBufferString(rebindBody), token))
+	var rebound paper.ExamTemplateBindingState
+	if err := json.Unmarshal(rebindRec.Body.Bytes(), &rebound); err != nil || rebindRec.Code != http.StatusOK || rebound.Revision != 3 || rebound.Binding == nil || rebound.Binding.Revision != 3 {
+		t.Fatalf("rebind with read cursor: %d %s err=%v", rebindRec.Code, rebindRec.Body.String(), err)
+	}
+	for _, stale := range []int{0, 1} {
+		staleRec := httptest.NewRecorder()
+		staleBody := fmt.Sprintf(`{"expected_revision":%d,"reason":"old editor removal"}`, stale)
+		router.ServeHTTP(staleRec, authedRequest(http.MethodDelete, "/api/v1/exams/exam-1/answer-sheet-template-binding", bytes.NewBufferString(staleBody), token))
+		if staleRec.Code != http.StatusConflict {
+			t.Fatalf("old removal %d after recreation: %d %s", stale, staleRec.Code, staleRec.Body.String())
+		}
+	}
+	currentRec := httptest.NewRecorder()
+	router.ServeHTTP(currentRec, authedRequest(http.MethodGet, "/api/v1/exams/exam-1/answer-sheet-template-binding", nil, token))
+	var current paper.ExamTemplateBindingState
+	if err := json.Unmarshal(currentRec.Body.Bytes(), &current); err != nil || currentRec.Code != http.StatusOK || current.Binding == nil || current.Binding.ID != rebound.Binding.ID || current.Revision != 3 {
+		t.Fatalf("old removals changed current binding: %d %s err=%v", currentRec.Code, currentRec.Body.String(), err)
 	}
 }
 

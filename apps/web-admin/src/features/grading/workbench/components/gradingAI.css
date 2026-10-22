@@ -1,0 +1,21 @@
+.grading-ai-plan-settings { padding: 20px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); }
+.grading-ai-plan-settings > p, .grading-ai-plan-summary p, .grading-ai-thresholds p { color: var(--text-secondary, #5b6575); line-height: 1.65; }
+.grading-ai-plan-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; margin: 20px 0; }
+.grading-ai-plan-fields label { display: flex; flex-direction: column; gap: 8px; font-weight: 500; }
+.grading-ai-plan-fields .ant-select, .grading-ai-plan-fields .ant-input-number-group-wrapper { width: 100%; }
+.grading-ai-plan-settings > small { display: block; margin-top: 10px; color: var(--text-secondary, #5b6575); }
+.grading-ai-thresholds { margin: 16px 0; }
+.grading-ai-probe-list > div { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+.grading-ai-probe-list small { flex-basis: 100%; color: var(--text-secondary, #5b6575); }
+.grading-ai-thresholds summary, .grading-ai-record summary { cursor: pointer; padding: 8px 0; }
+.grading-ai-plan-before-start { margin: 16px 0; padding: 16px; background: var(--bg-secondary, #f5f7fa); border-radius: 8px; }
+.grading-ai-record { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-color, #e5e7eb); }
+.grading-ai-record h2 { font-size: 18px; margin: 0 0 16px; }
+.grading-ai-record h3 { font-size: 14px; margin: 18px 0 10px; }
+.grading-record-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+.grading-record-heading > span { font-weight: 600; }
+.grading-record-body { display: grid; gap: 8px; }
+.grading-record-points article { padding: 14px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); }
+.grading-record-points article > header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.grading-record-points article > header > span { white-space: nowrap; color: var(--text-secondary, #5b6575); }
+.grading-record-quotes blockquote { margin: 10px 0; padding: 2px 12px; border-left: 3px solid #b7c4d5; color: var(--text-secondary, #5b6575); }

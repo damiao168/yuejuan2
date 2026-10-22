@@ -250,19 +250,30 @@ type VersionPage struct {
 	Offset   int       `json:"offset"`
 }
 
+// Store 组合本模块装配所需能力，保持现有构造入口兼容；新消费者应按业务职责依赖下方小接口。
+// 接口拆分只说明依赖范围，不代替权限、版本校验，也不承诺跨能力调用自动进入同一事务。
 type Store interface {
+	BankAccessStore
+	ItemVersionStore
+	MetadataStore
+	PublicationStore
+	ImportStore
+}
+
+// BankAccessStore 管理题库目录、成员、授权及检索；每次调用仍携带服务端派生的 AccessScope。
+type BankAccessStore interface {
 	ListMembers(context.Context, auth.AccessScope, string) ([]Member, error)
-	PreviewImports(context.Context, auth.AccessScope, ImportPreviewInput) (ImportPreviewBatch, error)
-	ImportQuestion(context.Context, auth.AccessScope, string, ImportQuestionInput) (ImportResult, error)
-	UpdateScoring(context.Context, auth.AccessScope, string, UpdateScoringInput) (Version, error)
-	Transition(context.Context, auth.AccessScope, string, string, ReviewInput) (Version, error)
-	ListReviews(context.Context, auth.AccessScope, string) ([]Review, error)
-	BindReviewers(context.Context, auth.AccessScope, string, ReviewerBinding) (Bank, error)
-	Materialize(context.Context, auth.AccessScope, string, MaterializeInput) (MaterializeResult, error)
 	ListBanks(context.Context, auth.AccessScope, Filter) (BankPage, error)
 	CreateBank(context.Context, auth.AccessScope, CreateBankInput) (Bank, error)
 	GetBank(context.Context, auth.AccessScope, string) (Bank, error)
 	UpdateBank(context.Context, auth.AccessScope, string, UpdateBankInput) (Bank, error)
+	GetACL(context.Context, auth.AccessScope, string) (ACLDocument, error)
+	UpdateACL(context.Context, auth.AccessScope, string, UpdateACLInput) (ACLDocument, error)
+	SearchItems(context.Context, auth.AccessScope, SearchFilter) (SearchPage, error)
+}
+
+// ItemVersionStore 管理条目及版本事实；评分、审核和采用能力分别声明，避免编辑者默认获得发布能力。
+type ItemVersionStore interface {
 	ListItems(context.Context, auth.AccessScope, string, Filter) (ItemPage, error)
 	CreateItem(context.Context, auth.AccessScope, string, CreateItemInput) (ItemResult, error)
 	GetItem(context.Context, auth.AccessScope, string) (Item, error)
@@ -270,13 +281,29 @@ type Store interface {
 	CreateVersion(context.Context, auth.AccessScope, string, CreateVersionInput) (Version, error)
 	GetVersion(context.Context, auth.AccessScope, string) (Version, error)
 	UpdateVersion(context.Context, auth.AccessScope, string, UpdateVersionInput) (Version, error)
+	RetireItem(context.Context, auth.AccessScope, string, RetireItemInput) (Item, error)
+	UpdateScoring(context.Context, auth.AccessScope, string, UpdateScoringInput) (Version, error)
+}
+
+// MetadataStore 管理版本绑定的分类规则与校验；规则升级不会改写历史版本的绑定。
+type MetadataStore interface {
 	GetMetadataSchema(context.Context, auth.AccessScope, string, int) (MetadataSchema, error)
 	UpdateMetadataSchema(context.Context, auth.AccessScope, string, UpdateMetadataSchemaInput) (MetadataSchema, error)
 	ValidateMetadata(context.Context, auth.AccessScope, string, ValidateMetadataInput) (MetadataValidationResult, error)
-	GetACL(context.Context, auth.AccessScope, string) (ACLDocument, error)
-	UpdateACL(context.Context, auth.AccessScope, string, UpdateACLInput) (ACLDocument, error)
-	SearchItems(context.Context, auth.AccessScope, SearchFilter) (SearchPage, error)
-	RetireItem(context.Context, auth.AccessScope, string, RetireItemInput) (Item, error)
+}
+
+// PublicationStore 声明审核与采用能力；实际授权仍由 AccessScope 和版本状态检查执行。
+type PublicationStore interface {
+	Transition(context.Context, auth.AccessScope, string, string, ReviewInput) (Version, error)
+	ListReviews(context.Context, auth.AccessScope, string) ([]Review, error)
+	BindReviewers(context.Context, auth.AccessScope, string, ReviewerBinding) (Bank, error)
+	Materialize(context.Context, auth.AccessScope, string, MaterializeInput) (MaterializeResult, error)
+}
+
+// ImportStore 管理导入预览与落库；预览不具有修改既有题目或考试评分事实的权限。
+type ImportStore interface {
+	PreviewImports(context.Context, auth.AccessScope, ImportPreviewInput) (ImportPreviewBatch, error)
+	ImportQuestion(context.Context, auth.AccessScope, string, ImportQuestionInput) (ImportResult, error)
 }
 
 type ImportMapping struct {

@@ -14,20 +14,23 @@
 .grading-overview {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 18px;
+  gap: 0;
+  padding: 24px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
 
-.grading-overview-head,
-.grading-run-strip {
+.grading-overview-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 16px 28px;
   flex-wrap: wrap;
 }
+
+.grading-overview-head h2 { font-size: 22px; font-weight: 650; letter-spacing: -0.4px; }
+.grading-overview-head { margin-bottom: 18px; }
+.grading-primary-actions { margin-left: auto; }
 
 .grading-overview-head h2,
 .grading-overview-head p {
@@ -41,11 +44,51 @@
 }
 
 .grading-run-strip {
-  justify-content: flex-start;
-  min-height: 38px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  background: var(--surface-muted);
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.grading-run-state { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.grading-run-state > span:first-child { color: var(--text-muted); font-size: 12px; }
+.grading-run-counts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; margin: 0; }
+.grading-run-counts dt { color: var(--text-muted); font-size: 12px; }
+.grading-run-counts dd { margin: 8px 0 0; color: var(--text); font-size: 28px; font-weight: 650; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.grading-run-counts .needs-attention dd { color: var(--primary, #1677ff); }
+.grading-run-counts .has-failure dd { color: var(--danger); }
+.grading-settings,
+.grading-preparation-details,
+.grading-question-details { min-width: 0; }
+.grading-overview-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding-top: 8px; border-top: 1px solid var(--border); }
+.grading-overview-tools > span { margin-left: auto; color: var(--text-muted); font-size: 12px; }
+.grading-overview-tools .ant-btn { color: var(--text-muted); font-size: 13px; }
+.grading-overview-tools .ant-btn[aria-expanded="true"] { color: var(--primary, #1677ff); background: var(--surface-muted); }
+.grading-settings > p,
+.grading-preparation-details > p { margin: 14px 0; font-size: 13px; }
+.grading-question-details:not([hidden]) { margin-top: 14px; }
+.grading-overview .fast-confirm-entry { padding: 16px 0; border: 0; border-radius: 0; background: transparent; }
+.grading-overview .fast-confirm-entry strong { font-size: 13px; }
+.grading-overview > .ant-alert { margin-top: 12px; }
+.grading-overview .ant-alert { padding: 10px 14px; }
+.grading-overview .grading-ai-progress { margin: 0; }
+.grading-settings > .ant-space { padding-bottom: 8px; }
+.fast-confirm-help summary:focus-visible { outline: 2px solid var(--primary, #1677ff); outline-offset: 3px; }
+@media (max-width: 1000px) {
+  .grading-run-strip { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .grading-run-state { flex-direction: row; align-items: center; }
+}
+@media (max-width: 600px) {
+  .grading-overview { padding: 16px; }
+  .grading-overview-head { align-items: flex-start; }
+  .grading-primary-actions { margin-left: 0; }
+  .grading-run-counts { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 20px; }
+  .grading-run-counts dd { font-size: 24px; }
+  .grading-overview-tools > span { width: 100%; margin-left: 12px; }
+  .fast-confirm-entry > div { min-width: 0; }
 }
 
 .grading-readiness-alert .ant-alert-description {
@@ -148,21 +191,24 @@
 
 .reviewer-progress-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 10px 18px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
 }
 
 .reviewer-progress-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) minmax(100px, 1fr) auto;
+  align-items: center;
+  gap: 20px;
   min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-muted);
+  padding: 6px 0;
 }
 
 .reviewer-progress-label {
   justify-content: space-between;
-  margin-bottom: 5px;
+  margin-bottom: 0;
 }
 
 .reviewer-progress-label strong {
@@ -178,7 +224,11 @@
 
 .reviewer-progress-meta {
   justify-content: flex-end;
-  margin-top: 4px;
+  margin-top: 0;
+}
+
+@media (max-width: 700px) {
+  .reviewer-progress-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
 }
 
 .reviewer-progress-meta strong {
@@ -307,8 +357,10 @@
 }
 
 .grading-topbar h1 {
+  flex-shrink: 0;
   font-size: var(--eg-font-section);
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .grading-work-title {
@@ -335,14 +387,24 @@
 
 .grading-taskbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* 筛选项都在任务侧栏内；整组范围和状态不能共用一行挤压彼此。 */
+  grid-template-columns: minmax(0, 1fr);
+  flex-shrink: 0;
   gap: 8px;
   align-items: center;
   padding: 10px;
 }
 
-.grading-taskbar > .ant-input-affix-wrapper {
-  grid-column: 1 / -1;
+.grading-taskbar > *,
+.grading-taskbar .grading-scope-filters > label,
+.grading-taskbar .ant-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.grading-taskbar > .muted {
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .grading-task-rail .grading-taskbar {
@@ -365,7 +427,9 @@
 
 .grading-assignment-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* 批量分配也在窄侧栏中；按钮和说明各占整行，避免长按钮把相邻列挤成竖排。 */
+  grid-template-columns: minmax(0, 1fr);
+  flex-shrink: 0;
   gap: 7px;
   padding: 8px;
   border-top: 1px solid var(--border);
@@ -376,8 +440,21 @@
   min-width: 0;
 }
 
-.grading-assignment-bar .ant-select {
+.grading-assignment-bar > *,
+.grading-assignment-bar .ant-select,
+.grading-assignment-bar .ant-btn {
+  width: 100%;
   min-width: 0;
+}
+
+.grading-assignment-bar .ant-btn {
+  height: auto;
+  min-height: 40px;
+  white-space: normal;
+}
+
+.grading-assignment-bar .muted {
+  overflow-wrap: break-word;
 }
 
 .grading-workspace {
@@ -1007,7 +1084,11 @@
 
   .grading-task-rail {
     position: static;
-    max-height: 320px;
+    max-height: none;
+  }
+
+  .grading-task-list {
+    max-height: 240px;
   }
 }
 
@@ -1068,10 +1149,13 @@
   font-size: var(--eg-font-reading);
 }
 
-.immersive-workspace .grading-overview-head p,
-.immersive-workspace .grading-overview > .ant-table-wrapper {
+.immersive-workspace .grading-overview-head p {
   display: none;
 }
+
+.immersive-workspace .grading-run-strip { padding: 10px 0; }
+.immersive-workspace .grading-run-counts dd { font-size: 20px; }
+.immersive-workspace .grading-run-counts dd { margin-top: 4px; }
 
 .immersive-workspace .reviewer-progress-panel {
   flex: 0 0 auto;
@@ -1126,7 +1210,7 @@
 }
 
 .immersive-workspace .grading-taskbar {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   padding: 8px;
   border-width: 0;
   border-radius: 0;
@@ -1322,7 +1406,7 @@
   }
 
   .immersive-workspace .grading-task-rail {
-    max-height: 240px;
+    max-height: none;
   }
 
   .immersive-workspace .answer-viewer {
@@ -1393,7 +1477,7 @@
 
 @container (max-width: 1050px) {
   .immersive-workspace .grading-workspace { height: auto; grid-template-columns: minmax(0, 1fr); overflow: visible; }
-  .immersive-workspace .grading-task-rail { position: static; height: auto; max-height: 200px; border-width: 0 0 1px; }
+  .immersive-workspace .grading-task-rail { position: static; height: auto; max-height: none; border-width: 0 0 1px; }
   .immersive-workspace .grading-task-list { max-height: 114px; }
   .immersive-workspace .grading-main,
   .immersive-workspace .grading-panels { height: auto; overflow: visible; }
@@ -1488,6 +1572,9 @@
 .fast-confirm-evidence ul { margin: 4px 0 0; padding-left: 20px; }
 .fast-confirm-evidence li { overflow-wrap: anywhere; }
 .fast-confirm-steps { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 8px 0 16px; padding-left: 20px; color: var(--text-secondary, #667085); }
+.fast-confirm-help { margin-bottom: 18px; color: var(--text-secondary, #667085); font-size: 13px; line-height: 1.7; }
+.fast-confirm-help summary { cursor: pointer; }
+.fast-confirm-help p { margin: 10px 0 0; }
 .fast-confirm-evidence .ant-checkbox-wrapper { margin-top: 10px; font-weight: 600; }
 
 .fast-confirm-item {
@@ -1513,3 +1600,60 @@
 }
 
 .fast-confirm-preview img { display: block; margin: 0 auto 12px; }
+
+/* 教师以答题材料为主体；管理视图继续使用常驻任务栏。小屏保持先材料后评分。 */
+.grading-teacher-simple .grading-workspace,
+.immersive-workspace .grading-teacher-simple .grading-workspace { grid-template-columns: minmax(0, 1fr); }
+.grading-teacher-simple .grading-panels,
+.immersive-workspace .grading-teacher-simple .grading-panels { grid-template-columns: 300px minmax(0, 1fr); grid-template-areas: "inspector answer"; }
+.grading-teacher-simple .grading-inspector,
+.immersive-workspace .grading-teacher-simple .grading-inspector { border-right: 1px solid var(--border); grid-template-rows: auto auto; }
+.grading-teacher-simple .answer-panel { border-right: 0; }
+.grading-teacher-simple .grading-work-title { flex-wrap: wrap; min-width: 0; }
+.grading-personal-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.grading-current-task { overflow-wrap: anywhere; }
+.grading-current-score { font-variant-numeric: tabular-nums; }
+.grading-reference-details { min-width: 0; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.grading-reference-details > summary { cursor: pointer; min-height: 28px; font-weight: 600; }
+.grading-reference-details .frozen-question-reference { border: 0; }
+.grading-task-drawer .grading-task-rail { position: static; width: 100%; max-height: none; height: auto; border: 0; }
+.grading-task-drawer .grading-taskbar { display: grid; grid-template-columns: minmax(0, 1fr); }
+.grading-task-drawer .grading-task-list { max-height: none; }
+.bookmark-inline-status { padding: 8px 12px; color: var(--eg-color-text-secondary, #666); }
+.bookmark-reason-count { text-align: right; padding-block: 6px; color: var(--eg-color-text-secondary, #666); }
+.bookmark-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.bookmark-filters > * { min-width: 0; width: 100%; }
+.bookmark-list-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; }
+.bookmark-list { list-style: none; padding: 0; margin: 0 0 16px; }
+.bookmark-list li { padding: 12px 0; border-block-start: 1px solid var(--border); }
+.bookmark-open { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; text-align: left; color: inherit; background: transparent; border: 0; padding: 0 0 8px; cursor: pointer; }
+.bookmark-open small { color: var(--eg-color-text-secondary, #666); }
+.bookmark-open strong { font-size: 16px; }
+.bookmark-open p { margin: 4px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.bookmark-empty, .bookmark-loading { padding: 24px 0; }
+.bookmark-cleanup { margin-top: 24px; border-top: 1px solid var(--border); padding-block: 12px; }
+.bookmark-cleanup > summary { cursor: pointer; }
+.bookmark-cleanup > div { display: flex; justify-content: space-between; padding-block: 8px; }
+/* 覆盖共享 .ant-modal 的重要宽度规则，按滚动容器可用宽度收缩，避免窄屏竖向滚动条再挤出横向滚动条。 */
+.ant-modal.bookmark-readonly-modal { max-width: calc(100% - 16px) !important; }
+.bookmark-readonly { display: flex; flex-direction: column; gap: 12px; }
+.bookmark-readonly header { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.bookmark-readonly-layout { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 18px; align-items: start; }
+.bookmark-readonly-layout > * { min-width: 0; }
+.bookmark-readonly-answer { padding: 12px; background: #eef0f3; min-height: 240px; overflow: auto; }
+.bookmark-readonly-answer img { display: block; max-width: 100%; height: auto; margin: auto; }
+.bookmark-submitted-score { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
+.bookmark-plain-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  /* Space 把个人工具作为一个子项；小屏摊平这一层，让各按钮沿用外层双列网格。 */
+  .immersive-workspace .grading-topbar > .ant-space > .ant-space-item:has(.grading-personal-actions),
+  .immersive-workspace .grading-personal-actions { display: contents; }
+  .grading-teacher-simple .grading-panels,
+  .immersive-workspace .grading-teacher-simple .grading-panels { grid-template-columns: minmax(0, 1fr); grid-template-areas: "answer" "inspector"; }
+  .bookmark-readonly-layout { grid-template-columns: minmax(0, 1fr); }
+  .bookmark-filters { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 700px) {
+  .grading-teacher-simple .grading-panels,
+  .immersive-workspace .grading-teacher-simple .grading-panels { grid-template-columns: minmax(0, 1fr); grid-template-areas: "answer" "inspector"; }
+}

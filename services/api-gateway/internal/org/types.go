@@ -11,6 +11,9 @@ var (
 	ErrSchoolCodeConflict    = errors.New("school code already exists")
 	ErrClassCodeConflict     = errors.New("class code already exists in this grade")
 	ErrStudentNoConflict     = errors.New("student number already exists in this school")
+	ErrNotFound              = errors.New("organization resource not found")
+	ErrStudentMustBeInactive = errors.New("student must be inactive before permanent deletion")
+	ErrStudentInUse          = errors.New("student has linked business records")
 )
 
 type Tenant struct {
@@ -102,6 +105,24 @@ type Student struct {
 	Status         string `json:"status"`
 }
 
+// GradePatch 不修改组织归属；升学、转班仍需通过学籍业务保留历史。
+type GradePatch struct {
+	Name *string `json:"name"`
+}
+
+type ClassPatch struct {
+	Name *string `json:"name"`
+	Code *string `json:"code"`
+}
+
+// StudentPatch 未传字段保持原值；Gender 的空串表示主动清空性别。
+type StudentPatch struct {
+	Name      *string `json:"name"`
+	StudentNo *string `json:"student_no"`
+	Gender    *string `json:"gender"`
+	Status    *string `json:"status"`
+}
+
 type StudentEnrollment struct {
 	ID               string `json:"id"`
 	StudentID        string `json:"student_id"`
@@ -155,10 +176,14 @@ type Store interface {
 	ListAcademicYears(ctx context.Context, tenantID string, schoolID string) ([]AcademicYear, error)
 	ListGradeCohorts(ctx context.Context, tenantID string, schoolID string) ([]GradeCohort, error)
 	CreateGrade(ctx context.Context, tenantID string, input Grade) (Grade, error)
+	UpdateGrade(ctx context.Context, tenantID string, id string, input GradePatch) (Grade, error)
 	ListGrades(ctx context.Context, tenantID string, schoolID string) ([]Grade, error)
 	CreateClass(ctx context.Context, tenantID string, input Class) (Class, error)
+	UpdateClass(ctx context.Context, tenantID string, id string, input ClassPatch) (Class, error)
 	ListClasses(ctx context.Context, tenantID string, gradeID string) ([]Class, error)
 	CreateStudent(ctx context.Context, tenantID string, input Student) (Student, error)
+	UpdateStudent(ctx context.Context, tenantID string, id string, input StudentPatch) (Student, error)
+	DeleteStudent(ctx context.Context, tenantID string, id string) error
 	ListStudents(ctx context.Context, tenantID string, filter StudentListFilter) ([]Student, error)
 	UpdateStudentStatus(ctx context.Context, tenantID string, id string, status string) (Student, error)
 	TransferStudent(ctx context.Context, tenantID string, studentID string, classID string, startDate string) (StudentEnrollment, error)

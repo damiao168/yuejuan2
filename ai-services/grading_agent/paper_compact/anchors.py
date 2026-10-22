@@ -20,8 +20,8 @@ from .schema import (
 )
 
 _NUMBER = r"\d+(?:\.\d+)?"
-# 考试分值必须关联题目标题或分节说明。
-# 题干中单独出现的“4分”可能是游戏得分，不是该题的分值。
+# 只有题目标题或分节说明明确给出分值时，才提取为考试满分。
+# 题干中单独出现的“4分”可能是游戏得分，不能据此认定该题满分。
 _QUESTION_MARK = re.compile(
     rf"(?:本(?:小)?题|此题)\s*(?:满分|共|计|为)?\s*[:：]?\s*({_NUMBER})\s*分"
 )
@@ -168,8 +168,7 @@ class _AnchorSegmentBuilder:
         match = _QUESTION_NUMBER.match(text)
         if match:
             number = int(match.group(1))
-            # 编号的解题步骤不是新题目。真正的下一题
-            # 会推进试卷中单调递增的题号序列。
+            # 已有题目时，只有更大的题号才开启下一题，避免把解题过程中的回退编号当作新题。
             if not self.current or (
                 number > self.current_number
                 and not (self.in_solution and number <= self.current_number)

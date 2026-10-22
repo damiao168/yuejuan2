@@ -40,6 +40,7 @@ def _boolean(name, default):
 
 @dataclass(frozen=True)
 class Settings:
+    material_callback_base_url: str = ""
     environment: str = "production"
     host: str = "0.0.0.0"
     port: int = 8100
@@ -75,6 +76,7 @@ class Settings:
     @classmethod
     def from_env(cls):
         settings = cls(
+            material_callback_base_url=os.getenv("EDUGRADE_GRADING_MATERIAL_CALLBACK_BASE_URL", "").rstrip("/"),
             environment=os.getenv("EDUGRADE_ENV", "production").strip().lower(),
             host=os.getenv("EDUGRADE_GRADING_AGENT_HOST", "0.0.0.0").strip(),
             port=_integer("EDUGRADE_GRADING_AGENT_PORT", 8100, 1, 65535),
@@ -116,6 +118,8 @@ class Settings:
         settings._validate_credentials_and_listener()
         model_url = settings._validate_model_url()
         settings._validate_model_identity(model_url)
+        if settings.material_callback_base_url:
+            validate_service_url("EDUGRADE_GRADING_MATERIAL_CALLBACK_BASE_URL", settings.material_callback_base_url, settings.environment)
         return settings
 
     def _validate_credentials_and_listener(self):

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -45,6 +46,15 @@ func TestProductionStoreGraphRejectsMissingStores(t *testing.T) {
 	err := validatePostgresStoreGraph(stores)
 	if err == nil || !strings.Contains(err.Error(), "stores.Identity.Auth is not configured") {
 		t.Fatalf("production graph accepted a missing store: %v", err)
+	}
+}
+
+func TestProductionStoreGraphRequiresPersonalReviewBookmarkStore(t *testing.T) {
+	stores := NewMemoryApplicationStores()
+	// 聚焦新增持久化槽位，避免内存工厂的其他可选读模型先触发全图检查。
+	stores.Grading.ReviewBookmark = nil
+	if err := validatePostgresStoreValue(reflect.ValueOf(stores.Grading), "stores.Grading"); err == nil || !strings.Contains(err.Error(), "stores.Grading.ReviewBookmark is not configured") {
+		t.Fatalf("production graph accepted missing personal bookmark persistence: %v", err)
 	}
 }
 

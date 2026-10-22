@@ -1,13 +1,13 @@
 import importlib.util
 import os
-from pathlib import Path
 import shutil
 import stat
 import subprocess
 import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
-
 
 GENERATOR_PATH = (
     Path(__file__).resolve().parents[2]
@@ -53,16 +53,19 @@ def _openssl(executable: Path, *arguments) -> str:
     return result.stdout
 
 
-def _invoke_main(generator, monkeypatch, output: Path, environment: str, executable) -> None:
+def _invoke_main(generator, monkeypatch, output: Path, environment: str, executable, days=None) -> None:
+    arguments = [
+        str(GENERATOR_PATH),
+        "--output-dir", str(output),
+        "--environment", environment,
+        "--openssl", str(executable),
+    ]
+    if days is not None:
+        arguments.extend(("--days", str(days)))
     monkeypatch.setattr(
         sys,
         "argv",
-        [
-            str(GENERATOR_PATH),
-            "--output-dir", str(output),
-            "--environment", environment,
-            "--openssl", str(executable),
-        ],
+        arguments,
     )
     generator.main()
 
@@ -80,11 +83,12 @@ def _directory_snapshot(directory: Path) -> dict:
     return snapshot
 
 
+@pytest.mark.parametrize("days", [None, 365])
 def test_main_generates_verifiable_isolated_certificates(
-    certificate_generator, openssl_executable, tmp_path, monkeypatch, capsys,
+    certificate_generator, openssl_executable, tmp_path, monkeypatch, capsys, days,
 ):
     output = tmp_path / "certificates"
-    _invoke_main(certificate_generator, monkeypatch, output, "test", openssl_executable)
+    _invoke_main(certificate_generator, monkeypatch, output, "test", openssl_executable, days)
 
     public = output / "internal-ca"
     private = output / "private-ca"
@@ -126,6 +130,13 @@ def test_main_generates_verifiable_isolated_certificates(
         key_pairs.append((certificate, key))
 
     for certificate, key in key_pairs:
+        # 读取实际 X.509 日期，防止只把 CLI 参数接通而 CA 或某个服务仍只签发两天。
+        dates = _openssl(openssl_executable, "x509", "-in", certificate, "-noout", "-dates")
+        boundaries = [
+            datetime.strptime(line.split("=", 1)[1], "%b %d %H:%M:%S %Y GMT").replace(tzinfo=timezone.utc)
+            for line in dates.splitlines()
+        ]
+        assert boundaries[1] - boundaries[0] == timedelta(days=2 if days is None else days)
         certificate_public_key = _openssl(openssl_executable, "x509", "-in", certificate,
                                           "-pubkey", "-noout")
         private_public_key = _openssl(openssl_executable, "pkey", "-in", key, "-pubout")
@@ -145,6 +156,28 @@ def test_main_generates_verifiable_isolated_certificates(
     messages = capsys.readouterr().out
     assert f"Disposable certificates created: {output.resolve()}" in messages
     assert "never mount private-ca" in messages
+
+
+@pytest.mark.parametrize("days", [0, -1, 3651, "1.5", "invalid"])
+def test_main_rejects_invalid_validity_before_creating_output(
+    certificate_generator, tmp_path, monkeypatch, days,
+):
+    output = tmp_path / "uncreated-parent" / "certificates"
+    with pytest.raises(SystemExit) as error:
+        _invoke_main(certificate_generator, monkeypatch, output, "local",
+                     tmp_path / "unused-openssl.exe", days)
+    assert error.value.code == 2
+    assert not output.parent.exists()
+
+
+@pytest.mark.parametrize("days", [0, -1, 3651, 1.5, "365", True])
+def test_direct_generation_rejects_invalid_validity_before_creating_output(
+    certificate_generator, tmp_path, days,
+):
+    output = tmp_path / "uncreated-parent" / "certificates"
+    with pytest.raises(ValueError, match="validity must be an integer"):
+        certificate_generator.generate_certificates(output, tmp_path / "unused-openssl.exe", valid_days=days)
+    assert not output.parent.exists()
 
 
 def test_main_rejects_existing_output_without_changing_contents(

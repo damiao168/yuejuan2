@@ -12,17 +12,19 @@ var (
 	ErrAgentInvalidResponse   = errors.New("invalid managed agent response")
 	ErrAgentToolsUnsupported  = errors.New("managed model does not support native tools")
 	ErrAgentResponseTruncated = errors.New("managed agent response was truncated")
+	ErrAgentImagesUnsupported = errors.New("managed model does not support image input")
 )
 
 // AgentMessage 只用于服务端编排，不作为客户端消息的解码结构。
 // system、tool 和 ToolCalls 必须由服务端创建，业务授权仍由工具执行层检查。
 type AgentMessage struct {
-	Role             string          `json:"role"`
-	Content          string          `json:"content,omitempty"`
-	ReasoningContent string          `json:"reasoning_content,omitempty"`
-	ToolCallID       string          `json:"tool_call_id,omitempty"`
-	Name             string          `json:"name,omitempty"`
-	ToolCalls        []AgentToolCall `json:"tool_calls,omitempty"`
+	Role             string                  `json:"role"`
+	Content          string                  `json:"content,omitempty"`
+	ReasoningContent string                  `json:"reasoning_content,omitempty"`
+	ToolCallID       string                  `json:"tool_call_id,omitempty"`
+	Name             string                  `json:"name,omitempty"`
+	ToolCalls        []AgentToolCall         `json:"tool_calls,omitempty"`
+	Images           []ManagedChatAttachment `json:"-"`
 }
 
 type AgentTool struct {
@@ -67,17 +69,16 @@ type AgentStreamModel interface {
 	Stream(context.Context, ManagedAPIConnection, AgentRequest, func(AgentEvent) error) (AgentResponse, error)
 }
 
-// NormalizeAgentUserMessages 复用现有客户端边界，并把已校验附件转成带内容边界的文本。
+// NormalizeAgentUserMessages 复用现有客户端边界；文本附件带内容边界，图片保留为模型的图像输入。
 // 不接受客户端 system/tool 角色，也不把历史 assistant 文本解析为可执行工具调用。
 func NormalizeAgentUserMessages(messages []ManagedChatMessage) ([]AgentMessage, error) {
 	normalized, err := normalizeManagedChatMessages(messages)
 	if err != nil {
 		return nil, err
 	}
-	providerMessages := managedChatProviderMessages(normalized)
-	result := make([]AgentMessage, 0, len(providerMessages))
-	for _, message := range providerMessages {
-		result = append(result, AgentMessage{Role: message["role"], Content: message["content"]})
+	result := make([]AgentMessage, 0, len(normalized))
+	for _, message := range normalized {
+		result = append(result, chatAgentMessage(message))
 	}
 	return result, nil
 }

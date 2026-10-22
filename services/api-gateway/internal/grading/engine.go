@@ -111,9 +111,33 @@ func (e *Engine) gradeMultipleChoice(ctx Context) Grade {
 		grade.MissingPoints = append(grade.MissingPoints, point("multiple_choice_set", "expected or student options are empty", ctx.Question.Score))
 		return finalize(grade)
 	}
+	config := toleranceMap(ctx.AnswerKey.Tolerance)
+	partialRaw, hasPartial := config["partial_score"]
+	wrongRaw, hasWrong := config["wrong_answer_score"]
+	partialScore, partialOK := floatValue(partialRaw)
+	wrongScore, wrongOK := floatValue(wrongRaw)
+	fixedScores := hasPartial || hasWrong
+	if fixedScores && (!hasPartial || !hasWrong || !partialOK || !wrongOK ||
+		math.IsNaN(partialScore) || math.IsInf(partialScore, 0) || partialScore < 0 || partialScore > ctx.Question.Score ||
+		math.IsNaN(wrongScore) || math.IsInf(wrongScore, 0) || wrongScore < 0 || wrongScore > ctx.Question.Score) {
+		grade.RiskFlags = append(grade.RiskFlags, "multiple_choice_policy_invalid")
+		return finalize(grade)
+	}
 	if setEqual(expected, actual) {
 		grade.SuggestedScore = ctx.Question.Score
 		grade.MatchedPoints = append(grade.MatchedPoints, point("multiple_choice_all_correct", "all selected options match answer key", ctx.Question.Score))
+		return finalize(grade)
+	}
+	// 固定得分只区分全对、少选无错选、有错选；一旦明确采用此规则，不叠加历史每项分值或罚分。
+	if fixedScores {
+		if hasWrongOption(expected, actual) {
+			grade.SuggestedScore = wrongScore
+			grade.MissingPoints = append(grade.MissingPoints, point("multiple_choice_wrong_option", "student selected at least one wrong option", ctx.Question.Score-wrongScore))
+		} else {
+			grade.SuggestedScore = partialScore
+			grade.MatchedPoints = append(grade.MatchedPoints, point("multiple_choice_partial", "student selected a correct subset", partialScore))
+			grade.MissingPoints = append(grade.MissingPoints, point("multiple_choice_missing_options", "student missed one or more correct options", ctx.Question.Score-partialScore))
+		}
 		return finalize(grade)
 	}
 	// 错选先按每个正确项得分减去每个错误项罚分；allow_partial 只控制后面的纯漏选分支。
@@ -383,11 +407,21 @@ func numericFromString(value string) (float64, string, bool) {
 	if slash := strings.Index(value, "/"); slash > 0 {
 		left := strings.TrimSpace(value[:slash])
 		rest := strings.TrimSpace(value[slash+1:])
-		denominatorText := numericPrefixPattern.FindString(rest)
 		numerator, numeratorErr := strconv.ParseFloat(left, 64)
-		denominator, denominatorErr := strconv.ParseFloat(denominatorText, 64)
-		if numeratorErr == nil && denominatorErr == nil && denominator != 0 {
-			return numerator / denominator, strings.TrimSpace(strings.TrimPrefix(rest, denominatorText)), true
+		if numeratorErr == nil {
+			// 一旦左侧已经是数字，斜杠就表示分式；分母无效或为零时必须拒绝整项，
+			// 不能退回前缀解析把“1/0”当成数字 1 并把“/0”吞进单位。
+			denominatorText := numericPrefixPattern.FindString(rest)
+			denominator, denominatorErr := strconv.ParseFloat(denominatorText, 64)
+			if denominatorText == "" || denominatorErr != nil || denominator == 0 || !finiteNumeric(numerator) || !finiteNumeric(denominator) {
+				return 0, "", false
+			}
+			unit := strings.TrimSpace(strings.TrimPrefix(rest, denominatorText))
+			result := numerator / denominator
+			if !finiteNumeric(result) || !numericUnitSuffix(unit) {
+				return 0, "", false
+			}
+			return result, unit, true
 		}
 	}
 	match := numericPrefixPattern.FindString(value)
@@ -395,7 +429,7 @@ func numericFromString(value string) (float64, string, bool) {
 		return 0, "", false
 	}
 	number, err := strconv.ParseFloat(match, 64)
-	if err != nil {
+	if err != nil || !finiteNumeric(number) {
 		return 0, "", false
 	}
 	unit := strings.TrimSpace(strings.TrimPrefix(value, match))
@@ -403,7 +437,25 @@ func numericFromString(value string) (float64, string, bool) {
 		number /= 100
 		unit = strings.TrimSpace(strings.TrimPrefix(unit, "%"))
 	}
+	if !numericUnitSuffix(unit) {
+		return 0, "", false
+	}
 	return number, unit, true
+}
+
+func finiteNumeric(value float64) bool {
+	return !math.IsNaN(value) && !math.IsInf(value, 0)
+}
+
+func numericUnitSuffix(unit string) bool {
+	if unit == "" {
+		return true
+	}
+	// 数值后剩余的算术符号不能当作单位；单位中的 m/s2 等写法仍从字母或度数符号开始。
+	for _, first := range unit {
+		return unicode.IsLetter(first) || first == '°' || first == '℃' || first == '℉'
+	}
+	return false
 }
 
 func matchingOptionCount(expected []string, actual []string) int {
@@ -557,7 +609,7 @@ func stringify(value any) string {
 func hasReviewRisk(flags []string) bool {
 	for _, flag := range flags {
 		switch flag {
-		case "true_false_parse_failed", "multiple_choice_empty_answer", "numeric_parse_failed":
+		case "true_false_parse_failed", "multiple_choice_empty_answer", "multiple_choice_policy_invalid", "numeric_parse_failed":
 			return true
 		case "answer_confidence_missing", "answer_low_confidence":
 			return true

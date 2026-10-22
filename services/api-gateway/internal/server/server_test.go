@@ -606,8 +606,27 @@ func TestNotFoundUsesUnifiedError(t *testing.T) {
 		t.Fatalf("expected status 404, got %d", rec.Code)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, `"error"`) || !strings.Contains(body, `"code":"not_found"`) {
+	if !strings.Contains(body, `"error"`) || !strings.Contains(body, `"code":"route_not_found"`) {
 		t.Fatalf("expected unified error response, got %s", body)
+	}
+}
+
+func TestTemplateLibraryRoutesRequireAuthentication(t *testing.T) {
+	router := NewRouter(testConfig(), logger.New(io.Discard, "error"), nil, testAuthStore(t), org.NewMemoryStore(), exam.NewMemoryStore(), paper.NewMemoryStore())
+	// 路由必须先进入身份校验；旧服务未注册这些接口时会直接落入通用 404。
+	for _, path := range []string{
+		"/api/v1/exams/11111111-1111-4111-8111-111111111111/answer-sheet-template-library",
+		"/api/v1/exams/11111111-1111-4111-8111-111111111111/answer-sheet-template-library/resolve",
+	} {
+		method := http.MethodGet
+		if strings.HasSuffix(path, "/resolve") {
+			method = http.MethodPost
+		}
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, httptest.NewRequest(method, path, nil))
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("%s %s: expected authentication guard, got %d %s", method, path, rec.Code, rec.Body.String())
+		}
 	}
 }
 

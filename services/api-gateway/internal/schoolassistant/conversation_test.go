@@ -86,13 +86,55 @@ func (m *conversationScriptModel) Stream(_ context.Context, _ modelgovernance.Ma
 }
 
 func conversationStore() *conversationModelStore {
-	return &conversationModelStore{connection: modelgovernance.ManagedAPIConnection{Config: modelgovernance.ManagedAPIConfig{ID: "99999999-9999-4999-8999-999999999999", TenantID: toolTestTenant, IsDefault: true, Status: "active", ModelName: "test-model", DisplayName: "测试模型", AdapterType: "openai_compatible", LastCapabilityStatus: "success", LastCapabilityVersion: modelgovernance.ManagedCapabilityProbeVersion}}}
+	return &conversationModelStore{connection: modelgovernance.ManagedAPIConnection{Config: modelgovernance.ManagedAPIConfig{
+		ID: "99999999-9999-4999-8999-999999999999", TenantID: toolTestTenant, IsDefault: true, Status: "active",
+		ModelName: "test-model", DisplayName: "测试模型", AdapterType: "openai_compatible", LastTextStatus: "success",
+		LastCapabilityStatus: "success", LastCapabilityVersion: modelgovernance.ManagedCapabilityProbeVersion,
+	}}}
 }
 func conversationInput(question string) ConversationRequest {
 	return ConversationRequest{Messages: []modelgovernance.ManagedChatMessage{{Role: "user", Content: question}}}
 }
 func conversationCall(id, name, args string) modelgovernance.AgentToolCall {
 	return modelgovernance.AgentToolCall{ID: id, Name: name, Arguments: json.RawMessage(args)}
+}
+
+func TestConversationRequiresIndependentTextEvidenceBeforeModelOrTools(t *testing.T) {
+	for _, test := range []struct {
+		name              string
+		textStatus        string
+		capabilityStatus  string
+		capabilityVersion string
+		wantAvailable     bool
+	}{
+		{name: "model list only", textStatus: "untested", capabilityStatus: "untested"},
+		{name: "legacy structured success", textStatus: "untested", capabilityStatus: "success", capabilityVersion: "structured-json-v3"},
+		{name: "text failed despite structured success", textStatus: "failed", capabilityStatus: "success", capabilityVersion: modelgovernance.ManagedCapabilityProbeVersion},
+		{name: "text success despite structured failure", textStatus: "success", capabilityStatus: "failed", capabilityVersion: modelgovernance.ManagedCapabilityProbeVersion, wantAvailable: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store := conversationStore()
+			store.connection.Config.LastTestStatus = "success"
+			store.connection.Config.LastProbeMode = "quick"
+			store.connection.Config.LastTextStatus = test.textStatus
+			store.connection.Config.LastCapabilityStatus = test.capabilityStatus
+			store.connection.Config.LastCapabilityVersion = test.capabilityVersion
+			reader := &toolTestExams{}
+			model := &conversationScriptModel{}
+			service := NewConversationService(NewService(Dependencies{Exams: reader}), ConversationDependencies{Models: store, Model: model})
+			err := service.Converse(toolTestContext(t, "school_admin"), conversationInput("起草考试通知"), nil)
+			if test.wantAvailable {
+				if err != nil || model.streamCalls != 1 {
+					t.Fatalf("text-only general conversation was rejected: err=%v streams=%d", err, model.streamCalls)
+				}
+				return
+			}
+			requireToolError(t, err, "ai_chat_model_unavailable")
+			if model.probeCalls != 0 || len(model.requests) != 0 || model.streamCalls != 0 || reader.listCalls != 0 || reader.getCalls != 0 {
+				t.Fatalf("unverified text reached model or business tools: probe=%d plans=%d streams=%d reads=%+v", model.probeCalls, len(model.requests), model.streamCalls, reader)
+			}
+		})
+	}
 }
 
 func TestConversationModelChoosesToolsAndReceivesRealEvidence(t *testing.T) {

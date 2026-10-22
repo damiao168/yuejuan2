@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { ReviewTask } from "../../../../api/review";
-import { listReviewTasks, getReviewTask } from "../../../../api/review";
+import { listReviewTasks } from "../../../../api/review";
 import { listAllActiveGraders, type ManagedUser } from "../../../../api/users";
 import { displayNameOrUsername } from "../../../../auth/session";
 import { formatError } from "../gradingWorkbench.model";
 import type { ReviewerProgress, TaskFilter } from "../gradingWorkbench.types";
 import { appendTaskPage, followingVisibleActionableTask, visibleTasks } from "../taskPaging";
 import { hashQueryParam } from "../../../../router/query";
-import type { ReviewTaskAggregate } from "@edugrade/sdk";
+import { useGradingQueuePages } from "./useGradingQueuePages";
 import { examSubjectLabel } from "../../../../constants/examStatus";
 
 interface UseGradingQueueOptions {
@@ -17,17 +17,10 @@ interface UseGradingQueueOptions {
   initialExamId: string;
   personalScope: boolean;
   onInfo: (message: string) => void;
+  heldGroupTask?: RefObject<string>;
 }
 
-// 深链补读的任务也受原考试和个人队列限制；请求代次由调用方在补读返回后核对。
-function assertRequestedTaskScope(task: ReviewTask, { canManageTasks, canWork, currentUserId, initialExamId, personalScope }: Omit<UseGradingQueueOptions, "onInfo">, queueScope: "mine" | "all") {
-  const personalQueue = personalScope || (canManageTasks && canWork && queueScope === "mine");
-  if ((initialExamId && task.exam_id !== initialExamId) || (personalQueue && task.assigned_to !== currentUserId)) {
-    throw new Error("此任务不在当前考试或已转派，请返回我的工作查看最新任务");
-  }
-}
-
-export function useGradingQueue({ canManageTasks, canWork, currentUserId, initialExamId, personalScope, onInfo }: UseGradingQueueOptions) {
+export function useGradingQueue({ canManageTasks, canWork, currentUserId, initialExamId, personalScope, onInfo, heldGroupTask }: UseGradingQueueOptions) {
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("active");
   const [queueScope, setQueueScope] = useState<"mine" | "all">(canManageTasks ? "all" : "mine");
   const [keyword, setKeyword] = useState(hashQueryParam("q"));
@@ -36,24 +29,11 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
   const [subjectFilter, setSubjectFilter] = useState("");
   const [questionFilter, setQuestionFilter] = useState("");
   const [unassignedOnly, setUnassignedOnly] = useState(false);
-  const [taskCatalogue, setTaskCatalogue] = useState<ReviewTask[]>([]);
-  const [matchedAggregate, setMatchedAggregate] = useState<ReviewTaskAggregate | null>(null);
-  const [unassignedCount, setUnassignedCount] = useState<number | null>(null);
   const [selectingAll, setSelectingAll] = useState(false);
   const selectingAllRef = useRef(false);
-  const [tasks, setTasks] = useState<ReviewTask[]>([]);
-  const [taskAggregate, setTaskAggregate] = useState<ReviewTaskAggregate | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState("");
-  const requestedTaskRef = useRef(hashQueryParam("task"));
-  const [loading, setLoading] = useState({ tasks: true, more: false });
-  const loadingTasks = loading.tasks;
-  const loadingMoreTasks = loading.more;
-  const [nextTaskCursor, setNextTaskCursor] = useState("");
-  const [hasMoreTasks, setHasMoreTasks] = useState(false);
-  const [pageError, setPageError] = useState<string | null>(null);
   const pendingPageRef = useRef<Promise<ReviewTask[]> | null>(null);
   const pendingNextRef = useRef<string | null>(null);
-  const [taskError, setTaskError] = useState<string | null>(null);
   const [graders, setGraders] = useState<ManagedUser[]>([]);
   const [gradersError, setGradersError] = useState<string | null>(null);
   const [assignmentUserId, setAssignmentUserId] = useState("");
@@ -63,6 +43,28 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
   const queueReadyRef = useRef(false);
   const filtersRef = useRef({ taskFilter, queueScope, keyword, examFilter, subjectFilter, questionFilter, unassignedOnly });
   const suppressAutoSelectRef = useRef(false);
+
+  useEffect(() => { const timer = window.setTimeout(() => setServerKeyword(keyword.trim()), 300); return () => window.clearTimeout(timer); }, [keyword]);
+  const effectiveExamId = initialExamId || examFilter;
+  const activeScopeKey = JSON.stringify([canManageTasks, canWork, currentUserId, initialExamId, personalScope, queueScope, effectiveExamId, subjectFilter, questionFilter, unassignedOnly, taskFilter, keyword.trim()]);
+  const activeScopeKeyRef = useRef(activeScopeKey);
+  activeScopeKeyRef.current = activeScopeKey;
+  const scopeQuery = useMemo(() => ({
+    ...((personalScope || (canManageTasks && canWork && queueScope === "mine")) ? { assigned_to: currentUserId } : {}),
+    ...(effectiveExamId ? { exam_id: effectiveExamId } : {}), ...(questionFilter ? { question_id: questionFilter } : {}),
+    ...(subjectFilter ? { subject: subjectFilter } : {}),
+    ...(serverKeyword ? { q: serverKeyword } : {})
+  }), [canManageTasks, canWork, currentUserId, effectiveExamId, personalScope, questionFilter, queueScope, serverKeyword, subjectFilter]);
+  const filterQuery = useMemo(() => ({ ...scopeQuery, ...(taskFilter !== "all" ? { status: taskFilter } : {}), ...(unassignedOnly ? { unassigned: true } : {}) }), [scopeQuery, taskFilter, unassignedOnly]);
+  const { taskCatalogue, setTaskCatalogue, matchedAggregate, setMatchedAggregate, unassignedCount, setUnassignedCount,
+    tasks, setTasks, taskAggregate, setTaskAggregate, loadingTasks, loadingMoreTasks, setLoading,
+    nextTaskCursor, setNextTaskCursor, hasMoreTasks, setHasMoreTasks, pageError, setPageError, taskError,
+    loadTasks, loadMoreTasks, refreshTaskAggregate } = useGradingQueuePages({
+      canManageTasks, canWork, currentUserId, initialExamId, personalScope, queueScope, activeScopeKey,
+      activeScopeKeyRef, serverKeyword, filtersRef, taskListRequestRef, allSelectionRequestRef, queueReadyRef,
+      selectingAllRef, pendingNextRef, pendingPageRef, setSelectingAll, setTaskFilter, setSelectedTaskId,
+      filterQuery, scopeQuery
+    });
 
   const invalidateFilter = useCallback(() => {
     // 输入先于防抖请求变化；同步作废旧分页和全选，避免它们在新筛选下回填旧范围。
@@ -75,7 +77,7 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
     setSelectingAll(false);
     setAssignmentTaskIds([]);
     setLoading({ tasks: true, more: false });
-  }, []);
+  }, [setLoading]);
   const updateFilter = useCallback(<K extends keyof typeof filtersRef.current>(key: K, value: typeof filtersRef.current[K], setValue: (value: typeof filtersRef.current[K]) => void) => {
     const previous = filtersRef.current[key];
     filtersRef.current[key] = value;
@@ -91,18 +93,6 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
   const updateQuestionFilter = useCallback((value: string) => updateFilter("questionFilter", value, setQuestionFilter), [updateFilter]);
   const updateUnassignedOnly = useCallback((value: boolean) => updateFilter("unassignedOnly", value, setUnassignedOnly), [updateFilter]);
 
-  useEffect(() => { const timer = window.setTimeout(() => setServerKeyword(keyword.trim()), 300); return () => window.clearTimeout(timer); }, [keyword]);
-  const effectiveExamId = initialExamId || examFilter;
-  const activeScopeKey = JSON.stringify([canManageTasks, canWork, currentUserId, initialExamId, personalScope, queueScope, effectiveExamId, subjectFilter, questionFilter, unassignedOnly, taskFilter, keyword.trim()]);
-  const activeScopeKeyRef = useRef(activeScopeKey);
-  activeScopeKeyRef.current = activeScopeKey;
-  const scopeQuery = useMemo(() => ({
-    ...((personalScope || (canManageTasks && canWork && queueScope === "mine")) ? { assigned_to: currentUserId } : {}),
-    ...(effectiveExamId ? { exam_id: effectiveExamId } : {}), ...(questionFilter ? { question_id: questionFilter } : {}),
-    ...(subjectFilter ? { subject: subjectFilter } : {}),
-    ...(serverKeyword ? { q: serverKeyword } : {})
-  }), [canManageTasks, canWork, currentUserId, effectiveExamId, personalScope, questionFilter, queueScope, serverKeyword, subjectFilter]);
-  const filterQuery = useMemo(() => ({ ...scopeQuery, ...(taskFilter !== "all" ? { status: taskFilter } : {}), ...(unassignedOnly ? { unassigned: true } : {}) }), [scopeQuery, taskFilter, unassignedOnly]);
   // 这里排序的是接口学科代码，保留固定 UTF-16 顺序；中文标签只负责展示，不参与排序。
   const subjectOptions = useMemo(() => [...new Set(taskCatalogue.map((task) => task.subject).filter((subject): subject is string => Boolean(subject)))].sort((left, right) => {
     if (left < right) return -1;
@@ -155,11 +145,13 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
   const remainingCount = taskAggregate?.remaining_count ?? 0;
 
   useEffect(() => {
+    // 整区内提交当前题后，其它评分行可能尚未保存；由教师明确切换，再离开这张共享图。
+    if (selectedTaskId && heldGroupTask?.current === selectedTaskId) return;
     if (loadingTasks || filteredTasks.some((task) => task.id === selectedTaskId)) return;
     if (selectedTaskId && hasMoreTasks && !tasks.some((task) => task.id === selectedTaskId)) return;
     if (!selectedTaskId && suppressAutoSelectRef.current) return;
     setSelectedTaskId(filteredTasks[0]?.id ?? "");
-  }, [filteredTasks, hasMoreTasks, loadingTasks, selectedTaskId, tasks]);
+  }, [filteredTasks, hasMoreTasks, loadingTasks, selectedTaskId, tasks, heldGroupTask]);
   useEffect(() => {
     const available = new Set(assignableTasks.map((task) => task.id));
     setAssignmentTaskIds((current) => current.filter((taskId) => available.has(taskId)));
@@ -171,108 +163,6 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
     return [...filteredTasks.slice(selectedIndex + 1), ...filteredTasks.slice(0, Math.max(selectedIndex, 0))]
       .filter(actionable).slice(0, 2);
   }, [filteredTasks, selectedIndex, selectedTaskId]);
-
-  const loadTasks = useCallback(async () => {
-    if (activeScopeKeyRef.current !== activeScopeKey || filtersRef.current.keyword.trim() !== serverKeyword) return;
-    const requestId = ++taskListRequestRef.current;
-    queueReadyRef.current = false;
-    allSelectionRequestRef.current += 1;
-    selectingAllRef.current = false;
-    setSelectingAll(false);
-    pendingNextRef.current = null;
-    pendingPageRef.current = null;
-    setLoading((current) => ({ ...current, tasks: true }));
-    setTaskAggregate(null);
-    setMatchedAggregate(null); setUnassignedCount(null);
-    setLoading((current) => ({ ...current, more: false }));
-    setTaskError(null);
-    setPageError(null);
-    try {
-      // 列表与匹配数量在服务端使用同一筛选；进度另按同考试/题目的全状态统计，避免“待处理”筛选把完成数清零。
-      const [result, progress, unassigned] = await Promise.all([
-        listReviewTasks({ ...filterQuery, limit: 50 }),
-        listReviewTasks({ ...scopeQuery, limit: 1 }),
-        canManageTasks && queueScope === "all" ? listReviewTasks({ ...filterQuery, unassigned: true, limit: 1 }) : Promise.resolve(null)
-      ]);
-      if (requestId !== taskListRequestRef.current || activeScopeKeyRef.current !== activeScopeKey) return;
-      const scopedTasks = initialExamId ? result.tasks.filter((task) => task.exam_id === initialExamId) : result.tasks;
-      const requestedId = requestedTaskRef.current;
-      if (requestedId && !scopedTasks.some((task) => task.id === requestedId)) {
-        const { task } = await getReviewTask(requestedId);
-        if (requestId !== taskListRequestRef.current || activeScopeKeyRef.current !== activeScopeKey) return;
-        assertRequestedTaskScope(task, { canManageTasks, canWork, currentUserId, initialExamId, personalScope }, queueScope);
-        scopedTasks.unshift(task);
-      }
-      if (requestedId) { setSelectedTaskId(requestedId); filtersRef.current.taskFilter = "all"; setTaskFilter("all"); requestedTaskRef.current = ""; }
-      setTasks(scopedTasks);
-      setTaskCatalogue((current) => appendTaskPage(current, scopedTasks));
-      setMatchedAggregate(result.aggregate ?? null);
-      setUnassignedCount(unassigned?.aggregate?.total_count ?? null);
-      setTaskAggregate(progress.aggregate ?? null);
-      setNextTaskCursor(result.next_cursor ?? "");
-      setHasMoreTasks(Boolean(result.has_more));
-      setSelectedTaskId((current) => requestedId || ((scopedTasks.some((task) => task.id === current) || (result.has_more && Boolean(current)))
-        ? current : scopedTasks.find((task) => ["assigned", "in_progress", "returned"].includes(task.status))?.id || ""));
-      queueReadyRef.current = true;
-    } catch (currentError) {
-      if (requestId !== taskListRequestRef.current || activeScopeKeyRef.current !== activeScopeKey) return;
-      setTasks([]); setTaskAggregate(null); setMatchedAggregate(null); setUnassignedCount(null); setNextTaskCursor(""); setHasMoreTasks(false); setSelectedTaskId(""); setTaskError(formatError(currentError));
-    } finally {
-      if (requestId === taskListRequestRef.current && activeScopeKeyRef.current === activeScopeKey) setLoading((current) => ({ ...current, tasks: false }));
-    }
-  }, [activeScopeKey, canManageTasks, canWork, currentUserId, initialExamId, personalScope, queueScope, filterQuery, scopeQuery, serverKeyword]);
-
-  const loadMoreTasks = useCallback((): Promise<ReviewTask[]> => {
-    if (!queueReadyRef.current || activeScopeKeyRef.current !== activeScopeKey || filtersRef.current.keyword.trim() !== serverKeyword) return Promise.resolve([]);
-    // 自动续页和手动翻页共享同一在途请求，避免同一游标并发追加两次。
-    if (pendingPageRef.current) return pendingPageRef.current;
-    if (!hasMoreTasks) return Promise.resolve([]);
-    if (!nextTaskCursor) { setPageError("后续任务缺少分页位置，请刷新任务列表"); return Promise.resolve([]); }
-    const requestId = taskListRequestRef.current;
-    const cursor = nextTaskCursor;
-    setPageError(null);
-    setLoading((current) => ({ ...current, more: true }));
-    const pending = (async () => {
-      try {
-        const result = await listReviewTasks({ ...filterQuery, limit: 50, cursor });
-        if (requestId !== taskListRequestRef.current || activeScopeKeyRef.current !== activeScopeKey) return [];
-        const scopedTasks = initialExamId ? result.tasks.filter((task) => task.exam_id === initialExamId) : result.tasks;
-        setTasks((current) => appendTaskPage(current, scopedTasks));
-        setTaskCatalogue((current) => appendTaskPage(current, scopedTasks));
-        if (result.aggregate) setMatchedAggregate(result.aggregate);
-        setNextTaskCursor(result.next_cursor ?? "");
-        setHasMoreTasks(Boolean(result.has_more));
-        if (result.has_more && (!result.next_cursor || result.next_cursor === cursor)) setPageError("任务分页位置未推进，请刷新任务列表");
-        return scopedTasks;
-      } catch (currentError) {
-        if (requestId === taskListRequestRef.current && activeScopeKeyRef.current === activeScopeKey) setPageError(formatError(currentError));
-        return [];
-      } finally {
-        if (requestId === taskListRequestRef.current && activeScopeKeyRef.current === activeScopeKey) setLoading((current) => ({ ...current, more: false }));
-      }
-    })();
-    pendingPageRef.current = pending;
-    void pending.finally(() => { if (pendingPageRef.current === pending) pendingPageRef.current = null; });
-    return pending;
-  }, [activeScopeKey, hasMoreTasks, initialExamId, nextTaskCursor, filterQuery, serverKeyword]);
-
-  const refreshTaskAggregate = useCallback(async () => {
-    if (!queueReadyRef.current || activeScopeKeyRef.current !== activeScopeKey || filtersRef.current.keyword.trim() !== serverKeyword) return;
-    const requestId = taskListRequestRef.current;
-    try {
-      const [result, matched, unassigned] = await Promise.all([
-        listReviewTasks({ ...scopeQuery, limit: 1 }), listReviewTasks({ ...filterQuery, limit: 1 }),
-        canManageTasks && queueScope === "all" ? listReviewTasks({ ...filterQuery, unassigned: true, limit: 1 }) : Promise.resolve(null)
-      ]);
-      if (requestId === taskListRequestRef.current && activeScopeKeyRef.current === activeScopeKey) {
-        if (result.aggregate) setTaskAggregate(result.aggregate);
-        if (matched.aggregate) setMatchedAggregate(matched.aggregate);
-        setUnassignedCount(unassigned?.aggregate?.total_count ?? null);
-      }
-    } catch {
-      // 后续完整刷新会重试；保留最后一次确认的汇总结果。
-    }
-  }, [activeScopeKey, canManageTasks, queueScope, scopeQuery, filterQuery, serverKeyword]);
 
   const selectAllMatchingAssignments = async () => {
     if (!canManageTasks || selectingAllRef.current) return;
@@ -359,7 +249,7 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
     setAssignmentTaskIds([]);
     Object.assign(filtersRef.current, { examFilter: initialExamId, subjectFilter: "", questionFilter: "", unassignedOnly: false });
     setTaskCatalogue([]); setExamFilter(initialExamId); setSubjectFilter(""); setQuestionFilter(""); setUnassignedOnly(false); setMatchedAggregate(null); setUnassignedCount(null);
-  }, [initialExamId, invalidateFilter]);
+  }, [initialExamId, invalidateFilter, setHasMoreTasks, setLoading, setMatchedAggregate, setNextTaskCursor, setTaskAggregate, setTaskCatalogue, setTasks, setUnassignedCount]);
 
   return {
     taskFilter, setTaskFilter: updateTaskFilter, queueScope, setQueueScope: updateQueueScope, keyword, setKeyword: updateKeyword, tasks, setTasks, taskAggregate,

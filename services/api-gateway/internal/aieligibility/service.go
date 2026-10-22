@@ -64,6 +64,25 @@ func (s *Service) Decide(ctx context.Context, tenantID string, input DecisionInp
 		decision.Reasons = append(decision.Reasons, reason("hard_risk_archetype_prohibition", "R3 开放题不得由单次模型快速确认或形成最终分数", true))
 		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
 	}
+	// 图像 v3 的 AI_ASSIST 只生成教师待确认建议。冻结策略和完整学生观察构成该路线的准入，
+	// 评测与校准仍决定自动确认资格；缺少它们不能把合法建议任务永久阻塞。
+	if imageTeacherSuggestion(input) {
+		if !input.RubricComplete {
+			decision.Reasons = append(decision.Reasons, reason("rubric_incomplete", "冻结评分标准不完整，不能调用 AI 评分", true))
+		} else if materialEvidenceRequired(input.AssessmentSnapshot) && !input.EvidenceAvailable {
+			decision.Reasons = append(decision.Reasons, reason("material_evidence_missing", "材料题缺少可核验的材料证据引用，模型必须弃权", true))
+		} else {
+			decision.Decision, decision.ExternalAIAllowed = assessment.ScoringAIAssist, true
+			decision.Reasons = append(decision.Reasons, reason("image_teacher_suggestion", "按冻结量规生成图像阅卷建议，最终分数须由教师确认", false))
+			if !input.Evaluation.Approved {
+				decision.Reasons = append(decision.Reasons, reason("suggestion_evaluation_unapproved", "当前模型与提示词尚无已批准评测，不具备自动确认资格", false))
+			}
+			if !input.Calibration.Available {
+				decision.Reasons = append(decision.Reasons, reason("suggestion_uncalibrated", "当前建议未经校准，须由教师确认", false))
+			}
+		}
+		return s.store.CreateOrGetDecision(ctx, tenantID, decision)
+	}
 
 	policy, policyErr := s.store.GetActivePolicy(ctx, tenantID, input.AssessmentSnapshot.SubjectCode,
 		input.AssessmentSnapshot.EducationStage, input.AssessmentSnapshot.ArchetypeCode, input.AssessmentSnapshot.RiskTier)
@@ -93,10 +112,12 @@ func (s *Service) Decide(ctx context.Context, tenantID string, input DecisionInp
 
 // 同时缺少多项证据时只记录原流程中最先阻止准入的一项，不能改变历史审计原因的优先级。
 func admissionEvidenceBlock(input DecisionInput, policy Policy) (Reason, bool) {
-	if qualityBelow(input.OCRQuality, policy.MinOCRQuality) {
+	imageObservation := input.InputProtocol == "grading-image-v3" && input.InputVersionID != "" && input.StudentObservationAvailable && input.RequestedMode == assessment.ScoringAIAssist
+	// 图像观察不是 OCR 或符号核验。新协议只以真实观察代替这两项前置，评测、校准和最终确认约束保持原样。
+	if !imageObservation && qualityBelow(input.OCRQuality, policy.MinOCRQuality) {
 		return reason("ocr_quality_below_policy", "文字识别质量不足，禁止模型猜测不可读答案", true), true
 	}
-	if qualityBelow(input.ParserQuality, policy.MinParserQuality) {
+	if !imageObservation && qualityBelow(input.ParserQuality, policy.MinParserQuality) {
 		return reason("parser_quality_below_policy", "结构化解析质量不足，必须转人工原图阅卷", true), true
 	}
 	if !input.RubricComplete {
@@ -114,9 +135,14 @@ func admissionEvidenceBlock(input DecisionInput, policy Policy) (Reason, bool) {
 	return Reason{}, false
 }
 
+func imageTeacherSuggestion(input DecisionInput) bool {
+	return input.InputProtocol == "grading-image-v3" && input.InputVersionID != "" && input.StudentObservationAvailable &&
+		input.RequestedMode == assessment.ScoringAIAssist && input.AssessmentSnapshot.ScoringPolicySnapshot.Mode == assessment.ScoringAIAssist
+}
+
 func applyAdmittedScoringMode(input DecisionInput, policy Policy, decision *Decision) {
 	// 结构化数学题尽量使用确定性处理；此检查先于允许的 AI 模式判断，调用方不能仅通过请求 LLM 模式绕过规则评分。
-	if prefersRuleAuto(input.AssessmentSnapshot) && containsMode(policy.AllowedModes, assessment.ScoringRuleAuto) {
+	if input.InputProtocol != "grading-image-v3" && prefersRuleAuto(input.AssessmentSnapshot) && containsMode(policy.AllowedModes, assessment.ScoringRuleAuto) {
 		decision.Decision = assessment.ScoringRuleAuto
 		decision.OutputConstraint.FinalScoreAuthority = "server_rubric_and_deterministic_rule"
 		decision.Reasons = append(decision.Reasons, reason("prefer_structured_rule", "数学结构表达式可由确定性规则优先判定，不调用 LLM", false))
@@ -214,6 +240,7 @@ func inputSnapshot(input DecisionInput) map[string]any {
 		return *value
 	}
 	result := map[string]any{
+		"input_protocol": input.InputProtocol, "input_version_id": input.InputVersionID, "student_observation_available": input.StudentObservationAvailable,
 		"assessment_snapshot_id": input.AssessmentSnapshot.ID, "assessment_content_hash": input.AssessmentSnapshot.ContentHash,
 		"subject_code": input.AssessmentSnapshot.SubjectCode, "education_stage": input.AssessmentSnapshot.EducationStage,
 		"archetype_code": input.AssessmentSnapshot.ArchetypeCode, "risk_tier": input.AssessmentSnapshot.RiskTier,

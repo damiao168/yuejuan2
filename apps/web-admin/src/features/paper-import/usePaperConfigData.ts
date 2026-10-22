@@ -34,6 +34,7 @@ export function usePaperConfigData({ initialExamId = "", fixedExamId }: { initia
   const [importConnectionError, setImportConnectionError] = useState<string>();
   const [importRetryKey, setImportRetryKey] = useState(0);
   const onImportConnectionError = useCallback((error?: unknown) => setImportConnectionError(error ? getUserErrorMessage(error, "暂时无法获取最新处理状态") : undefined), []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 换考试清除上一场的轮询连接错误，不将旧错误展示在新配置。
   useEffect(() => { setImportConnectionError(undefined); }, [selectedExamId]);
 
   const loadExams = useCallback(async () => {

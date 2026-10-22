@@ -114,15 +114,19 @@ func (s *PostgresStore) QueueRegistrationCorrectionPreview(ctx context.Context, 
 		return RegistrationCorrection{}, ErrInvalidInput
 	}
 	var regions []map[string]any
+	var gradingGroups any
+	foundPage := false
 	for _, page := range layout.Pages {
 		if page.PageNo == current.PageNo {
 			regions = page.QuestionRegions
+			gradingGroups = page.GradingGroups
+			foundPage = true
 		}
 	}
-	if regions == nil {
+	if !foundPage {
 		return RegistrationCorrection{}, ErrInvalidInput
 	}
-	payload, _ := json.Marshal(map[string]any{"correction_id": current.ID, "capture_page_id": current.CapturePageID, "exam_id": examID, "source_download_url": "/api/v1/files/" + sourceAssetID + "/download", "source_content_type": "image/png", "template_download_url": "/api/v1/files/" + templateAssetID + "/download", "template_content_type": templateContentType, "template_page_index": current.PageNo, "source_points": current.SourcePoints, "template_points": current.TemplatePoints, "question_regions": regions, "render_dpi": 300})
+	payload, _ := json.Marshal(map[string]any{"correction_id": current.ID, "capture_page_id": current.CapturePageID, "exam_id": examID, "source_download_url": "/api/v1/files/" + sourceAssetID + "/download", "source_content_type": "image/png", "template_download_url": "/api/v1/files/" + templateAssetID + "/download", "template_content_type": templateContentType, "template_page_index": current.PageNo, "source_points": current.SourcePoints, "template_points": current.TemplatePoints, "question_regions": regions, "grading_groups": gradingGroups, "render_dpi": 300})
 	// 同一组点允许人工再次尝试，键中加入尝试次数，避免重用已结束的预览任务。
 	key := "registration-correction:" + current.ID + ":" + current.ValidationReportHash() + ":a" + strconv.Itoa(current.AttemptCount+1)
 	var taskID string
@@ -138,20 +142,28 @@ func (s *PostgresStore) QueueRegistrationCorrectionPreview(ctx context.Context, 
 }
 
 func (s *PostgresStore) ApplyRegistrationCorrectionPreview(ctx context.Context, tenantID, correctionID string, input CorrectionPreviewResultInput) (RegistrationCorrection, error) {
-	if input.PreviewRegisteredFileAssetID == "" || len(input.SourceToTemplate) == 0 || len(input.TemplateToSource) == 0 || input.Coverage < 0.70 || input.Coverage > 1.15 || len(input.Segments) == 0 {
-		return RegistrationCorrection{}, ErrInvalidInput
-	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return RegistrationCorrection{}, err
 	}
 	defer tx.Rollback()
+	out, err := s.applyRegistrationCorrectionPreviewInTx(ctx, tx, tenantID, correctionID, input)
+	if err != nil {
+		return RegistrationCorrection{}, err
+	}
+	return out, tx.Commit()
+}
+
+func (s *PostgresStore) applyRegistrationCorrectionPreviewInTx(ctx context.Context, tx *sql.Tx, tenantID, correctionID string, input CorrectionPreviewResultInput) (RegistrationCorrection, error) {
+	if input.PreviewRegisteredFileAssetID == "" || len(input.SourceToTemplate) == 0 || len(input.TemplateToSource) == 0 || input.Coverage < 0.70 || input.Coverage > 1.15 || len(input.Segments) == 0 {
+		return RegistrationCorrection{}, ErrInvalidInput
+	}
 	current, err := scanRegistrationCorrection(tx.QueryRowContext(ctx, `SELECT `+correctionColumns+` FROM page_registration_correction WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, correctionID))
 	if err != nil {
 		return RegistrationCorrection{}, err
 	}
 	if current.Status == "preview_ready" {
-		return current, tx.Commit()
+		return current, nil
 	}
 	if current.Status != "queued" {
 		return RegistrationCorrection{}, ErrInvalidTransition
@@ -164,7 +176,7 @@ func (s *PostgresStore) ApplyRegistrationCorrectionPreview(ctx context.Context, 
 	if err != nil {
 		return RegistrationCorrection{}, err
 	}
-	return out, tx.Commit()
+	return out, nil
 }
 
 func (s *PostgresStore) ApplyRegistrationCorrectionFailure(ctx context.Context, tenantID, correctionID, errorCode string, detail map[string]any) (RegistrationCorrection, error) {

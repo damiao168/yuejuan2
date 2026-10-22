@@ -74,6 +74,8 @@ func New(cfg config.Config, logg *logger.Logger) (*Server, func(), error) {
 		return nil, nil, err
 	}
 	infra.startPaperParseExecutor(parseExecutor)
+	infra.startRubricDraftJobs(modules.Exam.RubricDraftJobs)
+	infra.startScoringCoordinator(modules.Grading.ScoringCoordinator)
 	router := NewRouterComplete(RouterDependencies{
 		Config: cfg, Logger: logg, Checkers: infra.Checkers, Metrics: infra.Metrics,
 		Modules: modules,
@@ -169,6 +171,7 @@ func NewRouterComplete(dependencies RouterDependencies) http.Handler {
 		middleware.CORS(ctx.cfg.Security.CORSAllowedOrigins, ctx.cfg.Security.CORSAllowedMethods, ctx.cfg.Security.CORSAllowedHeaders),
 		middleware.BrowserCSRF(ctx.cfg.Auth.SessionCookieName),
 		middleware.BodyLimit(ctx.cfg.Security.MaxRequestBodyBytes, skipGlobalBodyLimit),
+		middleware.BodyLimit(modelgovernance.ChatRequestBodyLimit, skipNonImageChat),
 		middleware.BodyLimit(fileRequestBodyLimit(ctx.cfg.Files.MaxUploadBytes), skipNonFileUpload),
 	)
 }
@@ -215,10 +218,36 @@ func localModelBaseline(cfg config.Config) modelgovernance.LocalBaseline {
 }
 
 func skipGlobalBodyLimit(r *http.Request) bool {
-	return r.Method == http.MethodPost && r.URL.Path == "/api/v1/files"
+	if r.Method != http.MethodPost {
+		return false
+	}
+	if r.URL.Path == "/api/v1/files" {
+		return true
+	}
+	if !skipNonImageChat(r) {
+		return true
+	}
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/exams/"), "/")
+	// 页序与图文对话各自限制请求大小；其余 JSON 请求仍沿用全局限制。
+	return strings.HasPrefix(r.URL.Path, "/api/v1/exams/") && len(parts) == 2 && parts[0] != "" && parts[1] == "answer-sheet-page-order"
 }
 
-func skipNonFileUpload(r *http.Request) bool { return !skipGlobalBodyLimit(r) }
+func skipNonImageChat(r *http.Request) bool {
+	if r.Method != http.MethodPost {
+		return true
+	}
+	// 只为真正支持图片的三个对话入口放宽限制，不匹配相邻业务路径。
+	switch r.URL.Path {
+	case "/api/v1/school-assistant/conversations/stream", "/api/v1/ai-chat/completions", "/api/v1/ai-chat/completions/stream":
+		return false
+	default:
+		return true
+	}
+}
+
+func skipNonFileUpload(r *http.Request) bool {
+	return r.Method != http.MethodPost || r.URL.Path != "/api/v1/files"
+}
 
 func fileRequestBodyLimit(fileLimit int64) int64 {
 	if fileLimit <= 0 {

@@ -9,6 +9,12 @@ from .app_v2 import ProductionMathV2Application
 from .capabilities import CapabilityMatrix
 from .contract import normalize_model_output, validate_request
 from .errors import AgentError
+from .execution_diagnostics import (
+    attach_failure,
+    merge_attempt_diagnostics,
+    repairable_model_error,
+    terminal_execution_error,
+)
 from .guardrails import detect_prompt_injection
 from .model import PromptRegistry, sum_model_usage
 from .provider_adapter import build_provider_adapter
@@ -29,6 +35,8 @@ class GradingAgentApplication:
         self._inflight = {}
         self._readiness_lock = threading.Lock()
         self._readiness_ready = False
+        from .image_protocol import ImageGradingApplication
+        self.image_v3 = ImageGradingApplication(settings, self.model)
         self.math_v2 = ProductionMathV2Application(settings, self.model, clock=self.clock, logger=self.logger)
 
     def grade_v2(self, payload, idempotency_key, *, body_size, content_encoding=""):
@@ -66,6 +74,8 @@ class GradingAgentApplication:
                         request_id=request_id,
                     )
                 self._cache.move_to_end(idempotency_key)
+                if isinstance(existing[2], AgentError):
+                    raise existing[2].copy(request_id)
                 self._log(request_id, "replayed", attempts=existing[2]["telemetry"]["attempts"])
                 return copy.deepcopy(existing[2]), True
             inflight = self._inflight.get(idempotency_key)
@@ -95,6 +105,11 @@ class GradingAgentApplication:
             suggestion = self._grade_uncached(request, route)
         except AgentError as exc:
             with self._cache_lock:
+                if terminal_execution_error(exc):
+                    # 终态失败与成功共用进程内 TTL/LRU；同键重放不能重开一轮收费推理。
+                    self._cache[idempotency_key] = (self.clock(), digest, exc.copy())
+                    while len(self._cache) > self.settings.idempotency_max_entries:
+                        self._cache.popitem(last=False)
                 inflight["error"] = exc
                 inflight["event"].set()
                 self._inflight.pop(idempotency_key, None)
@@ -163,13 +178,7 @@ class GradingAgentApplication:
             )
         if inflight["error"]:
             error = inflight["error"]
-            raise AgentError(
-                error.code,
-                error.message,
-                status=error.status,
-                retryable=error.retryable,
-                request_id=request_id,
-            )
+            raise error.copy(request_id)
         self._log(request_id, "replayed", attempts=inflight["result"]["telemetry"]["attempts"])
         return copy.deepcopy(inflight["result"])
 
@@ -177,6 +186,7 @@ class GradingAgentApplication:
         started = time.monotonic()
         prior_error_codes = []
         usage = {}
+        diagnostics = {}
         request_id = request["request_id"]
         with self.model.session(request_id):
             for attempt in range(self.settings.model_max_retries + 1):
@@ -187,7 +197,14 @@ class GradingAgentApplication:
                             repair_reason=prior_error_codes[-1] if prior_error_codes else None,
                         )
                     finally:
-                        usage = sum_model_usage(usage, getattr(self.model, "last_usage", dict)())
+                        latest_usage = getattr(self.model, "last_usage", dict)()
+                        usage = sum_model_usage(usage, latest_usage)
+                        diagnostics = merge_attempt_diagnostics(
+                            diagnostics, getattr(self.model, "last_execution_diagnostics", dict)(),
+                            attempts=attempt + 1, fallback_usage=latest_usage)
+                        self._log(request_id, "provider_attempt", attempt=attempt + 1,
+                                  provider_request_id=getattr(self.model, "last_provider_request_id", lambda: "")(),
+                                  finish_outcome=diagnostics["finish_outcome"], usage_status=diagnostics["usage_status"])
                     telemetry = {
                         "adapter": self.settings.adapter_type,
                         "provider": self.settings.provider_key,
@@ -198,6 +215,7 @@ class GradingAgentApplication:
                         "prior_error_codes": list(prior_error_codes),
                         "elapsed_ms": round((time.monotonic() - started) * 1000),
                         "usage": usage,
+                        "execution_diagnostics": diagnostics,
                     }
                     suggestion = normalize_model_output(
                         raw,
@@ -211,6 +229,7 @@ class GradingAgentApplication:
                     self._log(request_id, "succeeded", attempts=attempt + 1, elapsed_ms=telemetry["elapsed_ms"])
                     return suggestion
                 except AgentError as exc:
+                    attach_failure(diagnostics, exc)
                     prior_error_codes.append(exc.code)
                     if attempt >= self.settings.model_max_retries or not self._repairable(exc):
                         self._log(
@@ -225,12 +244,7 @@ class GradingAgentApplication:
 
     @staticmethod
     def _repairable(error):
-        return error.code in {
-            "model_output_invalid",
-            "evidence_verification_failed",
-            "model_unavailable",
-            "model_rate_limited",
-        } and (error.retryable or error.code in {"model_output_invalid", "evidence_verification_failed"})
+        return repairable_model_error(error)
 
     def _purge_cache(self):
         cutoff = self.clock() - self.settings.idempotency_ttl_seconds

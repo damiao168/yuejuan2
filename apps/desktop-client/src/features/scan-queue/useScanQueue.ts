@@ -1,12 +1,14 @@
+import { releaseQueueFiles } from "./scanQueueResources";
+import { useScanQueueRecovery } from "./useScanQueueRecovery";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Modal } from "antd";
 import { getUserErrorMessage } from "../../api/userError";
-import { archiveDurableScanQueueItems, hasDurableDesktopStore, listDurableScanQueue, persistDurableScanQueueItem, spoolScanAsset, removeUnstartedScanQueueItem } from "../../lib/durableStore";
+import { archiveDurableScanQueueItems, hasDurableDesktopStore, persistDurableScanQueueItem, spoolScanAsset, removeUnstartedScanQueueItem } from "../../lib/durableStore";
 import { isTauriRuntime } from "../../lib/localRuntime";
 import { listOfflineDraftEnvelopes, readOfflineDraftEnvelopes } from "../../lib/offlineStore";
 import { inferContentType, inspectScanFile, persistScanQueue, previewUrlForFile, readPersistedScanQueue } from "../../lib/scanFiles";
 import { inspectScannerSample, type ScannerProfile } from "../../lib/scannerProfile";
-import { getCaptureScanContext, type CaptureBatch, type CaptureScanContext } from "../../api/exams";
+import { type CaptureBatch, type CaptureScanContext } from "../../api/exams";
 import type { DesktopApiClient } from "../../api/client";
 import type { CaptureUploadSource } from "../../api/captureUploads";
 import type { Exam, LocalLogEntry, SyncQueueItem } from "../../types";
@@ -48,15 +50,7 @@ export function useScanQueue({
   const [offlineDraftCount, setOfflineDraftCount] = useState(() => readOfflineDraftEnvelopes().length);
   const [fileImportError, setFileImportError] = useState<string | null>(null);
   const [importResults, setImportResults] = useState<FileImportResult[]>([]);
-  const [queueRestoreStatus, setQueueRestoreStatus] = useState<"loading" | "ready" | "error" | "locked">(() => hasDurableDesktopStore() ? "loading" : "ready");
-  const [queueRestoreError, setQueueRestoreError] = useState<string | null>(null);
-  const [queueContextError, setQueueContextError] = useState<string | null>(null);
-  const [loadingQueueContext, setLoadingQueueContext] = useState(false);
-  const restoreRequestRef = useRef(0);
-  const queueContextRequestRef = useRef(0);
   const restoredScopeRef = useRef("");
-  const queueRestoreStatusRef = useRef(queueRestoreStatus);
-  queueRestoreStatusRef.current = queueRestoreStatus;
   const replacementId = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileBufferRef = useRef(new Map<string, File | CaptureUploadSource>());
@@ -65,6 +59,9 @@ export function useScanQueue({
   const durablePersistenceRef = useRef<Promise<void>>(Promise.resolve());
   const scopeRef = useRef(durableScopeKey);
   scopeRef.current = durableScopeKey;
+  const importScopeKey = JSON.stringify([durableScopeKey, selectedExamId, captureBatchId.trim()]);
+  const importScopeRef = useRef({ key: importScopeKey });
+  if (importScopeRef.current.key !== importScopeKey) importScopeRef.current = { key: importScopeKey };
 
   const updateQueue = useCallback((updater: (current: SyncQueueItem[]) => SyncQueueItem[]) => {
     const next = updater(queueRef.current);
@@ -84,60 +81,21 @@ export function useScanQueue({
     }
   }, []);
 
-  const restoreQueue = useCallback(async () => {
-    if (!hasDurableDesktopStore()) { setQueueRestoreStatus("ready"); return; }
-    const scope = scopeRef.current;
-    if (!scope) { setQueueRestoreStatus("locked"); return; }
-    const request = ++restoreRequestRef.current;
-    setQueueRestoreStatus("loading"); setQueueRestoreError(null);
-    const isCurrent = () => scopeRef.current === scope && request === restoreRequestRef.current;
-    try {
-      const items = await listDurableScanQueue(scope);
-      if (!isCurrent()) return;
-      // 同页重读不清除现有项；上传/导入产生的新状态优先，恢复快照只补回缺失原件。
-      const current = queueRef.current;
-      const currentIDs = new Set(current.map((item) => item.id));
-      const merged = [...current, ...items.filter((item) => !currentIDs.has(item.id))];
-      queueRef.current = merged; setQueue(merged); setQueueRestoreStatus("ready");
-    } catch (error) {
-      if (!isCurrent()) return;
-      const message = getUserErrorMessage(error, "本机上传队列读取失败，请检查账号授权和磁盘后重新读取。");
-      setQueueRestoreError(message); setQueueRestoreStatus("error"); setDiagnosticError(message);
-    }
-  }, [setDiagnosticError]);
-
-  const refreshQueueContext = useCallback(async () => {
-    if (!client || !token || !scopeRef.current) return;
-    const scope = scopeRef.current;
-    const request = ++queueContextRequestRef.current;
-    setLoadingQueueContext(true); setQueueContextError(null);
-    const isCurrent = () => scopeRef.current === scope && request === queueContextRequestRef.current;
-    const batches = new Map(queueRef.current.filter((item) => item.kind === "scan_upload" && item.examId && item.captureBatchId).map((item) => [item.captureBatchId!, item.examId!]));
-    const failures: string[] = [];
-    for (const [batchId, examId] of batches) {
-      try {
-        const context = await getCaptureScanContext(client, batchId);
-        if (!isCurrent()) return;
-        if (context.batch.id !== batchId || context.batch.exam_id !== examId || context.exam.id !== examId) throw new Error("考试与批次归属不一致，请联系学校管理员核对。");
-        // 元数据只替换显示名称，绝不修改原上传目标；旧记录也按原考试与批次重新授权读取。
-        updateQueue((items) => items.map((item) => item.examId === examId && item.captureBatchId === batchId ? { ...item, examName: context.exam.name, captureBatchName: context.batch.name, captureBatchCreatedAt: context.batch.created_at } : item));
-      } catch (error) {
-        if (!isCurrent()) return;
-        failures.push(getUserErrorMessage(error, "部分考试与批次名称未能确认，请重新读取；原上传归属保持不变。"));
-      }
-    }
-    if (isCurrent()) { setQueueContextError(failures[0] ?? null); setLoadingQueueContext(false); }
-  }, [client, token, updateQueue]);
+  const { queueRestoreStatus, queueRestoreError, queueContextError, loadingQueueContext,
+    restoreQueue, refreshQueueContext, resetRecovery, invalidateRecovery } = useScanQueueRecovery({
+      client, token, scopeRef, queueRef, setQueue, updateQueue, setDiagnosticError
+    });
+  const queueRestoreStatusRef = useRef(queueRestoreStatus);
+  queueRestoreStatusRef.current = queueRestoreStatus;
 
   useEffect(() => {
     setFileImportError(null);
     setImportResults([]);
     replacementId.current = null;
     restoredScopeRef.current = "";
-    restoreRequestRef.current += 1; queueContextRequestRef.current += 1;
-    setQueueRestoreError(null); setQueueContextError(null); setLoadingQueueContext(false);
+    resetRecovery();
     if (!hasDurableDesktopStore()) return;
-    for (const item of queueRef.current) if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    releaseQueueFiles(queueRef.current, fileBufferRef.current);
     fileBufferRef.current.clear();
     uploadInFlightRef.current.clear();
     queueRef.current = [];
@@ -149,7 +107,7 @@ export function useScanQueue({
         .then((drafts) => { if (scopeRef.current === durableScopeKey) setOfflineDraftCount(drafts.length); })
         .catch(() => undefined);
     }
-  }, [durableScopeKey, restoreQueue]);
+  }, [durableScopeKey, resetRecovery, restoreQueue]);
 
   useEffect(() => {
     if (queueRestoreStatus === "ready" && client && token && durableScopeKey && restoredScopeRef.current !== durableScopeKey) {
@@ -160,11 +118,11 @@ export function useScanQueue({
 
   useEffect(() => { queueRef.current = queue; }, [queue]);
   useEffect(() => () => {
-    restoreRequestRef.current += 1; queueContextRequestRef.current += 1;
-    for (const item of queueRef.current) if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    invalidateRecovery();
+    releaseQueueFiles(queueRef.current, fileBufferRef.current);
     fileBufferRef.current.clear();
     uploadInFlightRef.current.clear();
-  }, []);
+  }, [invalidateRecovery]);
 
   const prepareFileSelection = (files: FileList | null) => {
     if (hasDurableDesktopStore() && queueRestoreStatusRef.current !== "ready") {
@@ -195,7 +153,8 @@ export function useScanQueue({
       id: "file-import", name: "已有文件导入", deviceFingerprint: "", colorMode: "grayscale", autoRotate: false, compression: "pdf", createdAt: "", updatedAt: "" };
     const submissionId = scanSubmissionId.trim();
     const startPage = scanStartPage || 1;
-    return { selected, selectedExam, batch, template: scanContext.template, sampleProfile, submissionId, startPage };
+    return { selected, selectedExam, batch, template: scanContext.template, sampleProfile, submissionId, startPage,
+      scope: durableScopeKey, importScope: importScopeRef.current };
   };
   type PreparedFileSelection = NonNullable<ReturnType<typeof prepareFileSelection>>;
 
@@ -206,14 +165,14 @@ export function useScanQueue({
       // 原件写盘成功后才保留文件句柄和队列项；写盘失败不能移出旧件。
       const durableItem = await spoolScanAsset({
         file,
-        examId: selectedExamId || undefined,
-        captureBatchId: captureBatchId.trim() || undefined,
+        examId: selectedExam.id,
+        captureBatchId: batch.id,
         examName: selectedExam.name, captureBatchName: batch.name, captureBatchCreatedAt: batch.created_at,
         submissionId: submissionId || undefined,
         pageNo: startPage + index,
         qualityChecks
-      }, durableScopeKey);
-      if (scopeRef.current !== durableScopeKey) return "stop";
+      }, context.scope);
+      if (importScopeRef.current !== context.importScope) return "stop";
       fileBufferRef.current.set(durableItem.id, file);
       nextItems.push({
         ...durableItem,
@@ -226,7 +185,7 @@ export function useScanQueue({
       });
       results.push({ filename: file.name, saved: true, detail: failedQuality ? "原件已保留，质量检查失败；请修复后更换" : "已加密保留并加入队列" });
     } catch (error) {
-      if (scopeRef.current !== durableScopeKey) return "stop";
+      if (importScopeRef.current !== context.importScope) return "stop";
       await logEvent("error", "scan asset durable spool failed", error instanceof Error ? error.message : String(error));
       setDiagnosticError(getUserErrorMessage(error, "扫描原件无法写入耐久本地存储，已停止加入上传队列"));
       setFileImportError(getUserErrorMessage(error, "部分原件无法写入本机加密存储；已入队文件保留，请检查磁盘后重选失败文件。"));
@@ -265,8 +224,8 @@ export function useScanQueue({
       progress: 0,
       detail: failedQuality ? "本地质量检查未通过" : "已通过本地基础检查，等待上传",
       updatedAt: new Date().toISOString(),
-      examId: selectedExamId || undefined,
-      captureBatchId: captureBatchId.trim(),
+      examId: selectedExam.id,
+      captureBatchId: batch.id,
       examName: selectedExam?.name,
       captureBatchName: batch.name, captureBatchCreatedAt: batch.created_at,
       submissionId: submissionId || undefined,
@@ -282,20 +241,20 @@ export function useScanQueue({
   };
 
   const processSelectedScanFile = async (file: File, index: number, context: PreparedFileSelection, nextItems: SyncQueueItem[], results: FileImportResult[]): Promise<FileImportStep> => {
-    if (hasDurableDesktopStore() && scopeRef.current !== durableScopeKey) return "stop";
+    if (importScopeRef.current !== context.importScope) return "stop";
     let qualityChecks: NonNullable<SyncQueueItem["qualityChecks"]>;
     try {
       const scannerChecks = isTauriRuntime() ? await inspectScannerSample(file, context.sampleProfile) : [];
       qualityChecks = [...await inspectScanFile(file), ...scannerChecks,
         { key: "template_preset", label: "答题卡模板", status: "not_configured" as const, detail: `已选 ${context.template.name} 第 ${context.template.version_no} 版；原件是否匹配仍由服务端上传后核对。` }];
     } catch (error) {
-      if (scopeRef.current !== durableScopeKey) return "stop";
+      if (importScopeRef.current !== context.importScope) return "stop";
       results.push({ filename: file.name, saved: false, detail: getUserErrorMessage(error, "原件检查失败，请核对格式并重新选择该文件") });
       setImportResults([...results]);
       setFileImportError("部分文件检查失败；已入队文件保留，请核对失败文件后重新选择。");
       return "continue";
     }
-    if (hasDurableDesktopStore() && scopeRef.current !== durableScopeKey) return "stop";
+    if (importScopeRef.current !== context.importScope) return "stop";
     if (hasDurableDesktopStore()) return spoolSelectedScanFile(file, index, context, qualityChecks, nextItems, results);
     queueBrowserScanFile(file, index, context, qualityChecks, nextItems, results);
     return "continue";
@@ -304,7 +263,10 @@ export function useScanQueue({
   const handleFileSelection = async (files: FileList | null) => {
     setFileImportError(null);
     setImportResults([]);
+    // 文件检查前捕获本次替换对象；后续选择另一旧件不能改变这次导入将移出的原件。
+    const oldId = replacementId.current;
     const context = prepareFileSelection(files);
+    if (replacementId.current === oldId) replacementId.current = null;
     if (!context) return;
     const nextItems: SyncQueueItem[] = [];
     const results: FileImportResult[] = [];
@@ -312,19 +274,18 @@ export function useScanQueue({
       // 耐久队列模式下，账户切换终止整次导入；单个文件失败只跳过该文件。
       if (await processSelectedScanFile(file, index, context, nextItems, results) === "stop") return;
     }
-    if (hasDurableDesktopStore() && scopeRef.current !== durableScopeKey) return;
+    if (importScopeRef.current !== context.importScope) return;
     if (nextItems.length) updateQueue((current) => {
       const nextIDs = new Set(nextItems.map((item) => item.id));
       return [...nextItems, ...current.filter((item) => !nextIDs.has(item.id))];
     });
-    if (replacementId.current && nextItems.length) {
-      const oldId = replacementId.current; replacementId.current = null;
+    if (oldId && nextItems.length) {
       // 新原件已入队后才尝试移出旧条目；移出失败时仍保留原队列记录。
       if (!nextItems.some((item) => item.id === oldId)) await removeQueueItem(oldId, true);
       else setFileImportError("所选文件与已有原件相同，原队列已保留；如需修复请更换修正后的文件。");
     }
-    // 取消或导入失败后结束本次更换，避免下一次普通批量选择意外移出旧原件。
-    replacementId.current = null;
+    // 替换选择已在开始时消费；结束旧导入不能清掉后来选择的新替换对象。
+    if (importScopeRef.current !== context.importScope) return;
     setImportResults(results);
     await logEvent("info", "scan files queued", `${context.selected.length} files`);
   };
@@ -379,11 +340,7 @@ export function useScanQueue({
       }
     }
     updateQueue((current) => {
-      for (const item of current) {
-        if (item.status !== "succeeded") continue;
-        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
-        fileBufferRef.current.delete(item.id);
-      }
+      releaseQueueFiles(current.filter((item) => item.status === "succeeded"), fileBufferRef.current);
       return current.filter((item) => item.status !== "succeeded");
     });
   };

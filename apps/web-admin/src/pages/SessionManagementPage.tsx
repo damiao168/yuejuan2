@@ -6,6 +6,7 @@ import { changePassword, listSecurityEvents, listSessions, logoutAll, revokeSess
 import { ErrorState, LoadingState } from "../components/PageState";
 import { validateNewPassword } from "../auth/loginSecurity";
 import { TOTPManagement } from "../components/TOTPManagement";
+import { PersonalReviewBookmarkCleanup } from "../features/grading/workbench/components/PersonalReviewBookmarkCleanup";
 
 interface PasswordFormValues {
   currentPassword: string;
@@ -136,6 +137,8 @@ export function SessionManagementPage({ onLoggedOut, accountLabel }: Readonly<{ 
         onChanged={() => void load()}
         onLoggedOut={onLoggedOut}
       />
+
+      <PersonalReviewBookmarkCleanup />
 
       <section className="workspace-section">
         <div className="section-heading compact">

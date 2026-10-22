@@ -47,8 +47,14 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
   const [seedOpen, setSeedOpen] = useState(false);
   const [backmarkOpen, setBackmarkOpen] = useState(false);
   const [seedQuestionId, setSeedQuestionId] = useState("");
-  const [seedPolicy, setSeedPolicy] = useState<SeedPolicy>();
+  const seedPolicy = useRef<SeedPolicy | undefined>(undefined);
   const [seedLoading, setSeedLoading] = useState(false);
+  const [seedReady, setSeedReady] = useState(false);
+  const [seedReadError, setSeedReadError] = useState("");
+  const seedRequest = useRef(0);
+  const seedScope = useRef({ examId, questionId: "", ready: false, saving: false });
+  const activeExam = useRef(examId);
+  activeExam.current = examId;
   const [backmarkBatches, setBackmarkBatches] = useState<BackmarkBatch[]>([]);
   const [backmarkBatchesNextCursor, setBackmarkBatchesNextCursor] = useState("");
   const [backmarkLoading, setBackmarkLoading] = useState(false);
@@ -101,6 +107,7 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
     return () => controller.abort();
   }, [load]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 换考试必须作废上一场的回标汇总与打开状态，不能用旧汇总指导当前质检。
   useEffect(() => {
     summaryRequest.current += 1;
     summaryScope.current = undefined;
@@ -110,27 +117,57 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
     return () => { summaryRequest.current += 1; summaryScope.current = undefined; };
   }, [examId]);
 
+  // 题目修订号不能区分两道题；换考试同步废弃旧策略和在途请求，默认值只用于明确的404。
+  useEffect(() => {
+    seedRequest.current += 1;
+    seedScope.current = { examId, questionId: "", ready: false, saving: false };
+    seedPolicy.current = undefined;
+    setSeedQuestionId("");
+    setSeedOpen(false);
+    setSeedReady(false);
+    setSeedReadError("");
+    setSeedLoading(false);
+    return () => { seedRequest.current += 1; };
+  }, [examId]);
+
   if (loading && !data) return <LoadingState label="正在加载评分质量" />;
   if (error && !data) return <ErrorState message={error} onRetry={() => void load()} />;
   if (!data) return <Empty description="暂无质量数据" />;
   const questionLabels = Object.fromEntries(data.questions.map((row) => [row.question.id, row.question.question_no]));
 
   const loadSeedPolicy = async (questionId: string) => {
+    if (activeExam.current !== examId) return;
+    const request = ++seedRequest.current;
+    const scope = { examId, questionId, ready: false, saving: false };
+    seedScope.current = scope;
+    const isCurrent = () => request === seedRequest.current && scope === seedScope.current && activeExam.current === examId;
     setSeedQuestionId(questionId);
+    seedPolicy.current = undefined;
+    setSeedReady(false);
+    setSeedReadError("");
+    policyForm.setFieldsValue({ rate: undefined, min_interval: undefined, max_interval: undefined, enabled: false });
     setSeedLoading(true);
     try {
       const response = await getSeedPolicy(examId, questionId);
-      setSeedPolicy(response.policy);
+      if (!isCurrent()) return;
+      if (response.policy.exam_id !== examId || response.policy.question_id !== questionId) throw new Error("盲测策略与当前题目不一致，请重新读取。");
+      seedPolicy.current = response.policy;
       policyForm.setFieldsValue({ ...response.policy, enabled: response.policy.status === "active" });
+      scope.ready = true;
+      setSeedReady(true);
     } catch (reason) {
+      if (!isCurrent()) return;
       if (reason instanceof ApiClientError && reason.status === 404) {
-        setSeedPolicy(undefined);
+        seedPolicy.current = undefined;
         policyForm.setFieldsValue({ rate: 0.1, min_interval: 10, max_interval: 30, enabled: false });
+        scope.ready = true;
+        setSeedReady(true);
       } else {
+        setSeedReadError(errorMessage(reason));
         message.error(errorMessage(reason));
       }
     } finally {
-      setSeedLoading(false);
+      if (isCurrent()) setSeedLoading(false);
     }
   };
 
@@ -142,22 +179,33 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
   };
 
   const saveSeedPolicy = async () => {
-    if (!seedQuestionId) return;
-    const values = await policyForm.validateFields();
+    const scope = seedScope.current;
+    if (!canManage || !scope.ready || scope.saving || scope.examId !== examId || scope.questionId !== seedQuestionId || activeExam.current !== examId) return;
+    const request = ++seedRequest.current;
+    const isCurrent = () => request === seedRequest.current && scope === seedScope.current && activeExam.current === examId;
+    scope.saving = true;
+    setSeedLoading(true);
     try {
-      const response = await putSeedPolicy(examId, seedQuestionId, {
+      const values = await policyForm.validateFields();
+      if (!isCurrent()) return;
+      const response = await putSeedPolicy(scope.examId, scope.questionId, {
         rate: values.rate,
         min_interval: values.min_interval,
         max_interval: values.max_interval,
         status: values.enabled ? "active" : "paused",
-        expected_revision: seedPolicy?.revision ?? 0
+        expected_revision: seedPolicy.current?.revision ?? 0
       });
-      setSeedPolicy(response.policy);
+      if (!isCurrent()) return;
+      if (response.policy.exam_id !== scope.examId || response.policy.question_id !== scope.questionId) throw new Error("返回的盲测策略与当前题目不一致，请重新读取。");
+      seedPolicy.current = response.policy;
       policyForm.setFieldsValue({ ...response.policy, enabled: response.policy.status === "active" });
       message.success("盲测策略已保存");
       void load();
     } catch (reason) {
-      message.error(errorMessage(reason));
+      if (isCurrent()) message.error(errorMessage(reason));
+    } finally {
+      scope.saving = false;
+      if (isCurrent()) setSeedLoading(false);
     }
   };
 
@@ -418,15 +466,16 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
       {materialAction?.type === "calibration" ? <CalibrationDrawer open examId={examId} questionId={materialAction.questionId} graderId={currentUserId} canManagePolicy={canManage} onClose={() => { setMaterialAction(undefined); void load(); }} /> : null}
       {materialAction?.type === "groups" ? <AnswerGroupingDrawer open examId={examId} initialQuestionId={materialAction.questionId} availableQuestions={data.questions.map(row => ({ id: row.question.id, question_no: row.question.question_no, question_type: row.question.archetype_code }))} canManage={canManage} canReadReview={canManage} onNavigate={onNavigate} onClose={() => { setMaterialAction(undefined); void load(); }} /> : null}
       {onNavigate ? <Button onClick={() => onNavigate(`/exams/${encodeURIComponent(examId)}/grading`)}>前往本场阅卷工作区</Button> : null}
-      <Drawer title="盲测策略" width={520} open={seedOpen} onClose={() => setSeedOpen(false)} extra={canManage ? <Button type="primary" loading={seedLoading} onClick={() => void saveSeedPolicy()}>保存</Button> : null}>
+      <Drawer title="盲测策略" width={520} open={seedOpen} onClose={() => setSeedOpen(false)} extra={canManage ? <Button type="primary" disabled={!seedReady || seedLoading} loading={seedLoading} onClick={() => void saveSeedPolicy()}>保存</Button> : null}>
+        {seedReadError ? <Alert type="error" showIcon message="当前题目的盲测策略读取失败，暂不能保存" description={seedReadError} action={<Button onClick={() => void loadSeedPolicy(seedQuestionId)}>重新读取盲测策略</Button>} /> : null}
         <Form form={policyForm} layout="vertical" disabled={!canManage || seedLoading}>
           <Form.Item label="题目" required>
             <Select value={seedQuestionId} options={data.questions.map((item) => ({ value: item.question.id, label: `${item.question.question_no} · ${item.question.archetype_code || "未配置"}` }))} onChange={(value) => void loadSeedPolicy(value)} />
           </Form.Item>
-          <Form.Item name="rate" label="抽样比例" rules={[{ required: true, message: "请输入抽样比例" }]}><InputNumber min={0.001} max={1} step={0.01} precision={3} style={{ width: "100%" }} /></Form.Item>
-          <Form.Item name="min_interval" label="最小间隔（正常阅卷题数）" rules={[{ required: true }]}><InputNumber min={1} max={100000} style={{ width: "100%" }} /></Form.Item>
-          <Form.Item name="max_interval" label="最大间隔（正常阅卷题数）" rules={[{ required: true }]}><InputNumber min={1} max={100000} style={{ width: "100%" }} /></Form.Item>
-          <Form.Item name="enabled" label="启用盲测" valuePropName="checked"><Switch /></Form.Item>
+          <Form.Item name="rate" label="抽样比例" rules={[{ required: true, message: "请输入抽样比例" }]}><InputNumber disabled={!seedReady || !canManage || seedLoading} min={0.001} max={1} step={0.01} precision={3} style={{ width: "100%" }} /></Form.Item>
+          <Form.Item name="min_interval" label="最小间隔（正常阅卷题数）" rules={[{ required: true }]}><InputNumber disabled={!seedReady || !canManage || seedLoading} min={1} max={100000} style={{ width: "100%" }} /></Form.Item>
+          <Form.Item name="max_interval" label="最大间隔（正常阅卷题数）" rules={[{ required: true }]}><InputNumber disabled={!seedReady || !canManage || seedLoading} min={1} max={100000} style={{ width: "100%" }} /></Form.Item>
+          <Form.Item name="enabled" label="启用盲测" valuePropName="checked"><Switch disabled={!seedReady || !canManage || seedLoading} /></Form.Item>
         </Form>
         <Alert type="info" showIcon message="盲测题通过正常阅卷入口呈现；阅卷员不会看到标准卷答案或参考分。" />
       </Drawer>

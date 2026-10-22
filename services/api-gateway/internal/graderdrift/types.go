@@ -3,6 +3,7 @@ package graderdrift
 
 import (
 	"context"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"errors"
 	"time"
 )
@@ -104,6 +105,7 @@ type WindowFilter struct {
 }
 
 type IncidentFilter struct {
+	Access     auth.ExamCollectionAccess
 	ExamID     string
 	QuestionID string
 	GraderID   string

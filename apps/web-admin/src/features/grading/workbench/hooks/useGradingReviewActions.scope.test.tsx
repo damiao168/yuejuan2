@@ -1,0 +1,294 @@
+// @vitest-environment jsdom
+import { act, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { setBusinessCommandScope } from "../../../../api/businessCommand";
+import { createReviewTaskContextScope, } from "../../../../query/reviewTaskContext";
+import type { AiGrade, ReviewTask } from "../../../../api/review";
+import { createInitialDraft } from "../gradingWorkbench.model";
+import type { PrefetchedTaskBundle, WorkbenchContext } from "../gradingWorkbench.types";
+import type { DraftConflictResolution } from "../draftConflict";
+import type { MathWorkbenchEvidence } from "../mathWorkbenchEvidence";
+import { useGradingReviewActions, type UseGradingReviewActionsOptions } from "./useGradingReviewActions";
+
+const mocks = vi.hoisted(() => ({
+  submitHumanGrade: vi.fn(), removeQueries: vi.fn(), removeFallback: vi.fn(),
+  refreshAggregate: vi.fn(), loadSummary: vi.fn(), invalidateViewer: vi.fn(),
+  resetShortcuts: vi.fn(), nominate: vi.fn(), contextLoads: vi.fn(), loadMore: vi.fn(),
+  returnReviewTask: vi.fn(), confirm: vi.fn(), refreshCurrent: vi.fn(), mathRefresh: vi.fn(),
+  rememberCurrent: vi.fn(), loadTaskContext: vi.fn(), runAction: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn()
+}));
+vi.mock("antd", () => ({ Modal: { confirm: mocks.confirm } }));
+vi.mock("../../../../api/review", () => ({ submitHumanGrade: mocks.submitHumanGrade, returnReviewTask: mocks.returnReviewTask }));
+vi.mock("../../../../auth/reviewDraftFallback", () => ({
+  removeReviewDraftFallback: mocks.removeFallback, loadReviewDraftFallback: vi.fn(), saveReviewDraftFallback: vi.fn()
+}));
+vi.mock("../gradingTaskContext", () => ({ loadTaskContext: mocks.loadTaskContext }));
+
+function task(id: string): ReviewTask {
+  return { id, status: "in_progress", assigned_to: "teacher" } as ReviewTask;
+}
+
+function context(id: string, revision = 3): WorkbenchContext {
+  return {
+    task: task(id),
+    reviewContext: { expected_revision: revision, draft: null } as WorkbenchContext["reviewContext"],
+    pages: [], ocrTasks: [], ocrResults: [], aiGrades: [], warnings: [], ocrText: "", segmentImageUrl: ""
+  };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+function currentMathEvidence(): MathWorkbenchEvidence {
+  return {
+    segmentId: "segment-A", phase: "ready", message: "",
+    understanding: { correction_revision: 0, artifact: { id: "artifact-A", version: 2, correction_revision: 0, exam_question_snapshot_id: "snapshot-A" } },
+    score: { schema_version: "math-rubric-score-v1", scope: "teacher_suggestion_only", artifact_id: "artifact-A", artifact_version: 2,
+      correction_revision: 0, verified_correction_revision: 0, exam_question_snapshot_id: "snapshot-A", rubric_version: "rubric-v1",
+      suggested_score: 9, max_score: 10, unresolved_score: 0 }
+  } as unknown as MathWorkbenchEvidence;
+}
+
+describe("grading review scope and conflict boundaries", () => {
+  let root: Root;
+  let queryClient: QueryClient;
+  let current: {
+    selectedTaskId: string; ctx: WorkbenchContext | null;
+    draft: ReturnType<typeof createInitialDraft>; tasks: ReviewTask[];
+    hydrated: boolean; saveStatus: string; draftConflict: DraftConflictResolution | null; resolvingConflict: boolean; mathRequesting: boolean;
+  };
+  let switchExam: (id: string) => void;
+  let changeOriginalImagePermission: (allowed: boolean) => void;
+  let submitGrade: (nominate?: boolean) => Promise<void>;
+  let actions: ReturnType<typeof useGradingReviewActions>;
+  let receiveCurrentFailure: () => void;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setBusinessCommandScope("tenant", "teacher");
+    queryClient = new QueryClient();
+    vi.spyOn(queryClient, "removeQueries").mockImplementation(mocks.removeQueries);
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    mocks.submitHumanGrade.mockImplementation(() => new Promise(() => undefined));
+    mocks.refreshAggregate.mockResolvedValue(undefined);
+    mocks.loadSummary.mockResolvedValue(undefined);
+    mocks.loadMore.mockResolvedValue([]);
+    mocks.returnReviewTask.mockReset().mockResolvedValue(undefined);
+    mocks.refreshCurrent.mockReset().mockResolvedValue(undefined);
+    mocks.mathRefresh.mockReset().mockResolvedValue(null);
+    mocks.loadTaskContext.mockReset();
+    mocks.runAction.mockReset().mockImplementation(async (_key: string, action: () => Promise<void>) => { await action(); });
+    root = createRoot(document.createElement("div"));
+  });
+
+  afterEach(async () => { await act(async () => { root.unmount(); }); });
+
+  async function mount({ nextTask = task("B"), hasMoreTasks = false, subjectCode = "chinese", suggestedText = false }: { nextTask?: ReviewTask | null; hasMoreTasks?: boolean; subjectCode?: string; suggestedText?: boolean } = {}) {
+    function Harness() {
+      const [selectedTaskId, setSelectedTaskId] = useState("A");
+      const [currentUserId] = useState("teacher");
+      const [examId, setExamId] = useState("exam-A");
+      const [allowOriginalImage, setAllowOriginalImage] = useState(false);
+      const queryScope = useMemo(() => createReviewTaskContextScope(examId, allowOriginalImage), [examId, allowOriginalImage]);
+      const activeScope = useRef(queryScope);
+      activeScope.current = queryScope;
+      const isCurrentScope = useCallback(() => activeScope.current === queryScope, [queryScope]);
+      const [ctx, setCtx] = useState<WorkbenchContext | null>(null);
+      const [draft, setDraft] = useState(createInitialDraft(null));
+      const [tasks, setTasks] = useState([task("A"), task("B"), task("C")]);
+      const [hydrated, setHydrated] = useState(false);
+      const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
+      const [draftConflict, setDraftConflict] = useState<DraftConflictResolution | null>(null);
+      const [resolvingConflict, setResolvingConflict] = useState(false);
+      const [mathRequesting, setMathRequesting] = useState(false);
+      const mathActionLock = useRef(false);
+      const liveDraft = useRef(draft);
+      liveDraft.current = draft;
+      const conflictServerContext = useRef<WorkbenchContext | null>(null);
+      const activeTask = useRef(selectedTaskId);
+      const activeUserId = useRef(currentUserId);
+      activeTask.current = selectedTaskId;
+      activeUserId.current = currentUserId;
+      const contextRequestRef = useRef(0);
+      const lastSavedDraft = useRef("");
+      const prefetchedTaskRef = useRef(new Map<string, Promise<PrefetchedTaskBundle>>([
+        ["A", Promise.resolve({} as PrefetchedTaskBundle)], ["C", Promise.resolve({} as PrefetchedTaskBundle)]
+      ]));
+      const pendingNextRef = useRef<string | null>(null);
+      const suppressAutoSelectRef = useRef(false);
+      // 与真实工作台中稳定的上下文加载器和选中 ID 的 effect 一致。
+      // 再次选择相同的 B 值，无法修复被 A 响应清空的上下文。
+      const loadContext = useCallback((id: string) => {
+        mocks.contextLoads(id);
+        contextRequestRef.current += 1;
+        setCtx(id ? context(id) : null);
+        setDraft({ ...createInitialDraft(null), score: 6, comments: `${id} feedback` });
+        setHydrated(true);
+        setSaveStatus("saved");
+        lastSavedDraft.current = `${id} snapshot`;
+      }, []);
+      useEffect(() => { loadContext(selectedTaskId); }, [loadContext, selectedTaskId]);
+      const options = {
+        queryScope, isCurrentScope,
+        ctx, setCtx, draft, setDraft, canSubmit: true, maxScore: 10, rubricPoints: [],
+        canReturn: true, canEditDraft: true, canAdoptAiScore: true, canViewOriginalImage: allowOriginalImage,
+        selectedGrade: { suggested_score: 9, answer_segment_id: "segment-A", math_artifact_id: "artifact-A", math_artifact_version: 2, math_correction_revision: 0,
+          math_scoring_version: "math-rubric-score-v1", rubric_version: "rubric-v1", status: "succeeded", delivery_mode: "teacher_suggestion", needs_human_review: true, max_score: 10, mock: false,
+          ...(suggestedText ? { student_feedback: "AI 学生反馈", teacher_note: "AI 内部备注" } : {}) } as AiGrade,
+        subjectCode, mathActionLock, liveDraft, math: { refresh: mocks.mathRefresh, dirty: false }, setMathRequesting,
+        draftConflict, setDraftConflict, setResolvingConflict, conflictServerContext,
+        viewerMode: "segment", scale: 1, rotation: 0, offset: { x: 0, y: 0 }, autoFit: true,
+        nextTask: nextTask ?? undefined, currentUserId, selectedTaskId, hasMoreTasks,
+        canManageTasks: false, activeTask, activeUserId, contextRequestRef, lastSavedDraft,
+        prefetchedTaskRef, pendingNextRef, suppressAutoSelectRef, setSelectedTaskId, setTasks,
+        setDraftHydrated: setHydrated, setDraftSaveStatus: setSaveStatus,
+        setGoldPaperCandidate: mocks.nominate, invalidateViewerContent: mocks.invalidateViewer,
+        scoreShortcuts: { reset: mocks.resetShortcuts, rememberCurrent: mocks.rememberCurrent }, refreshTaskAggregate: mocks.refreshAggregate,
+        loadMoreTasks: mocks.loadMore, examScoring: { loadSummary: mocks.loadSummary },
+        refreshCurrent: mocks.refreshCurrent, runAction: mocks.runAction,
+        notify: { error: mocks.error, info: mocks.info, warning: mocks.warning }
+      } as unknown as UseGradingReviewActionsOptions;
+      actions = useGradingReviewActions(options);
+      receiveCurrentFailure = () => setCtx(previous => previous ? {
+        ...previous, reviewContext: { ...previous.reviewContext, ai_failure: { failure_kind: "output_truncated" } }
+      } : previous);
+      submitGrade = actions.submitGrade;
+      switchExam = setExamId;
+      changeOriginalImagePermission = setAllowOriginalImage;
+      current = { selectedTaskId, ctx, draft, tasks, hydrated, saveStatus, draftConflict, resolvingConflict, mathRequesting };
+      return null;
+    }
+    await act(async () => { root.render(<QueryClientProvider client={queryClient}><Harness /></QueryClientProvider>); });
+  }
+
+  it("does not start an old action after the same user moves to another exam", async () => {
+    await mount();
+    const previous = actions;
+    await act(async () => { switchExam("exam-B"); });
+    await act(async () => {
+      await previous.submitGrade();
+      await previous.markDispute();
+      await previous.adoptAiScore();
+      await previous.openDraftConflict();
+      previous.confirmReturnTask(false);
+    });
+
+    expect(mocks.submitHumanGrade).not.toHaveBeenCalled();
+    expect(mocks.returnReviewTask).not.toHaveBeenCalled();
+    expect(mocks.mathRefresh).not.toHaveBeenCalled();
+    expect(mocks.rememberCurrent).not.toHaveBeenCalled();
+    expect(mocks.loadTaskContext).not.toHaveBeenCalled();
+    expect(mocks.confirm).not.toHaveBeenCalled();
+    expect(mocks.runAction).not.toHaveBeenCalled();
+    expect(current.draft.score).toBe(6);
+  });
+
+  it("does not submit when its scope expires while runAction is waiting", async () => {
+    await mount();
+    const gate = deferred<void>();
+    mocks.runAction.mockImplementationOnce(async (_key: string, action: () => Promise<void>) => { await gate.promise; await action(); });
+    const pending = submitGrade();
+    await act(async () => { switchExam("exam-B"); });
+    await act(async () => { gate.resolve(); await pending; });
+    expect(mocks.submitHumanGrade).not.toHaveBeenCalled();
+  });
+
+  it("does not return a task from a late confirmation belonging to an earlier exam", async () => {
+    await mount();
+    actions.confirmReturnTask(false);
+    const onOk = mocks.confirm.mock.calls[0][0].onOk as () => Promise<void>;
+    await act(async () => { switchExam("exam-B"); });
+    await act(async () => { await onOk(); });
+
+    expect(mocks.returnReviewTask).not.toHaveBeenCalled();
+    expect(mocks.runAction).not.toHaveBeenCalled();
+    expect(mocks.refreshCurrent).not.toHaveBeenCalled();
+  });
+
+  it("does not return when its scope expires while runAction is waiting", async () => {
+    await mount();
+    const gate = deferred<void>();
+    mocks.runAction.mockImplementationOnce(async (_key: string, action: () => Promise<void>) => { await gate.promise; await action(); });
+    const pending = actions.markDispute();
+    await act(async () => { changeOriginalImagePermission(true); });
+    await act(async () => { gate.resolve(); await pending; });
+    expect(mocks.returnReviewTask).not.toHaveBeenCalled();
+  });
+
+  it("does not refresh a new exam after an earlier return finishes", async () => {
+    await mount();
+    const response = deferred<void>();
+    mocks.returnReviewTask.mockReturnValueOnce(response.promise);
+    const pending = actions.markDispute();
+    await act(async () => { switchExam("exam-B"); });
+    await act(async () => { response.resolve(); await pending; });
+    expect(mocks.returnReviewTask).toHaveBeenCalledTimes(1);
+    expect(mocks.refreshCurrent).not.toHaveBeenCalled();
+  });
+
+  it("does not adopt a late mathematics suggestion after an original-image permission change", async () => {
+    await mount({ subjectCode: "mathematics" });
+    const response = deferred<MathWorkbenchEvidence>();
+    mocks.mathRefresh.mockReturnValueOnce(response.promise);
+    let pending!: Promise<void>;
+    await act(async () => { pending = actions.adoptAiScore(); });
+    await act(async () => { changeOriginalImagePermission(true); });
+    const before = current;
+    await act(async () => { response.resolve(currentMathEvidence()); await pending; });
+
+    expect(current).toBe(before);
+    expect(current.draft.score).toBe(6);
+    expect(mocks.rememberCurrent).not.toHaveBeenCalled();
+    expect(mocks.warning).not.toHaveBeenCalled();
+  });
+
+  it("does not adopt an old mathematics grade when a current failure arrives during evidence refresh", async () => {
+    await mount({ subjectCode: "mathematics", suggestedText: true });
+    const response = deferred<MathWorkbenchEvidence>();
+    mocks.mathRefresh.mockReturnValueOnce(response.promise);
+    let pending!: Promise<void>;
+    await act(async () => { pending = actions.adoptAiScore(); });
+    await act(async () => { receiveCurrentFailure(); });
+    await act(async () => { response.resolve(currentMathEvidence()); await pending; });
+    expect(current.draft.score).toBe(6);
+    expect(current.draft.comments).toBe("A feedback");
+    expect(current.draft.studentFeedback).toBe("");
+    expect(mocks.rememberCurrent).not.toHaveBeenCalled();
+  });
+
+  it("keeps stale adoption callbacks from filling score or feedback after a current failure", async () => {
+    await mount({ suggestedText: true });
+    const previous = actions;
+    await act(async () => { receiveCurrentFailure(); });
+    await act(async () => { await previous.adoptAiScore(); previous.adoptAiFeedback(); });
+    expect(current.draft.score).toBe(6);
+    expect(current.draft.comments).toBe("A feedback");
+    expect(current.draft.studentFeedback).toBe("");
+    expect(current.draft.privateNote).toBe("");
+    expect(mocks.rememberCurrent).not.toHaveBeenCalled();
+  });
+
+  it("does not fill conflict results into a new exam using the same task ID", async () => {
+    await mount();
+    const response = deferred<WorkbenchContext>();
+    mocks.loadTaskContext.mockReturnValueOnce(response.promise);
+    let pending!: Promise<void>;
+    await act(async () => { pending = actions.openDraftConflict(); });
+    await act(async () => { switchExam("exam-B"); });
+    const before = current;
+    await act(async () => {
+      response.resolve(context("A", 4));
+      await pending;
+    });
+
+    expect(current).toBe(before);
+    expect(current.draftConflict).toBeNull();
+    expect(mocks.error).not.toHaveBeenCalled();
+  });
+});
+

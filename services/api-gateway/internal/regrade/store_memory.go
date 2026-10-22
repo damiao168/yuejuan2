@@ -352,11 +352,16 @@ func (s *MemoryStore) Claim(_ context.Context, tenantID, itemID, actorID string)
 	if item.AssignedTo != "" && item.AssignedTo != actorID {
 		return Item{}, ErrAssignmentForbidden
 	}
-	if item.Status == ItemClaimed && item.ClaimedBy == actorID {
+	if item.Status == ItemClaimed && item.ClaimedBy == actorID && item.AssignedTo != "" {
 		return cloneItem(item), nil
 	}
-	if item.Status != ItemPending {
+	if item.Status != ItemPending && !(item.Status == ItemClaimed && item.ClaimedBy == actorID) {
 		return Item{}, ErrStateConflict
+	}
+	// 未分配条目允许首次领取；同锁固定分配人与领取人，后续队列、材料和图片使用同一身份。
+	// 旧版本已领取但未保存分配人的条目也由本人重领补齐，其他阅卷人不能接管。
+	if item.AssignedTo == "" {
+		item.AssignedTo = actorID
 	}
 	item.Status, item.ClaimedBy, item.Revision, item.UpdatedAt = ItemClaimed, actorID, item.Revision+1, s.now().UTC()
 	s.items[jobID][index] = item

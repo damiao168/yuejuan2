@@ -83,7 +83,6 @@ export function useUploadSync({
   }, [durableScopeKey, token, updateQueue]);
 
   // 原件恢复期间可能切换账号；有原件后还要核对最新作用域，才能登记在途并发起上传。
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 作用域由 ref 读取最新值，不依赖其 current 成员。
   const prepareUploadSource = useCallback((id: string, file: File | CaptureUploadSource | undefined, scope: string) => {
     if (!file) {
       updateQueue((current) => updateScanQueueItem(current, id, {
@@ -220,7 +219,7 @@ export function useUploadSync({
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [logEvent, setIsOnline, uploadQueueItems]);
+  }, [logEvent, setIsOnline]);
 
   return { uploadQueueItem, uploadQueueItems };
 }

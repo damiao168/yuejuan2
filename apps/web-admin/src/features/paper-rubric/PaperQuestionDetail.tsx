@@ -1,8 +1,8 @@
-import { Alert, Button, ConfigProvider, Space } from "antd";
+import { Alert, Button, ConfigProvider, Form, Space, Tooltip } from "antd";
 import { ChevronLeft, ChevronRight, LockKeyhole, Save, Trash2 } from "lucide-react";
 import { StatusTag } from "../../components/StatusTag";
 import { PaperImportReviewPanel } from "../paper-import/PaperImportReviewPanel";
-import { PaperQuestionForm } from "./PaperQuestionForm";
+import { PaperQuestionBasics, PaperQuestionForm } from "./PaperQuestionForm";
 import { PaperScoringConfiguration } from "./PaperScoringConfiguration";
 import { hasStandardAnswer, questionEditorDescription, rubricSaveLabel } from "./paperQuestionPresentation";
 import type { PaperRubricViewContext } from "./paperRubricViewTypes";
@@ -24,6 +24,8 @@ export function PaperQuestionDetail({ context }: ViewProps) {
   const index = state.activeCandidateIndex;
   if (index !== null && latestPaperImport && pendingDrafts[index]) return <PaperCandidateDetail context={context} index={index} />;
   return <ConfigProvider componentDisabled={state.saveBusy}><section className="workspace-section question-editor">
+    {/* 顶部基本信息与正文共用一个表单；切换评分标签仍保留字段注册，不建立嵌套表单。 */}
+    <Form form={context.questionWorkflow.form} component={false} layout="vertical" disabled={state.saveBusy} onValuesChange={context.actions.markQuestionDirty}>
     <PaperQuestionHeading context={context} />
     {state.allSaveMessage && <Alert showIcon type={state.allSaveCompleted ? "success" : "warning"} message={state.allSaveMessage}
       action={savedResultAction(context)} />}
@@ -34,8 +36,12 @@ export function PaperQuestionDetail({ context }: ViewProps) {
         onClick={() => context.actions.setDetailTab("scoring")}>评分配置{context.rubricWorkflow.rubricDirty || context.scoringRuleWorkflow.scoringRuleDirty ? " · 未保存" : ""}</button>
     </div>
     {/* 隐藏而不是卸载表单；切换评分标签时保留字段注册和题目草稿。 */}
-    <div style={{ display: state.detailTab === "content" ? undefined : "none" }}><PaperQuestionForm context={context} /></div>
-    {state.detailTab === "scoring" && <PaperScoringConfiguration context={context} />}
+    <div className="paper-question-content" style={{ display: state.detailTab === "content" ? undefined : "none" }}>
+      <ConfigProvider componentDisabled={context.access.questionDisabled}><PaperQuestionForm context={context} /></ConfigProvider>
+    </div>
+    {/* 评分区同样保留挂载，切回题目与答案时不能丢失尚未应用的分段和建议草稿。 */}
+    <div data-paper-scoring-target tabIndex={-1} style={{ display: state.detailTab === "scoring" ? undefined : "none" }}><PaperScoringConfiguration context={context} /></div>
+    </Form>
   </section></ConfigProvider>;
 }
 
@@ -57,11 +63,12 @@ function PaperCandidateDetail({ context, index }: ViewProps & Readonly<{ index: 
 
 function PaperQuestionHeading({ context }: ViewProps) {
   const { config, selectedQuestion, state, access, actions } = context;
-  return <div className="section-head paper-editor-sticky-head">
+  return <div className="section-head paper-editor-sticky-head paper-question-heading">
     <div className="paper-editor-title">
-      <span className="preparation-kicker">{config.editorMode === "edit" ? `正式题目 · ${state.selectedQuestionIndex + 1} / ${config.questions.length}` : "新增正式题目"}</span>
-      <h2>{config.editorMode === "edit" ? `第 ${selectedQuestion?.question_no ?? "—"} 题` : "新建题目"}</h2>
-      <p>{questionEditorDescription(selectedQuestion, access.selectedLocked, state.unsavedWork)}</p>
+      {config.editorMode === "create" && <h2 className="paper-editor-screen-reader-title">新建题目</h2>}
+      {/* 字段锁定不能禁用同一区域的来源查看和保存结果回读。 */}
+      <ConfigProvider componentDisabled={access.questionDisabled}><PaperQuestionBasics /></ConfigProvider>
+      {(access.selectedLocked || state.unsavedWork || !selectedQuestion) && <p>{questionEditorDescription(selectedQuestion, access.selectedLocked, state.unsavedWork)}</p>}
       {state.unsavedWork && <p>核对后可保存本题全部修改，也可分别保存题目与答案、评分配置；分别保存会保留另一处草稿。</p>}
     </div>
     <div className="paper-editor-actions">
@@ -73,14 +80,14 @@ function PaperQuestionHeading({ context }: ViewProps) {
             onClick={() => actions.openQuestion(config.questions[state.selectedQuestionIndex + 1])} />
         </div>
       }
-      {access.selectedLocked && <StatusTag tone="success">已锁定</StatusTag>}
+      {access.selectedLocked && <StatusTag tone="success">细则已确认</StatusTag>}
       {config.editorMode === "edit" && <>
         <Button type="text" onClick={() => actions.setSourceOpen(true)}>来源与答题区域</Button>
         <Button type="text" danger aria-label="删除当前题目" title="删除当前题目" icon={<Trash2 size={16} />}
           disabled={access.questionDisabled} onClick={context.questionWorkflow.confirmDeleteQuestion} />
       </>}
       <PaperQuestionSaveActions context={context} />
-      <Button type="primary" icon={<Save size={16} />} loading={state.saveBusy} disabled={access.questionDisabled || state.saveBusy || state.saveRefreshPending || (config.editorMode === "edit" && !state.unsavedWork)} onClick={actions.saveAllQuestionChanges}>保存本题全部修改</Button>
+      {!access.selectedLocked && <Button type={state.detailTab === "scoring" ? "default" : "primary"} icon={<Save size={16} />} loading={state.saveBusy} disabled={access.questionDisabled || state.saveBusy || state.saveRefreshPending || (config.editorMode === "edit" && !state.unsavedWork)} onClick={actions.saveAllQuestionChanges}>保存本题全部修改</Button>}
       {(state.detailTab === "content" ? state.formDirty : context.rubricWorkflow.rubricDirty || context.scoringRuleWorkflow.scoringRuleDirty) &&
         <Button disabled={state.saveBusy} onClick={actions.discardActiveDraft}>放弃本区修改</Button>}
     </div>
@@ -92,14 +99,24 @@ export function PaperQuestionSaveActions({ context }: ViewProps) {
   if (state.detailTab === "content") return <Button type="primary" icon={<Save size={16} />} disabled={access.questionDisabled || state.saveRefreshPending}
     loading={questionWorkflow.savingQuestion} onClick={actions.saveQuestion}>保存题目与答案</Button>;
   if (state.detailTab !== "scoring") return null;
-  if (!access.editorUsesFixedScoring) return <Button type="primary" icon={rubricWorkflow.rubricStatus === "locked" ? <LockKeyhole size={16} /> : <Save size={16} />}
-    disabled={access.questionDisabled || state.saveRefreshPending || !selectedQuestion || selectedQuestion.score <= 0 || rubricWorkflow.scoreMismatch}
-    loading={rubricWorkflow.savingRubric} onClick={actions.saveRubric}>{rubricSaveLabel(rubricWorkflow.rubricStatus)}</Button>;
+  if (!access.editorUsesFixedScoring) {
+    if (access.selectedLocked) return null;
+    const disabled = access.questionDisabled || state.saveBusy || state.saveRefreshPending || !selectedQuestion || selectedQuestion.score <= 0 || rubricWorkflow.scoreMismatch || rubricWorkflow.assistantDirty;
+    // 草稿可独立保存；确认锁定前必须先保存题目与答案，避免冻结基于旧题目生成的细则。
+    return <>
+      <Button icon={<Save size={16} />} disabled={disabled} loading={rubricWorkflow.savingRubric}
+        onClick={() => actions.saveRubric("draft")}>{rubricSaveLabel("draft")}</Button>
+      <Tooltip title={state.formDirty ? "请先保存题目与答案，再确认细则" : undefined}><span>
+        <Button type="primary" icon={<LockKeyhole size={16} />} disabled={disabled || state.formDirty} loading={rubricWorkflow.savingRubric}
+          onClick={() => actions.saveRubric("locked")}>{rubricSaveLabel("locked")}</Button>
+      </span></Tooltip>
+    </>;
+  }
   if (!selectedQuestion || !access.objectiveRuleType) return null;
   return <>
-    <Button disabled={state.saveBusy || state.saveRefreshPending || !options.canManage || selectedQuestion.score <= 0} loading={scoringRuleWorkflow.savingScoringRule}
+    <Button disabled={state.saveBusy || state.saveRefreshPending || !options.canManage || selectedQuestion.score <= 0 || !scoringRuleWorkflow.scoringRulesReadable} loading={scoringRuleWorkflow.savingScoringRule}
       onClick={() => actions.saveScoringRule(false)}>保存规则草稿</Button>
-    <Button type="primary" icon={<LockKeyhole size={16} />} disabled={state.saveBusy || state.saveRefreshPending || !options.canManage || selectedQuestion.score <= 0 || !hasStandardAnswer(selectedQuestion)}
+    <Button type="primary" icon={<LockKeyhole size={16} />} disabled={state.saveBusy || state.saveRefreshPending || !options.canManage || selectedQuestion.score <= 0 || !hasStandardAnswer(selectedQuestion) || !scoringRuleWorkflow.scoringRulesReadable}
       loading={scoringRuleWorkflow.savingScoringRule} onClick={() => actions.saveScoringRule(true)}>发布规则</Button>
   </>;
 }

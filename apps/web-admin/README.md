@@ -2,13 +2,15 @@
 
 EduGrade Enterprise Web 管理后台基础框架。
 
+学校 AI 助手支持在对话输入框中用 Ctrl+V 粘贴 PNG/JPEG 图片，也可通过“上传文件”选择。图片会先显示缩略图，点击发送后才提交给学校配置的模型；每张最多 3 MB，与 PDF/文本合计每次最多 3 个附件。图片需要支持视觉输入的模型，整段对话的图片总大小最多 9 MB；浏览器历史只保存附件名称，不保存图片正文。
+
 ## 当前状态
 
 已实现：
 
 - React + TypeScript + Vite 基础入口。
 - Ant Design 主布局、菜单、顶部栏、面包屑、通知入口和用户菜单。
-- hash 路由、权限路由、403/404 状态页。
+- Browser History 路由、权限路由、403/404 状态页；旧 `/#/...` 链接自动转换为不含井号的路径。静态部署需将页面深路径回落到 `index.html`，当前 Nginx 已配置。
 - API Client 与统一错误结构。
 - Loading、Empty、Error 状态组件。
 - 表格和表单基础封装。
@@ -27,7 +29,7 @@ EduGrade Enterprise Web 管理后台基础框架。
 
 - 当前登录已对接真实 `/api/v1/auth/login` 与 `/api/v1/auth/me`，不再使用模拟会话放行。
 - 当前 Web 会话使用后端下发的 HttpOnly cookie；前端不再读取或写入 `localStorage` token。
-- 除考试管理、试卷与 Rubric 配置、答卷采集、阅卷工作台、双评仲裁、成绩管理与发布、学情报告、申诉中心、审计日志外，Dashboard、Quality、Permissions、Settings 等模块页仍包含 mock 占位内容，不代表真实业务数据。
+- Dashboard 使用真实学校工作台汇总或平台学校与系统状态 API；质量看板使用考试质量、回评、漂移和种子策略 API。页面的数据来源与可见操作仍取决于当前用户权限及后端配置，未配置、空结果和请求失败会明确显示。
 - 真实 API 页面依赖有效登录会话；会话失效时显示后端认证错误，不回退 mock 数据。
 
 ## 命令

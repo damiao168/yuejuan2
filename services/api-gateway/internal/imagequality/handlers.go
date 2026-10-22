@@ -1,6 +1,7 @@
 package imagequality
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -344,16 +345,29 @@ func (h *Handler) validateNormalizedResultAsset(w http.ResponseWriter, r *http.R
 
 func (h *Handler) applyCompletedPageQuality(r *http.Request, user auth.User, run Run) error {
 	// 仅用于旧的非协同事务路径；先应用答题页，再处理采集关联，失败不能提前确认 runtime 回执。
-	_, err := h.submissions.ApplyPageQualityResult(r.Context(), user.TenantID, submission.ApplyPageQualityInput{
+	input := submission.ApplyPageQualityInput{
+		SourceFileAssetID:     run.SourceFileAssetID,
 		SubmissionID:          run.SubmissionID,
 		PageID:                run.SubmissionPageID,
 		LatestQualityRunID:    run.ID,
 		NormalizedFileAssetID: run.NormalizedFileAssetID,
 		QualityStatus:         run.QualityStatus,
 		QualityIssues:         toSubmissionIssues(run.QualityIssues),
-	})
+	}
+	var err error
+	projected := true
+	if store, ok := h.submissions.(interface {
+		ApplyPageQualityProjection(context.Context, string, submission.ApplyPageQualityInput) (submission.SubmissionPage, bool, error)
+	}); ok {
+		_, projected, err = store.ApplyPageQualityProjection(r.Context(), user.TenantID, input)
+	} else {
+		_, err = h.submissions.ApplyPageQualityResult(r.Context(), user.TenantID, input)
+	}
 	if err != nil {
 		return err
+	}
+	if !projected {
+		return nil
 	}
 	if h.captures != nil {
 		captureLinked := true

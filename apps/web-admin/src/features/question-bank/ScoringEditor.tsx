@@ -21,6 +21,7 @@ import { questionBankApi } from "../../api/questionBank";
 import { getUserErrorMessage } from "../../api/client";
 import { uploadFile } from "../../api/files";
 import { createScoringExample, StructuredAnswerEditor, StructuredListEditor } from "../../components/StructuredTeacherFields";
+import { newRubricPointId, rubricPointIdentityError } from "../paper-rubric/rubricPointIdentity";
 
 const initial: QuestionBankScoring = {
 	answer: null,
@@ -93,6 +94,13 @@ export function ScoringEditor({
 	const revision = useRef(0);
 	const pending = useRef<{ fingerprint: string; key: string } | null>(null);
 	const savingRef = useRef(false);
+  const mounted = useRef(true);
+  const activeVersion = useRef(version.id);
+  activeVersion.current = version.id;
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 	const [saving, setSaving] = useState(false);
 	const [assets, setAssets] = useState<QuestionBankScoring["assets"]>(
 		version.scoring.assets,
@@ -149,6 +157,8 @@ export function ScoringEditor({
 	useEffect(() => { onDraftSnapshot?.({ fields: form.getFieldsValue(true), assets }); }, [assets, form, onDraftSnapshot]);
 	async function save(values: Values) {
 		if (disabled || savingRef.current) return;
+    const requestVersionId = version.id;
+    const isCurrent = () => mounted.current && activeVersion.current === requestVersionId;
 		savingRef.current = true;
 		setSaving(true);
 		try {
@@ -175,6 +185,9 @@ export function ScoringEditor({
 						examples: arrayValue(values.examples),
 					}
 				: null;
+      // 点编号是评分证据的身份；手工编号也必须唯一，不能等到服务端拒绝后才发现冲突。
+      const identityError = rubric && rubricPointIdentityError(rubric.points);
+      if (identityError) throw new Error(identityError);
 			const scoring: QuestionBankScoring = {
 				answer: values.answer.trim()
 					? {
@@ -205,11 +218,14 @@ export function ScoringEditor({
 				body,
 				headers: { "Idempotency-Key": pending.current.key },
 			});
+      // 已离开这份评分表单时，旧保存只能确认原版本，不能清除新题的脏标记或回填内容。
+      if (!isCurrent()) return;
 			pending.current = null;
 			onDirty(false);
 			onSaved(result.version);
 			message.success("评分标准已保存");
 		} catch (error) {
+      if (!isCurrent()) return;
 			message.error(
 				getUserErrorMessage(
 					error,
@@ -218,7 +234,7 @@ export function ScoringEditor({
 			);
 		} finally {
 			savingRef.current = false;
-			setSaving(false);
+      if (isCurrent()) setSaving(false);
 		}
 	}
 	return (
@@ -338,7 +354,7 @@ export function ScoringEditor({
 								<Button
 									onClick={() =>
 										add({
-											id: `P${fields.length + 1}`,
+                    id: newRubricPointId(),
 											description: "",
 											score: 1,
 											required: false,
@@ -388,12 +404,15 @@ export function ScoringEditor({
 							const file = e.target.files?.[0];
 							e.target.value = "";
 							if (!file || !templates.data?.schoolId) return;
+              const requestVersionId = version.id;
+              const isCurrent = () => mounted.current && activeVersion.current === requestVersionId;
 							setSaving(true);
 							try {
 								const result = await uploadFile(file, {
 									owner_type: "generic",
 									school_id: templates.data.schoolId,
 								});
+                if (!isCurrent()) return;
 								const f = result.file;
 								setAssets((current) =>
 									current.some((a) => a.file_asset_id === f.id)
@@ -410,9 +429,9 @@ export function ScoringEditor({
 								);
 								onDirty(true);
 							} catch (error) {
-								message.error(getUserErrorMessage(error, "附件上传失败"));
+                if (isCurrent()) message.error(getUserErrorMessage(error, "附件上传失败"));
 							} finally {
-								setSaving(false);
+                if (isCurrent()) setSaving(false);
 							}
 						}}
 					/>

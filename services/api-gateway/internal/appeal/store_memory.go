@@ -7,10 +7,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 type SubmissionGradeSeed struct {
 	ID            string
+	SchoolID      string
+	ClassIDs      []string
 	ExamID        string
 	ExamName      string
 	Subject       string
@@ -131,7 +135,7 @@ func (s *MemoryStore) ListAppeals(_ context.Context, tenantID string, filter Lis
 	defer s.mu.RUnlock()
 	out := []Appeal{}
 	for _, item := range s.appeals {
-		if !appealMatchesListFilter(item, tenantID, filter) {
+		if !appealMatchesListFilter(item, tenantID, filter) || !s.appealWithinAccessScope(item, filter.AccessScope) {
 			continue
 		}
 		out = append(out, cloneAppeal(item))
@@ -157,6 +161,25 @@ func (s *MemoryStore) ListAppeals(_ context.Context, tenantID string, filter Lis
 		out = out[:filter.Limit]
 	}
 	return out, nil
+}
+
+func (s *MemoryStore) appealWithinAccessScope(item Appeal, scope *auth.AccessScope) bool {
+	if scope == nil {
+		return true
+	}
+	if scope.TenantID != item.TenantID {
+		return false
+	}
+	// 受派人员仍需通过 handler 的本人受派筛选，不能借管理权限扩大组织边界。
+	if scope.AssignedOnly && scope.ActorID != "" && item.AssignedTo == scope.ActorID {
+		return true
+	}
+	seed := s.submissions[key(item.ExamID, item.StudentID)]
+	return auth.AllowsResourceBoundary(*scope, auth.ResourceBoundary{
+		ResourceType: "appeal", ResourceID: item.ID, TenantID: item.TenantID,
+		SchoolID: seed.SchoolID, ClassIDs: seed.ClassIDs, ExamID: item.ExamID,
+		StudentID: item.StudentID, SubmissionID: item.SubmissionID,
+	})
 }
 
 func appealMatchesListFilter(item Appeal, tenantID string, filter ListFilter) bool {
@@ -392,6 +415,9 @@ func (s *MemoryStore) Statistics(_ context.Context, tenantID string, filter Stat
 	var handled int
 	for _, item := range s.appeals {
 		if item.TenantID != tenantID {
+			continue
+		}
+		if !s.appealWithinAccessScope(item, filter.AccessScope) {
 			continue
 		}
 		if filter.ExamID != "" && item.ExamID != filter.ExamID {

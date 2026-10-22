@@ -20,6 +20,7 @@ export function AnswerGroupSampleEvidence({ groupId, segmentId, hash, onRead }: 
  const [open,setOpen]=useState(false);const [attempt,setAttempt]=useState(0);const [value,setValue]=useState<AnswerGroupMemberContext>();const [error,setError]=useState("");const [url,setUrl]=useState("");const [imageError,setImageError]=useState("");
  // 父组件刷新可能更换回调；请求完成时使用最新登记入口，不因此重新读取材料。
  const read = useRef(onRead); read.current = onRead;
+ // biome-ignore lint/correctness/useExhaustiveDependencies: attempt 由重试样本按钮递增；同组同片段也要重新核对文字与图片。
  useEffect(()=>{
   if(!open) {
    return;

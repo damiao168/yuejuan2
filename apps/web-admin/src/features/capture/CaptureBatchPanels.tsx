@@ -1,5 +1,5 @@
 // 批次详情只负责展示；异步命令和当前批次校验仍由页面统一持有，避免面板切换改变操作范围。
-import { Alert, Button, Empty, Progress, Space, Tabs, Upload, type TableColumnsType, type UploadProps } from "antd";
+import { Alert, Button, Empty, Progress, Select, Space, Tabs, Upload, type TableColumnsType, type UploadProps } from "antd";
 import { Check, FileUp, RefreshCw, ScanLine, SlidersHorizontal, Undo2, Workflow } from "lucide-react";
 import type { CaptureBatchDetail, CapturePage, ProcessingSummary } from "../../api/capture";
 import { ErrorState, LoadingState } from "../../components/PageState";
@@ -12,9 +12,10 @@ import type { useCaptureBatchList } from "./useCaptureBatchList";
 import type { useCaptureBatchDetail } from "./useCaptureBatchDetail";
 import type { captureSummary } from "./captureBatchSummary";
 import { statusLabels, statusTone } from "./capturePresentation";
-import { captureFileColumns, capturePageColumns, errorLabels } from "./captureColumns";
+import { captureFileColumns, capturePageColumns, captureFileErrorLabel } from "./captureColumns";
+import type { PendingCaptureUpload } from "./useCaptureUpload";
 
-export function CaptureBatchListPanel({ batches, selectedId, setSelectedId, hasMoreBatches, loadingMoreBatches, loadMoreBatches }: Readonly<Pick<ReturnType<typeof useCaptureBatchList>, "batches" | "selectedId" | "setSelectedId" | "hasMoreBatches" | "loadingMoreBatches" | "loadMoreBatches">>) {
+export function CaptureBatchListPanel({ batches, selectedId, setSelectedId, hasMoreBatches, loadingMoreBatches, loadMoreBatches, disabled }: Readonly<Pick<ReturnType<typeof useCaptureBatchList>, "batches" | "selectedId" | "setSelectedId" | "hasMoreBatches" | "loadingMoreBatches" | "loadMoreBatches"> & { disabled?: boolean }>) {
   return (
     <aside className="capture-batch-list">
       <div className="capture-pane-title">
@@ -25,6 +26,7 @@ export function CaptureBatchListPanel({ batches, selectedId, setSelectedId, hasM
         <button
           type="button"
           key={batch.id}
+          disabled={disabled}
           className={batch.id === selectedId ? "capture-batch-row active" : "capture-batch-row"}
           onClick={() => setSelectedId(batch.id)}
         >
@@ -42,7 +44,7 @@ export function CaptureBatchListPanel({ batches, selectedId, setSelectedId, hasM
 
 function CaptureProgress({ percent }: Readonly<{ percent: number | null }>) {
   if (percent === null) return null;
-  return <Progress percent={percent} size="small" />;
+  return <div aria-label="页面处理完成进度"><small>页面处理完成进度</small><Progress percent={percent} size="small" /></div>;
 }
 
 function CaptureIssueQueue({ detail, issuePages, pageColumns, actioning, batchCanManage, startProcessing, uploadRepair }: Readonly<{
@@ -61,7 +63,7 @@ function CaptureIssueQueue({ detail, issuePages, pageColumns, actioning, batchCa
     <div className="capture-issue-queue">
       {detail.files.filter((file) => file.status === "failed").map((file) => (
         <div className="capture-file-issue" key={file.id}>
-          <div><strong>{file.original_name}</strong><span title={file.error_code || undefined}>文件处理失败：{(file.error_code && errorLabels[file.error_code]) || "请重新导入正确的文件"}</span></div>
+          <div><strong>{file.original_name}</strong><span title={file.error_code || undefined}>文件处理失败：{captureFileErrorLabel(file.error_code)}</span></div>
           <Space><Button icon={<RefreshCw size={15} />} loading={actioning} disabled={!batchCanManage} onClick={() => void startProcessing()}>重试原文件</Button><Button icon={<FileUp size={15} />} disabled={!batchCanManage} onClick={uploadRepair}>上传修复文件</Button></Space>
         </div>
       ))}
@@ -94,6 +96,7 @@ function CaptureProcessingList({ detail, submissions, processingSummaries, actio
       {submissions.map((submissionId, index) => {
         const pages = detail.pages.filter((item) => item.submission_id === submissionId);
         const complete = pages.every((item) => item.status === "ready");
+        const groupingBlocked = pages.some(page => page.page_identity.grouping_status && page.page_identity.grouping_status !== "complete");
         const summary = processingSummaries[submissionId];
         return (
           <div key={submissionId} className="capture-processing-row">
@@ -110,22 +113,54 @@ function CaptureProcessingList({ detail, submissions, processingSummaries, actio
                       <Button
                         type={item.action === "confirm_registration" ? "primary" : "default"}
                         loading={actioning}
-                        disabled={!batchCanManage}
+                        disabled={!batchCanManage || groupingBlocked}
                         onClick={() => void resolveRegistration(item.registration_run_id!, item.action === "confirm_registration" ? "confirm" : "retry")}
                       >
                         {item.action === "confirm_registration" ? `确认第 ${item.page_no} 页对齐` : `重试第 ${item.page_no} 页对齐`}
                       </Button>
                     )}
-                    <Button icon={<SlidersHorizontal size={15} />} disabled={!batchCanManage} onClick={() => setCorrectionRunId(item.registration_run_id)}>校正第 {item.page_no} 页边界</Button>
+                    <Button icon={<SlidersHorizontal size={15} />} disabled={!batchCanManage || groupingBlocked} onClick={() => setCorrectionRunId(item.registration_run_id)}>校正第 {item.page_no} 页边界</Button>
                   </Space>
                 ))}
-              <Button icon={<Workflow size={16} />} loading={actioning} disabled={!batchCanManage || complete} onClick={() => void startPageProcessing(submissionId)}>{complete ? "处理完成" : "对齐版面并切题"}</Button>
+              <Button icon={<Workflow size={16} />} loading={actioning} disabled={!batchCanManage || complete || groupingBlocked} onClick={() => void startPageProcessing(submissionId)}>{complete ? "处理完成" : groupingBlocked ? "等待答卷完整分组" : "对齐版面并切题"}</Button>
             </Space>
           </div>
         );
       })}
     </div>
   );
+}
+
+function CaptureGroupingStatus({ detail }: Readonly<{ detail: CaptureBatchDetail }>) {
+  const groups = new Map<string, CaptureBatchDetail["files"]>();
+  for (const file of detail.files) {
+    if (!file.upload_group_id) continue;
+    const files = groups.get(file.upload_group_id) ?? [];
+    files.push(file);
+    groups.set(file.upload_group_id, files);
+  }
+  return <>{[...groups.entries()].map(([id, files], index) => {
+    const expectedFiles = Math.max(...files.map(file => file.upload_group_file_count ?? 0));
+    const pagesPerStudent = files[0].pages_per_student ?? 1;
+    const fileIds = new Set(files.map(file => file.id));
+    const pages = detail.pages.filter(page => fileIds.has(page.capture_file_id) && page.status !== "deleted");
+    const statuses = new Set(pages.map(page => page.page_identity.grouping_status));
+    const failed = files.filter(file => file.status === "failed").length;
+    const duplicate = files.filter(file => file.status === "duplicate").length;
+    const problems: string[] = [];
+    if (files.length < expectedFiles) problems.push(`应有 ${expectedFiles} 个文件，已登记 ${files.length} 个，文件尚未上传齐全。请重试本次上传`);
+    if (failed) problems.push(`${failed} 个文件解码失败，请重试原文件`);
+    if (duplicate) problems.push(`${duplicate} 个重复文件未计入完整答卷，请核对后一次重新选择完整答卷`);
+    if (statuses.has("incomplete_pages")) {
+      const totalPages = files.reduce((total, file) => total + file.page_count, 0);
+      const missing = (pagesPerStudent - totalPages % pagesPerStudent) % pagesPerStudent;
+      problems.push(`已解码 ${totalPages} 页，每名学生 ${pagesPerStudent} 页${missing ? `，缺少 ${missing} 页` : "，页面不完整"}，请一次重新选择完整答卷`);
+    }
+    if (statuses.has("identity_conflict")) problems.push("同一份答卷的学生身份冲突，请核对学生信息与页面顺序");
+    if (problems.length) return <Alert key={id} type="warning" showIcon message={`上传组 ${index + 1} 尚未完整分组，不进入后续页面处理`} description={`${problems.join("；")}。每次文件选择独立分组，不会与其他选择凑页。`} />;
+    if (statuses.has("waiting_files") || files.some(file => file.status !== "completed")) return <Alert key={id} type="info" showIcon message={`上传组 ${index + 1} 等待文件拆页与分组校验`} description={`每名学生 ${pagesPerStudent} 页；PDF/TIFF 按解码后的实际页数计算，完整分组后才进入后续处理。`} />;
+    return null;
+  })}</>;
 }
 
 function CaptureMatchingContent({ loading, error, onRetry, queue, workspaceProps }: Readonly<{
@@ -147,6 +182,7 @@ export function CaptureBatchWorkspace({
   progressPercent, summary, uploadProps, uploading, actioning, startProcessing, completeBatch,
   reopenBatch, activeTab, setActiveTab, issuePages, pageColumns, fileColumns, uploadRepair,
   onOverride, processingProps, matchingProps,
+  pagesPerStudent, setPagesPerStudent, pendingUpload, retryUpload, discardUpload,
 }: Readonly<{
   detail?: CaptureBatchDetail;
   detailError?: string;
@@ -159,6 +195,11 @@ export function CaptureBatchWorkspace({
   summary: ReturnType<typeof captureSummary>;
   uploadProps: UploadProps;
   uploading: boolean;
+  pagesPerStudent?: number;
+  setPagesPerStudent: (pages: number) => void;
+  pendingUpload?: PendingCaptureUpload;
+  retryUpload: () => Promise<void>;
+  discardUpload: () => void;
   actioning: boolean;
   startProcessing: () => Promise<void>;
   completeBatch: () => void;
@@ -188,8 +229,12 @@ export function CaptureBatchWorkspace({
         <CaptureProgress percent={progressPercent} />
       </div>
       <Space wrap>
+        <label htmlFor="capture-pages-per-student">每名学生答题卡页数</label>
+        <Select id="capture-pages-per-student" aria-label="每名学生答题卡页数" placeholder="请先选择页数" value={pagesPerStudent}
+          style={{ width: 200 }} disabled={!batchCanManage || Boolean(pendingUpload)} onChange={setPagesPerStudent}
+          options={Array.from({ length: 20 }, (_, index) => ({ value: index + 1, label: index === 0 ? "1 页（单面）" : index === 1 ? "2 页（正反面）" : `${index + 1} 页` }))} />
         <Upload {...uploadProps}>
-          <Button icon={<FileUp size={16} />} loading={uploading} disabled={!batchCanManage}>导入文件</Button>
+          <Button icon={<FileUp size={16} />} loading={uploading} disabled={!batchCanManage || !pagesPerStudent || Boolean(pendingUpload)}>导入文件</Button>
         </Upload>
         <Button type="primary" icon={<Workflow size={16} />} onClick={() => void startProcessing()} loading={actioning}
           disabled={!batchCanManage || !detail.files.some((item) => ["uploaded", "failed"].includes(item.status))}>
@@ -203,6 +248,11 @@ export function CaptureBatchWorkspace({
         )}
       </Space>
     </header>
+    <Alert type="info" showIcon message="请将同一学生的全部页面连续排列，再排列下一名学生" description="按选择的文件顺序、文件内页序，每 N 页组成一份学生答卷。1 页用于单面，2 页用于正反面，支持 1–20 页。PDF/TIFF 按解码页数计算；每次选择独立分组，缺页不会进入后续处理，也不会跨两次选择凑页。" />
+    {pendingUpload ? <Alert type={pendingUpload.error ? "warning" : "info"} showIcon message={`${uploading ? "正在上传" : "本次上传未完成"}：已登记 ${pendingUpload.completedFiles}/${pendingUpload.totalFiles} 个文件，每名学生 ${pendingUpload.pagesPerStudent} 页`}
+      description={pendingUpload.error || "请等待本次选择的文件按顺序上传和登记。"}
+      action={!uploading ? <Space><Button onClick={() => void retryUpload()} disabled={!batchCanManage}>重试本次上传</Button><Button onClick={discardUpload}>结束本次上传</Button></Space> : undefined} /> : null}
+    <CaptureGroupingStatus detail={detail} />
     <div className="capture-summary-strip">
       {summary.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}
     </div>

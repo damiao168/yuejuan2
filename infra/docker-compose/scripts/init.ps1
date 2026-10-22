@@ -70,6 +70,7 @@ function Wait-ComposeService([string]$Service, [int]$TimeoutSeconds = 180) {
 
 Push-Location $composeDir
 try {
+  & (Join-Path $scriptRoot "prepare-internal-tls.ps1") -EnvFile $envPath -ComposeDirectory $composeDir
   & (Join-Path $scriptRoot "preflight.ps1") -ComposeFile $composePath -EnvFile $envPath
 
   Invoke-Compose -Arguments @("up", "-d", "postgres", "redis", "minio", "qdrant")

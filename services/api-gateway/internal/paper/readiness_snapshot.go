@@ -25,6 +25,7 @@ type readinessPaperSnapshot struct {
 }
 
 type readinessQuestionSnapshot struct {
+	ReferenceMaterials  *ReferenceMaterialBinding  `json:"reference_materials,omitempty"`
 	ParentQuestionNo    string                     `json:"parent_question_no,omitempty"`
 	SubquestionNo       string                     `json:"subquestion_no,omitempty"`
 	Options             []string                   `json:"options,omitempty"`
@@ -55,6 +56,7 @@ type readinessImportSnapshot struct {
 }
 
 type readinessImportQuestionSnapshot struct {
+	ReferenceMaterials      *ReferenceMaterialBinding  `json:"reference_materials,omitempty"`
 	ParentQuestionNo        string                     `json:"parent_question_no,omitempty"`
 	SubquestionNo           string                     `json:"subquestion_no,omitempty"`
 	Options                 []string                   `json:"options,omitempty"`
@@ -113,16 +115,20 @@ type readinessTemplatePage struct {
 	RegistrationMarks []readinessTemplateRegion `json:"registration_marks"`
 	IdentityRegions   []readinessTemplateRegion `json:"identity_regions"`
 	QuestionRegions   []readinessTemplateRegion `json:"question_regions"`
+	GradingGroups     []TemplateGradingGroup    `json:"grading_groups,omitempty"`
 }
 
 type readinessTemplateRegion struct {
-	QuestionID    string                    `json:"question_id,omitempty"`
-	Label         string                    `json:"label,omitempty"`
-	X             float64                   `json:"x"`
-	Y             float64                   `json:"y"`
-	Width         float64                   `json:"width"`
-	Height        float64                   `json:"height"`
-	OptionRegions []readinessTemplateOption `json:"option_regions,omitempty"`
+	QuestionID            string                    `json:"question_id,omitempty"`
+	Label                 string                    `json:"label,omitempty"`
+	X                     float64                   `json:"x"`
+	Y                     float64                   `json:"y"`
+	Width                 float64                   `json:"width"`
+	Height                float64                   `json:"height"`
+	OptionRegions         []readinessTemplateOption `json:"option_regions,omitempty"`
+	OptionCoordinateSpace string                    `json:"option_coordinate_space,omitempty"`
+	GradingGroupID        string                    `json:"grading_group_id,omitempty"`
+	GradingBBox           *TemplateRegionBBox       `json:"grading_bbox,omitempty"`
 }
 
 type readinessTemplateOption struct {
@@ -153,8 +159,11 @@ func newReadinessConfigurationSnapshot(total float64, classIDs, candidateIDs []s
 		return snapshot.Papers[i].VersionNo < snapshot.Papers[j].VersionNo
 	})
 	for _, item := range questions {
-		if item.SourceType == "question_bank" {
+		if item.SourceType == "question_bank" && snapshot.Version < 2 {
 			snapshot.Version = 2
+		}
+		if item.ReferenceMaterials != nil {
+			snapshot.Version = 3
 		}
 		snapshot.Questions = append(snapshot.Questions, readinessConfigurationQuestionSnapshot(item))
 	}
@@ -184,7 +193,8 @@ func newReadinessConfigurationSnapshot(total float64, classIDs, candidateIDs []s
 // 配置 hash 保留原有内容字段；知识点排序使用副本，不能改变原题目或 nil/空集合的编码。
 func readinessConfigurationQuestionSnapshot(item Question) readinessQuestionSnapshot {
 	question := readinessQuestionSnapshot{
-		ParentQuestionNo: item.ParentQuestionNo, SubquestionNo: item.SubquestionNo, Options: append([]string(nil), item.Options...),
+		ReferenceMaterials: item.ReferenceMaterials,
+		ParentQuestionNo:   item.ParentQuestionNo, SubquestionNo: item.SubquestionNo, Options: append([]string(nil), item.Options...),
 		BankContent: item.BankContent, SourceContentHash: item.SourceContentHash,
 		ID: item.ID, ExamPaperID: item.ExamPaperID, QuestionNo: item.QuestionNo,
 		QuestionType: item.QuestionType, AssessmentArchetype: readinessAssessmentArchetype(item),
@@ -207,8 +217,12 @@ func readinessConfigurationQuestionSnapshot(item Question) readinessQuestionSnap
 func newReadinessImportSnapshot(configurationHash string, questions []Question) readinessImportSnapshot {
 	snapshot := readinessImportSnapshot{Version: 1, ConfigurationHash: configurationHash, Questions: []readinessImportQuestionSnapshot{}}
 	for _, item := range questions {
+		if item.ReferenceMaterials != nil {
+			snapshot.Version = 2
+		}
 		question := readinessImportQuestionSnapshot{
-			ParentQuestionNo: item.ParentQuestionNo, SubquestionNo: item.SubquestionNo, Options: append([]string(nil), item.Options...),
+			ReferenceMaterials: item.ReferenceMaterials,
+			ParentQuestionNo:   item.ParentQuestionNo, SubquestionNo: item.SubquestionNo, Options: append([]string(nil), item.Options...),
 			ID: item.ID, QuestionNo: item.QuestionNo, QuestionType: item.QuestionType,
 			AssessmentArchetype: readinessAssessmentArchetype(item), Score: item.Score,
 			Stem: item.Stem, KnowledgePoints: append([]string(nil), item.KnowledgePoints...),
@@ -237,6 +251,11 @@ func readinessPageSnapshot(page TemplatePage) readinessTemplatePage {
 	out.RegistrationMarks = readinessRegionSnapshots(page.RegistrationMarks)
 	out.IdentityRegions = readinessRegionSnapshots(page.IdentityRegions)
 	out.QuestionRegions = readinessRegionSnapshots(page.QuestionRegions)
+	out.GradingGroups = cloneTemplateGradingGroups(page.GradingGroups)
+	for index := range out.GradingGroups {
+		sort.Strings(out.GradingGroups[index].QuestionIDs)
+	}
+	sort.Slice(out.GradingGroups, func(i, j int) bool { return out.GradingGroups[i].GroupID < out.GradingGroups[j].GroupID })
 	return out
 }
 
@@ -245,7 +264,12 @@ func readinessRegionSnapshots(regions []LayoutRegion) []readinessTemplateRegion 
 	for _, region := range regions {
 		item := readinessTemplateRegion{
 			QuestionID: region.QuestionID, Label: region.Label, X: region.X, Y: region.Y,
-			Width: region.Width, Height: region.Height,
+			Width: region.Width, Height: region.Height, OptionCoordinateSpace: region.OptionCoordinateSpace,
+			GradingGroupID: region.GradingGroupID,
+		}
+		if region.GradingBBox != nil {
+			box := *region.GradingBBox
+			item.GradingBBox = &box
 		}
 		for _, option := range region.OptionRegions {
 			item.OptionRegions = append(item.OptionRegions, readinessTemplateOption{Label: option.Label, X: option.X, Y: option.Y, Width: option.Width, Height: option.Height})

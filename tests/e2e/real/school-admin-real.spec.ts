@@ -1,19 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Response } from "@playwright/test";
 import { loginAsSchoolAdmin } from "../fixtures/schoolAdminLogin";
+import { unexpectedForbiddenResponses } from "./response-boundary";
 
 // 依赖隔离 STORY-060 环境预置账号和考试；本文件没有 API 拦截，验证浏览器到真实网关的路径。
 test("学校管理员通过真实网关登录并查看已持久化考试", async ({ page }, testInfo) => {
   const examId = "00000000-0000-0000-0000-000000000604";
   const examName = "STORY-060 Synthetic Chinese Exam";
   const serverErrors: string[] = [];
-  const forbiddenResponses: string[] = [];
+  const forbiddenResponses: Response[] = [];
+  let expectedForeignResponse: Response | undefined;
   let authenticated = false;
   page.on("response", (response) => {
     if (response.url().includes("/api/") && response.status() >= 500) {
       serverErrors.push(`${response.status()} ${response.request().method()} ${response.url()}`);
     }
     if (authenticated && response.url().includes("/api/") && response.status() === 403) {
-      forbiddenResponses.push(`${response.request().method()} ${response.url()}`);
+      forbiddenResponses.push(response);
     }
   });
 
@@ -62,14 +64,19 @@ test("学校管理员通过真实网关登录并查看已持久化考试", async
 
   const foreignExamID = process.env.EDUGRADE_E2E_FOREIGN_EXAM_ID;
   if (foreignExamID) {
+    const foreignUrl = new URL(`/api/v1/exams/${encodeURIComponent(foreignExamID)}`, page.url()).href;
+    const responsePromise = page.waitForResponse((response) => response.url() === foreignUrl && response.request().method() === "GET");
     const status = await page.evaluate(async (id) => {
       const response = await fetch(`/api/v1/exams/${encodeURIComponent(id)}`, { credentials: "include" });
       return response.status;
     }, foreignExamID);
+    const boundaryResponse = await responsePromise;
     expect([403, 404]).toContain(status);
+    expect(boundaryResponse.status()).toBe(status);
+    expectedForeignResponse = boundaryResponse;
   }
 
-  expect(forbiddenResponses).toEqual([]);
+  expect(unexpectedForbiddenResponses(forbiddenResponses, expectedForeignResponse)).toEqual([]);
   expect(serverErrors).toEqual([]);
 
   await testInfo.attach("system-boundary", {

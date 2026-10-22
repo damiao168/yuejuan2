@@ -234,9 +234,14 @@ class OCRRunner:
                 blocks = self._recognize_paper_pages(pages, heartbeat)
             except AuthenticationError:
                 raise
+            except _OCRProcessingError as exc:
+                heartbeat.stop()
+                self.api.fail_paper_import(import_id, runtime_task_id, lease_token, exc.code, exc.retryable)
+                return
             except Exception as exc:  # noqa: BLE001 - OCR 后端可能抛出不同类型的错误。
                 heartbeat.stop()
-                self.api.fail_paper_import(import_id, runtime_task_id, lease_token, str(exc)[:80] or "paper_ocr_failed", False)
+                # 未分类错误保守终止，并仅发送固定错误码，避免把模型/源文档内容写入失败记录。
+                self.api.fail_paper_import(import_id, runtime_task_id, lease_token, "paper_ocr_failed", False)
                 return
             # 完成请求保持在识别的 try 之外，提交失败不能再次报告为 OCR 失败。
             heartbeat.stop()
@@ -273,9 +278,15 @@ class OCRRunner:
             document_index = int(page.get("document_index", -1))
             page_no = int(page.get("page_no") or 0)
             if not source_id or document_index < 0 or page_no <= 0:
-                raise ValueError("invalid_paper_ocr_page")
-            image = self.api.download(str(page["download_url"]))
-            for block in self.engine.recognize(image):
+                raise _OCRProcessingError("invalid_paper_ocr_page", False)
+            image = self._download_paper_page(page)
+            try:
+                recognized = list(self.engine.recognize(image))
+            except (TypeError, ValueError) as exc:
+                raise _OCRProcessingError("invalid_paper_ocr_image", False) from exc
+            except Exception as exc:  # noqa: BLE001 - 各 OCR 引擎使用不同运行时异常。
+                raise _OCRProcessingError("paper_ocr_engine_failed", True) from exc
+            for block in recognized:
                 if _valid_block(block.text, block.bbox, block.confidence):
                     # 编号跨页累计，不能因 source 或 page 切换而重新从 1 开始。
                     blocks.append({"source_id": source_id, "document_index": document_index, "page_no": page_no, "block_id": f"{source_id}:{page_no}:{len(blocks)+1}", "text": block.text, "bbox": block.bbox, "confidence": block.confidence})
@@ -283,6 +294,20 @@ class OCRRunner:
         if not blocks:
             raise ValueError("empty_ocr_result")
         return blocks
+
+    def _download_paper_page(self, page: dict[str, Any]) -> bytes:
+        url = page.get("download_url")
+        if not isinstance(url, str) or not url:
+            raise _OCRProcessingError("invalid_paper_ocr_page", False)
+        try:
+            return self.api.download(url)
+        except AuthenticationError:
+            raise
+        except APIError as exc:
+            # 仅传输、限流和暂时服务故障交回任务重试策略；无效输入、禁止重定向及其他 4xx 不重试。
+            status = exc.status_code
+            retryable = exc.retryable if exc.retryable is not None else status is None or status in {408, 425, 429, 500, 502, 503, 504}
+            raise _OCRProcessingError("paper_ocr_download_failed", retryable) from exc
 
     def _config_hash(self) -> str:
         if self.config.config_hash:

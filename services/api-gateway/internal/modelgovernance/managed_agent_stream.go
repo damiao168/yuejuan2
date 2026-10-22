@@ -22,7 +22,7 @@ func (m *HTTPAgentModel) Stream(ctx context.Context, connection ManagedAPIConnec
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		body, _ := io.ReadAll(io.LimitReader(response.Body, managedProbeResponseLimit))
-		return AgentResponse{}, agentProviderError(response.StatusCode, body, len(request.Tools) > 0)
+		return AgentResponse{}, agentProviderError(response.StatusCode, body, len(request.Tools) > 0, agentHasImages(request.Messages))
 	}
 	state := agentStreamState{dashscope: connection.Config.AdapterType == "dashscope_native"}
 	err = state.read(response.Body, emit)

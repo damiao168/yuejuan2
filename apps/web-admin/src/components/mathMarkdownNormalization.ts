@@ -3,7 +3,7 @@ import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
 import type { Root, RootContent } from "mdast";
 
-export interface MathMarkdownOptions { promoteInlineMath?: boolean }
+export interface MathMarkdownOptions { promoteInlineMath?: boolean; streaming?: boolean }
 
 // GFM 先分列，数学插件后解析。暂存单元公式的竖线，解析完表格再还原，保留绝对值和 array 列定义的原意。
 export const mathTablePipeToken = "\uE000markdown-math-pipe\uE001";
@@ -221,7 +221,7 @@ function displayFormula(value: string, index: number, formula: string) {
   return `\n${continuation}\n${continuation}${math}\n${continuation}\n${continuation}`;
 }
 
-export function normalizeMathMarkdown(value: string, { promoteInlineMath = true }: MathMarkdownOptions = {}) {
+export function normalizeMathMarkdown(value: string, { promoteInlineMath = true, streaming = false }: MathMarkdownOptions = {}) {
   const { protectedRanges, structuredRanges, inlineRanges, tableRanges } = collectRanges(value);
   const within = (ranges: SourceRange[], index: number) => ranges.some((range) => index >= range.start && index < range.end);
   const normalizeText = (text: string, offset: number) => {
@@ -229,6 +229,12 @@ export function normalizeMathMarkdown(value: string, { promoteInlineMath = true 
     let cursor = 0;
     while (cursor < text.length) {
       const delimited = readFormula(text, cursor);
+      // remark-math 会在文末隐式结束 $$ 块；流式半帧先按原文展示，避免未闭合花括号触发公式错误。
+      if (!delimited && streaming && text.startsWith("$$", cursor) && !isEscaped(text, cursor)) {
+        output += "\\$\\$";
+        cursor += 2;
+        continue;
+      }
       if (!delimited) { output += text[cursor++]; continue; }
       const { block, opening, closing } = delimited;
       let formula = text.slice(cursor + opening, closing);

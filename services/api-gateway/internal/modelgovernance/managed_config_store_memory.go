@@ -36,6 +36,7 @@ func (s *MemoryStore) CreateManagedAPIConfig(_ context.Context, tenantID, _ stri
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if normalized.IsDefault {
+		s.preserveInheritedChatAccessLocked(tenantID, "", true)
 		s.clearManagedDefault(tenantID, "")
 	}
 	now := time.Now().UTC()
@@ -50,8 +51,8 @@ func (s *MemoryStore) CreateManagedAPIConfig(_ context.Context, tenantID, _ stri
 		DataPolicy:    map[string]any{"training_allowed": false, "retention_mode": "no_store"},
 		HealthState:   "unverified",
 		Status:        normalized.Status, IsDefault: normalized.IsDefault, LastTestStatus: "untested",
-		LastCapabilityStatus: "untested",
-		ConfigSource:         normalized.ConfigSource, ProviderRegistryVersion: normalized.ProviderRegistryVersion,
+		LastTextStatus: "untested", LastCapabilityStatus: "untested",
+		ConfigSource: normalized.ConfigSource, ProviderRegistryVersion: normalized.ProviderRegistryVersion,
 		CreatedAt: now, UpdatedAt: now,
 	}
 	if normalized.InitialProbe != nil {
@@ -73,6 +74,12 @@ func (s *MemoryStore) UpdateManagedAPIConfig(_ context.Context, tenantID, id str
 	if !ok || item.TenantID != tenantID || item.DeletedAt != nil {
 		return ManagedAPIConfig{}, ErrNotFound
 	}
+	// 先核对检测所用版本再切换默认项或密钥；迟到请求失败时不改变任何已保存配置。
+	if normalized.InitialProbe != nil && normalized.ExpectedUpdatedAt.IsZero() ||
+		!normalized.ExpectedUpdatedAt.IsZero() && !item.UpdatedAt.Equal(normalized.ExpectedUpdatedAt) {
+		return ManagedAPIConfig{}, ErrManagedProbeStale
+	}
+	s.preserveInheritedChatAccessLocked(tenantID, id, normalized.IsDefault)
 	if normalized.IsDefault {
 		s.clearManagedDefault(tenantID, id)
 	}
@@ -87,7 +94,7 @@ func (s *MemoryStore) UpdateManagedAPIConfig(_ context.Context, tenantID, id str
 	item.Region = normalized.Region
 	item.Status = normalized.Status
 	item.IsDefault = normalized.IsDefault
-	item.UpdatedAt = time.Now().UTC()
+	item.UpdatedAt = nextManagedConfigUpdatedAt(item.UpdatedAt)
 	if normalized.APIKey != "" {
 		s.managedSecrets[id] = normalized.APIKey
 		item.CredentialHint = credentialHint(normalized.APIKey)
@@ -109,6 +116,11 @@ func resetManagedProbeEvidence(item *ManagedAPIConfig) {
 	item.LastTestedAt = nil
 	item.LastSuccessfulTestedAt = nil
 	item.LastProbeMode = ""
+	item.LastTextStatus = "untested"
+	item.LastTextMessage = ""
+	item.LastTextTestedAt = nil
+	item.LastTextUsage = ManagedAPIProbeUsage{}
+	item.LastTextDiagnostic = ManagedAPIProbeDiagnostic{}
 	item.LastCapabilityStatus = "untested"
 	item.LastCapabilityMessage = ""
 	item.LastCapabilityTestedAt = nil
@@ -143,6 +155,15 @@ func (s *MemoryStore) DeleteManagedAPIConfig(_ context.Context, tenantID, actorI
 
 // 调用方必须持有写锁；依赖校验和软删除不能被新增绑定或审批穿插。
 func (s *MemoryStore) managedConfigDeletionDependencyLocked(tenantID, id string) error {
+	if selection := s.answerSheetSelections[tenantID]; selection.Mode == "model" && selection.ModelConfigID == id {
+		return ErrManagedConfigInUse
+	}
+	if selection := s.gradingSelections[tenantID]; selection.Mode == "model" && selection.ModelConfigID == id {
+		return ErrManagedConfigInUse
+	}
+	if selection := s.documentSelections[tenantID]; selection.Mode == "model" && selection.ModelConfigID == id {
+		return ErrManagedConfigInUse
+	}
 	for _, binding := range s.roleBindings {
 		if binding.TenantID == tenantID && binding.ManagedModelAPIConfigID == id && binding.Status == "active" {
 			return ErrManagedConfigInUse
@@ -192,10 +213,11 @@ func (s *MemoryStore) RecordManagedAPIProbe(_ context.Context, tenantID, id stri
 	return item, nil
 }
 
-// 临时网络失败保留上次能力证据；确定性失败才刷新能力状态，并且不持久化响应预览。
+// 三种检测独立记录证据；临时故障只更新本次状态，不撤销已有文本或结构化结果。
+// quick 和复用结果不产生新生成证据，响应预览也不会写入存储。
 func applyManagedProbe(item *ManagedAPIConfig, result ManagedAPIProbeResult, testedAt time.Time) {
 	item.LastTestStatus = "failed"
-	connectionOK := result.OK || (result.ProbeMode == "capability" && result.CredentialCheck.OK && result.ModelCheck.OK)
+	connectionOK := managedProbeConnectionOK(result)
 	transientFailure := !result.OK && transientManagedProbeFailure(result)
 	if transientFailure {
 		item.LastTestStatus = "temporary_unavailable"
@@ -204,7 +226,7 @@ func applyManagedProbe(item *ManagedAPIConfig, result ManagedAPIProbeResult, tes
 		item.LastSuccessfulTestedAt = &testedAt
 	}
 	if connectionOK && !result.OK && !transientFailure {
-		item.LastTestMessage = "连接正常，结构化能力检测未通过"
+		item.LastTestMessage = "连接正常，生成检测未通过：" + strings.TrimSpace(result.Message)
 	} else {
 		item.LastTestMessage = strings.TrimSpace(result.Message)
 	}
@@ -214,7 +236,24 @@ func applyManagedProbe(item *ManagedAPIConfig, result ManagedAPIProbeResult, tes
 	if item.LastProbeMode == "" {
 		item.LastProbeMode = "capability"
 	}
-	if item.LastProbeMode == "capability" && !result.Reused && !transientFailure &&
+	if result.Reused || transientFailure {
+		return
+	}
+	if result.ProbeMode == "text" || managedProbeTextResponse(result) && managedStructuredProbe(result.ProbeMode) {
+		item.LastTextStatus = "failed"
+		if managedProbeTextResponse(result) {
+			item.LastTextStatus = "success"
+		}
+		item.LastTextMessage = boundedManagedProbeMessage(result.TextCheck.Message)
+		if item.LastTextMessage == "" {
+			item.LastTextMessage = boundedManagedProbeMessage(result.Message)
+		}
+		item.LastTextTestedAt = &testedAt
+		item.LastTextUsage = result.Usage
+		item.LastTextDiagnostic = result.Diagnostic
+		item.LastTextDiagnostic.ContentPreview = ""
+	}
+	if managedStructuredProbe(item.LastProbeMode) &&
 		(result.GeneratedRequest || result.CapabilityCheck.OK || result.CapabilityCheck.Code != "") {
 		applyManagedCapabilityProbe(item, result, &testedAt)
 	}
@@ -237,17 +276,35 @@ func applyManagedCapabilityProbe(item *ManagedAPIConfig, result ManagedAPIProbeR
 }
 
 func transientManagedProbeFailure(result ManagedAPIProbeResult) bool {
-	return result.ErrorCode == "provider_timeout" || result.ErrorCode == "provider_unavailable"
+	if result.ErrorCode == "provider_timeout" || result.ErrorCode == "provider_unavailable" || result.ErrorCode == "provider_rate_limited" {
+		return true
+	}
+	return result.StatusCode == 408 || result.StatusCode == 425 || result.StatusCode == 429 || result.StatusCode >= 500 ||
+		result.ErrorCode == "provider_error" && result.StatusCode == 0
+}
+
+func managedProbeConnectionOK(result ManagedAPIProbeResult) bool {
+	return result.OK || managedProbeTextResponse(result) || result.CredentialCheck.OK && result.ModelCheck.OK &&
+		result.StatusCode != 401 && result.StatusCode != 403 && result.StatusCode != 404 && !transientManagedProbeFailure(result)
 }
 
 func (s *MemoryStore) clearManagedDefault(tenantID, exceptID string) {
 	for id, item := range s.managedConfigs {
 		if item.TenantID == tenantID && id != exceptID && item.IsDefault {
 			item.IsDefault = false
-			item.UpdatedAt = time.Now().UTC()
+			item.UpdatedAt = nextManagedConfigUpdatedAt(item.UpdatedAt)
 			s.managedConfigs[id] = item
 		}
 	}
+}
+
+// 更新时间承担配置版本标识；系统时钟回退也不能让新修改重复旧版本。
+func nextManagedConfigUpdatedAt(previous time.Time) time.Time {
+	now := time.Now().UTC()
+	if !now.After(previous) {
+		return previous.Add(time.Nanosecond)
+	}
+	return now
 }
 
 var _ ManagedAPIConfigStore = (*MemoryStore)(nil)

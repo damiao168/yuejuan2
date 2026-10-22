@@ -58,11 +58,14 @@ export interface ModelHealth {
   credential_hint?: string;
   connection_status?: string;
   connection_message?: string;
+  text_status?: string;
+  text_message?: string;
   capability_status?: string;
   capability_version?: string;
   capability_message?: string;
   latency_ms?: number;
   last_tested_at?: string;
+  last_text_tested_at?: string;
   last_capability_tested_at?: string;
 }
 

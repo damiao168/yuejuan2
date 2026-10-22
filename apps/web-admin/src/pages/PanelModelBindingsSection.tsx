@@ -8,9 +8,10 @@ import {
   type ManagedModelAPIConfig,
   type PanelAgentRole,
   type PanelEducationStage,
-  type PanelModelRoleBinding
+  type PanelModelRoleBinding,
+  type GradingModelUse
 } from "../api/modelApiConfig";
-import { modelConfigOptionLabel } from "../features/platform-model-config/lib/modelConfig";
+import { capabilityVerified as structuredVerified, modelConfigOptionLabel } from "../features/platform-model-config/lib/modelConfig";
 import { getCurrentRuntimePrompt, type RuntimePrompt } from "../api/modelGovernance";
 import { ScoringSetupChecklist } from "../components/model-governance/ScoringSetupChecklist";
 
@@ -54,11 +55,10 @@ function emptyDrafts(): RoleDrafts {
 }
 
 function capabilityVerified(config: ManagedModelAPIConfig) {
-  return config.status === "active" && config.last_capability_status === "success" &&
-    config.last_capability_probe_version === "structured-json-v3";
+  return config.status === "active" && structuredVerified(config);
 }
 
-export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = false, onDirtyChange, onSavingChange, onOpenGovernance }: Readonly<{ tenantID: string; configs: ManagedModelAPIConfig[]; loadingConfigs?: boolean; onDirtyChange?: (dirty: boolean) => void; onSavingChange?: (saving: boolean) => void; onOpenGovernance?: (view: string, scope?: { stage: string; subject: string; archetype: string }) => void }>) {
+export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = false, suggestedModelID, savedUses = [], onSaved, onDirtyChange, onSavingChange, onOpenGovernance }: Readonly<{ tenantID: string; configs: ManagedModelAPIConfig[]; loadingConfigs?: boolean; suggestedModelID?: string; savedUses?: GradingModelUse[]; onSaved?: () => void; onDirtyChange?: (dirty: boolean) => void; onSavingChange?: (saving: boolean) => void; onOpenGovernance?: (view: string, scope?: { stage: string; subject: string; archetype: string }) => void }>) {
   const { message, modal } = AntApp.useApp();
   const [stage, setStage] = useState<PanelEducationStage>("senior");
   const [subject, setSubject] = useState("mathematics");
@@ -160,7 +160,7 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
     const canDisableMissing = draft.status === "disabled" && existing?.managed_model_api_config_id === draft.managed_model_api_config_id;
     if ((!config && !canDisableMissing) || !draft.prompt_version.trim() || !draft.strength_rank ||
       (draft.status === "active" && (!config || !capabilityVerified(config)))) {
-      message.error("请选择本校已通过完整能力检测的模型，并填写实际部署的 Prompt 版本");
+      message.error("请选择本校已通过结构化输出检测的模型，并填写实际部署的 Prompt 版本");
       return;
     }
     savingRef.current = true;
@@ -184,6 +184,7 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
           status: response.binding.status
         } }));
         message.success(`${roles.find((item) => item.key === role)?.title} 已保存；不会改变日常对话模型`);
+        onSaved?.();
       }
     } catch (error) {
       if (requestID === requestRef.current) {
@@ -243,6 +244,7 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
   };
 
   const typeOptions = questionTypeOptions(runtimePrompt, subject, archetype);
+  const suggestedModel = configs.find((config) => config.id === suggestedModelID);
   const promptOptions = [...new Set([runtimePrompt?.prompt_version, ...bindings.map((item) => item.prompt_version)].filter((value): value is string => Boolean(value)))].map((value) => ({ value, label: `${value}${value === runtimePrompt?.prompt_version ? " · 当前部署" : " · 已保存"}` }));
 
   return (
@@ -256,6 +258,13 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
       </div>
       {bindingConflict ? <Alert type="warning" showIcon message="角色配置已变化，暂时不能保存" description={bindingConflict} /> : null}
       {loadError ? <Alert type="error" showIcon message="角色配置读取失败，暂时不能保存" description={`${loadError}。已保留本页输入，请刷新绑定后核对。`} /> : null}
+      {suggestedModel ? <div className="platform-panel-suggested-model"><strong>当前模型：{suggestedModel.model_name}</strong>
+        <p className="platform-panel-bindings-hint">选择下方范围，再将当前模型用于指定角色并保存。已保存的角色：</p>
+        <div className="platform-model-saved-uses">{savedUses.length ? savedUses.map(use => <Button key={`${use.education_stage}:${use.subject_code}:${use.archetype_code}:${use.agent_role}`} size="small" disabled={savingRole !== null || loading}
+          onClick={() => changeScope(() => { setStage(use.education_stage); setSubject(use.subject_code); setArchetype(use.archetype_code); setArchetypeInput(use.archetype_code); })}>
+          {use.education_stage === "senior" ? "高中" : "初中"} / {subjects.find(subject => subject.value === use.subject_code)?.label ?? use.subject_code} / {use.archetype_code === "*" ? "全部题型" : questionTypeLabels[use.archetype_code] ?? use.archetype_code} / {roles.find(role => role.key === use.agent_role)?.title ?? use.agent_role}
+        </Button>) : <small>暂无已启用的角色绑定</small>}</div>
+      </div> : null}
       <div className="platform-panel-bindings-scope">
         <label>学段<Select value={stage} options={[{ value: "senior", label: "高中" }, { value: "junior", label: "初中" }]} onChange={(value) => changeScope(() => setStage(value))} disabled={savingRole !== null} /></label>
         <label>学科<Select value={subject} options={subjects} onChange={(value) => changeScope(() => setSubject(value))} disabled={savingRole !== null} showSearch optionFilterProp="label" /></label>
@@ -280,6 +289,8 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
           return <div className="platform-panel-role" key={role.key}>
             <div><h3>{role.title}</h3><small>{role.description}</small>{dirtyRoles.includes(role.key) ? <small className="platform-panel-role-dirty">未保存更改</small> : null}</div>
             <label>评分模型<Select aria-label={`${role.title}评分模型`} value={draft.managed_model_api_config_id || undefined} options={modelOptions} placeholder="选择已验证的学校模型" showSearch optionFilterProp="label" loading={loadingConfigs} disabled={!tenantID || !bindingReady || loadingConfigs || savingRole !== null} onChange={(value) => setRoleDraft(role.key, { managed_model_api_config_id: value })} /></label>
+            {suggestedModel ? <Button size="small" disabled={!bindingReady || loadingConfigs || savingRole !== null || !capabilityVerified(suggestedModel)}
+              onClick={() => setRoleDraft(role.key, { managed_model_api_config_id: suggestedModel.id })}>将 {suggestedModel.model_name} 用于{role.title}</Button> : null}
             <label>评分规则版本<Select aria-label={`${role.title} Prompt 版本`} value={draft.prompt_version || undefined} options={[...promptOptions, ...(!promptOptions.some((item) => item.value === draft.prompt_version) && draft.prompt_version ? [{ value: draft.prompt_version, label: `${draft.prompt_version} · 自定义` }] : [])]} placeholder="选择评分服务部署版本" disabled={!tenantID || !bindingReady || savingRole !== null} onChange={(value) => setRoleDraft(role.key, { prompt_version: value })} /></label>
             {advanced ? <label>自定义 Prompt 版本<Input aria-label={`${role.title}自定义 Prompt 版本`} value={draft.prompt_version} maxLength={128} placeholder="填写已核实的部署版本" disabled={!tenantID || !bindingReady || savingRole !== null} onChange={(event) => setRoleDraft(role.key, { prompt_version: event.target.value })} /></label> : null}
             <div className="platform-panel-role-footer">

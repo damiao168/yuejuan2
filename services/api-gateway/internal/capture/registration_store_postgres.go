@@ -3,6 +3,7 @@ package capture
 import (
 	"context"
 	"database/sql"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -18,10 +19,11 @@ type templateLayout struct {
 }
 
 type templateLayoutPage struct {
-	PageNo          int              `json:"page_no"`
-	Width           int              `json:"width"`
-	Height          int              `json:"height"`
-	QuestionRegions []map[string]any `json:"question_regions"`
+	PageNo          int                          `json:"page_no"`
+	Width           int                          `json:"width"`
+	Height          int                          `json:"height"`
+	QuestionRegions []map[string]any             `json:"question_regions"`
+	GradingGroups   []paper.TemplateGradingGroup `json:"grading_groups,omitempty"`
 }
 
 type registrationFallbackTemplate struct {
@@ -38,6 +40,16 @@ type registrationPageRow struct {
 	id, submissionPageID, assetID, hash string
 	templateID, templateHash            string
 	pageNo, revision                    int
+	explicitPageNo                      bool
+	identity                            registrationPageIdentity
+}
+
+type registrationPageIdentity struct {
+	PageNoSource        string `json:"page_no_source"`
+	MatchedTemplateID   string `json:"matched_template_id"`
+	MatchedTemplateHash string `json:"matched_template_content_hash"`
+	MatchedSourceHash   string `json:"matched_source_sha256"`
+	MatchedPageNo       int    `json:"matched_page_no"`
 }
 
 type registrationQueueScope struct {
@@ -79,6 +91,14 @@ func QueueSubmissionPagesInTx(ctx context.Context, tx *sql.Tx, tenantID, submiss
 	}
 	if err = ensureBatchWritableTx(ctx, tx, tenantID, batchID); err != nil {
 		return nil, err
+	}
+	// 未组齐的页不能进入配准；否则单独一张背面也可能被当成完整答卷。
+	var waiting bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM capture_page WHERE tenant_id=$1 AND submission_id=$2::uuid AND deleted_at IS NULL AND status<>'deleted' AND page_identity->>'grouping_status' IN ('waiting_files','incomplete_pages','identity_conflict'))`, tenantID, submissionID).Scan(&waiting); err != nil {
+		return nil, err
+	}
+	if waiting {
+		return []RegistrationRun{}, nil
 	}
 	scope := registrationQueueScope{tenantID: tenantID, examID: examID, batchID: batchID, actorID: actorID}
 	binding, err := loadRegistrationBindingTx(ctx, tx, scope, submissionID)
@@ -161,7 +181,8 @@ WHERE cp.tenant_id=$1::uuid AND cp.submission_id=$2::uuid AND cp.status='needs_r
 
 func loadRegistrationPagesTx(ctx context.Context, tx *sql.Tx, tenantID, submissionID string, bindingExists bool) ([]registrationPageRow, error) {
 	rows, err := tx.QueryContext(ctx, `SELECT cp.id::text,cp.submission_page_id::text,sp.normalized_file_asset_id::text,cp.assigned_page_no,cp.revision,fa.hash_sha256,
-	COALESCE(sheet.template_id::text,cp.barcode_template_id::text,''),COALESCE(sheet.template_content_hash,'')
+	COALESCE(sheet.template_id::text,cp.barcode_template_id::text,''),COALESCE(sheet.template_content_hash,''),
+	COALESCE(cp.manual_override ? 'page_no' OR cp.page_identity->>'barcode_status'='verified',false),cp.page_identity
 	FROM capture_page cp
 	JOIN submission_page sp ON sp.tenant_id=cp.tenant_id AND sp.id=cp.submission_page_id
 	JOIN file_asset fa ON fa.tenant_id=sp.tenant_id AND fa.id=sp.normalized_file_asset_id
@@ -182,7 +203,12 @@ func loadRegistrationPagesTx(ctx context.Context, tx *sql.Tx, tenantID, submissi
 	pages := []registrationPageRow{}
 	for rows.Next() {
 		var p registrationPageRow
-		if err = rows.Scan(&p.id, &p.submissionPageID, &p.assetID, &p.pageNo, &p.revision, &p.hash, &p.templateID, &p.templateHash); err != nil {
+		var identityRaw []byte
+		if err = rows.Scan(&p.id, &p.submissionPageID, &p.assetID, &p.pageNo, &p.revision, &p.hash, &p.templateID, &p.templateHash, &p.explicitPageNo, &identityRaw); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if err = json.Unmarshal(identityRaw, &p.identity); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -224,8 +250,10 @@ func prepareRegistrationTemplateTx(ctx context.Context, tx *sql.Tx, scope regist
 	if err != nil {
 		// 多模板或无模板时先建立匹配任务，返回空配准列表，等待匹配结果继续排队。
 		if template.routingMode == "single_template" && errors.Is(err, sql.ErrNoRows) {
-			if _, matchErr := queueTemplateMatchRun(ctx, tx, scope.tenantID, scope.examID, scope.actorID, pages[0]); matchErr != nil {
-				return registrationQueueTemplate{}, false, matchErr
+			for _, page := range pages {
+				if _, matchErr := queueTemplateMatchRun(ctx, tx, scope.tenantID, scope.examID, scope.actorID, page); matchErr != nil {
+					return registrationQueueTemplate{}, false, matchErr
+				}
 			}
 			if err = aggregateBatchTx(ctx, tx, scope.tenantID, scope.batchID); err != nil {
 				return registrationQueueTemplate{}, false, err
@@ -234,7 +262,29 @@ func prepareRegistrationTemplateTx(ctx context.Context, tx *sql.Tx, scope regist
 		}
 		return registrationQueueTemplate{}, false, mapNotFound(err)
 	}
-	return template, false, nil
+	matchingQueued := false
+	for _, page := range pages {
+		// 文件内页序只定位解码图片；即使考试已绑定模板，也要先识别没有受控条码或人工页码的答题卡页面。
+		if registrationPageNumberResolved(page, template) {
+			continue
+		}
+		if _, err = queueTemplateMatchRun(ctx, tx, scope.tenantID, scope.examID, scope.actorID, page); err != nil {
+			return registrationQueueTemplate{}, false, err
+		}
+		matchingQueued = true
+	}
+	if matchingQueued {
+		if err = aggregateBatchTx(ctx, tx, scope.tenantID, scope.batchID); err != nil {
+			return registrationQueueTemplate{}, false, err
+		}
+	}
+	return template, matchingQueued, nil
+}
+
+func registrationPageNumberResolved(page registrationPageRow, template registrationQueueTemplate) bool {
+	return page.explicitPageNo || (page.identity.PageNoSource == "visual_template_match" &&
+		page.identity.MatchedPageNo == page.pageNo && page.identity.MatchedTemplateID == template.id &&
+		page.identity.MatchedTemplateHash == template.contentHash && page.identity.MatchedSourceHash == page.hash)
 }
 
 func loadRegistrationTemplateTx(ctx context.Context, tx *sql.Tx, scope registrationQueueScope, binding registrationTemplateBinding, pages []registrationPageRow) (registrationQueueTemplate, error) {
@@ -345,7 +395,7 @@ VALUES ($1,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7,$8,$9,'processing','opencv-
 		"registration_run_id": runID, "capture_page_id": page.id, "exam_id": examID,
 		"source_file_asset_id": page.assetID, "source_download_url": fileDownloadRoutePrefix + page.assetID + fileDownloadRouteSuffix, "source_content_type": "image/png",
 		"template_id": templateID, "template_content_hash": templateHash, "template_file_asset_id": templateAssetID, "template_download_url": fileDownloadRoutePrefix + templateAssetID + fileDownloadRouteSuffix, "template_content_type": templateContentType,
-		"page_no": page.pageNo, "template_page_index": page.pageNo, "template_width": templatePage.Width, "template_height": templatePage.Height, "question_regions": templatePage.QuestionRegions, "render_dpi": 300,
+		"page_no": page.pageNo, "template_page_index": page.pageNo, "template_width": templatePage.Width, "template_height": templatePage.Height, "question_regions": templatePage.QuestionRegions, "grading_groups": templatePage.GradingGroups, "render_dpi": 300,
 		"routing_mode":       routingMode,
 		"fallback_templates": fallbackPayload,
 	})
@@ -380,7 +430,7 @@ func registrationFallbackPayload(templates []registrationFallbackTemplate, pageN
 			"template_id": candidate.ID, "template_content_hash": candidate.ContentHash,
 			"template_name": candidate.Name, "version_no": candidate.VersionNo,
 			"template_download_url": fileDownloadRoutePrefix + candidate.AssetID + fileDownloadRouteSuffix, "template_content_type": candidate.ContentType,
-			"template_page_index": candidatePage.PageNo, "question_regions": candidatePage.QuestionRegions,
+			"template_page_index": candidatePage.PageNo, "question_regions": candidatePage.QuestionRegions, "grading_groups": candidatePage.GradingGroups,
 		})
 	}
 	return payload
@@ -413,12 +463,20 @@ func (s *PostgresStore) ApplyRegistrationResult(ctx context.Context, tenantID, r
 		return RegistrationRun{}, err
 	}
 	defer tx.Rollback()
+	out, err := s.applyRegistrationResultInTx(ctx, tx, tenantID, runID, input)
+	if err != nil {
+		return RegistrationRun{}, err
+	}
+	return out, tx.Commit()
+}
+
+func (s *PostgresStore) applyRegistrationResultInTx(ctx context.Context, tx *sql.Tx, tenantID, runID string, input RegistrationResultInput) (RegistrationRun, error) {
 	current, err := scanRegistrationRun(tx.QueryRowContext(ctx, `SELECT `+registrationColumns+` FROM page_registration_run WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, runID))
 	if err != nil {
 		return RegistrationRun{}, err
 	}
 	if current.ProcessingStatus == "completed" {
-		return current, tx.Commit()
+		return current, nil
 	}
 	if current.ProcessingStatus != "processing" && current.ProcessingStatus != "retryable_error" {
 		return RegistrationRun{}, ErrInvalidTransition
@@ -477,7 +535,7 @@ revision=revision+1,updated_at=now()
 WHERE b.tenant_id=$1 AND b.id=(SELECT capture_batch_id FROM capture_page WHERE tenant_id=$1 AND id=$2::uuid)`, tenantID, current.CapturePageID); err != nil {
 		return RegistrationRun{}, err
 	}
-	return out, tx.Commit()
+	return out, nil
 }
 
 func (s *PostgresStore) ApplyRegistrationFailure(ctx context.Context, tenantID, runID, errorCode string, errorDetail map[string]any, retryable bool) (RegistrationRun, error) {

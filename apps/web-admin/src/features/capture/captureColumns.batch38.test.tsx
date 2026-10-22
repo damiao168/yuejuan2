@@ -44,7 +44,9 @@ describe("采集列错误与模板候选展示", () => {
   it.each([
     ["duplicate", "pdf_decode_failed", "PDF 无法解析，请重新导出后再导入", "pdf_decode_failed"],
     ["failed", "unsupported_type", "文件格式不支持，请转为 PDF 或图片", "unsupported_type"],
-    ["duplicate", "future_error", "处理失败，请删除后重新导入", "future_error"],
+    ["duplicate", "future_error", "处理失败，请重试原文件；仍失败请联系管理员", "future_error"],
+    ["failed", "source_download_failed", "服务暂时无法读取已上传文件，请重试原文件；仍失败请联系管理员", "source_download_failed"],
+    ["failed", "decoded_page_upload_failed:503", "页面保存失败，请重试原文件；仍失败请联系管理员", "decoded_page_upload_failed:503"],
     ["duplicate", "", "内容与批次内文件重复", undefined],
     ["failed", "", "-", undefined],
     ["ready", undefined, "-", undefined],

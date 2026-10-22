@@ -308,14 +308,18 @@ func (h *Handler) CompleteRegistrationCorrection(w http.ResponseWriter, r *http.
 			return
 		}
 	}
-	out, err := h.store.ApplyRegistrationCorrectionPreview(r.Context(), user.TenantID, correctionID, input)
-	if err != nil {
-		writeError(w, r, err)
+	if err := h.validateGradingGroupAssets(r.Context(), user.TenantID, context.ExamID, "page_registration_correction_preview", correctionID, task.Payload, input.Segments); err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "correction_grading_group_invalid", "shared grading crop does not match the frozen template or current preview")
 		return
 	}
-	result := map[string]any{"correction_id": correctionID, "result_version": input.ResultVersion, "preview_registered_file_asset_id": input.PreviewRegisteredFileAssetID, "segments": input.Segments}
-	if _, err = h.runtime.Complete(r.Context(), user.TenantID, input.TaskID, workerruntime.CompleteInput{LeaseToken: input.LeaseToken, ResultSchemaVersion: "page-registration-correction-result-v1", Result: result, DurationMS: input.DurationMS}); err != nil {
-		writeRuntimeError(w, r, err)
+	coordinator, ok := h.store.(RegistrationResultCommandStore)
+	if !ok {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "capture_command_unavailable", "atomic capture completion is unavailable")
+		return
+	}
+	out, err := coordinator.SubmitRegistrationCorrectionResultCommand(r.Context(), user.TenantID, correctionID, input, h.runtime)
+	if err != nil {
+		writeCaptureCompletionError(w, r, err)
 		return
 	}
 	h.auditAction(r, "page.registration_correction_preview_ready", "page_registration_correction", out.ID, "manual correction preview completed")
@@ -607,14 +611,19 @@ func (h *Handler) CompleteFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	result := map[string]any{"capture_file_id": fileID, "decoder_profile": input.DecoderProfile, "original_page_count": input.OriginalPageCount, "detected_content_type": input.DetectedContentType, "pages": input.Pages, "result_version": input.ResultVersion}
-	out, err := h.store.ApplyFileResult(r.Context(), user.TenantID, item.ID, input.Pages)
-	if err != nil {
-		writeError(w, r, err)
+	coordinator, ok := h.store.(FileResultCommandStore)
+	if !ok {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "capture_command_unavailable", "atomic capture completion is unavailable")
 		return
 	}
-	_, err = h.runtime.Complete(r.Context(), user.TenantID, input.TaskID, workerruntime.CompleteInput{LeaseToken: input.LeaseToken, ResultSchemaVersion: "capture-file-result-v1", Result: result, DurationMS: input.DurationMS})
+	// 领域页面和租约终态同一次提交；已成功回执只允许同指纹重放，不按页数接受不同产物。
+	out, err := coordinator.SubmitFileResultCommand(r.Context(), user.TenantID, item.ID, input, h.runtime, result)
 	if err != nil {
-		writeRuntimeError(w, r, err)
+		if errors.Is(err, workerruntime.ErrLeaseExpired) || errors.Is(err, workerruntime.ErrLeaseMismatch) || errors.Is(err, workerruntime.ErrConflict) || errors.Is(err, workerruntime.ErrInvalidTransition) {
+			writeRuntimeError(w, r, err)
+		} else {
+			writeError(w, r, err)
+		}
 		return
 	}
 	h.auditAction(r, "capture_file.decoded", "capture_file", out.ID, "materialize decoded capture pages")
@@ -723,6 +732,14 @@ func (h *Handler) RetryRegistration(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusAccepted, map[string]any{"run": out})
 }
 
+func writeCaptureCompletionError(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, workerruntime.ErrLeaseExpired) || errors.Is(err, workerruntime.ErrLeaseMismatch) || errors.Is(err, workerruntime.ErrConflict) || errors.Is(err, workerruntime.ErrInvalidTransition) {
+		writeRuntimeError(w, r, err)
+		return
+	}
+	writeError(w, r, err)
+}
+
 func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	runID := r.PathValue("runId")
@@ -757,14 +774,18 @@ func (h *Handler) CompleteRegistration(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	out, err := h.store.ApplyRegistrationResult(r.Context(), user.TenantID, runID, input)
-	if err != nil {
-		writeError(w, r, err)
+	if err := h.validateGradingGroupAssets(r.Context(), user.TenantID, source.ExamID, "answer_segment_crop", runID, task.Payload, input.Segments); err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "registration_grading_group_invalid", "shared grading crop does not match the frozen template or current registration")
 		return
 	}
-	result := map[string]any{"registration_run_id": runID, "result_version": input.ResultVersion, "registered_file_asset_id": input.RegisteredFileAssetID, "method": input.Method, "confidence": input.Confidence, "segments": input.Segments}
-	if _, err = h.runtime.Complete(r.Context(), user.TenantID, input.TaskID, workerruntime.CompleteInput{LeaseToken: input.LeaseToken, ResultSchemaVersion: "page-registration-result-v1", Result: result, DurationMS: input.DurationMS}); err != nil {
-		writeRuntimeError(w, r, err)
+	coordinator, ok := h.store.(RegistrationResultCommandStore)
+	if !ok {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "capture_command_unavailable", "atomic capture completion is unavailable")
+		return
+	}
+	out, err := coordinator.SubmitRegistrationResultCommand(r.Context(), user.TenantID, runID, input, h.runtime)
+	if err != nil {
+		writeCaptureCompletionError(w, r, err)
 		return
 	}
 	h.auditAction(r, "page.registration_completed", "page_registration_run", out.ID, "materialize registered page and segment crops")

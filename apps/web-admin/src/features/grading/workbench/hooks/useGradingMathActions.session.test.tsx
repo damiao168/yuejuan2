@@ -175,6 +175,65 @@ describe("math workbench action scope and late lock ownership (mock API)", () =>
     expect(current.state.requesting).toBe(false);
   });
 
+  it("stops presenting the old suggestion after incomplete output without changing the human draft", async () => {
+    const current = fixture();
+    current.state.ctx.reviewContext.draft = { score: 1, comments: "教师草稿" } as WorkbenchContext["reviewContext"]["draft"];
+    api.create.mockRejectedValue(new ApiClientError(502, "ai_output_incomplete", "private partial model output"));
+    await render(current.options);
+    await actions.requestMathSuggestion();
+    expect(current.state.notice).toBe("AI 建议未完成，请人工评分。");
+    expect(current.state.ctx.aiGrades).toEqual([]);
+    expect(current.state.ctx.reviewContext.ai_failure).toEqual({ failure_kind: "output_incomplete" });
+    expect(current.state.ctx.warnings).toEqual(["AI 建议未完成，请人工评分。"]);
+    expect(current.state.ctx.reviewContext.draft).toEqual({ score: 1, comments: "教师草稿" });
+    expect(client.invalidateQueries).toHaveBeenCalledWith({ queryKey: reviewTaskContextKeys.task(current.options.queryScope, "A") });
+    expect(current.math.refresh).toHaveBeenCalledTimes(2);
+    expect(current.state.requesting).toBe(false);
+  });
+
+  it("clears the prior incomplete notice only after a successful current evidence binding", async () => {
+    const current = fixture();
+    current.state.ctx.reviewContext.ai_failure = { failure_kind: "output_incomplete" };
+    current.state.ctx.warnings = ["AI 建议未完成，请人工评分。", "保留其他提示"];
+    api.create.mockResolvedValue({ grade: current.grade });
+    await render(current.options);
+    await actions.requestMathSuggestion();
+    expect(current.state.ctx.reviewContext.ai_failure).toBeUndefined();
+    expect(current.state.ctx.warnings).toEqual(["保留其他提示"]);
+  });
+
+  it("does not reintroduce an outdated grade while the prior current failure remains", async () => {
+    const current = fixture();
+    current.state.ctx.reviewContext.ai_failure = { failure_kind: "output_incomplete" };
+    current.state.ctx.aiGrades = [];
+    current.state.ctx.warnings = ["AI 建议未完成，请人工评分。"];
+    const latest: MathWorkbenchEvidence = { ...current.evidence, understanding: { ...current.evidence.understanding!, artifact: { ...current.evidence.understanding!.artifact, version: 4 } } };
+    api.create.mockResolvedValue({ grade: current.grade });
+    vi.mocked(current.math.refresh).mockResolvedValueOnce(current.evidence).mockResolvedValueOnce(latest);
+    await render(current.options);
+    await actions.requestMathSuggestion();
+    expect(current.state.ctx.reviewContext.ai_failure).toEqual({ failure_kind: "output_incomplete" });
+    expect(current.state.ctx.aiGrades).toEqual([]);
+    expect(current.state.ctx.warnings).toEqual(["AI 建议未完成，请人工评分。"]);
+  });
+
+  it("does not clear a new same-task failure received while generation was pending", async () => {
+    const current = fixture();
+    const response = deferred<{ grade: AiGrade }>();
+    api.create.mockReturnValue(response.promise);
+    await render(current.options);
+    const pending = actions.requestMathSuggestion();
+    await Promise.resolve();
+    const failure = { failure_kind: "output_truncated" } as const;
+    current.state.ctx = { ...current.state.ctx, aiGrades: [], warnings: ["AI 建议未完成，请人工评分。"], reviewContext: { ...current.state.ctx.reviewContext, ai_failure: failure } };
+    await render({ ...current.options, ctx: current.state.ctx });
+    response.resolve({ grade: current.grade });
+    await pending;
+    expect(current.state.ctx.reviewContext.ai_failure).toBe(failure);
+    expect(current.state.ctx.aiGrades).toEqual([]);
+    expect(current.state.notice).toBe("未生成可采纳的当前数学 v2 建议，请继续人工阅卷。");
+  });
+
   it("does not generate a grade while the pre-generation evidence is pending", async () => {
     const current = fixture();
     vi.mocked(current.math.refresh).mockResolvedValue({ ...current.evidence, phase: "pending" });

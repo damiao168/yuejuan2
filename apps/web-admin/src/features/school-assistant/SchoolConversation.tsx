@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type SubmitEvent, type KeyboardEvent } from "react";
-import { App, Button, Drawer, Input, Tooltip } from "antd";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type SubmitEvent, type KeyboardEvent } from "react";
+import { App, Button, Drawer, Input, Select, Tooltip } from "antd";
 import { ArrowUp, Bot, FileText, Menu, Paperclip, Square, X } from "lucide-react";
 import type { SessionUser } from "../../auth/session";
 import { getUserErrorMessage } from "../../api/client";
@@ -9,8 +9,10 @@ import { readChatAttachment } from "./conversationAttachments";
 import { readConversationThreads, serializeConversationThreads, type ConversationThread } from "./conversationStorage";
 import { emptyConversationEvidence, mergeConversationEvidence, acceptConversationEvent, conversationAccountKey, contextFromEvidence, type ConversationEvidence, type ConversationStreamIdentity } from "./conversationState";
 import { ConversationFlow, ConversationHistory } from "./SchoolConversationDisplay";
+import { ConversationImage, canPreviewConversationImage } from "./ConversationImage";
 import { conversationModelStatus, conversationPlaceholder, type PendingConversation } from "./conversationPresentation";
 import { conversationRecovery } from "./conversationRecovery";
+import { conversationModelPreferenceKey, readConversationModelPreference, saveConversationModelPreference } from "./conversationModelPreference";
 
 import "../../pages/school-ai-chat.css";
 import "./school-conversation.css";
@@ -35,12 +37,21 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
   const { message: toast, modal } = App.useApp();
   // 使用完整授权范围隔离一般聊天历史；旧 v1 没有授权信息，不能自动恢复到新的业务助手。
   const storageKey = `edugrade.ai-chat.v2:${conversationAccountKey(user)}`;
+  const modelPreferenceKey = conversationModelPreferenceKey(conversationAccountKey(user));
   const [threads, setThreads] = useState<ConversationThread[]>(() => user.publicComputer ? [] : readConversationThreads(storageKey));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const activeIdRef = useRef<string | null>(null);
+  const activateThread = useCallback((id: string | null) => {
+    // ref 与页面导航同步，发送和开启新对话同一帧发生时也按当前对话判断在途锁。
+    activeIdRef.current = id;
+    setActiveId(id);
+  }, []);
   const [draft, setDraft] = useState("");
   const [draftAttachments, setDraftAttachments] = useState<SchoolChatAttachment[]>([]);
   const [attaching, setAttaching] = useState(false);
   const [model, setModel] = useState<SchoolChatModel | null>(null);
+  const [chatModels, setChatModels] = useState<SchoolChatModel[]>([]);
+  const [selectedModelID, setSelectedModelID] = useState<string>();
   const [modelLoading, setModelLoading] = useState(true);
   const [modelError, setModelError] = useState("");
   const [sendErrors, setSendErrors] = useState<Record<string, string>>({});
@@ -54,7 +65,9 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
   const expandedReasoning = useRef(new Set<string>());
   const [historyOpen, setHistoryOpen] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState("");
-  const scrollEnd = useRef<HTMLDivElement>(null);
+  const scrollFlow = useRef<HTMLDivElement>(null);
+  const followingReply = useRef(true);
+  const scrollThread = useRef<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeThread = threads.find((thread) => thread.id === activeId);
@@ -73,12 +86,13 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
     };
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 同一入口的名称或投影刷新不能清空正在写的对话；只有考试、来源模块或分区改变才重置。
   useEffect(() => {
     attachmentRead.current?.abort();
     attachmentRead.current = null;
     setAttaching(false);
     setSeedContext(initialContext);
-    setActiveId(null);
+    activateThread(null);
     setDraft("");
     setDraftAttachments([]);
   }, [initialContext?.exam_id, initialContext?.origin_module, initialContext?.origin_section]);
@@ -101,38 +115,55 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
   useEffect(() => {
     let mounted = true;
     getSchoolChatModel()
-      .then((response) => { if (mounted) setModel(response.model); })
+      .then((response) => {
+        if (!mounted) return;
+        const candidates = response.models ?? [];
+        // 本机偏好只在新读取的可用名单内恢复；取消开放、停用和跨校授权变化都不能沿用旧编号。
+        const preferredID = readConversationModelPreference(modelPreferenceKey, user.publicComputer);
+        const selected = candidates.find(item => item.id === preferredID && item.available) ?? response.model;
+        setModel(selected); setChatModels(candidates); setSelectedModelID(selected.id);
+        saveConversationModelPreference(modelPreferenceKey, user.publicComputer, selected.available ? selected.id : undefined);
+      })
       .catch((error: unknown) => { if (mounted) setModelError(getUserErrorMessage(error, "无法加载对话模型")); })
       .finally(() => { if (mounted) setModelLoading(false); });
     return () => { mounted = false; };
-  }, []);
+  }, [modelPreferenceKey, user.publicComputer]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 正文、消息数量和工具进度是滚动触发键；推理增量不能打断用户正在阅读的位置。
   useEffect(() => {
-    // 切换对话或正文、消息、工具进度变化时触发滚动；展开推理时保留阅读位置，推理增量本身不触发。
-    if (activeId && expandedReasoning.current.has(activeId)) return;
-    scrollEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (scrollThread.current !== activeId) {
+      scrollThread.current = activeId;
+      followingReply.current = true;
+    }
+    // 用户上翻后保留阅读位置；是否跟随由滚动事件记录，不能用追加正文后的距离反推。
+    if (!followingReply.current || (activeId && expandedReasoning.current.has(activeId))) return;
+    const flow = scrollFlow.current;
+    // 只滚消息容器，不启动持续的平滑动画，以免下一段输出和鼠标争抢滚动位置。
+    flow?.scrollTo({ top: flow.scrollHeight, behavior: "instant" });
   }, [activeId, activeThread?.messages.length, activePending?.content, activePending?.evidence.tools.length]);
 
   const openNew = useCallback(() => {
     attachmentRead.current?.abort();
     attachmentRead.current = null;
     setAttaching(false);
-    setActiveId(null);
+    activateThread(null);
     setDraft("");
     setDraftAttachments([]);
     setHistoryOpen(false);
     inputRef.current?.focus();
-  }, []);
+  }, [activateThread]);
 
   const complete = useCallback(async (threadId: string, messages: SchoolChatMessage[], context?: SchoolConversationContext) => {
     if (controllers.current.has(threadId) || controllers.current.size >= MAX_ACTIVE_CHATS) return;
     const controller = new AbortController();
+    // 每条在途对话固定本次模型；其他对话更改偏好不能改写请求或当前对话显示的模型。
+    const requestModelID = selectedModelID;
     // ref 立即登记在途请求，防止 React 状态提交前连续操作突破单对话或全局并发限制。
     controllers.current.set(threadId, controller);
-    setPending((current) => ({ ...current, [threadId]: { content: "", reasoning: "", evidence: emptyConversationEvidence() } }));
+    setPending((current) => ({ ...current, [threadId]: { content: "", reasoning: "", evidence: emptyConversationEvidence(), modelConfigID: requestModelID } }));
     setSendErrors((current) => { const next = { ...current }; delete next[threadId]; return next; });
     setFailedEvidence((current) => { const next = { ...current }; delete next[threadId]; return next; });
-    let partial: PendingConversation = { content: "", reasoning: "", evidence: emptyConversationEvidence() };
+    let partial: PendingConversation = { content: "", reasoning: "", evidence: emptyConversationEvidence(), modelConfigID: requestModelID };
     const identity: ConversationStreamIdentity = { sequence: 0 };
     let completed = false;
     try {
@@ -140,7 +171,8 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
         // 先挡住旧挂载、已停止或替换的请求，再推进序号；晚到回调不能污染当前流。
         if (!live.current || controller.signal.aborted || controllers.current.get(threadId) !== controller || completed || !acceptConversationEvent(identity, event)) return;
         if (event.type === "error") throw new Error(event.message || "模型暂时无法回答，请稍后重试");
-        if (event.type === "model") setModel(event.model);
+        // 多模型选择是本页偏好；并行请求的元数据不能把选择器切换到其他模型。
+        if (event.type === "model" && !chatModels.length) setModel(event.model);
         if (event.type === "delta") {
           partial = { ...partial, [event.channel]: partial[event.channel] + event.delta };
           setPending((current) => ({ ...current, [threadId]: partial }));
@@ -161,7 +193,7 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
             ...thread, messages: [...thread.messages, reply].slice(-50), updatedAt: Date.now(), context: contextFromEvidence(partial.evidence, context)
           } : thread));
         }
-      });
+      }, requestModelID);
       if (!completed) throw new Error("对话流意外中断");
     } catch (error) {
       if (!live.current || controllers.current.get(threadId) !== controller) return;
@@ -181,12 +213,13 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
         setPending((current) => { const next = { ...current }; delete next[threadId]; return next; });
       }
     }
-  }, []);
+  }, [chatModels.length, selectedModelID]);
 
   const send = useCallback((event?: SubmitEvent) => {
     event?.preventDefault();
     const content = draft.trim();
-    if ((!content && draftAttachments.length === 0) || (activeId && controllers.current.has(activeId)) || controllers.current.size >= MAX_ACTIVE_CHATS || attaching || !model?.available || content.length > 20_000) return;
+    if ((!content && draftAttachments.length === 0) || (activeId && controllers.current.has(activeId)) || controllers.current.size >= MAX_ACTIVE_CHATS || attachmentRead.current || attaching || !model?.available || content.length > 20_000) return;
+    followingReply.current = true;
     const id = activeThread?.id ?? crypto.randomUUID();
     expandedReasoning.current.delete(id);
     const messages: SchoolChatMessage[] = [...(activeThread?.messages ?? []), {
@@ -200,11 +233,11 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
       return [next, ...current.filter((thread) => thread.id !== id)]
         .filter((thread, index) => index < 20 || controllers.current.has(thread.id));
     });
-    setActiveId(id);
+    activateThread(id);
     setDraft("");
     setDraftAttachments([]);
     void complete(id, messages, activeContext);
-  }, [activeId, activeThread, activeContext, attaching, complete, draft, draftAttachments, model?.available]);
+  }, [activeId, activeThread, activeContext, activateThread, attaching, complete, draft, draftAttachments, model?.available]);
 
   const stop = () => { if (activeId) controllers.current.get(activeId)?.abort(); };
 
@@ -245,11 +278,9 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
     return accepted;
   };
 
-  const selectFiles = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
-    // ref 在状态提交前挡住第二次选择；换对话、换上下文或卸载会取消这次读取。
-    if (attachmentRead.current) return;
+  const addFiles = async (files: File[]) => {
+    // 粘贴与选择共用读取锁和名额；同一帧粘贴后按回车也要先等附件读取完成。
+    if (!files.length || attachmentRead.current || (activeId && controllers.current.has(activeId)) || controllers.current.size >= MAX_ACTIVE_CHATS) return;
     const available = MAX_ATTACHMENTS - draftAttachments.length;
     if (available <= 0) {
       toast.warning(`每次最多上传 ${MAX_ATTACHMENTS} 个文件`);
@@ -267,6 +298,29 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
     }
   };
 
+  const selectFiles = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    void addFiles(files);
+  };
+
+  const pasteImages = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = Array.from(event.clipboardData.items ?? []);
+    const images = items.filter(item => item.kind === "file" && item.type.startsWith("image/"))
+      .map(item => item.getAsFile()).filter((file): file is File => file !== null);
+    const files = images.length ? images : Array.from(event.clipboardData.files ?? []).filter(file => file.type.startsWith("image/"));
+    // 没有图片时保留浏览器原生文字粘贴；图片与 HTML 同时存在时不粘贴网页标记。
+    if (!files.length) return;
+    event.preventDefault();
+    if (!model?.available) return;
+    void addFiles(files);
+    const text = event.clipboardData.getData("text/plain");
+    if (text) {
+      const { selectionStart, selectionEnd } = event.currentTarget;
+      setDraft(current => `${current.slice(0, selectionStart)}${text}${current.slice(selectionEnd)}`.slice(0, 20_000));
+    }
+  };
+
   const copyReply = async (content: string, key: string) => {
     try {
       await navigator.clipboard.writeText(content);
@@ -280,6 +334,7 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
 
   const retry = () => {
     if (activeThread && activeThread.messages[activeThread.messages.length - 1]?.role === "user" && !controllers.current.has(activeThread.id) && controllers.current.size < MAX_ACTIVE_CHATS) {
+      followingReply.current = true;
       void complete(activeThread.id, activeThread.messages, activeThread.context);
     }
   };
@@ -287,7 +342,7 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
   const historyContent = <ConversationHistory threads={threads} activeId={activeId} pending={pending} onNew={openNew}
     onSelect={(id) => {
       attachmentRead.current?.abort(); attachmentRead.current = null; setAttaching(false);
-      setActiveId(id); setHistoryOpen(false);
+      activateThread(id); setHistoryOpen(false);
     }} onDelete={deleteThread} />;
 
   const clearContext = () => {
@@ -306,7 +361,17 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
     <section className="school-chat-main" aria-label="AI 对话内容">
       <header className="school-chat-topbar">
         <div className="school-chat-topbar-title"><Button className="school-chat-mobile-menu" type="text" icon={<Menu size={18} />} aria-label="打开对话历史" onClick={() => setHistoryOpen(true)} /><Bot size={21} /><span>学校 AI 助手</span></div>
-        <div className="school-chat-model-status"><i className={model?.available ? "is-online" : ""} />{conversationModelStatus(model, modelLoading)}{activeCount > 0 ? ` · ${activeCount}/${MAX_ACTIVE_CHATS} 个对话进行中` : ""}</div>
+        <div className="school-chat-model-status"><i className={model?.available ? "is-online" : ""} />{chatModels.length ? <Select aria-label="切换对话模型" size="small" style={{ width: "min(300px, 40vw)" }} value={activePending?.modelConfigID ?? selectedModelID} disabled={modelLoading || Boolean(activePending)}
+          options={chatModels.map(item => ({ value: item.id, label: `${item.display_name} · ${item.model_name}${item.available ? "" : "（不可用）"}`, disabled: !item.available }))}
+          onChange={id => {
+            const currentThread = activeIdRef.current;
+            if (currentThread && controllers.current.has(currentThread)) return;
+            const selected = chatModels.find(item => item.id === id && item.available);
+            if (selected) {
+              setSelectedModelID(id); setModel(selected); setModelError("");
+              saveConversationModelPreference(modelPreferenceKey, user.publicComputer, id);
+            }
+          }} /> : conversationModelStatus(model, modelLoading)}{activeCount > 0 ? ` · ${activeCount}/${MAX_ACTIVE_CHATS} 个对话进行中` : ""}</div>
       </header>
       {activeContext?.exam_id ? <div className="school-conversation-context"><span>当前考试<strong>{activeContext.exam_name || activeContext.exam_id}</strong></span><Button type="text" size="small" icon={<X size={13} />} aria-label="移除当前考试上下文" disabled={Boolean(activePending)} onClick={clearContext}>移除</Button></div> : null}
 
@@ -316,19 +381,28 @@ function AccountConversation({ user, initialContext, compact = false, onNavigate
         onReasoningToggle={(expanded) => {
           if (activeId) { if (expanded) expandedReasoning.current.add(activeId); else expandedReasoning.current.delete(activeId); }
         }} copiedMessage={copiedMessage} onCopy={copyReply} retryDisabled={activeCount >= MAX_ACTIVE_CHATS} onRetry={retry}
-        modelError={modelError} model={model} onSuggestion={(question) => { setDraft(question); inputRef.current?.focus(); }} scrollEndRef={scrollEnd} />
+        modelError={modelError} model={model} onSuggestion={(question) => { setDraft(question); inputRef.current?.focus(); }} scrollRef={scrollFlow}
+        onScroll={(event) => {
+          const flow = event.currentTarget;
+          // 仅容忍小数像素舍入；轻微上滚也要暂停，拖动滚动条和触摸滚动同样走此边界。
+          followingReply.current = flow.scrollHeight - flow.scrollTop - flow.clientHeight <= 2;
+        }} onWheel={(event) => {
+          // 滚轮默认滚动之前就交还控制权，避免同一帧到达的正文先把页面拉回底部。
+          if (event.deltaY < 0) followingReply.current = false;
+        }} />
 
       <div className="school-chat-composer-wrap">
         <form className="school-chat-composer" onSubmit={send}>
-          {draftAttachments.length > 0 ? <div className="school-chat-attachments">{draftAttachments.map((attachment) => <span key={`${attachment.name}-${attachment.size}`}><FileText size={15} /><b title={attachment.name}>{attachment.name}</b><small>{Math.max(1, Math.round(attachment.size / 1024))} KB</small><button type="button" aria-label={`移除附件：${attachment.name}`} onClick={() => setDraftAttachments((current) => current.filter((item) => item !== attachment))}><X size={13} /></button></span>)}</div> : null}
+          {draftAttachments.length > 0 ? <div className="school-chat-attachments">{draftAttachments.map((attachment, index) => <span className={attachment.media_type.startsWith("image/") ? "is-image" : undefined} title={`${attachment.name} · ${Math.max(1, Math.round(attachment.size / 1024))} KB`} key={`${attachment.name}-${attachment.size}-${index}`}>
+            {canPreviewConversationImage(attachment) ? <ConversationImage attachment={attachment} /> : <FileText size={15} />}<b title={attachment.name}>{attachment.name}</b><small>{Math.max(1, Math.round(attachment.size / 1024))} KB</small><button type="button" aria-label={`移除附件：${attachment.name}`} onClick={() => setDraftAttachments((current) => current.filter((item) => item !== attachment))}><X size={13} /></button></span>)}</div> : null}
           <Input.TextArea
-            ref={inputRef} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onInputKeyDown}
+            ref={inputRef} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onInputKeyDown} onPaste={pasteImages}
             placeholder={conversationPlaceholder(Boolean(model?.available), activeCount >= MAX_ACTIVE_CHATS, Boolean(activePending))} disabled={!model?.available || Boolean(activePending) || activeCount >= MAX_ACTIVE_CHATS}
             autoSize={{ minRows: 2, maxRows: 7 }} maxLength={20_000} aria-label="对话输入"
           />
           <div className="school-chat-composer-bottom">
-            <input ref={fileInputRef} className="school-chat-file-input" type="file" multiple accept=".pdf,.txt,.md,.csv,.json,.xml,.html,.css,.js,.jsx,.ts,.tsx,.py,.java,.go,.sql,.yaml,.yml,.log,.ini,.conf,text/*,application/pdf,application/json" onChange={(event) => void selectFiles(event)} />
-            <Tooltip title="支持 PDF 和常见文本文件，最多 3 个"><Button type="text" size="small" icon={<Paperclip size={17} />} loading={attaching} disabled={Boolean(activePending) || activeCount >= MAX_ACTIVE_CHATS || draftAttachments.length >= MAX_ATTACHMENTS} onClick={() => fileInputRef.current?.click()}>上传文件</Button></Tooltip>
+            <input ref={fileInputRef} className="school-chat-file-input" type="file" multiple accept=".png,.jpg,.jpeg,image/png,image/jpeg,.pdf,.txt,.md,.csv,.json,.xml,.html,.css,.js,.jsx,.ts,.tsx,.py,.java,.go,.sql,.yaml,.yml,.log,.ini,.conf,text/*,application/pdf,application/json" onChange={selectFiles} />
+            <Tooltip title="可直接粘贴 PNG、JPEG 图片，每张不超过 3 MB；支持 PDF 和文本，共最多 3 个附件"><Button type="text" size="small" icon={<Paperclip size={17} />} loading={attaching} disabled={Boolean(activePending) || activeCount >= MAX_ACTIVE_CHATS || draftAttachments.length >= MAX_ATTACHMENTS} onClick={() => fileInputRef.current?.click()}>上传文件</Button></Tooltip>
             {activePending ? <Button type="primary" shape="circle" icon={<Square size={15} fill="currentColor" />} aria-label="中断当前对话" onClick={stop} /> : <Button type="primary" shape="circle" htmlType="submit" icon={<ArrowUp size={19} />} aria-label="发送消息" disabled={(!draft.trim() && draftAttachments.length === 0) || !model?.available || activeCount >= MAX_ACTIVE_CHATS || attaching} />}
           </div>
         </form>

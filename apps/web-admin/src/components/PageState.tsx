@@ -1,5 +1,7 @@
 import { Alert, Button, Empty, Result, Spin } from "antd";
+import "./page-loading.css";
 import { Home, RefreshCw } from "lucide-react";
+import { usePageLoading } from "./pageReadiness";
 
 type ForbiddenScope = "platform" | "school" | "exam" | "general";
 
@@ -13,10 +15,14 @@ function permissionContact(scope: ForbiddenScope) {
 }
 
 export function LoadingState({ label = "加载中" }: Readonly<{ label?: string }>) {
+  usePageLoading();
   return (
-    <div className="state-panel">
-      <Spin />
-      <span>{label}</span>
+    <div className="state-panel state-panel-loading" aria-busy="true">
+      <div className="page-loading-status" role="status"><Spin size="small" /><span>{label}</span></div>
+      <div className="page-loading-skeleton" aria-hidden="true">
+        <i className="page-loading-heading" /><i className="page-loading-toolbar" />
+        <i /><i /><i /><i />
+      </div>
     </div>
   );
 }

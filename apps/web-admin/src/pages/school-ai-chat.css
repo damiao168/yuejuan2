@@ -9,7 +9,9 @@
 .school-chat-thread:hover { background: #f5f6f8; }
 .school-chat-thread.is-active { background: #e6f4ff; }
 .school-chat-thread > button:first-child { display: flex; min-width: 0; min-height: 36px; flex: 1; align-items: center; gap: 9px; padding: 0 10px; border: 0; background: transparent; color: var(--text); font-size: var(--eg-font-body); font-weight: 400; text-align: left; cursor: pointer; }
-.school-chat-thread > button:first-child span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 长标题只压缩文字区域，不能挤小同一列表里的对话图标。 */
+.school-chat-thread > button:first-child > svg { width: 15px; height: 15px; flex: 0 0 15px; }
+.school-chat-thread > button:first-child span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .school-chat-thread.is-active > button:first-child { color: var(--primary); font-weight: 500; }
 .school-chat-delete { display: grid; flex: 0 0 27px; height: 28px; margin-right: 5px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: #9aa3af; opacity: 0; cursor: pointer; }
 .school-chat-thread:hover .school-chat-delete, .school-chat-delete:focus-visible { opacity: 1; }
@@ -24,7 +26,8 @@
 .school-chat-model-status i { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #c4cbd5; }
 .school-chat-model-status i.is-online { background: #39a778; }
 /* 禁用浏览器滚动锚定，流式追加内容时由聊天组件决定是否跟随底部。 */
-.school-chat-flow { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; }
+/* 两侧预留对称滚动条空间，展开思考过程时内容不横移，并保持与输入框的中心线一致。 */
+.school-chat-flow { min-height: 0; flex: 1; overflow-y: auto; scrollbar-gutter: stable both-edges; overscroll-behavior: contain; overflow-anchor: none; }
 .school-chat-flow.is-empty { display: grid; place-items: center; }
 .school-chat-welcome { width: min(100% - 40px, 630px); margin: -35px auto 0; text-align: center; animation: school-chat-enter .3s ease-out; }
 .school-chat-welcome-mark { display: grid; width: 60px; height: 60px; margin: 0 auto 21px; place-items: center; border-radius: 18px; background: #edf3fb; color: #3168b2; }
@@ -93,6 +96,9 @@
 .school-chat-shell .math-markdown .task-list-item { padding-left: 0; }
 .school-chat-shell .math-markdown .task-list-item input[type="checkbox"] { width: 13px; height: 13px; margin: 0 8px 0 0; accent-color: #397acb; vertical-align: -1px; }
 .school-chat-shell .math-markdown .katex { overflow-wrap: normal; word-break: normal; white-space: nowrap; }
+/* 行内公式使用 KaTeX 自身的文字基线；滚动放在段落上，避免滚动盒的底边取代公式基线。 */
+.school-chat-shell .math-markdown p > .katex { display: inline; margin: 0 .05em; padding: 0; overflow: visible; vertical-align: baseline; white-space: normal; }
+.school-chat-shell .math-markdown p:has(> .katex) { padding-block: .15em .25em; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
 .school-chat-shell .math-markdown .katex-display { max-width: 100%; margin: 14px 0; overflow-x: auto; overflow-y: hidden; padding-block: 2px; scrollbar-width: thin; }
 .school-chat-shell .math-markdown .katex-display > .katex { display: block; width: max-content; min-width: 100%; max-width: none; line-height: normal; text-align: left; white-space: nowrap; }
 .school-chat-shell .math-markdown .footnotes { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e1e6ed; color: #69768a; font-size: 12px; }

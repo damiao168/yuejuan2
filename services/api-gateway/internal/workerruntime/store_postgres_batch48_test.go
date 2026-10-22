@@ -147,7 +147,7 @@ type workerPollingIdentityCase struct {
 
 func assertWorkerPollingDatabaseClock(t *testing.T, scenario workerPollingIdentityCase, clock time.Time, dbNow time.Time) {
 	t.Helper()
-	state := &batch48RuntimeSQL{steps: []batch48RuntimeStep{{kind: "query", fragment: "SELECT transaction_timestamp()", args: []driver.Value{}, columns: 1, rows: [][]driver.Value{{clock}}}}}
+	state := &batch48RuntimeSQL{steps: []batch48RuntimeStep{{kind: "query", fragment: "SELECT clock_timestamp()", args: []driver.Value{}, columns: 1, rows: [][]driver.Value{{clock}}}}}
 	var tenantScope driver.Value = scenario.tenant
 	if scenario.tenant != "" {
 		state.steps = append(state.steps, batch48RuntimeStep{kind: "exec", fragment: "INSERT INTO agent_worker_heartbeat", args: []driver.Value{scenario.tenant, "worker", "instance", "queue", dbNow, []byte(`{"state":"polling"}`)}})
@@ -181,8 +181,8 @@ func assertWorkerHeartbeatAtomicFailure(t *testing.T, heartbeatErr error, dbNow 
 	t.Helper()
 	expires := dbNow.Add(time.Minute)
 	state := &batch48RuntimeSQL{steps: []batch48RuntimeStep{
-		{kind: "query", fragment: "SELECT transaction_timestamp()", args: []driver.Value{}, columns: 1, rows: [][]driver.Value{{dbNow}}},
 		{kind: "query", fragment: "FOR UPDATE", args: []driver.Value{"tenant", "task"}, columns: 35, rows: [][]driver.Value{batch48RuntimeTaskRow(StatusLeased, dbNow, dbNow.Add(time.Second))}},
+		{kind: "query", fragment: "SELECT clock_timestamp()", args: []driver.Value{}, columns: 1, rows: [][]driver.Value{{dbNow}}},
 		{kind: "query", fragment: "started_at = COALESCE(started_at, $3)", args: []driver.Value{"tenant", "task", dbNow, expires, []byte(`{"processed":3}`)}, columns: 35, rows: [][]driver.Value{batch48RuntimeTaskRow(StatusRunning, dbNow, expires)}},
 		{kind: "exec", fragment: "UPDATE agent_worker_task_attempt", args: []driver.Value{"tenant", "task", int64(1), dbNow}},
 		{kind: "exec", fragment: "INSERT INTO agent_worker_heartbeat", args: []driver.Value{"tenant", "worker", "instance", "persisted-queue", dbNow, []byte(`{"processed":3,"state":"running"}`)}, err: heartbeatErr},

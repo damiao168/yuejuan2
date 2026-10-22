@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Button, Tag } from "antd";
 import { BookOpenText, FileText, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 import { ApiClientError, getUserErrorMessage } from "../../api/client";
@@ -65,27 +65,23 @@ export function PromptVersionWorkspace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(undefined);
     try {
       const response = await getCurrentRuntimePrompt();
       setPrompt(response.prompt);
-      if (!response.prompt.components.some((item) => item.key === selected)) {
-        setSelected(response.prompt.components[0]?.key ?? "base");
-      }
+      setSelected(current => response.prompt.components.some(item => item.key === current) ? current : response.prompt.components[0]?.key ?? "base");
     } catch (nextError) {
       setError(promptError(nextError));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void load();
-    // 运行内容只在进入页面或显式操作时刷新。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
   const active = useMemo(
     () => prompt?.components.find((item) => item.key === selected),

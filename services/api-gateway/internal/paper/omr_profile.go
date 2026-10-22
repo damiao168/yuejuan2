@@ -6,17 +6,20 @@ import (
 )
 
 const (
-	// OMRProfileModeManualOnly 允许提取结果作为操作人员的建议，但阻止其成为自动成绩。
-	// 原始填涂比例提取器无法区分所有印刷答题卡设计与手写标记。
-	// 此模式始终需要人工确认；差分模式另由已批准的校准记录决定自动确认资格。
+	// OMRProfileModeManualOnly 保留历史默认填涂提取配置名，避免改变锁定模板和 Worker 协议哈希。
+	// 名称不再表示全部转人工；自动评分资格由服务端 RULE_AUTO 流程和逐题质量共同判断。
 	OMRProfileModeManualOnly = "manual_only"
 	// OMRProfileModeTemplateDifference 使用配置和配准答题卡时的不可变空白页。
 	// 它先移除表单已有印刷内容，再测量标记；这仍是提取模式，不代表有权自动确认成绩。
 	OMRProfileModeTemplateDifference = "template_difference"
 
-	// OMRProfileVersionOpenCVFillV1 是保守的原始填涂建议配置。
-	// 它不扣除具体答题卡设计的印刷内容，因此仍只允许人工确认。
+	// OMRProfileVersionOpenCVFillV1 是默认填涂提取契约；不扣除答题卡印刷内容。
+	// 清晰、空白及异常标记仍由每题提取结果区分，版本名不单独授予正式成绩资格。
 	OMRProfileVersionOpenCVFillV1 = "opencv-fill-v1"
+
+	// DefaultOMRAutoConfirmMinimumConfidence 是默认选择题自动接受的规则强度阈值，不是正确概率。
+	// 达到阈值后仍需通过逐题质量检查，不能用它覆盖遮挡、涂改或无法确定的标记。
+	DefaultOMRAutoConfirmMinimumConfidence = 0.8
 
 	// OMRProfileVersionTemplateDifferenceBubbleV1 的范围刻意受限：
 	// 只支持已按锁定模板中冻结的准确参考资源完成配准的页面上的显式涂点区域。
@@ -32,6 +35,7 @@ const (
 	OMRAutoConfirmReasonTemplateReferenceMismatch   = "template_reference_mismatch"
 	OMRAutoConfirmReasonTemplateReferenceRegion     = "template_reference_region_missing"
 	OMRAutoConfirmReasonManualOnlyProfile           = "manual_only_profile"
+	OMRAutoConfirmReasonLockedTemplateOMR           = "locked_template_omr"
 	OMRAutoConfirmReasonCalibrationUnapproved       = "template_difference_calibration_unapproved"
 	OMRAutoConfirmReasonCalibrationScopeMismatch    = "template_difference_calibration_scope_mismatch"
 	OMRAutoConfirmReasonCalibrationApproved         = "template_difference_calibration_approved"
@@ -60,7 +64,7 @@ type TemplateOMRReference struct {
 }
 
 // TemplateOMRProfile 是不可变答题卡布局的一部分。
-// 它描述生成建议所用的提取契约，不是操作人员可控制的自动成绩写入授权。
+// 它描述标记提取契约，不是操作人员可控制的自动成绩写入授权。
 type TemplateOMRProfile struct {
 	Mode      string                `json:"mode,omitempty"`
 	Version   string                `json:"version,omitempty"`
@@ -146,7 +150,7 @@ func OMRRuntimeProfileHash(profile OMRRuntimeProfile) string {
 	return "sha256:" + stableContentHash(profile)
 }
 
-// NormalizeTemplateLayout 在模板计算哈希和存储前，将省略的配置变为显式、不可变的仅人工确认契约。
+// NormalizeTemplateLayout 在模板计算哈希和存储前，将省略的配置变为显式、不可变的默认填涂契约。
 // 此处不改写已有锁定模板；OMRAutoConfirmPolicyForTemplate 读取它们时仍保守地视为未核验。
 func NormalizeTemplateLayout(layout TemplateLayout) TemplateLayout {
 	if isEmptyTemplateOMRProfile(layout.OMRProfile) {
@@ -156,7 +160,7 @@ func NormalizeTemplateLayout(layout TemplateLayout) TemplateLayout {
 }
 
 // BindTemplateOMRReference 将全部客户端提供的参考替换为服务器解析出的资源元数据。
-// 仅人工提取不能保留潜藏的参考，以免以后被误认为已批准契约。
+// 默认填涂提取不使用参考，不能保留潜藏的差分输入。
 func BindTemplateOMRReference(layout TemplateLayout, reference TemplateOMRReference) TemplateLayout {
 	if layout.OMRProfile.Mode == OMRProfileModeTemplateDifference {
 		referenceCopy := reference
@@ -212,9 +216,8 @@ func ValidateTemplateOMRReference(reference TemplateOMRReference) error {
 	}
 }
 
-// OMRAutoConfirmPolicyForTemplate 解析唯一可允许自动确认的授权来源。
-// 结果采取保守拒绝：原始 OpenCV 配置只提供可审计建议，绝不作为自动评分路径。
-// 此兼容入口没有校准记录，因此不授权自动确认；生产调用需使用带 Calibration 的入口。
+// OMRAutoConfirmPolicyForTemplate 检查锁定模板和提取配置是否具备自动接受资格。
+// 默认填涂仍需在 RULE_AUTO 流程中检查逐题质量；差分模式通过带 Calibration 的入口单独核验批准。
 func OMRAutoConfirmPolicyForTemplate(layout TemplateLayout, templateStatus, templateContentHash, segmentContentHash string) OMRAutoConfirmPolicy {
 	return OMRAutoConfirmPolicyForTemplateReference(layout, templateStatus, templateContentHash, segmentContentHash, TemplateOMRReference{}, "")
 }
@@ -222,14 +225,13 @@ func OMRAutoConfirmPolicyForTemplate(layout TemplateLayout, templateStatus, temp
 // OMRAutoConfirmPolicyForTemplateReference 同时解析 worker 提取契约和服务器端成绩权限。
 // 当前试卷资源元数据单独传入，避免过时或伪造的布局参考诱使 worker 扣除其他文档。
 func OMRAutoConfirmPolicyForTemplateReference(layout TemplateLayout, templateStatus, templateContentHash, segmentContentHash string, currentReference TemplateOMRReference, questionID string) OMRAutoConfirmPolicy {
-	// 这个兼容辅助函数没有模板 ID，因此只能返回未经校准的策略。
-	// 生产调用方必须使用模板带持久化 ID 且支持校准的函数。
+	// 这个兼容辅助函数没有模板 ID，差分配置无法匹配校准批准；默认填涂不依赖校准记录。
 	template := AnswerSheetTemplate{Layout: layout, Status: templateStatus, ContentHash: templateContentHash}
 	return OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(template, segmentContentHash, currentReference, questionID, nil)
 }
 
-// OMRAutoConfirmPolicyForTemplateReferenceAndCalibration 在一次保守拒绝决策中解析模板提取配置与单独持久化的校准批准。
-// 批准必须匹配所有可能改变标记识别结果的不可变输入。
+// OMRAutoConfirmPolicyForTemplateReferenceAndCalibration 解析锁定模板提取配置和服务端自动接受资格。
+// 差分模式另需校准批准，且批准必须匹配所有可能改变标记识别结果的不可变输入。
 // 调用方必须从数据库加载已批准记录；此函数校验匹配范围，不鉴别对象是否来自可信存储。
 func OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(template AnswerSheetTemplate, segmentContentHash string, currentReference TemplateOMRReference, questionID string, calibration *OMRCalibrationApproval) OMRAutoConfirmPolicy {
 	runtimeProfile := defaultOMRRuntimeProfile()
@@ -261,8 +263,10 @@ func OMRAutoConfirmPolicyForTemplateReferenceAndCalibration(template AnswerSheet
 	}
 
 	if template.Layout.OMRProfile.Mode == OMRProfileModeManualOnly {
-		// 显式的仅人工确认配置比省略的旧配置提供更多信息，但仍不具备自动确认资格。
-		policy.Reason = OMRAutoConfirmReasonManualOnlyProfile
+		// 历史模式名只标识默认提取契约；锁定且哈希匹配后，正常选择题继续由 RULE_AUTO 和逐题质量决定。
+		policy.AutoConfirmEligible = true
+		policy.Reason = OMRAutoConfirmReasonLockedTemplateOMR
+		policy.MinimumConfidence = DefaultOMRAutoConfirmMinimumConfidence
 		return policy
 	}
 

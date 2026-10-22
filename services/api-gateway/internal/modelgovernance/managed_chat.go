@@ -28,7 +28,7 @@ const (
 	managedChatMaxAttachments  = 3
 	managedChatMaxFileRunes    = 60_000
 	managedChatMaxTotalRunes   = 200_000
-	managedChatBodyLimit       = 1 << 20
+	managedChatBodyLimit       = ChatRequestBodyLimit
 )
 
 var (
@@ -51,7 +51,8 @@ type ManagedChatAttachment struct {
 }
 
 type ManagedChatRequest struct {
-	Messages []ManagedChatMessage `json:"messages"`
+	Messages      []ManagedChatMessage `json:"messages"`
+	ModelConfigID string               `json:"model_config_id,omitempty"`
 }
 
 type ManagedChatCompletion struct {
@@ -64,6 +65,7 @@ type ManagedChatCompletion struct {
 }
 
 type ManagedChatModelStatus struct {
+	ID          string `json:"id,omitempty"`
 	Available   bool   `json:"available"`
 	DisplayName string `json:"display_name,omitempty"`
 	ModelName   string `json:"model_name,omitempty"`
@@ -117,10 +119,10 @@ func (c *HTTPManagedAPIChatter) StreamChat(ctx context.Context, connection Manag
 	var err error
 	dashscope := connection.Config.AdapterType == "dashscope_native"
 	if dashscope {
-		endpoint = strings.TrimRight(connection.Config.BaseURL, "/") + "/services/aigc/text-generation/generation"
+		endpoint = strings.TrimRight(connection.Config.BaseURL, "/") + "/" + managedChatGenerationPath(messages)
 		payload, _ = json.Marshal(map[string]any{
 			"model":      connection.Config.ModelName,
-			"input":      map[string]any{"messages": managedChatProviderMessages(messages)},
+			"input":      map[string]any{"messages": managedChatProviderMessages(messages, true)},
 			"parameters": map[string]any{"result_format": "message", "incremental_output": true, "temperature": 0.7},
 		})
 	} else {
@@ -161,23 +163,14 @@ func (c *HTTPManagedAPIChatter) StreamChat(ctx context.Context, connection Manag
 
 type managedChatStreamChunk struct {
 	Choices []struct {
-		Delta struct {
-			Content          string `json:"content"`
-			ReasoningContent string `json:"reasoning_content"`
-		} `json:"delta"`
-		Message struct {
-			Content          string `json:"content"`
-			ReasoningContent string `json:"reasoning_content"`
-		} `json:"message"`
-		FinishReason string `json:"finish_reason"`
+		Delta        agentProviderMessage `json:"delta"`
+		Message      agentProviderMessage `json:"message"`
+		FinishReason string               `json:"finish_reason"`
 	} `json:"choices"`
 	Output struct {
 		Choices []struct {
-			Message struct {
-				Content          string `json:"content"`
-				ReasoningContent string `json:"reasoning_content"`
-			} `json:"message"`
-			FinishReason string `json:"finish_reason"`
+			Message      agentProviderMessage `json:"message"`
+			FinishReason string               `json:"finish_reason"`
 		} `json:"choices"`
 	} `json:"output"`
 	Usage json.RawMessage `json:"usage"`
@@ -288,8 +281,8 @@ func (c *HTTPManagedAPIChatter) chatOpenAICompatible(ctx context.Context, connec
 	}
 	var response struct {
 		Choices []struct {
-			Message      ManagedChatMessage `json:"message"`
-			FinishReason string             `json:"finish_reason"`
+			Message      agentProviderMessage `json:"message"`
+			FinishReason string               `json:"finish_reason"`
 		} `json:"choices"`
 		Usage managedOpenAIProbeUsage `json:"usage"`
 	}
@@ -302,10 +295,10 @@ func (c *HTTPManagedAPIChatter) chatOpenAICompatible(ctx context.Context, connec
 }
 
 func (c *HTTPManagedAPIChatter) chatDashScope(ctx context.Context, connection ManagedAPIConnection, messages []ManagedChatMessage) (ManagedChatCompletion, error) {
-	endpoint := strings.TrimRight(connection.Config.BaseURL, "/") + "/services/aigc/text-generation/generation"
+	endpoint := strings.TrimRight(connection.Config.BaseURL, "/") + "/" + managedChatGenerationPath(messages)
 	payload, _ := json.Marshal(map[string]any{
 		"model":      connection.Config.ModelName,
-		"input":      map[string]any{"messages": managedChatProviderMessages(messages)},
+		"input":      map[string]any{"messages": managedChatProviderMessages(messages, true)},
 		"parameters": map[string]any{"result_format": "message", "temperature": 0.7},
 	})
 	body, status, err := c.request(ctx, endpoint, connection, payload)
@@ -318,8 +311,8 @@ func (c *HTTPManagedAPIChatter) chatDashScope(ctx context.Context, connection Ma
 	var response struct {
 		Output struct {
 			Choices []struct {
-				Message      ManagedChatMessage `json:"message"`
-				FinishReason string             `json:"finish_reason"`
+				Message      agentProviderMessage `json:"message"`
+				FinishReason string               `json:"finish_reason"`
 			} `json:"choices"`
 		} `json:"output"`
 		Usage struct {
@@ -384,10 +377,19 @@ func normalizeManagedChatMessages(messages []ManagedChatMessage) ([]ManagedChatM
 	}
 	normalized := make([]ManagedChatMessage, 0, len(messages))
 	totalRunes := 0
+	imageBytes := int64(0)
 	for _, message := range messages {
 		message, count, err := normalizeManagedChatMessage(message)
 		if err != nil {
 			return nil, err
+		}
+		for _, attachment := range message.Attachments {
+			if strings.HasPrefix(attachment.MediaType, "image/") {
+				imageBytes += attachment.Size
+			}
+		}
+		if imageBytes > managedChatMaxImageTotalBytes {
+			return nil, ErrManagedChatImageBudget
 		}
 		totalRunes += count
 		if totalRunes > managedChatMaxTotalRunes {
@@ -430,6 +432,14 @@ func normalizeManagedChatAttachments(attachments []ManagedChatAttachment) (int, 
 		attachment.Name = strings.TrimSpace(attachment.Name)
 		attachment.MediaType = strings.ToLower(strings.TrimSpace(attachment.MediaType))
 		attachment.Content = strings.TrimSpace(attachment.Content)
+		if strings.HasPrefix(attachment.MediaType, "image/") {
+			if err := validateChatImage(*attachment); err != nil {
+				return 0, err
+			}
+			// 图片按字节预算单独限制，不能把 base64 当成六万字的文本附件。
+			totalRunes++
+			continue
+		}
 		fileRunes := utf8.RuneCountInString(attachment.Content)
 		if !validManagedChatAttachment(*attachment, fileRunes) {
 			return 0, ErrManagedChatInvalidRequest
@@ -447,46 +457,16 @@ func validManagedChatAttachment(attachment ManagedChatAttachment, contentRunes i
 		attachment.Size >= 0 && contentRunes > 0 && contentRunes <= managedChatMaxFileRunes
 }
 
-func managedChatProviderMessages(messages []ManagedChatMessage) []map[string]string {
-	providerMessages := make([]map[string]string, 0, len(messages))
+func managedChatProviderMessages(messages []ManagedChatMessage, native ...bool) []agentProviderMessage {
+	agentMessages := make([]AgentMessage, 0, len(messages))
 	for _, message := range messages {
-		sections := make([]string, 0, len(message.Attachments)+1)
-		if content := strings.TrimSpace(message.Content); content != "" {
-			sections = append(sections, content)
-		}
-		for _, attachment := range message.Attachments {
-			sections = append(sections, fmt.Sprintf("附件：%s（%s）\n--- 文件内容开始 ---\n%s\n--- 文件内容结束 ---", attachment.Name, attachment.MediaType, attachment.Content))
-		}
-		providerMessages = append(providerMessages, map[string]string{"role": message.Role, "content": strings.Join(sections, "\n\n")})
+		agentMessages = append(agentMessages, chatAgentMessage(message))
 	}
-	return providerMessages
+	return agentProviderMessages(agentMessages, native...)
 }
 
 func (h *Handler) GetManagedChatModel(w http.ResponseWriter, r *http.Request) {
-	store, ok := h.managedAPIStore(w, r)
-	if !ok {
-		return
-	}
-	items, err := store.ListManagedAPIConfigs(r.Context(), mustUser(r).TenantID)
-	if err != nil {
-		h.writeManagedAPIError(w, r, err)
-		return
-	}
-	status := ManagedChatModelStatus{Message: "学校尚未配置当前使用的对话模型"}
-	for _, item := range items {
-		if !item.IsDefault {
-			continue
-		}
-		status.DisplayName, status.ModelName, status.ProviderKey = item.DisplayName, item.ModelName, item.ProviderKey
-		status.Available = item.Status == "active" && item.LastCapabilityStatus == "success" && item.LastCapabilityVersion == ManagedCapabilityProbeVersion
-		if status.Available {
-			status.Message = "当前模型可用"
-		} else {
-			status.Message = "当前模型尚未通过能力检测，请联系平台管理员"
-		}
-		break
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"model": status})
+	h.getChatModels(w, r)
 }
 
 func (h *Handler) CreateManagedChatCompletion(w http.ResponseWriter, r *http.Request) {
@@ -510,7 +490,7 @@ func (h *Handler) CreateManagedChatCompletion(w http.ResponseWriter, r *http.Req
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_ai_chat_request", "对话内容为空、过长或格式不正确")
 		return
 	}
-	connection, err := ResolveDefaultManagedAPI(r.Context(), store, mustUser(r).TenantID)
+	connection, err := ResolveChatManagedAPI(r.Context(), store, mustUser(r).TenantID, input.ModelConfigID)
 	if err != nil || connection == nil {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "ai_chat_model_unavailable", "当前没有可用的学校对话模型，请联系平台管理员")
 		return
@@ -580,7 +560,7 @@ func (h *Handler) StreamManagedChatCompletion(w http.ResponseWriter, r *http.Req
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_ai_chat_request", "对话内容为空、过长或格式不正确")
 		return
 	}
-	connection, err := ResolveDefaultManagedAPI(r.Context(), store, mustUser(r).TenantID)
+	connection, err := ResolveChatManagedAPI(r.Context(), store, mustUser(r).TenantID, input.ModelConfigID)
 	if err != nil || connection == nil {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "ai_chat_model_unavailable", "当前没有可用的学校对话模型，请联系平台管理员")
 		return

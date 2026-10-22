@@ -7,26 +7,55 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/gradingevaluation"
 	"edugrade-enterprise/services/api-gateway/internal/modelcalibration"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
+type referenceMaterialSource interface {
+	Resolve(context.Context, string, string, string, *paper.ReferenceMaterialBinding) (paper.ReferenceMaterials, []paper.ResolvedReferenceImage, error)
+	ScoringRunSnapshot(context.Context, auth.AccessScope, string, string) (string, string, error)
+	FrozenImage(context.Context, string, string, string, string, string) ([]byte, error)
+	ForSnapshot(context.Context, string, string, string, string) (paper.ReferenceMaterials, error)
+}
+
 type Handler struct {
-	store         Store
-	adapter       LLMGradingAdapter
-	audit         auth.AuditRecorder
-	runtime       workerruntime.Store
-	eligibility   EligibilityGate
-	evaluation    EvaluationEvidenceProvider
-	calibration   CalibrationEvidenceProvider
-	parserQuality ParserQualityProvider
-	mathV2Enabled bool
-	mathAdapter   LLMGradingAdapter
-	mathEvidence  MathEvidenceSource
-	activeCrops   *ActiveCropResolver
+	imageModelResolver         func(context.Context, string) (*ImageModelConfig, error)
+	imageModelByIDResolver     func(context.Context, string, string, string) (*ImageModelConfig, error)
+	referenceMaterials         referenceMaterialSource
+	referenceMaterialPreflight ReferenceMaterialPreflight
+	store                      Store
+	adapter                    LLMGradingAdapter
+	audit                      auth.AuditRecorder
+	runtime                    workerruntime.Store
+	eligibility                EligibilityGate
+	evaluation                 EvaluationEvidenceProvider
+	calibration                CalibrationEvidenceProvider
+	parserQuality              ParserQualityProvider
+	mathV2Enabled              bool
+	mathAdapter                LLMGradingAdapter
+	mathEvidence               MathEvidenceSource
+	activeCrops                *ActiveCropResolver
 }
 
 func NewHandler(store Store, adapter LLMGradingAdapter, audit auth.AuditRecorder) *Handler {
 	return &Handler{store: store, adapter: adapter, audit: audit}
+}
+func (h *Handler) WithReferenceMaterials(s *paper.ReferenceMaterialsService) *Handler {
+	if s == nil {
+		h.referenceMaterials = nil
+	} else {
+		h.referenceMaterials = s
+	}
+	return h
+}
+
+// ReferenceMaterialPreflight 只核对当前部署与 image 审批；不创建运行、执行许可或供应商请求。
+// 预检通过后配置仍可能变化，实际消费许可时必须再次按运行身份检查。
+type ReferenceMaterialPreflight func(context.Context, string, Context, ModelPolicy, string) error
+
+func (h *Handler) WithReferenceMaterialPreflight(preflight ReferenceMaterialPreflight) *Handler {
+	h.referenceMaterialPreflight = preflight
+	return h
 }
 
 func (h *Handler) WithWorkerRuntimeStore(runtime workerruntime.Store) *Handler {

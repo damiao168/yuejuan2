@@ -1,5 +1,6 @@
 import { EduGradeApi } from "@edugrade/sdk";
 import { apiClient } from "./client";
+import type { AssessmentScoringPolicy } from "./assessment";
 
 const generatedApi = new EduGradeApi(apiClient);
 
@@ -12,8 +13,17 @@ export interface LayoutRegion {
   width: number;
   height: number;
   option_regions?: OptionRegion[];
+  option_coordinate_space?: "question_relative";
+  // 共框阅卷复用同页大区；本题坐标与分数仍分别保存，不能用大区替换单题 ROI。
+  grading_group_id?: string;
+  grading_bbox?: { x: number; y: number; width: number; height: number };
   suggestion_confidence?: number;
-  suggestion_source?: "pdf_text_anchor" | "ocr_layout";
+  suggestion_source?: "pdf_text_anchor" | "ocr_layout" | "multimodal_layout";
+  origin?: "model" | "local_detector" | "library" | "human";
+  review_state?: "suggested" | "edited" | "confirmed" | "discarded";
+  semantic_check?: "supported" | "needs_review" | "not_evaluated";
+  reason_codes?: string[];
+  analysis_run_id?: string;
 }
 
 export interface OptionRegion {
@@ -32,6 +42,14 @@ export interface TemplatePage {
   registration_marks: LayoutRegion[];
   identity_regions: LayoutRegion[];
   question_regions: LayoutRegion[];
+  // 教师可先确认完整填空大区；成员没有单题 ROI 时也不按题数切分或补造位置。
+  grading_groups?: TemplateGradingGroup[];
+}
+
+export interface TemplateGradingGroup {
+  group_id: string;
+  question_ids: string[];
+  bbox: { x: number; y: number; width: number; height: number };
 }
 
 export interface TemplateOMRReference {
@@ -50,6 +68,16 @@ export interface TemplateOMRProfile {
 export interface TemplateLayout {
   pages: TemplatePage[];
   omr_profile?: TemplateOMRProfile;
+  // 候选与丢弃记录随草稿保存；只有正式区域参与后续切题，待处理候选阻止锁定。
+  editor_state?: { version: 1; source_sha256: string; candidates: TemplateEditorCandidate[] };
+}
+
+export interface TemplateEditorCandidate {
+  id: string;
+  page_no: number;
+  role: "answer" | "objective_group" | "identity" | "uncertain" | "instruction" | "other";
+  region: LayoutRegion;
+  question_no?: string;
 }
 
 export interface AnswerSheetTemplate {
@@ -71,19 +99,8 @@ export interface AnswerSheetTemplate {
   updated_at: string;
 }
 
-export interface ExamTemplateBinding {
-  id: string;
-  tenant_id: string;
-  exam_id: string;
-  template_id: string;
-  template_content_hash: string;
-  mode: "bound_auto" | "locked_with_guard";
-  source: "automatic" | "manual";
-  revision: number;
-  bound_by: string;
-  bound_at: string;
-  updated_at: string;
-}
+export type ExamTemplateBinding = import("@edugrade/sdk").ExamTemplateBinding;
+export type ExamTemplateBindingState = import("@edugrade/sdk").ExamTemplateBindingState;
 
 export type OMRCalibrationStatus = import("@edugrade/sdk").OMRCalibrationSession["status"];
 export type OMRCalibrationSummary = import("@edugrade/sdk").OMRCalibrationSummary;
@@ -132,8 +149,28 @@ export interface ExamReadiness {
   import_snapshot_available: boolean;
   checks: ReadinessCheck[];
   advisories?: ReadinessAdvisory[];
+  // 预览与 configuration_hash 来自同次有效策略读取；页面不能再用逐题保存记录重新推导默认值。
+  scoring_preview?: ReadinessScoringPreview[];
   confirmed_at?: string;
   confirmed_by?: string;
+  // 后续考试阶段的历史确认只用于展示准备已完成，不能代替当前配置的 confirmed。
+  preparation_confirmed_at?: string;
+  preparation_snapshot_id?: string;
+}
+
+export interface ReadinessScoringPreview {
+  question_id: string;
+  question_no: string;
+  scoring_policy: AssessmentScoringPolicy;
+  processing_mode?: string;
+  source: "saved" | "default" | "snapshot";
+  profile: { id: string; code: string; education_stage: string; subject_code: string; version: number };
+  archetype_code: string;
+  risk_tier: string;
+  allowed_evidence_types: string[];
+  reason: string;
+  blocking_reason?: string;
+  blocking_section?: "exam" | "questions";
 }
 
 export async function listAnswerSheetTemplates(examId: string) {
@@ -154,8 +191,10 @@ export async function updateAnswerSheetTemplate(templateId: string, payload: Tem
   });
 }
 
-export async function lockAnswerSheetTemplate(templateId: string) {
-  return apiClient.request<{ template: AnswerSheetTemplate }>(`/api/v1/answer-sheet-templates/${encodeURIComponent(templateId)}/lock`, { method: "POST" });
+export async function lockAnswerSheetTemplate(templateId: string, expectedRevision?: number) {
+  return apiClient.request<{ template: AnswerSheetTemplate }>(`/api/v1/answer-sheet-templates/${encodeURIComponent(templateId)}/lock`, {
+    method: "POST", ...(expectedRevision === undefined ? {} : { body: JSON.stringify({ expected_revision: expectedRevision }) })
+  });
 }
 
 export async function cloneAnswerSheetTemplate(templateId: string) {
@@ -163,21 +202,15 @@ export async function cloneAnswerSheetTemplate(templateId: string) {
 }
 
 export async function getExamTemplateBinding(examId: string) {
-  return apiClient.request<{ binding: ExamTemplateBinding | null }>(`/api/v1/exams/${encodeURIComponent(examId)}/answer-sheet-template-binding`);
+  return generatedApi.getExamTemplateBinding({ path: { examId } });
 }
 
 export async function bindExamTemplate(examId: string, templateId: string, expectedRevision: number, mode: "locked_with_guard" = "locked_with_guard") {
-  return apiClient.request<{ binding: ExamTemplateBinding }>(`/api/v1/exams/${encodeURIComponent(examId)}/answer-sheet-template-binding`, {
-    method: "PUT",
-    body: JSON.stringify({ template_id: templateId, mode, expected_revision: expectedRevision })
-  });
+  return generatedApi.bindExamTemplate({ path: { examId }, body: { template_id: templateId, mode, expected_revision: expectedRevision } });
 }
 
 export async function unbindExamTemplate(examId: string, expectedRevision: number, reason: string) {
-  return apiClient.request<{ binding: ExamTemplateBinding }>(`/api/v1/exams/${encodeURIComponent(examId)}/answer-sheet-template-binding`, {
-    method: "DELETE",
-    body: JSON.stringify({ expected_revision: expectedRevision, reason })
-  });
+  return generatedApi.unbindExamTemplate({ path: { examId }, body: { expected_revision: expectedRevision, reason } });
 }
 
 export async function listOMRCalibrations(templateId: string) {

@@ -136,33 +136,18 @@ func (h *Handler) CompleteRuntimeTask(w http.ResponseWriter, r *http.Request) {
 		writeMathError(w, r, err)
 		return
 	}
-	artifact, err := h.artifacts.CreateArtifact(r.Context(), user.TenantID, preparedArtifact)
-	if err != nil {
-		writeMathError(w, r, err)
-		return
-	}
-	verificationTaskID := ""
-	if len(artifact.Formulas) > 0 {
-		verificationTask, taskErr := h.enqueueVerificationTask(r.Context(), user.ID, artifact, 0)
-		if taskErr != nil {
-			httpx.Error(w, r, http.StatusInternalServerError, "math_verification_enqueue_failed", "symbolic verification could not be scheduled")
-			return
-		}
-		verificationTaskID = verificationTask.ID
-	}
-	_, err = h.runtime.Complete(r.Context(), user.TenantID, task.ID, workerruntime.CompleteInput{
-		LeaseToken: input.LeaseToken, ResultSchemaVersion: "math-understanding-result-v2",
-		Result: map[string]any{
-			"artifact_id": artifact.ID, "artifact_version": artifact.Version, "input_hash": artifact.InputHash,
-			"verification_task_id": verificationTaskID,
-		},
-		DurationMS: input.DurationMS,
+	artifact, verificationTaskID, err := h.completeRuntimeArtifact(r.Context(), recognitionRuntimeCompletion{
+		Task: task, ActorID: user.ID, Input: preparedArtifact, LeaseToken: input.LeaseToken, DurationMS: input.DurationMS,
 	})
 	if err != nil {
-		httpx.Error(w, r, http.StatusConflict, "math_runtime_completion_failed", "math runtime lease is no longer valid")
+		if errors.Is(err, workerruntime.ErrConflict) || errors.Is(err, workerruntime.ErrLeaseExpired) || errors.Is(err, workerruntime.ErrLeaseMismatch) || errors.Is(err, workerruntime.ErrInvalidTransition) {
+			httpx.Error(w, r, http.StatusConflict, "math_runtime_completion_failed", "math runtime lease or accepted result no longer matches")
+		} else {
+			writeMathError(w, r, err)
+		}
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"artifact": artifact})
+	httpx.JSON(w, http.StatusOK, map[string]any{"artifact": artifact, "verification_task_id": verificationTaskID})
 }
 
 func (h *Handler) GetVerificationRuntimeInput(w http.ResponseWriter, r *http.Request) {

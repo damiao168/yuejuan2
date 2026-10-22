@@ -2,6 +2,7 @@ import { Button, Input, Select } from "antd";
 import { Plus } from "lucide-react";
 import { isUnmatchedPlaceholder, questionAttention, questionIndexLabel, questionScoreLabel, questionSummary, type QuestionFilter } from "./paperQuestionPresentation";
 import type { PaperRubricViewContext } from "./paperRubricViewTypes";
+import { PaperRubricJobMarker } from "./PaperRubricJobs";
 
 type ViewProps = Readonly<{ context: PaperRubricViewContext }>;
 
@@ -10,7 +11,7 @@ export function PaperQuestionIndex({ context }: ViewProps) {
   const summary = questionSummary(config.questions, context.latestPaperImport, context.structureConfirmed);
   return <aside className="workspace-section question-list-panel" aria-label="题号总览">
     <div className="section-head question-index-head">
-      <div><h2>题号总览</h2><p>按题序定位，选中后在右侧编辑</p></div>
+      <div><h2>题号总览</h2></div>
       <Button size="small" icon={<Plus size={14} />} disabled={!options.canManage} onClick={actions.createQuestion}>新建</Button>
     </div>
     <button type="button" className="question-index-toggle" aria-expanded={state.indexOpen}
@@ -22,13 +23,13 @@ export function PaperQuestionIndex({ context }: ViewProps) {
         className="question-index-filter" options={[
           { label: `全部题目 · ${config.questions.length}`, value: "all" },
           { label: `待补答案 · ${summary.needsAnswerCount}`, value: "answer" },
-          { label: `待锁定评分细则 · ${summary.needsRubricCount}`, value: "rubric" }
+          { label: `待确认细则 · ${summary.needsRubricCount}`, value: "rubric" }
         ]} />
       <PaperCandidateIndex context={context} />
       <div className="question-index-section-head"><strong>正式题目</strong><span>{state.visibleQuestions.length} / {config.questions.length}</span></div>
       <PaperFormalQuestionIndex context={context} />
-      <div className="question-index-legend"><span><i className="is-ready" />已填答案或锁定细则</span>
-        <span><i className="is-answer" />待补答案</span><span><i className="is-rubric" />细则待锁定</span></div>
+      <div className="question-index-legend"><span><i className="is-ready" />已填答案或确认细则</span>
+        <span><i className="is-answer" />待补答案</span><span><i className="is-rubric" />待确认细则</span></div>
     </div>
   </aside>;
 }
@@ -57,6 +58,6 @@ function PaperFormalQuestionIndex({ context }: ViewProps) {
     const attentionClass = attention ? ` is-${attention}` : " is-ready";
     return <button key={question.id} type="button" className={`question-index-cell${attentionClass}${selected ? " is-active" : ""}`}
       aria-current={selected ? "true" : undefined} aria-label={questionLabel} title={questionLabel}
-      onClick={() => actions.openQuestion(question)}><span>{question.question_no}</span><i aria-hidden="true" /></button>;
+      onClick={() => actions.openQuestion(question)}><span>{question.question_no}</span><PaperRubricJobMarker questionId={question.id} /><i aria-hidden="true" /></button>;
   })}</div>;
 }

@@ -81,8 +81,8 @@ export function MathRubricMatrix({ evidence, grades, points, dirty, requesting, 
         })}</tbody>
       </table></div>
     </> : emptyState}
-    <Button size="small" loading={requesting} disabled={!canRequest || dirty || evidence.phase !== "ready"} onClick={onRequest}>重新生成数学建议</Button>
-    <output className="math-suggestion-note" aria-live="polite">{mathSuggestionNote(canRequest, dirty, evidence.phase, disabledReason)}</output>
+    {canRequest ? <><Button size="small" loading={requesting} disabled={dirty || evidence.phase !== "ready"} onClick={onRequest}>重新生成数学建议</Button>
+    <output className="math-suggestion-note" aria-live="polite">{mathSuggestionNote(canRequest, dirty, evidence.phase, disabledReason)}</output></> : null}
     {grades.length ? <details className="math-suggestion-history"><summary>建议版本记录（{grades.length}）</summary><ul>{grades.map((grade) => {
       const state = mathSuggestionState(grade, evidence, dirty);
       return <li key={grade.id}><div><strong>{grade.math_artifact_version ? `数学证据 v${grade.math_artifact_version} · 校正 #${grade.math_correction_revision ?? 0}` : "旧版 / 未绑定数学证据"}</strong><small>{grade.suggested_score} / {grade.max_score} · {new Date(grade.created_at).toLocaleString("zh-CN")}</small></div><StatusTag tone={state.current ? "success" : "warning"}>{state.label}</StatusTag></li>;

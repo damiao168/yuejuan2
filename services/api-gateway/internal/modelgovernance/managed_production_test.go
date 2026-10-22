@@ -11,7 +11,7 @@ func TestValidateManagedProductionCandidate(t *testing.T) {
 	valid := managedProductionCandidate{
 		ID: "model-1", Endpoint: "https://api.example.com", ModelVersion: "v1",
 		Region: "global", Status: "active", Present: true,
-		ConnectionStatus: "success", CapabilityStatus: "success",
+		TextStatus: "success", IsDefault: true, StructuredRequired: true, CapabilityStatus: "success",
 		CapabilityVersion: ManagedCapabilityProbeVersion,
 	}
 	tests := []struct {
@@ -29,7 +29,19 @@ func TestValidateManagedProductionCandidate(t *testing.T) {
 		{name: "deleted", change: func(c *managedProductionCandidate) { c.Present = false }, apiKey: "secret", wantUnsafe: true},
 		{name: "missing model version", change: func(c *managedProductionCandidate) { c.ModelVersion = " " }, apiKey: "secret", wantUnsafe: true},
 		{name: "missing region", change: func(c *managedProductionCandidate) { c.Region = " " }, apiKey: "secret", wantUnsafe: true},
-		{name: "failed connection", change: func(c *managedProductionCandidate) { c.ConnectionStatus = "failed" }, apiKey: "secret", wantUnsafe: true},
+		{name: "failed text", change: func(c *managedProductionCandidate) { c.TextStatus = "failed" }, apiKey: "secret", wantUnsafe: true},
+		{name: "default needs only text", change: func(c *managedProductionCandidate) {
+			c.StructuredRequired = false
+			c.CapabilityStatus = "failed"
+			c.CapabilityVersion = ""
+		}, apiKey: "secret"},
+		{name: "role cannot use text only", change: func(c *managedProductionCandidate) {
+			c.IsDefault = false
+			c.CapabilityStatus = "untested"
+			c.CapabilityVersion = ""
+		}, apiKey: "secret", wantUnsafe: true},
+		{name: "role needs only structured", change: func(c *managedProductionCandidate) { c.IsDefault = false; c.TextStatus = "untested" }, apiKey: "secret"},
+		{name: "default plus role needs text", change: func(c *managedProductionCandidate) { c.TextStatus = "untested" }, apiKey: "secret", wantUnsafe: true},
 		{name: "failed capability", change: func(c *managedProductionCandidate) { c.CapabilityStatus = "failed" }, apiKey: "secret", wantUnsafe: true},
 		{name: "untested capability", change: func(c *managedProductionCandidate) { c.CapabilityStatus = "untested" }, apiKey: "secret", wantUnsafe: true},
 		{name: "stale probe", change: func(c *managedProductionCandidate) { c.CapabilityVersion = "structured-json-v2" }, apiKey: "secret", wantUnsafe: true},

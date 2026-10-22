@@ -26,10 +26,12 @@ describe("task query and complete selection", () => {
     api.list.mockImplementation(async (filter) => ({ tasks: filter.limit === 1 ? [] : [task("a"), task("b", "q2")], aggregate: aggregate(filter.unassigned ? 1 : 2), has_more: false }));
   });
   afterEach(async () => { await act(async () => root.unmount()); vi.useRealTimers(); });
-  async function mount(canManageTasks = true) {
+  async function mount(canManageTasks = true, heldGroupTask?: { current: string }) {
     function Probe() {
-      queue = useGradingQueue({ canManageTasks, canWork: false, currentUserId: "admin", initialExamId: "", personalScope: false, onInfo: api.info });
-      useEffect(() => { void queue.loadTasks(); }, [queue.loadTasks]);
+      const currentQueue = useGradingQueue({ canManageTasks, canWork: false, currentUserId: "admin", initialExamId: "", personalScope: false, onInfo: api.info, heldGroupTask });
+      queue = currentQueue;
+      const { loadTasks } = currentQueue;
+      useEffect(() => { void loadTasks(); }, [loadTasks]);
       return null;
     }
     await act(async () => root.render(<Probe />));
@@ -38,6 +40,16 @@ describe("task query and complete selection", () => {
     await act(async () => { queue.setKeyword(value); });
     await act(async () => { await vi.advanceTimersByTimeAsync(300); });
   }
+  it("整区当前题提交后保留共享图选择，防止自动换题丢掉其它行草稿", async () => {
+    const held = { current: "a" };
+    await mount(true, held);
+    expect(queue.selectedTaskId).toBe("a");
+    await act(async () => { queue.setTasks(current => current.map(item => item.id === "a" ? { ...item, status: "submitted" } : item)); });
+    expect(queue.filteredTasks.some(item => item.id === "a")).toBe(false);
+    expect(queue.selectedTaskId).toBe("a");
+    await act(async () => { held.current = ""; queue.setTasks(current => [...current]); });
+    expect(queue.selectedTaskId).toBe("b");
+  });
   it("sends subject, question and unassigned filters to list and matched aggregate, keeping whole-state progress", async () => {
     await mount(); await act(async () => { queue.setSubjectFilter("math"); queue.setQuestionFilter("q1"); queue.setUnassignedOnly(true); });
     expect(api.list).toHaveBeenCalledWith(expect.objectContaining({ subject: "math", question_id: "q1", unassigned: true, status: "active", limit: 50 }));

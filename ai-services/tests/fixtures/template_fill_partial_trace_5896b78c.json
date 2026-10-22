@@ -1,0 +1,216 @@
+{
+  "fixture_kind": "recorded_model_response_and_geometry_only",
+  "trace_run_id": "5896b78c5c1f47178a74b39aac625b90",
+  "trace_sha256": "5a6862983e46b8e14476deb5104bf015a273f5e48b3d4ccbf3bf25f1e36ab160",
+  "source_sha256": "6b961b0be6d1561bcd4e2ab66fa5914e6483bad9bd03820747630301353d8285",
+  "page": {
+    "page_no": 1,
+    "width": 1600,
+    "height": 1132
+  },
+  "limitations": [
+    "Original source pixels are unavailable.",
+    "Independent OCR and printed-frame measurement are not rerun.",
+    "Final recorded local roles are uncertain; the replay reconstructs their pre-repair answer roles and removes post-repair conflict reasons.",
+    "Local evidence refs are reconstructed from the recorded detector version and candidate IDs.",
+    "Only the fill parent and two old local children are replayed, not the full page pipeline."
+  ],
+  "fill_region_version": "printed-fill-underline-v4",
+  "parent_observed_labels": [
+    "12",
+    "13",
+    "14"
+  ],
+  "recorded_final_rows": [
+    {
+      "candidate_id": "model-1-68881c8f2913973d2e9ed4d1",
+      "role": "uncertain",
+      "origin": "model",
+      "printed_question_label": null,
+      "identity_label": null,
+      "source_bbox": {
+        "x": 0.06605270504951477,
+        "y": 0.5098966360092163,
+        "width": 0.2817627191543579,
+        "height": 0.12032277882099152
+      },
+      "proposed_bbox": {
+        "x": 0.06605270504951477,
+        "y": 0.5098966360092163,
+        "width": 0.2817627191543579,
+        "height": 0.12032277882099152
+      },
+      "association_status": "unassociated",
+      "semantic_check": "needs_review",
+      "reason_codes": [
+        "MODEL_DISCOVERED_REGION",
+        "MODEL_LAYOUT_REQUIRES_REVIEW",
+        "HANDWRITING_LAYOUT_REQUIRES_REVIEW",
+        "MODEL_OBS_MULTIPLE_QUESTION_LABELS",
+        "WRITING_STATE_UNKNOWN",
+        "REGION_ROLE_UNCERTAIN",
+        "GEOMETRY_NOT_VERIFIED",
+        "NO_PRINTED_FRAME_REQUIRES_REVIEW",
+        "LOCAL_FILL_SUBREGIONS_DETECTED",
+        "REGION_CONFLICT",
+        "SEMANTIC_REGION_OVERLAP_CONFLICT",
+        "PAGE_COVERAGE_ROLE_CONFLICT"
+      ]
+    },
+    {
+      "candidate_id": "local-fill-1-83a62d580d558daed6a5",
+      "role": "uncertain",
+      "origin": "local_detector",
+      "printed_question_label": "12",
+      "identity_label": null,
+      "source_bbox": {
+        "x": 0.07416666666666667,
+        "y": 0.5118727915194347,
+        "width": 0.10458333333333332,
+        "height": 0.04996466431095402
+      },
+      "proposed_bbox": {
+        "x": 0.07416666666666667,
+        "y": 0.5118727915194347,
+        "width": 0.10458333333333332,
+        "height": 0.04996466431095402
+      },
+      "association_status": "unassociated",
+      "semantic_check": "needs_review",
+      "reason_codes": [
+        "LOCAL_FILL_HEADER_VERIFIED",
+        "LOCAL_FILL_PRINTED_MARKER_VERIFIED",
+        "LOCAL_FILL_UNDERLINE_VERIFIED",
+        "LOCAL_FILL_REQUIRES_REVIEW",
+        "LOCAL_FILL_LOCAL_OCR_RECHECKED",
+        "LOCAL_FILL_PARENT_REGION_REQUIRES_REVIEW",
+        "REGION_CONFLICT",
+        "SEMANTIC_REGION_OVERLAP_CONFLICT",
+        "PAGE_COVERAGE_ROLE_CONFLICT"
+      ]
+    },
+    {
+      "candidate_id": "local-fill-1-3959d83dd21599b82373",
+      "role": "uncertain",
+      "origin": "local_detector",
+      "printed_question_label": "13",
+      "identity_label": null,
+      "source_bbox": {
+        "x": 0.20239583333333333,
+        "y": 0.5118374558303886,
+        "width": 0.1125,
+        "height": 0.050736160188457065
+      },
+      "proposed_bbox": {
+        "x": 0.20239583333333333,
+        "y": 0.5118374558303886,
+        "width": 0.1125,
+        "height": 0.050736160188457065
+      },
+      "association_status": "unassociated",
+      "semantic_check": "needs_review",
+      "reason_codes": [
+        "LOCAL_FILL_HEADER_VERIFIED",
+        "LOCAL_FILL_PRINTED_MARKER_VERIFIED",
+        "LOCAL_FILL_UNDERLINE_VERIFIED",
+        "LOCAL_FILL_REQUIRES_REVIEW",
+        "LOCAL_FILL_LOCAL_OCR_RECHECKED",
+        "LOCAL_FILL_PARENT_REGION_REQUIRES_REVIEW",
+        "REGION_CONFLICT",
+        "SEMANTIC_REGION_OVERLAP_CONFLICT",
+        "PAGE_COVERAGE_ROLE_CONFLICT"
+      ]
+    }
+  ],
+  "repair_batch": {
+    "task": "mixed_region",
+    "replace_candidate_ids": [
+      "model-1-68881c8f2913973d2e9ed4d1"
+    ],
+    "crop_bbox": {
+      "x": 0.051875,
+      "y": 0.49469964664310956,
+      "width": 0.310625,
+      "height": 0.15106007067137808
+    }
+  },
+  "coarse_repair_response": {
+    "candidates": [
+      {
+        "role": "answer",
+        "bbox": {
+          "x": 0.055,
+          "y": 0.13,
+          "width": 0.36,
+          "height": 0.27
+        },
+        "labels": [
+          "12"
+        ],
+        "identity_label": null,
+        "static_label": null,
+        "option_pattern": "none",
+        "identity_pattern": "none",
+        "barcode_pattern": "none",
+        "boundary_basis": "printed_answer_line",
+        "anchor_bbox": {
+          "x": 0.06,
+          "y": 0.16,
+          "width": 0.09,
+          "height": 0.1
+        },
+        "objective_items": []
+      },
+      {
+        "role": "answer",
+        "bbox": {
+          "x": 0.47,
+          "y": 0.13,
+          "width": 0.36,
+          "height": 0.27
+        },
+        "labels": [
+          "13"
+        ],
+        "identity_label": null,
+        "static_label": null,
+        "option_pattern": "none",
+        "identity_pattern": "none",
+        "barcode_pattern": "none",
+        "boundary_basis": "printed_answer_line",
+        "anchor_bbox": {
+          "x": 0.475,
+          "y": 0.16,
+          "width": 0.09,
+          "height": 0.1
+        },
+        "objective_items": []
+      },
+      {
+        "role": "answer",
+        "bbox": {
+          "x": 0.055,
+          "y": 0.55,
+          "width": 0.42,
+          "height": 0.27
+        },
+        "labels": [
+          "14"
+        ],
+        "identity_label": null,
+        "static_label": null,
+        "option_pattern": "none",
+        "identity_pattern": "none",
+        "barcode_pattern": "none",
+        "boundary_basis": "printed_answer_line",
+        "anchor_bbox": {
+          "x": 0.06,
+          "y": 0.58,
+          "width": 0.09,
+          "height": 0.1
+        },
+        "objective_items": []
+      }
+    ]
+  }
+}

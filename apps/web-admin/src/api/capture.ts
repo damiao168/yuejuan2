@@ -33,6 +33,10 @@ export interface CaptureFile {
   page_count: number;
   status: string;
   error_code?: string;
+  upload_group_id?: string;
+  upload_group_file_count?: number;
+  upload_group_file_index?: number;
+  pages_per_student?: number;
   created_at: string;
 }
 
@@ -160,8 +164,16 @@ export function runImageQualityCheck(submissionId: string) {
   );
 }
 
-export async function registerCaptureFile(batchId: string, fileAssetId: string, idempotencyKey: string) {
-  return apiClient.request<{ file: CaptureFile }>(`/api/v1/capture-batches/${encodeURIComponent(batchId)}/files`, { method: "POST", body: JSON.stringify({ file_asset_id: fileAssetId, idempotency_key: idempotencyKey }) });
+export interface CaptureUploadGroupInput {
+  upload_group_id: string;
+  upload_group_file_count: number;
+  // 文件位置从 1 开始；服务端按此顺序及文件内页序分组，不按请求完成时间排列。
+  upload_group_file_index: number;
+  pages_per_student: number;
+}
+
+export async function registerCaptureFile(batchId: string, fileAssetId: string, idempotencyKey: string, group?: CaptureUploadGroupInput) {
+  return apiClient.request<{ file: CaptureFile }>(`/api/v1/capture-batches/${encodeURIComponent(batchId)}/files`, { method: "POST", body: JSON.stringify({ file_asset_id: fileAssetId, idempotency_key: idempotencyKey, ...group }) });
 }
 
 export async function processCaptureBatch(batchId: string) {

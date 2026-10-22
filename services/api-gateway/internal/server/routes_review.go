@@ -10,11 +10,16 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/qualitydashboard"
 	"edugrade-enterprise/services/api-gateway/internal/regrade"
 	"edugrade-enterprise/services/api-gateway/internal/regraderelease"
+	"edugrade-enterprise/services/api-gateway/internal/reviewbookmark"
 	"edugrade-enterprise/services/api-gateway/internal/seedquality"
 	"net/http"
 )
 
 func registerReviewRoutes(mux *http.ServeMux, ctx routerContext) {
+	mux.Handle("GET /api/v1/review-tasks/{id}/reference-materials", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewHandler.GetReferenceMaterials))
+	mux.Handle("GET /api/v1/review-tasks/{id}/reference-materials/{itemId}/image", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewHandler.GetReferenceMaterialImage))
+	reviewbookmark.RegisterRoutes(mux, ctx.modules.Grading.ReviewBookmarkHandler,
+		ctx.guards.requirePersonalReviewRead, ctx.guards.requirePersonalReviewWrite, ctx.guards.requirePersonalReviewCleanup)
 	// Gold 集合、答案组参考案例、Seed 观察和漂移证据属于质量管理事实。
 	// 阅卷人员通过普通复核流程只接收当前校准或 Seed 任务；
 	// 将这些列表开放给 review:work 会泄漏参考分数，或使暗样本可被识别。

@@ -59,7 +59,8 @@ export function restoreWorkbenchDraft(next: WorkbenchContext, options: Readonly<
   const mayPersistDraft = reviewerOwnsTask && next.reviewContext.claim.can_renew;
   const initial = createInitialDraft(next);
   const serverDraft = reviewerOwnsTask ? next.reviewContext.draft : null;
-  const server = serverDraftSnapshot(initial, serverDraft, options.canViewOriginalImage);
+  // 共区模板默认展示整区；已保存的单题查看选择仍优先，评分草稿继续属于当前题。
+  const server = serverDraftSnapshot(initial, serverDraft, options.canViewOriginalImage, next.gradingGroupImageUrl ? "group" : "segment");
   const localDraft = mayPersistDraft ? loadReviewDraftFallback<unknown>(options.currentUserId, options.taskId) : null;
   const localSnapshot = localDraft ? fallbackSnapshot(localDraft.snapshot, initial) : null;
   const useLocal = Boolean(localDraft && localSnapshot && (options.isConflicted || localDraft.updatedAt > server.updatedAt));
@@ -73,6 +74,9 @@ export function restoreWorkbenchDraft(next: WorkbenchContext, options: Readonly<
     status = options.isConflicted ? "conflict" : "offline";
   } else if (localDraft) {
     removeReviewDraftFallback(options.currentUserId, options.taskId);
+  }
+  if (restored.viewer.mode === "group" && !next.gradingGroupImageUrl) {
+    restored = { ...restored, viewer: { ...restored.viewer, mode: "segment" } };
   }
   return { restored, status, server, mayPersistDraft };
 }

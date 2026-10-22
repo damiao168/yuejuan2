@@ -128,6 +128,12 @@ export async function createGrade(payload: Pick<Grade, "school_id" | "name" | "l
   });
 }
 
+export function updateGrade(id: string, payload: Pick<Grade, "name">) {
+  return apiClient.request<{ grade: Grade }>(`/api/v1/grades/${encodeURIComponent(id)}`, {
+    method: "PATCH", body: JSON.stringify(payload)
+  });
+}
+
 export async function listClasses(gradeId?: string) {
   const query = gradeId ? `?grade_id=${encodeURIComponent(gradeId)}` : "";
   return apiClient.request<{ classes: SchoolClass[] }>(`/api/v1/classes${query}`);
@@ -137,6 +143,12 @@ export async function createClass(payload: Pick<SchoolClass, "school_id" | "grad
   return apiClient.request<{ class: SchoolClass }>("/api/v1/classes", {
     method: "POST",
     body: JSON.stringify({ ...payload, status: "active" })
+  });
+}
+
+export function updateClass(id: string, payload: Pick<SchoolClass, "name" | "code">) {
+  return apiClient.request<{ class: SchoolClass }>(`/api/v1/classes/${encodeURIComponent(id)}`, {
+    method: "PATCH", body: JSON.stringify(payload)
   });
 }
 
@@ -163,6 +175,18 @@ export async function updateStudentStatus(id: string, status: "active" | "inacti
   return apiClient.request<{ student: Student }>(`/api/v1/students/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: JSON.stringify({ status })
+  });
+}
+
+export function deleteStudent(id: string) {
+  return apiClient.request<{ student_id: string; deleted: boolean }>(`/api/v1/students/${encodeURIComponent(id)}`, {
+    method: "DELETE"
+  });
+}
+
+export function updateStudent(id: string, payload: Pick<Student, "name" | "student_no"> & { gender: string }) {
+  return apiClient.request<{ student: Student }>(`/api/v1/students/${encodeURIComponent(id)}`, {
+    method: "PATCH", body: JSON.stringify(payload)
   });
 }
 

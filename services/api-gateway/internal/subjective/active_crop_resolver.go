@@ -57,12 +57,21 @@ func NewActiveCropResolver(evidence ActiveCropEvidenceStore, assets files.Store,
 }
 
 func (r *ActiveCropResolver) Resolve(ctx context.Context, tenantID string, segmentID string, questionID string) (ResolvedActiveCrop, error) {
+	return r.resolve(ctx, tenantID, segmentID, questionID, false)
+}
+
+// ResolveForObservation 允许持久计划中的共区原图；旧数学 v2 仍只允许精确单题 ROI。
+func (r *ActiveCropResolver) ResolveForObservation(ctx context.Context, tenantID, segmentID, questionID string) (ResolvedActiveCrop, error) {
+	return r.resolve(ctx, tenantID, segmentID, questionID, true)
+}
+
+func (r *ActiveCropResolver) resolve(ctx context.Context, tenantID string, segmentID string, questionID string, allowGroup bool) (ResolvedActiveCrop, error) {
 	if r == nil || r.evidence == nil || r.assets == nil || r.objects == nil ||
 		strings.TrimSpace(tenantID) == "" || strings.TrimSpace(segmentID) == "" || strings.TrimSpace(questionID) == "" {
 		return ResolvedActiveCrop{}, ErrActiveCropUnavailable
 	}
 	// 先锁定租户范围内当前裁剪的元数据；对象读取前后都会复核它，避免修正或替换在读取期间改变。
-	first, err := r.loadMetadata(ctx, tenantID, segmentID, questionID)
+	first, err := r.loadMetadataForScope(ctx, tenantID, segmentID, questionID, allowGroup)
 	if err != nil {
 		return ResolvedActiveCrop{}, resolverError(ctx)
 	}
@@ -86,7 +95,7 @@ func (r *ActiveCropResolver) Resolve(ctx context.Context, tenantID string, segme
 
 	// 读取对象后再次读取租户作用域内元数据。
 	// 对象读取期间，已应用修正可能被撤销，分段裁剪图也可能被替换。
-	second, err := r.loadMetadata(ctx, tenantID, segmentID, questionID)
+	second, err := r.loadMetadataForScope(ctx, tenantID, segmentID, questionID, allowGroup)
 	if err != nil || first != second {
 		return ResolvedActiveCrop{}, resolverError(ctx)
 	}
@@ -120,8 +129,16 @@ type activeCropMetadata struct {
 }
 
 func (r *ActiveCropResolver) loadMetadata(ctx context.Context, tenantID string, segmentID string, questionID string) (activeCropMetadata, error) {
+	return r.loadMetadataForScope(ctx, tenantID, segmentID, questionID, false)
+}
+
+func (r *ActiveCropResolver) loadMetadataForScope(ctx context.Context, tenantID string, segmentID string, questionID string, allowGroup bool) (activeCropMetadata, error) {
 	evidence, err := r.evidence.GetEvidenceForQuestion(ctx, tenantID, segmentID, questionID)
 	if err != nil {
+		return activeCropMetadata{}, ErrActiveCropUnavailable
+	}
+	// 原逐题识别协议只接收精确单题 ROI；整区成员缺少子框时交由人工共区上下文处理。
+	if scope := segment.AnswerScope(evidence.NormalizedBBox); scope != "question" && !(allowGroup && scope == "grading_group") {
 		return activeCropMetadata{}, ErrActiveCropUnavailable
 	}
 	// 只有已完成、未删除且归属关系完整的裁剪才能进入模型请求；任何状态不一致都按不可用处理。
@@ -136,7 +153,16 @@ func (r *ActiveCropResolver) loadMetadata(ctx context.Context, tenantID string, 
 		!validLowerSHA256(evidence.CropSHA256) {
 		return activeCropMetadata{}, ErrActiveCropUnavailable
 	}
-	bbox, err := activeCropBBox(evidence.NormalizedBBox)
+	boxValue := evidence.NormalizedBBox
+	if allowGroup {
+		boxValue = map[string]any{}
+		for _, key := range []string{"x", "y", "width", "height"} {
+			boxValue[key] = evidence.NormalizedBBox[key]
+		}
+	}
+	// 观察协议只发送已裁好的 PNG，不把页面框写入旧 v2 的六位小数契约。
+	// 配准会产生更高精度坐标；这里保留原值做前后复核，范围、面积和资产校验仍相同。
+	bbox, err := parseActiveCropBBox(boxValue, !allowGroup)
 	if err != nil {
 		return activeCropMetadata{}, ErrActiveCropUnavailable
 	}
@@ -199,6 +225,10 @@ func validateActiveCropPNG(data []byte) (int, int, error) {
 }
 
 func activeCropBBox(value map[string]any) (ActiveCropBBox, error) {
+	return parseActiveCropBBox(value, true)
+}
+
+func parseActiveCropBBox(value map[string]any, requireSixDecimals bool) (ActiveCropBBox, error) {
 	if len(value) != 4 {
 		return ActiveCropBBox{}, ErrActiveCropUnavailable
 	}
@@ -211,7 +241,7 @@ func activeCropBBox(value map[string]any) (ActiveCropBBox, error) {
 	targets := []*float64{&bbox.X, &bbox.Y, &bbox.Width, &bbox.Height}
 	for index, field := range []string{"x", "y", "width", "height"} {
 		number, ok := finiteFloat(value[field])
-		if !ok || !sixDecimalBBox(number) {
+		if !ok || requireSixDecimals && !sixDecimalBBox(number) {
 			return ActiveCropBBox{}, ErrActiveCropUnavailable
 		}
 		*targets[index] = number

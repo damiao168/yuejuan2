@@ -25,7 +25,13 @@ func (h *Handler) WithMathGradingV2(enabled bool, adapter LLMGradingAdapter, sou
 }
 
 func (h *Handler) prepareMathEvidence(ctx context.Context, tenantID string, value *Context) error {
-	if value == nil || !h.mathV2Enabled || !mathSubject(*value) {
+	if value != nil && value.InputVersionID != "" {
+		return nil
+	}
+	if err := h.prepareReferenceMaterial(ctx, tenantID, value); err != nil {
+		return err
+	}
+	if value == nil || value.InputVersionID != "" || !h.mathV2Enabled || !mathSubject(*value) {
 		return nil
 	}
 	evidence, err := h.mathEvidence.Prepare(ctx, tenantID, *value)
@@ -36,13 +42,59 @@ func (h *Handler) prepareMathEvidence(ctx context.Context, tenantID string, valu
 	return nil
 }
 
+func (h *Handler) prepareReferenceMaterial(ctx context.Context, tenantID string, value *Context) error {
+	if value != nil && value.ReferenceMaterials != nil && value.ReferenceMaterials.Mode == "reference_images" {
+		if !h.mathV2Enabled || !mathSubject(*value) || h.referenceMaterials == nil {
+			return &GradingAgentError{Code: "reference_material_capability_unavailable"}
+		}
+		cache, _ := ctx.Value(referencePreflightContextKey{}).(*referencePreflightCache)
+		identity := h.referencePreflightIdentity(tenantID, *value)
+		if cache.contains(identity) {
+			return nil
+		}
+		if _, _, err := h.referenceMaterials.Resolve(ctx, tenantID, value.AssessmentSnapshot.ExamID, value.Question.ID, value.ReferenceMaterials); err != nil {
+			return &GradingAgentError{Code: "reference_material_unavailable", cause: err}
+		}
+		if err := h.preflightReferenceMaterial(ctx, tenantID, *value); err != nil {
+			return err
+		}
+		cache.add(identity)
+	}
+	return nil
+}
+
+func (h *Handler) preflightReferenceMaterial(ctx context.Context, tenantID string, value Context) error {
+	capability, supported := h.mathAdapter.(interface {
+		ReferenceMaterialCapability(context.Context) (string, error)
+	})
+	governed, configured := h.mathAdapter.(GovernedPolicyProvider)
+	planned, planningConfigured := h.adapter.(GovernedPolicyProvider)
+	if !supported || !configured || !planningConfigured || h.referenceMaterialPreflight == nil {
+		return &GradingAgentError{Code: "reference_material_capability_unavailable"}
+	}
+	policy := governed.Policy()
+	if ValidatePolicy(policy) != nil || policy.ModelVersion != planned.Policy().ModelVersion || policy.PromptVersion != planned.Policy().PromptVersion {
+		return &GradingAgentError{Code: "reference_material_capability_unavailable"}
+	}
+	wrapper, err := capability.ReferenceMaterialCapability(ctx)
+	if err != nil || !validLowerSHA256(wrapper) {
+		return &GradingAgentError{Code: "reference_material_capability_unavailable", cause: err}
+	}
+	// 入队计划尚未持久化前就阻断缺少 image 审批的材料请求；这里的结果不替代消费时实时准入。
+	if err := h.referenceMaterialPreflight(ctx, tenantID, value, policy, wrapper); err != nil {
+		return &GradingAgentError{Code: "reference_material_image_not_authorized", cause: err}
+	}
+	return nil
+}
+
 func (h *Handler) useMathV2(value Context) bool {
 	return h.mathV2Enabled && mathSubject(value) && value.MathEvidence != nil && h.mathAdapter != nil
 }
 
 func runInputFor(value Context, batchID string, policy ModelPolicy, requestID string) CreateRunInput {
 	input := CreateRunInput{AnswerSegmentID: value.SegmentID, BatchID: batchID, AnswerVersion: value.AnswerVersion,
-		QuestionID: value.Question.ID, RubricVersion: value.Rubric.Version, ModelVersion: policy.ModelVersion,
+		QuestionID: value.Question.ID, ExamQuestionSnapshotID: value.AssessmentSnapshot.ID,
+		RubricVersion: value.Rubric.Version, ModelVersion: policy.ModelVersion,
 		PromptVersion: policy.PromptVersion, MinConfidence: policy.MinConfidence, RequestID: requestID}
 	if value.MathEvidence != nil {
 		input.MathArtifactID = value.MathEvidence.ArtifactID
@@ -58,6 +110,26 @@ func (h *Handler) buildAdapterInput(ctx context.Context, tenantID, requestID str
 		Question: value.Question, Rubric: value.Rubric, AnswerText: value.AnswerText, AnswerImageRef: value.AnswerImageRef,
 		OCRConfidence: value.OCRConfidence, AssessmentSnapshot: value.AssessmentSnapshot, ModelPolicy: policy, PromptGuard: guard,
 		MathEvidence: value.MathEvidence, ReferenceContext: value.ReferenceContext, OutputConstraint: constraint}
+	if value.InputVersionID != "" {
+		adapter, model, err := h.imageAdapterForPlan(ctx, tenantID, imagePlanForQuestion(value.AIPlan, value.Question.QuestionType))
+		if err != nil {
+			return AdapterInput{}, nil, false, err
+		}
+		if value.Observation == nil || imageModelBinding(model) != value.Observation.ModelBinding || adapter.Policy().ModelVersion != policy.ModelVersion {
+			return AdapterInput{}, nil, false, ErrWorkerResultVersionConflict
+		}
+		crop, err := h.activeCrops.ResolveForObservation(ctx, tenantID, value.SegmentID, value.Question.ID)
+		if err != nil {
+			return AdapterInput{}, nil, false, err
+		}
+		if crop.SHA256 != value.CropSHA256 {
+			return AdapterInput{}, nil, false, mathunderstanding.ErrRevisionConflict
+		}
+		input.InputVersionID, input.CropSHA256, input.Observation = value.InputVersionID, value.CropSHA256, value.Observation
+		input.ActiveCrop = &crop
+		input.ImageModel = model
+		return input, adapter, false, nil
+	}
 	if !h.useMathV2(value) {
 		return input, h.adapter, false, nil
 	}
@@ -72,10 +144,26 @@ func (h *Handler) buildAdapterInput(ctx context.Context, tenantID, requestID str
 		return AdapterInput{}, nil, true, mathunderstanding.ErrRevisionConflict
 	}
 	input.ActiveCrop = &crop
+	if value.ReferenceMaterials != nil && value.ReferenceMaterials.Mode == "reference_images" {
+		materials, images, err := h.referenceMaterials.Resolve(ctx, tenantID, value.AssessmentSnapshot.ExamID, value.Question.ID, value.ReferenceMaterials)
+		if err != nil {
+			return AdapterInput{}, nil, true, err
+		}
+		manifest := &ReferenceManifest{Mode: "reference_images", ManifestHash: materials.ContentHash, AssessmentSnapshotID: value.AssessmentSnapshot.ID, AssessmentSnapshotHash: value.AssessmentSnapshot.ContentHash, RequiredMediaIDs: []string{}}
+		for _, image := range images {
+			item := image.Item
+			manifest.RequiredMediaIDs = append(manifest.RequiredMediaIDs, item.ID)
+			input.ReferenceMedia = append(input.ReferenceMedia, ReferenceMedia{MediaID: item.ID, Role: item.Role, Ordinal: item.Ordinal, Encoding: "base64", MediaType: "image/png", SHA256: item.SHA256, ByteSize: item.SizeBytes, WidthPixels: item.Width, HeightPixels: item.Height, Data: image.Data})
+		}
+		input.ReferenceManifest = manifest
+	}
 	return input, h.mathAdapter, true, nil
 }
 
 func (h *Handler) buildPanelMathInput(ctx context.Context, tenantID, requestID string, value Context, policy ModelPolicy, guard PromptGuard, constraint aieligibility.OutputConstraint) (AdapterInput, error) {
+	if value.ReferenceMaterials != nil && value.ReferenceMaterials.Mode == "reference_images" {
+		return AdapterInput{}, &GradingAgentError{Code: "reference_material_panel_not_supported"}
+	}
 	if !h.mathV2Enabled || !mathSubject(value) || value.MathEvidence == nil || h.activeCrops == nil {
 		return AdapterInput{}, ErrActiveCropUnavailable
 	}
@@ -94,6 +182,9 @@ func (h *Handler) buildPanelMathInput(ctx context.Context, tenantID, requestID s
 func (h *Handler) settleMathOutput(ctx context.Context, tenantID string, value Context, policy ModelPolicy, output *AdapterOutput) error {
 	if output == nil || value.MathEvidence == nil || output.SchemaVersion != gradingAgentV2BuilderSchemaVersion || output.Mock || output.DeliveryMode != "teacher_suggestion" {
 		return ErrInvalidModelOutput
+	}
+	if err := validateOutputExecutionDiagnostics(*output); err != nil {
+		return err
 	}
 	// worker 结果封装可携带已结算建议，但其中所有含分数的字段都必须经过服务器重算才能保留。
 	output.SuggestedScore, output.MathScore = 0, nil

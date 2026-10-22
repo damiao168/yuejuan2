@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
 // BeginScoringRunCancellation 先持久化 cancelling，再交由调用方取消外部任务；中途失败可继续同一取消流程。
@@ -40,7 +42,10 @@ FROM subjective_grading_batch batch
 JOIN subjective_grading_run ai_run ON ai_run.tenant_id=batch.tenant_id AND ai_run.batch_id=batch.id AND ai_run.deleted_at IS NULL
 JOIN agent_worker_task wt ON wt.tenant_id=ai_run.tenant_id AND wt.source_type='subjective_grading_run' AND wt.source_id=ai_run.id
 WHERE batch.tenant_id=$1::uuid AND batch.scoring_run_id=$2::uuid AND batch.deleted_at IS NULL
-  AND wt.status IN ('queued','leased','running')`, tenantID, runID)
+  AND wt.status IN ('queued','leased','running')
+UNION
+SELECT wt.id::text FROM scoring_run_item item JOIN agent_worker_task wt ON wt.tenant_id=item.tenant_id AND wt.id=item.runtime_task_id
+WHERE item.tenant_id=$1::uuid AND item.scoring_run_id=$2::uuid AND wt.status IN ('queued','leased','running')`, tenantID, runID)
 	if err != nil {
 		return ScoringRun{}, nil, err
 	}
@@ -96,6 +101,12 @@ WHERE o.tenant_id=$1::uuid AND o.scoring_run_id=$2::uuid AND o.deleted_at IS NUL
 	if active > 0 {
 		return ScoringRun{}, ErrInvalidTransition
 	}
+	if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM scoring_run_item item JOIN agent_worker_task wt ON wt.tenant_id=item.tenant_id AND wt.id=item.runtime_task_id WHERE item.tenant_id=$1::uuid AND item.scoring_run_id=$2::uuid AND wt.status IN ('queued','leased','running')`, tenantID, runID).Scan(&active); err != nil {
+		return ScoringRun{}, err
+	}
+	if active > 0 {
+		return ScoringRun{}, ErrInvalidTransition
+	}
 	if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM subjective_grading_batch batch
 JOIN subjective_grading_run ai_run ON ai_run.tenant_id=batch.tenant_id AND ai_run.batch_id=batch.id AND ai_run.deleted_at IS NULL
 JOIN agent_worker_task wt ON wt.tenant_id=ai_run.tenant_id AND wt.source_type='subjective_grading_run' AND wt.source_id=ai_run.id
@@ -129,6 +140,9 @@ AND rt.scoring_run_id=$2::uuid AND dm.status IN ('pending','first_submitted','se
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE question_grade SET is_current=false,status='invalidated'
 WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND is_current AND deleted_at IS NULL`, tenantID, runID); err != nil {
+		return ScoringRun{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE scoring_run_item SET processing_status='cancelled',next_action='none',retryable=false,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND processing_status NOT IN ('succeeded','superseded','cancelled')`, tenantID, runID); err != nil {
 		return ScoringRun{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE final_grade fg SET deleted_at=now(),updated_at=now()
@@ -180,9 +194,17 @@ func (s *PostgresStore) PrepareOMRRetry(ctx context.Context, tenantID, omrRunID 
 		return FailedOMRTask{}, err
 	}
 	defer tx.Rollback()
+	item, err := s.prepareOMRRetryTx(ctx, tx, tenantID, omrRunID)
+	if err != nil {
+		return FailedOMRTask{}, err
+	}
+	return item, tx.Commit()
+}
+
+func (s *PostgresStore) prepareOMRRetryTx(ctx context.Context, tx *sql.Tx, tenantID, omrRunID string) (FailedOMRTask, error) {
 	var item FailedOMRTask
 	var runStatus string
-	err = tx.QueryRowContext(ctx, `
+	err := tx.QueryRowContext(ctx, `
 SELECT o.id::text,o.runtime_task_id::text,sr.status
 FROM omr_run o
 JOIN scoring_run sr ON sr.tenant_id=o.tenant_id AND sr.id=o.scoring_run_id
@@ -204,10 +226,39 @@ FOR UPDATE OF o,sr`, tenantID, omrRunID).Scan(&item.OMRRunID, &item.RuntimeTaskI
 	if count, _ := result.RowsAffected(); count != 1 {
 		return FailedOMRTask{}, ErrInvalidTransition
 	}
+	return item, nil
+}
+
+// RetryOMRTask 不依赖补偿写入：来源准备、runtime 重新入队及父汇总要么全部成功，要么保留原终止失败。
+func (s *PostgresStore) RetryOMRTask(ctx context.Context, tenantID, omrRunID string) (FailedOMRTask, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return FailedOMRTask{}, err
+	}
+	defer tx.Rollback()
+	item, err := s.prepareOMRRetryTx(ctx, tx, tenantID, omrRunID)
+	if err != nil {
+		return FailedOMRTask{}, err
+	}
+	task, err := workerruntime.RequeueTaskInTx(ctx, tx, tenantID, item.RuntimeTaskID)
+	if err != nil {
+		return FailedOMRTask{}, err
+	}
+	if task.SourceType != "omr_run" || task.SourceID != omrRunID {
+		return FailedOMRTask{}, ErrInvalidTransition
+	}
+	var runID string
+	if err = tx.QueryRowContext(ctx, `SELECT scoring_run_id::text FROM omr_run WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, omrRunID).Scan(&runID); err != nil {
+		return FailedOMRTask{}, err
+	}
+	if _, err = s.refreshScoringRunTx(ctx, tx, tenantID, runID); err != nil {
+		return FailedOMRTask{}, err
+	}
 	return item, tx.Commit()
 }
 
 // RestoreOMRRetry 用于外部 Worker 重试未成功时恢复业务状态；只撤回仍处于 queued 的准备结果。
+// 生产评分重试使用 RetryOMRTask 的单事务命令，不依赖这项兼容补偿。
 func (s *PostgresStore) RestoreOMRRetry(ctx context.Context, tenantID, omrRunID string) error {
 	result, err := s.db.ExecContext(ctx, `UPDATE omr_run SET status='terminal_error',completed_at=now(),updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='queued'`, tenantID, omrRunID)
 	if err != nil {
@@ -240,18 +291,32 @@ func (s *PostgresStore) refreshScoringRunTx(ctx context.Context, tx *sql.Tx, ten
 	if run.Status == "cancelling" || run.Status == "cancelled" {
 		return run, nil
 	}
+	if err = refreshScoringItemsTx(ctx, tx, tenantID, runID); err != nil {
+		return ScoringRun{}, err
+	}
+	if err = reconcileScoringAIReviewTasksTx(ctx, tx, tenantID, runID); err != nil {
+		return ScoringRun{}, err
+	}
 	var queued, review, failed, autoConfirmed, humanConfirmed int
 	err = tx.QueryRowContext(ctx, `
 SELECT
-  (SELECT count(*) FROM omr_run WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status IN ('queued','processing','retryable_error') AND deleted_at IS NULL),
+  (SELECT count(DISTINCT answer_segment_id) FROM (
+     SELECT answer_segment_id FROM omr_run WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status IN ('queued','processing','retryable_error') AND deleted_at IS NULL
+     UNION SELECT answer_segment_id FROM scoring_run_item WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND processing_status IN ('waiting_dependency','queued','running','retry_wait')
+   ) active),
   (SELECT count(DISTINCT pending.answer_segment_id) FROM (
      SELECT answer_segment_id FROM review_task WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status IN ('pending','assigned','in_progress','returned') AND deleted_at IS NULL
+     UNION ALL
+     SELECT answer_segment_id FROM scoring_run_item WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND (decision_status IN ('suggestion_ready','review_needed','manual_only') OR processing_status IN ('blocked','superseded'))
      UNION ALL
      SELECT arb.answer_segment_id FROM arbitration_task arb JOIN double_mark_session dm ON dm.tenant_id=arb.tenant_id AND dm.id=arb.double_mark_session_id
        JOIN review_task rt ON rt.tenant_id=dm.tenant_id AND rt.id=dm.first_review_task_id
        WHERE arb.tenant_id=$1::uuid AND rt.scoring_run_id=$2::uuid AND arb.status IN ('pending','assigned') AND arb.deleted_at IS NULL
    ) pending),
-  (SELECT count(*) FROM omr_run WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status='terminal_error' AND deleted_at IS NULL),
+  (SELECT count(DISTINCT answer_segment_id) FROM (
+    SELECT answer_segment_id FROM omr_run WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status='terminal_error' AND deleted_at IS NULL
+    UNION SELECT answer_segment_id FROM scoring_run_item WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND processing_status='failed'
+  ) failures),
   (SELECT count(*) FROM question_grade WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND source='rule_confirmed' AND is_current AND status='confirmed' AND deleted_at IS NULL),
   (SELECT count(*) FROM question_grade WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND source='human' AND is_current AND status='confirmed' AND deleted_at IS NULL)
 `, tenantID, runID).Scan(&queued, &review, &failed, &autoConfirmed, &humanConfirmed)

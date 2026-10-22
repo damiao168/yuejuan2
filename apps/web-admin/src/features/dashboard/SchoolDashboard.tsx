@@ -1,5 +1,5 @@
 import { Button } from "antd";
-import { ArrowRight, Check, Clock3, GraduationCap, UserCog, UsersRound } from "lucide-react";
+import { ArrowRight, Building2, Check, Clock3, GraduationCap, UserCog, UsersRound } from "lucide-react";
 import type { DashboardActiveExam, DashboardActivity, DashboardOrganizationStatistics, DashboardStatistics } from "../../api/dashboard";
 import { StatusTag } from "../../components/StatusTag";
 import { examStatusLabels, examStatusTone, examSubjectLabel } from "../../constants/examStatus";
@@ -34,12 +34,11 @@ function examAction(exam: DashboardActiveExam) {
   return { label: "查看考试", path: `/exams/${encodedId}/overview` };
 }
 
-function MembersSection({ statistics, onNavigate }: Readonly<{ statistics: DashboardOrganizationStatistics; onNavigate: (path: string) => void }>) {
+function MembersSection({ schoolName, statistics, onNavigate }: Readonly<{ schoolName: string; statistics: DashboardOrganizationStatistics; onNavigate: (path: string) => void }>) {
   const items = [
     {
       label: "学生名册",
       value: `${statistics.active_student_count.toLocaleString("zh-CN")} 人`,
-      detail: "在籍学生",
       action: "管理学生",
       path: "/members/students",
       icon: <UsersRound size={18} />
@@ -47,16 +46,14 @@ function MembersSection({ statistics, onNavigate }: Readonly<{ statistics: Dashb
     {
       label: "年级与班级",
       value: `${statistics.grade_count} 个年级 · ${statistics.class_count} 个班`,
-      detail: statistics.empty_class_count ? `${statistics.empty_class_count} 个班尚无学生` : "班级名册已建立",
       action: "管理班级",
       path: "/members/classes",
       icon: <GraduationCap size={18} />
     },
     {
-      label: "阅卷教师",
+      label: "教师看板",
       value: `${statistics.teacher_count} 名教师`,
-      detail: `${statistics.grader_count} 名阅卷人员`,
-      action: "管理人员",
+      action: "管理教师",
       path: "/members/teachers",
       icon: <UserCog size={18} />
     }
@@ -65,15 +62,15 @@ function MembersSection({ statistics, onNavigate }: Readonly<{ statistics: Dashb
   return (
     <section className="school-dashboard-section members-section">
       <div className="school-dashboard-section-head">
-        <div className="school-dashboard-section-title"><span>01</span><div><h2>成员管理</h2><p>维护组织、学生与考试人员基础数据</p></div></div>
-        <Button type="link" onClick={() => onNavigate("/members/students")}>查看成员管理 <ArrowRight size={14} /></Button>
+        <div className="school-dashboard-section-title"><span>01</span><div><h2>成员管理</h2></div></div>
       </div>
+      <div className="member-school-name"><Building2 size={18} /><strong>{schoolName || "当前学校"}</strong></div>
       <div className="member-summary-grid">
         {items.map((item) => (
-          <button type="button" key={item.label} onClick={() => onNavigate(item.path)}>
+          <button type="button" key={item.label} aria-label={`${item.label}：${item.value}，${item.action}`} onClick={() => onNavigate(item.path)}>
             <span className="member-summary-icon">{item.icon}</span>
-            <span className="member-summary-copy"><small>{item.label}</small><strong>{item.value}</strong><em>{item.detail}</em></span>
-            <span className="member-summary-action">{item.action}<ArrowRight size={14} /></span>
+            <span className="member-summary-copy"><small>{item.label}</small><strong>{item.value}</strong></span>
+            <span className="member-summary-action" aria-hidden="true"><ArrowRight size={16} /></span>
           </button>
         ))}
       </div>
@@ -85,19 +82,19 @@ function ExamsSection({ exams, activeExamCount, onNavigate }: Readonly<{ exams: 
   return (
     <section className="school-dashboard-section exams-section">
       <div className="school-dashboard-section-head">
-        <div className="school-dashboard-section-title"><span>02</span><div><h2>考试管理</h2><p>进行中 {activeExamCount} 场 · 查看当前阶段并继续下一项工作</p></div></div>
+        <div className="school-dashboard-section-title"><span>02</span><div><h2>考试管理</h2><p>进行中 {activeExamCount} 场</p></div></div>
         <Button type="link" onClick={() => onNavigate("/exams")}>全部考试 <ArrowRight size={14} /></Button>
       </div>
       {exams.length ? (
         <div className="dashboard-table-wrap">
           <table className="dashboard-operation-table exam-operation-table">
-            <thead><tr><th>考试</th><th>科目</th><th>当前阶段</th><th className="number-cell">答卷</th><th className="number-cell">异常</th><th>下一步</th></tr></thead>
+            <thead><tr><th>考试</th><th>科目</th><th>阶段</th><th className="number-cell">答卷</th><th className="number-cell">异常</th><th>下一步</th></tr></thead>
             <tbody>{exams.slice(0, 5).map((exam) => {
               const action = examAction(exam);
               const issueCount = exam.failed_count + exam.quality_issue_count + exam.unmatched_count;
               return (
                 <tr key={exam.id}>
-                  <td><button type="button" className="table-primary-link" onClick={() => onNavigate(`/exams/${encodeURIComponent(exam.id)}/overview`)}>{exam.name}</button></td>
+                  <td><button type="button" className="table-primary-link" title={exam.name} onClick={() => onNavigate(`/exams/${encodeURIComponent(exam.id)}/overview`)}>{exam.name}</button></td>
                   <td>{examSubjectLabel(exam.subject)}</td>
                   <td><StatusTag tone={examStatusTone(exam.status)}>{examStatusLabels[exam.status] ?? "进行中"}</StatusTag></td>
                   <td className="number-cell">{exam.submission_count || "—"}</td>
@@ -172,7 +169,8 @@ function KeyProgressSection({ activities, onNavigate }: Readonly<{ activities: D
   );
 }
 
-export function SchoolDashboard({ organizationStatistics, statistics, activeExamCount, exams, workItems, activities, onNavigate }: Readonly<{
+export function SchoolDashboard({ schoolName, organizationStatistics, statistics, activeExamCount, exams, workItems, activities, onNavigate }: Readonly<{
+  schoolName: string;
   organizationStatistics: DashboardOrganizationStatistics;
   statistics: DashboardStatistics;
   activeExamCount: number;
@@ -183,8 +181,10 @@ export function SchoolDashboard({ organizationStatistics, statistics, activeExam
 }>) {
   return (
     <div className="school-dashboard-sections">
-      <MembersSection statistics={organizationStatistics} onNavigate={onNavigate} />
-      <ExamsSection exams={exams} activeExamCount={activeExamCount} onNavigate={onNavigate} />
+      <div className="school-dashboard-overview">
+        <MembersSection schoolName={schoolName} statistics={organizationStatistics} onNavigate={onNavigate} />
+        <ExamsSection exams={exams} activeExamCount={activeExamCount} onNavigate={onNavigate} />
+      </div>
       <GradingResultsSection statistics={statistics} workItems={workItems} onNavigate={onNavigate} />
       <KeyProgressSection activities={activities} onNavigate={onNavigate} />
     </div>

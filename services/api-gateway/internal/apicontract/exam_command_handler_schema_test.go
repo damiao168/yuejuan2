@@ -67,7 +67,7 @@ func TestExamCommandHandlerResponsesValidateAgainstOpenAPI(t *testing.T) {
 func scopedContractRequest(request *http.Request) *http.Request {
 	ctx := logger.WithTraceID(logger.WithRequestID(context.Background(), "contract-request"), "contract-trace")
 	ctx = auth.WithUser(ctx, auth.User{ID: "actor-1", TenantID: "tenant-1"})
-	ctx = auth.WithAccessScope(ctx, auth.AccessScope{TenantID: "tenant-1", TenantWide: true})
+	ctx = auth.WithAccessScope(ctx, auth.AccessScope{TenantID: "tenant-1", ActorID: "actor-1", TenantWide: true})
 	return request.WithContext(ctx)
 }
 

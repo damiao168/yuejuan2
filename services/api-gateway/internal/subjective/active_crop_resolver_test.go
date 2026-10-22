@@ -18,6 +18,18 @@ import (
 
 const activeCropTestPNGBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII="
 
+func TestActiveCropResolverDoesNotSendSharedOnlyContextAsIndividualCrop(t *testing.T) {
+	fixture := newActiveCropResolverFixture(t)
+	fixture.evidence.NormalizedBBox["answer_scope"] = "grading_group"
+	fixture.refresh()
+	if _, err := fixture.resolver.Resolve(context.Background(), "tenant-1", "segment-1", "question-1"); err != ErrActiveCropUnavailable {
+		t.Fatalf("shared-only image sent to individual model: %v", err)
+	}
+	if fixture.objects.getCalls != 0 {
+		t.Fatal("shared-only object was read")
+	}
+}
+
 func TestActiveCropResolverReturnsVerifiedCurrentCrop(t *testing.T) {
 	fixture := newActiveCropResolverFixture(t)
 	resolved, err := fixture.resolver.Resolve(context.Background(), "tenant-1", "segment-1", "question-1")
@@ -40,6 +52,25 @@ func TestActiveCropResolverReturnsVerifiedCurrentCrop(t *testing.T) {
 			fixture.assetStore.calls,
 			fixture.objects.getCalls,
 		)
+	}
+}
+
+func TestObservationCropRetainsRegistrationPrecisionAndLegacyV2RequiresSixDecimals(t *testing.T) {
+	fixture := newActiveCropResolverFixture(t)
+	// 像素坐标除以页面尺寸会产生长小数，不能把有效已裁 PNG 当成缺图；旧 v2 契约仍单独校验精度。
+	fixture.evidence.NormalizedBBox = map[string]any{"x": 0.07416666666666667, "y": 0.5118727915194347, "width": 0.10458333333333332, "height": 0.04836572438162544}
+	fixture.refresh()
+	if _, err := fixture.resolver.Resolve(context.Background(), "tenant-1", "segment-1", "question-1"); err != ErrActiveCropUnavailable {
+		t.Fatalf("legacy v2 accepted precision outside its contract: %v", err)
+	}
+	resolved, err := fixture.resolver.ResolveForObservation(context.Background(), "tenant-1", "segment-1", "question-1")
+	if err != nil || resolved.NormalizedBBox.Y != 0.5118727915194347 || !bytes.Equal(resolved.Data, fixture.data) {
+		t.Fatalf("valid registration crop lost its original identity: crop=%+v err=%v", resolved, err)
+	}
+	fixture.asset.HashSHA256 = strings.Repeat("0", 64)
+	fixture.refresh()
+	if _, err := fixture.resolver.ResolveForObservation(context.Background(), "tenant-1", "segment-1", "question-1"); err != ErrActiveCropUnavailable {
+		t.Fatalf("observation bypassed asset hash binding: %v", err)
 	}
 }
 

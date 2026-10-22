@@ -44,7 +44,7 @@ func TestBatch28ExceptionFiltersAndProjectionTime(t *testing.T) {
 		{"combined", ExceptionFilter{ExamID: "exam-a", Severity: SeverityP0, Status: ExceptionOpen, Stage: StageQualityChecked}, []string{"a"}, now},
 		{"empty-still-has-projection", ExceptionFilter{ExamID: "exam-a", Severity: SeverityP3}, []string{}, now},
 		{"unknown-exam", ExceptionFilter{ExamID: "absent"}, []string{}, time.Time{}},
-		{"legacy-cursor-and-subject-unused", ExceptionFilter{CursorAt: now.Add(-time.Hour), CursorID: "c", Subject: "math"}, []string{"b", "a", "c"}, now.Add(time.Hour)},
+		{"cursor-before-last-item", ExceptionFilter{CursorAt: now.Add(-time.Hour), CursorID: "c"}, []string{}, now.Add(time.Hour)},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

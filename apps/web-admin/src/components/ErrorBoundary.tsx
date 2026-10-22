@@ -40,11 +40,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     window.location.reload();
   };
 
-  // 这里完全重载页面，不仅修改 hash 并调用 setState：
+  // 这里完全重载页面，不仅更换路由并调用 setState：
   // 故障页面可能就是仪表盘，而 lazy() 会持续缓存被拒绝的模块加载，
   // 所以原地重新渲染仍会抛出同一个错误。
   private readonly backToDashboard = () => {
-    window.location.hash = "/dashboard";
+    window.history.replaceState(window.history.state, "", "/dashboard");
     window.location.reload();
   };
 

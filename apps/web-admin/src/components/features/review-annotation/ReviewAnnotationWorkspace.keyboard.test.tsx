@@ -84,15 +84,17 @@ describe("批注键盘新增与归一化坐标", () => {
     expect(mocks.save.mock.calls[0][0].geometry).toEqual({ coordinate_space: "canonical_image_normalized", x: 0.5, y: 0.35, width: 0, height: 0 });
   });
 
-  it("无编辑权限时新增与已有批注编辑都不能发送保存请求", () => {
+  it("无编辑权限时仅查看已有批注，编辑器和新增入口不挂载", () => {
     mocks.annotations = [{ id: "annotation", type: "note", content: "已有评语", visibility: "private", revision: 7, payload: {},
       geometry: { coordinate_space: "canonical_image_normalized", x: 0.5, y: 0.5, width: 0, height: 0 } } as ReviewAnnotation];
     render(<ReviewAnnotationWorkspace {...props} disabled />);
-    expect((screen.getByRole("button", { name: "新增点批注" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "编辑批注：已有评语" }));
-    expect((screen.getByRole("button", { name: "保存批注" }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole("spinbutton", { name: "批注距左侧百分比" }) as HTMLInputElement).disabled).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "保存批注" })); expect(mocks.save).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "新增点批注" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "常用评语" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "查看批注：已有评语" }));
+    expect(screen.getByText("已有评语")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "保存批注" })).toBeNull();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+    expect(mocks.save).not.toHaveBeenCalled();
   });
 
   it("调整已有批注时仍把原revision交给共享hook处理冲突", async () => {

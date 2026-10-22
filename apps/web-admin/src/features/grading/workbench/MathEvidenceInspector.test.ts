@@ -96,13 +96,11 @@ describe("math evidence inspector details", () => {
     expect(host.querySelector(".math-evidence-summary button")?.textContent).toBe("查看详情");
   });
 
-  it("keeps read-only structure controls disabled while evidence remains navigable", async () => {
+  it("does not mount read-only correction controls while evidence remains navigable", async () => {
     await open({ ...props(), disabled: true });
-    expect(host.querySelector<HTMLInputElement>('[aria-label="校正公式 formula-1"]')?.disabled).toBe(true);
+    expect(host.querySelector<HTMLInputElement>('[aria-label="校正公式 formula-1"]')).toBeNull();
+    expect(host.textContent).toContain("x=2");
     expect(host.querySelector<HTMLButtonElement>('[aria-label="定位步骤 step-1"]')?.disabled).toBe(false);
-    for (const button of host.querySelectorAll<HTMLButtonElement>(".math-step-row button:not([aria-label^='定位步骤']), .math-crossed-block button, .ant-space-compact button, .math-evidence-actions button")) {
-      expect(button.disabled).toBe(true);
-    }
-    expect(host.querySelector(".math-evidence-actions")?.textContent).toContain("校正保存为当前数学证据，不直接改分。");
+    expect(host.querySelectorAll(".math-step-row button:not([aria-label^='定位步骤']), .math-crossed-block button, .ant-space-compact button, .math-evidence-actions button")).toHaveLength(0);
   });
 });

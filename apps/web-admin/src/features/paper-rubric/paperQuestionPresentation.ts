@@ -5,6 +5,7 @@ import { questionAnswerText } from "./hooks/useQuestionEditor";
 import { formulaEvidenceEnabled, labelFrom } from "./paperPresentation";
 
 export type QuestionFilter = "all" | "answer" | "rubric";
+export type QuestionIssueTarget = "score" | "answer" | "rubric";
 export type PaperDraftSection = "question" | "rubric" | "scoring";
 const toleranceQuestionTypes = new Set(["numeric", "formula", "calculation"]);
 export const fixedScoringQuestionTypes = new Set(["single_choice", "true_false", "multiple_choice", "fill_blank", "numeric"]);
@@ -99,9 +100,19 @@ export function questionStateLabel(question: Question, placeholder: boolean) {
   if (placeholder) return "预设占位，等待结构核对";
   const pending: string[] = [];
   if (questionNeedsAnswer(question)) pending.push("待补答案");
-  if (questionNeedsRubric(question)) pending.push("评分细则待锁定");
+  if (questionNeedsRubric(question)) pending.push(question.rubric?.points.length ? rubricProgressLabel(question) : "待确认细则");
   if (pending.length) return pending.join("、");
-  return fixedScoringQuestionTypes.has(question.question_type) ? "答案已填" : "评分细则已锁定";
+  return fixedScoringQuestionTypes.has(question.question_type) ? "答案已填" : "细则已确认";
+}
+
+// 保存过的有效采分点才算草稿；表单默认生成的空内容不能显示成已经保存。
+export function rubricProgressLabel(question: Question | null, unsaved = false) {
+  if (question?.rubric?.status === "locked") return "已确认并锁定";
+  if (unsaved) return "有未保存修改";
+  if (!question?.rubric?.points.length) return "尚未配置细则";
+  if (question.rubric.status === "pending_review") return "已提交审批，待确认";
+  if (question.rubric.status === "approved") return "审批已通过，待确认";
+  return "草稿已保存，待确认";
 }
 
 export function questionIndexLabel(question: Question, placeholder: boolean) {
@@ -110,16 +121,16 @@ export function questionIndexLabel(question: Question, placeholder: boolean) {
 }
 
 export function questionEditorDescription(question: Question | null, locked: boolean, unsaved: boolean) {
-  if (locked) return "评分细则已锁定";
+  if (locked) return "评分细则已确认并锁定";
   if (unsaved) return "有未保存的修改";
   if (!question) return "填写题目与答案后保存";
   return `${labelFrom(questionTypeOptions, question.question_type)} · ${questionScoreLabel(question.score)}`;
 }
 
 export function rubricSaveLabel(status: string) {
-  if (status === "locked") return "锁定评分细则";
+  if (status === "locked") return "确认并锁定细则";
   if (status === "pending_review") return "提交审批";
-  return "保存评分细则";
+  return "保存草稿";
 }
 
 export function questionEditorToggleLabel(open: boolean, questionCount: number) {
@@ -128,7 +139,7 @@ export function questionEditorToggleLabel(open: boolean, questionCount: number) 
 }
 
 export function fixedScoringDescription(type: string) {
-  if (type === "multiple_choice") return "多选题少选分与错选扣分以下方政策为准。";
+  if (type === "multiple_choice") return "少选且无错选、有错选的得分以下方设置为准；空白得 0 分。";
   if (type === "fill_blank") return "填空题还需核对每空答案、等价写法和分值。";
   return "空白或识别不确定的答卷应转人工确认。";
 }

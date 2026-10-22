@@ -47,6 +47,26 @@ func NewGradeSettlementPipeline(settleMath mathSettlementFunc, recordCalibration
 // Settle 在一处应用同步和异步共用的结果策略。
 // 持久化留给调用方，以保持事务和幂等行为不变。
 func (p *GradeSettlementPipeline) Settle(ctx context.Context, input GradeSettlementInput, output *AdapterOutput) error {
+	if input.Context.InputVersionID != "" {
+		// 回调携带的分数、正文和观察都不可信；只能用已保存观察重建冻结量规的建议。
+		if output == nil || output.SchemaVersion != ImageProtocolVersion {
+			return ErrInvalidModelOutput
+		}
+		if input.Context.AIPlan != nil {
+			if err := settleImagePanelOutput(input.Context, input.Policy, output); err != nil {
+				return err
+			}
+			// 多评聚合是本场冻结规则，不沿用单模型校准通过结论；AI_ASSIST 仍由教师确认。
+			ApplyPromptGuard(output, InspectPromptInjection(input.Context.AnswerText))
+			ApplyReviewPolicy(output, input.Context, input.Policy)
+			return nil
+		}
+		output.Observation = input.Context.Observation
+		if err := projectImageJudgments(output, AdapterInput{SegmentID: input.Context.SegmentID, Question: input.Context.Question, Rubric: input.Context.Rubric, CropSHA256: input.Context.CropSHA256, Observation: input.Context.Observation}); err != nil {
+			return err
+		}
+		output.RawOutput = imageRawOutput(input.Context, output.ImageJudgments)
+	}
 	if input.MathRun {
 		if p.settleMath == nil {
 			return ErrInvalidModelOutput

@@ -290,7 +290,7 @@ fn run_scanner_preflight_scoped(
     // 预检期间，外层租约守卫持有操作锁。
     // 带账号作用域的存储根目录表明已选定登录账号。
     let durable_status = crate::durable_store::scoped_status(app.clone());
-    let free_bytes = available_disk_bytes();
+    let free_bytes = available_disk_bytes(&durable_status);
     Ok(evaluate_preflight(
         profile,
         inventory,
@@ -693,28 +693,16 @@ fn parse_windows_inventory(json: &str) -> Result<Vec<ScannerDevice>, String> {
         .collect())
 }
 
-fn available_disk_bytes() -> Option<u64> {
-    // 当前取所有文件系统盘中最大的空闲值，尚未定位 spool 所在盘，不能视为该目录的容量保证。
-    #[cfg(windows)]
-    {
-        let output = Command::new("powershell")
-            .args([
-                "-NoProfile",
-                "-NonInteractive",
-                "-Command",
-                "Get-PSDrive -PSProvider FileSystem | Sort-Object Free -Descending | Select-Object -First 1 -ExpandProperty Free",
-            ])
-            .output()
-            .ok()?;
-        if !output.status.success() {
-            return None;
-        }
-        String::from_utf8_lossy(&output.stdout).trim().parse().ok()
+fn available_disk_bytes(
+    durable_status: &Result<crate::durable_store::DurableStoreStatus, String>,
+) -> Option<u64> {
+    // 预检外层持有账号操作锁；只查询本次状态实际打开的 spool 卷，其他盘空闲不能替它放行。
+    // 状态或目录不可用时保留“未知”提示，不退回系统盘或任意最大空闲盘。
+    let status = durable_status.as_ref().ok()?;
+    if !status.ready || status.spool_path.trim().is_empty() {
+        return None;
     }
-    #[cfg(not(windows))]
-    {
-        None
-    }
+    crate::durable_store::storage::volume_free_bytes(std::path::Path::new(&status.spool_path))
 }
 
 fn fingerprint(value: &str) -> String {
@@ -777,6 +765,47 @@ mod tests {
             network_available: false,
             required_free_bytes: Some(1024),
         }
+    }
+
+    #[test]
+    fn disk_preflight_does_not_guess_a_volume_without_ready_spool() {
+        assert_eq!(available_disk_bytes(&Err("store unavailable".into())), None);
+        for ready in [false, true] {
+            assert_eq!(
+                available_disk_bytes(&Ok(crate::durable_store::DurableStoreStatus {
+                    ready,
+                    database_path: String::new(),
+                    spool_path: String::new(),
+                    legacy_data_present: false,
+                })),
+                None
+            );
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn disk_preflight_reads_only_the_selected_spool_directory() {
+        let root = std::env::temp_dir().join(format!("edugrade-scanner-disk-{}", Uuid::new_v4()));
+        std::fs::create_dir(&root).unwrap();
+        let status_for = |path: std::path::PathBuf| crate::durable_store::DurableStoreStatus {
+            ready: true,
+            database_path: String::new(),
+            spool_path: path.to_string_lossy().into_owned(),
+            legacy_data_present: false,
+        };
+        assert!(available_disk_bytes(&Ok(status_for(root.clone()))).is_some());
+        // 目标目录不可用时，即使机器其他卷仍有空间，也不能把它们的容量当成 spool 容量。
+        let free = available_disk_bytes(&Ok(status_for(root.join("missing-spool"))));
+        assert_eq!(free, None);
+        let result = evaluate_preflight(profile(), Ok(connected_devices()), true, free, &request());
+        let disk = result
+            .checks
+            .iter()
+            .find(|check| check.key == "disk_space")
+            .unwrap();
+        assert_eq!(disk.status, "warning");
+        std::fs::remove_dir(&root).unwrap();
     }
 
     #[test]
