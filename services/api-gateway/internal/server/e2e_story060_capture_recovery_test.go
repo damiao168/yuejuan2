@@ -262,6 +262,10 @@ func e2eAssertStory060QualityAtomicity(t *testing.T, db *sql.DB, fixture story05
 // 人工放行保留原失败证据和操作者，并重新排队配准任务，不能只修改页面状态。
 func e2eAssertStory060ManualQualityRecovery(t *testing.T, db *sql.DB, router http.Handler, adminToken string, fixture story056AcceptanceFixture, submissionPageID string) {
 	t.Helper()
+	// 此场景只验证质量放行恢复配准，页码先由人工确认，不能把解码顺序当作可靠页码。
+	if _, err := db.Exec(`UPDATE capture_page SET manual_override=manual_override || jsonb_build_object('page_no',assigned_page_no) WHERE tenant_id=$1::uuid AND submission_page_id=$2::uuid`, fixture.TenantID, submissionPageID); err != nil {
+		t.Fatal(err)
+	}
 	override := e2ePostJSON(t, router, http.MethodPost, "/api/v1/submission-pages/"+submissionPageID+"/quality-override", adminToken, story056JSON(t, map[string]any{
 		"reason": "人工核对页面清晰，倾斜与模糊程度不影响阅卷",
 	}), http.StatusOK)

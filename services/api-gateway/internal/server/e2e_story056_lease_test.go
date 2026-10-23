@@ -13,8 +13,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
-// OMR 回调不能把暂时的规则发布竞争变成没有后续操作的成功 worker 任务。
-// 任务和 OMR 事实仍已持久化，缺失的确认目标则成为显式人工复核项。
+// 人工已领取答案时，迟到的 OMR 不能绕过人工所有权确认成绩。
+// 任务和 OMR 事实仍持久化，并复用已有的人工复核项。
 func TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
@@ -36,16 +36,16 @@ func TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E(t *testing.
 	item, lease := e2eStory056ClaimSingleOMR(t, router, adminToken, runID, "story056-confirmation-fallback-worker")
 	omrRunID := e2eString(t, item, "omr_run_id")
 	segmentID := e2eString(t, item, "answer_segment_id")
-	questionID := e2eString(t, item, "question_id")
-
-	// 此处复现 worker 已领取任务后规则变为不可用的情况。
-	// retired 是有效的不可变历史规则状态，可在不破坏夹具的情况下使确认查询失败。
-	result, err := db.Exec(`UPDATE scoring_rule SET status='retired',updated_at=now() WHERE tenant_id=$1::uuid AND question_id=$2::uuid AND status='published' AND deleted_at IS NULL`, fixture.TenantID, questionID)
+	// 当前规则退役不影响已冻结批次；使用教师先领取的真实冲突触发自动确认失败。
+	result, err := db.Exec(`INSERT INTO review_task(tenant_id,exam_id,submission_id,question_id,question_no,answer_segment_id,anonymous_code,scoring_run_id,source,reason_code,status,assigned_to,created_by)
+SELECT seg.tenant_id,sub.exam_id,seg.submission_id,seg.question_id,seg.question_no,seg.id,sub.id::text,$3::uuid,'grading_failure','auto_grade_confirmation_failed','assigned',$4::uuid,$4::uuid
+FROM answer_segment seg JOIN submission sub ON sub.tenant_id=seg.tenant_id AND sub.id=seg.submission_id
+WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid`, fixture.TenantID, segmentID, runID, fixture.AdminID)
 	if err != nil {
-		t.Fatalf("retire claimed task's scoring rule: %v", err)
+		t.Fatalf("seed teacher ownership before OMR completion: %v", err)
 	}
 	if count, _ := result.RowsAffected(); count != 1 {
-		t.Fatalf("expected exactly one published scoring rule to retire, got %d", count)
+		t.Fatalf("expected exactly one assigned teacher task, got %d", count)
 	}
 
 	overlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, omrRunID, 0)
@@ -69,7 +69,7 @@ func TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E(t *testing.
 	}
 
 	var allReviews, gradingFailureReviews, candidates, answers, grades int
-	if err := db.QueryRow(`SELECT count(*),count(*) FILTER (WHERE source='grading_failure' AND status='pending' AND reason_code='auto_grade_confirmation_failed') FROM review_task WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND answer_segment_id=$3::uuid AND deleted_at IS NULL`, fixture.TenantID, runID, segmentID).Scan(&allReviews, &gradingFailureReviews); err != nil {
+	if err := db.QueryRow(`SELECT count(*),count(*) FILTER (WHERE source='grading_failure' AND status='assigned' AND assigned_to=$4::uuid AND reason_code='auto_grade_confirmation_failed') FROM review_task WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND answer_segment_id=$3::uuid AND deleted_at IS NULL`, fixture.TenantID, runID, segmentID, fixture.AdminID).Scan(&allReviews, &gradingFailureReviews); err != nil {
 		t.Fatalf("inspect confirmation fallback review task: %v", err)
 	}
 	if err := db.QueryRow(`SELECT count(*) FROM answer_candidate WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND answer_segment_id=$3::uuid AND source='omr' AND deleted_at IS NULL`, fixture.TenantID, runID, segmentID).Scan(&candidates); err != nil {
@@ -86,9 +86,9 @@ func TestStory056OMRAutoGradeConfirmationFailureFallsBackToReviewE2E(t *testing.
 	}
 }
 
-// worker 可以识别出明确的所选答案，但当前原始填涂比例配置只提供建议。
-// 此验收测试验证：控制转入持久化自动成绩的是服务器端资格快照，而非 worker 声称的置信度。
-func TestStory056ManualOnlyOMRProfileRequiresReviewE2E(t *testing.T) {
+// 历史 manual_only 是提取配置名；锁定模板与逐题质量允许清晰选择题直接确认。
+// 自动资格仍取服务端快照，不能由 Worker 自行声明。
+func TestStory056DefaultOMRProfileUsesServerEligibilityE2E(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
 	if dsn == "" {
 		t.Skip("EDUGRADE_E2E_DATABASE_URL is not set; skipping STORY-056 manual-only OMR gate test")
@@ -108,10 +108,14 @@ func TestStory056ManualOnlyOMRProfileRequiresReviewE2E(t *testing.T) {
 	item, lease := e2eStory056ClaimSingleOMR(t, router, adminToken, runID, "story056-manual-only-worker")
 	omrRunID := e2eString(t, item, "omr_run_id")
 	segmentID := e2eString(t, item, "answer_segment_id")
+	// 批次使用已冻结的规则；后续退役当前配置不应让这份清晰答卷误转人工。
+	if _, err := db.Exec(`UPDATE scoring_rule SET status='retired',updated_at=now() WHERE tenant_id=$1::uuid AND question_id=$2::uuid AND status='published' AND deleted_at IS NULL`, fixture.TenantID, e2eString(t, item, "question_id")); err != nil {
+		t.Fatal(err)
+	}
 	overlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, omrRunID, 1)
 	response := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, e2eStory056OMRResultPayload(t, lease, item, overlay, "story056-manual-only-v1-"+omrRunID, []map[string]any{{"option": "A", "fill_ratio": 0.93}}, false)), http.StatusOK)
-	if _, found := response["question_grade"]; found {
-		t.Fatalf("manual-only raw OMR must not return an automatic grade: %#v", response)
+	if _, found := response["question_grade"]; !found {
+		t.Fatalf("clear OMR under a locked template must return an automatic grade: %#v", response)
 	}
 
 	var runStatus, candidateDecision, reviewReason, autoReason string
@@ -129,8 +133,8 @@ WHERE r.tenant_id=$1::uuid AND r.id=$2::uuid
 	if err != nil {
 		t.Fatalf("inspect manual-only OMR gate facts: %v", err)
 	}
-	if runStatus != "needs_review" || autoConfirmed != 0 || autoEligible || autoReason != "manual_only_profile" || candidateDecision != "selected" || gradeCount != 0 || reviewReason != "omr_manual_only_profile" {
-		t.Fatalf("manual-only OMR must persist a suggestion and review only: status=%s auto=%d eligible=%t reason=%s candidate=%s grades=%d review=%s segment=%s", runStatus, autoConfirmed, autoEligible, autoReason, candidateDecision, gradeCount, reviewReason, segmentID)
+	if runStatus != "completed" || autoConfirmed != 1 || !autoEligible || autoReason != paper.OMRAutoConfirmReasonLockedTemplateOMR || candidateDecision != "confirmed" || gradeCount != 1 || reviewReason != "" {
+		t.Fatalf("locked-template OMR lost automatic grade or provenance: status=%s auto=%d eligible=%t reason=%s candidate=%s grades=%d review=%s segment=%s", runStatus, autoConfirmed, autoEligible, autoReason, candidateDecision, gradeCount, reviewReason, segmentID)
 	}
 }
 

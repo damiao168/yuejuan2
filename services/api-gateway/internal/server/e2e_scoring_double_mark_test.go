@@ -120,12 +120,16 @@ func e2eResolveAndAssertDoubleMarkArbitration(t *testing.T, db *sql.DB, reviews 
 		t.Fatal(err)
 	}
 	markedForArbitration := false
+	confirmedBeforeArbitration := 0
 	for _, item := range detail.Items {
+		if item.State == "confirmed" && item.DecisionStatus == "human_confirmed" {
+			confirmedBeforeArbitration++
+		}
 		if item.AnswerSegmentID == tasks[3].segment && item.State == "review" && item.ReviewStatus == "needs_arbitration" {
 			markedForArbitration = true
 		}
 	}
-	if !markedForArbitration {
+	if !markedForArbitration || confirmedBeforeArbitration != 1 {
 		t.Fatalf("run detail should expose pending arbitration: %+v", detail.Items)
 	}
 	var arbID string
@@ -157,6 +161,16 @@ func e2eResolveAndAssertDoubleMarkArbitration(t *testing.T, db *sql.DB, reviews 
 	}
 	if grades != 2 {
 		t.Fatalf("finalized question grades=%d", grades)
+	}
+	// 仲裁完成后，页面读取的逐题状态也必须已确认，不能只验证批次汇总数字。
+	completed, err := grading.NewPostgresStore(db).GetScoringRunDetail(context.Background(), f.TenantID, runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range completed.Items {
+		if item.State != "confirmed" || item.DecisionStatus != "human_confirmed" || item.NextAction != "none" {
+			t.Fatalf("finalized item still requests teacher work: %+v", item)
+		}
 	}
 }
 

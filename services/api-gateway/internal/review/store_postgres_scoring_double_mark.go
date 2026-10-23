@@ -94,7 +94,16 @@ func (s *PostgresStore) syncScoringDoubleMarkRunTx(ctx context.Context, tx *sql.
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE scoring_run SET review_count=$3,human_confirmed_count=$4,
+	// 双评或仲裁产生正式人工成绩后，同步逐题投影；未合分的首评不会提前完成题目。
+	_, err = tx.ExecContext(ctx, `WITH confirmed_items AS (
+UPDATE scoring_run_item item SET processing_status='succeeded',decision_status='human_confirmed',stage='done',
+reason_code='',next_action='none',retryable=false,revision=item.revision+1,updated_at=now()
+FROM question_grade grade WHERE item.tenant_id=$1::uuid AND item.scoring_run_id=$2::uuid
+AND grade.tenant_id=item.tenant_id AND grade.scoring_run_id=item.scoring_run_id AND grade.answer_segment_id=item.answer_segment_id
+AND grade.source='human' AND grade.is_current AND grade.status='confirmed' AND grade.deleted_at IS NULL
+AND item.processing_status NOT IN ('cancelled','superseded') AND item.decision_status<>'human_confirmed'
+RETURNING item.id
+) UPDATE scoring_run SET review_count=$3,human_confirmed_count=$4,
  status=CASE WHEN queued_count=0 AND $3=0 AND failed_count=0 AND auto_confirmed_count+$4>=total_count THEN 'completed'
              WHEN queued_count=0 AND failed_count=0 THEN 'needs_review' ELSE status END,
  completed_at=CASE WHEN queued_count=0 AND $3=0 AND failed_count=0 AND auto_confirmed_count+$4>=total_count THEN now() ELSE completed_at END,

@@ -433,7 +433,15 @@ RETURNING `+reviewTaskColumns+`
 		return SubmitResult{}, err
 	}
 	if task.GradeRound == "single" {
-		if _, err = tx.ExecContext(ctx, `UPDATE scoring_run sr SET review_count=GREATEST(0,sr.review_count-1),human_confirmed_count=sr.human_confirmed_count+1,
+		// 人工成绩、逐题状态和批次计数一并提交，避免总数已完成而任务仍显示待处理；历史取消条目不能复活。
+		if _, err = tx.ExecContext(ctx, `WITH confirmed_items AS (
+UPDATE scoring_run_item item SET processing_status='succeeded',decision_status='human_confirmed',stage='done',
+reason_code='',next_action='none',retryable=false,revision=item.revision+1,updated_at=now()
+FROM review_task rt WHERE rt.tenant_id=$1::uuid AND rt.id=$2::uuid AND item.tenant_id=rt.tenant_id
+AND item.scoring_run_id=rt.scoring_run_id AND item.answer_segment_id=rt.answer_segment_id
+AND item.processing_status NOT IN ('cancelled','superseded') AND item.decision_status<>'human_confirmed'
+RETURNING item.id
+) UPDATE scoring_run sr SET review_count=GREATEST(0,sr.review_count-1),human_confirmed_count=sr.human_confirmed_count+1,
 status=CASE WHEN sr.queued_count=0 AND GREATEST(0,sr.review_count-1)=0 AND sr.failed_count=0 THEN 'completed' WHEN sr.queued_count=0 THEN 'needs_review' ELSE sr.status END,
 completed_at=CASE WHEN sr.queued_count=0 AND GREATEST(0,sr.review_count-1)=0 AND sr.failed_count=0 THEN now() ELSE sr.completed_at END,updated_at=now()
 FROM review_task rt WHERE rt.tenant_id=$1::uuid AND rt.id=$2::uuid AND rt.scoring_run_id=sr.id AND sr.tenant_id=rt.tenant_id`, tenantID, task.ID); err != nil {

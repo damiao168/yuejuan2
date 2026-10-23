@@ -31,6 +31,7 @@ func TestExamTemplateBindingE2EWithPostgresTestDatabase(t *testing.T) {
 		nil,
 	)
 	var submissionID, capturePageID string
+	// 已人工确认第 1 页，只留下模板歧义；绑定模板应恢复该页，不能另行猜测文件顺序。
 	if err := db.QueryRow(`
 WITH created_submission AS (
   INSERT INTO submission (
@@ -71,11 +72,11 @@ WITH created_submission AS (
 ), created_capture_page AS (
   INSERT INTO capture_page (
     tenant_id,capture_batch_id,capture_file_id,source_index,submission_id,submission_page_id,
-    assigned_page_no,sequence_no,decoded_file_asset_id,status,revision,match_candidates
+    assigned_page_no,sequence_no,decoded_file_asset_id,status,revision,match_candidates,manual_override
   )
   SELECT $1::uuid,created_file.capture_batch_id,created_file.id,1,created_submission_page.submission_id,
          created_submission_page.id,1,1,created_normalized_asset.id,'needs_review',1,
-         jsonb_build_array(jsonb_build_object('template_id',$5::text,'score',0.82))
+         jsonb_build_array(jsonb_build_object('template_id',$5::text,'score',0.82)),jsonb_build_object('page_no',1)
   FROM created_file CROSS JOIN created_submission_page CROSS JOIN created_normalized_asset
   RETURNING id,submission_id,submission_page_id
 ), created_match AS (
