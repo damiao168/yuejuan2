@@ -143,6 +143,9 @@ jobs:
   web-e2e-mocked:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # 镜像版本须与 package-lock.json 的 Playwright 一致；预装浏览器和系统依赖，避免安装挤占测试时限。
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.1-noble@sha256:2f29369043d81d6d69a815ceb80760f55e85f5020371ad06a4d996f18503ad1c
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -150,7 +153,6 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       # 失败时保留断言、页面和 trace，避免作业超时后只剩进度日志。
       - name: Preserve mocked browser diagnostics
