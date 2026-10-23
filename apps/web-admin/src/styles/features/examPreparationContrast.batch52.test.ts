@@ -44,10 +44,10 @@ describe("扫描选项标签对比度", () => {
 
   it("选项框保持原件可见和指针穿透，实色底只用于嵌套标签", () => {
     const marker = declarations(".template-option-region");
-    expect(marker.get("background")).toBe("rgba(22, 132, 91, 0.2)");
+    expect(marker.get("background")).toBe("transparent");
     expect(marker.get("pointer-events")).toBe("none");
     expect(marker.get("position")).toBe("absolute");
-    expect(marker.get("border")).toBe("2px solid #16845b");
+    expect(marker.get("border")).toBe("1px solid rgba(22, 119, 255, .5)");
     expect(declarations(".template-region > span").get("position")).toBe("absolute");
     expect(declarations(".template-option-region > span").has("position")).toBe(false);
   });

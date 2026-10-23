@@ -90,6 +90,9 @@ vi.mock("antd", async () => {
     App: { useApp: () => ({ message: mocks.message, modal: mocks.modal }) }, Form, Input,
     Button: ({ children, onClick, loading, disabled, htmlType, danger }: { children?: ReactNode; onClick?: () => void; loading?: boolean; disabled?: boolean; htmlType?: "button" | "submit" | "reset"; danger?: boolean }) =>
       <button type={htmlType ?? "button"} onClick={onClick} disabled={loading || disabled} data-loading={String(Boolean(loading))} data-danger={String(Boolean(danger))}>{children}</button>,
+    // 菜单在此直接展开，只核对命令和禁用状态。
+    Dropdown: ({ children, disabled, menu }: { children: ReactNode; disabled?: boolean; menu: { items: Array<{ key: string; label: ReactNode; danger?: boolean; onClick?: () => void }> } }) =>
+      <div>{children}{menu.items.map((item) => <button key={item.key} type="button" disabled={disabled} data-danger={String(Boolean(item.danger))} onClick={item.onClick}>{item.label}</button>)}</div>,
     Space: Object.assign(({ children }: { children: ReactNode }) => <div>{children}</div>, { Compact: ({ children }: { children: ReactNode }) => <div>{children}</div> }),
     Tabs: ({ items, activeKey, onChange }: { items: Array<{ key: string; label: string }>; activeKey: string; onChange: (key: string) => void }) =>
       <div role="tablist">{items.map((item) => <button key={item.key} type="button" role="tab" aria-selected={item.key === activeKey} onClick={() => onChange(item.key)}>{item.label}</button>)}</div>,

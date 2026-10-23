@@ -62,6 +62,8 @@ vi.mock("antd", async () => {
     Form, Input,
     Button: ({ children, onClick, htmlType, disabled, loading }: { children?: ReactNode; onClick?: () => void; htmlType?: "button" | "submit"; disabled?: boolean; loading?: boolean }) =>
       <button type={htmlType ?? "button"} onClick={onClick} disabled={disabled || loading}>{children}</button>,
+    Dropdown: ({ children, disabled, menu }: { children: ReactNode; disabled?: boolean; menu: { items: Array<{ key: string; label: ReactNode; onClick?: () => void }> } }) =>
+      <div>{children}{menu.items.map((item) => <button key={item.key} type="button" disabled={disabled} onClick={item.onClick}>{item.label}</button>)}</div>,
     Modal: ({ open, title, onCancel, children }: { open: boolean; title: string; onCancel: () => void; children: ReactNode }) =>
       open ? <div role="dialog"><h2>{title}</h2><button type="button" onClick={onCancel}>取消</button>{children}</div> : null,
     Tabs: ({ items, onChange }: { items: Array<{ key: string; label: string }>; onChange: (key: string) => void }) =>

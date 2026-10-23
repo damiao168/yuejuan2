@@ -17,6 +17,8 @@ COPY packages/shared-types packages/shared-types
 COPY packages/design-tokens packages/design-tokens
 COPY packages/sdk packages/sdk
 COPY packages/ui packages/ui
+# TypeScript 同时检查 src 内的路由权限测试，构建阶段也需要读取权威角色矩阵。
+COPY contracts/authorization contracts/authorization
 COPY apps/web-admin apps/web-admin
 COPY tests/e2e/fixtures tests/e2e/fixtures
 # Vite 参数在构建时写入静态资源；启动最终 Nginx 容器时再设环境变量不会改写页面。

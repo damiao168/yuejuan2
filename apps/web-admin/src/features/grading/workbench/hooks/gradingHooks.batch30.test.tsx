@@ -27,7 +27,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 function suggestion(overrides: Partial<AiGrade> = {}): AiGrade {
-  return { suggested_score: 9, max_score: 10, rubric_version: "v1", matched_points: [{ code: "p1", label: "步骤", score: 9 }], missing_points: [],
+  return { id: "ai-grade", suggested_score: 9, max_score: 10, rubric_version: "v1", matched_points: [{ code: "p1", label: "步骤", score: 9 }], missing_points: [],
     answer_segment_id: "segment", math_artifact_id: "artifact", math_artifact_version: 2, math_correction_revision: 0, math_scoring_version: "math-rubric-score-v1",
     status: "succeeded", delivery_mode: "teacher_suggestion", needs_human_review: true, mock: false, ...overrides } as AiGrade;
 }
@@ -105,7 +105,7 @@ describe("第30批AI填稿与数学核对顺序", () => {
     const queryClient = new QueryClient();
     const queryScope = createReviewTaskContextScope("exam");
     const point = { id: "p1", description: "步骤", score: 10, required: true, evidence_requirements: [] } satisfies RubricPoint;
-    const ctx = { task: task({ id: "A" }), question: { rubric: { version: "v1" } } } as unknown as WorkbenchContext;
+    const ctx = { task: task({ id: "A" }), question: { rubric: { version: "v1" } }, reviewContext: {} } as unknown as WorkbenchContext;
     function Probe() {
       const [draft, setDraft] = useState<ScoreDraft>(() => ({ ...createInitialDraft(null), score: 6, reason: "教师原说明", rubricSelections: { old: 2 }, studentFeedback: "原反馈", privateNote: "原备注" }));
       const [requesting, setMathRequesting] = useState(false);

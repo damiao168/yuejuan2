@@ -239,12 +239,12 @@ describe("学校模型库操作", () => {
     await act(async () => root.render(<PlatformModelConfigPage />));
   }
 
-  it("应用用途始终显示四个入口，阅卷使用结构化门槛并在抽屉带入当前模型", async () => {
+  it("应用用途始终显示四个入口，阅卷允许先配置模型且解析保留结构化门槛", async () => {
     configs[1] = { ...configs[1], last_text_status: "success" };
     configs[3] = { ...configs[3], last_capability_status: "success", last_capability_probe_version: "structured-json-v4" };
     mocks.applications.mockResolvedValue({ document_selection: { revision: "absent", mode: "follow_chat" }, grading_model_ids: ["智谱"] });
     await render();
-    expect(button("阅卷配置", row("OpenAI")).disabled).toBe(true);
+    expect(button("阅卷配置", row("OpenAI")).disabled).toBe(false);
     expect(button("试卷解析", row("OpenAI")).disabled).toBe(true);
     expect(button("阅卷配置", row("智谱")).textContent).toBe("阅卷·已配置");
     await act(async () => button("阅卷配置", row("智谱")).click());

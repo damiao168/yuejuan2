@@ -12,8 +12,8 @@ describe("scoring preflight routes", () => {
   });
 
   it.each([
-    { questionType: "short_answer", mode: "AI_ASSIST", lane: "ai", note: "可另行发起本题试改，核对后决定扩批；建议须由教师确认" },
-    { questionType: "essay", mode: "AI_FAST_CONFIRM", lane: "ai", note: "可另行发起本题试改，核对后决定扩批；建议须由教师确认" },
+    { questionType: "short_answer", mode: "AI_ASSIST", lane: "ai", note: "自动识别学生作答并生成建议分，由教师确认最终分数" },
+    { questionType: "essay", mode: "AI_FAST_CONFIRM", lane: "ai", note: "自动识别学生作答并生成建议分，由教师确认最终分数" },
     { questionType: "numeric", mode: "RULE_AUTO", lane: "rule", note: "规则判分；异常转人工" },
     { questionType: "short_answer", mode: "RULE_AUTO", lane: "human", note: "人工评分或复核" },
     { questionType: "coding", mode: "DUAL_HUMAN", lane: "human", note: "同校两名阅卷员互盲双评，分数不一致即仲裁" },

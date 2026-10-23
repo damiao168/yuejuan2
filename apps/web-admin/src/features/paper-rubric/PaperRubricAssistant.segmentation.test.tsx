@@ -26,20 +26,22 @@ describe("拆分、合并和 AI 共用解答单元", () => {
   it("长块支持光标拆分、合并、撤销；向AI发送调整后原文范围", async () => {
     const draftStore: { current: RubricAssistantDraft | null } = { current: null };
     const p = props(); const view = render(<PaperRubricAssistant {...p} draftStore={draftStore} />);
-    fireEvent.click(screen.getByRole("button", { name: "拆分解答单元 1" }));
+    // 控件已有明确标签，直接按标签定位，避免反复计算整页 Ant Design 节点的可见性。
+    fireEvent.click(screen.getByLabelText("拆分解答单元 1"));
     const input = screen.getByLabelText("原解答拆分光标") as HTMLTextAreaElement;
     input.setSelectionRange(4, 4); fireEvent.select(input);
-    await waitFor(() => expect((screen.getByRole("button", { name: "确认拆分" }) as HTMLButtonElement).disabled).toBe(false));
-    fireEvent.click(screen.getByRole("button", { name: "确认拆分" }));
-    expect(screen.getByRole("button", { name: "拆分解答单元 2" })).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: "合并解答单元 1 与下一单元" }));
-    expect(screen.queryByRole("button", { name: "拆分解答单元 2" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "撤销上次拆分或合并" }));
-    expect(screen.getByRole("button", { name: "拆分解答单元 2" })).toBeDefined();
+    const confirmSplit = screen.getByText("确认拆分").closest("button")!;
+    await waitFor(() => expect(confirmSplit.disabled).toBe(false));
+    fireEvent.click(confirmSplit);
+    expect(screen.getByLabelText("拆分解答单元 2")).toBeDefined();
+    fireEvent.click(screen.getByLabelText("合并解答单元 1 与下一单元"));
+    expect(screen.queryByLabelText("拆分解答单元 2")).toBeNull();
+    fireEvent.click(screen.getByText("撤销上次拆分或合并").closest("button")!);
+    expect(screen.getByLabelText("拆分解答单元 2")).toBeDefined();
     expect(p.onDirtyChange).toHaveBeenCalledWith(true);
     view.unmount();
     render(<PaperRubricAssistant {...p} draftStore={draftStore} />);
-    expect(screen.getByRole("button", { name: "拆分解答单元 2" })).toBeDefined();
+    expect(screen.getByLabelText("拆分解答单元 2")).toBeDefined();
     fireEvent.click(screen.getByText("AI 建议分值划分"));
     mocks.generate.mockResolvedValue({ suggested_rubric_candidates: [] });
     fireEvent.click(screen.getByText("生成分值建议"));
@@ -61,9 +63,9 @@ describe("拆分、合并和 AI 共用解答单元", () => {
     fireEvent.click(screen.getByText("让 AI 建议采分段（可选）"));
     fireEvent.click(screen.getByText("生成分段建议"));
     await screen.findByText("采用分段建议，不采用建议分值");
-    expect(screen.getAllByRole("button", { name: /^拆分解答单元/ })).toHaveLength(3);
+    expect(screen.getAllByLabelText(/^拆分解答单元/)).toHaveLength(3);
     fireEvent.click(screen.getByText("采用分段建议，不采用建议分值"));
-    expect(screen.getAllByRole("button", { name: /^拆分解答单元/ })).toHaveLength(2);
+    expect(screen.getAllByLabelText(/^拆分解答单元/)).toHaveLength(2);
     expect(p.onApply).not.toHaveBeenCalled();
   });
 
@@ -75,10 +77,10 @@ describe("拆分、合并和 AI 共用解答单元", () => {
     fireEvent.click(screen.getByText("让 AI 建议采分段（可选）"));
     fireEvent.click(screen.getByText("生成分段建议"));
     const signal = mocks.generate.mock.calls[0][1] as AbortSignal;
-    fireEvent.click(screen.getByRole("button", { name: "合并解答单元 1 与下一单元" }));
+    fireEvent.click(screen.getByLabelText("合并解答单元 1 与下一单元"));
     expect(signal.aborted).toBe(true);
     await act(async () => resolve({ suggested_rubric_candidates: [] }));
     expect(screen.queryByText("采用分段建议，不采用建议分值")).toBeNull();
-    expect(screen.getAllByRole("button", { name: /^拆分解答单元/ })).toHaveLength(2);
+    expect(screen.getAllByLabelText(/^拆分解答单元/)).toHaveLength(2);
   });
 });

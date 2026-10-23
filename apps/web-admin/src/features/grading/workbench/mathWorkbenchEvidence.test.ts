@@ -66,9 +66,19 @@ describe("mathematical suggestion freshness", () => {
 
 describe("rubric × step provenance", () => {
   it.each([
-    { name: "permission before dirty and pending", canRequest: false, dirty: true, phase: "pending", disabledReason: "当前身份无重新生成数学建议的权限；请联系管理员。", expected: "当前身份无重新生成数学建议的权限；请联系管理员。", disabled: true },
-    { name: "empty permission reason fallback", canRequest: false, dirty: true, phase: "pending", disabledReason: "", expected: "当前任务无重新生成权限，请继续人工评分或联系管理员。", disabled: true },
-    { name: "missing permission reason fallback", canRequest: false, dirty: false, phase: "ready", disabledReason: undefined, expected: "当前任务无重新生成权限，请继续人工评分或联系管理员。", disabled: true },
+    { dirty: true, phase: "pending", disabledReason: "当前身份无重新生成数学建议的权限；请联系管理员。" },
+    { dirty: true, phase: "pending", disabledReason: "" },
+    { dirty: false, phase: "ready", disabledReason: undefined },
+  ] as const)("无生成权限时隐藏入口，保留数学证据：$phase/$dirty", ({ dirty, phase, disabledReason }) => {
+    const { evidence } = fixture();
+    evidence.phase = phase;
+    const html = matrixHTML(evidence, { canRequest: false, dirty, disabledReason });
+    expect(html).not.toContain("重新生成数学建议");
+    expect(html).not.toContain('class="math-suggestion-note"');
+    expect(html).toContain("定位数学步骤 step1");
+    expect(html).toContain("服务端建议");
+  });
+  it.each([
     { name: "dirty before pending", canRequest: true, dirty: true, phase: "pending", disabledReason: undefined, expected: "请先保存证据校正并完成验证，再重新生成建议。", disabled: true },
     { name: "pending clean evidence", canRequest: true, dirty: false, phase: "pending", disabledReason: undefined, expected: "数学证据尚未验证就绪；请刷新证据状态，或继续人工评分。", disabled: true },
     { name: "ready clean evidence", canRequest: true, dirty: false, phase: "ready", disabledReason: undefined, expected: "点击后请求受治理模型；建议仍需人工核对。", disabled: false },
@@ -143,7 +153,7 @@ describe("rubric × step provenance", () => {
     const disabledButtons = (dirty = false, canRequest = true) =>
       (matrixHTML(evidence, { dirty, canRequest }).match(/<button\b[^>]*\bdisabled=""/g) ?? []).length;
     expect(disabledButtons()).toBe(0);
-    expect(disabledButtons(false, false)).toBe(1);
+    expect(disabledButtons(false, false)).toBe(0);
     expect(disabledButtons(true)).toBe(2);
     evidence.phase = "conflict";
     expect(disabledButtons()).toBe(2);

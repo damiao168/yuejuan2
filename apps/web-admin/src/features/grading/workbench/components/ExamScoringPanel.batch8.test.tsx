@@ -130,11 +130,11 @@ describe("batch8 scoring panel common original/current contract (mock UI/control
     await render({ scoring: controller({ readiness: readiness(false), blockingChecks }) });
     expect(button("开始评分")?.disabled).toBe(true);
     await act(async () => click("配置本场大题评分"));
-    const modal = rendered.widgets.filter(entry => entry.name === "Modal" && entry.props.title === "配置本场大题 AI 评分").at(-1)!.props;
+    const modal = rendered.widgets.filter(entry => entry.name === "Modal" && entry.props.title === "配置本场大题 AI 评分").slice(-1)[0]!.props;
     await act(async () => (modal.onCancel as () => void)());
     expect(props.scoring.setPlanOpen).not.toHaveBeenCalled();
     await act(async () => click("配置本场大题评分"));
-    const editor = rendered.widgets.filter(entry => entry.name === "GradingAIPlanSettings").at(-1)!.props;
+    const editor = rendered.widgets.filter(entry => entry.name === "GradingAIPlanSettings").slice(-1)[0]!.props;
     await act(async () => (editor.onSaved as () => void)());
     expect(props.scoring.loadSummary).toHaveBeenCalledOnce();
     expect(props.scoring.setPlanOpen).not.toHaveBeenCalled();
@@ -149,7 +149,7 @@ describe("batch8 scoring panel common original/current contract (mock UI/control
     const planSummary = rendered.widgets.find(entry => entry.name === "GradingAIPlanSummary")!.props;
     await act(async () => (planSummary.onConfigure as () => void)());
     expect(props.scoring.setPlanOpen).toHaveBeenLastCalledWith(false);
-    const modal = rendered.widgets.filter(entry => entry.name === "Modal" && entry.props.title === "配置本场大题 AI 评分").at(-1)!.props;
+    const modal = rendered.widgets.filter(entry => entry.name === "Modal" && entry.props.title === "配置本场大题 AI 评分").slice(-1)[0]!.props;
     await act(async () => (modal.onCancel as () => void)());
     expect(props.scoring.setPlanOpen).toHaveBeenLastCalledWith(true);
   });

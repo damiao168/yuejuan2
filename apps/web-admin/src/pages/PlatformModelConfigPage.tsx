@@ -12,17 +12,12 @@ import {
 import { Plus, RefreshCw, Zap } from "lucide-react";
 import {
   autoCreateManagedModelAPIConfig,
-  deleteManagedModelAPIConfig,
   listAvailableManagedModels,
   listManagedModelAPIConfigs,
-  managedModelDiscoveryErrorMessage,
-  probeManagedModelAPIConfig,
   updateManagedModelAPIConfig,
-  type ManagedAPIProbeMode,
   type ManagedAPIProbeResult,
   type ManagedModelAPIConfig
 } from "../api/modelApiConfig";
-import { ApiClientError, getUserErrorMessage } from "../api/client";
 import { usePageLoading } from "../components/pageReadiness";
 import type { Tenant } from "../api/org";
 import { onboardingQueryKey } from "../features/onboarding/queries";
@@ -33,6 +28,8 @@ import { SchoolModelTable } from "../features/platform-model-config/components/S
 import { modelConfigColumns } from "../features/platform-model-config/components/modelConfigColumns";
 import { useModelConfigDrafts } from "../features/platform-model-config/hooks/useModelConfigDrafts";
 import { useModelOperations } from "../features/platform-model-config/hooks/useModelOperations";
+import { useSchoolModelActions, type ModelConfigPatch } from "../features/platform-model-config/hooks/useSchoolModelActions";
+import { modelDiscoveryFailure, modelSaveFailure, savedModelAccessDescription } from "../features/platform-model-config/lib/modelConfigNotices";
 import { useModelApplications } from "../features/platform-model-config/hooks/useModelApplications";
 import { useChatModelAccess } from "../features/platform-model-config/hooks/useChatModelAccess";
 import { DocumentModelForm } from "../features/platform-model-config/components/DocumentModelForm";
@@ -44,16 +41,11 @@ import {
   presetForConfig,
   isSameModelAPIOrigin,
   modelConfigDraftKey,
-  isTransientProbeError,
   applySavedModelConfig,
-  modelUsageMessage,
   modelSaveLabel,
   hasModelFormChanges,
-  capabilityDialogPresentation,
   capabilityVerified,
   textVerified,
-  formatDateTime,
-  probeFormatLabel,
   loadAllSchoolTenants,
   type SupplierPreset,
   type ConfigFormValues
@@ -64,52 +56,8 @@ import { replaceRouteQuery, routeQueryParam } from "../router/query";
 import { rememberModelConfigLocation, selectModelSchool } from "../features/platform-model-config/lib/modelConfigLocation";
 import { useUnsavedChangesGuard } from "../router/useUnsavedChangesGuard";
 
-type ModelFailureNotice = { kind: "warning" | "error"; text: string };
-type ProbeOutcome = { status: "success" | "temporary" | "failed"; requestFailed?: boolean };
-type ProbeBatch = { group: string; completed: number; total: number; stopped: boolean };
-type ConfigPatch = { sequence: number; tenantID: string; config: ManagedModelAPIConfig | null; modelID: string; syncDefault: boolean };
 
 const disabledModelDiscoveryMessage = "此配置已停用，已保存的密钥暂不能用于获取模型列表。请关闭侧栏，在模型列表中启用后重试；或输入新 API Key 查询。";
-
-function isTransientModelAPIError(error: unknown) {
-  if (error instanceof TypeError && /failed to fetch|fetch failed|network(?:error| request failed| disconnected)|load failed/i.test(error.message)) return true;
-  if (!(error instanceof ApiClientError)) return false;
-  // 保存失败的外层状态是网关校验结果；临时性必须依据内层供应商请求，不能把 400 参数错误当成可重试故障。
-  const validation = error.payload.validation;
-  return isTransientProbeError(validation?.error_code ?? error.code, validation ? validation.status_code : error.status);
-}
-
-function modelDiscoveryFailure(error: unknown, hasSavedCredential: boolean): ModelFailureNotice {
-  const temporarilyUnavailable = isTransientModelAPIError(error);
-  return {
-    kind: temporarilyUnavailable ? "warning" : "error",
-    text: `${managedModelDiscoveryErrorMessage(error, hasSavedCredential)}${temporarilyUnavailable ? "（本次暂时无法验证，不代表 API Key 无效）" : ""}`
-  };
-}
-
-function modelSaveFailure(error: unknown, editing: ManagedModelAPIConfig | null): ModelFailureNotice {
-  const temporarilyUnavailable = isTransientModelAPIError(error);
-  return {
-    kind: temporarilyUnavailable ? "warning" : "error",
-    text: `${getUserErrorMessage(error, editing ? "配置更新失败" : "配置保存失败")}${temporarilyUnavailable ? "（本次暂时无法验证，已保留当前填写内容）" : ""}`
-  };
-}
-
-function modelProbeFailure(config: ManagedModelAPIConfig, result: ManagedAPIProbeResult): ModelFailureNotice {
-  // 供应商暂不可用只表示本次未能验证，不能把模型或密钥显示为已失效。
-  const temporarilyUnavailable = isTransientProbeError(result.error_code, result.status_code);
-  return {
-    kind: temporarilyUnavailable ? "warning" : "error",
-    text: `${config.display_name}：${result.message}${temporarilyUnavailable ? "（本次暂时无法验证，不代表模型已失效）" : ""}`
-  };
-}
-
-function savedModelAccessDescription(config?: ManagedModelAPIConfig) {
-  // 保存只做访问检查；聊天和评分分别使用独立结果，结构化未通过不能否定普通回复能力。
-  if (config && capabilityVerified(config)) return "该配置已通过当前结构化输出检测。正式评分仍需要角色绑定、真实评测、人工批准和使用策略。";
-  if (config && textVerified(config)) return "普通回复已验证，可开放给学校对话；评分和试卷解析仍需通过结构化输出检测。";
-  return "此次保存未生成回复，尚未验证普通回复与结构化能力。普通回复检测会产生少量用量，通过后可开放给学校对话；评分和试卷解析需另做结构化输出检测。";
-}
 
 export function PlatformModelConfigPage() {
   const queryClient = useQueryClient();
@@ -164,17 +112,13 @@ export function PlatformModelConfigPage() {
   const openApplication = useCallback((config: ManagedModelAPIConfig, type: "grading" | "document" | "answer_sheet") => {
     setApplicationDirty(false); setApplicationTarget({ config, type });
   }, []);
-  const [batches, setBatches] = useState<Record<string, ProbeBatch>>({});
-  const batchRef = useRef(new Map<string, ProbeBatch>());
-  const batchSequenceRef = useRef(0);
-  const batchProbeProgress = batches[selectedTenantID];
   const mountedRef = useRef(true);
   const selectedTenantRef = useRef(selectedTenantID);
   selectedTenantRef.current = selectedTenantID;
   const configsRef = useRef(configs);
   configsRef.current = configs;
   const configPatchSequenceRef = useRef(0);
-  const configPatchesRef = useRef(new Map<string, ConfigPatch>());
+  const configPatchesRef = useRef(new Map<string, ModelConfigPatch>());
   const knownConfigVersionsRef = useRef(new Map<string, string>());
   const probeDetailsRef = useRef(new Map<string, { config: ManagedModelAPIConfig; result: ManagedAPIProbeResult }>());
   const [availableModels, setAvailableModels] = useState<string[]>([]);
@@ -544,220 +488,10 @@ export function PlatformModelConfigPage() {
     form.resetFields();
   };
 
-  const showConnectionDetails = useCallback((config: ManagedModelAPIConfig) => {
-    const kind = config.last_test_status === "failed" ? "error" : config.last_test_status === "temporary_unavailable" ? "warning" : "info";
-    modal[kind]({
-      title: `${config.model_name}：连接检测详情`,
-      width: 560,
-      content: <div className="platform-model-diagnostic">
-        <p>{config.last_test_message || "暂无连接检测说明"}</p>
-        <dl>
-          <div><dt>最近检测</dt><dd>{formatDateTime(config.last_tested_at)}</dd></div>
-          <div><dt>上次连接成功</dt><dd>{formatDateTime(config.last_successful_tested_at)}</dd></div>
-          <div><dt>检测耗时</dt><dd>{config.last_test_latency_ms !== undefined ? `${config.last_test_latency_ms}ms` : "—"}</dd></div>
-          <div><dt>API 地址</dt><dd>{config.base_url}</dd></div>
-        </dl>
-      </div>,
-    });
-  }, [modal]);
-
-  const showCapabilityDetails = useCallback((config: ManagedModelAPIConfig, result?: ManagedAPIProbeResult) => {
-    const recent = probeDetailsRef.current.get(modelOperationKey(config.tenant_id, config.id));
-    if (!result && recent && recent.config.updated_at === config.updated_at && recent.config.last_capability_tested_at === config.last_capability_tested_at) result = recent.result;
-    const diagnostic = result?.diagnostic ?? config.last_capability_diagnostic ?? {};
-    const usage = result?.usage ?? config.last_capability_usage;
-    const temporarilyUnavailable = result ? isTransientProbeError(result.error_code, result.status_code) : config.last_capability_status === "temporary_unavailable";
-    const failed = result ? !result.ok && !temporarilyUnavailable : config.last_capability_status === "failed";
-    const presentation = capabilityDialogPresentation(config.display_name, temporarilyUnavailable, failed);
-    modal[presentation.kind]({
-      title: presentation.title,
-      width: 560,
-      content: (
-        <div className="platform-model-diagnostic">
-          <p>{result?.message ?? config.last_capability_message ?? "暂无结构化检测结果"}</p>
-          <dl>
-            <div><dt>检测时间</dt><dd>{formatDateTime(config.last_capability_tested_at)}</dd></div>
-            <div><dt>错误分类</dt><dd>{result?.error_code ?? (failed ? "检测失败" : "—")}</dd></div>
-            <div><dt>结束原因</dt><dd>{diagnostic.finish_reason || "—"}</dd></div>
-            <div><dt>输出约束</dt><dd>{probeFormatLabel(diagnostic.response_format)}</dd></div>
-            <div><dt>返回长度</dt><dd>{diagnostic.content_length ?? 0} 字符</dd></div>
-            <div><dt>Token 用量</dt><dd>{usage?.total_tokens ?? 0}（输出 {usage?.output_tokens ?? 0}）</dd></div>
-          </dl>
-          {diagnostic.content_preview ? (
-            <><small>本次返回摘要（最多 256 个字符，不会写入数据库）</small><pre>{diagnostic.content_preview}</pre></>
-          ) : <small>供应商没有返回可展示的内容摘要。</small>}
-        </div>
-      )
-    });
-  }, [modal]);
-
-  const showTextDetails = useCallback((config: ManagedModelAPIConfig) => {
-    // 普通回复详情只读取独立的文本检测记录，不能借用连接或结构化检测结果。
-    const diagnostic = config.last_text_diagnostic;
-    const usage = config.last_text_usage;
-    const kind = config.last_text_status === "failed" ? "error" : config.last_text_status === "temporary_unavailable" ? "warning" : "info";
-    modal[kind]({
-      title: `${config.model_name}：普通回复检测详情`,
-      width: 560,
-      content: <div className="platform-model-diagnostic">
-        <p>{config.last_text_message || "暂无普通回复检测说明"}</p>
-        <dl>
-          <div><dt>检测时间</dt><dd>{formatDateTime(config.last_text_tested_at)}</dd></div>
-          <div><dt>结束原因</dt><dd>{diagnostic?.finish_reason || "—"}</dd></div>
-          <div><dt>返回长度</dt><dd>{diagnostic?.content_length !== undefined ? `${diagnostic.content_length} 字符` : "—"}</dd></div>
-          <div><dt>Token 用量</dt><dd>{usage ? `${usage.total_tokens}（输出 ${usage.output_tokens}）` : "—"}</dd></div>
-        </dl>
-        {diagnostic?.content_preview ? <pre>{diagnostic.content_preview}</pre> : null}
-      </div>,
-    });
-  }, [modal]);
-
-  const runProbe = useCallback((config: ManagedModelAPIConfig, tenantID: string, mode: ManagedAPIProbeMode, group?: string) => {
-    return queue.enqueue<ProbeOutcome>(tenantID, config.id, mode, async () => {
-      const startSequence = configPatchSequenceRef.current;
-      const visible = () => mountedRef.current && tenantID === selectedTenantRef.current;
-      try {
-        const response = group
-          ? await probeManagedModelAPIConfig(config.id, tenantID, mode)
-          : await probeManagedModelAPIConfig(config.id, tenantID, mode, mode === "structured" || mode === "capability");
-        if (!mountedRef.current) return { status: "failed" };
-        const laterPatch = configPatchesRef.current.get(modelOperationKey(tenantID, config.id));
-        // 切换默认项等写入可能同时更新这一行；先前检测不能带回旧的默认选择或连接信息。
-        const knownVersion = knownConfigVersionsRef.current.get(modelOperationKey(tenantID, config.id));
-        const superseded = Boolean(laterPatch && laterPatch.sequence > startSequence) || knownVersion === "deleted" ||
-          Boolean(knownVersion && response.config.updated_at && knownVersion !== response.config.updated_at);
-        if (!superseded) {
-          commitConfig(tenantID, response.config, config.id);
-          if (mode === "structured" || mode === "capability") {
-            probeDetailsRef.current.set(modelOperationKey(tenantID, config.id), response);
-          }
-        } else if (visible()) void loadConfigs(tenantID);
-        if (visible() && !group && !superseded) {
-          if (response.result.ok) {
-            const tokenSummary = response.result.generated_request ? ` · ${response.result.usage?.total_tokens ?? 0} Tokens` : " · 0 生成 Token";
-            message.success(`${config.display_name}：${response.result.message}${tokenSummary}`);
-          } else {
-            const notice = modelProbeFailure(config, response.result);
-            message[notice.kind](notice.text);
-            // 检测结果不自动打开弹窗，避免打断另一模型正在进行的编辑。
-          }
-        }
-        if (!group) void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
-        return { status: response.result.ok ? "success" : isTransientProbeError(response.result.error_code, response.result.status_code) ? "temporary" : "failed" };
-      } catch (error) {
-        const temporarilyUnavailable = isTransientModelAPIError(error);
-        if (visible() && !group) {
-          void loadConfigs(tenantID);
-          const notify = temporarilyUnavailable ? message.warning : message.error;
-          notify(`${getUserErrorMessage(error, `${config.display_name}连接失败`)}${temporarilyUnavailable ? "（本次暂时无法验证，不代表模型已失效）" : ""}`);
-        }
-        return { status: temporarilyUnavailable ? "temporary" : "failed", requestFailed: true };
-      }
-    }, group);
-  }, [queue, commitConfig, loadConfigs, message, queryClient]);
-
-  const probe = useCallback(async (config: ManagedModelAPIConfig, mode: ManagedAPIProbeMode = "quick") => {
-    await runProbe(config, selectedTenantID, mode);
-  }, [runProbe, selectedTenantID]);
-
-  const probeAll = useCallback(async () => {
-    const tenantID = selectedTenantID;
-    if (!tenantID || configLoading || !configs.length || batchRef.current.has(tenantID)) return;
-    const batch: ProbeBatch = { group: `batch-${++batchSequenceRef.current}`, completed: 0, total: configs.length, stopped: false };
-    batchRef.current.set(tenantID, batch);
-    setBatches((current) => ({ ...current, [tenantID]: { ...batch } }));
-    let healthy = 0, temporary = 0, failed = 0, skipped = 0;
-    let requestFailed = false;
-    try {
-      await Promise.all(configs.map(async (config) => {
-        const outcome = await runProbe(config, tenantID, "quick", batch.group);
-        if (!outcome) skipped += 1;
-        else {
-          if (outcome.status === "success") healthy += 1;
-          else if (outcome.status === "temporary") temporary += 1;
-          else failed += 1;
-          requestFailed ||= Boolean(outcome.requestFailed);
-        }
-        batch.completed += 1;
-        if (mountedRef.current) setBatches((current) => ({ ...current, [tenantID]: { ...batch } }));
-      }));
-      if (!mountedRef.current || tenantID !== selectedTenantRef.current) return;
-      const summary = `${batch.stopped ? "连接检测已停止" : "全部连接检测完成"}：${healthy} 个正常，${temporary} 个暂时无法验证，${failed} 个失败${skipped ? `，${skipped} 个未检测` : ""}`;
-      if (temporary || failed || batch.stopped) message.warning(summary);
-      else message.success(summary);
-      void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
-      if (requestFailed) await loadConfigs(tenantID);
-    } finally {
-      batchRef.current.delete(tenantID);
-      if (mountedRef.current) setBatches((current) => { const next = { ...current }; delete next[tenantID]; return next; });
-    }
-  }, [configLoading, configs, loadConfigs, message, queryClient, runProbe, selectedTenantID]);
-
-  const stopBatch = () => {
-    const batch = batchRef.current.get(selectedTenantID);
-    if (!batch) return;
-    batch.stopped = true;
-    queue.cancelQueued(batch.group);
-    setBatches((current) => ({ ...current, [selectedTenantID]: { ...batch } }));
-  };
-
-  const updateUsage = useCallback(async (config: ManagedModelAPIConfig, status: "active" | "disabled", isDefault: boolean) => {
-    const tenantID = selectedTenantID;
-    const release = queue.acquireWrite(tenantID, config.id);
-    if (!release) return;
-    // 默认选择属于整所学校；同校的两次切换必须串行，避免响应乱序显示成不同的默认项。
-    const changesDefault = isDefault || config.is_default;
-    const releaseDefault = changesDefault ? queue.acquireWrite(tenantID, "__default__") : undefined;
-    if (changesDefault && !releaseDefault) { release(); return; }
-    try {
-      const response = await updateManagedModelAPIConfig(config.id, tenantID, {
-        display_name: config.display_name,
-        adapter_type: config.adapter_type,
-        base_url: config.base_url,
-        api_key: "",
-        model_name: config.model_name,
-        model_version: config.model_version,
-        region: config.region,
-        status,
-        is_default: isDefault
-      });
-      commitConfig(tenantID, response.config, config.id, true);
-      if (mountedRef.current && tenantID === selectedTenantRef.current) message.success(modelUsageMessage(config, status, isDefault));
-      void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
-    } catch (error) {
-      if (mountedRef.current && tenantID === selectedTenantRef.current) message.error(getUserErrorMessage(error));
-    } finally {
-      releaseDefault?.();
-      release();
-    }
-  }, [commitConfig, message, queryClient, queue, selectedTenantID]);
-
-  const removeConfig = useCallback((config: ManagedModelAPIConfig) => {
-    if (queue.isBusy(selectedTenantID, config.id) || config.is_default) return;
-    const tenantID = selectedTenantID;
-    modal.confirm({
-      title: `删除 ${config.display_name}？`,
-      content: "删除后该配置无法在此恢复，已保存的 API Key 将不再可用。被阅卷角色、试卷解析或治理配置引用的模型无法删除。",
-      okText: "删除",
-      okButtonProps: { danger: true },
-      cancelText: "取消",
-      onOk: async () => {
-        const release = queue.acquireWrite(tenantID, config.id);
-        if (!release) return;
-        try {
-          await deleteManagedModelAPIConfig(config.id, tenantID);
-          commitConfig(tenantID, null, config.id);
-          probeDetailsRef.current.delete(modelOperationKey(tenantID, config.id));
-          if (mountedRef.current && tenantID === selectedTenantRef.current) message.success(`${config.display_name} 已删除`);
-          void queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
-        } catch (error) {
-          if (mountedRef.current && tenantID === selectedTenantRef.current) message.error(getUserErrorMessage(error));
-        } finally {
-          release();
-        }
-      }
-    });
-  }, [commitConfig, message, modal, queryClient, queue, selectedTenantID]);
+  const { showConnectionDetails, showCapabilityDetails, showTextDetails, probe, probeAll, stopBatch, updateUsage, removeConfig, batchProbeProgress } = useSchoolModelActions({
+    selectedTenantID, configs, configLoading, queue, mountedRef, selectedTenantRef, configPatchSequenceRef,
+    configPatchesRef, knownConfigVersionsRef, probeDetailsRef, commitConfig, loadConfigs
+  });
 
   const credentialHintIDs = useMemo(() => {
     // 同名模型才补充脱敏尾号；配置身份和请求路由始终使用原有 id，尾号不保证唯一。
