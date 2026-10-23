@@ -19,7 +19,7 @@
     "@edugrade/sdk": "0.1.0",
     "@tauri-apps/api": "^2.11.1",
     "antd": "^5.27.6",
-    "framer-motion": "^12.23.0",
+    "framer-motion": "^14.0.0",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
