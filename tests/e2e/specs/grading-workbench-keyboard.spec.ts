@@ -30,8 +30,7 @@ test("阅卷教师从任务列表核对异常来源，启用快捷键后连续�
   await page.getByRole("checkbox", { name: /^启用单字符快捷键/ }).check();
   await page.getByText(/^键盘帮助 ·/).click();
 
-  // 聚焦的输入框必须保留自身键盘语义：数字键和 Enter
-  // 都不能触发工作台的全局评分或提交快捷键。
+  // 分数框中的数字仍用于输入；未开启连续阅卷时，单独 Enter 不提交。
   await score.focus();
   await page.keyboard.press("1");
   await page.keyboard.press("Enter");

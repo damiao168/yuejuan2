@@ -37,7 +37,11 @@ export function useGradingKeyboard(options: UseGradingKeyboardOptions) {
     const onKeyDown = (event: KeyboardEvent) => {
       // 系统候选窗鼠标确认可能没有页面 keyup；新的非 Enter 按键结束这次确认保护。
       if (event.key !== "Enter") composition.current.awaitingKeyUp = false;
-      // 输入法组合、弹层和控件自身的 Enter 优先，避免打字或确认对话框时误提交评分。
+      // 填分或开启连续阅卷后，焦点仍在该控件；只为这两种显式标记开放 Enter，文字和其它控件保留原行为。
+      const submitInputEnter = event.key === "Enter" && event.target instanceof HTMLInputElement
+        && (event.target.dataset.gradingScoreInput === "true" || (event.target.dataset.gradingQuickSubmit === "true" && event.target.checked))
+        && !event.target.disabled && !event.target.readOnly;
+      // 输入法组合、弹层和控件已消费的事件仍优先，不能因分数框例外而误交评分。
       const intent = gradingShortcutIntent({
         key: event.key,
         code: event.code,
@@ -50,7 +54,7 @@ export function useGradingKeyboard(options: UseGradingKeyboardOptions) {
         singleKeyShortcutsEnabled,
         blocked: Boolean(document.querySelector('.ant-modal-wrap:not([style*="display: none"]), .ant-drawer-open, .ant-popover:not(.ant-popover-hidden)')),
         quickSubmit: options.quickSubmit,
-        isInputTarget: isInputTarget(event.target) || (event.key === "Enter" && !event.ctrlKey && !event.metaKey && event.target instanceof Element && Boolean(event.target.closest('button, a, [role="button"], [role="checkbox"], [role="combobox"]'))),
+        isInputTarget: !submitInputEnter && (isInputTarget(event.target) || (event.key === "Enter" && !event.ctrlKey && !event.metaKey && event.target instanceof Element && Boolean(event.target.closest('button, a, [role="button"], [role="checkbox"], [role="combobox"]')))),
         hasTask: options.hasTask,
         canEditDraft: options.canEditDraft,
         canSubmit: options.canSubmit,

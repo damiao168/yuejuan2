@@ -33,6 +33,7 @@ export function SharedScoreControl({
       <div className="score-input-row">
         <InputNumber
           aria-label="最终得分"
+          data-grading-score-input="true"
           disabled={disabled}
           min={0}
           max={maxScore}
@@ -75,6 +76,7 @@ export function SharedScoreControl({
             >
               <InputNumber
                 aria-label={`${point.description || "采分点"}得分`}
+                data-grading-score-input="true"
                 disabled={disabled}
                 min={0}
                 max={point.score}

@@ -151,8 +151,8 @@ export function ScoreEditor({
       </details>
 
       <div className="grading-submit-note">提交后进入质检，不会直接发布成绩</div>
-      <Checkbox checked={quickSubmit} onChange={(event) => onQuickSubmitChange?.(event.target.checked)}>连续阅卷：允许 Enter 提交并下一份</Checkbox>
-      <details className="grading-shortcut-help"><summary>键盘帮助 · {quickSubmit ? "Enter" : "Ctrl / ⌘ + Enter"} 提交</summary><Checkbox checked={singleKeyShortcutsEnabled} onChange={(event) => setSingleKeyShortcutsEnabled(event.target.checked)}>启用单字符快捷键（数字、A / F / R / Z、+ / -）</Checkbox><p>{rubricPoints.length ? "1–9 仅切换对应评分点并合计；没有对应评分点的数字键不生效。" : "1–9 直接打分，0分或小数请在最终分输入框填写。"} A 采纳建议分（不采用反馈） · F 标记异常 · R 退回 · Z 撤销本次评分编辑 · +/- 缩放。输入文字或打开弹窗时快捷键暂停。关闭单字符快捷键后仍可使用提交组合键和答题图工具按钮。</p></details>
+      <Checkbox data-grading-quick-submit="true" checked={quickSubmit} onChange={(event) => onQuickSubmitChange?.(event.target.checked)}>连续阅卷：允许 Enter 提交并下一份</Checkbox>
+      <details className="grading-shortcut-help"><summary>键盘帮助 · {quickSubmit ? "Enter" : "Ctrl / ⌘ + Enter"} 提交</summary><Checkbox checked={singleKeyShortcutsEnabled} onChange={(event) => setSingleKeyShortcutsEnabled(event.target.checked)}>启用单字符快捷键（数字、A / F / R / Z、+ / -）</Checkbox><p>{rubricPoints.length ? "1–9 仅切换对应评分点并合计；没有对应评分点的数字键不生效。" : "1–9 直接打分，0分或小数请在最终分输入框填写。"} A 采纳建议分（不采用反馈） · F 标记异常 · R 退回 · Z 撤销本次评分编辑 · +/- 缩放。分数输入框内也可使用提交快捷键；评语框内 Enter 换行，输入法确认或打开弹窗时不会提交。关闭单字符快捷键后仍可使用提交组合键和答题图工具按钮。</p></details>
 
       <Space wrap className="grading-submit-bar">
         {canReturn ? (
