@@ -74,30 +74,8 @@ pub(crate) fn legacy_master_key() -> Result<[u8; 32], String> {
 }
 
 #[cfg(windows)]
-pub(crate) fn existing_scoped_master_key(root: &Path) -> Result<Option<[u8; 32]>, String> {
-    read_key_for_account(&durable_credential_account(root)?)
-}
-
-#[cfg(windows)]
 pub(crate) fn install_scoped_master_key(root: &Path, key: &[u8; 32]) -> Result<(), String> {
     write_key_for_account(&durable_credential_account(root)?, key)
-}
-
-#[cfg(windows)]
-pub(crate) fn restore_scoped_master_key(
-    root: &Path,
-    previous: Option<&[u8; 32]>,
-) -> Result<(), String> {
-    let account = durable_credential_account(root)?;
-    if let Some(key) = previous {
-        return write_key_for_account(&account, key);
-    }
-    let entry = keyring::Entry::new(DURABLE_CREDENTIAL_SERVICE, &account)
-        .map_err(|error| error.to_string())?;
-    match entry.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(error) => Err(error.to_string()),
-    }
 }
 
 pub(crate) fn encrypt_json<T: Serialize>(

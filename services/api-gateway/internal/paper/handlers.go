@@ -21,7 +21,7 @@ const (
 )
 
 type Handler struct {
-	referenceMaterials *ReferenceMaterialsService
+	referenceMaterials     *ReferenceMaterialsService
 	papers                 PaperRepository
 	imports                PaperImportRepository
 	questions              QuestionRepository

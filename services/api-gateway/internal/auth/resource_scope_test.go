@@ -191,6 +191,8 @@ func TestRegisteredDirectIDRoutesDeclareResourceBoundaryOrExplicitTenantScope(t 
 		// 命令恢复资源不是目标资源 ID；其存储查询同时要求已认证的租户、操作者和命令 ID。
 		"/api/v1/subjective-grading-batch-commands/", "/api/v1/review-commands/",
 		"/api/v1/score-commands/", "/api/v1/report-commands/",
+		// 个人书签由存储按已认证租户、本人 owner_id 和任务授权检查，清理也只允许本人记录。
+		"/api/v1/me/review-bookmarks/",
 		"/api/v1/review/comment-templates/", "/api/v1/model-", "/api/v1/grading-evaluations/",
 		"/api/v1/ai-eligibility/", "/api/v1/platform/model-api-configs/",
 		// 平台学校路由会访问其他租户。在查询跨租户读模型前，专用守卫要求平台租户的 platform_admin 角色及 tenant:manage 权限。
