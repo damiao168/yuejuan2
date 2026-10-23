@@ -5,7 +5,7 @@ import {
   subjectFixtures
 } from "../fixtures/gradingWorkbenchMocks";
 
-test("阅卷教师先理解异常原因，再用键盘连续完成 20 份跨学科任务", async ({ page }) => {
+test("阅卷教师从任务列表核对异常来源，启用快捷键后连续完成 20 份跨学科任务", async ({ page }) => {
   test.setTimeout(120_000);
   const state = createGradingWorkbenchMockState(20);
   // 队列按考试/学科组织连续任务；每学科内维持服务端顺序，不再交替更换评分依据。
@@ -18,12 +18,17 @@ test("阅卷教师先理解异常原因，再用键盘连续完成 20 份跨学�
   const submit = page.getByRole("button", { name: "提交并下一份" });
   await expect(score).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(".answer-panel")).toContainText("fixture-01");
-  await expect(page.getByText("为什么需要我处理？")).toBeVisible();
-  await expect(page.getByText("系统评分把握不足", { exact: true })).toBeVisible();
-  await expect(page.getByText("系统无法可靠判断本题，请结合标准答案和采分点人工确认。", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "任务", exact: true }).click();
+  const taskDrawer = page.getByRole("dialog", { name: "阅卷任务", exact: true });
+  await expect(taskDrawer.locator(".grading-task-item").filter({ hasText: "fixture-01" })).toContainText("需要人工确认：系统评分把握不足");
+  await taskDrawer.locator(".ant-drawer-close").click();
 
   await page.getByRole("button", { name: "开始处理" }).click();
   await expect.poll(() => state.claims).toEqual(["review-task-01"]);
+  // 单字符快捷键默认关闭；先显式启用，再验证输入框仍保留自身键盘语义。
+  await page.getByText(/^键盘帮助 ·/).click();
+  await page.getByRole("checkbox", { name: /^启用单字符快捷键/ }).check();
+  await page.getByText(/^键盘帮助 ·/).click();
 
   // 聚焦的输入框必须保留自身键盘语义：数字键和 Enter
   // 都不能触发工作台的全局评分或提交快捷键。
@@ -42,7 +47,9 @@ test("阅卷教师先理解异常原因，再用键盘连续完成 20 份跨学�
     const task = taskOrder[index];
     const expectedTool = task.subject.tool;
     await expect(page.locator(".answer-panel")).toContainText(task.anonymous_code);
+    await page.getByText("学科工具与任务信息", { exact: true }).click();
     await expect(page.locator(".subject-tool-panel h2")).toHaveText(expectedTool);
+    await page.getByText("学科工具与任务信息", { exact: true }).click();
 
     // 刷新后焦点位于表单输入框之外，此时评分和提交
     // 完全通过已说明的键盘快捷键驱动。
@@ -102,6 +109,7 @@ test("教师核对完整冻结资料后分别审读采纳建议分和学生反�
   await installGradingWorkbenchMocks(page, state);
   await page.goto("/#/teacher/grading", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("spinbutton", { name: "最终得分" })).toBeVisible({ timeout: 30_000 });
+  await page.getByText("题目、参考答案与评分细则", { exact: true }).click();
   const reference = page.getByRole("region", { name: "本任务题目与完整评分依据" });
   await expect(reference).toContainText("连续阅卷测试考试");
   await expect(reference).toContainText("冻结参考答案");

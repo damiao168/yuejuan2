@@ -11,12 +11,13 @@ test("切换学校后忽略过期配置响应，并保留新学校的配置", as
   let releaseA!: () => void;
   // 挂起甲校请求，乙校显示后再释放；不依赖固定 sleep 来碰运气触发响应乱序。
   const pendingA = new Promise<void>(resolve => { releaseA = resolve; });
-  let startedA = false;
+  let notifyStartedA!: () => void;
+  const startedA = new Promise<void>(resolve => { notifyStartedA = resolve; });
   let finishedA = false;
   await page.route("**/api/v1/platform/model-api-configs?*", async route => {
     const tenant = new URL(route.request().url()).searchParams.get("tenant_id");
     if (tenant === "school-a") {
-      startedA = true;
+      notifyStartedA();
       await pendingA;
     }
     await route.fulfill({ json: { configs: [{ id: tenant, tenant_id: tenant,
@@ -27,7 +28,7 @@ test("切换学校后忽略过期配置响应，并保留新学校的配置", as
     if (tenant === "school-a") finishedA = true;
   });
   await page.goto("/#/platform/model-config", { waitUntil: "domcontentloaded" });
-  await expect.poll(() => startedA).toBe(true);
+  await startedA;
   const schoolSelect = page.locator(".platform-model-school-select .ant-select-selector");
   await schoolSelect.click();
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "乙学校 · B" }).click();
@@ -111,13 +112,16 @@ test("只填供应商和 API Key 即可零 Token 获取模型并保存", async (
 
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByText("DeepSeek", { exact: true })).toBeVisible();
-  await expect(page.getByText("备用", { exact: true })).toBeVisible();
   await expect(page.getByText("DeepSeek：密钥及模型访问权限检查通过", { exact: true })).toBeVisible();
-  await expect(page.getByText(/^此次保存未生成回复，尚未验证回复与结构化能力/)).toBeVisible();
-  const savedModel = page.getByRole("row", { name: /DeepSeek deepseek-v4-pro 配置 model-1/ });
-  await expect(savedModel.getByText("连接正常", { exact: true })).toBeVisible();
-  await expect(savedModel.getByText(/^18ms/)).toBeVisible();
-  await expect(savedModel.getByText("结构化能力：未验证", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^此次保存未生成回复，尚未验证普通回复与结构化能力/)).toBeVisible();
+  const savedModel = page.getByRole("row").filter({ hasText: "deepseek-v4-pro" });
+  const connection = savedModel.getByRole("button", { name: "deepseek-v4-pro：查看连接详情", exact: true });
+  await expect(connection).toHaveText("连接正常");
+  await connection.click();
+  const details = page.getByRole("dialog");
+  await expect(details).toContainText("18ms");
+  await details.getByRole("button", { name: "知道了", exact: true }).click();
+  await expect(savedModel.getByRole("cell").nth(4)).toContainText("未验证");
 });
 
 test("新建模型遇到网络超时时使用警告提示并保留当前输入", async ({ page }) => {
@@ -168,7 +172,7 @@ test("普通连接检测使用零生成 Token 快速模式", async ({ page }) =>
     last_probe_mode: "capability", last_test_message: "配置验证成功", last_test_latency_ms: 18,
     last_tested_at: "2026-09-11T09:00:00Z", last_capability_status: "success",
     last_capability_message: "结构化输出正常", last_capability_tested_at: "2026-09-11T09:00:00Z",
-    last_capability_probe_version: "structured-json-v3",
+    last_capability_probe_version: "structured-json-v4",
     last_capability_usage: { input_tokens: 9, cached_input_tokens: 0, output_tokens: 5, reasoning_tokens: 0, total_tokens: 14 },
     config_source: "auto", provider_registry_version: "2026-09-11",
     created_at: "2026-09-11T09:00:00Z", updated_at: "2026-09-11T09:00:00Z"
@@ -195,7 +199,7 @@ test("普通连接检测使用零生成 Token 快速模式", async ({ page }) =>
   await page.getByRole("button", { name: "检测连接" }).click();
   await expect.poll(() => quickRequestSeen).toBe(true);
   await expect(page.getByText("连接正常", { exact: true })).toBeVisible();
-  await expect(page.getByText(/结构化能力：已验证/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "deepseek-v4-pro：查看结构化详情", exact: true })).toHaveText("通过");
 });
 
 test("连接超时仅标记暂时无法验证，保留上次成功时间，重测成功后恢复", async ({ page }) => {
@@ -210,7 +214,7 @@ test("连接超时仅标记暂时无法验证，保留上次成功时间，重�
     credential_hint: "•••• st-16", status: "active", is_default: true, last_test_status: "success",
     last_test_message: "连接检查成功", last_test_latency_ms: 18,
     last_tested_at: "2026-09-21T14:50:00Z", last_successful_tested_at: "2026-09-21T14:50:00Z",
-    last_capability_status: "success", last_capability_probe_version: "structured-json-v3",
+    last_capability_status: "success", last_capability_probe_version: "structured-json-v4",
     last_capability_tested_at: "2026-09-21T14:50:00Z",
     config_source: "auto", created_at: "2026-09-21T14:50:00Z", updated_at: "2026-09-21T14:50:00Z"
   };
@@ -240,18 +244,22 @@ test("连接超时仅标记暂时无法验证，保留上次成功时间，重�
 
   await page.goto("/#/platform/model-config");
   await page.getByRole("button", { name: "检测连接" }).click();
-  await expect(page.locator(".platform-model-probe .ant-tag-warning")).toHaveText("暂时无法验证");
-  await expect(page.locator(".platform-model-probe")).toContainText("模型服务连接超时，请稍后重试");
-  await expect(page.locator(".platform-model-probe")).toContainText(/上次连接正常：\d{2}\/\d{2} \d{2}:\d{2}/);
-  await expect(page.locator(".platform-model-school-summary")).toContainText("DeepSeek · deepseek-flash · 暂时无法验证");
+  const connection = page.getByRole("button", { name: "deepseek-flash：查看连接详情", exact: true });
+  await expect(connection).toHaveText("连接超时");
   await expect(page.locator(".platform-model-school-summary")).toContainText("1 个暂时无法验证");
-  await expect(page.locator(".platform-model-probe .ant-tag-error")).toHaveCount(0);
   await expect(page.locator(".ant-message-notice-warning")).toContainText("不代表模型已失效");
+  await connection.click();
+  const details = page.getByRole("dialog");
+  await expect(details).toContainText("模型服务连接超时，请稍后重试");
+  const lastSuccess = details.locator("dl > div").filter({ has: page.getByText("上次连接成功", { exact: true }) });
+  await expect(lastSuccess).toContainText("09/21");
+  await details.getByRole("button", { name: "知道了", exact: true }).click();
 
   await page.getByRole("button", { name: "检测连接" }).click();
-  await expect(page.locator(".platform-model-probe .ant-tag-success")).toHaveText("连接正常");
-  await expect(page.locator(".platform-model-school-summary")).toContainText("DeepSeek · deepseek-flash · 正常");
-  await expect(page.locator(".platform-model-probe")).not.toContainText("上次连接正常：");
+  await expect(connection).toHaveText("连接正常");
+  await expect(page.locator(".platform-model-school-summary")).not.toContainText("1 个暂时无法验证");
+  await connection.click();
+  await expect(lastSuccess).toContainText("09/22");
 });
 
 test("完整能力检测失败时保留配置并展示具体原因", async ({ page }) => {
@@ -280,18 +288,21 @@ test("完整能力检测失败时保留配置并展示具体原因", async ({ pa
       diagnostic: { finish_reason: "stop", response_format: "json_object", content_length: 8, content_preview: "not json" }
     },
     config: { ...config, last_capability_status: "failed", last_capability_message: "模型返回内容不是合法 JSON",
-      last_capability_probe_version: "structured-json-v3", last_capability_diagnostic: {
+      last_capability_probe_version: "structured-json-v4", last_capability_diagnostic: {
         finish_reason: "stop", response_format: "json_object", content_length: 8
       } }
   } }));
 
   await page.goto("/#/platform/model-config");
-  await page.getByRole("button", { name: "DeepSeek更多操作" }).click();
-  await page.getByText("完整能力检测", { exact: true }).click();
+  await page.getByRole("button", { name: "deepseek-flash：检测结构化输出", exact: true }).click();
+  const structured = page.getByRole("button", { name: "deepseek-flash：查看结构化详情", exact: true });
+  await expect(structured).toHaveText("未通过");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await structured.click();
   const diagnosticDialog = page.getByRole("dialog");
   await expect(diagnosticDialog.locator(".ant-modal-confirm-title")).toHaveText("DeepSeek：结构化输出检测未通过");
   await expect(diagnosticDialog.getByText("not json", { exact: true })).toBeVisible();
-  await expect(page.getByText("验证失败", { exact: false })).toBeVisible();
+  await expect(structured).toHaveText("未通过");
   await expect(page.getByText("DeepSeek", { exact: true })).toBeVisible();
 });
 
@@ -430,25 +441,26 @@ test("同 Key 草稿可恢复且保存成功后立即清除", async ({ page }) =
   });
 
   await page.goto("/#/platform/model-config");
-  // 保存后会增加同厂商模型行，始终从原模型打开菜单，才能验证原密钥草稿已经清除。
+  // 保存后会增加同厂商模型行，始终从原模型的编辑入口复用密钥，避免选到新模型。
   const sourceRow = page.getByRole("row").filter({ hasText: "deepseek-flash" });
-  await sourceRow.getByRole("button", { name: "DeepSeek更多操作" }).click();
-  await page.getByRole("menuitem", { name: "添加同 Key 模型" }).click();
+  const openWithSavedKey = async () => {
+    await sourceRow.getByRole("button", { name: "编辑DeepSeek", exact: true }).click();
+    await page.getByRole("button", { name: "使用此密钥添加模型", exact: true }).click();
+  };
+  await openWithSavedKey();
   await expect(page.getByLabel("API Key")).toHaveCount(0);
   await page.getByLabel("模型名称").fill("deepseek-reasoner");
   await page.getByRole("button", { name: "关闭", exact: true }).click();
-  await sourceRow.getByRole("button", { name: "DeepSeek更多操作" }).click();
-  await page.getByRole("menuitem", { name: "添加同 Key 模型" }).click();
+  await openWithSavedKey();
   await expect(page.getByLabel("模型名称")).toHaveValue("deepseek-reasoner");
   await expect(page.getByText("已恢复 2 分钟内未保存的模型配置", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "检测连接并保存", exact: true }).click();
 
-  await sourceRow.getByRole("button", { name: "DeepSeek更多操作" }).click();
-  await page.getByRole("menuitem", { name: "添加同 Key 模型" }).click();
+  await openWithSavedKey();
   await expect(page.getByLabel("模型名称")).toHaveValue("");
 });
 
-test("编辑自定义 API 地址时保存也必须提交新密钥", async ({ page }) => {
+test("编辑自定义 API 域名时保存也必须提交密钥", async ({ page }) => {
   await installApiMocks(page, { role: "platform_admin", initiallyAuthenticated: true });
   await page.route("**/api/v1/tenants?*", route => route.fulfill({ json: {
     tenants: [{ id: "school-a", code: "A", name: "甲学校", status: "active" }], has_more: false
@@ -474,7 +486,7 @@ test("编辑自定义 API 地址时保存也必须提交新密钥", async ({ pag
   await page.getByLabel("编辑自定义模型").click();
   await page.getByLabel("API 地址").fill("https://new.example.test/v1");
   await page.getByRole("button", { name: "检测连接并更新", exact: true }).click();
-  await expect(page.getByText("更换 API 地址时请输入新 API Key", { exact: true })).toBeVisible();
+  await expect(page.getByText("更换 API 域名或端口时，请重新输入 API Key（可以使用原密钥）", { exact: true })).toBeVisible();
   expect(updateRequests).toBe(0);
 
   await page.getByLabel("API Key").fill("new-endpoint-secret-at-least-16");
@@ -518,8 +530,10 @@ test("检测接口以错误响应返回超时时仍使用警告并刷新临时�
   await page.goto("/#/platform/model-config");
   await page.getByRole("button", { name: "检测连接" }).click();
   await expect(page.locator(".ant-message-notice-warning")).toContainText("模型服务连接超时");
-  await expect(page.locator(".platform-model-probe .ant-tag-warning")).toHaveText("暂时无法验证");
-  await expect(page.locator(".platform-model-probe")).toContainText("上次连接正常：");
+  const connection = page.getByRole("button", { name: "deepseek-flash：查看连接详情", exact: true });
+  await expect(connection).toHaveText("连接超时");
+  await connection.click();
+  await expect(page.getByRole("dialog").locator("dl > div").filter({ has: page.getByText("上次连接成功", { exact: true }) })).toContainText("09/21");
 });
 
 test("编辑侧边栏复用已保存密钥获取模型并可更新完整配置", async ({ page }) => {
@@ -575,7 +589,7 @@ test("编辑侧边栏复用已保存密钥获取模型并可更新完整配置",
   await page.getByLabel("模型名称").fill("ark-code-latest");
   await page.getByLabel("API 地址").fill("https://ark.example.test/v1");
   await page.getByRole("button", { name: "获取可用模型" }).click();
-  await expect(page.getByText("更换 API 地址时请输入新 API Key", { exact: true })).toBeVisible();
+  await expect(page.getByText("更换 API 域名或端口时，请重新输入 API Key（可以使用原密钥）", { exact: true })).toBeVisible();
   await page.getByLabel("API 地址").fill("https://ark.cn-beijing.volces.com/api/coding/v3");
   await page.getByRole("button", { name: "获取可用模型" }).click();
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "doubao-seed-2.1-turbo" }).click();

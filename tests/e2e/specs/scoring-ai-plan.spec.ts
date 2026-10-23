@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { installApiMocks } from "../fixtures/apiMocks";
 import { createGradingWorkbenchMockState, installGradingWorkbenchMocks } from "../fixtures/gradingWorkbenchMocks";
 
@@ -51,73 +51,98 @@ test("fast confirmation keeps the evidence and confirmation usable on a narrow s
   await expect(item.getByRole("checkbox", { name: "已核对原图、证据并确认此分数" })).toBeEnabled();
 });
 
-test("AI assisted question follows the visible plan into an idempotent suggestion batch", async ({ page }) => {
+async function installConfirmedAIPlan(page: Page) {
+  await page.route("**/api/v1/exams/exam-1/grading-ai-plan", route => route.fulfill({ json: {
+    plan: { version: 1, revision: "plan-1", effective_mode: "single", fallback_model_config_id: "model-ai",
+      roles: {}, resolved_roles: {}, independent_model_count: 1, reason_codes: [],
+      single_model: { model_config_id: "model-ai", display_name: "学校评分模型", model_name: "fixture-model" },
+      decision_config: { primary_allowed_diff_points: null, teacher_allowed_diff_points: null, aggregation_version: "dual-conditional-arbiter-v1", rounding: "ceil_final" },
+      confirmed_by: "user-school_admin", confirmed_at: "2026-10-01T00:00:00Z" },
+    available_models: [], can_configure: true
+  } }));
+}
+
+test("AI 评分路线提交一次启动命令，刷新后沿用服务端进度", async ({ page }) => {
   await installApiMocks(page, { initiallyAuthenticated: true });
+  await installConfirmedAIPlan(page);
   let started = false;
-  const batches: Array<{ key: string; segments: string[]; runId?: string }> = [];
+  let browserBatchCreates = 0;
+  const commands: Array<{ key: string; body: { idempotency_key: string } }> = [];
   const run = { id: "run-ai", exam_id: "exam-1", status: "needs_review", total_count: 1, queued_count: 0, auto_confirmed_count: 0, human_confirmed_count: 0, review_count: 1, failed_count: 0 };
-  const batch = { id: "batch-ai", idempotency_key: "scoring-ai-run-ai-original", status: "processing", segment_ids: ["segment-ai"], total_count: 1, queued_count: 1, processing_count: 0, succeeded_count: 0, failed_count: 0 };
-  const item = { answer_segment_id: "segment-ai", question_id: "question-ai", question_no: "1", question_type: "essay", state: "review", anonymous_code: "A001", normalized_bbox: { x: 0, y: 0, width: 1, height: 1 } };
+  const batch = { id: "batch-ai", idempotency_key: "service-plan-run-ai", status: "processing", segment_ids: ["segment-ai"], total_count: 1, queued_count: 1, processing_count: 0, succeeded_count: 0, failed_count: 0 };
+  const item = { answer_segment_id: "segment-ai", question_id: "question-ai", question_no: "1", question_type: "essay", state: "review", decision_status: "suggestion_ready", anonymous_code: "A001", normalized_bbox: { x: 0, y: 0, width: 1, height: 1 } };
   await page.route("**/api/v1/exams/exam-1/scoring-summary", route => route.fulfill({ json: { scoring_summary: { run: started ? run : undefined, questions: [{ question_id: "question-ai", question_no: "1", question_type: "essay", total: 1, queued: 0, confirmed: 0, review: started ? 1 : 0, failed: 0 }] } } }));
   await page.route("**/api/v1/exams/exam-1/questions/question-ai/assessment-snapshot", route => route.fulfill({ json: { assessment_snapshot: { scoring_policy_snapshot: { mode: "AI_ASSIST" }, risk_tier: "R2" } } }));
-  await page.route("**/api/v1/exams/exam-1/scoring-runs", route => { started = true; return route.fulfill({ status: 201, json: { scoring_run: run } }); });
-  await page.route("**/api/v1/scoring-runs/run-ai", route => route.fulfill({ json: { scoring_run: run, items: [item] } }));
-  await page.route("**/api/v1/scoring-runs/run-ai/ai-batches", route => route.fulfill({ json: { batches: batches.length ? [batch] : [] } }));
-  await page.route("**/api/v1/exams/exam-1/automation-results", route => route.fulfill({ json: { items: [item] } }));
-  await page.route("**/api/v1/subjective-grading-batches", async route => {
-    const body = route.request().postDataJSON() as { idempotency_key: string; segment_ids: string[]; scoring_run_id?: string };
-    batches.push({ key: body.idempotency_key, segments: body.segment_ids, runId: body.scoring_run_id });
-    await route.fulfill({ status: 201, json: { batch } });
+  await page.route("**/api/v1/exams/exam-1/scoring-runs", route => {
+    commands.push({ key: route.request().headers()["idempotency-key"], body: route.request().postDataJSON() });
+    started = true;
+    return route.fulfill({ status: 201, json: { scoring_run: run } });
   });
-  await page.route("**/api/v1/subjective-grading-batches/batch-ai/enqueue", route => route.fulfill({ json: { batch, tasks: [], enqueue_result: { requested_count: 1, accepted_count: 1, task_count: 1, failed_count: 0, partial_success: false, failures: [] } } }));
-  await page.route("**/api/v1/subjective-grading-batches/batch-ai", route => route.fulfill({ json: { batch } }));
+  await page.route("**/api/v1/scoring-runs/run-ai/ai-batches", route => route.fulfill({ json: { batches: started ? [batch] : [] } }));
+  await page.route("**/api/v1/exams/exam-1/automation-results", route => route.fulfill({ json: { items: [item] } }));
+  // 服务端持久计划负责安排批次；浏览器只能提交启动命令和读取进度，不能另拼一套批次。
+  await page.route("**/api/v1/subjective-grading-batches", route => {
+    browserBatchCreates++;
+    return route.fulfill({ status: 500, json: { error: { code: "unexpected_browser_batch" } } });
+  });
 
-  await page.goto("/#/exams/exam-1/grading");
+  await page.goto("/#/admin/exams/exam-1/grading");
   const start = page.getByRole("button", { name: "开始评分", exact: true });
   await expect(start).toBeEnabled({ timeout: 15_000 });
   await start.click();
   const plan = page.getByRole("dialog", { name: "确认本次评分路线" });
   await expect(plan.locator(".grading-plan-counts")).toContainText("AI 建议");
   await expect(plan.getByText("1 · 作文题")).toBeVisible();
-  await expect(plan.getByText("AI 仅生成建议，须由教师确认")).toBeVisible();
+  await expect(plan.getByText("自动识别学生作答并生成建议分，由教师确认最终分数", { exact: true })).toBeVisible();
+  await expect(plan.getByText("单模型评分 · 非三智能体", { exact: true })).toBeVisible();
   await plan.getByRole("button", { name: "按此路线启动" }).click();
-  await expect.poll(() => batches.length).toBe(1);
-  expect(batches[0]).toEqual({ key: expect.stringMatching(/^scoring-ai-run-ai-[a-f0-9]{32}$/), segments: ["segment-ai"], runId: "run-ai" });
-  await expect(page.getByText("AI 辅助建议", { exact: true })).toBeVisible();
+  await expect.poll(() => commands.length).toBe(1);
+  expect(commands[0].key).toMatch(/^web-[a-f0-9-]{36}$/);
+  expect(commands[0].body.idempotency_key).toBe(commands[0].key);
   await page.reload();
-  await expect(page.getByText("AI 辅助建议", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "确认建议分", exact: true })).toBeVisible({ timeout: 15_000 });
+  expect(commands).toHaveLength(1);
+  expect(browserBatchCreates).toBe(0);
 });
 
-// 预置已接受的评分 run，却暂时不给 AI 批次，模拟跨步骤中断；刷新后只能补建一次。
-test("an accepted scoring run without AI batches resumes after opening the workbench", async ({ page }) => {
+// 已接受运行暂时没有 AI 批次时，页面只恢复服务端事实；失败项由明确操作交回原运行重试。
+test("已接受运行恢复服务端事实，失败项通过原运行重试且不重复创建", async ({ page }) => {
   await installApiMocks(page, { initiallyAuthenticated: true });
-  const run = { id: "run-ai", exam_id: "exam-1", status: "needs_review", total_count: 1, queued_count: 0, auto_confirmed_count: 0, human_confirmed_count: 0, review_count: 1, failed_count: 0 };
-  let batch = { id: "batch-ai", idempotency_key: "scoring-ai-run-ai-original", status: "processing", segment_ids: ["segment-ai"], total_count: 1, queued_count: 1, processing_count: 0, succeeded_count: 0, failed_count: 0 };
-  const retryBatch = { ...batch, id: "batch-retry", idempotency_key: "scoring-ai-retry-batch-ai" };
-  let created = 0;
+  await installConfirmedAIPlan(page);
+  let failed = false;
+  let starts = 0;
+  let browserBatchCreates = 0;
   let retried = 0;
-  await page.route("**/api/v1/exams/exam-1/scoring-summary", route => route.fulfill({ json: { scoring_summary: { run, questions: [{ question_id: "question-ai", question_no: "1", question_type: "essay", total: 1, queued: 0, confirmed: 0, review: 1, failed: 0 }] } } }));
-  await page.route("**/api/v1/exams/exam-1/questions/question-ai/assessment-snapshot", route => route.fulfill({ json: { assessment_snapshot: { scoring_policy_snapshot: { mode: "AI_ASSIST" }, risk_tier: "R2" } } }));
-  await page.route("**/api/v1/scoring-runs/run-ai", route => route.fulfill({ json: { scoring_run: run, items: [{ question_id: "question-ai", answer_segment_id: "segment-ai", state: "review" }] } }));
-  await page.route("**/api/v1/scoring-runs/run-ai/ai-batches", route => route.fulfill({ json: { batches: created ? [batch, ...(retried ? [retryBatch] : [])] : [] } }));
-  await page.route("**/api/v1/subjective-grading-batches", route => {
-    const input = route.request().postDataJSON() as { idempotency_key: string; segment_ids: string[] };
-    if (input.idempotency_key === "scoring-ai-retry-batch-ai") { retried++; expect(input.segment_ids).toEqual(["segment-ai"]); return route.fulfill({ status: 201, json: { batch: retryBatch } }); }
-    created++; return route.fulfill({ status: 201, json: { batch } });
+  const run = () => ({ id: "run-ai", exam_id: "exam-1", status: "needs_review", total_count: 1, queued_count: 0, auto_confirmed_count: 0, human_confirmed_count: 0, review_count: failed ? 0 : 1, failed_count: failed ? 1 : 0 });
+  await page.route("**/api/v1/exams/exam-1/scoring-summary", route => route.fulfill({ json: { scoring_summary: { run: run(), questions: [{ question_id: "question-ai", question_no: "1", question_type: "essay", total: 1, queued: 0, confirmed: 0, review: failed ? 0 : 1, failed: failed ? 1 : 0 }] } } }));
+  await page.route("**/api/v1/scoring-runs/run-ai/ai-batches", route => route.fulfill({ json: { batches: [] } }));
+  await page.route("**/api/v1/exams/exam-1/automation-results", route => route.fulfill({ json: { items: [{ question_id: "question-ai", question_no: "1", question_type: "essay", answer_segment_id: "segment-ai", state: failed ? "failed" : "review", decision_status: failed ? undefined : "suggestion_ready" }] } }));
+  await page.route("**/api/v1/exams/exam-1/scoring-runs", route => {
+    starts++;
+    return route.fulfill({ status: 500, json: { error: { code: "unexpected_new_run" } } });
   });
-  await page.route("**/api/v1/subjective-grading-batches/batch-ai/enqueue", route => route.fulfill({ json: { batch, tasks: [], enqueue_result: { requested_count: 1, accepted_count: 1, task_count: 1, failed_count: 0, partial_success: false, failures: [] } } }));
-  await page.route("**/api/v1/subjective-grading-batches/batch-ai", route => route.fulfill({ json: { batch } }));
-  await page.route("**/api/v1/subjective-grading-batches/batch-ai/failed-segments", route => route.fulfill({ json: { segment_ids: ["segment-ai"] } }));
-  await page.route("**/api/v1/subjective-grading-batches/batch-retry/enqueue", route => route.fulfill({ json: { batch: retryBatch, tasks: [], enqueue_result: { requested_count: 1, accepted_count: 1, task_count: 1, failed_count: 0, partial_success: false, failures: [] } } }));
-  await page.route("**/api/v1/subjective-grading-batches/batch-retry", route => route.fulfill({ json: { batch: retryBatch } }));
-  await page.goto("/#/exams/exam-1/grading");
-  await expect.poll(() => created, { timeout: 15_000 }).toBe(1);
+  await page.route("**/api/v1/subjective-grading-batches", route => {
+    browserBatchCreates++;
+    return route.fulfill({ status: 500, json: { error: { code: "unexpected_browser_batch" } } });
+  });
+  await page.route("**/api/v1/scoring-runs/run-ai/retry-failed", route => {
+    expect(route.request().method()).toBe("POST");
+    retried++;
+    failed = false;
+    return route.fulfill({ json: { scoring_run: run(), requeued: 1 } });
+  });
+
+  await page.goto("/#/admin/exams/exam-1/grading");
+  await expect(page.getByRole("button", { name: "确认建议分", exact: true })).toBeVisible({ timeout: 15_000 });
   await page.reload();
-  await expect(page.getByText("AI 辅助建议", { exact: true })).toBeVisible({ timeout: 15_000 });
-  expect(created).toBe(1);
-  batch = { ...batch, status: "failed", queued_count: 0, failed_count: 1 };
-  await page.locator(".grading-overview").getByRole("button", { name: "刷新" }).click();
-  await expect(page.getByRole("button", { name: "重试失败的 AI 建议" })).toBeVisible();
-  await page.getByRole("button", { name: "重试失败的 AI 建议" }).click();
+  await expect(page.getByRole("button", { name: "确认建议分", exact: true })).toBeVisible({ timeout: 15_000 });
+  expect(starts).toBe(0);
+  expect(browserBatchCreates).toBe(0);
+  failed = true;
+  await page.locator(".grading-overview").getByRole("button", { name: "刷新", exact: true }).click();
+  await page.getByRole("button", { name: "重新处理失败项", exact: true }).click();
   await expect.poll(() => retried).toBe(1);
+  await expect(page.getByRole("button", { name: "确认建议分", exact: true })).toBeVisible();
+  expect(starts).toBe(0);
+  expect(browserBatchCreates).toBe(0);
 });

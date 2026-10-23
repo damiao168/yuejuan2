@@ -22,7 +22,7 @@ test("学校模型与治理使用同一学校配置，旧治理地址转入模�
     adapter_type: "openai_compatible", base_url: "https://api.deepseek.com", model_name: "deepseek-v4",
     model_version: "deepseek-v4", region: "global", credential_configured: true,
     status: "active", is_default: false, last_test_status: "success",
-    last_capability_status: "success", last_capability_probe_version: "structured-json-v3"
+    last_capability_status: "success", last_capability_probe_version: "structured-json-v4"
   }] } }));
   let bindingBody: Record<string, unknown> | undefined;
   await page.route("**/api/v1/platform/panel-model-bindings?*", route => route.fulfill({ json: { bindings: [] } }));
@@ -85,8 +85,8 @@ test("治理操作只提交学校模型配置 ID", async ({ page }) => {
     tenants: [{ id: "school-a", code: "A", name: "甲学校", status: "active" }], has_more: false
   } }));
   await page.route("**/api/v1/platform/model-api-configs?*", route => route.fulfill({ json: { configs: [
-    { id: "model-a", tenant_id: "school-a", provider_key: "deepseek", display_name: "DeepSeek", model_name: "deepseek-v4", model_version: "v4", region: "global", base_url: "https://example.test", adapter_type: "openai_compatible", credential_configured: true, status: "active", is_default: false, last_test_status: "success", last_capability_status: "success", last_capability_probe_version: "structured-json-v3" },
-    { id: "model-b", tenant_id: "school-a", provider_key: "aliyun", display_name: "阿里云百炼", model_name: "qwen-vl", model_version: "v2", region: "cn", base_url: "https://example.test", adapter_type: "openai_compatible", credential_configured: true, status: "active", is_default: false, last_test_status: "success", last_capability_status: "success", last_capability_probe_version: "structured-json-v3" }
+    { id: "model-a", tenant_id: "school-a", provider_key: "deepseek", display_name: "DeepSeek", model_name: "deepseek-v4", model_version: "v4", region: "global", base_url: "https://example.test", adapter_type: "openai_compatible", credential_configured: true, status: "active", is_default: false, last_test_status: "success", last_capability_status: "success", last_capability_probe_version: "structured-json-v4" },
+    { id: "model-b", tenant_id: "school-a", provider_key: "aliyun", display_name: "阿里云百炼", model_name: "qwen-vl", model_version: "v2", region: "cn", base_url: "https://example.test", adapter_type: "openai_compatible", credential_configured: true, status: "active", is_default: false, last_test_status: "success", last_capability_status: "success", last_capability_probe_version: "structured-json-v4" }
   ] } }));
   const candidate = { id: "candidate-a", model_config_id: "model-a", model_name: "deepseek-v4", provider_key: "deepseek", model_version: "v4", prompt_version: "prompt-v1", rubric_version: "rubric-v1", metrics: { teacher_acceptance_rate: 0.9, serious_error_rate: 0, evidence_validity_rate: 1, stability_rate: 1, average_cost_micros: 10 }, p95_latency_ms: 100 };
   const draftRun = { id: "run-draft", run_key: "draft", display_name: "待录入", dataset_reference: "frozen", dataset_sha256: "a".repeat(64), authorization_reference: "approved-data", evidence_class: "authorized_frozen_set", subject: "数学", grade: "九年级", question_type: "essay", modality: "text", sample_count: 10, repeat_count: 1, status: "draft", candidates: [], created_at: "2026-09-23T00:00:00Z" };
@@ -163,7 +163,7 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
     adapter_type: "openai_compatible", base_url: "https://example.test", model_name: model,
     model_version: model, region: "global", credential_configured: true,
     status: "active", is_default: false, last_test_status: "success",
-    last_capability_status: "success", last_capability_probe_version: "structured-json-v3"
+    last_capability_status: "success", last_capability_probe_version: "structured-json-v4"
   });
   const configs = [
     config("model-a", "deepseek", "DeepSeek", "deepseek-v4"),
@@ -187,7 +187,7 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
   });
   let probed = false;
   await page.route("**/api/v1/platform/model-api-configs/model-c/probe?*", route => {
-    expect(new URL(route.request().url()).searchParams.get("mode")).toBe("capability");
+    expect(new URL(route.request().url()).searchParams.get("mode")).toBe("structured");
     probed = true;
     configs[0] = config("model-c", "zhipu", "智谱 AI", "glm-4.6v");
     return route.fulfill({ json: {
@@ -262,8 +262,7 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
   await page.getByRole("button", { name: "获取可用模型" }).click();
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "glm-4.6v" }).click();
   await page.getByRole("button", { name: "检测连接并保存" }).click();
-  await page.getByRole("button", { name: "智谱 AI更多操作" }).click();
-  await page.getByText("完整能力检测", { exact: true }).click();
+  await page.getByRole("button", { name: "glm-4.6v：检测结构化输出", exact: true }).click();
   await expect.poll(() => probed).toBe(true);
 
   await page.getByText("三智能体配置", { exact: true }).click();

@@ -13,7 +13,7 @@ test("角色配置冲突保留所有草稿，明确刷新核对后才使用新�
   await page.route("**/api/v1/platform/model-api-configs?*", route => route.fulfill({ json: { configs: ["a", "b"].map(key => ({
     id: `model-${key}`, tenant_id: "school-a", provider_key: "custom", display_name: `学校模型${key}`, model_name: `model-${key}`, model_version: `version-${key}`,
     region: "global", base_url: "https://example.test", adapter_type: "openai_compatible", credential_configured: true, status: "active", is_default: false,
-    last_test_status: "success", last_capability_status: "success", last_capability_probe_version: "structured-json-v3"
+    last_test_status: "success", last_capability_status: "success", last_capability_probe_version: "structured-json-v4"
   })) } }));
   await page.route("**/api/v1/platform/panel-model-bindings?*", route => route.fulfill({ json: { bindings: [binding] } }));
   await page.route("**/api/v1/platform/panel-model-bindings", route => {
