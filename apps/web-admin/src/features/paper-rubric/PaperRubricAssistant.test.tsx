@@ -7,7 +7,10 @@ import type { RubricAssistantDraft } from "./rubricAssistantDraft";
 
 const mocks = vi.hoisted(() => ({ generate: vi.fn(), confirm: vi.fn() }));
 vi.mock("../../api/papers", async (original) => ({ ...await original<typeof import("../../api/papers")>(), generateQuestionRubricDraft: mocks.generate }));
-vi.mock("antd", async (original) => ({ ...await original<typeof import("antd")>(), App: { useApp: () => ({ modal: { confirm: mocks.confirm } }) } }));
+vi.mock("antd", async (original) => {
+  const { withFixedTextAreaLayout } = await import("../../test-utils/antdTextAreaLayout");
+  return { ...withFixedTextAreaLayout(await original<typeof import("antd")>()), App: { useApp: () => ({ modal: { confirm: mocks.confirm } }) } };
+});
 vi.mock("../../components/MathMarkdown", () => ({ MathMarkdown: ({ children }: { children: string }) => <div>{children}</div> }));
 
 const question: Question = { id: "q1", tenant_id: "tenant", exam_id: "exam", question_no: "16", question_type: "calculation", score: 6,

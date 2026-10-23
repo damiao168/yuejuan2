@@ -25,7 +25,10 @@ vi.mock("./QuestionBankWorkspace",async()=>{
  const {Form,Input}=await import('antd');
  return {QuestionBankWorkspace:(p: QuestionBankWorkspaceProps)=>{mocks.workspace=p;return <><button onClick={()=>p.selectItem(items[0] as QuestionBankWorkspaceProps["item"] & {})}>选A</button><button onClick={()=>p.selectItem(items[1] as QuestionBankWorkspaceProps["item"] & {})}>选B</button><Form form={p.editor}><Form.Item name='stem'><Input/></Form.Item></Form>{p.selected&&p.editorVersion?.id===p.selected.id?<ScoringEditor key={p.selected.id} version={p.editorVersion} disabled={p.contentDirty||p.saving} onSaved={p.scoringSaved} onDirty={p.setScoringDirty} canManageFiles={false} actorId='actor'/>:null}</>}}
 });
-vi.mock("antd",async importOriginal=>({...await importOriginal<typeof import("antd")>(),App:{useApp:()=>({message:{success:mocks.success,error:mocks.error,warning:vi.fn()},modal:{confirm:mocks.confirm}})}}));
+vi.mock("antd",async importOriginal=>{
+ const {withFixedTextAreaLayout}=await import("../../test-utils/antdTextAreaLayout");
+ return {...withFixedTextAreaLayout(await importOriginal<typeof import("antd")>()),App:{useApp:()=>({message:{success:mocks.success,error:mocks.error,warning:vi.fn()},modal:{confirm:mocks.confirm}})}};
+});
 let host: HTMLDivElement, root: Root, client: QueryClient;
 beforeEach(()=>{vi.clearAllMocks();mocks.workspace=null;location.hash='';Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});vi.stubGlobal('matchMedia',()=>({matches:false,addListener(){},removeListener(){},addEventListener(){},removeEventListener(){}}));vi.stubGlobal('ResizeObserver',class{observe(){}unobserve(){}disconnect(){}});const original=window.getComputedStyle.bind(window);vi.spyOn(window,'getComputedStyle').mockImplementation(e=>original(e));host=document.createElement('div');document.body.append(host);root=createRoot(host);client=new QueryClient({defaultOptions:{queries:{retry:false,gcTime:0}}})});
 afterEach(async()=>{await act(async()=>root.unmount());client.clear();host.remove();vi.unstubAllGlobals();vi.restoreAllMocks()});

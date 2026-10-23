@@ -13,10 +13,11 @@ vi.mock("../../api/papers", async (original) => ({
   ...await original<typeof import("../../api/papers")>(),
   generateQuestionRubricDraft: mocks.generate, createRubric: mocks.createRubric
 }));
-vi.mock("antd", async (original) => ({
-  ...await original<typeof import("antd")>(),
-  App: { useApp: () => ({ modal: { confirm: mocks.confirm }, message: mocks.message }) }
-}));
+vi.mock("antd", async (original) => {
+  const { withFixedTextAreaLayout } = await import("../../test-utils/antdTextAreaLayout");
+  return { ...withFixedTextAreaLayout(await original<typeof import("antd")>()),
+    App: { useApp: () => ({ modal: { confirm: mocks.confirm }, message: mocks.message }) } };
+});
 vi.mock("../../components/MathMarkdown", () => ({
   MathMarkdown: ({ children }: { children: string }) => <div>{children}</div>
 }));
@@ -52,7 +53,7 @@ function EditorHarness({ selectedQuestion }: { selectedQuestion: Question }) {
 }
 
 function expectMethod(method: "steps" | "ai") {
-  const radio = screen.getByRole("radio", { name: method === "ai" ? /AI/ : /按解答步骤配分/ }) as HTMLInputElement;
+  const radio = screen.getByLabelText(method === "ai" ? /AI/ : /按解答步骤配分/) as HTMLInputElement;
   expect(radio.checked).toBe(true);
 }
 
@@ -70,18 +71,18 @@ afterEach(cleanup);
 describe("分值建议方式在采用与保存后的恢复", () => {
   it("选择 AI 不产生未保存草稿；采用并保存后保留 AI 方式，清除预览且保存教师采用的采分点", async () => {
     const view = render(<EditorHarness selectedQuestion={question} />);
-    fireEvent.click(screen.getByRole("radio", { name: /AI/ }));
+    fireEvent.click(screen.getByLabelText(/AI/));
     expectMethod("ai");
     expect(screen.getByLabelText("细则修改状态").textContent).toBe("false");
     expect(mocks.generate).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "生成分值建议" }));
+    fireEvent.click(screen.getByText("生成分值建议").closest("button")!);
     await screen.findByText("AI 建议 · 待教师核对");
-    fireEvent.click(screen.getByRole("button", { name: "保存测试细则" }));
+    fireEvent.click(screen.getByText("保存测试细则").closest("button")!);
     await waitFor(() => expect(mocks.message.error).toHaveBeenCalledOnce());
     expect(mocks.createRubric).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "采用建议到评分细则" }));
+    fireEvent.click(screen.getByText("采用建议到评分细则").closest("button")!);
     await act(async () => mocks.confirm.mock.calls[0][0].onOk());
     expectMethod("ai");
     expect(screen.queryByText("AI 建议 · 待教师核对")).toBeNull();
@@ -89,7 +90,7 @@ describe("分值建议方式在采用与保存后的恢复", () => {
     expect(screen.getByLabelText("细则修改状态").textContent).toBe("true");
     expect(screen.getByLabelText("评分细则内容").textContent).toContain("正确移项");
 
-    fireEvent.click(screen.getByRole("button", { name: "保存测试细则" }));
+    fireEvent.click(screen.getByText("保存测试细则").closest("button")!);
     await waitFor(() => expect(mocks.createRubric).toHaveBeenCalledOnce());
     const payload = mocks.createRubric.mock.calls[0][1] as RubricPayload;
     expect(payload.points).toEqual([
@@ -111,7 +112,7 @@ describe("分值建议方式在采用与保存后的恢复", () => {
     ["学校", { tenant_id: "another-tenant" }]
   ])("切换%s后不沿用上一题的 AI 方式", (_, identity) => {
     const view = render(<EditorHarness selectedQuestion={question} />);
-    fireEvent.click(screen.getByRole("radio", { name: /AI/ }));
+    fireEvent.click(screen.getByLabelText(/AI/));
     view.rerender(<EditorHarness selectedQuestion={{ ...question, ...identity }} />);
     expectMethod("steps");
     expect(screen.getByLabelText("细则修改状态").textContent).toBe("false");
@@ -120,14 +121,14 @@ describe("分值建议方式在采用与保存后的恢复", () => {
 
   it("同题参考解答更新后保留 AI 方式，但旧建议不能继续应用", async () => {
     const view = render(<EditorHarness selectedQuestion={question} />);
-    fireEvent.click(screen.getByRole("radio", { name: /AI/ }));
-    fireEvent.click(screen.getByRole("button", { name: "生成分值建议" }));
+    fireEvent.click(screen.getByLabelText(/AI/));
+    fireEvent.click(screen.getByText("生成分值建议").closest("button")!);
     await screen.findByText("AI 建议 · 待教师核对");
     view.rerender(<EditorHarness selectedQuestion={{ ...question, solution: { ...question.solution!, solution_version: "v2",
       steps: [{ step_no: 1, content: "3x=6" }, { step_no: 2, content: "x=2" }] } }} />);
     expectMethod("ai");
     expect(screen.queryByText("AI 建议 · 待教师核对")).toBeNull();
-    expect(screen.queryByRole("button", { name: "采用建议到评分细则" })).toBeNull();
+    expect(screen.queryByText("采用建议到评分细则")).toBeNull();
     expect(screen.getByLabelText("助手预览状态").textContent).toBe("false");
     expect(mocks.generate).toHaveBeenCalledOnce();
   });
@@ -136,8 +137,8 @@ describe("分值建议方式在采用与保存后的恢复", () => {
     let complete!: (value: typeof suggestion) => void;
     mocks.generate.mockImplementation(() => new Promise((resolve) => { complete = resolve; }));
     const view = render(<EditorHarness selectedQuestion={question} />);
-    fireEvent.click(screen.getByRole("radio", { name: /AI/ }));
-    fireEvent.click(screen.getByRole("button", { name: "生成分值建议" }));
+    fireEvent.click(screen.getByLabelText(/AI/));
+    fireEvent.click(screen.getByText("生成分值建议").closest("button")!);
     const signal = mocks.generate.mock.calls[0][1] as AbortSignal;
     view.rerender(<EditorHarness selectedQuestion={{ ...question, solution: { ...question.solution!, solution_version: "v2", raw_text: "新解答" } }} />);
     expect(signal.aborted).toBe(true);
@@ -150,10 +151,10 @@ describe("分值建议方式在采用与保存后的恢复", () => {
 
   it("同题解答来源更新清除原来的手动配分", () => {
     const view = render(<EditorHarness selectedQuestion={question} />);
-    fireEvent.click(screen.getByRole("button", { name: "在第 1 行结束采分段" }));
+    fireEvent.click(screen.getByLabelText("在第 1 行结束采分段"));
     fireEvent.change(screen.getByLabelText("本段分值"), { target: { value: "4" } });
     fireEvent.blur(screen.getByLabelText("本段分值"));
-    fireEvent.click(screen.getByRole("button", { name: "添加为采分点" }));
+    fireEvent.click(screen.getByText("添加为采分点").closest("button")!);
     expect(screen.getByLabelText("采分点 1 分值")).toBeDefined();
     view.rerender(<EditorHarness selectedQuestion={{ ...question, solution: { ...question.solution!, solution_version: "v2",
       steps: [{ step_no: 1, content: "3x=6" }, { step_no: 2, content: "x=2" }] } }} />);

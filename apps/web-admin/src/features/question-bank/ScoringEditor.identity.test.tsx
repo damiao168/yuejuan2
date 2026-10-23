@@ -11,7 +11,10 @@ vi.mock("../../api/questionBank", () => ({ questionBankApi: {
   getQuestionBankItem: async () => ({ item: { bank_id: "bank" } }), getQuestionBank: async () => ({ bank: { school_id: "school" } }),
   listQuestionBankRubricTemplates: async () => ({ items: [] }), updateQuestionBankScoring: mocks.update,
 } }));
-vi.mock("antd", async importOriginal => ({ ...await importOriginal<typeof import("antd")>(), App: { useApp: () => ({ message: { success: mocks.success, error: mocks.error } }) } }));
+vi.mock("antd", async importOriginal => {
+  const { withFixedTextAreaLayout } = await import("../../test-utils/antdTextAreaLayout");
+  return { ...withFixedTextAreaLayout(await importOriginal<typeof import("antd")>()), App: { useApp: () => ({ message: { success: mocks.success, error: mocks.error } }) } };
+});
 const scoring = { answer: null, solution: null, rubric: { status: "approved", max_score: 3,
   points: [1, 2, 3].map(index => ({ id: `P${index}`, description: `point${index}`, score: 1, required: false, evidence_requirements: [] })), deductions: [], examples: [] },
   assets: [], template_version_id: null, use_policy: "practice_only" } as QuestionBankScoring;

@@ -18,8 +18,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("antd", async importOriginal => {
   const original = await importOriginal<typeof import("antd")>();
+  const { withFixedTextAreaLayout } = await import("../test-utils/antdTextAreaLayout");
   const app = { message: { warning: mocks.warning, success: mocks.success, error: mocks.error, info: mocks.info }, modal: { confirm: mocks.confirm } };
-  return { ...original, App: { useApp: () => app } };
+  return { ...withFixedTextAreaLayout(original), App: { useApp: () => app } };
 });
 vi.mock("../api/papers", () => ({
   validatePaperConfig: vi.fn(), updateQuestion: mocks.updateQuestion, createQuestion: mocks.createQuestion,
