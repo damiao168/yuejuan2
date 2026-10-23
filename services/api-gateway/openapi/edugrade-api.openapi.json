@@ -20,6 +20,246 @@
     }
   ],
   "paths": {
+    "/api/v1/exams/{examId}/grading-ai-plan": {
+      "get": {
+        "tags": [
+          "Grading"
+        ],
+        "operationId": "getExamGradingAIPlan",
+        "summary": "读取本场大题 AI 阅卷方案",
+        "description": "需要 grading:manage，并按登录主体的租户和考试资源边界授权。can_configure 表示当前主体是否具有 school_admin、tenant_admin 或 platform_admin 角色。查询只读取已选模型的图片能力缓存，不发起收费检测。未确认的考试 revision 为 absent，可使用学校默认备用模型作为配置起点；此方案的多评只适用于 short_answer、calculation、essay、discussion 大题。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ExamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "读取本场大题 AI 阅卷方案",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradingAIPlanDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "description": "服务端未能完成操作，错误码 grading_operation_failed。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "方案存储或检测服务不可用，错误码 grading_ai_plan_unavailable。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Grading"
+        ],
+        "operationId": "saveExamGradingAIPlan",
+        "summary": "确认本场大题 AI 阅卷方案",
+        "description": "需要 grading:manage，并按登录主体的租户和考试资源边界授权。还必须具有 school_admin、tenant_admin 或 platform_admin 角色，否则返回 grading_ai_plan_admin_required。expected_revision 必须与当前方案一致；首次确认为 absent，修订冲突返回 grading_ai_plan_changed。只能选择本校当前可用模型，服务端按模型身份和强度解析实际模式。dual 或 dual_conditional_arbiter 要求管理员手填两个允许分差（单位：分），single 允许 null；主评分差不得大于教师复核允许分差。确认与评分启动共用考试锁，已经启动的运行保留其冻结方案。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ExamId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradingAIPlanInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "确认本场大题 AI 阅卷方案",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradingAIPlanDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSON 或配置无效（invalid_request、invalid_grading_input），未选择可用模型（grading_model_required），或多评缺少手填分差（grading_ai_threshold_required）。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "缺少 grading:manage、考试资源权限或管理员角色；管理员角色不足时错误码 grading_ai_plan_admin_required。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "方案已被更新，错误码 grading_ai_plan_changed；刷新方案后使用最新 revision 重新确认。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端未能完成操作，错误码 grading_operation_failed。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "方案存储或检测服务不可用，错误码 grading_ai_plan_unavailable。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exams/{examId}/grading-ai-plan/probe": {
+      "post": {
+        "tags": [
+          "Grading"
+        ],
+        "operationId": "probeExamGradingAIModel",
+        "summary": "显式检测本校阅卷模型的图片能力",
+        "description": "需要 grading:manage，并按登录主体的租户和考试资源边界授权。还必须具有 school_admin、tenant_admin 或 platform_admin 角色，否则返回 grading_ai_plan_admin_required。允许检测本校可用但尚未保存到考试方案的模型，不会保存或确认方案。此操作可调用图片服务；request_id 用于检测请求，cache_hit 表示复用了已有检测结果。HTTP 200 仍需检查 vision_probe_status，连接变化或检测失败可通过状态与原因返回。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ExamId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProbeGradingAIModelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "显式检测本校阅卷模型的图片能力",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradingVisionProbe"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSON 无效（invalid_request），或 request_id 长度不在 8–128 字节、模型不在本校可用列表（invalid_grading_input）。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "缺少 grading:manage、考试资源权限或管理员角色；管理员角色不足时错误码 grading_ai_plan_admin_required。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "description": "服务端未能完成操作，错误码 grading_operation_failed。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "图片能力检测调用失败，错误码 visual_model_probe_failed。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "方案存储或检测服务不可用，错误码 grading_ai_plan_unavailable。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/exams/{examId}/questions/{questionId}/rubric-draft": {
       "post": {
         "operationId": "suggestQuestionMathRubricDraft",
@@ -24394,6 +24634,486 @@
       }
     },
     "schemas": {
+      "GradingAIRoleSelectionInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "model_config_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  ""
+                ]
+              }
+            ],
+            "description": "本校可用模型配置 ID；空字符串表示未选择。"
+          },
+          "strength_rank": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "管理员设置的模型强度。0 表示未明确设置；第三模型只有在两个主模型强度都大于 0 且自身强度更高时才参与条件仲裁。"
+          }
+        }
+      },
+      "GradingAIRoleSelection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "model_config_id",
+          "strength_rank"
+        ],
+        "properties": {
+          "model_config_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  ""
+                ]
+              }
+            ],
+            "description": "本校可用模型配置 ID；空字符串表示未选择。"
+          },
+          "strength_rank": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "管理员设置的模型强度。0 表示未明确设置；第三模型只有在两个主模型强度都大于 0 且自身强度更高时才参与条件仲裁。"
+          }
+        }
+      },
+      "GradingAIDecisionConfigInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "aggregation_version",
+          "rounding"
+        ],
+        "description": "空值不替换为默认阈值；多评确认时两个分差都必须由管理员填写。",
+        "properties": {
+          "primary_allowed_diff_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "minimum": 0,
+            "maximum": 1000,
+            "description": "管理员手填的两个主评分允许分差，单位：分。single 可为 null；多评确认时必须填写，且不得大于 teacher_allowed_diff_points。"
+          },
+          "teacher_allowed_diff_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "minimum": 0,
+            "maximum": 1000,
+            "description": "管理员手填的教师复核允许分差，单位：分。single 可为 null；多评确认时必须填写。"
+          },
+          "aggregation_version": {
+            "type": "string",
+            "enum": [
+              "dual-conditional-arbiter-v1"
+            ]
+          },
+          "rounding": {
+            "type": "string",
+            "enum": [
+              "ceil_final"
+            ]
+          }
+        }
+      },
+      "GradingAIDecisionConfig": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "primary_allowed_diff_points",
+          "teacher_allowed_diff_points",
+          "aggregation_version",
+          "rounding"
+        ],
+        "properties": {
+          "primary_allowed_diff_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "minimum": 0,
+            "maximum": 1000,
+            "description": "管理员手填的两个主评分允许分差，单位：分。single 可为 null；多评确认时必须填写，且不得大于 teacher_allowed_diff_points。"
+          },
+          "teacher_allowed_diff_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "minimum": 0,
+            "maximum": 1000,
+            "description": "管理员手填的教师复核允许分差，单位：分。single 可为 null；多评确认时必须填写。"
+          },
+          "aggregation_version": {
+            "type": "string",
+            "enum": [
+              "dual-conditional-arbiter-v1"
+            ]
+          },
+          "rounding": {
+            "type": "string",
+            "enum": [
+              "ceil_final"
+            ]
+          }
+        }
+      },
+      "GradingAIPlanInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expected_revision",
+          "decision_config"
+        ],
+        "properties": {
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "absent"
+                ]
+              }
+            ],
+            "description": "读取到的方案 revision；首次保存使用 absent。冲突后必须重新读取。"
+          },
+          "fallback_model_config_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  ""
+                ]
+              }
+            ],
+            "description": "本校可用模型配置 ID；空字符串表示未选择。"
+          },
+          "roles": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "primary_a": {
+                    "$ref": "#/components/schemas/GradingAIRoleSelectionInput"
+                  },
+                  "primary_b": {
+                    "$ref": "#/components/schemas/GradingAIRoleSelectionInput"
+                  },
+                  "arbiter": {
+                    "$ref": "#/components/schemas/GradingAIRoleSelectionInput"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "只接受 primary_a、primary_b、arbiter；省略或 null 视为空配置。角色未选或模型身份重复时可能降级为单模型。"
+          },
+          "decision_config": {
+            "$ref": "#/components/schemas/GradingAIDecisionConfigInput"
+          }
+        }
+      },
+      "GradingAIModel": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "只公开模型身份、版本指纹和图片能力状态；不返回连接地址、API 密钥或其他凭据。config_revision 是连接配置的指纹，binding_revision 固定学校选择的版本种子。",
+        "required": [
+          "model_config_id",
+          "display_name",
+          "provider_key",
+          "adapter_type",
+          "model_name",
+          "model_version",
+          "config_revision",
+          "binding_revision"
+        ],
+        "properties": {
+          "model_config_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "provider_key": {
+            "type": "string"
+          },
+          "adapter_type": {
+            "type": "string"
+          },
+          "model_name": {
+            "type": "string"
+          },
+          "model_version": {
+            "type": "string"
+          },
+          "config_revision": {
+            "type": "string"
+          },
+          "binding_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "absent"
+                ]
+              }
+            ]
+          },
+          "strength_rank": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "vision_probe_status": {
+            "type": "string",
+            "description": "图片能力状态：passed、failed、not_checked 或 unavailable。读取方案时只查询已选模型缓存，其余模型为 not_checked。"
+          },
+          "vision_probe_reason": {
+            "type": "string"
+          }
+        }
+      },
+      "GradingAIPlan": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "revision",
+          "fallback_model_config_id",
+          "roles",
+          "decision_config",
+          "effective_mode",
+          "reason_codes",
+          "resolved_roles",
+          "independent_model_count"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "absent"
+                ]
+              }
+            ],
+            "description": "absent 表示尚未确认；每次成功确认都更换 UUID。"
+          },
+          "fallback_model_config_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  ""
+                ]
+              }
+            ],
+            "description": "本校可用模型配置 ID；空字符串表示未选择。"
+          },
+          "roles": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "primary_a": {
+                "$ref": "#/components/schemas/GradingAIRoleSelection"
+              },
+              "primary_b": {
+                "$ref": "#/components/schemas/GradingAIRoleSelection"
+              },
+              "arbiter": {
+                "$ref": "#/components/schemas/GradingAIRoleSelection"
+              }
+            }
+          },
+          "decision_config": {
+            "$ref": "#/components/schemas/GradingAIDecisionConfig"
+          },
+          "effective_mode": {
+            "type": "string",
+            "enum": [
+              "single",
+              "dual",
+              "dual_conditional_arbiter",
+              "unconfigured"
+            ],
+            "description": "按本校可用模型及其身份解析，不把重复连接计为独立模型；只有大题使用此多评方案。"
+          },
+          "reason_codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "模式降级或缺少配置的原因；无原因时为空数组。"
+          },
+          "resolved_roles": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "primary_a": {
+                "$ref": "#/components/schemas/GradingAIModel"
+              },
+              "primary_b": {
+                "$ref": "#/components/schemas/GradingAIModel"
+              },
+              "arbiter": {
+                "$ref": "#/components/schemas/GradingAIModel"
+              }
+            }
+          },
+          "single_model": {
+            "$ref": "#/components/schemas/GradingAIModel",
+            "description": "备用模型或按 primary_a、primary_b、arbiter 顺序选出的首个可用模型；没有可用模型时省略。"
+          },
+          "independent_model_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "confirmed_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "confirmed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GradingAIPlanDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "plan",
+          "available_models",
+          "can_configure"
+        ],
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/GradingAIPlan"
+          },
+          "available_models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GradingAIModel"
+            },
+            "description": "仅本校启用且未删除的模型配置。"
+          },
+          "can_configure": {
+            "type": "boolean",
+            "description": "当前主体是否具有 school_admin、tenant_admin 或 platform_admin 角色；false 时只可查看，不能确认或检测。"
+          }
+        }
+      },
+      "ProbeGradingAIModelRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "model_config_id",
+          "request_id"
+        ],
+        "properties": {
+          "model_config_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "本校当前可用模型，可在尚未保存到考试方案时检测。"
+          },
+          "request_id": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "description": "检测请求标识；服务端按 UTF-8 字节校验长度为 8–128，建议使用 UUID。"
+          }
+        }
+      },
+      "GradingVisionProbe": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "model_config_id",
+          "vision_probe_status",
+          "vision_probe_reason",
+          "cache_hit"
+        ],
+        "properties": {
+          "model_config_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vision_probe_status": {
+            "type": "string",
+            "description": "检测结果状态：passed、failed、not_checked 或 unavailable；HTTP 200 不表示图片能力已通过。"
+          },
+          "vision_probe_reason": {
+            "type": "string"
+          },
+          "cache_hit": {
+            "type": "boolean"
+          }
+        }
+      },
       "QuestionMathRubricDraftRequest": {
         "type": "object",
         "additionalProperties": false,

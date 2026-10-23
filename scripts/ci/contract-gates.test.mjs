@@ -8,7 +8,76 @@ import { fileURLToPath } from "node:url";
 import { findBreakingChanges } from "../check-openapi-breaking.mjs";
 import { findRouteDebtFailures } from "../check-openapi-route-debt.mjs";
 import { buildRouteCoverage } from "../update-api-route-coverage.mjs";
+import { schemaToType } from "../lib/openapi-sdk.mjs";
 import { changedGenerated } from "./check-generated-contracts.mjs";
+
+test("exam grading AI plan routes contract their scoped reads, admin writes and probe failures", () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const spec = JSON.parse(fs.readFileSync(path.join(root, "services/api-gateway/openapi/edugrade-api.openapi.json"), "utf8"));
+  const base = "/api/v1/exams/{examId}/grading-ai-plan";
+  const expected = [
+    [base, "get", "getExamGradingAIPlan", "GradingAIPlanDetail", undefined, ["200", "401", "403", "404", "500", "503"]],
+    [base, "put", "saveExamGradingAIPlan", "GradingAIPlanDetail", "GradingAIPlanInput", ["200", "400", "401", "403", "404", "409", "500", "503"]],
+    [base + "/probe", "post", "probeExamGradingAIModel", "GradingVisionProbe", "ProbeGradingAIModelRequest", ["200", "400", "401", "403", "404", "500", "502", "503"]],
+  ];
+  assert.ok(spec.security.some((security) => Object.hasOwn(security, "sessionCookie")));
+  assert.ok(spec.security.some((security) => Object.hasOwn(security, "bearerAuth")));
+  for (const [route, method, id, response, request, statuses] of expected) {
+    const operation = spec.paths[route]?.[method];
+    assert.ok(operation, `${method.toUpperCase()} ${route}`);
+    assert.equal(operation.operationId, id);
+    assert.equal(operation.security, undefined, `${id} must retain document authentication`);
+    assert.match(operation.description, /grading:manage/);
+    assert.deepEqual(operation.parameters, [{ $ref: "#/components/parameters/ExamId" }]);
+    assert.equal(spec.components.parameters.ExamId.schema.format, "uuid");
+    assert.equal(operation.responses["200"].content["application/json"].schema.$ref, `#/components/schemas/${response}`);
+    for (const status of statuses) assert.ok(operation.responses[status], `${id} response ${status}`);
+    if (request) {
+      assert.equal(operation.requestBody.required, true);
+      assert.equal(operation.requestBody.content["application/json"].schema.$ref, `#/components/schemas/${request}`);
+      for (const role of ["school_admin", "tenant_admin", "platform_admin"]) assert.ok(operation.description.includes(role), `${id} role ${role}`);
+      assert.match(operation.responses["403"].description, /grading_ai_plan_admin_required/);
+    } else {
+      assert.equal(operation.requestBody, undefined);
+    }
+  }
+  assert.match(spec.paths[base].put.responses["409"].description, /grading_ai_plan_changed/);
+  assert.match(spec.paths[base + "/probe"].post.description, /尚未保存/);
+});
+
+test("exam grading AI plan response fields and nullability stay aligned with the Go DTOs", () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const spec = JSON.parse(fs.readFileSync(path.join(root, "services/api-gateway/openapi/edugrade-api.openapi.json"), "utf8"));
+  const dtoSource = fs.readFileSync(path.join(root, "services/api-gateway/internal/grading/exam_ai_plan.go"), "utf8");
+  const schemas = spec.components.schemas;
+  // 以响应 DTO 的 json 标签核对公开字段和 omitempty，防止契约漏字段或强制客户端补齐可省略值。
+  for (const name of ["GradingAIRoleSelection", "GradingAIDecisionConfig", "GradingAIModel", "GradingAIPlan", "GradingAIPlanDetail", "GradingVisionProbe"]) {
+    const body = dtoSource.match(new RegExp(`type ${name} struct \\{([\\s\\S]*?)\\n\\}`))?.[1];
+    assert.ok(body, `${name} Go DTO`);
+    const fields = [...body.matchAll(/`json:"([^",]+)(,omitempty)?"`/g)];
+    assert.deepEqual(Object.keys(schemas[name].properties).sort(), fields.map((field) => field[1]).sort(), `${name} public fields`);
+    assert.deepEqual([...schemas[name].required].sort(), fields.filter((field) => !field[2]).map((field) => field[1]).sort(), `${name} required fields`);
+  }
+  for (const name of ["GradingAIDecisionConfigInput", "GradingAIDecisionConfig"]) {
+    for (const field of ["primary_allowed_diff_points", "teacher_allowed_diff_points"]) {
+      const threshold = schemas[name].properties[field];
+      assert.deepEqual(threshold.anyOf, [{ type: "number" }, { type: "null" }], `${name}.${field} OpenAPI 3.1 null`);
+      assert.equal(schemaToType(threshold), "number | null", `${name}.${field} generated type`);
+      assert.equal(threshold.minimum, 0);
+      assert.equal(threshold.maximum, 1000);
+      assert.match(threshold.description, /单位：分/);
+    }
+  }
+  assert.ok(schemas.GradingAIPlanDetail.required.includes("can_configure"));
+  assert.equal(schemas.GradingAIModel.additionalProperties, false);
+  for (const hidden of ["base_url", "api_key", "api_key_encrypted", "credential", "credentials"]) assert.equal(schemas.GradingAIModel.properties[hidden], undefined);
+  assert.deepEqual(schemas.GradingAIPlanInput.required, ["expected_revision", "decision_config"]);
+  assert.deepEqual(schemas.GradingAIDecisionConfigInput.required, ["aggregation_version", "rounding"]);
+  assert.deepEqual(Object.keys(schemas.GradingAIPlan.properties.roles.properties).sort(), ["arbiter", "primary_a", "primary_b"]);
+  assert.equal(schemas.GradingAIPlan.properties.roles.additionalProperties, false);
+  const requestID = schemas.ProbeGradingAIModelRequest.properties.request_id;
+  assert.deepEqual([requestID.minLength, requestID.maxLength], [8, 128]);
+});
 
 test("generated artifact gate rejects modified, missing and extra output independently of git status", () => {
   const before = new Map([["kept",Buffer.from("same")],["changed",Buffer.from("old")],["removed",Buffer.from("gone")]]);

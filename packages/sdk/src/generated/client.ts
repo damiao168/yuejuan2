@@ -3,6 +3,10 @@
 import type { ApiTransport } from "../runtime";
 import { appendQuery, fillPath } from "../runtime";
 import type {
+  GradingAIPlanInput,
+  GradingAIPlanDetail,
+  ProbeGradingAIModelRequest,
+  GradingVisionProbe,
   QuestionMathRubricDraftRequest,
   RegradeReviewContextResponse,
   AnswerGroupMemberContextResponse,
@@ -385,6 +389,9 @@ import type {
 } from "./types";
 
 export interface operations {
+  "getExamGradingAIPlan": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: GradingAIPlanDetail; };
+  "saveExamGradingAIPlan": { args: { path: { "examId": string; }; body: GradingAIPlanInput; signal?: AbortSignal; }; response: GradingAIPlanDetail; };
+  "probeExamGradingAIModel": { args: { path: { "examId": string; }; body: ProbeGradingAIModelRequest; signal?: AbortSignal; }; response: GradingVisionProbe; };
   "suggestQuestionMathRubricDraft": { args: { path: { "examId": string; "questionId": string; }; body: QuestionMathRubricDraftRequest; signal?: AbortSignal; }; response: MathRubricDraftResponse; };
   "getPlatformModelApplications": { args: { query: { "tenant_id": string; }; signal?: AbortSignal; }; response: ModelApplications; };
   "savePlatformDocumentModelSelection": { args: { body: DocumentModelSelectionInput; signal?: AbortSignal; }; response: { "selection": DocumentModelSelection; }; };
@@ -743,6 +750,21 @@ export interface operations {
 
 export class EduGradeApi {
   constructor(private readonly transport: ApiTransport) {}
+
+  getExamGradingAIPlan(args: operations["getExamGradingAIPlan"]["args"]): Promise<operations["getExamGradingAIPlan"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/grading-ai-plan", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  saveExamGradingAIPlan(args: operations["saveExamGradingAIPlan"]["args"]): Promise<operations["saveExamGradingAIPlan"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/grading-ai-plan", args.path);
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  probeExamGradingAIModel(args: operations["probeExamGradingAIModel"]["args"]): Promise<operations["probeExamGradingAIModel"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/grading-ai-plan/probe", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
 
   suggestQuestionMathRubricDraft(args: operations["suggestQuestionMathRubricDraft"]["args"]): Promise<operations["suggestQuestionMathRubricDraft"]["response"]> {
     const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/rubric-draft", args.path);

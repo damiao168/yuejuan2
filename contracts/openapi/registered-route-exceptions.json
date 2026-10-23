@@ -225,7 +225,6 @@
         "POST /api/v1/calibration-sessions/{id}/attempts",
         "POST /api/v1/capture-batches/{id}/cancel",
         "POST /api/v1/capture-batches/{id}/complete",
-        "POST /api/v1/capture-batches/{id}/files",
         "POST /api/v1/capture-batches/{id}/process",
         "POST /api/v1/capture-batches/{id}/reopen",
         "POST /api/v1/capture-batches/{id}/submissions/merge",

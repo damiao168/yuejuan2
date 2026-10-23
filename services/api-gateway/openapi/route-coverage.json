@@ -4,9 +4,9 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 580,
-    "openapi": 336,
-    "registered_gaps": 244
+    "registered": 586,
+    "openapi": 343,
+    "registered_gaps": 243
   },
   "routes": [
     {
@@ -993,14 +993,8 @@
       "method": "POST",
       "path": "/api/v1/capture-batches/{id}/files",
       "source": "services/api-gateway/internal/server/routes_capture.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "registerCaptureFile"
     },
     {
       "method": "GET",
@@ -1567,6 +1561,27 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/grading-ai-plan",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "getExamGradingAIPlan"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/exams/{examId}/grading-ai-plan",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "saveExamGradingAIPlan"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/grading-ai-plan/probe",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "probeExamGradingAIModel"
     },
     {
       "method": "GET",
@@ -3731,6 +3746,20 @@
       "operation_id": "savePlatformDocumentModelSelection"
     },
     {
+      "method": "PUT",
+      "path": "/api/v1/platform/grading-model-selection",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "savePlatformGradingModelSelection"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/platform/grading-model-selection/probe",
+      "source": "services/api-gateway/internal/server/routes_governance.go",
+      "coverage": "openapi",
+      "operation_id": "probePlatformGradingModelSelection"
+    },
+    {
       "method": "GET",
       "path": "/api/v1/platform/model-api-configs",
       "source": "services/api-gateway/internal/server/routes_governance.go",
@@ -4915,6 +4944,13 @@
       "source": "services/api-gateway/internal/server/routes_grading.go",
       "coverage": "openapi",
       "operation_id": "getScoringReferenceMaterialImage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scoring-runs/{runId}/resume",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "resumeScoringRun"
     },
     {
       "method": "POST",

@@ -1,5 +1,25 @@
 // Generated from services/api-gateway/openapi/edugrade-api.openapi.json. DO NOT EDIT.
 
+export type GradingAIRoleSelectionInput = { "model_config_id"?: string | ""; "strength_rank"?: number; };
+
+export type GradingAIRoleSelection = { "model_config_id": string | ""; "strength_rank": number; };
+
+export type GradingAIDecisionConfigInput = { "primary_allowed_diff_points"?: number | null; "teacher_allowed_diff_points"?: number | null; "aggregation_version": "dual-conditional-arbiter-v1"; "rounding": "ceil_final"; };
+
+export type GradingAIDecisionConfig = { "primary_allowed_diff_points": number | null; "teacher_allowed_diff_points": number | null; "aggregation_version": "dual-conditional-arbiter-v1"; "rounding": "ceil_final"; };
+
+export type GradingAIPlanInput = { "expected_revision": string | "absent"; "fallback_model_config_id"?: string | ""; "roles"?: { "primary_a"?: GradingAIRoleSelectionInput; "primary_b"?: GradingAIRoleSelectionInput; "arbiter"?: GradingAIRoleSelectionInput; } | null; "decision_config": GradingAIDecisionConfigInput; };
+
+export type GradingAIModel = { "model_config_id": string; "display_name": string; "provider_key": string; "adapter_type": string; "model_name": string; "model_version": string; "config_revision": string; "binding_revision": string | "absent"; "strength_rank"?: number; "vision_probe_status"?: string; "vision_probe_reason"?: string; };
+
+export type GradingAIPlan = { "version": 1; "revision": string | "absent"; "fallback_model_config_id": string | ""; "roles": { "primary_a"?: GradingAIRoleSelection; "primary_b"?: GradingAIRoleSelection; "arbiter"?: GradingAIRoleSelection; }; "decision_config": GradingAIDecisionConfig; "effective_mode": "single" | "dual" | "dual_conditional_arbiter" | "unconfigured"; "reason_codes": Array<string>; "resolved_roles": { "primary_a"?: GradingAIModel; "primary_b"?: GradingAIModel; "arbiter"?: GradingAIModel; }; "single_model"?: GradingAIModel; "independent_model_count": number; "confirmed_by"?: string; "confirmed_at"?: string; };
+
+export type GradingAIPlanDetail = { "plan": GradingAIPlan; "available_models": Array<GradingAIModel>; "can_configure": boolean; };
+
+export type ProbeGradingAIModelRequest = { "model_config_id": string; "request_id": string; };
+
+export type GradingVisionProbe = { "model_config_id": string; "vision_probe_status": string; "vision_probe_reason": string; "cache_hit": boolean; };
+
 export type QuestionMathRubricDraftRequest = { "expected_question": QuestionMathRubricDraftExpectedQuestion; "solution_segments"?: Array<QuestionRubricSolutionSegment> | null; };
 
 export type QuestionRubricSolutionSegment = { "spans": Array<QuestionRubricSolutionSpan>; };
@@ -1598,6 +1618,16 @@ export type CaptureFileResponse = { "file": CaptureFile; };
 
 export interface components {
   schemas: {
+    "GradingAIRoleSelectionInput": GradingAIRoleSelectionInput;
+    "GradingAIRoleSelection": GradingAIRoleSelection;
+    "GradingAIDecisionConfigInput": GradingAIDecisionConfigInput;
+    "GradingAIDecisionConfig": GradingAIDecisionConfig;
+    "GradingAIPlanInput": GradingAIPlanInput;
+    "GradingAIModel": GradingAIModel;
+    "GradingAIPlan": GradingAIPlan;
+    "GradingAIPlanDetail": GradingAIPlanDetail;
+    "ProbeGradingAIModelRequest": ProbeGradingAIModelRequest;
+    "GradingVisionProbe": GradingVisionProbe;
     "QuestionMathRubricDraftRequest": QuestionMathRubricDraftRequest;
     "QuestionRubricSolutionSegment": QuestionRubricSolutionSegment;
     "QuestionRubricSolutionSpan": QuestionRubricSolutionSpan;
