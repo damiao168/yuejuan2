@@ -83,4 +83,14 @@ describe("shell presentation boundaries", () => {
     expect(mobile.querySelector(".experience-switcher")).not.toBeNull();
     expect(mobile.querySelector(".sidebar-toggle")).toBeNull();
   });
+
+  it("uses the same username as the member list and keeps a valid name in the account description", () => {
+    const named = markup(<ShellNavigation {...navigation} />);
+    expect(named.querySelector(".sidebar-account-copy strong")?.textContent).toBe("teacher-1");
+    expect(named.querySelector(".sidebar-account")?.getAttribute("aria-label")).toBe("账户菜单：teacher-1（Teacher）");
+    const invalidName = markup(<ShellNavigation {...navigation} user={{ ...user, username: "demo_school_admin", displayName: "???????" }} />);
+    expect(invalidName.querySelector(".sidebar-account-copy strong")?.textContent).toBe("demo_school_admin");
+    expect(invalidName.querySelector(".sidebar-account")?.getAttribute("aria-label")).toBe("账户菜单：demo_school_admin");
+    expect(invalidName.textContent).not.toContain("???????");
+  });
 });

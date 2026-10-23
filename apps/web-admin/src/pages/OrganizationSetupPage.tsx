@@ -38,7 +38,7 @@ import { createManagedUser, listAssignableRoles, listManagedUsers, type Assignab
 import { ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { onboardingQueryKey, useOnboardingReadiness } from "../features/onboarding/queries";
-import { MemberCreationFields } from "../features/members/teachers/TeacherManagementViews";
+import { MemberCreationFields, taskStaffRoleCodes } from "../features/members/teachers/TeacherManagementViews";
 
 interface SetupData {
   schools: School[];
@@ -100,20 +100,16 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
   const [mapping, setMapping] = useState({ studentNo: "", name: "", classCode: "" });
   const [importErrors, setImportErrors] = useState<StudentImportError[]>([]);
   const [staffForm] = Form.useForm();
-  const staffSchool = Form.useWatch("school_id", staffForm) as string | undefined;
-  const staffRoles = Form.useWatch("role_codes", staffForm) as string[] | undefined;
   const [invitation, setInvitation] = useState<StaffInvitation>();
   const invitationSavingRef = useRef(false);
 
-  const inviteStaff = async (values: { display_name: string; phone: string; employee_no?: string; school_id: string; role_codes: string[]; class_ids?: string[] }) => {
+  const inviteStaff = async (values: { display_name: string; username: string; phone?: string; employee_no?: string; school_id: string }) => {
     if (saving || invitationSavingRef.current) return;
     // React 提交按钮更新前也可能再次收到提交；同步锁保护一次性邀请回执。
     invitationSavingRef.current = true;
     setSaving(true);
     try {
-      const classIDs = values.role_codes.includes("teacher") ? values.class_ids ?? [] : [];
-      if (classIDs.some((id) => !data?.classes.some((item) => item.id === id && item.school_id === values.school_id))) throw new Error("关联班级必须属于所选学校");
-      const result = await createManagedUser({ display_name: values.display_name, phone: values.phone, employee_no: values.employee_no, school_id: values.school_id, role_codes: values.role_codes, class_ids: classIDs });
+      const result = await createManagedUser({ display_name: values.display_name.trim(), username: values.username.trim(), phone: values.phone?.trim() || undefined, employee_no: values.employee_no?.trim() || undefined, school_id: values.school_id, role_codes: taskStaffRoleCodes, class_ids: [] });
       // 一次性邀请只出现在创建响应；先保留回执，再刷新，刷新失败不能让人重新创建账号。
       setInvitation({ name: result.user.display_name, activation: result.activation });
       staffForm.resetFields();
@@ -366,11 +362,11 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
         return renderStudentsStep(data);
       case 4:
         return (
-          <Form key="user" form={staffForm} layout="vertical" preserve={false} initialValues={{ role_codes: ["teacher"], school_id: data.schools.length === 1 ? data.schools[0].id : undefined }} disabled={saving} onFinish={(values) => void inviteStaff(values)}>
+          <Form key="user" form={staffForm} layout="vertical" preserve={false} initialValues={{ school_id: data.schools.length === 1 ? data.schools[0].id : undefined }} disabled={saving} onFinish={(values) => void inviteStaff(values)}>
             <h2>人员账号</h2>
             <p className="section-copy">创建教师激活邀请，由本人设置密码。请通过可信渠道交给本人；邀请创建后仍为待激活，学校人员就绪以启用账号为准。</p>
             {completed[4] ? <Alert type="success" showIcon message="已存在可参与学校业务的管理员或教师账号" /> : null}
-            <MemberCreationFields mode="teacher" selectedRole={staffRoles} roles={data.roles} schools={data.schools} classes={data.classes.filter((item) => item.school_id === staffSchool)} grades={data.grades} />
+            <MemberCreationFields schools={data.schools} />
             <Button type="primary" htmlType="submit" loading={saving}>创建激活邀请</Button>
             {renderStaffInvitationNotice(invitation, message)}
             <Space wrap><Button onClick={() => onNavigate("/members/teachers")}>前往人员与权限管理</Button><Button disabled={saving} onClick={() => setStep(5)}>继续准备考试</Button></Space>

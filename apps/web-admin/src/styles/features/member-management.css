@@ -33,7 +33,7 @@
 .member-management-filters .ant-input-search { width: min(100%, 360px); }
 .member-management-filters > span { color: var(--text-muted); font-size: var(--eg-font-caption); }
 .member-administrator-alert { margin-bottom: 14px; }
-/* 长姓名和多项职责可以换行；状态和操作保留单行，表格始终使用容器宽度。 */
+/* 姓名、用户名和操作可以换行；身份列不截断，方便与左下角当前账号核对。 */
 .responsive-desktop-table.member-management-table table {
   width: 100% !important;
   min-width: 0 !important;
@@ -45,14 +45,14 @@
   overflow-wrap: anywhere;
   word-break: normal;
 }
-.responsive-desktop-table.member-management-table .ant-table-cell:nth-child(5),
-.responsive-desktop-table.member-management-table .ant-table-cell:last-child { white-space: nowrap; }
 .responsive-desktop-table.member-management-table .ant-table-cell .ant-space {
-  max-width: none;
-  flex-wrap: nowrap;
+  max-width: 100%;
+  flex-wrap: wrap;
 }
 .responsive-desktop-table.member-management-table .ant-table-cell .ant-space-item { flex-shrink: 0; }
 .responsive-desktop-table.member-management-table .ant-table-cell .ant-btn { padding-inline: 4px; white-space: nowrap; }
+.member-login-identity { display: grid; gap: 3px; }
+.member-login-identity > small { color: var(--primary); font-size: var(--eg-font-caption); }
 .paper-advanced-settings { margin: 12px 0; border-top: 1px solid var(--border); }
 .paper-advanced-settings > summary { padding: 12px 2px; color: var(--primary); font-size: var(--eg-font-body); font-weight: 600; cursor: pointer; }
 .paper-advanced-settings[open] > summary { margin-bottom: 12px; }

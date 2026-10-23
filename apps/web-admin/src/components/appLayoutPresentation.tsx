@@ -1,6 +1,6 @@
 import { Avatar, Button, Dropdown, Layout, Menu, Segmented, Space, Tooltip, type MenuProps } from "antd";
 import { ArrowLeft, ChevronDown, Menu as MenuIcon, PanelLeft, UserRound } from "lucide-react";
-import { productIdentityLabel, type SessionUser } from "../auth/session";
+import { accountIdentityLabel, productIdentityLabel, type SessionUser } from "../auth/session";
 import { experienceLabel, type ProductExperience } from "../router/experience";
 import { examWorkspaceNavigationPath } from "../router/navigation";
 import type { AppRoute } from "../router/routes";
@@ -77,9 +77,9 @@ export function ShellNavigation({ desktop, collapsed, scrollbarVisible, scrollba
     </div>
     <div className="sidebar-footer">
       <Dropdown menu={accountMenu} placement="topLeft" trigger={["click"]}>
-        <button type="button" className="sidebar-account" aria-label={`账户菜单：${user.displayName || user.username}`}>
+        <button type="button" className="sidebar-account" title={accountIdentityLabel(user)} aria-label={`账户菜单：${accountIdentityLabel(user)}`}>
           <Avatar size={28} icon={<UserRound size={16} />} />
-          <span className="sidebar-account-copy"><strong>{user.displayName || user.username}</strong><small>{productIdentityLabel(user)}</small></span>
+          <span className="sidebar-account-copy"><strong>{user.username}</strong><small>{productIdentityLabel(user)}</small></span>
           <ChevronDown size={14} />
         </button>
       </Dropdown>

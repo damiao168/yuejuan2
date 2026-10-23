@@ -30,6 +30,9 @@ vi.mock("../../../components/PageState", () => ({
 vi.mock("../../../components/StatusTag", () => ({
   StatusTag: ({ children }: { children: ReactNode }) => <span>{children}</span>
 }));
+vi.mock("./MemberProfileDialog", () => ({
+  MemberProfileDialog: ({ user, onCancel, onSaved }: { user: ManagedUser; onCancel: () => void; onSaved: (user: ManagedUser) => void }) => <div role="dialog"><h2>编辑资料 · {user.display_name}</h2><button type="button" onClick={onCancel}>取消</button><button type="button" onClick={() => onSaved(user)}>保存资料</button></div>
+}));
 vi.mock("../../../components/ResponsiveTable", () => ({
   ResponsiveTable: ({ dataSource, columns }: {
     dataSource: ManagedUser[];
@@ -129,8 +132,8 @@ describe("人员管理弹窗文案优先级", () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
-  it.each(["教师甲", ""])("新增管理员取消后编辑人员，名称“%s”仍按编辑入口提交", async (displayName) => {
-    // 先打开管理员新增入口，保留 createMode，再从名单进入编辑，保护编辑优先级。
+  it.each(["教师甲", ""])("新增管理员取消后编辑人员，名称“%s”仍只打开资料编辑", async (displayName) => {
+    // 切换过管理员新增模式后，编辑资料也只能传给原人员，不能误走创建或授权修改。
     const target = { ...teacher, display_name: displayName };
     mocks.users.mockResolvedValue([target]);
     mocks.access.mockResolvedValue({ user: target });
@@ -139,13 +142,11 @@ describe("人员管理弹窗文案优先级", () => {
     await click("新增管理员");
     await click("取消", host.querySelector('[role="dialog"]')!);
     await changeTab("teachers");
-    await click("职责与班级", host.querySelector('[data-user-id="teacher-a"]')!);
+    await click("编辑资料", host.querySelector('[data-user-id="teacher-a"]')!);
     const dialog = host.querySelector('[role="dialog"]')!;
-    expect(dialog.querySelector("h2")?.textContent).toBe(`职责与班级 · ${displayName}`);
-    expect(dialog.querySelector('button[type="submit"]')?.textContent).toBe("验证身份并保存");
-    await act(async () => { dialog.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
-    expect(mocks.stepUp).toHaveBeenCalledWith(expect.objectContaining({ reason: `修改“${displayName}”的工作职责与班级` }));
-    expect(mocks.access).toHaveBeenCalledWith("teacher-a", { role_codes: ["teacher"], class_ids: [], expected_roles: ["teacher"], expected_class_ids: [], reason: "核对职责" });
+    expect(dialog.querySelector("h2")?.textContent).toBe(`编辑资料 · ${displayName}`);
+    await click("保存资料", dialog);
+    expect(mocks.access).not.toHaveBeenCalled();
     expect(mocks.create).not.toHaveBeenCalled();
     expect(host.querySelector('[role="dialog"]')).toBeNull();
   });

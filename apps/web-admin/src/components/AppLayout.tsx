@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type SubmitEvent, type ReactNode } from "react";
 import { Alert, Button, ConfigProvider, Drawer, Grid, Input, Layout, Modal, Tag, theme } from "antd";
-import type { SessionUser } from "../auth/session";
+import { accountIdentityLabel, type SessionUser } from "../auth/session";
 import type { AppRoute } from "../router/routes";
 import { hasRouteAccess, routeGroups, routePresentation, visibleRoutes } from "../router/routes";
 import type { ProductExperience } from "../router/experience";
@@ -232,9 +232,7 @@ export function AppLayout({
       {
         key: "account",
         type: "group" as const,
-        label: user.displayName && user.displayName !== user.username
-          ? `${user.displayName}（${user.username}）`
-          : user.username
+        label: `当前登录用户名：${accountIdentityLabel(user)}`
       },
       { key: "sessions", label: "账户安全" },
       { key: "reading-size", label: readingSize === "large" ? "✓ 大字阅读 · 切换标准字号" : "大字阅读" },
@@ -336,7 +334,7 @@ export function AppLayout({
           width={420}
         >
           <form className="public-computer-unlock" onSubmit={unlockWorkspace}>
-            <p>为保护未完成的阅卷内容，工作区已在 15 分钟无操作后锁定。请使用 <strong>{user.displayName || user.username}</strong> 的密码解锁。</p>
+            <p>为保护未完成的阅卷内容，工作区已在 15 分钟无操作后锁定。请使用 <strong>{accountIdentityLabel(user)}</strong> 的密码解锁。</p>
             {unlockError ? <Alert type="error" showIcon message={unlockError} /> : null}
             <Input.Password
               value={unlockPassword}
@@ -351,7 +349,7 @@ export function AppLayout({
             </div>
           </form>
         </Modal>
-        <StepUpDialog accountLabel={user.displayName || user.username} hidden={workspaceLocked} />
+        <StepUpDialog accountLabel={accountIdentityLabel(user)} hidden={workspaceLocked} />
       </Layout>
     </ConfigProvider>
   );

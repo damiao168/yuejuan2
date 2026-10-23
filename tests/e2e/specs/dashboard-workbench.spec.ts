@@ -21,7 +21,8 @@ test("桌面壳层取消空置顶栏，并固定品牌、菜单和账户区域",
 
   await expect(page.locator(".topbar")).toHaveCount(0);
   await expect(page.locator(".brand-copy")).toContainText("EduGrade");
-  await expect(page.getByRole("button", { name: "账户菜单：学校管理员" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "账户菜单：school_admin（学校管理员）" })).toBeVisible();
+  await expect(page.locator(".sidebar-account-copy strong")).toHaveText("school_admin");
 
   const expandedWidth = await page.locator(".sidebar").evaluate((element) => element.getBoundingClientRect().width);
   await expect(page.locator(".brand-copy")).toBeVisible();
@@ -37,7 +38,8 @@ test("桌面壳层取消空置顶栏，并固定品牌、菜单和账户区域",
   await expect(page.locator(".sidebar-account-copy")).toBeHidden();
 
   await page.getByRole("button", { name: "展开导航" }).click();
-  await page.getByRole("button", { name: "账户菜单：学校管理员" }).click();
+  await page.getByRole("button", { name: "账户菜单：school_admin（学校管理员）" }).click();
+  await expect(page.getByText("当前登录用户名：school_admin（学校管理员）", { exact: true })).toBeVisible();
   await expect(page.getByText("账户安全", { exact: true })).toBeVisible();
   await expect(page.getByText("退出登录", { exact: true })).toBeVisible();
 });
@@ -53,7 +55,7 @@ test("移动端只保留导航触发条，账户位于抽屉底部", async ({ pa
   expect(await shellbar.evaluate((element) => element.getBoundingClientRect().height)).toBeLessThanOrEqual(48);
   await page.getByRole("button", { name: "打开主导航" }).click();
   await expect(page.locator(".mobile-navigation")).toBeVisible();
-  await expect(page.getByRole("button", { name: "账户菜单：学校管理员" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "账户菜单：school_admin（学校管理员）" })).toBeVisible();
   await expect(page.locator(".mobile-navigation .sidebar-footer")).toBeVisible();
 });
 

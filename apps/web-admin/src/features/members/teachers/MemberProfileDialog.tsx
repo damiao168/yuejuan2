@@ -49,7 +49,7 @@ export function MemberProfileDialog({ user, onCancel, onSaved }: Readonly<{
       });
       onSaved(result.user);
       if (!result.login_identity_changed) message.success("人员资料已保存");
-      else if (result.user.status === "invited") message.success("资料已保存，请通过“更多”重新生成邀请，原邀请已失效");
+      else if (result.user.status === "invited") message.success("资料已保存，请点击“重新生成邀请”，原邀请已失效");
       else message.success("资料已保存，登录信息已变更，请通知该人员重新登录");
     } catch (reason) {
       if (!isStepUpCancelledError(reason)) {
@@ -66,6 +66,7 @@ export function MemberProfileDialog({ user, onCancel, onSaved }: Readonly<{
   return <Modal title={`编辑资料 · ${user.display_name}`} open footer={null} destroyOnHidden maskClosable={!saving} closable={!saving} keyboard={!saving} onCancel={() => { if (!savingRef.current) onCancel(); }}>
     <Form<MemberProfileValues> layout="vertical" disabled={saving} initialValues={{ display_name: user.display_name, employee_no: user.employee_no ?? "", phone: "" }} onFinish={(values) => void save(values)}>
       {error ? <Alert type="error" showIcon message={error} /> : null}
+      <Form.Item label="用户名"><Input value={user.username} readOnly /></Form.Item>
       <Form.Item name="display_name" label="姓名" rules={[{ required: true, whitespace: true, message: "请输入姓名" }, { max: 80, message: "姓名最多 80 个字符" }]}><Input maxLength={80} autoComplete="off" /></Form.Item>
       <Form.Item name="employee_no" label="教职工号（可选）" extra="留空可清除原教职工号。" rules={[{ max: 64, message: "教职工号最多 64 个字符" }]}><Input maxLength={64} autoComplete="off" /></Form.Item>
       <Form.Item label="当前手机号"><Input value={user.phone_masked || "未设置"} disabled /></Form.Item>

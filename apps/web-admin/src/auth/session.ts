@@ -74,12 +74,18 @@ export function displayNameOrUsername(displayName: unknown, username: string): s
   return normalizeDisplayName(displayName) || username.trim() || "未命名用户";
 }
 
+// 用户名用于对照人员列表；有效姓名只作补充，避免同一账号在不同入口看起来像两个人。
+export function accountIdentityLabel(user: Pick<SessionUser, "username" | "displayName">): string {
+  const name = normalizeDisplayName(user.displayName);
+  return name && name !== user.username ? `${user.username}（${name}）` : user.username;
+}
+
 function normalizeDisplayName(value: unknown): string {
   if (typeof value !== "string") {
     return "";
   }
   const trimmed = value.trim();
-  return trimmed && !/^[?？]+$/.test(trimmed) && !trimmed.includes("\uFFFD") ? trimmed : "";
+  return trimmed && !/^[?？\s]+$/.test(trimmed) && !trimmed.includes("\uFFFD") ? trimmed : "";
 }
 
 function schoolLabelFromScope(scope: Record<string, unknown>, tenantCode: string): string {

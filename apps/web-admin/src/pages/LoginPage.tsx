@@ -130,7 +130,7 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Re
           <div><h1>EduGrade Enterprise</h1><p>智能阅卷与学情诊断平台</p></div>
         </div>
         <div className="login-method-switch" role="tablist" aria-label="登录方式">
-          <button type="button" role="tab" aria-selected={method === "password"} className={method === "password" ? "is-active" : ""} onClick={() => setMethod("password")}><LockKeyhole size={16} />账号登录</button>
+          <button type="button" role="tab" aria-selected={method === "password"} className={method === "password" ? "is-active" : ""} onClick={() => setMethod("password")}><LockKeyhole size={16} />用户名密码</button>
           <button type="button" role="tab" aria-selected={method === "wechat"} className={method === "wechat" ? "is-active" : ""} onClick={() => setMethod("wechat")}><ScanLine size={16} />微信扫码</button>
         </div>
 
@@ -139,8 +139,9 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Re
             {error ? <Alert type="error" showIcon message="登录失败" description={error} /> : null}
             <Form form={form} layout="vertical" onFinish={onLogin} className="login-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
               <TenantField tenantHint={tenantHint} />
-              <Form.Item label="手机号 / 教职工号" name="identifier" rules={[{ required: true, message: "请输入手机号、教职工号或原登录账号" }, byteLimitRule(LOGIN_FIELD_LIMITS.identifier, "登录标识过长")]}>
-                <Input placeholder="手机号、教职工号或原登录账号" autoComplete="username" maxLength={LOGIN_FIELD_LIMITS.identifier} />
+              {/* 沿用 identifier 协议，已有手机号和教职工号别名仍由服务端兼容解析。 */}
+              <Form.Item label="用户名" name="identifier" rules={[{ required: true, message: "请输入用户名" }, byteLimitRule(LOGIN_FIELD_LIMITS.identifier, "用户名过长")]}>
+                <Input placeholder="请输入用户名" autoComplete="username" maxLength={LOGIN_FIELD_LIMITS.identifier} />
               </Form.Item>
               <Form.Item label="密码" name="password" rules={[{ required: true, message: "请输入密码" }, byteLimitRule(LOGIN_FIELD_LIMITS.password, "密码过长")]}>
                 <Input.Password prefix={<LockKeyhole size={16} />} placeholder="请输入密码" autoComplete="current-password" />

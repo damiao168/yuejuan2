@@ -54,14 +54,14 @@ describe("学校初始化展示", () => {
   it("教师邀请不发送初始密码，刷新失败仍保留一次性激活链接与待激活事实",async()=>{
     mocks.users.mockResolvedValue({users:[]});
     mocks.roles.mockResolvedValue({roles:[{code:"teacher",name:"教师"}]});
-    mocks.staffValues={display_name:"王老师",phone:"13800000000",school_id:"school",role_codes:["teacher"],class_ids:["class"]};
+    mocks.staffValues={display_name:"王老师",username:"wang_teacher",phone:"13800000000",school_id:"school"};
     mocks.createUser.mockResolvedValue({user:{id:"invited",display_name:"王老师",status:"invited"},activation:{path:"/activate?token=one-time",expires_at:"2026-10-09T00:00:00Z"}});
     render(<OrganizationSetupPage onNavigate={vi.fn()}/>);
     await screen.findByRole("heading",{name:"人员账号"});
     mocks.schools.mockRejectedValueOnce(new Error("refresh failed"));
     fireEvent.submit(screen.getByRole("button",{name:"创建激活邀请"}).closest("form")!);
     await screen.findByText("王老师：邀请已创建，等待激活");
-    expect(mocks.createUser).toHaveBeenCalledWith(mocks.staffValues);
+    expect(mocks.createUser).toHaveBeenCalledWith({...mocks.staffValues,employee_no:undefined,role_codes:["grader","arbitrator"],class_ids:[]});
     expect(mocks.createUser.mock.calls[0][0]).not.toHaveProperty("password");
     expect(screen.getByRole("button",{name:"复制激活链接"})).toBeTruthy();
     expect(screen.getByRole("button",{name:"人员账号"}).getAttribute("data-current")).toBe("true");
@@ -78,7 +78,7 @@ describe("学校初始化展示", () => {
 
   it("邀请响应缺少激活链接时保留待激活回执并提供核对提示", async () => {
     mocks.users.mockResolvedValue({ users: [] });
-    mocks.staffValues = { display_name: "王老师", phone: "13800000000", school_id: "school", role_codes: ["teacher"] };
+    mocks.staffValues = { display_name: "王老师", username: "wang_teacher", phone: "13800000000", school_id: "school" };
     mocks.createUser.mockResolvedValue({ user: { id: "invited", display_name: "王老师", status: "invited" } });
     render(<OrganizationSetupPage onNavigate={vi.fn()} />);
     await screen.findByRole("heading", { name: "人员账号" });

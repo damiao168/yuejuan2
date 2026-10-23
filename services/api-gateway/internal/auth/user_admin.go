@@ -78,7 +78,8 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	invited := input.Password == ""
-	if input.DisplayName == "" || (input.RoleCode == "" && len(input.RoleCodes) == 0) || (invited && input.Phone == "" && input.EmployeeNo == "") || (!invited && input.Username == "") {
+	// 邀请可直接使用用户名；仅在没有用户名时才用手机号或工号生成登录名，激活要求不变。
+	if input.DisplayName == "" || (input.RoleCode == "" && len(input.RoleCodes) == 0) || (invited && input.Username == "" && input.Phone == "" && input.EmployeeNo == "") || (!invited && input.Username == "") {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "display_name, role_code and a login identity are required")
 		return
 	}

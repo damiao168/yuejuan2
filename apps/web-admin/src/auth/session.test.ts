@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sessionFromAuthUser } from "./session";
+import { accountIdentityLabel, displayNameOrUsername, sessionFromAuthUser } from "./session";
 
 describe("session organization scope", () => {
   it("maps the server-resolved organization boundary", () => {
@@ -21,5 +21,17 @@ describe("session organization scope", () => {
       gradeIds: ["grade-2"], classIds: ["class-1", "class-2"]
     });
     expect(session.publicComputer).toBe(true);
+  });
+});
+
+describe("account identity presentation", () => {
+  it.each(["", "   ", "???????", "？ ? ？", "损坏\uFFFD姓名", undefined])("falls back to the stable username for an invalid display name %j", (displayName) => {
+    expect(displayNameOrUsername(displayName, "demo_school_admin")).toBe("demo_school_admin");
+  });
+
+  it("keeps the username first and includes only a valid distinct name", () => {
+    expect(accountIdentityLabel({ username: "admin-1", displayName: " 张老师 " })).toBe("admin-1（张老师）");
+    expect(accountIdentityLabel({ username: "admin-1", displayName: "???????" })).toBe("admin-1");
+    expect(accountIdentityLabel({ username: "admin-1", displayName: "admin-1" })).toBe("admin-1");
   });
 });

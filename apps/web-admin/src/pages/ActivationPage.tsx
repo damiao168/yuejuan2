@@ -51,7 +51,7 @@ export function ActivationPage({ onComplete }: Readonly<{ onComplete: (tenantCod
   };
 
   if (loading) return <main className="login-screen"><section className="login-panel"><Spin tip="正在验证邀请" /></section></main>;
-  if (complete) return <main className="login-screen"><section className="login-panel"><Result status="success" title="账号已激活" subTitle="请使用手机号、教职工号或原登录账号登录。" extra={<Button type="primary" onClick={() => onComplete(preview?.tenant_code)}>前往登录</Button>} /></section></main>;
+  if (complete) return <main className="login-screen"><section className="login-panel"><Result status="success" title="账号已激活" subTitle="请使用用户名和本人设置的密码登录。" extra={<Button type="primary" onClick={() => onComplete(preview?.tenant_code)}>前往登录</Button>} /></section></main>;
 
   return (
     <main className="login-screen">

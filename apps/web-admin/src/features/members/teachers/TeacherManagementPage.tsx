@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, App, Button, Dropdown, Form, Input, Modal, Select, Space, Tabs } from "antd";
-import type { MenuProps, TableColumnsType } from "antd";
+import { Alert, App, Button, Form, Input, Modal, Space, Tabs } from "antd";
+import type { TableColumnsType } from "antd";
 import { getUserErrorMessage } from "../../../api/client";
-import { listClasses, listGrades, listSchools, type Grade, type School, type SchoolClass } from "../../../api/org";
+import { listSchools, type School } from "../../../api/org";
 import {
   createManagedUser,
   createCredentialRecovery,
@@ -10,31 +10,27 @@ import {
   listAllManagedUsers,
   reissueManagedUserActivation,
   updateManagedUserStatus,
-  updateManagedUserAccess,
   type AssignableRole,
   type ManagedUser
 } from "../../../api/users";
-import type { SessionUser } from "../../../auth/session";
+import { displayNameOrUsername, type SessionUser } from "../../../auth/session";
 import { ErrorState, LoadingState } from "../../../components/PageState";
 import { ResponsiveTable } from "../../../components/ResponsiveTable";
 import { isStepUpCancelledError, useStepUp } from "../../../auth/stepUpContext";
-import { AdministratorConfigurationNotice, MemberCreationFields, MemberManagementHeading, MemberStatus, recentUsage, roleLabels, teacherRoles, type CreateMode } from "./TeacherManagementViews";
+import { AdministratorConfigurationNotice, MemberCreationFields, MemberManagementHeading, MemberStatus, recentUsage, teacherRoles, taskStaffRoleCodes, type CreateMode } from "./TeacherManagementViews";
 import { MemberProfileDialog } from "./MemberProfileDialog";
 
 type MemberView = "teachers" | "administrators";
 
-// 状态和操作保留完整单行所需宽度，其余列分配剩余空间，避免固定列宽之和撑出横向滚动。
+// 操作直接展开并允许换行，其余列共享剩余宽度，避免窄屏被动作按钮撑出横向滚动。
 const memberColumnWidths = {
-  phone: "12%",
-  employee: "10%",
+  phone: "14%",
   recent: "16%",
   status: 80,
-  actions: 144
+  actions: 264
 };
 
-function memberDialogPresentation(editingUser: ManagedUser | null, createMode: CreateMode) {
-  // 编辑已有人员时，文案不能沿用上一次新增管理员时留下的模式。
-  if (editingUser) return { title: `职责与班级 · ${editingUser.display_name}`, submitLabel: "验证身份并保存" };
+function memberDialogPresentation(createMode: CreateMode) {
   if (createMode === "administrator") return { title: "新增学校管理员", submitLabel: "创建管理员邀请" };
   return { title: "新增教师", submitLabel: "创建并生成邀请" };
 }
@@ -44,22 +40,17 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
   const { runWithStepUp } = useStepUp();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [roles, setRoles] = useState<AssignableRole[]>([]);
-  const [grades, setGrades] = useState<Grade[]>([]);
-  const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [view, setView] = useState<MemberView>("teachers");
   const [query, setQuery] = useState("");
   const [createMode, setCreateMode] = useState<CreateMode>("teacher");
   const [open, setOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
   const [profileUser, setProfileUser] = useState<ManagedUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [updatingUserID, setUpdatingUserID] = useState("");
   const [error, setError] = useState("");
   const [form] = Form.useForm();
-  const selectedRole = Form.useWatch("role_codes", form) as string[] | undefined;
-  const selectedSchool = Form.useWatch("school_id", form) as string | undefined;
   const loadVersion = useRef(0);
 
   const load = useCallback(async () => {
@@ -67,19 +58,15 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
     setLoading(true);
     setError("");
     try {
-      const [userResult, roleResult, schoolResult, gradeResult, classResult] = await Promise.all([
+      const [userResult, roleResult, schoolResult] = await Promise.all([
         listAllManagedUsers(),
         listAssignableRoles(),
-        listSchools(),
-        listGrades(),
-        listClasses()
+        listSchools()
       ]);
       if (version !== loadVersion.current) return;
       setUsers(userResult.filter((user) => user.roles.some((role) => teacherRoles.has(role) || role === "school_admin")));
       setRoles(roleResult.roles);
       setSchools(schoolResult.schools);
-      setGrades(gradeResult.grades);
-      setClasses(classResult.classes);
     } catch (loadError) {
       if (version === loadVersion.current) setError(getUserErrorMessage(loadError, "人员名单加载失败"));
     } finally {
@@ -108,32 +95,31 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
   const renderActions = (user: ManagedUser) => {
     if (!canManageUser(user)) return "-";
     const busy = loading || Boolean(error) || saving || Boolean(updatingUserID);
-    const items: MenuProps["items"] = [{ key: "access", label: "职责与班级", onClick: () => openAccess(user) }];
-    if (user.status === "invited") items.push({ key: "invite", label: "重新生成邀请", onClick: () => void reissueActivation(user) });
-    else {
-      if (user.status === "active") items.push({ key: "recovery", label: "协助恢复", onClick: () => void createRecovery(user) });
-      items.push({ key: "status", label: user.status === "active" ? "停用" : "恢复", danger: user.status === "active", onClick: () => confirmStatusChange(user) });
-    }
-    // 日常资料编辑直接可见，低频权限和账号操作收进菜单，避免操作列挤出横向滚动。
-    return <Space size={2}>
+    return <Space className="member-account-actions" size={2} wrap>
       <Button type="link" disabled={busy} onClick={() => { if (canManageUser(user)) setProfileUser(user); }}>编辑资料</Button>
-      <Dropdown menu={{ items }} trigger={["click"]} disabled={busy}><Button type="link" loading={updatingUserID === user.id} disabled={busy} aria-label={`更多操作：${user.display_name}`}>更多</Button></Dropdown>
+      {user.status === "invited" ? <Button type="link" disabled={busy} loading={updatingUserID === user.id} onClick={() => void reissueActivation(user)}>重新生成邀请</Button> : <>
+        {user.status === "active" ? <Button type="link" disabled={busy} loading={updatingUserID === user.id} onClick={() => void createRecovery(user)}>协助恢复</Button> : null}
+        <Button type="link" danger={user.status === "active"} disabled={busy} onClick={() => confirmStatusChange(user)}>{user.status === "active" ? "停用" : "恢复"}</Button>
+      </>}
     </Space>;
   };
 
+  // 表格与侧栏使用同一登录账号；历史乱码姓名不能让当前账号看起来像第三个人。
+  const identityColumns: TableColumnsType<ManagedUser> = [
+    { title: "用户", key: "identity", render: (_, user) => {
+      const name = displayNameOrUsername(user.display_name, user.username);
+      return <span className="member-login-identity"><span>{user.username}</span>{name !== user.username ? <small>{name}</small> : null}{user.id === currentUser.id ? <small>当前登录</small> : null}</span>;
+    } },
+    { title: "手机号", dataIndex: "phone_masked", width: memberColumnWidths.phone, render: (value?: string) => value || "未填写" }
+  ];
   const teacherColumns: TableColumnsType<ManagedUser> = [
-    { title: "姓名", dataIndex: "display_name" },
-    { title: "手机号", dataIndex: "phone_masked", width: memberColumnWidths.phone, render: (value?: string) => value || "-" },
-    { title: "教职工号", dataIndex: "employee_no", width: memberColumnWidths.employee, render: (value?: string) => value || "-" },
-    { title: "工作职责", dataIndex: "roles", render: (items: string[]) => items.map((item) => roleLabels[item]).filter(Boolean).join("、") || "-" },
+    ...identityColumns,
     { title: "状态", dataIndex: "status", width: memberColumnWidths.status, render: (status: string) => <MemberStatus status={status} /> },
     { title: "最近使用", key: "last_login_at", width: memberColumnWidths.recent, render: (_, user) => recentUsage(user) },
     { title: "操作", key: "actions", width: memberColumnWidths.actions, render: (_, item) => renderActions(item) }
   ];
   const administratorColumns: TableColumnsType<ManagedUser> = [
-    { title: "姓名", dataIndex: "display_name" },
-    { title: "手机号", dataIndex: "phone_masked", width: memberColumnWidths.phone, render: (value?: string) => value || "-" },
-    { title: "教职工号", dataIndex: "employee_no", width: memberColumnWidths.employee, render: (value?: string) => value || "-" },
+    ...identityColumns,
     { title: "所属学校", dataIndex: "school_id", render: (schoolID?: string) => schoolID ? schoolNames.get(schoolID) ?? "学校信息已变更" : "未标明学校" },
     { title: "状态", dataIndex: "status", width: memberColumnWidths.status, render: (status: string) => <MemberStatus status={status} /> },
     { title: "最近使用", key: "last_login_at", width: memberColumnWidths.recent, render: (_, user) => recentUsage(user) },
@@ -179,62 +165,25 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
   }
 
   function openCreate(nextMode: CreateMode) {
-    setEditingUser(null);
     setCreateMode(nextMode);
     form.resetFields();
-    if (nextMode === "administrator") form.setFieldValue("role_code", "school_admin");
-    else form.setFieldValue("role_codes", ["teacher"]);
     if (schools.length === 1) form.setFieldValue("school_id", schools[0].id);
     setOpen(true);
   }
 
-  function openAccess(user: ManagedUser) {
-    setEditingUser(user);
-    form.resetFields();
-    form.setFieldValue("role_codes", [...user.roles]);
-    form.setFieldValue("class_ids", [...(user.class_ids ?? [])]);
-    form.setFieldValue("school_id", user.school_id);
-    setOpen(true);
-  }
-
-  async function saveAccess(values: { role_codes: string[]; class_ids?: string[]; reason: string }) {
-    if (!editingUser) return;
-    const target = editingUser;
+  async function submit(values: { username: string; phone?: string; employee_no?: string; display_name: string; school_id: string }) {
     setSaving(true);
     try {
-      // 提交服务端返回的旧授权，不能在冲突后自动覆盖别人的修改；失败保留当前表单。
-      const result = await runWithStepUp({
-        reason: `修改“${target.display_name}”的工作职责与班级`,
-        description: "此操作改变账号访问权限。保存成功后，该人员需要重新登录。",
-        action: () => updateManagedUserAccess(target.id, {
-          role_codes: values.role_codes,
-          class_ids: values.role_codes.includes("teacher") ? values.class_ids ?? [] : [],
-          expected_roles: target.roles,
-          expected_class_ids: target.class_ids ?? [],
-          reason: values.reason.trim()
-        })
-      });
-      setUsers((current) => current.map((user) => user.id === result.user.id ? result.user : user));
-      setOpen(false); setEditingUser(null);
-      message.success("职责与班级已保存，请通知该人员重新登录");
-    } catch (reason) {
-      if (!isStepUpCancelledError(reason)) message.error(getUserErrorMessage(reason, "保存失败，当前填写内容已保留；如授权已变更，请刷新名单后重新核对。"));
-    } finally { setSaving(false); }
-  }
-
-  async function submit(values: { phone: string; employee_no?: string; display_name: string; role_codes?: string[]; school_id: string; class_ids?: string[] }) {
-    setSaving(true);
-    try {
-      const roleCodes = createMode === "administrator" ? ["school_admin"] : values.role_codes ?? [];
-      const classIDs = roleCodes.includes("teacher") ? values.class_ids ?? [] : [];
-      if (classIDs.some((id) => !classes.some((item) => item.id === id && item.school_id === values.school_id))) throw new Error("关联班级必须属于所选学校，请重新选择班级");
+      // 教师只取得分配任务的阅卷、复核资格；学校管理权限仍通过独立管理员入口创建。
+      const roleCodes = createMode === "administrator" ? ["school_admin"] : taskStaffRoleCodes;
       const result = await createManagedUser({
-        phone: values.phone,
-        employee_no: values.employee_no,
-        display_name: values.display_name,
+        username: values.username.trim(),
+        phone: values.phone?.trim() || undefined,
+        employee_no: values.employee_no?.trim() || undefined,
+        display_name: values.display_name.trim(),
         role_codes: roleCodes,
         school_id: values.school_id,
-        class_ids: classIDs
+        class_ids: []
       });
       message.success(createMode === "administrator" ? "管理员邀请已创建" : "教师邀请已创建");
       setOpen(false);
@@ -281,7 +230,7 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
   if (loading && !users.length) return <LoadingState label="正在加载人员名单" />;
   if (error && !users.length) return <ErrorState message={error} onRetry={() => void load()} />;
   const isTeacherView = view === "teachers";
-  const dialog = memberDialogPresentation(editingUser, createMode);
+  const dialog = memberDialogPresentation(createMode);
   return <div className="member-management-page">
     <MemberManagementHeading isTeacherView={isTeacherView} canCreateAdministrator={canCreateAdministrator} loading={loading} onRefresh={() => void load()} onCreate={openCreate} />
     {error ? <Alert type="warning" showIcon message="名单刷新失败，当前显示此前读取的名单" description={error} /> : null}
@@ -291,21 +240,16 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
         { key: "administrators", label: `学校管理员（${administratorUsers.length}）` }
       ]} />
       {!isTeacherView ? <AdministratorConfigurationNotice schoolsNeedingBackup={schoolsNeedingBackup} canCreateAdministrator={canCreateAdministrator} /> : null}
-      <div className="member-management-filters"><Input.Search allowClear value={query} placeholder="搜索姓名、手机号或工号" onChange={(event) => setQuery(event.target.value)} /><span>共 {visible.length} 人</span></div>
+      <div className="member-management-filters"><Input.Search allowClear value={query} placeholder="搜索姓名、用户名、手机号或工号" onChange={(event) => setQuery(event.target.value)} /><span>共 {visible.length} 人</span></div>
       <ResponsiveTable className="dense-data-table member-management-table" rowKey="id" size="small" columns={isTeacherView ? teacherColumns : administratorColumns} dataSource={visible} pagination={{ pageSize: 20 }} />
     </section>
     {profileUser ? <MemberProfileDialog key={profileUser.id} user={profileUser} onCancel={() => setProfileUser(null)} onSaved={(user) => {
       setUsers((current) => current.map((item) => item.id === user.id ? user : item));
       setProfileUser(null);
     }} /> : null}
-    <Modal title={dialog.title} open={open} footer={null} destroyOnHidden maskClosable={!saving} closable={!saving} onCancel={() => { if (!saving) { setOpen(false); setEditingUser(null); } }}>
-      <Form form={form} layout="vertical" disabled={saving} onFinish={(values) => editingUser ? void saveAccess(values) : void submit(values)}>
-        {editingUser ? <>
-          <Alert type="info" showIcon message={`所属学校：${schoolNames.get(editingUser.school_id ?? "") ?? "未标明学校"}`} description="各职责沿用原有范围。学科教师仅访问关联班级；阅卷和复核仅处理分配任务。保存后旧会话和设备凭据会失效，该人员需重新登录。" />
-          <Form.Item name="role_codes" label="工作职责（可多选）" rules={[{ required: true, type: "array", min: 1, message: "至少保留一项职责" }]}><Select mode="multiple" options={roles.map((role) => ({ value: role.code, label: roleLabels[role.code] ?? role.name }))} /></Form.Item>
-          {selectedRole?.includes("teacher") ? <Form.Item name="class_ids" label="关联班级"><Select mode="multiple" optionFilterProp="label" options={classes.filter((item) => item.school_id === editingUser.school_id).map((item) => ({ value: item.id, label: `${grades.find((grade) => grade.id === item.grade_id)?.name ?? "未分年级"} · ${item.name}` }))} /></Form.Item> : null}
-          <Form.Item name="reason" label="变更说明" rules={[{ required: true, whitespace: true, message: "请说明职责或班级变更原因" }]}><Input /></Form.Item>
-        </> : <MemberCreationFields mode={createMode} selectedRole={selectedRole} roles={roles} schools={schools} classes={classes.filter((item) => item.school_id === selectedSchool)} grades={grades} />}
+    <Modal title={dialog.title} open={open} footer={null} destroyOnHidden maskClosable={!saving} closable={!saving} onCancel={() => { if (!saving) setOpen(false); }}>
+      <Form form={form} layout="vertical" disabled={saving} onFinish={(values) => void submit(values)}>
+        <MemberCreationFields schools={schools} />
         <Button type="primary" htmlType="submit" loading={saving}>{dialog.submitLabel}</Button>
       </Form>
     </Modal>

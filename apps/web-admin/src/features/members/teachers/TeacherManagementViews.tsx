@@ -1,18 +1,12 @@
 import { Alert, Button, Form, Input, Select } from "antd";
 import { Plus, RefreshCw } from "lucide-react";
-import type { Grade, School, SchoolClass } from "../../../api/org";
-import type { AssignableRole, ManagedUser } from "../../../api/users";
+import type { School } from "../../../api/org";
+import type { ManagedUser } from "../../../api/users";
 import { StatusTag } from "../../../components/StatusTag";
 
-export const roleLabels: Record<string, string> = {
-  tenant_admin: "机构管理员",
-  school_admin: "学校管理员",
-  teacher: "学科教师",
-  grader: "阅卷教师",
-  arbitrator: "仲裁/复核教师"
-};
-
 export const teacherRoles = new Set(["teacher", "grader", "arbitrator"]);
+// 两种资格都按具体任务授权；新增人员不再配置教学班级或全校成绩范围。
+export const taskStaffRoleCodes = ["grader", "arbitrator"];
 export type CreateMode = "teacher" | "administrator";
 export function memberStatusLabel(status: string) {
   return ({ active: "正常", invited: "待激活", disabled: "已停用" } as Record<string, string>)[status] ?? "未知状态";
@@ -69,47 +63,21 @@ export function MemberManagementHeading({ isTeacherView, canCreateAdministrator,
     createButton = <Button type="primary" icon={<Plus size={15} />} onClick={() => onCreate("administrator")}>新增管理员</Button>;
   }
   return <section className="member-management-heading">
-    <div><h1>{isTeacherView ? "人员与权限" : "学校管理员"}</h1><p>{isTeacherView ? "创建教师邀请并管理教学、阅卷和复核访问权限。" : "每所学校建议至少配置 2 位管理员，便于工作交接和应急接替。"}</p></div>
+    <div><h1>{isTeacherView ? "人员与权限" : "学校管理员"}</h1><p>{isTeacherView ? "管理教师登录账号，阅卷与复核任务在阅卷管理中分配。" : "每所学校建议至少配置 2 位管理员，便于工作交接和应急接替。"}</p></div>
     <div><Button icon={<RefreshCw size={15} />} loading={loading} onClick={onRefresh}>刷新</Button>{createButton}</div>
   </section>;
 }
 
-function MemberRoleField({ mode, roles }: Readonly<{ mode: CreateMode; roles: readonly AssignableRole[] }>) {
-  if (mode === "administrator") return <Form.Item name="role_code" hidden><Input /></Form.Item>;
-  return <Form.Item name="role_codes" label="工作职责（可多选）" rules={[{ required: true, type: "array", min: 1, message: "请选择至少一项工作职责" }]}><Select mode="multiple" options={roles.filter((role) => teacherRoles.has(role.code)).map((role) => ({ value: role.code, label: roleLabels[role.code] ?? role.name }))} /></Form.Item>;
-}
-
-function MemberRoleScope({ mode, selectedRole, classes, grades }: Readonly<{
-  mode: CreateMode;
-  selectedRole: string[] | undefined;
-  classes: readonly SchoolClass[];
-  grades: readonly Grade[];
-}>) {
-  if (mode !== "teacher") return null;
-  if (selectedRole?.includes("teacher")) {
-      return <Form.Item name="class_ids" label="关联班级（可选）"><Select mode="multiple" optionFilterProp="label" options={classes.map((item) => ({ value: item.id, label: `${grades.find((grade) => grade.id === item.grade_id)?.name ?? "未分年级"} · ${item.name}` }))} /></Form.Item>;
-  }
-  return <p>阅卷和复核范围由具体分配的任务决定。</p>;
-}
-
-// 表单实例和职责选择仍由页面持有，这些顶层组件只展示字段。
-export function MemberCreationFields({ mode, selectedRole, roles, schools, classes, grades }: Readonly<{
-  mode: CreateMode;
-  selectedRole: string[] | undefined;
-  roles: readonly AssignableRole[];
+export function MemberCreationFields({ schools }: Readonly<{
   schools: readonly School[];
-  classes: readonly SchoolClass[];
-  grades: readonly Grade[];
 }>) {
   return <>
     <div className="form-grid compact-form-grid">
       <Form.Item name="display_name" label="姓名" rules={[{ required: true, message: "请输入姓名" }]}><Input /></Form.Item>
-      <Form.Item name="phone" label="手机号" rules={[{ required: true, message: "请输入教师手机号" }, { pattern: /^(?:\+?86)?1\d{10}$/, message: "请输入有效的中国大陆手机号" }]}><Input inputMode="tel" autoComplete="tel" /></Form.Item>
+      <Form.Item name="username" label="用户名" rules={[{ required: true, whitespace: true, message: "请输入登录用户名" }, { max: 64, message: "用户名最多 64 个字符" }]}><Input autoComplete="off" maxLength={64} placeholder="用于用户名和密码登录" /></Form.Item>
+      <Form.Item name="phone" label="手机号（可选）" rules={[{ pattern: /^(?:\+?86)?1\d{10}$/, message: "请输入有效的中国大陆手机号" }]}><Input inputMode="tel" autoComplete="tel" /></Form.Item>
       <Form.Item name="employee_no" label="教职工号（可选）"><Input autoComplete="off" /></Form.Item>
-      <MemberRoleField mode={mode} roles={roles} />
       <Form.Item name="school_id" label="所属学校" rules={[{ required: true, message: "请选择所属学校" }]}><Select options={schools.map((school) => ({ value: school.id, label: school.name }))} /></Form.Item>
     </div>
-    <p>学科教师可查看关联班级的教学信息；阅卷教师处理分配的阅卷任务；仲裁/复核教师处理分配的复核任务。同一人可兼任，不会因此获得全校成绩访问权。模型密钥管理仍需独立的平台权限。</p>
-    <MemberRoleScope mode={mode} selectedRole={selectedRole} classes={classes} grades={grades} />
   </>;
 }

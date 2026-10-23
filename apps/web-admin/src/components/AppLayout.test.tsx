@@ -7,7 +7,7 @@ import { PUBLIC_COMPUTER_IDLE_LOCK_MS } from "../auth/loginSecurity";
 import { routeFromPath } from "../router/routes";
 import { AppLayout, type ShellMode } from "./AppLayout";
 
-const state = vi.hoisted(() => ({ desktop: true, cancel: vi.fn() }));
+const state = vi.hoisted(() => ({ desktop: true, cancel: vi.fn(), accountLabel: "" }));
 vi.mock("../auth/stepUpContext", async () => {
   const { createElement } = await import("react");
   return {
@@ -21,7 +21,11 @@ vi.mock("antd", async () => {
     createElement("div", { className, id, tabIndex }, children);
   return {
     Alert: ({ message }: { message: ReactNode }) => createElement("div", { role: "alert" }, message),
-    Avatar: wrapper, ConfigProvider: wrapper, Dropdown: wrapper, Space: wrapper, Tag: wrapper, Tooltip: wrapper,
+    Avatar: wrapper, ConfigProvider: wrapper, Space: wrapper, Tag: wrapper, Tooltip: wrapper,
+    Dropdown: ({ children, menu }: { children?: ReactNode; menu?: { items?: Array<{ label?: string }> } }) => {
+      state.accountLabel = menu?.items?.[0]?.label ?? "";
+      return createElement("div", null, children);
+    },
     Button: ({ children, htmlType, disabled, onClick, className }: {
       children?: ReactNode; htmlType?: "button" | "submit"; disabled?: boolean; onClick?: () => void; className?: string;
     }) => createElement("button", { type: htmlType ?? "button", disabled, onClick, className }, children),
@@ -51,6 +55,7 @@ describe("shell public-computer lock ordering", () => {
     vi.useFakeTimers();
     state.desktop = true;
     state.cancel.mockReset();
+    state.accountLabel = "";
     window.localStorage.clear();
     host = document.createElement("div");
     document.body.append(host);
@@ -70,6 +75,13 @@ describe("shell public-computer lock ordering", () => {
       <span>Workspace</span><input data-workspace-draft defaultValue="initial" />
     </AppLayout>));
   }
+
+  it("explicitly identifies the current login username and omits damaged names from the menu", async () => {
+    await render(async () => undefined, { ...user, publicComputer: false });
+    expect(state.accountLabel).toBe("当前登录用户名：teacher-1（Teacher）");
+    await render(async () => undefined, { ...user, username: "demo_school_admin", displayName: "???????", publicComputer: false });
+    expect(state.accountLabel).toBe("当前登录用户名：demo_school_admin");
+  });
 
   it("covers the workspace and cancels step-up while the remote lock remains pending", async () => {
     // 网络锁定尚未返回时，界面已经遮挡；pagehide 不能再启动第二次锁定请求。
