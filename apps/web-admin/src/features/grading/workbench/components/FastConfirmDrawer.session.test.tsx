@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setBusinessCommandScope } from "../../../../api/businessCommand";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
@@ -51,9 +51,27 @@ describe("快捷确认的页面作用域和提交代次", () => {
     return <QueryClientProvider client={client}><FastConfirmDrawer {...value} /></QueryClientProvider>;
   }
   async function open(waitForLoaded = true) {
-    fireEvent.click(screen.getByRole("button", { name: "查看待确认的建议分" }));
+    fireEvent.click(screen.getByRole("button", { name: "AI 建议分" }));
     if (waitForLoaded) await waitFor(() => expect(screen.queryByText("加载中")).toBeNull());
   }
+  it("入口移到评分侧栏后，切题换挂载点不会关闭已打开的抽屉或重载批次", async () => {
+    const first = document.createElement("div"); const second = document.createElement("div");
+    document.body.append(first, second);
+    try {
+      const mounted = render(tree({ ...props(), triggerTarget: first }));
+      expect(mounted.container.textContent).toBe("");
+      fireEvent.click(within(first).getByRole("button", { name: "AI 建议分" }));
+      await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(2));
+      const drawer = screen.getByRole("dialog");
+      mounted.rerender(tree({ ...props(), triggerTarget: null }));
+      expect(screen.getByRole("dialog")).toBe(drawer);
+      expect(screen.queryByRole("button", { name: "AI 建议分" })).toBeNull();
+      mounted.rerender(tree({ ...props(), triggerTarget: second }));
+      expect(screen.getByRole("dialog")).toBe(drawer);
+      expect(within(second).getByRole("button", { name: "AI 建议分" })).not.toBeNull();
+      expect(mocks.load).toHaveBeenCalledTimes(2);
+    } finally { first.remove(); second.remove(); }
+  });
   async function inspect(index: number) {
     fireEvent.click(screen.getAllByRole("button", { name: "核对原图与证据" })[index]);
     await screen.findByRole("img", { name: "待核对的学生答题原图" });

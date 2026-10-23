@@ -63,7 +63,7 @@ describe("快捷确认的候选展示和提交结果", () => {
   }
 
   async function open(waitForLoaded = true) {
-    fireEvent.click(screen.getByRole("button", { name: "查看待确认的建议分" }));
+    fireEvent.click(screen.getByRole("button", { name: "AI 建议分" }));
     if (waitForLoaded) await waitFor(() => expect(screen.queryByText("加载中")).toBeNull());
   }
 

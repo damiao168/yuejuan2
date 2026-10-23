@@ -23,8 +23,8 @@ test("阅卷教师从任务列表核对异常来源，启用快捷键后连续�
   await expect(taskDrawer.locator(".grading-task-item").filter({ hasText: "fixture-01" })).toContainText("需要人工确认：系统评分把握不足");
   await taskDrawer.locator(".ant-drawer-close").click();
 
-  await page.getByRole("button", { name: "开始处理" }).click();
-  await expect.poll(() => state.claims).toEqual(["review-task-01"]);
+  // 打开已分配任务即可评分，不再要求点击重复领取当前答卷的按钮。
+  await expect(page.getByRole("button", { name: "开始处理" })).toHaveCount(0);
   // 单字符快捷键默认关闭；先显式启用，再验证输入框仍保留自身键盘语义。
   await page.getByText(/^键盘帮助 ·/).click();
   await page.getByRole("checkbox", { name: /^启用单字符快捷键/ }).check();

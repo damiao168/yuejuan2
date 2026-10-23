@@ -107,7 +107,8 @@ describe("batch30 header permission and callback boundaries", () => {
   ] as const)("keeps reviewer controls scoped: manager=%s queue=%s", (canManageTasks, queueScope, actions, queues) => {
     render(<WorkbenchHeader {...headerProps()} canManageTasks={canManageTasks} queueScope={queueScope} />);
     expect(Boolean(screen.queryByRole("button", { name: "下一份" }))).toBe(actions);
-    expect(Boolean(screen.queryByRole("button", { name: "开始处理" }))).toBe(actions);
+    expect(screen.queryByRole("button", { name: "开始处理" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "领取任务" })).toBeNull();
     expect(Boolean(screen.queryByRole("button", { name: "暂放" }))).toBe(actions);
     expect(Boolean(screen.queryByText("退回队列"))).toBe(queues);
     expect(Boolean(screen.queryByText("重评队列"))).toBe(queues);
@@ -123,8 +124,14 @@ describe("batch30 header permission and callback boundaries", () => {
     expect(props.onReloadConflict).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "暂放" })).toHaveProperty("disabled", true);
     view.rerender(<WorkbenchHeader {...props} />);
-    for (const label of ["刷新", "下一份", "开始处理", "暂放"]) fireEvent.click(screen.getByRole("button", { name: label }));
-    for (const callback of [props.onRefresh, props.onNext, props.onClaim, props.onRelease]) expect(callback).toHaveBeenCalledTimes(1);
+    for (const label of ["刷新", "下一份", "暂放"]) fireEvent.click(screen.getByRole("button", { name: label }));
+    for (const callback of [props.onRefresh, props.onNext, props.onRelease]) expect(callback).toHaveBeenCalledTimes(1);
+    expect(props.onClaim).not.toHaveBeenCalled();
+    view.rerender(<WorkbenchHeader {...props} hasContext={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "领取任务" }));
+    expect(props.onClaim).toHaveBeenCalledOnce();
+    view.rerender(<WorkbenchHeader {...props} hasContext={false} remainingCount={0} />);
+    expect(screen.queryByRole("button", { name: "领取任务" })).toBeNull();
     view.rerender(<WorkbenchHeader {...props} ownsSelectedTask={false} />);
     expect(screen.getByRole("button", { name: "暂放" })).toHaveProperty("disabled", true);
     view.rerender(<WorkbenchHeader {...props} canWork={false} />);

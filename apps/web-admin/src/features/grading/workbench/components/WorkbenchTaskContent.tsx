@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, ReactNode, RefCallback } from "react";
 import { Alert } from "antd";
 import type { AiGrade } from "../../../../api/review";
 import { getSafeUserText } from "../../../../api/client";
@@ -46,12 +46,13 @@ interface WorkbenchTaskContentProps {
   evidence: Omit<ComponentProps<typeof EvidenceInspector>, "context">;
   editor: Omit<ComponentProps<typeof ScoreEditor>, "context">;
   regionEditor?: ReactNode;
+  aiSuggestionEntryRef?: RefCallback<HTMLDivElement>;
 }
 
-export function WorkbenchTaskContent({ context, loading, error, hasTasks, canManageTasks, onRetry, selectedGrade, subjectCode, canAdoptAiScore, answer, evidence, editor, regionEditor }: Readonly<WorkbenchTaskContentProps>) {
+export function WorkbenchTaskContent({ context, loading, error, hasTasks, canManageTasks, onRetry, selectedGrade, subjectCode, canAdoptAiScore, answer, evidence, editor, regionEditor, aiSuggestionEntryRef }: Readonly<WorkbenchTaskContentProps>) {
   if (loading) return <main className="grading-main-empty"><LoadingState label="正在加载答卷" /></main>;
   if (error) return <main className="grading-main-empty"><ErrorState message={error} onRetry={onRetry} /></main>;
-  if (!context) return <main className="grading-main-empty"><EmptyState title="请选择一份答卷" description={emptyQueueDescription(hasTasks, canManageTasks)} /></main>;
+  if (!context) return <main className="grading-main-empty"><EmptyState title="请选择一份答卷" description={emptyQueueDescription(hasTasks, canManageTasks)} />{aiSuggestionEntryRef ? <div className="grading-ai-entry" ref={aiSuggestionEntryRef} /> : null}</main>;
   return (
     <main className="grading-main">
       {context.warnings.length > 0 ? <Alert type="warning" showIcon message="AI 辅助不可用" description={context.warnings.map((warning) => getSafeUserText(warning, "智能辅助暂时不可用")).join("；")} /> : null}
@@ -61,6 +62,7 @@ export function WorkbenchTaskContent({ context, loading, error, hasTasks, canMan
         <AnswerEvidencePane {...answer} context={context} />
         <aside className="grading-inspector">
           {editor.canEditDraft && regionEditor ? regionEditor : <ScoreEditor {...editor} context={context} />}
+          {aiSuggestionEntryRef ? <div className="grading-ai-entry" ref={aiSuggestionEntryRef} /> : null}
           <EvidenceInspector {...evidence} context={context} />
         </aside>
       </section>

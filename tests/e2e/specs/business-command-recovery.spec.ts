@@ -15,7 +15,7 @@ test("stale human-submit command resumes after reload without changing score or 
     payload: JSON.parse(requests[0]!.body)
   } }));
   await page.goto("/#/teacher/grading");
-  await page.getByRole("button", { name: "开始处理" }).click();
+  await expect(page.getByRole("button", { name: "开始处理" })).toHaveCount(0);
   await page.getByRole("spinbutton", { name: "最终得分" }).fill("4");
   const submit = page.getByRole("button", { name: "提交并下一份" });
   await expect(submit).toBeEnabled();

@@ -38,7 +38,7 @@ test("当前 AI 失败隐藏历史建议，教师草稿和人工提交仍可使�
   await expect(page.getByText("AI 学生反馈草稿", { exact: true })).toHaveCount(0);
   await page.screenshot({ path: "output/playwright/ai-output-incomplete-teacher.png", fullPage: true });
 
-  await page.getByRole("button", { name: "查看待确认的建议分" }).click();
+  await page.getByRole("button", { name: "AI 建议分", exact: true }).click();
   const drawer = page.getByRole("dialog", { name: "批量确认 AI 建议分" });
   await expect(drawer.getByText("本次检查的任务中，暂无可批量确认的 AI 建议分")).toBeVisible();
   await expect(drawer.getByRole("button", { name: /提交已核对/ })).toHaveCount(0);

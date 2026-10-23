@@ -27,12 +27,13 @@ export interface ExamScoringPanelProps {
   onOpenAssignments?: () => void;
   showOverview?: boolean;
   showFastConfirmEntry?: boolean;
+  fastConfirmTriggerTarget?: HTMLElement | null;
   showResults?: boolean;
   showSettings?: boolean;
   onOpenResults?: (filter?: ScoringReviewFilter) => void;
 }
 
-export function ExamScoringPanel({ initialExamId, canGrade, canWork, canManageTasks, currentQuestionId, scoring, onOpenGoldPapers, onOpenCalibration, tasks, currentUserId, onTasksChanged, onOpenAssignments, showOverview = true, showFastConfirmEntry = true, showResults = false, showSettings = false, onOpenResults }: Readonly<ExamScoringPanelProps>) {
+export function ExamScoringPanel({ initialExamId, canGrade, canWork, canManageTasks, currentQuestionId, scoring, onOpenGoldPapers, onOpenCalibration, tasks, currentUserId, onTasksChanged, onOpenAssignments, showOverview = true, showFastConfirmEntry = true, fastConfirmTriggerTarget, showResults = false, showSettings = false, onOpenResults }: Readonly<ExamScoringPanelProps>) {
   const fallbackQuestionId = scoring.summary?.questions[0]?.question_id ?? "";
   const session = getBusinessCommandSession();
   const queueExamId = initialExamId || tasks.find((task) => task.assigned_to === currentUserId)?.exam_id || "";
@@ -60,11 +61,11 @@ export function ExamScoringPanel({ initialExamId, canGrade, canWork, canManageTa
     });
   }, [currentUserId, queueExamId, session, hasOwnWork]);
   const showFastConfirm = hasOwnWork || (sameSession && lastExam.examId === fastConfirmExamId && lastExam.eligible);
-  const fastConfirm = showFastConfirmEntry && fastConfirmExamId && canWork && showFastConfirm ? <FastConfirmDrawer key={fastConfirmExamId} tasks={tasks} examId={fastConfirmExamId} currentUserId={currentUserId} onTasksChanged={onTasksChanged} onScoringChanged={async () => { if (canGrade) await scoring.loadSummary(); }} /> : null;
+  const fastConfirm = showFastConfirmEntry && fastConfirmExamId && canWork && showFastConfirm ? <FastConfirmDrawer key={fastConfirmExamId} tasks={tasks} examId={fastConfirmExamId} currentUserId={currentUserId} triggerTarget={fastConfirmTriggerTarget} onTasksChanged={onTasksChanged} onScoringChanged={async () => { if (canGrade) await scoring.loadSummary(); }} /> : null;
   return <>
     {showSettings && initialExamId && canGrade && canManageTasks ? <GradingSettingsView key={aiPlanScope} examId={initialExamId} questionId={currentQuestionId || fallbackQuestionId} onOpenGoldPapers={onOpenGoldPapers} onOpenCalibration={onOpenCalibration} onAIPlanSaved={() => void scoring.loadSummary()} /> : null}
     {showOverview && initialExamId && canGrade && canManageTasks && aiPlanBlocksStart ? <div className="grading-focus-actions"><Button onClick={() => setAIPlanOpenFor({ scope: aiPlanScope, returnToStart: false })}>配置本场大题评分</Button></div> : null}
-    {showOverview && initialExamId && canGrade ? <ExamScoringOverview scoring={scoring} canManageTasks={canManageTasks} onOpenTrial={canManageTasks && trialRun && ["queued", "processing", "needs_review", "failed"].includes(trialRun.status) ? () => setTrialOpenFor(trialScope) : undefined} fastConfirm={fastConfirm} onOpenAssignments={onOpenAssignments} onOpenResults={onOpenResults} /> : fastConfirm ? <div className="grading-fast-confirm-entry">{fastConfirm}</div> : null}
+    {showOverview && initialExamId && canGrade ? <ExamScoringOverview scoring={scoring} canManageTasks={canManageTasks} onOpenTrial={canManageTasks && trialRun && ["queued", "processing", "needs_review", "failed"].includes(trialRun.status) ? () => setTrialOpenFor(trialScope) : undefined} fastConfirm={fastConfirm} onOpenAssignments={onOpenAssignments} onOpenResults={onOpenResults} /> : fastConfirm}
     <OcrWorkerAlert enabled={canWork && !canManageTasks} />
     <ExamScoringPlanDialog scoring={scoring} examId={initialExamId} onConfigureAI={canManageTasks ? () => { scoring.setPlanOpen(false); setAIPlanOpenFor({ scope: aiPlanScope, returnToStart: true }); } : undefined} />
     {aiPlanOpenFor?.scope === aiPlanScope && canManageTasks ? <Modal title="配置本场大题 AI 评分" open onCancel={closeAIPlan} footer={null} destroyOnHidden width={740}><GradingAIPlanSettings key={aiPlanScope} examId={initialExamId} onSaved={() => { closeAIPlan(); void scoring.loadSummary(); }} /></Modal> : null}

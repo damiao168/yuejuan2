@@ -126,6 +126,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   heldGroupTask.current = regionEditing ? ctx!.task.id : "";
   const updateRegionState = useCallback((dirty: boolean, busy: boolean) => { setRegionDirty(dirty); setRegionBusy(busy); }, []);
   const [quickSubmit, setQuickSubmit] = useState(false);
+  const [aiSuggestionEntry, setAISuggestionEntry] = useState<HTMLDivElement | null>(null);
   const [actioning, setActioning] = useState<string | null>(null);
   const [assignmentPreview, setAssignmentPreview] = useState<ReviewTask[] | null>(null);
   const [mathRequesting, setMathRequesting] = useState(false);
@@ -529,6 +530,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         showSettings={managing && managementView === "settings"}
         showOverview={managing && managementView === "overview"}
         showFastConfirmEntry={!managing || managementView === "overview"}
+        fastConfirmTriggerTarget={managing ? undefined : aiSuggestionEntry}
       />
       {managing && managementView === "progress" ? <ReviewerProgressView reviewers={reviewerProgress}
         progressComplete={Boolean(taskAggregate) && !loadingTasks && !taskError} loading={loadingTasks} error={taskError} gradersError={gradersError}
@@ -614,6 +616,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         <WorkbenchTaskContent
           context={ctx} loading={contextLoading} error={contextError} hasTasks={tasks.length > 0}
           canManageTasks={managing} onRetry={() => void loadContext(selectedTaskId)}
+          aiSuggestionEntryRef={managing ? undefined : setAISuggestionEntry}
           selectedGrade={selectedGrade} subjectCode={subjectCode} canAdoptAiScore={canAdoptAiScore}
           regionEditor={regionEditing && ctx ? <RegionScoreEditor context={ctx} currentUserId={currentUserId}
             canGrade={canGrade && canWork && hasSession && !draftConflict} draft={draft} setDraft={setDraft}

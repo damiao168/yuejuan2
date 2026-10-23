@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Checkbox, Drawer, Empty, Spin } from "antd";
 import type { GradeEvidence, ReviewTask } from "../../../../api/review";
@@ -27,8 +28,9 @@ function evidenceEntries(values: readonly GradeEvidence[]) {
   });
 }
 
-export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged, onScoringChanged }: Readonly<{
+export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged, onScoringChanged, triggerTarget }: Readonly<{
   tasks: ReviewTask[]; examId: string; currentUserId: string; onTasksChanged: () => Promise<void>; onScoringChanged: () => Promise<void>;
+  triggerTarget?: HTMLElement | null;
 }>) {
   const queryClient = useQueryClient();
   const queryScope = useReviewTaskContextScope(examId, false);
@@ -156,11 +158,11 @@ export function FastConfirmDrawer({ tasks, examId, currentUserId, onTasksChanged
     </>;
   }
 
+  const trigger = <Button className="fast-confirm-trigger" aria-haspopup="dialog" aria-expanded={open} disabled={loading || submitting} onClick={() => { setOpen(true); void load(); }}>AI 建议分</Button>;
+  // 只移动入口，抽屉仍由常驻组件持有；切题或提交最后一份时不能丢掉已核对状态和提交回执。
+  // undefined 使用本地入口；null 表示评分侧栏尚未挂载，先不在页面顶部补一个重复入口。
   return <>
-    <div className="fast-confirm-entry">
-      <div><strong>批量确认 AI 建议分</strong><span>逐份核对学生作答与评分依据，勾选认可的建议分后一起提交。</span></div>
-      <Button disabled={loading || submitting} onClick={() => { setOpen(true); void load(); }}>查看待确认的建议分</Button>
-    </div>
+    {triggerTarget === undefined ? trigger : triggerTarget ? createPortal(trigger, triggerTarget) : null}
     <Drawer title="批量确认 AI 建议分" width="min(860px, 100vw)" open={open} closable={!submitting} maskClosable={!submitting} keyboard={!submitting} onClose={() => { if (!submitting) setOpen(false); }}>
       <p>AI 已给出建议分。请逐份核对，认可后勾选，再一次提交多份。需要改分时，请返回阅卷页面评分。</p>
       <ol className="fast-confirm-steps"><li>查看学生作答原图</li><li>核对 AI 建议分和评分依据</li><li>勾选认可的分数后一起提交</li></ol>

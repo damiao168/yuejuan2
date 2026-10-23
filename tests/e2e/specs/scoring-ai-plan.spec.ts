@@ -6,8 +6,9 @@ test("grader can open fast confirmation from the personal workbench", async ({ p
   const state = createGradingWorkbenchMockState(1);
   await installGradingWorkbenchMocks(page, state);
   await page.goto("/#/teacher/grading", { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("批量确认 AI 建议分", { exact: true })).toBeVisible({ timeout: 30_000 });
-  await page.getByRole("button", { name: "查看待确认的建议分" }).click();
+  await expect(page.locator('.grading-inspector').getByRole("button", { name: "AI 建议分", exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.fast-confirm-entry')).toHaveCount(0);
+  await page.getByRole("button", { name: "AI 建议分", exact: true }).click();
   const drawer = page.getByRole("dialog", { name: "批量确认 AI 建议分" });
   await expect(drawer).toContainText("勾选认可的分数后一起提交");
   await expect(drawer.getByRole("button", { name: /提交已核对/ })).toHaveCount(0);
@@ -18,7 +19,7 @@ test("fast confirmation requires viewing the answer before the teacher submits",
   state.fastConfirmTaskIds.add(state.tasks[0].id);
   await installGradingWorkbenchMocks(page, state);
   await page.goto("/#/teacher/grading", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "查看待确认的建议分" }).click();
+  await page.getByRole("button", { name: "AI 建议分", exact: true }).click();
   const drawer = page.getByRole("dialog", { name: "批量确认 AI 建议分" });
   await expect(drawer.getByText("符合条件 1 份")).toBeVisible();
   const confirm = drawer.getByRole("checkbox", { name: "已核对原图、证据并确认此分数" });
@@ -40,7 +41,7 @@ test("fast confirmation keeps the evidence and confirmation usable on a narrow s
   state.fastConfirmTaskIds.add(state.tasks[0].id);
   await installGradingWorkbenchMocks(page, state);
   await page.goto("/#/teacher/grading", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "查看待确认的建议分" }).click();
+  await page.getByRole("button", { name: "AI 建议分", exact: true }).click();
   const drawer = page.getByRole("dialog", { name: "批量确认 AI 建议分" });
   await drawer.getByRole("button", { name: "核对原图与证据" }).click();
   const item = drawer.locator(".fast-confirm-item").first();

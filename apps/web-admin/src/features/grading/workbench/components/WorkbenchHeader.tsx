@@ -116,7 +116,8 @@ export function WorkbenchHeader({
           {showReviewerActions ? <Button icon={<ArrowRight size={16} />} onClick={() => void onNext()} disabled={!canWork}>下一份</Button> : null}
           {!canManageTasks ? <BackmarkQueue canWork={canWork} /> : null}
           {!canManageTasks ? <RegradeQueue canWork={canWork} /> : null}
-          {canWork && showReviewerActions ? <Button type="primary" icon={<BadgeCheck size={16} />} loading={actioning === "claim-task"} onClick={() => void onClaim()}>开始处理</Button> : null}
+          {/* 当前答卷打开后已自动续租；只有空选择且仍有任务时才需要显式领取，避免重复领取看起来毫无变化。 */}
+          {canWork && showReviewerActions && !hasContext && !loading && remainingCount > 0 ? <Button type="primary" icon={<BadgeCheck size={16} />} disabled={Boolean(actioning)} loading={actioning === "claim-task"} onClick={() => void onClaim()}>领取任务</Button> : null}
           {showReviewerActions ? (
             <Tooltip title="放回队列前请确认草稿已保存到服务端；未同步的修改无法保证恢复">
               <Button icon={<LogOut size={16} />} disabled={!ownsSelectedTask || !["saved", "idle"].includes(draftSaveStatus)} loading={actioning === "release"} onClick={() => void onRelease()}>暂放</Button>

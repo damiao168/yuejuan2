@@ -70,8 +70,7 @@
 .grading-settings > p,
 .grading-preparation-details > p { margin: 14px 0; font-size: 13px; }
 .grading-question-details:not([hidden]) { margin-top: 14px; }
-.grading-overview .fast-confirm-entry { padding: 16px 0; border: 0; border-radius: 0; background: transparent; }
-.grading-overview .fast-confirm-entry strong { font-size: 13px; }
+.grading-overview .fast-confirm-trigger { align-self: flex-start; margin: 12px 0; }
 .grading-overview > .ant-alert { margin-top: 12px; }
 .grading-overview .ant-alert { padding: 10px 14px; }
 .grading-overview .grading-ai-progress { margin: 0; }
@@ -88,7 +87,6 @@
   .grading-run-counts { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 20px; }
   .grading-run-counts dd { font-size: 24px; }
   .grading-overview-tools > span { width: 100%; margin-left: 12px; }
-  .fast-confirm-entry > div { min-width: 0; }
 }
 
 .grading-readiness-alert .ant-alert-description {
@@ -1541,22 +1539,8 @@
   margin: 16px 0;
 }
 
-.grading-fast-confirm-entry { margin-bottom: 12px; }
-
-.fast-confirm-entry {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 14px 18px;
-  border: 1px solid var(--border-color, #e9e9e9);
-  border-radius: 10px;
-  background: var(--surface-subtle, #f8fafc);
-}
-
-.fast-confirm-entry > div { display: flex; flex-direction: column; gap: 3px; }
-.fast-confirm-entry span { color: var(--text-secondary, #667085); font-size: 13px; }
+.grading-ai-entry { padding: 0 12px 12px; }
+.fast-confirm-trigger { justify-self: start; }
 
 .fast-confirm-summary {
   display: flex;
