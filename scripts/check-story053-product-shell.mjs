@@ -12,7 +12,8 @@ const checks = [
   {
     name: "tenant user administration",
     file: "services/api-gateway/internal/auth/user_admin.go",
-    includes: ["decodeAuthJSON(w, r, &input, true)", "strongBootstrapPassword", "auth.user_created", "role is not assignable"]
+    // 人员直建按目标角色校验长度；此处检查实际调用，不能继续要求统一管理员密码规则。
+    includes: ["decodeAuthJSON(w, r, &input, true)", "PasswordMeetsMinimum(input.Password, PasswordMinimum(", "auth.user_created", "role is not assignable"]
   },
   {
     name: "strict authentication JSON decoding",
