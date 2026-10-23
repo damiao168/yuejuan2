@@ -82,7 +82,12 @@ class Handler(BaseHTTPRequestHandler):
         except (KeyError, StopIteration, TypeError, ValueError):
             self._json(400, {"error": "invalid_grading_request"})
             return
-        self._json(200, {"choices": [{"message": {"content": json.dumps(output)}}]})
+        # 模拟完整的供应商完成信封；缺少 finish_reason 时，正式适配器必须拒绝把内容当成完整结果。
+        self._json(200, {
+            "id": "story060-protocol-fixture", "object": "chat.completion",
+            "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": json.dumps(output)}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20},
+        })
 
     def _json(self, status: int, payload: dict[str, object]) -> None:
         body = json.dumps(payload).encode("utf-8")
