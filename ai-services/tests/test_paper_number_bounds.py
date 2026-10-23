@@ -2,7 +2,6 @@
 from copy import deepcopy
 
 import pytest
-
 from grading_agent.errors import AgentError
 from grading_agent.paper_validation import validate_paper_output
 

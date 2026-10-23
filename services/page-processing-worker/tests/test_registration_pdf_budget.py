@@ -1,4 +1,5 @@
 import io
+
 import pypdfium2 as pdfium
 from page_processing.registration import _decode_page
 

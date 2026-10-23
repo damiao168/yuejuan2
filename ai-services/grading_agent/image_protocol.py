@@ -5,19 +5,20 @@ import copy
 import hashlib
 import json
 import math
-import struct
 import secrets
-import zlib
+import struct
 import threading
 import time
+import zlib
 from collections import OrderedDict
 
-from .errors import AgentError
-from .model import sum_model_usage
-from .execution_diagnostics import attach_failure, merge_attempt_diagnostics
-from .managed_model import create_managed_model
-from .image_grading_diagnostics import ImageGradingTrace, ImageProbeTrace
 from jsonschema import Draft202012Validator
+
+from .errors import AgentError
+from .execution_diagnostics import attach_failure, merge_attempt_diagnostics
+from .image_grading_diagnostics import ImageGradingTrace, ImageProbeTrace
+from .managed_model import create_managed_model
+from .model import sum_model_usage
 
 VERSION = "grading-image-v3"
 OBSERVE_PROMPT = "student-observation-v3-20261022-r4"

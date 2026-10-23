@@ -5,8 +5,10 @@ import copy
 import cv2
 import numpy as np
 import pytest
-
-from grading_agent.template_analysis_option_alignment import _bounds, _measured_item_bounds
+from grading_agent.template_analysis_option_alignment import (
+    _bounds,
+    _measured_item_bounds,
+)
 
 
 def _box(x, y, width, height):
@@ -36,7 +38,7 @@ def test_partial_identity_anchors_still_give_every_horizontal_multicolumn_item_i
 
 
 def test_color_checkmark_and_tiny_black_residue_do_not_expand_number_ink_bounds():
-    image, groups, markers, region = _fixture()
+    image, groups, _markers, region = _fixture()
     before = _measured_item_bounds(image, groups, [], region, "horizontal")
     cv2.line(image, (82, 155), (88, 171), (255, 0, 0), 2)
     cv2.line(image, (88, 171), (95, 152), (255, 0, 0), 2)
@@ -74,7 +76,7 @@ def test_neighboring_option_pixels_are_a_hard_boundary_for_the_next_column_numbe
 
 
 def test_vertical_option_layout_does_not_search_the_horizontal_left_number_strip():
-    image, groups, markers, region = _fixture()
+    image, _groups, markers, region = _fixture()
     vertical = [[_box(100, y, 20, 12) for y in (120, 150, 180, 210)]]
     assert _measured_item_bounds(image, vertical, [], region, "vertical") == [_bounds(vertical[0])]
     assert _measured_item_bounds(image, vertical, [("1", 0, markers[0])], region, "vertical") == [

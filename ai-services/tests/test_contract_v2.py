@@ -1,8 +1,8 @@
 import copy
 import json
 import unittest
-from pathlib import Path
 from decimal import Decimal
+from pathlib import Path
 
 from grading_agent.app import GradingAgentApplication
 from grading_agent.contract_v2 import (

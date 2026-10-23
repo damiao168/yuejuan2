@@ -6,18 +6,17 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from test_template_analysis import (
-    StructuredModel,
-    discovered_row,
-    payload,
-    unframed_page,
-)
-
 from grading_agent.template_analysis import TemplateAnalyzer
 from grading_agent.template_analysis_observations import review_model_observations
 from grading_agent.template_analysis_semantics import (
     LocalContentEvidence,
     read_static_ocr,
+)
+from test_template_analysis import (
+    StructuredModel,
+    discovered_row,
+    payload,
+    unframed_page,
 )
 
 

@@ -2,7 +2,10 @@
 
 import copy
 
-from .dashscope_native_contract import DASHSCOPE_MULTIMODAL_GENERATION_PATH, DASHSCOPE_TEXT_GENERATION_PATH
+from .dashscope_native_contract import (
+    DASHSCOPE_MULTIMODAL_GENERATION_PATH,
+    DASHSCOPE_TEXT_GENERATION_PATH,
+)
 from .errors import AgentError
 
 

@@ -6,7 +6,11 @@ import time
 from collections import OrderedDict
 from contextlib import nullcontext
 
-from .contract_v2 import compute_request_binding_hash, validate_request_v2, validate_response_v2
+from .contract_v2 import (
+    compute_request_binding_hash,
+    validate_request_v2,
+    validate_response_v2,
+)
 from .errors import AgentError
 from .execution_diagnostics import (
     attach_failure,

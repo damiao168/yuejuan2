@@ -6,10 +6,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from PIL import Image
-
 from grading_agent.answer_sheet_vision import detect_printed_frames
 from grading_agent.template_analysis_fill_groups import discover_fill_grading_groups
+from PIL import Image
 
 
 def _box(x, y, width, height):

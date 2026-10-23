@@ -1,9 +1,14 @@
+import itertools
+
 import cv2
 import numpy as np
 import pytest
+from grading_agent.answer_sheet_vision import (
+    detect_printed_frames,
+    regions_overlap,
+    snap_to_printed_frame,
+)
 from PIL import Image, ImageDraw
-
-from grading_agent.answer_sheet_vision import detect_printed_frames, regions_overlap, snap_to_printed_frame
 
 
 def pixel_edges(frame, width, height):
@@ -97,7 +102,7 @@ def test_adjacent_cells_share_only_the_measured_stroke_center(axis):
     dimension = "height" if axis == "horizontal" else "width"
     frames = [frame for frame in frames if frame["bbox"][dimension] < .5]
     assert len(frames) == 3
-    for first, second in zip(frames, frames[1:]):
+    for first, second in itertools.pairwise(frames):
         assert not regions_overlap(first["bbox"], second["bbox"], 600, 800)
         a, b = first["bbox"], second["bbox"]
         edge, size = ("y", "height") if axis == "horizontal" else ("x", "width")

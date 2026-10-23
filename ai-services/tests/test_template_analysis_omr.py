@@ -7,7 +7,6 @@ import time
 import cv2
 import numpy as np
 import pytest
-
 from grading_agent.template_analysis_omr import populate_objective_items
 from grading_agent.template_analysis_registration import transform_registration_bbox
 

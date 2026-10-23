@@ -70,7 +70,8 @@ const invalidWholePageV2 = loadV2("fixtures/invalid-request-whole-page.json");
 const invalidResponseV2 = loadV2("fixtures/invalid-response-unknown-evidence-id.json");
 const errorV2 = loadV2("fixtures/valid-error.json");
 
-assert.equal(contractV2.deployment_mode, "unreachable_fixture_only");
+// 契约已进入兼容多模态阶段；原生供应商能力仍需独立验证，不能把它声明为最终成绩发布通道。
+assert.equal(contractV2.deployment_mode, "multimodal_compatibility_path_pending_native_validation");
 assert.equal(contractV2.http_route_enabled, false);
 assert.equal(contractV2.external_provider_enabled, false);
 assert.equal(contractV2.final_grade_publication_allowed, false);

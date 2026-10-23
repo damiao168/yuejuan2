@@ -4,9 +4,8 @@ import copy
 
 import numpy as np
 import pytest
-from test_template_analysis_v8_flow import box, no_external_evidence, request, row
-
 from grading_agent.template_analysis import _apply_repair_batches, _normalize
+from test_template_analysis_v8_flow import box, no_external_evidence, request, row
 
 
 def replay(*, variant=None):

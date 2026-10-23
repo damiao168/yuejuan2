@@ -74,7 +74,7 @@ def grading_group_crops(registered_png: bytes, regions: list[dict], grading_grou
     if image is None:
         raise RegistrationError("invalid_template_grading_group_image")
     height, width = image.shape[:2]
-    for group_id, group in groups.items():
+    for group in groups.values():
         if len(group["question_ids"]) < 2:
             raise RegistrationError("invalid_template_grading_group")
         values = _box(group["normalized_bbox"])

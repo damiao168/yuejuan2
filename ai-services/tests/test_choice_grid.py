@@ -10,14 +10,13 @@ from urllib import request as urlrequest
 import cv2
 import numpy as np
 import pytest
-from helpers import FakeModel, settings
-
 from grading_agent.app import GradingAgentApplication
 from grading_agent.choice_grid import ObjectiveGridAnalyzer
 from grading_agent.choice_grid_brackets import _split_attached_bracket
 from grading_agent.choice_grid_schema import SCHEMA_VERSION
 from grading_agent.errors import AgentError
 from grading_agent.server import GradingAgentHTTPServer
+from helpers import FakeModel, settings
 
 
 def draw_option(image, center, shape="rectangle", filled=False):

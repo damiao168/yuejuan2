@@ -238,7 +238,7 @@ class OCRRunner:
                 heartbeat.stop()
                 self.api.fail_paper_import(import_id, runtime_task_id, lease_token, exc.code, exc.retryable)
                 return
-            except Exception as exc:  # noqa: BLE001 - OCR 后端可能抛出不同类型的错误。
+            except Exception:  # noqa: BLE001 - OCR 后端可能抛出不同类型的错误。
                 heartbeat.stop()
                 # 未分类错误保守终止，并仅发送固定错误码，避免把模型/源文档内容写入失败记录。
                 self.api.fail_paper_import(import_id, runtime_task_id, lease_token, "paper_ocr_failed", False)
@@ -284,7 +284,8 @@ class OCRRunner:
                 recognized = list(self.engine.recognize(image))
             except (TypeError, ValueError) as exc:
                 raise _OCRProcessingError("invalid_paper_ocr_image", False) from exc
-            except Exception as exc:  # noqa: BLE001 - 各 OCR 引擎使用不同运行时异常。
+            except Exception as exc:
+                # 各 OCR 引擎使用不同异常类型，统一转为可重试的引擎故障。
                 raise _OCRProcessingError("paper_ocr_engine_failed", True) from exc
             for block in recognized:
                 if _valid_block(block.text, block.bbox, block.confidence):

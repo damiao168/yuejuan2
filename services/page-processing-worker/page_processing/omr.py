@@ -200,9 +200,11 @@ def _select_marks(
         selected = []
     elif not multiple and len(selected) > 1:
         decision = "multiple"
-    elif multiple and any(item["state"] == "uncertain" for item in measurements):
-        decision = "ambiguous"
-    elif (not multiple and len(selected) == 1 and margin < profile.minimum_margin) or (multiple and not selected):
+    elif (
+        multiple and any(item["state"] == "uncertain" for item in measurements)
+        or not multiple and len(selected) == 1 and margin < profile.minimum_margin
+        or multiple and not selected
+    ):
         decision = "ambiguous"
     elif selected:
         decision = "selected"

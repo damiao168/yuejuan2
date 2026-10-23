@@ -1,12 +1,16 @@
 import copy
 import json
 import os
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-from grading_agent.image_protocol import ImageGradingApplication, OBSERVE_PROMPT, VERSION
+from grading_agent.image_protocol import (
+    OBSERVE_PROMPT,
+    VERSION,
+    ImageGradingApplication,
+)
 from grading_agent.managed_model import create_managed_model
 from helpers import settings
 from test_image_protocol import CONFIG, StructuredModel, comparison, member, request

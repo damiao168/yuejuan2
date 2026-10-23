@@ -7,7 +7,6 @@
 import copy
 
 import pytest
-
 from grading_agent.template_analysis_coarse import expand_coarse_output
 from grading_agent.template_analysis_final_review import apply_page_coverage
 

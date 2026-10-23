@@ -1,9 +1,8 @@
 import io
 
 import pytest
-from PIL import Image, ImageDraw, ImageFilter
-
 from image_quality.engine import analyze_and_normalize
+from PIL import Image, ImageDraw, ImageFilter
 
 
 def _landscape_answer_sheet(*, margin_rules: bool = False) -> Image.Image:

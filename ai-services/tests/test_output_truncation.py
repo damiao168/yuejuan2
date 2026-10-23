@@ -132,7 +132,7 @@ class OutputCompletionTests(unittest.TestCase):
             for structured in (False, True):
                 model = adapter(native, None)
                 calls = []
-                def transport(*_args):
+                def transport(*_args, calls=calls):
                     calls.append(1)
                     raise ValueError("private invalid provider JSON")
                 model.transport = transport
@@ -260,19 +260,35 @@ class OutputCompletionTests(unittest.TestCase):
         self.assertEqual(errors[0], errors[1])
         self.assertEqual(calls, [1])
 
-    def test_native_math_visual_capability_is_rejected_without_dispatch(self):
+    def test_native_math_visual_transport_validates_candidates_and_replays_without_dispatch(self):
         calls = []
-        model = adapter(True, provider_response(True), calls)
+        candidates = {"criterion_candidates": [], "alternative_solution_candidate": False, "risk_flags": []}
+        model = adapter(True, provider_response(True, content=candidates), calls)
         app = ProductionMathV2Application(settings(), model, logger=lambda _event: None)
         request = valid_math_v2_request()
+        # 原生视觉传输已支持数学接口；重放只复用经过候选 schema 校验的结果，不重复调用供应商。
+        for cached in (False, True):
+            result, replayed = app.grade(request, request["request_id"], body_size=len(json.dumps(request).encode()))
+            self.assertEqual(replayed, cached)
+            self.assertEqual(result["criterion_candidates"], [])
+            self.assertEqual(result["telemetry"]["execution_diagnostics"]["provider_request_count"], 1)
+        self.assertEqual(len(calls), 1)
+        self.assertIn("image", json.dumps(calls[0]["input"]["messages"]))
+
+    def test_native_math_visual_exhausted_schema_repairs_are_cached_without_new_dispatch(self):
+        calls = []
+        model = adapter(True, provider_response(True, content={}), calls)
+        app = ProductionMathV2Application(settings(), model, logger=lambda _event: None)
+        request = valid_math_v2_request()
+        expected_attempts = app.settings.model_max_retries + 1
         for _ in range(2):
             with self.assertRaises(AgentError) as caught:
                 app.grade(request, request["request_id"], body_size=len(json.dumps(request).encode()))
             facts = caught.exception.execution_diagnostics
-            self.assertEqual(facts["failure_kind"], "capability_unavailable")
-            self.assertEqual(facts["provider_request_count"], 0)
-            self.assertEqual(facts["attempts"], 0)
-        self.assertEqual(calls, [])
+            self.assertEqual(facts["failure_kind"], "schema_invalid")
+            self.assertEqual(facts["provider_request_count"], expected_attempts)
+            self.assertEqual(facts["attempts"], expected_attempts)
+        self.assertEqual(len(calls), expected_attempts)
 
     def test_v2_nonretryable_auth_is_not_retried(self):
         class AuthFailureModel:

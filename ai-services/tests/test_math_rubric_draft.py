@@ -4,11 +4,10 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
-from helpers import settings
-
 from grading_agent.errors import AgentError
 from grading_agent.managed_model import paper_model
 from grading_agent.math_rubric_draft import MathRubricDraftGenerator
+from helpers import settings
 
 
 class FakeModel:

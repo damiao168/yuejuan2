@@ -1,7 +1,9 @@
 import numpy as np
 import pytest
-
-from page_processing.region_visibility import RegionVisibilityError, inspect_required_regions
+from page_processing.region_visibility import (
+    RegionVisibilityError,
+    inspect_required_regions,
+)
 
 
 def test_full_page_area_does_not_hide_a_missing_answer_region():

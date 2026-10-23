@@ -5,7 +5,11 @@ import cv2
 import numpy as np
 import pytest
 from page_processing.grading_groups import grading_group_crops
-from page_processing.registration import RegistrationError, crop_regions, required_template_regions
+from page_processing.registration import (
+    RegistrationError,
+    crop_regions,
+    required_template_regions,
+)
 from page_processing.runner import Runner
 
 

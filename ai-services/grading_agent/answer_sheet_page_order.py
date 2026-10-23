@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import itertools
 import json
 import re
 import time
@@ -174,7 +175,7 @@ def _resolve_page_order(rows, batch_orders):
         # 多批分析只在题号范围可衔接时全局排序；交叉题号不能用批次输入顺序打破平局。
         if all((left[0], left[1]) != (right[0], right[1])
                and (left[1] < right[0] or left[1] == right[0] and right[2]["starts_with_continuation"])
-               for left, right in zip(intervals, intervals[1:])) and _consistent_printed_order(ordered):
+               for left, right in itertools.pairwise(intervals)) and _consistent_printed_order(ordered):
             return [row["page_id"] for row in ordered], [*notes, "PAGE_ORDER_FROM_QUESTION_SEQUENCE"]
 
     if len(batch_orders) == 1:
@@ -188,7 +189,7 @@ def _resolve_page_order(rows, batch_orders):
                 return [], ["PAGE_ORDER_EVIDENCE_CONFLICT"]
             # 没有页码时允许模型利用跨页内容，但不能把与可见题号方向相反的排列交给上传流程。
             numbered = [row for row in ordered if row["question_numbers"]]
-            if any(min(left["question_numbers"]) > min(right["question_numbers"]) for left, right in zip(numbered, numbered[1:])):
+            if any(min(left["question_numbers"]) > min(right["question_numbers"]) for left, right in itertools.pairwise(numbered)):
                 return [], ["PAGE_ORDER_EVIDENCE_CONFLICT"]
             if numbered or any(row["starts_with_continuation"] for row in ordered):
                 return order, [*notes, "PAGE_ORDER_FROM_CONTENT_CONTINUITY"]
@@ -197,4 +198,4 @@ def _resolve_page_order(rows, batch_orders):
 
 def _consistent_printed_order(rows):
     numbers = [row["printed_page_no"] for row in rows if row["printed_page_no"] is not None]
-    return all(left < right for left, right in zip(numbers, numbers[1:]))
+    return all(left < right for left, right in itertools.pairwise(numbers))

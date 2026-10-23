@@ -1,7 +1,6 @@
 """提示词是运行输入；这里核对版本及 schema 边界，不推断真实识别准确率。"""
 
 import pytest
-
 from grading_agent.template_analysis_prompt import build_system_prompt, prompt_version
 from grading_agent.template_analysis_schema import (
     IDENTITY_LABELS,

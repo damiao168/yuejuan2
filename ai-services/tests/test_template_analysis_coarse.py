@@ -4,8 +4,6 @@ import copy
 import json
 
 import pytest
-from jsonschema import Draft202012Validator, ValidationError
-
 from grading_agent.template_analysis import _finalize_candidate_reasons, _normalize
 from grading_agent.template_analysis_coarse import (
     coarse_message_payload,
@@ -13,6 +11,7 @@ from grading_agent.template_analysis_coarse import (
     expand_coarse_output,
 )
 from grading_agent.template_analysis_schema import model_output_schema
+from jsonschema import Draft202012Validator, ValidationError
 
 
 def payload():

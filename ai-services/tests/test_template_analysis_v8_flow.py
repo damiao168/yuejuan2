@@ -9,7 +9,6 @@ from contextlib import nullcontext
 import cv2
 import numpy as np
 import pytest
-
 from grading_agent.config import Settings
 from grading_agent.errors import AgentError
 from grading_agent.template_analysis import (

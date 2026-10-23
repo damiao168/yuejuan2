@@ -5,12 +5,10 @@ import json
 from pathlib import Path
 
 import numpy as np
-
 from grading_agent.template_analysis import _apply_repair_batches
 from grading_agent.template_analysis_coarse import expand_coarse_output
 from grading_agent.template_analysis_repair import _restore_rows
 from grading_agent.template_analysis_semantics import LocalContentEvidence
-
 
 FIXTURE = Path(__file__).with_name("fixtures") / "template_fill_partial_trace_5896b78c.json"
 

@@ -8,7 +8,6 @@ from contextlib import nullcontext
 import cv2
 import numpy as np
 import pytest
-
 from grading_agent.config import Settings
 from grading_agent.template_analysis import TemplateAnalyzer
 from grading_agent.template_analysis_fill_regions import _measured_sections

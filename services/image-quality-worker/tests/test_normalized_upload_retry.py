@@ -5,7 +5,6 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 
 import pytest
-
 from image_quality.api import APIError, EduGradeImageQualityClient
 
 

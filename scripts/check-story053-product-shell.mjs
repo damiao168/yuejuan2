@@ -47,7 +47,8 @@ const checks = [
   {
     name: "exam workspace",
     file: "apps/web-admin/src/features/exams/workspace/ExamWorkspaceLayout.tsx",
-    includes: ["ExamStageIndicator", "QualityIndicator", "data.exam_id", "当前下一步", "data.next_actions", "exam-preparation-nav", "切换考试环节"]
+    // 考试入口已统一为准备步骤与学生答卷；实际导航和完成状态由下方组件测试验证。
+    includes: ["data.exam_id", "preparationNavigationSteps", "preparationSteps", "exam-preparation-nav", "考试准备与答卷导入", "学生答卷", "onNavigate"]
   },
   {
     name: "URL exam context",

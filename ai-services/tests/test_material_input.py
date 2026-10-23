@@ -13,14 +13,24 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
-from PIL import Image
-from grading_agent.app_v2 import GradingAgentV2ApplicationSeam, OfflineV2FixtureAdapter, ProductionMathV2Application, math_candidate_messages
-from grading_agent.contract_v2 import compute_reference_media_binding_hash, compute_request_binding_hash, validate_request_v2, validate_response_v2
+from grading_agent.app_v2 import (
+    GradingAgentV2ApplicationSeam,
+    OfflineV2FixtureAdapter,
+    ProductionMathV2Application,
+    math_candidate_messages,
+)
+from grading_agent.contract_v2 import (
+    compute_reference_media_binding_hash,
+    compute_request_binding_hash,
+    validate_request_v2,
+    validate_response_v2,
+)
 from grading_agent.errors import AgentError
 from grading_agent.material_runtime import MaterialDispatch, math_wrapper_hash
 from grading_agent.model import LocalLlamaCppAdapter
 from helpers import settings
 from jsonschema import Draft202012Validator
+from PIL import Image
 from referencing import Registry, Resource
 
 
@@ -143,9 +153,8 @@ class MaterialInputTests(unittest.TestCase):
         request, configured = self._configured()
         calls = []
         model = LocalLlamaCppAdapter(configured, transport=lambda *args: calls.append(args))
-        with patch("grading_agent.model._open_model_request", side_effect=OSError("synthetic callback unavailable")):
-            with self.assertRaises(AgentError):
-                ProductionMathV2Application(configured, model, logger=lambda _: None).grade(request, request["request_id"], body_size=len(json.dumps(request)))
+        with patch("grading_agent.model._open_model_request", side_effect=OSError("synthetic callback unavailable")), self.assertRaises(AgentError):
+            ProductionMathV2Application(configured, model, logger=lambda _: None).grade(request, request["request_id"], body_size=len(json.dumps(request)))
         self.assertEqual(calls, [])
 
     def test_real_adapter_receives_three_images_and_records_response(self):
@@ -189,9 +198,8 @@ class MaterialInputTests(unittest.TestCase):
         def callback(req, timeout):
             events.append(json.loads(req.data)["stage"])
             yield CallbackResponse()
-        with patch("grading_agent.model._open_model_request", side_effect=callback):
-            with self.assertRaises(AgentError):
-                ProductionMathV2Application(configured, LocalLlamaCppAdapter(configured, transport=provider), logger=lambda _: None).grade(request, request["request_id"], body_size=len(json.dumps(request)))
+        with patch("grading_agent.model._open_model_request", side_effect=callback), self.assertRaises(AgentError):
+            ProductionMathV2Application(configured, LocalLlamaCppAdapter(configured, transport=provider), logger=lambda _: None).grade(request, request["request_id"], body_size=len(json.dumps(request)))
         self.assertEqual(len(calls), 1)
         self.assertEqual(events, ["consume", "provider_request_attempted", "unknown_after_attempt"])
         self.assertTrue(all(part["image_url"]["url"] == "" for part in calls[0][1]["messages"][1]["content"] if part["type"] == "image_url"))
@@ -202,9 +210,8 @@ class MaterialInputTests(unittest.TestCase):
         def provider(*args):
             calls.append(args)
             return {"id": "synthetic-invalid-schema", "choices": [{"message": {"role": "assistant", "content": "{}"}, "finish_reason": "stop"}]}
-        with patch("grading_agent.model._open_model_request", side_effect=self._callback(events)):
-            with self.assertRaises(AgentError):
-                ProductionMathV2Application(configured, LocalLlamaCppAdapter(configured, transport=provider), logger=lambda _: None).grade(request, request["request_id"], body_size=len(json.dumps(request)))
+        with patch("grading_agent.model._open_model_request", side_effect=self._callback(events)), self.assertRaises(AgentError):
+            ProductionMathV2Application(configured, LocalLlamaCppAdapter(configured, transport=provider), logger=lambda _: None).grade(request, request["request_id"], body_size=len(json.dumps(request)))
         self.assertEqual(len(calls), 1)
         self.assertEqual([event["stage"] for event in events], ["consume", "provider_request_attempted", "provider_response_received"])
 
@@ -301,9 +308,8 @@ class MaterialInputTests(unittest.TestCase):
             return validate_request_v2(payload)
         request["reference_media"][0]["sha256"] = "0" * 64
         seam = GradingAgentV2ApplicationSeam(OfflineV2FixtureAdapter({}), logger=lambda _: None)
-        with patch("grading_agent.app_v2.validate_request_v2", side_effect=observe):
-            with self.assertRaises(AgentError):
-                seam.grade(request, request["request_id"], body_size=len(json.dumps(request)))
+        with patch("grading_agent.app_v2.validate_request_v2", side_effect=observe), self.assertRaises(AgentError):
+            seam.grade(request, request["request_id"], body_size=len(json.dumps(request)))
         self._assert_material_cleared(captured[0])
         self.assertTrue(request["execution_permit"]["credential"])
 

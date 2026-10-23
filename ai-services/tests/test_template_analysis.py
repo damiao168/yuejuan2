@@ -14,9 +14,6 @@ from urllib import request as urlrequest
 import cv2
 import numpy as np
 import pytest
-from helpers import FakeModel, settings
-from PIL import Image
-
 from grading_agent.answer_sheet_vision import (
     VisionInputError,
     decode_display_page,
@@ -31,6 +28,8 @@ from grading_agent.template_analysis import TemplateAnalyzer
 from grading_agent.template_analysis_coarse import coarse_model_output_schema
 from grading_agent.template_analysis_model import prepare_template_model
 from grading_agent.template_analysis_schema import SCHEMA_VERSION
+from helpers import FakeModel, settings
+from PIL import Image
 
 
 def test_compatible_coarse_response_does_not_gain_legacy_nullable_fields():

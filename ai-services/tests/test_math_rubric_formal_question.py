@@ -1,7 +1,6 @@
 from contextlib import nullcontext
 
 import pytest
-
 from grading_agent.errors import AgentError
 from grading_agent.math_rubric_draft import MathRubricDraftGenerator
 
@@ -105,8 +104,8 @@ def test_partitioned_steps_keep_whole_solution_context_without_widening_evidence
 
 @pytest.mark.parametrize("scenario,expected_status", [("valid", 200), ("tampered", 400), ("unauthenticated", 401)])
 def test_http_route_carries_formal_reference_and_keeps_service_auth(scenario, expected_status):
-    import json
     import http.client
+    import json
     from unittest.mock import patch
     from urllib import error, request
 

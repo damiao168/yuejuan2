@@ -10,9 +10,6 @@ from unittest.mock import patch
 import cv2
 import numpy as np
 import pytest
-from PIL import Image
-from test_template_analysis import StructuredModel, payload
-
 from grading_agent.answer_sheet_vision import detect_printed_frames
 from grading_agent.template_analysis import TemplateAnalyzer, _merge_local_fill_regions
 from grading_agent.template_analysis_fill_regions import (
@@ -20,6 +17,8 @@ from grading_agent.template_analysis_fill_regions import (
     _read_section,
     discover_fill_regions,
 )
+from PIL import Image
+from test_template_analysis import StructuredModel, payload
 
 
 def fill_page():

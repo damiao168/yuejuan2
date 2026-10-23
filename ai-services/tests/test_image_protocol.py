@@ -2,20 +2,24 @@ import base64
 import copy
 import hashlib
 import json
-import struct
-import unittest
 import os
+import struct
 import tempfile
-from pathlib import Path
+import unittest
 import zlib
 from contextlib import contextmanager
+from pathlib import Path
 from unittest.mock import patch
 
 from grading_agent.errors import AgentError
-from grading_agent.image_protocol import ImageGradingApplication, VERSION, _probe_png, validate_observation
+from grading_agent.image_protocol import (
+    VERSION,
+    ImageGradingApplication,
+    _probe_png,
+    validate_observation,
+)
 from grading_agent.managed_model import create_managed_model
 from helpers import settings
-
 
 CONFIG = {"adapter_type": "openai_compatible", "provider_key": "fixture", "base_url": "https://fixture.example/v1",
           "api_key": "private-test-credential", "model_name": "fixture-vision", "model_version": "vision-v1", "config_revision": "revision-1"}
@@ -350,7 +354,7 @@ class ImageProtocolTests(unittest.TestCase):
         schema = {"type": "object", "additionalProperties": False, "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]}
         for adapter in ("openai_compatible", "dashscope_native"):
             captured = []
-            def transport(url, body, _headers, _timeout):
+            def transport(url, body, _headers, _timeout, captured=captured, adapter=adapter):
                 captured.append((url, copy.deepcopy(body)))
                 choice = {"finish_reason": "stop", "message": {"role": "assistant", "content": [{"text": '{"ok":true}'}] if adapter == "dashscope_native" else '{"ok":true}'}}
                 return {"output": {"choices": [choice]}} if adapter == "dashscope_native" else {"choices": [choice]}

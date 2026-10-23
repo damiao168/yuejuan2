@@ -9,7 +9,6 @@ from unittest.mock import patch
 from urllib import error
 
 import pytest
-
 from subjective_grading_worker.__main__ import run_cycle
 from subjective_grading_worker.api import APIError, EduGradeClient
 from subjective_grading_worker.config import Settings
@@ -56,9 +55,8 @@ def test_execute_converts_truncated_http_error_body_to_api_error() -> None:
         {},
         _BrokenErrorBody(),
     )
-    with patch("subjective_grading_worker.api._open_request", side_effect=response_error):
-        with pytest.raises(APIError) as caught:
-            client.execute("run-1", "task-1", "lease-1")
+    with patch("subjective_grading_worker.api._open_request", side_effect=response_error), pytest.raises(APIError) as caught:
+        client.execute("run-1", "task-1", "lease-1")
     assert caught.value.status_code == 502
 
 

@@ -2,9 +2,9 @@ import io
 
 import cv2
 import numpy as np
-from PIL import Image
 from page_processing.config import Config
 from page_processing.runner import Runner
+from PIL import Image
 
 
 def _png(image: np.ndarray) -> bytes:

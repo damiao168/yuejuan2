@@ -5,10 +5,13 @@ import io
 import cv2
 import numpy as np
 import pytest
-from PIL import Image
-
 from page_processing.omr import OMRProfile, extract_marks
-from page_processing.omr_acceptance import OPTION_REGIONS, SyntheticOMRCase, render_synthetic_case
+from page_processing.omr_acceptance import (
+    OPTION_REGIONS,
+    SyntheticOMRCase,
+    render_synthetic_case,
+)
+from PIL import Image
 
 
 def printed_sheet(marked: tuple[str, ...] = (), *, scale: int = 1, gray_mark: str = "", red_annotation: bool = False) -> tuple[bytes, list[dict]]:

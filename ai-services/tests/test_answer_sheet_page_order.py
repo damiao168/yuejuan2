@@ -10,16 +10,15 @@ from urllib import request as urlrequest
 import cv2
 import numpy as np
 import pytest
-from helpers import settings
-from test_template_analysis import (
-    http_server as http_server,  # noqa: PLC0414 - pytest 通过同名导入复用服务 fixture。
-)
-
 from grading_agent.answer_sheet_page_order import (
     SCHEMA_VERSION,
     AnswerSheetPageOrderAnalyzer,
 )
 from grading_agent.errors import AgentError
+from helpers import settings
+from test_template_analysis import (
+    http_server as http_server,  # noqa: PLC0414 - pytest 通过同名导入复用服务 fixture。
+)
 
 
 def page(number):

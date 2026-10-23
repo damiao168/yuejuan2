@@ -3,7 +3,6 @@
 import copy
 
 import pytest
-
 from grading_agent.template_analysis_frame_alignment import (
     complete_coarse_objective_frame,
 )

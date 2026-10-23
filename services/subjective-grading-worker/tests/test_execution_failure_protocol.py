@@ -6,7 +6,6 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 
 import pytest
-
 from subjective_grading_worker.api import APIError, AuthenticationError, EduGradeClient
 from subjective_grading_worker.config import Settings
 from subjective_grading_worker.runner import Runner
@@ -21,9 +20,8 @@ def test_execute_accepts_server_recorded_failure_for_current_endpoint(code):
             "task_failure_recorded": True, "retryable": False}
     client = EduGradeClient("http://127.0.0.1:8080", "demo", "worker", "secret")
     error = HTTPError(client.base_url, 502, "failed", {}, io.BytesIO(json.dumps(body).encode()))
-    with patch("subjective_grading_worker.api._open_request", side_effect=error):
-        with pytest.raises(APIError) as caught:
-            client.execute("run", "task", "lease")
+    with patch("subjective_grading_worker.api._open_request", side_effect=error), pytest.raises(APIError) as caught:
+        client.execute("run", "task", "lease")
     assert caught.value.task_failure_recorded is True
     assert caught.value.retryable is False
     assert caught.value.code == code
@@ -39,9 +37,8 @@ def test_execute_accepts_server_recorded_failure_for_current_endpoint(code):
 def test_untrusted_or_missing_recorded_marker_keeps_failure_callback(body):
     client = EduGradeClient("http://127.0.0.1:8080", "demo", "worker", "secret")
     error = HTTPError(client.base_url, 502, "failed", {}, io.BytesIO(body))
-    with patch("subjective_grading_worker.api._open_request", side_effect=error):
-        with pytest.raises(APIError) as caught:
-            client.execute("run", "task", "lease")
+    with patch("subjective_grading_worker.api._open_request", side_effect=error), pytest.raises(APIError) as caught:
+        client.execute("run", "task", "lease")
     assert caught.value.task_failure_recorded is False
 
 
@@ -49,25 +46,24 @@ def test_non_execute_endpoint_cannot_suppress_failure_callback():
     client = EduGradeClient("http://127.0.0.1:8080", "demo", "worker", "secret")
     body = b'{"error":{"code":"ai_output_incomplete"},"task_failure_recorded":true}'
     error = HTTPError(client.base_url, 502, "failed", {}, io.BytesIO(body))
-    with patch("subjective_grading_worker.api._open_request", side_effect=error):
-        with pytest.raises(APIError) as caught:
-            client.complete("run", "task", "lease", {}, 0)
+    with patch("subjective_grading_worker.api._open_request", side_effect=error), pytest.raises(APIError) as caught:
+        client.complete("run", "task", "lease", {}, 0)
     assert caught.value.task_failure_recorded is False
 
 
 def test_unauthorized_does_not_schedule_paid_retry():
     client = EduGradeClient("http://127.0.0.1:8080", "demo", "worker", "secret")
     error = HTTPError(client.base_url, 401, "unauthorized", {}, io.BytesIO(b"{}"))
-    with patch("subjective_grading_worker.api._open_request", side_effect=error):
-        with pytest.raises(AuthenticationError) as caught:
-            client.execute("run", "task", "lease")
+    with patch("subjective_grading_worker.api._open_request", side_effect=error), pytest.raises(AuthenticationError) as caught:
+        client.execute("run", "task", "lease")
     assert caught.value.retryable is False
 
 
 @pytest.mark.parametrize("recorded", [True, False])
 def test_runner_skips_duplicate_failure_only_after_server_commit(recorded):
     class API:
-        calls = []
+        def __init__(self):
+            self.calls = []
 
         def claim(self, *_args):
             return [{"id": "task", "source_id": "run", "source_type": "subjective_grading_run", "lease_token": "lease"}]

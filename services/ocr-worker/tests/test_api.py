@@ -1,8 +1,8 @@
 import json
 import unittest
 from unittest.mock import patch
-from edugrade_worker_runtime import ResponseValidationError
 
+from edugrade_worker_runtime import ResponseValidationError
 from ocr_worker.api import (
     PAPER_IMPORT_COMPLETION_TIMEOUT_SECONDS,
     APIError,
