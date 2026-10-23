@@ -211,12 +211,14 @@ describe("Batch8 equivalent student portal behavior", () => {
     fireEvent.change(reason, { target: { value: "  请核对原卷第二步中的识别内容。  " } });
     fireEvent.load(screen.getByAltText("本题答题区域"));
     fireEvent.click(screen.getByRole("button", { name: "选择整个答题区域" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认提交（仅一次）" }));
+    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
+    // 表单显示时已有申请查询可能仍未结束；等待按钮启用后再验证首次提交失败和重试。
+    await waitFor(() => expect(submit.disabled).toBe(false));
+    fireEvent.click(submit);
     await screen.findByText("暂时无法连接服务，请稍后重试。");
     expect(reason.value).toBe("  请核对原卷第二步中的识别内容。  ");
     expect(screen.getByText("已圈选争议区域")).toBeTruthy();
     expect(screen.queryByText("PRIVATE_UPSTREAM_DETAIL")).toBeNull();
-    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
     expect(submit.disabled).toBe(false);
     fireEvent.click(submit);
     await screen.findByText("本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。");
