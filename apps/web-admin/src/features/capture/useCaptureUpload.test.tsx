@@ -24,7 +24,7 @@ describe("学生答卷上传分组", () => {
     vi.resetAllMocks();
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.upload.mockImplementation(async (file: File) => ({ file: { id: `asset-${file.name}` } }));
-    mocks.register.mockResolvedValue({}); mocks.load.mockResolvedValue(undefined);
+    mocks.register.mockImplementation(async (_batch, asset: string) => ({ file: { id: `registered-${asset}` } })); mocks.load.mockResolvedValue(undefined);
     container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
     await act(async () => root.render(<Probe />));
   });
@@ -33,7 +33,7 @@ describe("学生答卷上传分组", () => {
   it("两张PNG按原选择顺序上传与登记，组成同一学生的两页答卷", async () => {
     const events: string[] = [];
     mocks.upload.mockImplementation(async (file: File) => { events.push(`upload:${file.name}`); return { file: { id: `asset-${file.name}` } }; });
-    mocks.register.mockImplementation(async (_batch, asset: string) => { events.push(`register:${asset}`); return {}; });
+    mocks.register.mockImplementation(async (_batch, asset: string) => { events.push(`register:${asset}`); return { file: { id: `registered-${asset}` } }; });
     await act(async () => current.uploadSources([front, back], 2));
     expect(events).toEqual(["upload:front.png", "register:asset-front.png", "upload:back.png", "register:asset-back.png"]);
     const [first, second] = mocks.register.mock.calls;
@@ -106,10 +106,38 @@ describe("学生答卷上传分组", () => {
   it("首文件未返回前，同一时刻的第二次选择不能启动", async () => {
     let finish!: (value: { file: { id: string } }) => void;
     mocks.upload.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
-    let pending!: Promise<void>;
+    let pending!: Promise<string[]>;
     await act(async () => { pending = current.uploadSources([front, back], 2); await current.uploadSources([front, back], 2); });
     expect(mocks.upload).toHaveBeenCalledTimes(1);
     await act(async () => { finish({ file: { id: "asset-front" } }); await pending; });
     expect(mocks.register).toHaveBeenCalledTimes(2);
+  });
+
+  it("替代选择完整登记后才绑定旧组，并返回按选择顺序排列的文件ID", async () => {
+    const replace = vi.fn().mockResolvedValue(undefined);
+    let ids: string[] = [];
+    await act(async () => { ids = await current.uploadSources([front, back], 2, replace); });
+    expect(ids).toEqual(["registered-asset-front.png", "registered-asset-back.png"]);
+    expect(replace).toHaveBeenCalledExactlyOnceWith(ids);
+    expect(mocks.register.mock.invocationCallOrder[1]).toBeLessThan(replace.mock.invocationCallOrder[0]);
+  });
+
+  it("替代绑定失败保留全部已登记ID，重试只重新绑定而不重传或登记", async () => {
+    const replace = vi.fn().mockRejectedValueOnce(new Error("替代结果中断")).mockResolvedValue(undefined);
+    await act(async () => { expect(await current.uploadSources([front, back], 2, replace)).toEqual([]); });
+    expect(current.pendingUpload).toMatchObject({ completedFiles: 2, totalFiles: 2, error: "替代结果中断" });
+    await act(async () => current.retryUpload());
+    expect(mocks.upload).toHaveBeenCalledTimes(2);
+    expect(mocks.register).toHaveBeenCalledTimes(2);
+    expect(replace.mock.calls[1]).toEqual(replace.mock.calls[0]);
+    expect(current.pendingUpload).toBeUndefined();
+  });
+
+  it("替代文件只登记一部分时不退出旧组", async () => {
+    const replace = vi.fn();
+    mocks.upload.mockResolvedValueOnce({ file: { id: "first" } }).mockRejectedValueOnce(new Error("第二文件失败"));
+    await act(async () => { await current.uploadSources([front, back], 2, replace); });
+    expect(replace).not.toHaveBeenCalled();
+    expect(current.pendingUpload?.completedFiles).toBe(1);
   });
 });

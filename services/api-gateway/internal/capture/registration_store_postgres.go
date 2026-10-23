@@ -524,15 +524,12 @@ ON CONFLICT (tenant_id,submission_id,question_id) DO UPDATE SET submission_page_
 	if _, err = tx.ExecContext(ctx, `UPDATE capture_page SET status=$3,revision=revision+1,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, current.CapturePageID, pageStatus); err != nil {
 		return RegistrationRun{}, err
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE capture_batch b SET
-review_count=(SELECT count(*) FROM capture_page p WHERE p.tenant_id=b.tenant_id AND p.capture_batch_id=b.id AND p.status IN ('needs_review','quality_rejected','failed') AND p.deleted_at IS NULL),
-normal_count=(SELECT count(*) FROM capture_page p WHERE p.tenant_id=b.tenant_id AND p.capture_batch_id=b.id AND p.status='ready' AND p.deleted_at IS NULL),
-status=CASE
-  WHEN EXISTS(SELECT 1 FROM capture_page p WHERE p.tenant_id=b.tenant_id AND p.capture_batch_id=b.id AND p.status IN ('needs_review','quality_rejected','failed') AND p.deleted_at IS NULL) THEN 'needs_review'
-  WHEN NOT EXISTS(SELECT 1 FROM capture_page p WHERE p.tenant_id=b.tenant_id AND p.capture_batch_id=b.id AND p.status<>'ready' AND p.deleted_at IS NULL) THEN 'ready'
-  ELSE 'processing' END,
-revision=revision+1,updated_at=now()
-WHERE b.tenant_id=$1 AND b.id=(SELECT capture_batch_id FROM capture_page WHERE tenant_id=$1 AND id=$2::uuid)`, tenantID, current.CapturePageID); err != nil {
+	// 配准回调与其它入口共用聚合；页面就绪不能掩盖同批文件失败或学生身份冲突。
+	var batchID string
+	if err = tx.QueryRowContext(ctx, `SELECT capture_batch_id::text FROM capture_page WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, current.CapturePageID).Scan(&batchID); err != nil {
+		return RegistrationRun{}, err
+	}
+	if err = aggregateBatchTx(ctx, tx, tenantID, batchID); err != nil {
 		return RegistrationRun{}, err
 	}
 	return out, nil

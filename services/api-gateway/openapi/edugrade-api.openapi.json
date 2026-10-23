@@ -24404,6 +24404,323 @@
           }
         }
       }
+    },
+    "/api/v1/exams/{examId}/capture-summary": {
+      "get": {
+        "tags": [
+          "Capture"
+        ],
+        "operationId": "getCaptureCollectionSummary",
+        "summary": "逐生核对本场答卷导入",
+        "description": "需要 capture:manage 和考试作用域。成功导入只核验冻结名册、唯一身份及完整可用页面，不依赖评分状态。结束命令在同一事务重算并封存；网络不确定时只重试原 revision、idempotency_key 和内容。文件排除以整个上传组为单位，保留审计，已有评分材料禁止直接排除。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ExamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "逐生核对本场答卷导入",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureCollectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "需要 capture:manage 及考试资源作用域",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "版本变化、材料尚未齐全、已结束或已有评分；刷新概览并处理，不自动更换命令键",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "导入操作失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "当前存储未启用冻结名册导入核对",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exams/{examId}/complete-collection": {
+      "post": {
+        "tags": [
+          "Capture"
+        ],
+        "operationId": "completeCaptureCollection",
+        "summary": "核验并结束本场导入",
+        "description": "需要 capture:manage 和考试作用域。成功导入只核验冻结名册、唯一身份及完整可用页面，不依赖评分状态。结束命令在同一事务重算并封存；网络不确定时只重试原 revision、idempotency_key 和内容。文件排除以整个上传组为单位，保留审计，已有评分材料禁止直接排除。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ExamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "核验并结束本场导入",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureCollectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "需要 capture:manage 及考试资源作用域",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "版本变化、材料尚未齐全、已结束或已有评分；刷新概览并处理，不自动更换命令键",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "导入操作失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "当前存储未启用冻结名册导入核对",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteCaptureCollectionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/capture-files/{id}/exclude": {
+      "post": {
+        "tags": [
+          "Capture"
+        ],
+        "operationId": "excludeCaptureFile",
+        "summary": "明确不计入或替换本次上传组",
+        "description": "需要 capture:manage 和考试作用域。成功导入只核验冻结名册、唯一身份及完整可用页面，不依赖评分状态。结束命令在同一事务重算并封存；网络不确定时只重试原 revision、idempotency_key 和内容。文件排除以整个上传组为单位，保留审计，已有评分材料禁止直接排除。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "明确不计入或替换本次上传组",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureBatchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "需要 capture:manage 及考试资源作用域",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "版本变化、材料尚未齐全、已结束或已有评分；刷新概览并处理，不自动更换命令键",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "导入操作失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "当前存储未启用冻结名册导入核对",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcludeCaptureFileRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -54656,6 +54973,236 @@
         "properties": {
           "file": {
             "$ref": "#/components/schemas/CaptureFile"
+          }
+        }
+      },
+      "CaptureCollectionEntry": {
+        "type": "object",
+        "required": [
+          "student_id",
+          "student_no",
+          "student_name",
+          "class_name",
+          "status",
+          "code",
+          "expected_pages",
+          "actual_pages"
+        ],
+        "properties": {
+          "student_id": {
+            "type": "string"
+          },
+          "student_no": {
+            "type": "string"
+          },
+          "student_name": {
+            "type": "string"
+          },
+          "class_name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "processing",
+              "needs_attention",
+              "ready",
+              "absent"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "batch_id": {
+            "type": "string"
+          },
+          "submission_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "expected_pages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "actual_pages": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "CaptureCollectionIssue": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "code",
+          "name",
+          "batch_id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "file",
+              "submission",
+              "batch",
+              "upload"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "batch_id": {
+            "type": "string"
+          },
+          "submission_id": {
+            "type": "string"
+          },
+          "file_id": {
+            "type": "string"
+          }
+        }
+      },
+      "CaptureCollectionSummary": {
+        "type": "object",
+        "required": [
+          "exam_id",
+          "exam_status",
+          "revision",
+          "pages_per_student",
+          "roster_count",
+          "required_count",
+          "ready_count",
+          "absent_count",
+          "pending_count",
+          "closed",
+          "can_complete",
+          "blockers",
+          "entries",
+          "issues"
+        ],
+        "properties": {
+          "exam_id": {
+            "type": "string"
+          },
+          "exam_status": {
+            "type": "string"
+          },
+          "completed_by": {
+            "type": "string"
+          },
+          "completed_at": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pages_per_student": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "roster_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "required_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ready_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "absent_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "closed": {
+            "type": "boolean"
+          },
+          "can_complete": {
+            "type": "boolean"
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaptureCollectionEntry"
+            }
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaptureCollectionIssue"
+            }
+          }
+        }
+      },
+      "CaptureCollectionResponse": {
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/CaptureCollectionSummary"
+          }
+        }
+      },
+      "CompleteCaptureCollectionRequest": {
+        "type": "object",
+        "required": [
+          "revision",
+          "idempotency_key"
+        ],
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "ExcludeCaptureFileRequest": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "replacement_file_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       }

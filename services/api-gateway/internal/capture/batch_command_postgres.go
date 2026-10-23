@@ -38,10 +38,10 @@ func (s *PostgresStore) createBatchCommand(ctx context.Context, tenantID, examID
 		}
 		return Batch{}, err
 	}
-	if status != "collecting" {
+	if status != "collecting" && !(input.Purpose == "supplement" && (status == "grading" || status == "reviewing")) {
 		return Batch{}, ErrInvalidTransition
 	}
-	batch, err := scanBatch(tx.QueryRowContext(ctx, `INSERT INTO capture_batch(tenant_id,exam_id,name,source_type,operator_id,scanner_device,idempotency_key,command_request_hash) VALUES($1::uuid,$2::uuid,$3,$4,$5::uuid,NULLIF($6,''),$7,$8) RETURNING `+batchColumns, tenantID, examID, input.Name, input.SourceType, actorID, input.ScannerDevice, input.IdempotencyKey, hash))
+	batch, err := scanBatch(tx.QueryRowContext(ctx, `INSERT INTO capture_batch(tenant_id,exam_id,name,source_type,operator_id,scanner_device,idempotency_key,command_request_hash,purpose,supplement_reason) VALUES($1::uuid,$2::uuid,$3,$4,$5::uuid,NULLIF($6,''),$7,$8,$9,NULLIF($10,'')) RETURNING `+batchColumns, tenantID, examID, input.Name, input.SourceType, actorID, input.ScannerDevice, input.IdempotencyKey, hash, input.Purpose, input.Reason))
 	if err != nil {
 		return Batch{}, err
 	}

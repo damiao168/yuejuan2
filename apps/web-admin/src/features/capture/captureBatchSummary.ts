@@ -30,7 +30,8 @@ export function captureSubmissionIds(detail?: CaptureBatchDetail): string[] {
   return detail
     ? (Array.from(
         new Set(
-          detail.pages.map((item) => item.submission_id).filter(Boolean),
+          // 排除整组材料后保留 deleted 页面供查阅，但它们不再生成页面处理待办。
+          detail.pages.filter(item => item.status !== "deleted").map((item) => item.submission_id).filter(Boolean),
         ),
       ) as string[])
     : [];

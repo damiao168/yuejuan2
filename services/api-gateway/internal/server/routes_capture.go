@@ -8,6 +8,9 @@ import (
 
 // submission 读写与捕获修正使用不同权限；涉及 examID 的入口还要让资源边界 guard 校验考试所属租户。
 func registerCaptureRoutes(mux *http.ServeMux, ctx routerContext) {
+	mux.Handle("GET /api/v1/exams/{examId}/capture-summary", ctx.guards.requireCaptureManage(ctx.guards.withScopedExam(ctx.modules.Capture.CaptureHandler.GetCollectionSummary)))
+	mux.Handle("POST /api/v1/exams/{examId}/complete-collection", ctx.guards.requireCaptureManage(ctx.guards.withScopedExam(ctx.modules.Capture.CaptureHandler.CompleteCollection)))
+	mux.Handle("POST /api/v1/capture-files/{id}/exclude", ctx.guards.requireCaptureManage(ctx.modules.Capture.CaptureHandler.ExcludeFile))
 	mux.Handle("POST /api/v1/exams/{examId}/submissions", ctx.guards.requireSubmissionManage(ctx.guards.withScopedExam(ctx.modules.Exam.SubmissionHandler.Create)))
 	mux.Handle("GET /api/v1/exams/{examId}/submissions", ctx.guards.requireSubmissionManage(ctx.guards.withScopedExam(ctx.modules.Exam.SubmissionHandler.ListByExam)))
 	mux.Handle("GET /api/v1/submissions/{id}", ctx.guards.requireSubmissionManage(ctx.modules.Exam.SubmissionHandler.Get))

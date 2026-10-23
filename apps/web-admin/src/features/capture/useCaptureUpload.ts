@@ -9,9 +9,10 @@ interface UploadGroup {
   batchId: string;
   examId: string;
   pagesPerStudent: number;
-  files: Array<{ file: File; commandId: string; assetId?: string }>;
+  files: Array<{ file: File; commandId: string; assetId?: string; registeredId?: string }>;
   nextIndex: number;
   error?: string;
+  onRegistered?: (fileIds: string[]) => Promise<void>;
 }
 
 export interface PendingCaptureUpload {
@@ -37,8 +38,8 @@ export function useCaptureUpload(detail: CaptureBatchDetail | undefined, examId:
     return () => { mounted.current = false; };
   }, []);
 
-  async function runGroup(group: UploadGroup) {
-    if (busy.current) return;
+  async function runGroup(group: UploadGroup): Promise<string[]> {
+    if (busy.current) return [];
     busy.current = true;
     setUploading(true);
     group.error = undefined;
@@ -46,28 +47,36 @@ export function useCaptureUpload(detail: CaptureBatchDetail | undefined, examId:
     const isCurrent = () => mounted.current && activeScope.current === groupScope;
     try {
       while (group.nextIndex < group.files.length) {
-        if (!isCurrent()) return;
+        if (!isCurrent()) return [];
         const item = group.files[group.nextIndex];
         if (!item.assetId) {
           const uploaded = await uploadFile(item.file, { owner_type: "capture_batch", owner_id: group.batchId, exam_id: group.examId });
           item.assetId = uploaded.file.id;
         }
-        if (!isCurrent()) return;
+        if (!isCurrent()) return [];
         // 上传成功而登记响应丢失时复用 asset 和命令键，避免重试制造第二个文件位置。
-        await registerCaptureFile(group.batchId, item.assetId, item.commandId, {
+        const registered = await registerCaptureFile(group.batchId, item.assetId, item.commandId, {
           upload_group_id: group.id,
           upload_group_file_count: group.files.length,
           upload_group_file_index: group.nextIndex + 1,
           pages_per_student: group.pagesPerStudent,
         });
+        if (!registered.file?.id) throw new Error("未收到文件登记结果，请重试本次上传");
+        item.registeredId = registered.file.id;
         group.nextIndex += 1;
         if (isCurrent()) setRevision(value => value + 1);
       }
+      const fileIds = group.files.map(item => item.registeredId!);
+      if (!isCurrent()) return [];
+      // 替代材料先完整登记，再退出旧组；后续绑定失败时保留原组和新文件标识，重试不再重传。
+      if (group.onRegistered) await group.onRegistered(fileIds);
       pendingGroups.current.delete(groupScope);
       if (isCurrent()) message.success(`${group.files.length} 个文件已加入批次，每 ${group.pagesPerStudent} 页组成一份学生答卷，等待拆页校验`);
+      return fileIds;
     } catch (currentError) {
       group.error = getUserErrorMessage(currentError, "上传失败，请重试本次上传");
       if (isCurrent()) message.error(group.error);
+      return [];
     } finally {
       try {
         if (isCurrent()) await loadDetail(group.batchId, true);
@@ -81,21 +90,22 @@ export function useCaptureUpload(detail: CaptureBatchDetail | undefined, examId:
     }
   }
 
-  async function uploadSources(files: readonly File[], pagesPerStudent: number) {
-    if (!detail || detail.batch.id !== selectedId || busy.current || !files.length) return;
-    if (pendingGroups.current.has(scope)) { message.error("请先重试本次上传，或结束本次上传后再选择完整答卷"); return; }
-    if (!Number.isInteger(pagesPerStudent) || pagesPerStudent < 1 || pagesPerStudent > 20) { message.error("请先选择每名学生答题卡页数（1–20 页）"); return; }
+  async function uploadSources(files: readonly File[], pagesPerStudent: number, onRegistered?: (fileIds: string[]) => Promise<void>): Promise<string[]> {
+    if (!detail || detail.batch.id !== selectedId || busy.current || !files.length) return [];
+    if (pendingGroups.current.has(scope)) { message.error("请先重试本次上传，或结束本次上传后再选择完整答卷"); return []; }
+    if (!Number.isInteger(pagesPerStudent) || pagesPerStudent < 1 || pagesPerStudent > 20) { message.error("请先选择每名学生答题卡页数（1–20 页）"); return []; }
     const onlySinglePageImages = files.every(file => /\.(png|jpe?g)$/i.test(file.name) || ["image/png", "image/jpeg"].includes(file.type));
     if (onlySinglePageImages && files.length % pagesPerStudent !== 0) {
       message.error(`本次选择 ${files.length} 页，每名学生 ${pagesPerStudent} 页，缺少 ${pagesPerStudent - files.length % pagesPerStudent} 页；请一次选择完整答卷`);
-      return;
+      return [];
     }
     const group: UploadGroup = {
       id: crypto.randomUUID(), batchId: selectedId, examId, pagesPerStudent,
       files: files.map(file => ({ file, commandId: crypto.randomUUID() })), nextIndex: 0,
+      onRegistered,
     };
     pendingGroups.current.set(scope, group);
-    await runGroup(group);
+    return runGroup(group);
   }
 
   async function retryUpload() {

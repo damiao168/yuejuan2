@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import {
   confirmRegistration,
-  completeCaptureBatch,
   createCaptureBatch,
   overrideCapturePageQuality,
   processCaptureBatch,
@@ -32,7 +31,11 @@ import {
   updateCapturePage,
   type CaptureBatch,
   type CapturePage,
+  type CreateCaptureBatchInput,
 } from "../api/capture";
+import { CaptureCollectionPanel, type CaptureCollectionTarget } from "../features/capture/CaptureCollectionPanel";
+import { useCaptureCollection } from "../features/capture/useCaptureCollection";
+import { excludeCaptureFile, type CaptureCollectionIssue } from "../api/captureCollection";
 import { downloadFileBlob } from "../api/files";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { RegistrationCorrectionWorkspace } from "../components/RegistrationCorrectionWorkspace";
@@ -53,15 +56,20 @@ export function CaptureBatchPage({
   user,
   examId,
   canManage,
+  examStatus = "collecting",
+  onCollectionChanged,
 }: Readonly<{
   user: SessionUser;
   examId: string;
   canManage: boolean;
+  examStatus?: string;
+  onCollectionChanged?: () => Promise<unknown>;
 }>) {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [form] = Form.useForm<{
     name: string;
     source_type: CaptureBatch["source_type"];
+    reason?: string;
   }>();
   const {
     batches, setBatches, selectedId, setSelectedId, loading, loadingMoreBatches,
@@ -78,27 +86,48 @@ export function CaptureBatchPage({
   const [preview, setPreview] = useState<{ url: string; page: CapturePage }>();
   const [correctionRunId, setCorrectionRunId] = useState<string>();
   const [activeTab, setActiveTab] = useState("files");
+  const captureTargetQuery = [hashQueryParam("batch"), hashQueryParam("submission"), hashQueryParam("student")].filter(Boolean).join(":");
+  const [recordsExpanded, setRecordsExpanded] = useState(Boolean(captureTargetQuery));
   const [pagesPerStudent, setPagesPerStudent] = useState<number>();
   const [locatedSubmission,setLocatedSubmission]=useState("");
   const [locatedBatch, setLocatedBatch] = useState("");
+  const [locatedTab, setLocatedTab] = useState(hashQueryParam("tab") || "matching");
   const [locationError,setLocationError]=useState("");
   const [locationAttempt,setLocationAttempt]=useState(0);
   const [locating, setLocating] = useState(() => Boolean(hashQueryParam("batch") || hashQueryParam("submission") || hashQueryParam("student")));
   const [locationChoices, setLocationChoices] = useState<Array<{ batch: CaptureBatch; submissionId: string; candidateNo: string }>>([]);
+  const [replacement, setReplacement] = useState<{ fileId: string; batchId: string; name: string; reason: string }>();
   const { detail, detailError, detailLoading, matching, matchingError, setMatching, matchingLoading, processingSummaries,
-    loadDetail, loadMatching, resetDetail } = useCaptureBatchDetail(setBatches, setActiveTab, selectedId, selectedId === locatedBatch ? hashQueryParam("tab") || "matching" : undefined);
+    loadDetail, loadMatching, resetDetail } = useCaptureBatchDetail(setBatches, setActiveTab, selectedId, selectedId === locatedBatch ? locatedTab : undefined);
   const { uploading, pendingUpload, uploadSources, retryUpload, discardUpload } = useCaptureUpload(detail, examId, loadDetail, selectedId);
+  const recordsVisible = recordsExpanded || uploading;
+  const collection = useCaptureCollection(examId, `${batches.map(batch => `${batch.id}:${batch.revision}`).join(",")}:${detail?.batch.revision ?? ""}:${uploading}:${actioning}`);
+  const currentExamStatus = collection.summary?.exam_status ?? examStatus;
+  const supplement = ["grading", "reviewing"].includes(currentExamStatus);
+  const canCreateBatch = canManage && (currentExamStatus === "collecting" || supplement);
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState("");
   const [qualityOverridePage, setQualityOverridePage] = useState<CapturePage>();
   const [qualityOverrideReason, setQualityOverrideReason] = useState("");
   const previewRequestRef = useRef(0);
-  const activeBatch = useRef(selectedId);
-  activeBatch.current = selectedId;
-  const batchCanManage = canManage && !locating && !uploading && detail?.batch.id === selectedId && !detailLoading && !detailError && !["completed", "cancelled"].includes(detail?.batch.status ?? "");
+  const locationRequest = useRef(0);
+  const currentExam = useRef(examId);
+  if (currentExam.current !== examId) { currentExam.current = examId; locationRequest.current += 1; }
+  const unfinishedBatch = !["completed", "cancelled"].includes(detail?.batch.status ?? "");
+  // 进入阅卷不等于本场导入已结束；旧流程留下的未封存批次仍可处理，关闭台账后只能新建补传。
+  const canEditSelectedBatch = canManage && collection.summary?.closed !== true && (currentExamStatus === "collecting" ||
+    (supplement && (detail?.batch.purpose === "supplement" || (collection.summary?.closed === false && unfinishedBatch))));
+  const batchCanManage = canEditSelectedBatch && !locating && !uploading && detail?.batch.id === selectedId && !detailLoading && !detailError && !["completed", "cancelled"].includes(detail?.batch.status ?? "");
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 页数必须在当前考试和批次显式选择，不能沿用上一批次的上传设置。
-  useEffect(() => { setPagesPerStudent(undefined); }, [examId, selectedId]);
+  const defaultPages = collection.summary?.pages_per_student;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 换考试重置展开状态；新的明确定位自动展开，普通批次刷新保留用户选择。
+  useEffect(() => { setRecordsExpanded(Boolean(captureTargetQuery)); }, [examId, captureTargetQuery]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 换批次使用本场模板页数重新初始化，不携带另一批次的手动设置。
+  useEffect(() => { setPagesPerStudent(defaultPages && defaultPages >= 1 && defaultPages <= 20 ? defaultPages : undefined); }, [examId, selectedId]);
+  useEffect(() => {
+    // 模板事实可能晚于批次到达；只补尚未选择的值，后续刷新不能覆盖用户的显式修改。
+    if (defaultPages && Number.isInteger(defaultPages) && defaultPages >= 1 && defaultPages <= 20) setPagesPerStudent(current => current ?? defaultPages);
+  }, [defaultPages]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: 换考试时清理旧批次选择及影像请求；resetDetail 回调身份不能代替考试身份边界。
   useEffect(() => {
@@ -106,7 +135,9 @@ export function CaptureBatchPage({
     previewRequestRef.current += 1;
     setSelectedId("");
     setPreview(undefined);
+    setReplacement(undefined);
   }, [examId, resetDetail, setSelectedId]);
+  useEffect(() => () => { locationRequest.current += 1; }, []);
   useEffect(() => {
     void loadBatches();
   }, [loadBatches]);
@@ -131,7 +162,7 @@ export function CaptureBatchPage({
         // 同一名册对象可能有重扫/重复答卷，不能静默把第一份当作需要处理的唯一对象。
         setLocationChoices(choices); setSelectedId(""); setLocatedSubmission(""); setLocatedBatch(""); return;
       }
-      setSelectedId(choices[0].batch.id); setLocatedBatch(choices[0].batch.id); setLocatedSubmission(choices[0].submissionId); setActiveTab(hashQueryParam("tab") || "matching"); setLocating(false);
+      setSelectedId(choices[0].batch.id); setLocatedBatch(choices[0].batch.id); setLocatedSubmission(choices[0].submissionId); setLocatedTab(hashQueryParam("tab") || "matching"); setActiveTab(hashQueryParam("tab") || "matching"); setLocating(false);
     };
     void locate().catch(cause => { if (active) { setLocationError(formatError(cause)); setLocating(false); } });
     return () => { active = false; };
@@ -165,11 +196,13 @@ export function CaptureBatchPage({
   );
   // 本地仍有待确认命令时复用原载荷和幂等键；页面表单的新编辑不能偷偷改变已经发出的操作。
   async function submitBatch() {
-    if (creationBusy.current) return;
+    if (creationBusy.current || !canCreateBatch) return;
     creationBusy.current = true;
     try {
       const pending = loadBatchCreateCommand(localStorage, creationCommandKey);
-      const values = pending?.payload ?? await form.validateFields();
+      const values: Omit<CreateCaptureBatchInput, "idempotency_key"> = pending?.payload ?? {
+        ...await form.validateFields(), ...(supplement ? { purpose: "supplement" as const } : {}),
+      };
       setCreating(true);
       const command = acceptBatchCreateCommand(localStorage, creationCommandKey, values);
       setPendingCreation(true);
@@ -180,10 +213,12 @@ export function CaptureBatchPage({
       try { localStorage.removeItem(creationCommandKey); } catch { /* 恢复仍返回同一个批次。 */ }
       setPendingCreation(false);
       setModalOpen(false);
+      setRecordsExpanded(true);
       form.resetFields();
       await loadBatches();
       setSelectedId(result.batch.id);
-      message.success("采集批次已创建");
+      await collection.load();
+      message.success(supplement ? "补传批次已创建，当前阅卷阶段保持不变" : "采集批次已创建");
     } catch (currentError) {
       if (currentError instanceof ApiClientError && currentError.code === "capture_invalid_input") {
         try { localStorage.removeItem(creationCommandKey); setPendingCreation(false); } catch { /* 保留恢复数据。 */ }
@@ -202,7 +237,19 @@ export function CaptureBatchPage({
     disabled: !batchCanManage || !pagesPerStudent || Boolean(pendingUpload),
     beforeUpload: (file, files) => {
       // antd 为每个文件调用一次；只用首个回调提交完整选择，避免同一选择被拆成多个学生组。
-      if (file === files[0] && batchCanManage && pagesPerStudent && !pendingUpload) void uploadSources(files, pagesPerStudent);
+      if (file === files[0] && batchCanManage && pagesPerStudent && !pendingUpload) {
+        const original = replacement?.batchId === selectedId ? replacement : undefined;
+        if (!original) { void uploadSources(files, pagesPerStudent); return false; }
+        void uploadSources(files, pagesPerStudent, async fileIds => {
+          if (!fileIds[0]) throw new Error("尚未收到替代文件登记结果，请重试本次上传");
+          await excludeCaptureFile(original.fileId, original.reason, fileIds[0]);
+          if (currentExam.current === examId) {
+            setReplacement(value => value?.fileId === original.fileId ? undefined : value);
+            await collection.load();
+            message.success("替代答卷已登记，原选择的全部材料已退出有效输入；请等待新答卷处理完成");
+          }
+        });
+      }
       return false;
     },
   };
@@ -221,37 +268,13 @@ export function CaptureBatchPage({
     }
   }
 
-  function completeBatch() {
-    if (!detail || !batchCanManage) return;
-    modal.confirm({
-      title: "确认完成批次",
-      content: "完成后批次将不可再修改。请确认所有页面已处理完毕，且每份答卷都已确认学生身份。",
-      okText: "完成批次",
-      cancelText: "返回检查",
-      onOk: async () => {
-        if (activeBatch.current !== detail.batch.id) throw new Error("批次已切换，请返回当前批次确认");
-        setActioning(true);
-        try {
-          await completeCaptureBatch(detail.batch.id, "所有页面处理完成并已人工确认");
-          await Promise.all([loadBatches(), loadDetail(detail.batch.id)]);
-          message.success("批次已完成");
-        } catch (currentError) {
-          message.error(formatError(currentError));
-          throw currentError;
-        } finally {
-          setActioning(false);
-        }
-      },
-    });
-  }
-
   function reopenBatch() {
     setReopenReason("");
     setReopenOpen(true);
   }
 
   async function confirmReopen() {
-    if (detail?.batch.id !== selectedId || !canManage || !reopenReason.trim()) return;
+    if (detail?.batch.id !== selectedId || !canEditSelectedBatch || !reopenReason.trim()) return;
     setActioning(true);
     try {
       await reopenCaptureBatch(detail.batch.id, reopenReason.trim());
@@ -345,6 +368,40 @@ export function CaptureBatchPage({
   const summary = useMemo(() => captureSummary(detail), [detail]);
   const submissions = useMemo(() => captureSubmissionIds(detail), [detail]);
   const issuePages = useMemo(() => captureIssuePages(detail), [detail]);
+
+  async function locateCollectionTarget(target: CaptureCollectionTarget) {
+    if (uploading || locating || !target.batchId) return false;
+    setRecordsExpanded(true);
+    setLocating(true);
+    setLocationError("");
+    const sourceExam = examId;
+    const request = ++locationRequest.current;
+    try {
+      const result = await getCaptureBatch(target.batchId);
+      if (request !== locationRequest.current || sourceExam !== currentExam.current) return false;
+      if (result.batch.exam_id !== sourceExam) throw new Error("答卷不属于当前考试");
+      setBatches(current => [...new Map([...current, result.batch].map(batch => [batch.id, batch])).values()]);
+      setLocationChoices([]);
+      setLocatedBatch(target.batchId);
+      setLocatedSubmission(target.submissionId ?? "");
+      setLocatedTab(target.tab);
+      setSelectedId(target.batchId);
+      setActiveTab(target.tab);
+      document.getElementById("capture-batch-workspace")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      return true;
+    } catch (cause) {
+      if (request === locationRequest.current && sourceExam === currentExam.current) setLocationError(formatError(cause));
+      return false;
+    } finally {
+      if (request === locationRequest.current && sourceExam === currentExam.current) setLocating(false);
+    }
+  }
+
+  async function prepareReplacement(issue: CaptureCollectionIssue, reason: string) {
+    if (!issue.file_id || !await locateCollectionTarget({ batchId: issue.batch_id, tab: "files" })) throw new Error("暂时无法定位待替代材料，请刷新核对后重试");
+    setPagesPerStudent(defaultPages && Number.isInteger(defaultPages) && defaultPages >= 1 && defaultPages <= 20 ? defaultPages : undefined);
+    setReplacement({ fileId: issue.file_id, batchId: issue.batch_id, name: issue.name, reason });
+  }
   async function resolveRegistration(runId: string, action: "confirm" | "retry") {
     setActioning(true);
     try {
@@ -363,21 +420,13 @@ export function CaptureBatchPage({
     }
   }
 
-  if (loading) return <LoadingState label="正在加载采集批次" />;
-  if (error)
-    return (
-      <ErrorState
-        message={`采集批次加载失败：${error}`}
-        onRetry={() => void loadBatches()}
-      />
-    );
   if (correctionRunId) return <RegistrationCorrectionWorkspace runId={correctionRunId} canManage={batchCanManage} onClose={() => setCorrectionRunId(undefined)} onChanged={async () => { await loadDetail(selectedId, true); }} />;
   return (
     <div className="capture-batch-page">
       <section className="member-management-heading">
         <div>
           <h1>答卷导入</h1>
-          <p>上传扫描文件并优先处理学生匹配、图像质量和处理失败问题。</p>
+          <p>{supplement ? "补传答卷并核对学生，当前阅卷阶段保持不变。" : "按本场名册核对学生答卷，全部就绪后结束导入。"}</p>
         </div>
         <Space>
           <Button
@@ -390,29 +439,47 @@ export function CaptureBatchPage({
             type="primary"
             icon={<Plus size={16} />}
             onClick={() => setModalOpen(true)}
-            disabled={!canManage}
+            disabled={!canCreateBatch}
           >
-            新建批次
+            {supplement ? "补传答卷" : "导入答卷"}
           </Button>
         </Space>
       </section>
+      <CaptureCollectionPanel key={`${user.tenant}:${user.id}:${examId}`} examId={examId} actorKey={`${user.tenant}:${user.id}`} summary={collection.summary} loading={collection.loading} error={collection.error}
+        canManage={canCreateBatch} localBusy={uploading || Boolean(pendingUpload) || actioning || creating || locating}
+        onRefresh={collection.load} onLocate={target => void locateCollectionTarget(target)}
+        onReplace={prepareReplacement}
+        onCompleted={async value => {
+          collection.acceptSummary(value);
+          await Promise.all([loadBatches(), loadDetail(selectedId, true), onCollectionChanged?.()]);
+        }}
+        onMaterialChanged={async batchId => { await loadBatches(); if (batchId === selectedId) await loadDetail(batchId, true); }} />
+      {replacement?.batchId === selectedId ? <Alert type="warning" showIcon message={`正在替代：${replacement.name}`} description="请先选择每名学生页数，再一次上传本次选择所对应的全部完整答卷。登记成功后，原选择的全部文件及其答卷将退出有效输入；新答卷仍需处理成功。" action={<Button disabled={uploading || Boolean(pendingUpload)} onClick={() => setReplacement(undefined)}>取消替代</Button>} /> : null}
       {locationError ? <Alert type="warning" showIcon message={locationError} action={<Button onClick={() => setLocationAttempt(value => value + 1)}>重试定位</Button>} /> : null}
       {locationChoices.length > 1 ? <Alert type="info" message={`定位到 ${locationChoices.length} 份采集答卷，请选择本次核对对象`} description={<Select aria-label="选择名册对应采集答卷" style={{ minWidth: 320 }} value={locatedSubmission ? `${selectedId}:${locatedSubmission}` : undefined} options={locationChoices.map((choice, index) => ({ value: `${choice.batch.id}:${choice.submissionId}`, label: `${choice.batch.name} · 考号 ${choice.candidateNo || "待匹配"} · 答卷 ${index + 1}` }))} onChange={value => { const choice = locationChoices.find(item => `${item.batch.id}:${item.submissionId}` === value); if (choice) { setSelectedId(choice.batch.id); setLocatedBatch(choice.batch.id); setLocatedSubmission(choice.submissionId); setActiveTab(hashQueryParam("tab") || "matching"); setLocating(false); } }} />} /> : null}
-      {batches.length === 0 ? (
+      <section className="capture-records" aria-label="批次文件与处理记录">
+        <button type="button" className="capture-records-toggle" aria-expanded={recordsVisible} aria-controls="capture-processing-records" disabled={uploading} onClick={() => setRecordsExpanded(value => !value)}>
+          <span><strong>批次文件与处理记录</strong><small>{batches.length} 个批次 · 查看文件、质检、页面处理与学生匹配</small></span>
+          <span>{uploading ? "正在上传" : recordsVisible ? "收起" : "展开"}</span>
+        </button>
+        {/* 保留已挂载的详情和上传进度；收起只影响展示，不能丢失当前操作或本次选择。 */}
+        <div id="capture-processing-records" className="capture-records-body" hidden={!recordsVisible}>
+      {loading ? <LoadingState label="正在加载采集批次" /> : error ? <ErrorState message={`采集批次加载失败：${error}`} onRetry={() => void loadBatches()} /> : batches.length === 0 ? (
         <Empty description="尚未创建采集批次">
-          <Button type="primary" onClick={() => setModalOpen(true)} disabled={!canManage}>
+          <Button type="primary" onClick={() => setModalOpen(true)} disabled={!canCreateBatch}>
             创建第一个批次
           </Button>
         </Empty>
       ) : (
-        <div className="capture-batch-layout">
+        <div className="capture-batch-layout" id="capture-batch-workspace" aria-label="批次与材料详情">
           <CaptureBatchListPanel batches={batches} selectedId={selectedId} setSelectedId={setSelectedId} disabled={uploading} hasMoreBatches={hasMoreBatches} loadingMoreBatches={loadingMoreBatches} loadMoreBatches={loadMoreBatches} />
           <main className="capture-batch-workspace">
             <CaptureBatchWorkspace detail={detail} detailError={detailError} detailLoading={detailLoading} selectedId={selectedId}
-              loadDetail={loadDetail} canManage={canManage} batchCanManage={batchCanManage} progressPercent={progressPercent}
+              loadDetail={loadDetail} canManage={canEditSelectedBatch} batchCanManage={batchCanManage} progressPercent={progressPercent}
               summary={summary} uploadProps={uploadProps} uploading={uploading} actioning={actioning} startProcessing={startProcessing}
+              uploadLabel={replacement?.batchId === selectedId ? "上传替代答卷" : undefined}
               pagesPerStudent={pagesPerStudent} setPagesPerStudent={setPagesPerStudent} pendingUpload={pendingUpload} retryUpload={retryUpload} discardUpload={discardUpload}
-              completeBatch={completeBatch} reopenBatch={reopenBatch} activeTab={activeTab} setActiveTab={setActiveTab}
+              reopenBatch={reopenBatch} activeTab={activeTab} setActiveTab={setActiveTab}
               issuePages={issuePages} pageColumns={pageColumns} fileColumns={fileColumns}
               uploadRepair={() => { setActiveTab("files"); message.info("请按学生页序一次选择完整答卷重新导入；新选择独立分组，系统会保留原失败记录"); }}
               onOverride={(page) => { setQualityOverrideReason(""); setQualityOverridePage(page); }}
@@ -423,6 +490,8 @@ export function CaptureBatchPage({
           </main>
         </div>
       )}
+        </div>
+      </section>
       <Modal
         title="人工放行质量误判"
         open={Boolean(qualityOverridePage)}
@@ -458,7 +527,7 @@ export function CaptureBatchPage({
         <Input.TextArea value={reopenReason} rows={3} maxLength={300} placeholder="填写重开原因" onChange={(event) => setReopenReason(event.target.value)} />
       </Modal>
       <Modal
-        title={pendingCreation ? "恢复上次采集批次创建" : "新建采集批次"}
+        title={pendingCreation ? "恢复上次采集批次创建" : supplement ? "新建补传批次" : "新建采集批次"}
         okText={pendingCreation ? "继续确认原操作" : "创建"}
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
@@ -494,6 +563,7 @@ export function CaptureBatchPage({
               ]}
             />
           </Form.Item>
+          {supplement ? <Form.Item name="reason" label="补传原因" rules={[{ required: true, whitespace: true, message: "请填写补传原因" }, { max: 300 }]}><Input.TextArea rows={3} maxLength={300} placeholder="例如：补交缺考学生答卷或补扫遗漏页面" /></Form.Item> : null}
         </Form>
       </Modal>
       <Modal

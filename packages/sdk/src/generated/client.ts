@@ -385,7 +385,10 @@ import type {
   MaterialPermitRecordRequest,
   MaterialPermitRecordResponse,
   CaptureFileRegisterRequest,
-  CaptureFileResponse
+  CaptureFileResponse,
+  CaptureCollectionResponse,
+  CompleteCaptureCollectionRequest,
+  ExcludeCaptureFileRequest
 } from "./types";
 
 export interface operations {
@@ -746,6 +749,9 @@ export interface operations {
   "resumeScoringRun": { args: { path: { "runId": string; }; signal?: AbortSignal; }; response: ScoringRunRetryResponse; };
   "savePlatformGradingModelSelection": { args: { body: AnswerSheetModelSelectionInput; signal?: AbortSignal; }; response: { "selection": AnswerSheetModelSelection; }; };
   "probePlatformGradingModelSelection": { args: { body: { "tenant_id": string; "request_id": string; }; signal?: AbortSignal; }; response: { "capability": { "visual_supported": boolean; "model_version"?: string; "model_binding"?: string; }; }; };
+  "getCaptureCollectionSummary": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: CaptureCollectionResponse; };
+  "completeCaptureCollection": { args: { path: { "examId": string; }; body: CompleteCaptureCollectionRequest; signal?: AbortSignal; }; response: CaptureCollectionResponse; };
+  "excludeCaptureFile": { args: { path: { "id": string; }; body: ExcludeCaptureFileRequest; signal?: AbortSignal; }; response: CaptureBatchResponse; };
 }
 
 export class EduGradeApi {
@@ -2533,6 +2539,21 @@ export class EduGradeApi {
 
   probePlatformGradingModelSelection(args: operations["probePlatformGradingModelSelection"]["args"]): Promise<operations["probePlatformGradingModelSelection"]["response"]> {
     const requestPath = "/api/v1/platform/grading-model-selection/probe";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getCaptureCollectionSummary(args: operations["getCaptureCollectionSummary"]["args"]): Promise<operations["getCaptureCollectionSummary"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/capture-summary", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  completeCaptureCollection(args: operations["completeCaptureCollection"]["args"]): Promise<operations["completeCaptureCollection"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/complete-collection", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  excludeCaptureFile(args: operations["excludeCaptureFile"]["args"]): Promise<operations["excludeCaptureFile"]["response"]> {
+    const requestPath = fillPath("/api/v1/capture-files/{id}/exclude", args.path);
     return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 }

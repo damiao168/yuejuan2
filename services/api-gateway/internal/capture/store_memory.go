@@ -464,7 +464,7 @@ func (s *MemoryStore) CreateBatch(_ context.Context, tenantID, examID, actorID s
 		}
 	}
 	now := time.Now().UTC()
-	item := Batch{ID: uuid.NewString(), TenantID: tenantID, ExamID: examID, Name: input.Name, SourceType: input.SourceType, Status: "draft", Revision: 1, OperatorID: actorID, ScannerDevice: input.ScannerDevice, CreatedAt: now}
+	item := Batch{ID: uuid.NewString(), TenantID: tenantID, ExamID: examID, Name: input.Name, SourceType: input.SourceType, Purpose: input.Purpose, Status: "draft", Revision: 1, OperatorID: actorID, ScannerDevice: input.ScannerDevice, CreatedAt: now}
 	s.batches[item.ID] = item
 	if input.IdempotencyKey != "" {
 		s.batchKeys[key] = item.ID

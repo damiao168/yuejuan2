@@ -4,8 +4,8 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 586,
-    "openapi": 343,
+    "registered": 589,
+    "openapi": 346,
     "registered_gaps": 243
   },
   "routes": [
@@ -1082,6 +1082,13 @@
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
     },
     {
+      "method": "POST",
+      "path": "/api/v1/capture-files/{id}/exclude",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
+      "coverage": "openapi",
+      "operation_id": "excludeCaptureFile"
+    },
+    {
       "method": "PATCH",
       "path": "/api/v1/capture-pages/{id}",
       "source": "services/api-gateway/internal/server/routes_capture.go",
@@ -1485,10 +1492,24 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/exams/{examId}/capture-summary",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
+      "coverage": "openapi",
+      "operation_id": "getCaptureCollectionSummary"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/exams/{examId}/capture-targets",
       "source": "services/api-gateway/internal/server/routes_capture.go",
       "coverage": "openapi",
       "operation_id": "findExamCaptureTargets"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/complete-collection",
+      "source": "services/api-gateway/internal/server/routes_capture.go",
+      "coverage": "openapi",
+      "operation_id": "completeCaptureCollection"
     },
     {
       "method": "POST",

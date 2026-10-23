@@ -5,8 +5,9 @@
   padding: 24px 0 64px;
 }
 
-/* 考试准备各步骤共用工作区宽度，切换时保持标题、导航和内容边缘对齐。 */
-.exam-workspace-canvas.is-preparation { width: calc(100% - 48px); }
+/* 考试准备与学生答卷共用工作区宽度，六步切换时保持标题、导航和内容边缘对齐。 */
+.exam-workspace-canvas.is-preparation,
+.exam-workspace-canvas.is-capture { width: calc(100% - 48px); }
 
 /* 桌面侧栏的标识行高为 52px；考试信息从同一顶部起排，手机仍保留原有页头间距。 */
 @media (min-width: 992px) {
@@ -64,7 +65,8 @@
 .exam-preparation-step-number { display: grid; flex: 0 0 22px; width: 22px; height: 22px; place-items: center; border: 1px solid #c5ccd6; border-radius: 50%; color: #667085; background: #fff; font-size: 12px; }
 .exam-preparation-nav button.is-complete .exam-preparation-step-number { border-color: #16845b; color: #fff; background: #16845b; }
 .exam-workspace-content { min-width: 0; }
-.exam-workspace-content.is-preparation { width: 100%; max-width: none; }
+.exam-workspace-content.is-preparation,
+.exam-workspace-content.is-capture { width: 100%; max-width: none; }
 .exam-workspace-module { min-width: 0; }
 .exam-workspace-next-actions { margin-bottom: 16px; }
 .exam-workspace-next-actions > strong { display: block; margin-bottom: 8px; }
@@ -111,7 +113,8 @@
 
 @media (max-width: 720px) {
   .exam-workspace-canvas { width: min(calc(100% - 24px), 1180px); padding-top: 14px; }
-  .exam-workspace-canvas.is-preparation { width: calc(100% - 24px); }
+  .exam-workspace-canvas.is-preparation,
+  .exam-workspace-canvas.is-capture { width: calc(100% - 24px); }
   /* 手机页头改为纵向排列后，桌面 flex 基准宽度不能继续撑高标题。 */
   .exam-workspace-canvas .exam-context-title { display: grid; flex: 0 1 auto; gap: 2px; }
   .exam-workspace-canvas .eg-workspace-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }

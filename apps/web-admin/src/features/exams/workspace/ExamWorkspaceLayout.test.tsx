@@ -109,6 +109,17 @@ describe("学科工作台整场上下文", () => {
     } finally { await view.close(); }
   });
 
+  it("学生答卷采用六步共用宽度，独立阅卷页面保留原有布局", async () => {
+    const view = await render(workspace(), "capture");
+    try {
+      expect(view.container.querySelector(".exam-workspace-canvas.is-capture")).not.toBeNull();
+      expect(view.container.querySelector(".exam-workspace-content.is-capture")).not.toBeNull();
+      await view.update(workspace(), "grading");
+      expect(view.container.querySelector(".is-capture")).toBeNull();
+      expect(view.container.querySelector(".exam-workspace-canvas")).not.toBeNull();
+    } finally { await view.close(); }
+  });
+
   it("完成颜色只按真实检查判断，当前位置和ready都不能代替确认", async () => {
     const result = readiness();
     result.checks.find((check) => check.code === "paper_file")!.passed = false;

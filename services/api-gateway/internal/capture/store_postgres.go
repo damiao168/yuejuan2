@@ -21,7 +21,7 @@ func NewPostgresStoreWithBarcodeKeyring(db *sql.DB, keyring BarcodeKeyring) *Pos
 
 const batchColumns = `id::text, tenant_id::text, exam_id::text, name, source_type, status, revision,
 operator_id::text, COALESCE(scanner_device, ''), file_count, page_count, submission_count,
-normal_count, review_count, failed_count, started_at, completed_at, created_at`
+normal_count, review_count, failed_count, started_at, completed_at, created_at, purpose`
 
 const fileColumns = `id::text, tenant_id::text, capture_batch_id::text, file_asset_id::text,
 original_name, content_type, sha256, byte_size, page_count, status, COALESCE(error_code, ''),
@@ -44,11 +44,11 @@ func (s *PostgresStore) CreateBatch(ctx context.Context, tenantID, examID, actor
 		return s.createBatchCommand(ctx, tenantID, examID, actorID, input)
 	}
 	row := s.db.QueryRowContext(ctx, `
-INSERT INTO capture_batch (tenant_id, exam_id, name, source_type, operator_id, scanner_device, idempotency_key)
-VALUES ($1, $2::uuid, $3, $4, $5::uuid, NULLIF($6, ''), NULLIF($7, ''))
+INSERT INTO capture_batch (tenant_id, exam_id, name, source_type, operator_id, scanner_device, idempotency_key,purpose,supplement_reason)
+VALUES ($1, $2::uuid, $3, $4, $5::uuid, NULLIF($6, ''), NULLIF($7, ''),$8,NULLIF($9,''))
 ON CONFLICT (tenant_id, exam_id, idempotency_key) WHERE idempotency_key IS NOT NULL AND idempotency_key <> '' AND deleted_at IS NULL
 DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
-RETURNING `+batchColumns, tenantID, examID, input.Name, input.SourceType, actorID, input.ScannerDevice, input.IdempotencyKey)
+RETURNING `+batchColumns, tenantID, examID, input.Name, input.SourceType, actorID, input.ScannerDevice, input.IdempotencyKey, input.Purpose, input.Reason)
 	return scanBatch(row)
 }
 
@@ -969,6 +969,16 @@ func (s *PostgresStore) SetBatchStatus(ctx context.Context, tenantID, batchID, a
 	if err != nil {
 		return Batch{}, err
 	}
+	// 完成时重算当前事实，不能仅相信先前缓存的 ready 状态。
+	if status == "completed" {
+		if err = aggregateBatchTx(ctx, tx, tenantID, batchID); err != nil {
+			return Batch{}, err
+		}
+		current, err = scanBatch(tx.QueryRowContext(ctx, `SELECT `+batchColumns+` FROM capture_batch WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, batchID))
+		if err != nil {
+			return Batch{}, err
+		}
+	}
 	if !canSetBatchStatus(current.Status, status) {
 		return Batch{}, ErrInvalidTransition
 	}
@@ -1009,7 +1019,7 @@ status=CASE
  WHEN EXISTS(SELECT 1 FROM capture_page p JOIN submission s ON s.tenant_id=p.tenant_id AND s.id=p.submission_id WHERE p.tenant_id=b.tenant_id AND p.capture_batch_id=b.id AND p.status<>'deleted' AND s.identity_status<>'matched' AND p.deleted_at IS NULL) THEN 'matching'
  WHEN EXISTS(SELECT 1 FROM capture_page p WHERE p.tenant_id=b.tenant_id AND p.capture_batch_id=b.id AND p.status<>'deleted' AND p.deleted_at IS NULL) AND NOT EXISTS(SELECT 1 FROM capture_page p WHERE p.tenant_id=b.tenant_id AND p.capture_batch_id=b.id AND p.status NOT IN ('ready','deleted') AND p.deleted_at IS NULL) THEN 'ready'
  ELSE 'matching' END,
-revision=revision+1,updated_at=now() WHERE b.tenant_id=$1 AND b.id=$2::uuid`, tenantID, batchID)
+revision=revision+1,updated_at=now() WHERE b.tenant_id=$1 AND b.id=$2::uuid AND b.status NOT IN ('completed','cancelled')`, tenantID, batchID)
 	return err
 }
 
@@ -1033,7 +1043,7 @@ type scanner interface{ Scan(...any) error }
 func scanBatch(r scanner) (Batch, error) {
 	var x Batch
 	var a, b sql.NullTime
-	err := r.Scan(&x.ID, &x.TenantID, &x.ExamID, &x.Name, &x.SourceType, &x.Status, &x.Revision, &x.OperatorID, &x.ScannerDevice, &x.FileCount, &x.PageCount, &x.SubmissionCount, &x.NormalCount, &x.ReviewCount, &x.FailedCount, &a, &b, &x.CreatedAt)
+	err := r.Scan(&x.ID, &x.TenantID, &x.ExamID, &x.Name, &x.SourceType, &x.Status, &x.Revision, &x.OperatorID, &x.ScannerDevice, &x.FileCount, &x.PageCount, &x.SubmissionCount, &x.NormalCount, &x.ReviewCount, &x.FailedCount, &a, &b, &x.CreatedAt, &x.Purpose)
 	if err != nil {
 		return Batch{}, mapNotFound(err)
 	}

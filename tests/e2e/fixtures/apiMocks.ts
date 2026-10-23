@@ -456,6 +456,12 @@ export async function installApiMocks(
         }
       });
     }
+    if (path === "/api/v1/exams/exam-1/capture-summary" && request.method() === "GET") {
+      return json(route, { summary: { exam_id: "exam-1", exam_status: "collecting", revision: 1, closed: false,
+        pages_per_student: 2, roster_count: 1, required_count: 1, ready_count: 0, absent_count: 0, pending_count: 1,
+        can_complete: false, blockers: ["仍有学生未完成答卷导入，请处理待完成列表"], issues: [],
+        entries: [{ student_id: "student-1", student_no: "001", student_name: "测试学生", class_name: "一班", status: "missing", code: "missing_submission", expected_pages: 2, actual_pages: 0 }] } });
+    }
     if (path === "/api/v1/exams/exam-1/capture-batches" && request.method() === "GET") {
       return json(route, { batches: [], next_cursor: "", has_more: false });
     }

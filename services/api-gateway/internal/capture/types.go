@@ -17,6 +17,7 @@ var (
 
 // Batch 汇总采集文件、页面和身份处理状态；计数由存储层聚合，不应在接口层自行推算。
 type Batch struct {
+	Purpose         string     `json:"purpose"`
 	ID              string     `json:"id"`
 	TenantID        string     `json:"tenant_id"`
 	ExamID          string     `json:"exam_id"`
@@ -147,6 +148,8 @@ type MergeSubmissionsInput struct {
 }
 
 type CreateBatchInput struct {
+	Purpose        string `json:"purpose,omitempty"`
+	Reason         string `json:"reason,omitempty"`
 	Name           string `json:"name"`
 	SourceType     string `json:"source_type"`
 	ScannerDevice  string `json:"scanner_device"`

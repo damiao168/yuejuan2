@@ -11,6 +11,14 @@ var validSourceTypes = map[string]bool{
 }
 
 func validateCreateBatch(input *CreateBatchInput) error {
+	input.Purpose = strings.TrimSpace(input.Purpose)
+	input.Reason = strings.TrimSpace(input.Reason)
+	if input.Purpose == "" {
+		input.Purpose = "initial"
+	}
+	if input.Purpose != "initial" && input.Purpose != "supplement" || input.Purpose == "supplement" && input.Reason == "" || len(input.Reason) > 500 {
+		return ErrInvalidInput
+	}
 	input.Name = strings.TrimSpace(input.Name)
 	input.SourceType = strings.TrimSpace(input.SourceType)
 	input.ScannerDevice = strings.TrimSpace(input.ScannerDevice)

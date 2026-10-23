@@ -1616,6 +1616,18 @@ export type CaptureFile = { "id": string; "tenant_id"?: string; "capture_batch_i
 
 export type CaptureFileResponse = { "file": CaptureFile; };
 
+export type CaptureCollectionEntry = { "student_id": string; "student_no": string; "student_name": string; "class_name": string; "status": "missing" | "processing" | "needs_attention" | "ready" | "absent"; "code": string; "batch_id"?: string; "submission_id"?: string; "reason"?: string; "expected_pages": number; "actual_pages": number; };
+
+export type CaptureCollectionIssue = { "id": string; "kind": "file" | "submission" | "batch" | "upload"; "code": string; "name": string; "batch_id": string; "submission_id"?: string; "file_id"?: string; };
+
+export type CaptureCollectionSummary = { "exam_id": string; "exam_status": string; "completed_by"?: string; "completed_at"?: string; "revision": number; "pages_per_student": number; "roster_count": number; "required_count": number; "ready_count": number; "absent_count": number; "pending_count": number; "closed": boolean; "can_complete": boolean; "blockers": Array<string>; "entries": Array<CaptureCollectionEntry>; "issues": Array<CaptureCollectionIssue>; };
+
+export type CaptureCollectionResponse = { "summary": CaptureCollectionSummary; };
+
+export type CompleteCaptureCollectionRequest = { "revision": number; "idempotency_key": string; "reason"?: string; };
+
+export type ExcludeCaptureFileRequest = { "reason": string; "replacement_file_id"?: string; };
+
 export interface components {
   schemas: {
     "GradingAIRoleSelectionInput": GradingAIRoleSelectionInput;
@@ -2426,5 +2438,11 @@ export interface components {
     "CaptureFileRegisterRequest": CaptureFileRegisterRequest;
     "CaptureFile": CaptureFile;
     "CaptureFileResponse": CaptureFileResponse;
+    "CaptureCollectionEntry": CaptureCollectionEntry;
+    "CaptureCollectionIssue": CaptureCollectionIssue;
+    "CaptureCollectionSummary": CaptureCollectionSummary;
+    "CaptureCollectionResponse": CaptureCollectionResponse;
+    "CompleteCaptureCollectionRequest": CompleteCaptureCollectionRequest;
+    "ExcludeCaptureFileRequest": ExcludeCaptureFileRequest;
   };
 }

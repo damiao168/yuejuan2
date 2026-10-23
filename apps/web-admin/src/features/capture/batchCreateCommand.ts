@@ -1,8 +1,8 @@
-import type { CaptureBatch } from "../../api/capture";
+import type { CreateCaptureBatchInput } from "../../api/capture";
 
 export interface BatchCreateCommand {
   version: 1;
-  payload: { name: string; source_type: CaptureBatch["source_type"]; scanner_device?: string; idempotency_key: string };
+  payload: CreateCaptureBatchInput;
 }
 
 export function batchCreateCommandKey(tenant: string, actor: string, exam: string) {

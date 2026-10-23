@@ -1,6 +1,6 @@
 // 批次详情只负责展示；异步命令和当前批次校验仍由页面统一持有，避免面板切换改变操作范围。
 import { Alert, Button, Empty, Progress, Select, Space, Tabs, Upload, type TableColumnsType, type UploadProps } from "antd";
-import { Check, FileUp, RefreshCw, ScanLine, SlidersHorizontal, Undo2, Workflow } from "lucide-react";
+import { FileUp, RefreshCw, ScanLine, SlidersHorizontal, Undo2, Workflow } from "lucide-react";
 import type { CaptureBatchDetail, CapturePage, ProcessingSummary } from "../../api/capture";
 import { ErrorState, LoadingState } from "../../components/PageState";
 import { ResponsiveTable } from "../../components/ResponsiveTable";
@@ -34,7 +34,7 @@ export function CaptureBatchListPanel({ batches, selectedId, setSelectedId, hasM
             <strong>{batch.name}</strong>
             <small>{new Date(batch.created_at).toLocaleString("zh-CN", { hour12: false })}</small>
           </span>
-          <StatusTag tone={statusTone(batch.status)}>{statusLabels[batch.status]}</StatusTag>
+          <StatusTag tone={statusTone(batch.status)}>{batch.status === "ready" ? "本批处理完成" : statusLabels[batch.status]}</StatusTag>
         </button>
       ))}
       {hasMoreBatches ? <Button block loading={loadingMoreBatches} onClick={() => void loadMoreBatches()}>加载更多批次</Button> : null}
@@ -94,7 +94,7 @@ function CaptureProcessingList({ detail, submissions, processingSummaries, actio
   return (
     <div className="capture-processing-list">
       {submissions.map((submissionId, index) => {
-        const pages = detail.pages.filter((item) => item.submission_id === submissionId);
+        const pages = detail.pages.filter((item) => item.submission_id === submissionId && item.status !== "deleted");
         const complete = pages.every((item) => item.status === "ready");
         const groupingBlocked = pages.some(page => page.page_identity.grouping_status && page.page_identity.grouping_status !== "complete");
         const summary = processingSummaries[submissionId];
@@ -179,10 +179,11 @@ function CaptureMatchingContent({ loading, error, onRetry, queue, workspaceProps
 
 export function CaptureBatchWorkspace({
   detail, detailError, detailLoading, selectedId, loadDetail, canManage, batchCanManage,
-  progressPercent, summary, uploadProps, uploading, actioning, startProcessing, completeBatch,
+  progressPercent, summary, uploadProps, uploading, actioning, startProcessing,
   reopenBatch, activeTab, setActiveTab, issuePages, pageColumns, fileColumns, uploadRepair,
   onOverride, processingProps, matchingProps,
   pagesPerStudent, setPagesPerStudent, pendingUpload, retryUpload, discardUpload,
+  uploadLabel = "导入文件",
 }: Readonly<{
   detail?: CaptureBatchDetail;
   detailError?: string;
@@ -195,6 +196,7 @@ export function CaptureBatchWorkspace({
   summary: ReturnType<typeof captureSummary>;
   uploadProps: UploadProps;
   uploading: boolean;
+  uploadLabel?: string;
   pagesPerStudent?: number;
   setPagesPerStudent: (pages: number) => void;
   pendingUpload?: PendingCaptureUpload;
@@ -202,7 +204,6 @@ export function CaptureBatchWorkspace({
   discardUpload: () => void;
   actioning: boolean;
   startProcessing: () => Promise<void>;
-  completeBatch: () => void;
   reopenBatch: () => void;
   activeTab: string;
   setActiveTab: (key: string) => void;
@@ -224,7 +225,7 @@ export function CaptureBatchWorkspace({
         <Space>
           <ScanLine size={20} />
           <h2>{detail.batch.name}</h2>
-          <StatusTag tone={statusTone(detail.batch.status)}>{statusLabels[detail.batch.status]}</StatusTag>
+          <StatusTag tone={statusTone(detail.batch.status)}>{detail.batch.status === "ready" ? "本批处理完成" : statusLabels[detail.batch.status]}</StatusTag>
         </Space>
         <CaptureProgress percent={progressPercent} />
       </div>
@@ -234,15 +235,12 @@ export function CaptureBatchWorkspace({
           style={{ width: 200 }} disabled={!batchCanManage || Boolean(pendingUpload)} onChange={setPagesPerStudent}
           options={Array.from({ length: 20 }, (_, index) => ({ value: index + 1, label: index === 0 ? "1 页（单面）" : index === 1 ? "2 页（正反面）" : `${index + 1} 页` }))} />
         <Upload {...uploadProps}>
-          <Button icon={<FileUp size={16} />} loading={uploading} disabled={!batchCanManage || !pagesPerStudent || Boolean(pendingUpload)}>导入文件</Button>
+          <Button icon={<FileUp size={16} />} loading={uploading} disabled={!batchCanManage || !pagesPerStudent || Boolean(pendingUpload)}>{uploadLabel}</Button>
         </Upload>
         <Button type="primary" icon={<Workflow size={16} />} onClick={() => void startProcessing()} loading={actioning}
           disabled={!batchCanManage || !detail.files.some((item) => ["uploaded", "failed"].includes(item.status))}>
           {detail.files.some((item) => item.status === "failed") ? "处理待办文件" : "开始处理"}
         </Button>
-        {detail.batch.status === "ready" && (
-          <Button type="primary" icon={<Check size={16} />} onClick={completeBatch} loading={actioning} disabled={!batchCanManage}>完成批次</Button>
-        )}
         {detail.batch.status === "completed" && canManage && (
           <Button icon={<Undo2 size={16} />} onClick={reopenBatch} loading={actioning}>重开批次</Button>
         )}

@@ -28,4 +28,12 @@ describe("capture batch command persistence", () => {
     expect(store.getItem('broken')).toBe('{');
     expect(()=>acceptBatchCreateCommand({getItem:()=>null,setItem:()=>{throw new Error('quota');}},'key',{name:'Draft',source_type:'web_upload'})).toThrow('quota');
   });
+  it("补传创建恢复时保留原用途和原因，不接受新的表单内容覆盖", () => {
+    const store = storage();
+    const draft = { name: "补传", source_type: "web_upload" as const, purpose: "supplement" as const, reason: "补扫遗漏答卷" };
+    const command = acceptBatchCreateCommand(store, "supplement", draft);
+    const recovered = acceptBatchCreateCommand(store, "supplement", { ...draft, reason: "新的编辑" });
+    expect(recovered).toEqual(command);
+    expect(recovered.payload).toMatchObject({ purpose: "supplement", reason: "补扫遗漏答卷" });
+  });
 });

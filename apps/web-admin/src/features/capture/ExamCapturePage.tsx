@@ -67,8 +67,8 @@ export function ExamCapturePage({ user, examId, canManage, canStart, canReview, 
   const importing = data.exam_status === "collecting";
   const reviewing = ["grading", "reviewing"].includes(data.exam_status);
   const canOpenBatches = importing || reviewing || ["finalized", "published", "archived"].includes(data.exam_status);
-  // 后续阶段保留扫描与匹配记录供查阅；导入写操作只在 collecting 阶段开放。
-  const canEditBatches = canManage && importing;
+  // 阅卷中的新增材料通过补传批次处理；不能为了补传把考试回退到导入阶段。
+  const canEditBatches = canManage && (importing || reviewing);
 
   if (!needsPreparation && data.exam_status !== "ready" && !canOpenBatches) return <ErrorState message="当前考试状态不支持导入答卷，请返回阅卷管理刷新。" onRetry={() => void refetch()} />;
 
@@ -77,7 +77,7 @@ export function ExamCapturePage({ user, examId, canManage, canStart, canReview, 
       <Button onClick={() => onNavigate("/grading")}>返回阅卷管理</Button>
       {(importing || reviewing) && canReview ? <Button onClick={() => onNavigate(`${basePath}/grading`)}>前往阅卷 <ArrowRight size={16} /></Button> : null}
     </Space>
-    {canOpenBatches ? <CaptureBatchPage user={user} examId={examId} canManage={canEditBatches} /> : (
+    {canOpenBatches ? <CaptureBatchPage user={user} examId={examId} canManage={canEditBatches} examStatus={data.exam_status} onCollectionChanged={refetch} /> : (
       <section className="page-heading">
         <div><h2>答卷导入</h2><p>{needsPreparation ? "请先完成考试准备并确认，再开始导入学生答卷。" : "考试准备已确认，开始导入后可创建批次并上传学生答卷。"}</p></div>
         {needsPreparation ? <Button onClick={() => onNavigate(`${basePath}/settings`)}>检查考试准备</Button> : <Button type="primary" icon={<Play size={16} />} disabled={!canStart} loading={starting} onClick={confirmStart}>开始导入答卷</Button>}

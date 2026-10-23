@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UploadProps } from "antd";
 import type { CaptureBatch, CaptureBatchDetail, CapturePage, MatchingQueue, ProcessingSummary } from "../api/capture";
 import type { SessionUser } from "../auth/session";
+import type { CaptureCollectionSummary } from "../api/captureCollection";
 import { CaptureBatchPage } from "./CaptureBatchPage";
 
 const mocks = vi.hoisted(() => ({
@@ -17,9 +18,12 @@ const mocks = vi.hoisted(() => ({
   form: { validateFields: vi.fn(), resetFields: vi.fn() },
   targets: vi.fn(), getBatch: vi.fn(),
   uploading: false, uploadProps: undefined as UploadProps | undefined,
+  collectionProps: vi.fn(), exclude: vi.fn(),
+  collectionSummary: undefined as CaptureCollectionSummary | undefined,
 }));
 
 vi.mock("../api/capture", () => ({ confirmRegistration: mocks.confirm, retryRegistration: mocks.retry, findCaptureTargets: mocks.targets, getCaptureBatch: mocks.getBatch }));
+vi.mock("../api/captureCollection", () => ({ excludeCaptureFile: mocks.exclude }));
 vi.mock("../api/client", () => ({
   ApiClientError: class extends Error {},
   getUserErrorMessage: (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback,
@@ -33,6 +37,8 @@ vi.mock("../features/capture/useCaptureBatchDetail", () => ({ useCaptureBatchDet
   processingSummaries: mocks.summaries, loadDetail: mocks.loadDetail, loadMatching: mocks.loadMatching, resetDetail: mocks.resetDetail,
 }) }));
 vi.mock("../features/capture/useCaptureUpload", () => ({ useCaptureUpload: () => ({ uploading: mocks.uploading, uploadSources: mocks.upload, retryUpload: vi.fn(), discardUpload: vi.fn() }) }));
+vi.mock("../features/capture/useCaptureCollection", () => ({ useCaptureCollection: () => ({ summary: mocks.collectionSummary, loading: false, load: mocks.loadBatches, acceptSummary: vi.fn() }) }));
+vi.mock("../features/capture/CaptureCollectionPanel", () => ({ CaptureCollectionPanel: (props: object) => { mocks.collectionProps(props); return null; } }));
 vi.mock("../features/capture/useCaptureMatchActions", () => ({ useCaptureMatchActions: () => ({
   matchStudent: mocks.matchStudent, markUnknown: mocks.markUnknown, matchPage: mocks.matchPage,
   changePageLifecycle: mocks.lifecycle, splitSubmission: mocks.split, mergeSubmissions: mocks.merge,
@@ -108,6 +114,7 @@ describe("采集批次页条件展示与对齐回读", () => {
     mocks.detail = detail(); mocks.summaries = {}; mocks.matching = undefined; mocks.matchingLoading = false;
     mocks.batches = undefined; mocks.detailError = undefined; mocks.detailLoading = false;
     mocks.uploading = false; mocks.uploadProps = undefined;
+    mocks.collectionSummary = undefined;
     mocks.loadDetail.mockResolvedValue(undefined); mocks.confirm.mockResolvedValue({}); mocks.retry.mockResolvedValue({});
     localStorage.clear();
     location.hash = "";
@@ -115,8 +122,8 @@ describe("采集批次页条件展示与对齐回读", () => {
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); location.hash = ""; });
 
-  async function renderPage(canManage = true) {
-    await act(async () => root.render(<CaptureBatchPage {...props} canManage={canManage} />));
+  async function renderPage(canManage = true, examStatus = "collecting") {
+    await act(async () => root.render(<CaptureBatchPage {...props} canManage={canManage} examStatus={examStatus} />));
   }
   async function click(label: string) {
     const button = [...host.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.textContent === label);
@@ -147,6 +154,81 @@ describe("采集批次页条件展示与对齐回读", () => {
     expect(host.querySelector<HTMLSelectElement>('select[aria-label="每名学生答题卡页数"]')?.disabled).toBe(true);
     expect(host.querySelector<HTMLButtonElement>(".capture-batch-row")?.disabled).toBe(true);
     expect(mocks.uploadProps?.disabled).toBe(true);
+  });
+
+  it("技术记录默认收起，可手动切换，问题定位自动展开且上传期间不能隐藏", async () => {
+    await renderPage();
+    const records = () => host.querySelector<HTMLElement>("#capture-processing-records")!;
+    const toggle = () => host.querySelector<HTMLButtonElement>('[aria-controls="capture-processing-records"]')!;
+    expect(records().hidden).toBe(true);
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    await act(async () => toggle().click());
+    expect(records().hidden).toBe(false);
+    await act(async () => toggle().click());
+    expect(records().hidden).toBe(true);
+    mocks.getBatch.mockResolvedValue(detail());
+    const collection = mocks.collectionProps.mock.lastCall![0] as { onLocate: (target: object) => void };
+    await act(async () => collection.onLocate({ batchId: "batch-16", submissionId: "submission-16", tab: "matching" }));
+    expect(records().hidden).toBe(false);
+    mocks.uploading = true;
+    await renderPage();
+    expect(toggle().disabled).toBe(true);
+    await act(async () => toggle().click());
+    expect(records().hidden).toBe(false);
+  });
+
+  it("阅卷阶段只开放补传批次写入，原批次保留查阅", async () => {
+    await renderPage(true, "grading");
+    await choosePages();
+    expect([...host.querySelectorAll("button")].find(button => button.textContent === "补传答卷")?.disabled).toBe(false);
+    expect(mocks.uploadProps?.disabled).toBe(true);
+    mocks.detail!.batch.purpose = "supplement";
+    await renderPage(true, "grading");
+    expect(mocks.uploadProps?.disabled).toBe(false);
+  });
+
+  it("阅卷尚未结束导入时允许修复旧未完成批次，结束后旧批次不能重开", async () => {
+    mocks.collectionSummary = { exam_id: "exam-16", exam_status: "grading", closed: false, pages_per_student: 2 } as CaptureCollectionSummary;
+    await renderPage(true, "grading");
+    expect(mocks.uploadProps?.disabled).toBe(false);
+    mocks.detail!.batch.status = "completed";
+    await renderPage(true, "grading");
+    expect([...host.querySelectorAll("button")].some(button => button.textContent === "重开批次")).toBe(false);
+    mocks.detail!.batch.purpose = "supplement";
+    mocks.collectionSummary.closed = true;
+    await renderPage(true, "grading");
+    expect([...host.querySelectorAll("button")].some(button => button.textContent === "重开批次")).toBe(false);
+  });
+
+  it("模板页数晚到时补默认值，刷新保留用户选择，换场次不带旧页数", async () => {
+    await renderPage();
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="每名学生答题卡页数"]')?.value).toBe("");
+    mocks.collectionSummary = { exam_id: "exam-16", exam_status: "collecting", closed: false, pages_per_student: 2 } as CaptureCollectionSummary;
+    await renderPage();
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="每名学生答题卡页数"]')?.value).toBe("2");
+    await choosePages(3);
+    mocks.collectionSummary = { ...mocks.collectionSummary, pages_per_student: 4 };
+    await renderPage();
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="每名学生答题卡页数"]')?.value).toBe("3");
+    mocks.collectionSummary = undefined;
+    await act(async () => root.render(<CaptureBatchPage {...props} examId="other-exam" />));
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="每名学生答题卡页数"]')?.value).toBe("");
+  });
+
+  it("上传替代答卷绑定本次整组首个新文件，不在新登记完成前排除原组", async () => {
+    mocks.getBatch.mockResolvedValue(detail());
+    mocks.exclude.mockResolvedValue({});
+    await renderPage();
+    const collection = mocks.collectionProps.mock.lastCall![0] as { onReplace: (issue: object, reason: string) => Promise<void> };
+    await act(async () => collection.onReplace({ id: "old", kind: "file", code: "file_failed", name: "旧选择.pdf", batch_id: "batch-16", file_id: "old-file" }, "重新导出完整答卷"));
+    await choosePages();
+    expect(host.textContent).toContain("原选择的全部文件及其答卷将退出有效输入");
+    const files = [new File(["front"], "front.png"), new File(["back"], "back.png")] as Parameters<NonNullable<UploadProps["beforeUpload"]>>[1];
+    await act(async () => { await mocks.uploadProps!.beforeUpload!(files[0], files); });
+    expect(mocks.exclude).not.toHaveBeenCalled();
+    const onRegistered = mocks.upload.mock.lastCall![2] as (ids: string[]) => Promise<void>;
+    await act(async () => onRegistered(["new-first", "new-second"]));
+    expect(mocks.exclude).toHaveBeenCalledExactlyOnceWith("old-file", "重新导出完整答卷", "new-first");
   });
 
   it.each(["waiting_files", "incomplete_pages", "identity_conflict"])("分组 %s 阻止答卷进入后续页面处理", async status => {
@@ -193,21 +275,21 @@ describe("采集批次页条件展示与对齐回读", () => {
   });
 
   it.each([
-    ["ready", true, true, true, false],
-    ["ready", false, false, true, false],
-    ["completed", true, false, false, true],
-    ["completed", false, false, false, false],
-    ["cancelled", true, false, false, false],
-    ["needs_review", true, true, false, false],
-  ] as const)("批次 %s、管理权限 %s 保留写入与完成/重开边界", async (status, canManage, writable, showComplete, showReopen) => {
+    ["ready", true, true, false],
+    ["ready", false, false, false],
+    ["completed", true, false, true],
+    ["completed", false, false, false],
+    ["cancelled", true, false, false],
+    ["needs_review", true, true, false],
+  ] as const)("批次 %s、管理权限 %s 保留写入/重开边界并移除逐批结束入口", async (status, canManage, writable, showReopen) => {
     mocks.detail!.batch.status = status; mocks.detail!.files = [file()];
     await renderPage(canManage);
     if (writable) await choosePages();
     const findButton = (label: string) => [...host.querySelectorAll("button")].find(button => button.textContent === label);
     expect(findButton("导入文件")?.disabled).toBe(!writable);
     expect(findButton("开始处理")?.disabled).toBe(!writable);
-    expect(findButton("完成批次") !== undefined).toBe(showComplete);
-    if (showComplete) expect(findButton("完成批次")?.disabled).toBe(!writable);
+    expect(findButton("完成批次")).toBeUndefined();
+    if (status === "ready") expect(host.textContent).toContain("本批处理完成");
     expect(findButton("重开批次") !== undefined).toBe(showReopen);
   });
 
@@ -287,6 +369,13 @@ describe("采集批次页条件展示与对齐回读", () => {
     expect(host.querySelector(".capture-file-issue")?.textContent).toContain("待修复.pdf");
     await click("上传修复文件");
     expect(mocks.info).toHaveBeenCalledWith("请按学生页序一次选择完整答卷重新导入；新选择独立分组，系统会保留原失败记录");
+  });
+
+  it("整组退出后保留删除页查阅，但不再显示对应答卷的处理待办", async () => {
+    mocks.detail!.pages[0].status = "deleted";
+    await renderPage();
+    expect(host.querySelector(".capture-processing-row")).toBeNull();
+    expect(host.querySelector('[data-tab="processing"]')?.textContent).toContain("拆页完成后，系统将自动对齐版面并按题切分");
   });
 
   it("名册定位读取分页外的真实批次，保留明确答卷对象", async () => {

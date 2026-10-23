@@ -48,7 +48,7 @@ function ExamWorkspaceModule({ data, section, name, inPreparation, moduleContent
     : "考试已归档，当前学科只读；已发布成绩继续按原权限访问。";
   // 分区按需加载或报错时只替换内容，保留考试信息和导航；换考试或分区后重置错误边界。
   const module = <ErrorBoundary resetKey={`${data.exam_id}:${section}`}><Suspense fallback={<LoadingState label={`正在加载${name}`} />}>{moduleContent}</Suspense></ErrorBoundary>;
-  return <div className={`exam-workspace-content${inPreparation ? " is-preparation" : ""}`} data-stage={sectionBusinessStage[section]}>
+  return <div className={`exam-workspace-content${inPreparation ? " is-preparation" : section === "capture" ? " is-capture" : ""}`} data-stage={sectionBusinessStage[section]}>
     {readOnly ? <Alert className="drawer-alert" type="info" showIcon message={readOnlyNotice} /> : null}
     {moduleContent ? <div className="exam-workspace-module" aria-label={name}>{module}</div> : <main className="eg-workspace-panel eg-workspace-section-empty"><div><span>考试工作区</span><h2>{name}</h2><p>该环节暂时没有独立页面，请从左侧菜单选择可用入口。</p></div></main>}
   </div>;
@@ -96,7 +96,7 @@ export function ExamWorkspaceLayout({ data, section, moduleContent, onNavigate, 
   const preparationLinks = preparationNavigationSteps(currentReadinessResult?.readiness);
   // 导航只挂载在页头一次；切换模块继续复用同一组按钮和准备检查结果。
   const preparationNavigation = showPreparationNavigation ? <PreparationNavigation links={preparationLinks} section={section} examId={data.exam_id} failed={Boolean(currentReadinessResult?.failed)} canRead={canReadReadiness} onNavigate={onNavigate} /> : null;
-  return <div className={`exam-workspace-canvas${inPreparation ? " is-preparation" : ""}`}><WorkspaceLayout
+  return <div className={`exam-workspace-canvas${inPreparation ? " is-preparation" : section === "capture" ? " is-capture" : ""}`}><WorkspaceLayout
     header={<ExamWorkspaceHeader data={data} section={section} assistant={assistant} preparationNavigation={preparationNavigation} onNavigate={onNavigate} />}
     // 考试列表内只导航准备与答卷导入；阅卷和成绩使用左侧各自的业务入口。
     stageRail={null}

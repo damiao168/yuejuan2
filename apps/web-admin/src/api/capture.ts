@@ -11,6 +11,7 @@ export interface CaptureBatch {
   revision: number;
   operator_id: string;
   scanner_device?: string;
+  purpose?: string;
   file_count: number;
   page_count: number;
   submission_count: number;
@@ -135,7 +136,16 @@ export interface NormalizedPoint { x: number; y: number; }
 export interface RegistrationCorrectionContext { registration_run_id: string; capture_page_id: string; exam_id: string; page_revision: number; page_no: number; source_file_asset_id: string; template_file_asset_id: string; template_content_type: string; template_width: number; template_height: number; }
 export interface RegistrationCorrection { id: string; capture_page_id: string; base_registration_run_id: string; applied_registration_run_id?: string; source_page_revision: number; template_id: string; template_content_hash: string; page_no: number; source_points: NormalizedPoint[]; template_points: NormalizedPoint[]; advanced_anchor_mode: boolean; status: "draft" | "queued" | "preview_ready" | "failed" | "expired" | "superseded" | "applied" | "undone"; revision: number; attempt_count: number; preview_registered_file_asset_id?: string; coverage?: number; reprojection_error?: number; validation_report: Record<string, unknown>; error_code?: string; }
 
-export async function createCaptureBatch(examId: string, payload: { name: string; source_type: CaptureBatch["source_type"]; scanner_device?: string; idempotency_key: string }) {
+export interface CreateCaptureBatchInput {
+  name: string;
+  source_type: CaptureBatch["source_type"];
+  scanner_device?: string;
+  idempotency_key: string;
+  purpose?: "supplement";
+  reason?: string;
+}
+
+export async function createCaptureBatch(examId: string, payload: CreateCaptureBatchInput) {
   return apiClient.request<{ batch: CaptureBatch }>(`/api/v1/exams/${encodeURIComponent(examId)}/capture-batches`, { method: "POST", headers: { "Idempotency-Key": payload.idempotency_key }, body: JSON.stringify(payload) });
 }
 
@@ -193,6 +203,10 @@ export async function completeCaptureBatch(batchId: string, reason: string) {
 
 export async function reopenCaptureBatch(batchId: string, reason: string) {
   return apiClient.request<{ batch: CaptureBatch }>(`/api/v1/capture-batches/${encodeURIComponent(batchId)}/reopen`, { method: "POST", body: JSON.stringify({ reason }) });
+}
+
+export async function cancelCaptureBatch(batchId: string, reason: string) {
+  return apiClient.request<{ batch: CaptureBatch }>(`/api/v1/capture-batches/${encodeURIComponent(batchId)}/cancel`, { method: "POST", body: JSON.stringify({ reason }) });
 }
 
 export async function updateCapturePage(pageId: string, payload: { revision: number; rotation_degrees?: number; sequence_no?: number }) {

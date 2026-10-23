@@ -4,6 +4,38 @@
   gap: 16px;
 }
 
+.capture-records { border: 1px solid var(--border); background: var(--surface); }
+.capture-records-toggle { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 18px; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.capture-records-toggle > span:first-child { display: grid; gap: 4px; }
+.capture-records-toggle small, .capture-records-toggle > span:last-child { color: var(--text-muted); }
+.capture-records-toggle:hover { background: var(--hover-bg); }
+.capture-records-toggle:disabled { cursor: default; }
+.capture-records-body[hidden] { display: none; }
+.capture-records .capture-batch-layout { border: 0; border-top: 1px solid var(--border); }
+
+.capture-collection { border: 1px solid var(--border); background: var(--surface); padding: 20px; }
+.capture-collection-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.capture-collection-heading h2 { margin: 0; font-size: 1.15rem; }
+.capture-collection-heading p { margin: 6px 0 0; color: var(--text-muted); }
+.capture-collection-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 20px 0 16px; border-block: 1px solid var(--border); }
+.capture-collection-stats > div { padding: 14px 16px; border-right: 1px solid var(--border); }
+.capture-collection-stats > div:last-child { border-right: 0; }
+.capture-collection-stats span, .capture-collection-stats strong { display: block; }
+.capture-collection-stats span { color: var(--text-muted); }
+.capture-collection-stats strong { font-size: 1.6rem; margin-top: 4px; }
+.capture-collection-filter { margin: 18px 0 12px; }
+.capture-collection-materials { margin-top: 22px; }
+.capture-collection-materials h3 { font-size: 1rem; margin-bottom: 8px; }
+.capture-collection-materials h3 small { font-weight: 400; color: var(--text-muted); margin-left: 6px; }
+.capture-collection-material { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--border); }
+.capture-collection-material > div:first-child { display: grid; gap: 4px; }
+.capture-collection-material span { color: var(--text-muted); }
+@media (max-width: 760px) {
+  .capture-collection { padding: 14px; }
+  .capture-collection-heading, .capture-collection-material { flex-direction: column; align-items: stretch; }
+  .capture-collection-stats > div { padding: 12px 8px; }
+}
+
 .capture-batch-layout {
   min-height: 650px;
   display: grid;

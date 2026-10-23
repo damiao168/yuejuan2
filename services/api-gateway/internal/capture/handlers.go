@@ -57,7 +57,7 @@ func (h *Handler) CreateBatch(w http.ResponseWriter, r *http.Request) {
 		input.IdempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
 	// 非采集阶段只允许恢复已成功接受的同键命令，不能借恢复接口新建批次。
-	if current.Status != "collecting" {
+	if current.Status != "collecting" && !(input.Purpose == "supplement" && (current.Status == "grading" || current.Status == "reviewing")) {
 		recovery, recoveryErr := h.store.RecoverBatchCommand(r.Context(), user.TenantID, examID, user.ID, input.IdempotencyKey)
 		if recoveryErr != nil || recovery.Status != "succeeded" {
 			httpx.Error(w, r, http.StatusConflict, "exam_not_collecting", "exam must be collecting before capture batches can be created")
@@ -934,6 +934,10 @@ func decodeStrict(w http.ResponseWriter, r *http.Request, target any) bool {
 func mustUser(r *http.Request) auth.User { user, _ := auth.UserFromContext(r.Context()); return user }
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, ErrFileHasGrades):
+		httpx.Error(w, r, http.StatusConflict, "capture_file_has_grades", "这份答卷已进入评分，请通过答卷修订与重新阅卷处理，不能直接移除")
+	case strings.Contains(err.Error(), "capture_collection_closed"):
+		httpx.Error(w, r, http.StatusConflict, "capture_collection_closed", "本场导入已结束，请使用补传答卷入口")
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "capture_not_found", "capture resource not found")
 	case errors.Is(err, ErrInvalidInput):

@@ -131,15 +131,15 @@ describe("答卷导入状态边界", () => {
   });
 
   it.each([
-    { status: "grading", hasReviewEntry: true },
-    { status: "reviewing", hasReviewEntry: true },
-    { status: "finalized", hasReviewEntry: false },
-    { status: "published", hasReviewEntry: false },
-    { status: "archived", hasReviewEntry: false }
-  ])("$status 状态只读，并按阶段限制阅卷入口", async ({ status, hasReviewEntry }) => {
+    { status: "grading", hasReviewEntry: true, canSupplement: true },
+    { status: "reviewing", hasReviewEntry: true, canSupplement: true },
+    { status: "finalized", hasReviewEntry: false, canSupplement: false },
+    { status: "published", hasReviewEntry: false, canSupplement: false },
+    { status: "archived", hasReviewEntry: false, canSupplement: false }
+  ])("$status 按阶段开放补传和阅卷入口", async ({ status, hasReviewEntry, canSupplement }) => {
     workspaceStatus(status);
     await renderPage();
-    expect(container.querySelector("[data-capture-exam]")?.getAttribute("data-capture-manage")).toBe("false");
+    expect(container.querySelector("[data-capture-exam]")?.getAttribute("data-capture-manage")).toBe(String(canSupplement));
     expect([...container.querySelectorAll("button")].some((item) => item.textContent?.trim() === "前往阅卷")).toBe(hasReviewEntry);
   });
 
