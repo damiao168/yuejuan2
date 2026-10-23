@@ -1,6 +1,7 @@
 package subjective
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"errors"
@@ -12,7 +13,8 @@ import (
 func imageLedgerTx(t *testing.T, steps ...imageSQLStep) *sql.Tx {
 	t.Helper()
 	steps = append(append([]imageSQLStep{{kind: "begin"}}, steps...), imageSQLStep{kind: "rollback"})
-	tx, err := imageTestDB(t, steps...).BeginTx(t.Context(), nil)
+	// t.Context 会先于 Cleanup 取消并触发异步回滚；夹具由下面的显式回滚结束事务，再核对全部 SQL 步骤。
+	tx, err := imageTestDB(t, steps...).BeginTx(context.WithoutCancel(t.Context()), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -63,7 +63,7 @@ test("首页主动作完成单页新建考试并进入考试准备", async ({ pa
   await loginAsSchoolAdmin(page);
 
   await page.getByRole("button", { name: "新建考试" }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/new/);
+  await expect(page).toHaveURL(/\/admin\/exams\/new$/);
   await expect(page.getByRole("region", { name: "创建方式" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "1. 考试名称与基本信息" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "2. 添加考试学科" })).toBeVisible();
@@ -78,22 +78,22 @@ test("首页主动作完成单页新建考试并进入考试准备", async ({ pa
   await page.getByRole("button", { name: /系统通用高中考试方案/ }).click();
   await expect(page.getByText("已套用试卷结构")).toHaveCount(3);
   await page.locator(".exam-composer-submit").getByRole("button", { name: "使用方案创建考试" }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/exam-created-math\/students/);
+  await expect(page).toHaveURL(/\/admin\/exams\/exam-created-math\/students$/);
 
   await page.goto("/#/admin/dashboard");
   await page.getByRole("row", { name: /主观题等待确认/ }).getByRole("button", { name: "继续阅卷" }).click();
-  await expect(page).toHaveURL(/#\/admin\/grading\?status=pending/);
+  await expect(page).toHaveURL(/\/admin\/grading\?status=pending$/);
 
   await page.goto("/#/admin/dashboard");
   await page.getByRole("button", { name: /处理答卷/ }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/exam-1\/capture/);
+  await expect(page).toHaveURL(/\/admin\/exams\/exam-1\/capture$/);
 });
 
 test("没有待办时使用紧凑空状态", async ({ page }) => {
   await installApiMocks(page, { dashboardMode: "empty", onboardingReady: true });
   await loginAsSchoolAdmin(page);
 
-  await expect(page).toHaveURL(/#\/admin\/dashboard/);
+  await expect(page).toHaveURL(/\/admin\/dashboard$/);
   await expect(page.getByText("当前没有需要处理的事项")).toBeVisible();
   await expect(page.getByText("暂无进行中考试")).toBeVisible();
   await expect(page.getByText("进行中 0 场", { exact: false })).toBeVisible();
@@ -105,13 +105,13 @@ test("成员管理入口进入正式班级和教师页面", async ({ page }) => 
   await loginAsSchoolAdmin(page);
 
   await page.getByRole("button", { name: /年级与班级/ }).click();
-  await expect(page).toHaveURL(/#\/admin\/members\/classes/);
+  await expect(page).toHaveURL(/\/admin\/members\/classes$/);
   await expect(page.getByRole("heading", { name: "年级与班级" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("高二（1）班")).toBeVisible();
 
   await page.goto("/#/admin/dashboard");
-  await page.getByRole("button", { name: /阅卷教师/ }).click();
-  await expect(page).toHaveURL(/#\/admin\/members\/teachers/);
+  await page.getByRole("button", { name: /教师看板.*管理教师/ }).click();
+  await expect(page).toHaveURL(/\/admin\/members\/teachers$/);
   await expect(page.getByRole("heading", { name: "人员与权限", exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("数学阅卷老师")).toBeVisible();
 });

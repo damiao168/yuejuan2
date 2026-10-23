@@ -38,12 +38,12 @@ test("学校管理员通过真实网关登录并查看已持久化考试", async
     expect(readiness.checks.find((check) => check.key === key)?.state).toBe("ready");
   }
   await page.getByText("考试列表", { exact: true }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams/);
+  await expect(page).toHaveURL(/\/admin\/exams$/);
   const examLink = page.getByText(examName, { exact: true });
   await expect(examLink).toBeVisible();
   await examLink.click();
   // 列表先进入整场总览，再由学科入口进入工作区；固定种子 ID 防止误读另一场同名考试。
-  await expect(page).toHaveURL(new URL(`/#/admin/exams/overview/standalone/${examId}`, page.url()).href);
+  await expect(page).toHaveURL(new URL(`/admin/exams/overview/standalone/${examId}`, page.url()).href);
   await expect(page.getByRole("heading", { name: examName, exact: true })).toBeVisible();
   const persistedExam = await page.evaluate(async (id) => {
     const response = await fetch(`/api/v1/exams/${encodeURIComponent(id)}`, { credentials: "include" });
@@ -54,8 +54,8 @@ test("学校管理员通过真实网关登录并查看已持久化考试", async
   // 夹具已按正式生命周期进入 grading，真实 worker 完成批次后仍应保留考试阶段。
   expect(persistedExam).toMatchObject({ id: examId, name: examName, status: "grading" });
   const subjectRow = page.getByRole("row").filter({ has: page.getByRole("cell", { name: "语文", exact: true }) });
-  await subjectRow.getByRole("button", { name: "继续阅卷", exact: true }).click();
-  await expect(page).toHaveURL(new URL(`/#/admin/exams/${examId}/grading`, page.url()).href);
+  await subjectRow.click();
+  await expect(page).toHaveURL(new URL(`/admin/exams/${examId}/grading`, page.url()).href);
 
   for (const section of ["overview", "students", "paper", "questions", "capture", "processing", "grading", "scores", "reports"]) {
     await page.goto(`/#/admin/exams/${encodeURIComponent(examId)}/${section}`);

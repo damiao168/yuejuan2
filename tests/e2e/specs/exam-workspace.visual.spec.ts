@@ -17,35 +17,30 @@ for (const viewport of desktopViewports) {
   test(`exam workspace showcase is stable at ${viewport.name}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
     await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
-    // 展示已保存的评分方式；缺少新增目录接口会产生 404，不能把错误画面录入展示基线。
+    // 准备页使用同次检查返回的有效评分方案，展示夹具也须提供该摘要。
     const profileID = "senior.mathematics.v1";
-    await page.route("**/api/v1/exams/exam-1/questions", route => route.fulfill({ json: { questions: [
-      { id: "question-visual", exam_id: "exam-1", question_no: "1", question_type: "calculation", stem: "计算并说明步骤。", score: 10, page_no: 1, status: "active", revision: 1, knowledge_points: [] }
-    ] } }));
-    await page.route("**/api/v1/assessment/subject-profiles", route => route.fulfill({ json: { subject_profiles: [
-      { id: profileID, code: "senior.mathematics.standard", education_stage: "senior", subject_code: "mathematics", version: 1, status: "active", parser_policy: {}, evidence_policy: { allowed_types: ["math_step"] }, scoring_default: { mode: "AI_ASSIST", require_evidence: true } }
-    ] } }));
-    await page.route("**/api/v1/assessment/question-archetypes", route => route.fulfill({ json: { question_archetypes: [
-      { code: "structured_steps", response_schema: {}, evidence_types: ["math_step"], default_scoring_mode: "AI_ASSIST" }
-    ] } }));
-    await page.route("**/api/v1/exams/exam-1/questions/question-visual/assessment-profile", route => route.fulfill({ json: { assessment_profile: {
-      id: "assessment-visual", exam_id: "exam-1", question_id: "question-visual", subject_profile_id: profileID,
-      education_stage: "senior", subject_code: "mathematics", archetype_code: "structured_steps", allowed_evidence_types: ["math_step"], risk_tier: "R2", scoring_policy: { mode: "AI_ASSIST", require_evidence: true }, revision: 1
+    await page.route("**/api/v1/exams/exam-1/readiness", route => route.fulfill({ json: { readiness: {
+      ready: false, confirmed: false, configuration_hash: "visual-readiness", import_snapshot_available: false,
+      checks: [{ code: "paper_file", label: "上传试卷", passed: false, severity: "blocker", message: "请上传并确认考试资料", section: "paper" }],
+      advisories: [], scoring_preview: [{ question_id: "question-visual", question_no: "1", source: "saved",
+        profile: { id: profileID, code: "senior.mathematics.standard", education_stage: "senior", subject_code: "mathematics", version: 1 },
+        archetype_code: "structured_steps", allowed_evidence_types: ["math_step"], risk_tier: "R2",
+        scoring_policy: { mode: "AI_ASSIST", require_evidence: true }, reason: "沿用本题已保存的评分方案" }]
     } } }));
     await page.goto("/#/admin/exams/exam-1/settings", { waitUntil: "domcontentloaded" });
 
     const workspace = page.locator(".eg-workspace-layout");
     await expect(workspace).toBeVisible({ timeout: 30_000 });
-    const stages = workspace.getByRole("combobox", { name: "切换考试环节", exact: true });
-    await expect(stages).toBeVisible();
-    await expect(workspace.locator(".exam-context-status")).toContainText("答卷导入");
-    await stages.press("ArrowDown");
-    await expect(page.locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content")).toHaveText(["考试准备", "答卷导入", "阅卷", "成绩"]);
-    await stages.press("Escape");
-    await expect(page.getByRole("navigation", { name: "考试准备" })).toBeVisible();
+    const preparation = page.getByRole("navigation", { name: "考试准备与答卷导入", exact: true });
+    await expect(preparation.locator("button > span:last-child")).toHaveText([
+      "学生范围", "考试资料", "小题与分值", "答题卡设置", "确认准备完成", "学生答卷"
+    ]);
     await expect(page.getByRole("heading", { name: "确认准备完成" })).toBeVisible();
-    await expect(page.getByText("已核实 1 / 1 题", { exact: true })).toBeVisible();
-    await expect(page.getByRole("row", { name: "第 1 题 系统建议分数，教师逐题确认 已保存，可核实", exact: true })).toBeVisible();
+    const scoring = page.locator(".scoring-preparation");
+    await expect(scoring.getByText("已匹配 1 题 · 沿用单题设置 1 题", { exact: true })).toBeVisible();
+    await scoring.getByRole("button", { name: "查看评分明细", exact: true }).click();
+    await expect(scoring.getByRole("cell", { name: "系统建议分数，教师逐题确认", exact: true })).toBeVisible();
+    await expect(scoring.getByRole("cell", { name: "单题设置", exact: true })).toBeVisible();
     await expect(page.getByText("请求的内容不存在或已被删除。", { exact: true })).toHaveCount(0);
     await page.evaluate(async () => document.fonts.ready);
     // 异步评分表格变高可能触发浏览器滚动锚定；展示基线固定首屏，并验证考试页头完整可见。
@@ -86,7 +81,7 @@ test("new exam opens a focused paper-upload first screen", async ({ page }, test
   await page.goto("/#/admin/exams/exam-created-math/paper", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByRole("heading", { name: "添加试卷资料" })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("navigation", { name: "考试准备" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "考试准备与答卷导入", exact: true })).toBeVisible();
   await expect(page.getByPlaceholder("选择考试")).toHaveCount(0);
   await page.evaluate(async () => document.fonts.ready);
 

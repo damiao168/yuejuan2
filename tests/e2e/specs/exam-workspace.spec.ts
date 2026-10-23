@@ -34,52 +34,49 @@ test("mock API 支持动态考试 ID，并在测试层拦截未配置接口", as
   await expect.poll(() => capabilitiesSucceeded).toBe(true);
 });
 
-test("考试工作区以紧凑选择器保留四阶段和当前考试，让阻断项跳到可处理环节", async ({ page }) => {
+test("考试工作区保留当前考试和六步导航，阅卷与成绩从业务入口进入", async ({ page }) => {
   await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
   await page.goto("/#/admin/exams/exam-1/overview", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByRole("heading", { name: "2026 春季数学期中考试" })).toBeVisible({ timeout: 30_000 });
-  const stages = page.getByRole("combobox", { name: "切换考试环节", exact: true });
-  await expect(stages).toBeVisible();
-  await expect(page.locator(".exam-context-status")).toContainText("答卷导入");
-  await stages.press("ArrowDown");
-  await expect(page.locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content")).toHaveText(["考试准备", "答卷导入", "阅卷", "成绩"]);
-  await stages.press("Escape");
+  const preparation = page.getByRole("navigation", { name: "考试准备与答卷导入", exact: true });
+  await expect(preparation.locator("button > span:last-child")).toHaveText([
+    "学生范围", "考试资料", "小题与分值", "答题卡设置", "确认准备完成", "学生答卷"
+  ]);
+  await expect(page.getByRole("combobox", { name: "切换考试环节", exact: true })).toHaveCount(0);
   await expect(page.locator("#primary-navigation")).toBeVisible();
 
-  const nextAction = page.getByRole("region", { name: "当前下一步", exact: true });
-  await expect(nextAction).toContainText("答卷处理失败");
-  await nextAction.getByRole("button", { name: "查看并重试 答卷处理失败", exact: true }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/exam-1\/capture/);
+  await preparation.getByRole("button", { name: /^学生答卷，/ }).click();
+  await expect(page).toHaveURL(/\/admin\/exams\/exam-1\/capture$/);
+  await expect(preparation.getByRole("button", { name: /^学生答卷，/ })).toHaveAttribute("aria-current", "step");
   await expect(page.locator("#primary-navigation")).toBeVisible();
 
-  await stages.press("ArrowDown");
-  await page.getByTitle("阅卷", { exact: true }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/exam-1\/grading/);
+  // 准备与答卷共用考试内导航；阅卷和成绩沿用左侧正式业务入口。
+  await page.locator("#primary-navigation").getByRole("menuitem", { name: "阅卷管理", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/grading$/);
   await expect(page.locator("#primary-navigation")).toBeVisible();
-  await stages.press("ArrowDown");
-  await page.getByTitle("成绩", { exact: true }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/exam-1\/scores/);
+  await page.locator("#primary-navigation").getByRole("menuitem", { name: "成绩发布", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/scores$/);
   await expect(page.locator("#primary-navigation")).toBeVisible();
 });
 
-test("左侧显示固定准备任务，右侧仅显示当前任务", async ({ page }) => {
+test("顶部显示准备与答卷六步入口，内容区仅显示当前任务", async ({ page }) => {
   await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
   await page.goto("/#/admin/exams/exam-created-math/settings", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByRole("heading", { name: "确认准备完成" })).toBeVisible({ timeout: 60_000 });
   await expect(page.locator(".exam-preparation-nav button > span:last-child")).toHaveText([
-    "学生范围", "考试资料", "小题与分值", "答题卡设置", "确认准备完成"
+    "学生范围", "考试资料", "小题与分值", "答题卡设置", "确认准备完成", "学生答卷"
   ]);
-  await expect(page.locator(".exam-preparation-nav .exam-preparation-step-number")).toHaveText(["1", "2", "3", "4", "5"]);
+  await expect(page.locator(".exam-preparation-nav .exam-preparation-step-number")).toHaveText(["1", "2", "3", "4", "5", "6"]);
   await expect(page.locator(".exam-setup-questions")).toHaveCount(0);
   await expect(page.locator(".exam-readiness-issues")).toContainText("请上传并确认考试资料");
 
   await page.locator(".exam-readiness-issues li").filter({ hasText: "上传试卷" }).getByRole("button", { name: "去处理" }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/exam-created-math\/paper/);
+  await expect(page).toHaveURL(/\/admin\/exams\/exam-created-math\/paper$/);
 
-  await page.getByRole("navigation", { name: "考试准备" }).getByRole("button", { name: "学生范围" }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/exam-created-math\/students/);
+  await page.getByRole("navigation", { name: "考试准备与答卷导入", exact: true }).getByRole("button", { name: /^学生范围，/ }).click();
+  await expect(page).toHaveURL(/\/admin\/exams\/exam-created-math\/students$/);
   await expect(page.getByRole("heading", { name: "学生范围" })).toBeVisible();
 });
 
@@ -137,6 +134,6 @@ test("同场次学科切换直接使用工作台投影，不拉取全校考试�
   await expect(page.getByRole("heading", { name: "2026 春季期中考试" })).toBeVisible();
   await page.locator(".exam-workspace-subject .ant-select-selector").click();
   await page.getByTitle("物理 · 100 分").click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/exam-physics\/settings/);
+  await expect(page).toHaveURL(/\/admin\/exams\/exam-physics\/settings$/);
   expect(examListRequests).toBe(0);
 });

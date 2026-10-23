@@ -13,7 +13,7 @@ test("学校管理员登录后从可信工作台进入正式答题卡导入", as
   await expect(page.getByText("主观题等待确认")).toBeVisible();
 
   await page.getByRole("button", { name: "处理答卷" }).click();
-  await expect(page).toHaveURL(/#\/admin\/exams\/exam-1\/capture/);
+  await expect(page).toHaveURL(/\/admin\/exams\/exam-1\/capture$/);
   await expect(page.getByRole("heading", { name: "答卷导入" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "新建批次" })).toBeVisible();
   await expect(page.getByText("当前页面是兼容模式")).toHaveCount(0);
