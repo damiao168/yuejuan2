@@ -136,11 +136,7 @@ func taskScope(store Store, completion bool) func(http.Handler) http.Handler {
 	}
 }
 
-// 先核对请求中的当前租约；已认证服务的队列白名单由 TaskScope 在成功后检查。
-func authorizeTaskRequest(w http.ResponseWriter, r *http.Request, store Store) (Task, bool) {
-	return authorizeTaskRequestForCompletion(w, r, store, false)
-}
-
+// 先核对当前租约；仅完成回调允许检查同一工作节点的持久完成回执。
 func authorizeTaskRequestForCompletion(w http.ResponseWriter, r *http.Request, store Store, completion bool) (Task, bool) {
 	taskID := strings.TrimSpace(r.Header.Get(TaskIDHeader))
 	leaseToken := strings.TrimSpace(r.Header.Get(TaskLeaseHeader))

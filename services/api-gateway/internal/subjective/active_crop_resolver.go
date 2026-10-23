@@ -128,10 +128,6 @@ type activeCropMetadata struct {
 	bbox           ActiveCropBBox
 }
 
-func (r *ActiveCropResolver) loadMetadata(ctx context.Context, tenantID string, segmentID string, questionID string) (activeCropMetadata, error) {
-	return r.loadMetadataForScope(ctx, tenantID, segmentID, questionID, false)
-}
-
 func (r *ActiveCropResolver) loadMetadataForScope(ctx context.Context, tenantID string, segmentID string, questionID string, allowGroup bool) (activeCropMetadata, error) {
 	evidence, err := r.evidence.GetEvidenceForQuestion(ctx, tenantID, segmentID, questionID)
 	if err != nil {

@@ -294,21 +294,6 @@ WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 	return out, nil
 }
 
-func (s *PostgresStore) getTask(ctx context.Context, tenantID string, id string) (Task, error) {
-	row := s.db.QueryRowContext(ctx, `
-SELECT id::text, tenant_id::text, orchestration_run_id::text, agent_type, status,
-  input_ref, output_ref, evidence_ref, confidence::float8, attempt_no, max_attempts,
-  COALESCE(error_message, ''), created_by::text, started_at, completed_at, created_at
-FROM agent_task
-WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
-`, tenantID, id)
-	var out Task
-	if err := scanTask(row, &out); err != nil {
-		return Task{}, err
-	}
-	return out, nil
-}
-
 func (s *PostgresStore) getTaskTx(ctx context.Context, tx *sql.Tx, tenantID string, id string) (Task, error) {
 	// 同一运行的任务先锁父运行再锁任务；父汇总才能看到前一个任务的已提交状态，
 	// 也避免不同任务各自汇总后再排队写父状态时，把 completed 覆盖成过时的 running。
