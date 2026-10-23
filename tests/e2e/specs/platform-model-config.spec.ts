@@ -364,6 +364,8 @@ test("未保存草稿超过两分钟后自动清除", async ({ page }) => {
   await page.getByLabel("API Key").fill("expiring-draft-secret-at-least-16");
   await page.getByLabel("模型名称").fill("expiring-draft-model");
   await page.getByRole("button", { name: "关闭", exact: true }).click();
+  // 先结束侧栏关闭动画和滚动锁，再推进草稿时钟，避免旧表单遮挡下一次打开。
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.clock.fastForward(2 * 60 * 1000 + 1);
 
   await page.getByRole("button", { name: "添加模型" }).click();
@@ -487,6 +489,8 @@ test("编辑自定义 API 域名时保存也必须提交密钥", async ({ page }
   await page.getByLabel("API 地址").fill("https://new.example.test/v1");
   await page.getByRole("button", { name: "检测连接并更新", exact: true }).click();
   await expect(page.getByText("更换 API 域名或端口时，请重新输入 API Key（可以使用原密钥）", { exact: true })).toBeVisible();
+  // 字段错误先显示，整表校验随后才释放保存锁；等失败提交结束，再输入密钥开始第二次提交。
+  await expect(page.getByRole("button", { name: "检测连接并更新", exact: true })).toBeVisible();
   expect(updateRequests).toBe(0);
 
   await page.getByLabel("API Key").fill("new-endpoint-secret-at-least-16");
