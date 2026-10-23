@@ -486,15 +486,16 @@ test("编辑自定义 API 域名时保存也必须提交密钥", async ({ page }
 
   await page.goto("/#/platform/model-config");
   await page.getByLabel("编辑自定义模型").click();
+  const update = page.getByRole("dialog").getByRole("button", { name: /检测连接并更新/ });
   await page.getByLabel("API 地址").fill("https://new.example.test/v1");
-  await page.getByRole("button", { name: "检测连接并更新", exact: true }).click();
+  await update.click();
   await expect(page.getByText("更换 API 域名或端口时，请重新输入 API Key（可以使用原密钥）", { exact: true })).toBeVisible();
-  // 字段错误先显示，整表校验随后才释放保存锁；等失败提交结束，再输入密钥开始第二次提交。
-  await expect(page.getByRole("button", { name: "检测连接并更新", exact: true })).toBeVisible();
+  // 字段错误先显示，整表校验随后才释放保存锁；按实际忙碌状态等候，不依赖退场图标的无障碍名称。
+  await expect(update).not.toHaveClass(/ant-btn-loading/);
   expect(updateRequests).toBe(0);
 
   await page.getByLabel("API Key").fill("new-endpoint-secret-at-least-16");
-  await page.getByRole("button", { name: "检测连接并更新", exact: true }).click();
+  await update.click();
   await expect.poll(() => updateRequests).toBe(1);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
