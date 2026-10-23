@@ -1,5 +1,5 @@
 # 镜像入口运行 internal/server 包的测试，未按 STORY-056 名称筛选。
-ARG GO_BUILD_IMAGE=golang:1.26.9-alpine
+ARG GO_BUILD_IMAGE=golang:1.26.10-alpine
 ARG NODE_RUNTIME_IMAGE=node:24-alpine
 
 FROM ${GO_BUILD_IMAGE} AS go-toolchain

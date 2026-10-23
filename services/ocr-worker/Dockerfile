@@ -22,10 +22,10 @@ WORKDIR /app
 # 任意安装命令失败都终止这一层；不能让后续if或基础依赖安装掩盖Paddle/HPI失败。
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
     set -e; python -m pip install --index-url "$PIP_INDEX_URL" \
-      "pip==26.1.2" "setuptools==83.0.0" \
+      "pip==26.2.2" "setuptools==83.0.0" \
     ; if [ "$INSTALL_PADDLEOCR" = "true" ]; then \
       python -m pip install --index-url "$PIP_INDEX_URL" \
-        "paddleocr==3.7.0" "paddlepaddle==3.3.1" "tokenizers==0.22.1" "Pillow>=10,<12" "matplotlib>=3.9,<4"; \
+        "paddleocr==3.7.0" "paddlepaddle==3.3.1" "tokenizers==0.22.1" "Pillow==13.0.0" "matplotlib>=3.9,<4"; \
       if [ "$INSTALL_PADDLEOCR_HPI" = "true" ]; then \
         paddlex --install hpi-cpu; \
       fi; \

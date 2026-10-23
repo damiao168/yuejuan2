@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY services/math-verification-worker/pyproject.toml ./pyproject.toml
 COPY services/math-verification-worker/math_verification_worker ./math_verification_worker
-RUN python -m pip install --no-cache-dir --timeout 180 --retries 10 "pip==26.1.2" "setuptools==83.0.0" \
+RUN python -m pip install --no-cache-dir --timeout 180 --retries 10 "pip==26.2.2" "setuptools==83.0.0" \
     && python -m pip install --no-cache-dir .
 # 容器仅处理内部数学请求；以非特权用户运行，健康探针地址可随 TLS 部署调整。
 USER nobody
