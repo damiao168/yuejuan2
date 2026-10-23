@@ -3,7 +3,7 @@ import { Alert, Button, Form, Input, Result, Spin } from "antd";
 import { KeyRound } from "lucide-react";
 import { completeRecovery, verifyRecovery, type RecoveryPreview } from "../api/auth";
 import { getUserErrorMessage } from "../api/client";
-import { validateNewPassword } from "../auth/loginSecurity";
+import { newPasswordValidator } from "../auth/loginSecurity";
 
 interface RecoveryFormValues {
   password: string;
@@ -61,7 +61,8 @@ export function RecoveryPage({ onComplete }: Readonly<{ onComplete: (tenantCode?
         {preview ? (
           <Form<RecoveryFormValues> layout="vertical" onFinish={(values) => void submit(values)}>
             {preview.phone_masked ? <Alert type="info" showIcon message={`账号手机号：${preview.phone_masked}`} /> : null}
-            <Form.Item name="password" label="设置新密码" extra="建议使用一句只有你知道的长短语，至少 15 个字符。" rules={[{ required: true, message: "请设置新密码" }, { validator: validateNewPassword }]}>
+            <p>链接有效至 {new Date(preview.expires_at).toLocaleString("zh-CN")}，成功重置后失效。</p>
+            <Form.Item name="password" label="设置新密码" extra={`密码至少 ${preview.password_min_length ?? 8} 个字符。`} rules={[{ required: true, message: "请设置新密码" }, { validator: newPasswordValidator(preview.password_min_length ?? 8) }]}>
               <Input.Password prefix={<KeyRound size={16} />} autoComplete="new-password" />
             </Form.Item>
             <Form.Item name="confirmPassword" label="确认新密码" dependencies={["password"]} rules={[{ required: true, message: "请再次输入新密码" }, ({ getFieldValue }) => ({ validator: (_, value) => !value || value === getFieldValue("password") ? Promise.resolve() : Promise.reject(new Error("两次输入的密码不一致")) })]}>

@@ -3,7 +3,7 @@ import { Alert, Button, Form, Input, Result, Spin } from "antd";
 import { KeyRound } from "lucide-react";
 import { completeActivation, verifyActivation, type ActivationPreview } from "../api/auth";
 import { getUserErrorMessage } from "../api/client";
-import { validateNewPassword } from "../auth/loginSecurity";
+import { newPasswordValidator } from "../auth/loginSecurity";
 
 interface ActivationFormValues {
   password: string;
@@ -61,7 +61,7 @@ export function ActivationPage({ onComplete }: Readonly<{ onComplete: (tenantCod
         {preview ? (
           <Form<ActivationFormValues> layout="vertical" onFinish={(values) => void submit(values)}>
             {preview.phone_masked ? <Alert type="info" showIcon message={`邀请手机号：${preview.phone_masked}`} /> : null}
-            <Form.Item name="password" label="设置密码" extra="建议使用一句只有你知道的长短语，至少 15 个字符。" rules={[{ required: true, message: "请设置密码" }, { validator: validateNewPassword }]}>
+            <Form.Item name="password" label="设置密码" extra={`密码至少 ${preview.password_min_length ?? 8} 个字符。`} rules={[{ required: true, message: "请设置密码" }, { validator: newPasswordValidator(preview.password_min_length ?? 8) }]}>
               <Input.Password prefix={<KeyRound size={16} />} autoComplete="new-password" />
             </Form.Item>
             <Form.Item name="confirmPassword" label="确认密码" dependencies={["password"]} rules={[{ required: true, message: "请再次输入密码" }, ({ getFieldValue }) => ({ validator: (_, value) => !value || value === getFieldValue("password") ? Promise.resolve() : Promise.reject(new Error("两次输入的密码不一致")) })]}>

@@ -2,6 +2,7 @@ import { lazy, type ReactNode } from "react";
 import type { QueryClient } from "@tanstack/react-query";
 import { hasAnyPermission, hasEveryPermission, type SessionUser } from "../auth/session";
 import { canWorkTeacherAppeals } from "../auth/capabilities";
+import { passwordMinimumForRoles } from "../auth/loginSecurity";
 import { ForbiddenState, NotFoundState } from "../components/PageState";
 import { invalidateExamWorkspace } from "../query/examWorkspace";
 import { managementExamRoute } from "../features/exams/management/managementPresentation";
@@ -231,7 +232,7 @@ export function renderAppRouteContent(context: Readonly<RouteRenderingContext>):
     case "/system/models":
       return <PlatformModelConfigPage />;
     case "/account/sessions":
-      return <SessionManagementPage key={`${user.tenant}:${user.id}`} onLoggedOut={logout} accountLabel={`${user.tenant}/${user.username}`} />;
+      return <SessionManagementPage key={`${user.tenant}:${user.id}`} onLoggedOut={logout} accountLabel={`${user.tenant}/${user.username}`} minimumPasswordLength={passwordMinimumForRoles(user.roles)} />;
     case "/grading/subjective-batches":
       return <SubjectiveGradingBatchPage key={`${user.tenant}:${user.id}`} scopeKey={`${user.tenant}:${user.id}`} />;
     default:

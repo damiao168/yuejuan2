@@ -81,25 +81,10 @@ func normalizeBootstrapAdminInput(input BootstrapAdminInput) BootstrapAdminInput
 }
 
 func strongBootstrapPassword(password string) bool {
-	return StrongPassword(password)
+	return PasswordMeetsMinimum(password, AdministratorPasswordMinimum)
 }
 
+// StrongPassword 保留现有调用入口；普通账号只校验长度，不再拦截常见密码。
 func StrongPassword(password string) bool {
-	if len([]rune(password)) < 15 {
-		return false
-	}
-	normalized := strings.ToLower(strings.TrimSpace(password))
-	if normalized == "" {
-		return false
-	}
-	_, blocked := commonPasswordBlocklist[normalized]
-	return !blocked
-}
-
-var commonPasswordBlocklist = map[string]struct{}{
-	"123456789012345":  {},
-	"passwordpassword": {},
-	"qwertyuiopasdfgh": {},
-	"adminadminadmin":  {},
-	"changemechangeme": {},
+	return PasswordMeetsMinimum(password, UserPasswordMinimum)
 }

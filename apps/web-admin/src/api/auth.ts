@@ -31,6 +31,7 @@ export interface LoginRequest {
 }
 
 export interface ActivationPreview {
+  password_min_length?: number;
   display_name: string;
   tenant_code: string;
   school_id?: string;

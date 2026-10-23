@@ -52,8 +52,8 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "current_password and new_password are required")
 		return
 	}
-	if !StrongPassword(input.NewPassword) {
-		httpx.Error(w, r, http.StatusBadRequest, "weak_password", "new password must be a long passphrase of at least 15 characters")
+	if !PasswordMeetsMinimum(input.NewPassword, PasswordMinimum(user.Roles)) {
+		httpx.Error(w, r, http.StatusBadRequest, "weak_password", "new password does not meet the minimum length for this account")
 		return
 	}
 	currentPasswordHash, err := h.store.FindPasswordHash(r.Context(), user.TenantID, user.ID)

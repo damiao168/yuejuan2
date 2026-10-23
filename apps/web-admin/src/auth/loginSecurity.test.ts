@@ -4,14 +4,26 @@ import {
   isPublicComputerIdle,
   isWithinUtf8ByteLimit,
   PUBLIC_COMPUTER_IDLE_LOCK_MS,
-  validateNewPassword
+  validateNewPassword,
+  newPasswordValidator,
+  passwordMinimumForRoles
 } from "./loginSecurity";
 
 describe("new password length validation", () => {
   it("counts Unicode characters the same way as the API", async () => {
-    await expect(validateNewPassword(undefined, "😀".repeat(8))).rejects.toThrow("至少 15");
-    await expect(validateNewPassword(undefined, "😀".repeat(15))).resolves.toBeUndefined();
+    await expect(validateNewPassword(undefined, "😀".repeat(7))).rejects.toThrow("至少 8");
+    await expect(validateNewPassword(undefined, "😀".repeat(8))).resolves.toBeUndefined();
     await expect(validateNewPassword(undefined, "只有老师本人知道的这句很长密码短语")).resolves.toBeUndefined();
+  });
+
+  it("uses the administrator minimum for mixed roles and permits common numeric passwords", async () => {
+    expect(passwordMinimumForRoles(["grader", "arbitrator"])).toBe(8);
+    expect(passwordMinimumForRoles(["grader", "school_admin"])).toBe(12);
+    await expect(validateNewPassword(undefined, "12345678")).resolves.toBeUndefined();
+    await expect(newPasswordValidator(12)(undefined, "12345678901")).rejects.toThrow("至少 12");
+    await expect(newPasswordValidator(12)(undefined, "123456789012")).resolves.toBeUndefined();
+    await expect(validateNewPassword(undefined, "123456789012345")).resolves.toBeUndefined();
+    await expect(validateNewPassword(undefined, " ".repeat(8))).rejects.toThrow("不能全部为空格");
   });
 
   it("allows long passphrases but applies the UTF-8 byte ceiling", async () => {

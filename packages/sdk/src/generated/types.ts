@@ -222,9 +222,9 @@ export type OneTimeTokenRequest = { "token": string; };
 
 export type CompleteOneTimePasswordRequest = { "token": string; "password": string; };
 
-export type ActivationPreview = { "display_name": string; "tenant_code": string; "school_id"?: string; "phone_masked"?: string; "expires_at": string; };
+export type ActivationPreview = { "display_name": string; "tenant_code": string; "school_id"?: string; "phone_masked"?: string; "expires_at": string; "password_min_length"?: 8 | 12; };
 
-export type RecoveryPreview = { "display_name": string; "tenant_code": string; "phone_masked"?: string; "expires_at": string; };
+export type RecoveryPreview = { "display_name": string; "tenant_code": string; "phone_masked"?: string; "expires_at": string; "password_min_length"?: 8 | 12; };
 
 export type ActivationPreviewResponse = { "activation": ActivationPreview; };
 

@@ -53,8 +53,8 @@ func (h *Handler) CreateTenant(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "school and administrator fields are required")
 		return
 	}
-	if !auth.StrongPassword(input.AdminPassword) {
-		httpx.Error(w, r, http.StatusBadRequest, "weak_password", "password must contain upper, lower, number and symbol and be at least 12 characters")
+	if !auth.PasswordMeetsMinimum(input.AdminPassword, auth.AdministratorPasswordMinimum) {
+		httpx.Error(w, r, http.StatusBadRequest, "weak_password", "administrator password must be at least 12 characters")
 		return
 	}
 	hash, err := auth.HashPassword(input.AdminPassword)

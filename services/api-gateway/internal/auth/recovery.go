@@ -105,7 +105,8 @@ func (h *Handler) CompleteRecovery(w http.ResponseWriter, r *http.Request) {
 	}
 	tokenHash := HashToken(input.Token)
 	// 预检只减少无效请求的哈希开销；是否仍可消费令牌，由最终的 CompleteRecovery 再确认。
-	if _, err := h.store.FindRecovery(r.Context(), tokenHash, time.Now().UTC()); err != nil {
+	preview, err := h.store.FindRecovery(r.Context(), tokenHash, time.Now().UTC())
+	if err != nil {
 		if errors.Is(err, ErrRecoveryInvalid) {
 			httpx.Error(w, r, http.StatusBadRequest, "recovery_invalid", recoveryInvalidMsg)
 			return
@@ -113,8 +114,8 @@ func (h *Handler) CompleteRecovery(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
-	if !StrongPassword(input.Password) {
-		httpx.Error(w, r, http.StatusBadRequest, "weak_password", "password must be a long passphrase of at least 15 characters")
+	if !PasswordMeetsMinimum(input.Password, preview.PasswordMinLength) {
+		httpx.Error(w, r, http.StatusBadRequest, "weak_password", "password does not meet the minimum length for this account")
 		return
 	}
 	passwordHash, err := HashPassword(input.Password)

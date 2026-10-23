@@ -1117,8 +1117,13 @@ VALUES ($1::uuid, $2::uuid, $3::uuid, $4::jsonb)
 func (s *PostgresStore) FindActivation(ctx context.Context, tokenHash string, now time.Time) (ActivationPreview, error) {
 	var preview ActivationPreview
 	var phone string
+	// 密码长度来自邀请目标的有效角色，与 PasswordMinimum 保持 8/12 的同一规则。
 	err := s.db.QueryRowContext(ctx, `
-SELECT u.display_name, t.code, COALESCE(u.school_id::text, ''), COALESCE(u.phone_normalized, ''), activation.expires_at
+SELECT u.display_name, t.code, COALESCE(u.school_id::text, ''), COALESCE(u.phone_normalized, ''), activation.expires_at,
+CASE WHEN EXISTS (
+  SELECT 1 FROM user_role pur JOIN role pr ON pr.tenant_id=pur.tenant_id AND pr.id=pur.role_id AND pr.deleted_at IS NULL
+  WHERE pur.tenant_id=u.tenant_id AND pur.user_id=u.id AND pur.deleted_at IS NULL AND pr.code IN ('school_admin','tenant_admin','platform_admin')
+) THEN 12 ELSE 8 END
 FROM auth_activation activation
 JOIN app_user u ON u.tenant_id=activation.tenant_id AND u.id=activation.user_id
 JOIN tenant t ON t.id=activation.tenant_id
@@ -1129,7 +1134,7 @@ WHERE activation.token_hash=$1
   AND u.deleted_at IS NULL
   AND t.status='active'
   AND t.deleted_at IS NULL
-`, tokenHash, now).Scan(&preview.DisplayName, &preview.TenantCode, &preview.SchoolID, &phone, &preview.ExpiresAt)
+`, tokenHash, now).Scan(&preview.DisplayName, &preview.TenantCode, &preview.SchoolID, &phone, &preview.ExpiresAt, &preview.PasswordMinLength)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ActivationPreview{}, ErrActivationInvalid
 	}
@@ -1341,8 +1346,13 @@ VALUES ($1::uuid, $2::uuid, 'admin_assisted', $3, $4, $5::uuid, $6)
 func (s *PostgresStore) FindRecovery(ctx context.Context, tokenHash string, now time.Time) (RecoveryPreview, error) {
 	var preview RecoveryPreview
 	var phone string
+	// 恢复请求尚未登录，必须从令牌归属读取目标账号要求，不能接受客户端自报角色。
 	err := s.db.QueryRowContext(ctx, `
-SELECT u.display_name, t.code, COALESCE(u.phone_normalized, ''), recovery.expires_at
+SELECT u.display_name, t.code, COALESCE(u.phone_normalized, ''), recovery.expires_at,
+CASE WHEN EXISTS (
+  SELECT 1 FROM user_role pur JOIN role pr ON pr.tenant_id=pur.tenant_id AND pr.id=pur.role_id AND pr.deleted_at IS NULL
+  WHERE pur.tenant_id=u.tenant_id AND pur.user_id=u.id AND pur.deleted_at IS NULL AND pr.code IN ('school_admin','tenant_admin','platform_admin')
+) THEN 12 ELSE 8 END
 FROM auth_recovery recovery
 JOIN app_user u ON u.tenant_id=recovery.tenant_id AND u.id=recovery.user_id
 JOIN tenant t ON t.id=recovery.tenant_id
@@ -1354,7 +1364,7 @@ WHERE recovery.token_hash=$1
   AND u.deleted_at IS NULL
   AND t.status='active'
   AND t.deleted_at IS NULL
-`, tokenHash, now).Scan(&preview.DisplayName, &preview.TenantCode, &phone, &preview.ExpiresAt)
+`, tokenHash, now).Scan(&preview.DisplayName, &preview.TenantCode, &phone, &preview.ExpiresAt, &preview.PasswordMinLength)
 	if errors.Is(err, sql.ErrNoRows) {
 		return RecoveryPreview{}, ErrRecoveryInvalid
 	}

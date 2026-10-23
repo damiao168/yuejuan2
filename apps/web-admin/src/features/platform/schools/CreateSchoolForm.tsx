@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { App, Button, Form, Input, Space } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
 import { createTenant, type Tenant } from "../../../api/org";
-import { validateNewPassword } from "../../../auth/loginSecurity";
+import { newPasswordValidator } from "../../../auth/loginSecurity";
 import { onboardingQueryKey } from "../../onboarding/queries";
 import { isStepUpCancelledError, useStepUp } from "../../../auth/stepUpContext";
 import { getUserErrorMessage } from "../../../api/client";
@@ -63,7 +63,7 @@ export function CreateSchoolForm({ compact = false, submitLabel = "创建", onCr
         <Form.Item name="code" label="学校代码" extra="用于登录，例如 fuzhou-no1" rules={[{ required: true, message: "请输入学校代码" }, { pattern: /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/, message: "使用 3–64 位小写字母、数字或连字符" }]}><Input maxLength={64} /></Form.Item>
         <Form.Item name="admin_display_name" label="管理员姓名" rules={[{ required: true, message: "请输入管理员姓名" }]}><Input maxLength={128} /></Form.Item>
         <Form.Item name="admin_username" label="管理员账号" rules={[{ required: true, message: "请输入管理员账号" }]}><Input maxLength={64} autoComplete="off" /></Form.Item>
-        <Form.Item name="admin_password" label="初始密码" extra="建议使用至少 15 个字符的长密码短语" rules={[{ required: true, message: "请输入初始密码" }, { validator: validateNewPassword }]}><Input.Password autoComplete="new-password" /></Form.Item>
+        <Form.Item name="admin_password" label="初始密码" extra="密码至少 12 个字符。" rules={[{ required: true, message: "请输入初始密码" }, { validator: newPasswordValidator(12) }]}><Input.Password autoComplete="new-password" /></Form.Item>
       </div>
       <Space>{onCancel ? <Button onClick={onCancel}>取消</Button> : null}<Button type="primary" htmlType="submit" loading={saving}>{submitLabel}</Button></Space>
     </Form>

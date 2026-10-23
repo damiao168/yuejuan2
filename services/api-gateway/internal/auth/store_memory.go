@@ -992,7 +992,7 @@ func (s *MemoryStore) FindActivation(_ context.Context, tokenHash string, now ti
 	}
 	for _, user := range s.users {
 		if user.TenantID == activation.TenantID && user.ID == activation.UserID && user.Status == "invited" && s.tenantStatuses[user.TenantID] == "active" {
-			return ActivationPreview{DisplayName: user.DisplayName, TenantCode: user.TenantCode, SchoolID: managedUserSchoolID(user), PhoneMasked: MaskPhone(user.PhoneNormalized), ExpiresAt: activation.ExpiresAt}, nil
+			return ActivationPreview{PasswordMinLength: PasswordMinimum(user.Roles), DisplayName: user.DisplayName, TenantCode: user.TenantCode, SchoolID: managedUserSchoolID(user), PhoneMasked: MaskPhone(user.PhoneNormalized), ExpiresAt: activation.ExpiresAt}, nil
 		}
 	}
 	return ActivationPreview{}, ErrActivationInvalid
@@ -1017,7 +1017,7 @@ func (s *MemoryStore) CreateActivation(_ context.Context, actor User, actorScope
 			}
 		}
 		s.activations[tokenHash] = memoryActivation{TenantID: user.TenantID, UserID: user.ID, ExpiresAt: expiresAt}
-		return ActivationPreview{DisplayName: user.DisplayName, TenantCode: user.TenantCode, SchoolID: schoolID, PhoneMasked: MaskPhone(user.PhoneNormalized), ExpiresAt: expiresAt}, nil
+		return ActivationPreview{PasswordMinLength: PasswordMinimum(user.Roles), DisplayName: user.DisplayName, TenantCode: user.TenantCode, SchoolID: schoolID, PhoneMasked: MaskPhone(user.PhoneNormalized), ExpiresAt: expiresAt}, nil
 	}
 	return ActivationPreview{}, ErrManagedUserNotFound
 }
@@ -1067,7 +1067,7 @@ func (s *MemoryStore) CreateRecovery(_ context.Context, actor User, actorScope A
 			}
 		}
 		s.recoveries[tokenHash] = memoryRecovery{TenantID: user.TenantID, UserID: user.ID, ExpiresAt: expiresAt, SecurityEpoch: user.SecurityEpoch}
-		return RecoveryPreview{DisplayName: user.DisplayName, TenantCode: user.TenantCode, PhoneMasked: MaskPhone(user.PhoneNormalized), ExpiresAt: expiresAt}, nil
+		return RecoveryPreview{PasswordMinLength: PasswordMinimum(user.Roles), DisplayName: user.DisplayName, TenantCode: user.TenantCode, PhoneMasked: MaskPhone(user.PhoneNormalized), ExpiresAt: expiresAt}, nil
 	}
 	return RecoveryPreview{}, ErrManagedUserNotFound
 }
@@ -1081,7 +1081,7 @@ func (s *MemoryStore) FindRecovery(_ context.Context, tokenHash string, now time
 	}
 	for _, user := range s.users {
 		if user.TenantID == recovery.TenantID && user.ID == recovery.UserID && user.Status == "active" && user.SecurityEpoch == recovery.SecurityEpoch && s.tenantStatuses[user.TenantID] == "active" {
-			return RecoveryPreview{DisplayName: user.DisplayName, TenantCode: user.TenantCode, PhoneMasked: MaskPhone(user.PhoneNormalized), ExpiresAt: recovery.ExpiresAt}, nil
+			return RecoveryPreview{PasswordMinLength: PasswordMinimum(user.Roles), DisplayName: user.DisplayName, TenantCode: user.TenantCode, PhoneMasked: MaskPhone(user.PhoneNormalized), ExpiresAt: recovery.ExpiresAt}, nil
 		}
 	}
 	return RecoveryPreview{}, ErrRecoveryInvalid

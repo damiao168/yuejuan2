@@ -125,7 +125,7 @@ const apiErrorMessages: Record<string, string> = {
   recovery_invalid: "恢复链接无效、已过期或已使用，请联系管理员重新生成。",
   credential_recovery_forbidden: "当前账号不能为该人员生成恢复链接。",
   credential_recovery_failed: "暂时无法恢复账号，请稍后重试。",
-  weak_password: "请使用至少 15 个字符的长密码或密码短语。",
+  weak_password: "密码长度不足：普通账号至少 8 个字符，管理员至少 12 个字符。",
   role_not_assignable: "所选人员角色当前不可用，请重新选择。",
   role_assignment_forbidden: "当前账号不能创建该角色的人员。",
   invalid_role_binding: "所选角色与学校或班级不匹配，请重新选择。",

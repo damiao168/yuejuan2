@@ -102,8 +102,8 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 		}
 		input.ActivationExpiresAt = time.Now().UTC().Add(48 * time.Hour)
 	} else {
-		if !strongBootstrapPassword(input.Password) {
-			httpx.Error(w, r, http.StatusBadRequest, "weak_password", "password must be a long passphrase of at least 15 characters")
+		if !PasswordMeetsMinimum(input.Password, PasswordMinimum(append(append([]string{}, input.RoleCodes...), input.RoleCode))) {
+			httpx.Error(w, r, http.StatusBadRequest, "weak_password", "password does not meet the minimum length for the target account")
 			return
 		}
 		var err error

@@ -17,10 +17,23 @@ export function isWithinUtf8ByteLimit(value: string, limit: number): boolean {
   return new TextEncoder().encode(value).byteLength <= limit;
 }
 
-// 与 Go 的 rune 计数和 UTF-8 字节上限保持一致，不按 UTF-16 代码单元计算。
+export function passwordMinimumForRoles(roles: readonly string[]): number {
+  return roles.some(role => ["school_admin", "tenant_admin", "platform_admin"].includes(role)) ? 12 : 8;
+}
+
+// 与 Go 的字符数和字节上限保持一致；恢复和激活采用服务端返回的目标账号要求。
+export function newPasswordValidator(minimum = 8) {
+  return (_: unknown, value?: string): Promise<void> => validatePasswordLength(value, minimum);
+}
+
 export function validateNewPassword(_: unknown, value?: string): Promise<void> {
+  return validatePasswordLength(value, 8);
+}
+
+function validatePasswordLength(value: string | undefined, minimum: number): Promise<void> {
   if (!value) return Promise.resolve();
-  if (Array.from(value).length < 15) return Promise.reject(new Error("密码至少 15 个字符"));
+  if (Array.from(value).length < minimum) return Promise.reject(new Error(`密码至少 ${minimum} 个字符`));
+  if (!value.trim()) return Promise.reject(new Error("密码不能全部为空格"));
   if (!isWithinUtf8ByteLimit(value, LOGIN_FIELD_LIMITS.password)) {
     return Promise.reject(new Error("密码过长，请缩短后重试"));
   }

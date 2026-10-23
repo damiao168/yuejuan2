@@ -132,7 +132,10 @@ func e2eActivateInvitedTeacherAndLogin(t *testing.T, router http.Handler, school
 	reissued := e2ePostJSON(t, router, http.MethodPost, "/api/v1/users/"+userID+"/activation", schoolAdminToken, `{}`, http.StatusCreated)
 	activationToken := e2eString(t, reissued["activation"].(map[string]any), "token")
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/activation/verify", "", `{"token":"`+oldToken+`"}`, http.StatusBadRequest)
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/activation/verify", "", `{"token":"`+activationToken+`"}`, http.StatusOK)
+	activationPreview := e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/activation/verify", "", `{"token":"`+activationToken+`"}`, http.StatusOK)["activation"].(map[string]any)
+	if activationPreview["password_min_length"] != float64(8) {
+		t.Fatalf("teacher activation must advertise the 8-character minimum: %#v", activationPreview)
+	}
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/activation/complete", "", `{"token":"`+activationToken+`","password":"TeacherPrivatePassphrase"}`, http.StatusOK)
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/activation/complete", "", `{"token":"`+activationToken+`","password":"TeacherPrivatePassphrase"}`, http.StatusBadRequest)
 	phoneLogin := e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/token", "",
@@ -297,7 +300,10 @@ func e2eRecoverTeacherCredentialAndRevokeOldIdentities(t *testing.T, ctx context
 	if err := db.QueryRow(`SELECT token_hash FROM auth_recovery WHERE user_id=$1::uuid AND used_at IS NULL`, userID).Scan(&storedToken); err != nil || storedToken != auth.HashToken(recoveryToken) || storedToken == recoveryToken {
 		t.Fatalf("recovery must persist only the token hash: err=%v", err)
 	}
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/recovery/verify", "", `{"token":"`+recoveryToken+`"}`, http.StatusOK)
+	recoveryPreview := e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/recovery/verify", "", `{"token":"`+recoveryToken+`"}`, http.StatusOK)["recovery"].(map[string]any)
+	if recoveryPreview["password_min_length"] != float64(8) {
+		t.Fatalf("teacher recovery must advertise the same minimum as activation: %#v", recoveryPreview)
+	}
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/recovery/complete", "", `{"token":"`+recoveryToken+`","password":"TeacherRecoveredPassphrase"}`, http.StatusOK)
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/recovery/complete", "", `{"token":"`+recoveryToken+`","password":"TeacherRecoveredPassphrase"}`, http.StatusBadRequest)
 	for _, token := range []string{phoneSession, employeeSession} {

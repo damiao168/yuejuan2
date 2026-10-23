@@ -118,11 +118,12 @@ type CreateManagedUserInput struct {
 }
 
 type ActivationPreview struct {
-	DisplayName string    `json:"display_name"`
-	TenantCode  string    `json:"tenant_code"`
-	SchoolID    string    `json:"school_id,omitempty"`
-	PhoneMasked string    `json:"phone_masked,omitempty"`
-	ExpiresAt   time.Time `json:"expires_at"`
+	PasswordMinLength int       `json:"password_min_length,omitempty"`
+	DisplayName       string    `json:"display_name"`
+	TenantCode        string    `json:"tenant_code"`
+	SchoolID          string    `json:"school_id,omitempty"`
+	PhoneMasked       string    `json:"phone_masked,omitempty"`
+	ExpiresAt         time.Time `json:"expires_at"`
 }
 
 type ActivationResult struct {
@@ -131,10 +132,11 @@ type ActivationResult struct {
 }
 
 type RecoveryPreview struct {
-	DisplayName string    `json:"display_name"`
-	TenantCode  string    `json:"tenant_code"`
-	PhoneMasked string    `json:"phone_masked,omitempty"`
-	ExpiresAt   time.Time `json:"expires_at"`
+	PasswordMinLength int       `json:"password_min_length,omitempty"`
+	DisplayName       string    `json:"display_name"`
+	TenantCode        string    `json:"tenant_code"`
+	PhoneMasked       string    `json:"phone_masked,omitempty"`
+	ExpiresAt         time.Time `json:"expires_at"`
 }
 
 type RecoveryResult struct {

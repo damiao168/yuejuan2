@@ -105,7 +105,8 @@ func (h *Handler) CompleteActivation(w http.ResponseWriter, r *http.Request) {
 	}
 	tokenHash := HashToken(input.Token)
 	// 先检查邀请再计算昂贵的密码哈希；最终消费仍由 ActivateUser 核查，不能依赖这次预检。
-	if _, err := h.store.FindActivation(r.Context(), tokenHash, time.Now().UTC()); err != nil {
+	preview, err := h.store.FindActivation(r.Context(), tokenHash, time.Now().UTC())
+	if err != nil {
 		if errors.Is(err, ErrActivationInvalid) {
 			httpx.Error(w, r, http.StatusBadRequest, "activation_invalid", activationInvalidMsg)
 			return
@@ -113,8 +114,8 @@ func (h *Handler) CompleteActivation(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
 		return
 	}
-	if !StrongPassword(input.Password) {
-		httpx.Error(w, r, http.StatusBadRequest, "weak_password", "password must be a long passphrase of at least 15 characters")
+	if !PasswordMeetsMinimum(input.Password, preview.PasswordMinLength) {
+		httpx.Error(w, r, http.StatusBadRequest, "weak_password", "password does not meet the minimum length for this account")
 		return
 	}
 	passwordHash, err := HashPassword(input.Password)

@@ -12,7 +12,7 @@ type Story060ProvisionStore interface {
 }
 
 func ProvisionStory060Users(ctx context.Context, store Story060ProvisionStore, schoolAdminPassword, workerPassword string) error {
-	if !StrongPassword(schoolAdminPassword) || !StrongPassword(workerPassword) {
+	if !PasswordMeetsMinimum(schoolAdminPassword, AdministratorPasswordMinimum) || !PasswordMeetsMinimum(workerPassword, 15) {
 		return ErrStory060ProvisioningInput
 	}
 	users := []struct{ username, displayName, roleCode, password string }{

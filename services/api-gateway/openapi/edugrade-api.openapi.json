@@ -29257,7 +29257,8 @@
           },
           "password": {
             "type": "string",
-            "minLength": 15
+            "minLength": 8,
+            "description": "Minimum length is provided by the verified link preview: 8 for ordinary accounts, 12 for administrators. No common-password blocklist."
           }
         }
       },
@@ -29285,6 +29286,14 @@
           "expires_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "password_min_length": {
+            "type": "integer",
+            "enum": [
+              8,
+              12
+            ],
+            "description": "Minimum Unicode character count for the target account. Administrators require 12; other accounts require 8."
           }
         }
       },
@@ -29309,6 +29318,14 @@
           "expires_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "password_min_length": {
+            "type": "integer",
+            "enum": [
+              8,
+              12
+            ],
+            "description": "Minimum Unicode character count for the target account. Administrators require 12; other accounts require 8."
           }
         }
       },

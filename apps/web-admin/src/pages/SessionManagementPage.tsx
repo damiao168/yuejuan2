@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, KeyRound, LogOut, RefreshCw, ShieldCheck, Smart
 import { getUserErrorMessage } from "../api/client";
 import { changePassword, listSecurityEvents, listSessions, logoutAll, revokeSession, type DeviceSession, type SecurityEvent } from "../api/auth";
 import { ErrorState, LoadingState } from "../components/PageState";
-import { validateNewPassword } from "../auth/loginSecurity";
+import { newPasswordValidator } from "../auth/loginSecurity";
 import { TOTPManagement } from "../components/TOTPManagement";
 import { PersonalReviewBookmarkCleanup } from "../features/grading/workbench/components/PersonalReviewBookmarkCleanup";
 
@@ -41,7 +41,7 @@ function securityEventLabel(type: string) {
   return labels[type] ?? "账户安全状态已更新";
 }
 
-export function SessionManagementPage({ onLoggedOut, accountLabel }: Readonly<{ onLoggedOut: () => void; accountLabel: string }>) {
+export function SessionManagementPage({ onLoggedOut, accountLabel, minimumPasswordLength = 8 }: Readonly<{ onLoggedOut: () => void; accountLabel: string; minimumPasswordLength?: number }>) {
   const { message } = App.useApp();
   const [form] = Form.useForm<PasswordFormValues>();
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
@@ -213,8 +213,8 @@ export function SessionManagementPage({ onLoggedOut, accountLabel }: Readonly<{ 
           <Form.Item
             name="newPassword"
             label="新密码"
-            extra="建议使用一句只有你知道的长短语，至少 15 个字符。"
-            rules={[{ required: true, message: "请输入新密码" }, { validator: validateNewPassword }]}
+            extra={`密码至少 ${minimumPasswordLength} 个字符。`}
+            rules={[{ required: true, message: "请输入新密码" }, { validator: newPasswordValidator(minimumPasswordLength) }]}
           >
             <Input.Password autoComplete="new-password" />
           </Form.Item>
