@@ -256,21 +256,25 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
 
   await page.goto("/#/platform/model-config", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "添加模型" }).click();
-  await page.getByLabel("供应商").click();
+  await page.getByLabel("供应商").press("ArrowDown");
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "智谱" }).click();
   await page.getByLabel("API Key").fill("zhipu-secret-at-least-16");
   await page.getByRole("button", { name: "获取可用模型" }).click();
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "glm-4.6v" }).click();
   await page.getByRole("button", { name: "检测连接并保存" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.getByRole("button", { name: "glm-4.6v：检测结构化输出", exact: true }).click();
   await expect.poll(() => probed).toBe(true);
+  await expect(page.getByRole("button", { name: "glm-4.6v：查看结构化详情", exact: true })).toHaveText("通过");
 
   await page.getByText("三智能体配置", { exact: true }).click();
   await page.getByRole("button", { name: "为 A/B/C 套用当前部署版本" }).click();
   for (const [role, model] of [["主评 A", "deepseek-v4"], ["主评 B", "qwen-vl"], ["仲裁 C", "glm-4.6v"]] as const) {
-    await page.getByRole("combobox", { name: `${role}评分模型` }).click();
+    await page.getByRole("combobox", { name: `${role}评分模型` }).press("ArrowDown");
     await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: model }).click();
-    await page.getByRole("button", { name: `保存${role}` }).click();
+    const saveRole = page.getByRole("button", { name: new RegExp(`保存${role}$`) });
+    await saveRole.click();
+    await expect(saveRole).not.toHaveClass(/ant-btn-loading/);
   }
   await expect.poll(() => bindings.length).toBe(3);
   expect(bindings.map(item => item.managed_model_api_config_id)).toEqual(["model-a", "model-b", "model-c"]);
@@ -290,17 +294,19 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
   await evaluationDrawer.getByLabel("题型标识").fill("short_answer");
   await evaluationDrawer.getByLabel("创建原因").fill("学校模型完整流程评测");
   await evaluationDrawer.getByRole("button", { name: "创建批次" }).click();
+  await expect(evaluationDrawer).not.toBeVisible();
   await expect(page.getByRole("heading", { name: "完整学校评测" })).toBeVisible();
   for (const model of ["deepseek-v4", "qwen-vl"]) {
     await page.getByRole("button", { name: "添加候选" }).click();
     const candidateDrawer = page.getByRole("dialog", { name: "添加候选结果 · 完整学校评测", exact: true });
-    await candidateDrawer.getByLabel("评测模型").click();
+    await candidateDrawer.getByLabel("评测模型").press("ArrowDown");
     await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: model }).click();
     await candidateDrawer.getByLabel("提示词版本").fill("prompt-v1");
     await candidateDrawer.getByLabel("Rubric 版本").fill("rubric-v1");
     await candidateDrawer.getByLabel("录入原因").fill("学校模型冻结证据");
     await candidateDrawer.getByRole("button", { name: "保存候选" }).click();
     await expect.poll(() => (runs[0].candidates as unknown[]).length).toBe(model === "deepseek-v4" ? 1 : 2);
+    await expect(candidateDrawer).not.toBeVisible();
   }
   await page.getByRole("button", { name: "冻结完成" }).click();
   await page.getByRole("dialog", { name: "冻结完成评测" }).getByPlaceholder("填写可审计的操作原因").fill("两候选评测已复核");
@@ -310,22 +316,37 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
   await page.getByText("模型批准", { exact: true }).click();
   await page.getByRole("button", { name: "新建批准" }).click();
   const approvalDrawer = page.getByRole("dialog", { name: "新建题型级模型批准" });
-  await approvalDrawer.getByLabel("授权冻结集评测").click();
+  await approvalDrawer.getByLabel("授权冻结集评测").press("ArrowDown");
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "完整学校评测" }).click();
-  await approvalDrawer.getByLabel("评测模型").click();
+  await approvalDrawer.getByLabel("评测模型").press("ArrowDown");
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click();
   await approvalDrawer.getByLabel("决策引用").fill("school-full-decision");
   await approvalDrawer.getByLabel("批准原因").fill("学校模型评测符合批准条件");
-  await page.getByRole("button", { name: "确认批准" }).click();
+  // 批准响应后还有策略读取和抽屉关闭；两者完成后再编辑，不能把写入回执当成页面已就绪。
+  await Promise.all([
+    page.waitForResponse(response => response.request().method() === "GET" && new URL(response.url()).pathname === "/api/v1/model-policy"),
+    approvalDrawer.getByRole("button", { name: "确认批准", exact: true }).click()
+  ]);
   await expect.poll(() => approvalBody?.model_config_id).toBe("model-a");
   expect(approvalBody).not.toHaveProperty("deployment_id");
+  await expect(approvalDrawer).not.toBeVisible();
+  const governance = page.locator(".model-governance-workspace");
+  await expect(governance.locator(":scope > .ant-space").getByRole("button", { name: "刷新", exact: true })).not.toHaveClass(/ant-btn-loading/);
 
   await page.getByText("使用策略", { exact: true }).click();
   await page.getByLabel("允许外部模型").click();
   await page.getByLabel("允许发送文本").click();
-  await page.getByLabel("允许使用的学校模型").click();
+  await page.getByLabel("允许使用的学校模型").press("ArrowDown");
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click();
   await page.getByLabel("修改原因").fill("学校模型完整流程授权");
-  await page.getByRole("button", { name: "保存策略" }).click();
-  await expect.poll(() => policy.allowed_model_config_ids).toEqual(["model-a"]);
+  await expect(page.getByLabel("允许外部模型")).toBeChecked();
+  const allowedModels = governance.locator(".ant-form-item").filter({ has: page.getByLabel("允许使用的学校模型", { exact: true }) });
+  await expect(allowedModels.locator(".ant-select-selection-item")).toContainText("deepseek-v4");
+  const [policySaved] = await Promise.all([
+    page.waitForResponse(response => response.request().method() === "PUT" && new URL(response.url()).pathname === "/api/v1/model-policy"),
+    page.getByRole("button", { name: "保存策略", exact: true }).click()
+  ]);
+  expect(policySaved.status()).toBe(200);
+  expect(policy.allowed_model_config_ids).toEqual(["model-a"]);
+  await expect(governance.getByText("已允许 1 个学校模型", { exact: true })).toBeVisible();
 });
