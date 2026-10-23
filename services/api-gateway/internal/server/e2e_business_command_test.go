@@ -114,6 +114,42 @@ func e2eBusinessCommandReplay(t *testing.T, router http.Handler, path, token, bo
 	return result
 }
 
+// 完成唯一任务后，阅卷员的分派作用域会消失；已提交结果通过本人回执恢复，不重新授予题目写权限。
+func e2eReviewCommandRecoveryAfterAssignmentEnds(t *testing.T, router http.Handler, path, token, body string) {
+	t.Helper()
+	command := uuid.NewString()
+	send := func() *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Idempotency-Key", command)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec
+	}
+	first := send()
+	if first.Code != http.StatusCreated {
+		t.Fatalf("first review command: %d %s", first.Code, first.Body)
+	}
+	if replay := send(); replay.Code != http.StatusForbidden || !strings.Contains(replay.Body.String(), "access_scope_forbidden") {
+		t.Fatalf("completed assignment must not retain write scope: %d %s", replay.Code, replay.Body)
+	}
+	receipt := e2eGetJSON(t, router, "/api/v1/review-commands/"+command, token, http.StatusOK)
+	if receipt["status"] != "succeeded" || receipt["command_id"] != command {
+		t.Fatalf("completed review receipt: %+v", receipt)
+	}
+	var response map[string]any
+	if err := json.Unmarshal(first.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	recovered := receipt["result"].(map[string]any)
+	want, _ := json.Marshal(response["human_grade"])
+	got, _ := json.Marshal(recovered["human_grade"])
+	if !bytes.Equal(got, want) {
+		t.Fatalf("recovered grade changed: want=%s got=%s", want, got)
+	}
+}
+
 // 仲裁夹具把同一场双评的租户、考试、答题片段与角色身份一起传入；每个角色仍保持独立。
 type arbitrationCommandFixture struct {
 	Tenant, Exam, Segment, FirstActor, SecondActor, Arbitrator string

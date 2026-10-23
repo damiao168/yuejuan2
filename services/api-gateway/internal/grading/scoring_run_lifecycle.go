@@ -154,7 +154,7 @@ WHERE fg.tenant_id=$1::uuid AND fg.double_mark_session_id=dm.id AND rt.scoring_r
 UPDATE scoring_run
 SET status='cancelled',cancelled_at=now(),completed_at=now(),queued_count=0,review_count=0,updated_at=now()
 WHERE tenant_id=$1::uuid AND id=$2::uuid
-RETURNING id::text,tenant_id::text,exam_id::text,idempotency_key,status,total_count,queued_count,auto_confirmed_count,human_confirmed_count,review_count,failed_count,started_by::text,started_at,completed_at,created_at,updated_at`, tenantID, runID))
+RETURNING `+scoringRunColumns, tenantID, runID))
 	if err != nil {
 		return ScoringRun{}, err
 	}
@@ -338,5 +338,5 @@ UPDATE scoring_run
 SET status=$3,queued_count=$4,review_count=$5,failed_count=$6,auto_confirmed_count=$7,human_confirmed_count=$8,
   completed_at=CASE WHEN $3='completed' THEN now() ELSE NULL END,updated_at=now()
 WHERE tenant_id=$1::uuid AND id=$2::uuid
-RETURNING id::text,tenant_id::text,exam_id::text,idempotency_key,status,total_count,queued_count,auto_confirmed_count,human_confirmed_count,review_count,failed_count,started_by::text,started_at,completed_at,created_at,updated_at`, tenantID, runID, status, queued, review, failed, autoConfirmed, humanConfirmed))
+RETURNING `+scoringRunColumns, tenantID, runID, status, queued, review, failed, autoConfirmed, humanConfirmed))
 }

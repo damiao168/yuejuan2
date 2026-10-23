@@ -204,7 +204,11 @@ func e2eCollectPostgresAnswerAndAbstainFromAI(t *testing.T, scope postgresWorkfl
 	}); err != nil {
 		t.Fatalf("apply synthetic page image quality result: %v", err)
 	}
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/submissions/"+submissionID+"/status", adminToken, `{"status":"ready_for_ocr","expected_revision":1}`, http.StatusOK)
+	// 添加页面和质量检查会推进答卷版本，后续状态命令必须基于最新读到的版本。
+	currentSubmission := e2eGetJSON(t, router, "/api/v1/submissions/"+submissionID, adminToken, http.StatusOK)["submission"].(map[string]any)
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/submissions/"+submissionID+"/status", adminToken, story056JSON(t, map[string]any{
+		"status": "ready_for_ocr", "expected_revision": currentSubmission["revision"],
+	}), http.StatusOK)
 
 	ocrTask := e2ePostJSON(t, router, http.MethodPost, "/api/v1/submissions/"+submissionID+"/ocr-tasks", adminToken, `{"engine":"mock_ocr","engine_version":"story041-synthetic","min_confidence":0.8}`, http.StatusCreated)["task"].(map[string]any)
 	ocrTaskID := e2eString(t, ocrTask, "id")
@@ -366,7 +370,7 @@ func e2eCompletePostgresReviewWithDraftIsolation(t *testing.T, scope postgresWor
 		t.Fatalf("restore review task assignment: %v", err)
 	}
 	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/review-tasks/"+reviewTaskID+"/submit", graderToken, `{"expected_revision":2,"score":6,"rubric_selections":[{"point_id":"p1","score":6}],"comments":"over max"}`, http.StatusBadRequest)
-	e2eBusinessCommandReplay(t, router, "/api/v1/review-tasks/"+reviewTaskID+"/submit", graderToken, `{"expected_revision":2,"score":4,"rubric_selections":[{"point_id":"p1","score":4}],"comments":"story041 synthetic human grade","reason":"manual review after mock AI"}`, "review", http.StatusCreated)
+	e2eReviewCommandRecoveryAfterAssignmentEnds(t, router, "/api/v1/review-tasks/"+reviewTaskID+"/submit", graderToken, `{"expected_revision":2,"score":4,"rubric_selections":[{"point_id":"p1","score":4}],"comments":"story041 synthetic human grade","reason":"manual review after mock AI"}`)
 
 }
 

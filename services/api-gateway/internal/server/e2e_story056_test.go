@@ -27,6 +27,7 @@ type story056AcceptanceFixture struct {
 	AdminID             string
 	SchoolID            string
 	ClassID             string
+	StudentIDs          []string
 	ExamID              string
 	PaperFileAssetID    string
 	TemplateID          string
@@ -56,7 +57,7 @@ func TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase(t *testing.
 	adminToken := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
 	graderID := e2eLookupUserID(t, db, "demo", "grader")
 	graderToken := e2eLoginWithTenant(t, router, "demo", "grader", "ChangeMe123!")
-	fixture := e2eCreateStory056AcceptanceFixture(t, db, router, adminToken, suffix)
+	fixture := e2eCreateStory056AcceptanceFixture(t, db, router, adminToken, suffix, story056AcceptanceAnswerCount)
 
 	missingSegments := e2eStory062ScoringReadiness(t, router, adminToken, fixture.ExamID)
 	e2eAssertStory062ScoringReadiness(t, missingSegments, false, 3, 0, 0, 0)
@@ -241,19 +242,19 @@ func e2eFinalizeAndReprocessStory056(t *testing.T, db *sql.DB, router http.Handl
 	e2eAssertStory056ReprocessVersion(t, db, fixture.TenantID, segmentID, reprocessID)
 }
 
-func e2eCreateStory056AcceptanceFixture(t *testing.T, db *sql.DB, router http.Handler, adminToken string, suffix string) story056AcceptanceFixture {
-	return e2eCreateStory056AcceptanceFixtureWithOMRProfile(t, db, router, adminToken, suffix, nil)
+func e2eCreateStory056AcceptanceFixture(t *testing.T, db *sql.DB, router http.Handler, adminToken string, suffix string, candidateCount ...int) story056AcceptanceFixture {
+	return e2eCreateStory056AcceptanceFixtureWithOMRProfile(t, db, router, adminToken, suffix, nil, candidateCount...)
 }
 
-func e2eCreateStory056AcceptanceFixtureWithOMRProfile(t *testing.T, db *sql.DB, router http.Handler, adminToken string, suffix string, omrProfile map[string]any) story056AcceptanceFixture {
-	return e2eCreateStory056AcceptanceFixtureWithLifecycle(t, db, router, adminToken, suffix, omrProfile, true)
+func e2eCreateStory056AcceptanceFixtureWithOMRProfile(t *testing.T, db *sql.DB, router http.Handler, adminToken string, suffix string, omrProfile map[string]any, candidateCount ...int) story056AcceptanceFixture {
+	return e2eCreateStory056AcceptanceFixtureWithLifecycle(t, db, router, adminToken, suffix, omrProfile, true, candidateCount...)
 }
 
-func e2eCreateStory056MutableTemplateFixture(t *testing.T, db *sql.DB, router http.Handler, adminToken string, suffix string, omrProfile map[string]any) story056AcceptanceFixture {
-	return e2eCreateStory056AcceptanceFixtureWithLifecycle(t, db, router, adminToken, suffix, omrProfile, false)
+func e2eCreateStory056MutableTemplateFixture(t *testing.T, db *sql.DB, router http.Handler, adminToken string, suffix string, omrProfile map[string]any, candidateCount ...int) story056AcceptanceFixture {
+	return e2eCreateStory056AcceptanceFixtureWithLifecycle(t, db, router, adminToken, suffix, omrProfile, false, candidateCount...)
 }
 
-func e2eCreateStory056AcceptanceFixtureWithLifecycle(t *testing.T, db *sql.DB, router http.Handler, adminToken string, suffix string, omrProfile map[string]any, activateExam bool) story056AcceptanceFixture {
+func e2eCreateStory056AcceptanceFixtureWithLifecycle(t *testing.T, db *sql.DB, router http.Handler, adminToken string, suffix string, omrProfile map[string]any, activateExam bool, candidateCount ...int) story056AcceptanceFixture {
 	t.Helper()
 	adminID := e2eLookupUserID(t, db, "demo", "tenant_admin")
 	var tenantID string
@@ -272,9 +273,27 @@ func e2eCreateStory056AcceptanceFixtureWithLifecycle(t *testing.T, db *sql.DB, r
 		"school_id": schoolID, "grade_id": e2eString(t, grade, "id"), "name": "高一(1)班", "code": "story056-" + suffix,
 	}), http.StatusCreated)["class"].(map[string]any)
 	classID := e2eString(t, class, "id")
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/students", adminToken, story056JSON(t, map[string]any{
-		"school_id": schoolID, "class_id": classID, "student_no": "S056-READY-" + suffix, "name": "验收学生",
-	}), http.StatusCreated)
+	count := 1
+	if len(candidateCount) > 0 {
+		count = candidateCount[0]
+	}
+	if count < 1 {
+		t.Fatal("candidate count must be positive")
+	}
+	// 学生名单必须先于准备确认建立；确认后新增学生会使名单快照失效，不能在答卷夹具中临时补人。
+	studentIDs := make([]string, 0, count)
+	for index := 0; index < count; index++ {
+		studentNo := "S056-READY-" + suffix
+		studentName := "验收学生"
+		if index > 0 {
+			studentNo += fmt.Sprintf("-%03d", index+1)
+			studentName = fmt.Sprintf("验收学生%03d", index+1)
+		}
+		student := e2ePostJSON(t, router, http.MethodPost, "/api/v1/students", adminToken, story056JSON(t, map[string]any{
+			"school_id": schoolID, "class_id": classID, "student_no": studentNo, "name": studentName,
+		}), http.StatusCreated)["student"].(map[string]any)
+		studentIDs = append(studentIDs, e2eString(t, student, "id"))
+	}
 
 	exam := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams", adminToken, story056JSON(t, map[string]any{
 		"school_id": schoolID, "name": "高一物理能力测试", "subject": "physics", "exam_type": "unit_test", "total_score": 3,
@@ -296,6 +315,8 @@ func e2eCreateStory056AcceptanceFixtureWithLifecycle(t *testing.T, db *sql.DB, r
 		config := map[string]any{}
 		if questionType == "multiple_choice" {
 			config["allow_partial"] = true
+			// 本场每题 1 分、两个正确选项；少选必须明确每项分值，不能依赖历史比例缺省。
+			config["score_per_correct_option"] = 0.5
 		}
 		rule := e2ePostJSON(t, router, http.MethodPost, "/api/v1/questions/"+questionID+"/scoring-rules", adminToken, story056JSON(t, map[string]any{
 			"rule_type": questionType, "config": config,
@@ -319,14 +340,16 @@ func e2eCreateStory056AcceptanceFixtureWithLifecycle(t *testing.T, db *sql.DB, r
 		"exam_paper_id": paperID, "name": "高一综合能力测试答题卡", "page_count": 1, "layout": layout,
 	}), http.StatusCreated)["template"].(map[string]any)
 	templateID := e2eString(t, template, "id")
-	locked := e2ePostJSON(t, router, http.MethodPost, "/api/v1/answer-sheet-templates/"+templateID+"/lock", adminToken, `{}`, http.StatusOK)["template"].(map[string]any)
+	locked := e2ePostJSON(t, router, http.MethodPost, "/api/v1/answer-sheet-templates/"+templateID+"/lock", adminToken, story056JSON(t, map[string]any{
+		"expected_revision": template["revision"],
+	}), http.StatusOK)["template"].(map[string]any)
 	if activateExam {
 		e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/readiness/confirm", adminToken, `{}`, http.StatusOK)
 		e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/start-collection", adminToken, `{}`, http.StatusOK)
 	}
 
 	return story056AcceptanceFixture{
-		TenantID: tenantID, AdminID: adminID, SchoolID: schoolID, ClassID: classID, ExamID: examID,
+		TenantID: tenantID, AdminID: adminID, SchoolID: schoolID, ClassID: classID, StudentIDs: studentIDs, ExamID: examID,
 		PaperFileAssetID: paperFileID, TemplateID: templateID, TemplateContentHash: e2eString(t, locked, "content_hash"), QuestionIDs: questionIDs,
 	}
 }
@@ -378,6 +401,9 @@ func e2eSeedStory056AcceptanceAnswersWithQuestionTypes(t *testing.T, db *sql.DB,
 	if count < 1 || len(questionTypes) == 0 {
 		t.Fatalf("STORY-056 acceptance answer count must be positive, got %d", count)
 	}
+	if count > len(fixture.StudentIDs) {
+		t.Fatalf("answer count %d exceeds the %d candidates prepared before confirmation", count, len(fixture.StudentIDs))
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	fileStore := files.NewPostgresStore(db)
@@ -386,14 +412,7 @@ func e2eSeedStory056AcceptanceAnswersWithQuestionTypes(t *testing.T, db *sql.DB,
 		if _, ok := fixture.QuestionIDs[questionType]; !ok {
 			t.Fatalf("STORY-056 fixture has no %q question", questionType)
 		}
-		var studentID string
-		if err := db.QueryRowContext(ctx, `
-INSERT INTO student (tenant_id, school_id, class_id, student_no, name, status)
-VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, 'active')
-RETURNING id::text
-`, fixture.TenantID, fixture.SchoolID, fixture.ClassID, fmt.Sprintf("S056-%s-%03d", strings.ReplaceAll(suffix, ".", ""), index+1), fmt.Sprintf("验收学生%03d", index+1)).Scan(&studentID); err != nil {
-			t.Fatalf("seed acceptance student %d: %v", index+1, err)
-		}
+		studentID := fixture.StudentIDs[index]
 		var submissionID string
 		if err := db.QueryRowContext(ctx, `
 INSERT INTO submission (

@@ -34,7 +34,7 @@ func TestStory056TemplateDifferenceCalibrationApprovalAndRevocationE2E(t *testin
 	approverToken := e2eLoginWithTenant(t, router, "demo", approverUsername, "ChangeMe123!")
 	fixture := e2eCreateStory056AcceptanceFixtureWithOMRProfile(t, db, router, adminToken, suffix, map[string]any{
 		"mode": paper.OMRProfileModeTemplateDifference, "version": paper.OMRProfileVersionTemplateDifferenceBubbleV1,
-	})
+	}, 120)
 	e2eSeedStory056AcceptanceAnswersWithQuestionTypes(t, db, fixture, suffix+"-calibration", 120, []string{"single_choice", "true_false", "multiple_choice"})
 
 	seedRun := e2eStartStory056Run(t, router, adminToken, fixture.ExamID, "story056-calibration-seed-"+suffix)
@@ -180,7 +180,7 @@ func TestStory056ApprovedCalibrationIsInheritedByTemplateCloneE2E(t *testing.T) 
 	approverToken := e2eLoginWithTenant(t, router, "demo", approverUsername, "ChangeMe123!")
 	fixture := e2eCreateStory056MutableTemplateFixture(t, db, router, adminToken, suffix, map[string]any{
 		"mode": paper.OMRProfileModeTemplateDifference, "version": paper.OMRProfileVersionTemplateDifferenceBubbleV1,
-	})
+	}, 120)
 	e2eSeedStory056AcceptanceAnswersWithQuestionTypes(t, db, fixture, suffix+"-clone", 120, []string{"single_choice", "true_false", "multiple_choice"})
 	e2eSeedStory056MutableCalibrationOMRFacts(t, db, fixture)
 

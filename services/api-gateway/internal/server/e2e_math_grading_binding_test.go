@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/http"
 	"os"
 	"testing"
 	"time"
 
+	"edugrade-enterprise/services/api-gateway/internal/grading"
 	"edugrade-enterprise/services/api-gateway/internal/mathunderstanding"
 	"edugrade-enterprise/services/api-gateway/internal/review"
 	"edugrade-enterprise/services/api-gateway/internal/subjective"
@@ -28,18 +30,22 @@ func TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion(t *testing.T)
 	router := e2ePostgresRouter(db)
 	token := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
 	suffix := time.Now().UTC().Format("20060102150405.000000000")
-	fixture := e2eCreateStory056AcceptanceFixture(t, db, router, token, suffix)
-	e2eSeedStory056AcceptanceAnswersCount(t, db, fixture, suffix, 2)
+	fixture := e2ePrepareMathGradingBindingFixture(t, db, router, token, suffix)
 	ctx := context.Background()
-	var segmentID, questionID, snapshotID, otherSegmentID string
-	if err := db.QueryRowContext(ctx, `SELECT seg.id::text,seg.question_id::text,snapshot.id::text
+	questionID := fixture.QuestionIDs["single_choice"]
+	var segmentID, snapshotID, rubricVersion, otherSegmentID string
+	if err := db.QueryRowContext(ctx, `SELECT seg.id::text,snapshot.id::text,snapshot.rubric_snapshot_json->>'version'
 FROM answer_segment seg JOIN submission sub ON sub.id=seg.submission_id
-JOIN exam_question_snapshot snapshot ON snapshot.tenant_id=seg.tenant_id AND snapshot.question_id=seg.question_id
-WHERE sub.exam_id=$1::uuid ORDER BY seg.id LIMIT 1`, fixture.ExamID).Scan(&segmentID, &questionID, &snapshotID); err != nil {
+JOIN exam_question_snapshot snapshot ON snapshot.tenant_id=seg.tenant_id AND snapshot.exam_id=sub.exam_id AND snapshot.question_id=seg.question_id
+WHERE sub.exam_id=$1::uuid AND seg.question_id=$2::uuid ORDER BY sub.candidate_no LIMIT 1`, fixture.ExamID, questionID).Scan(&segmentID, &snapshotID, &rubricVersion); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.QueryRowContext(ctx, `SELECT seg.id::text FROM answer_segment seg JOIN submission sub ON sub.id=seg.submission_id
 WHERE sub.exam_id=$1::uuid AND seg.id<>$2::uuid LIMIT 1`, fixture.ExamID, segmentID).Scan(&otherSegmentID); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := grading.NewPostgresStore(db).RecordAnswer(ctx, fixture.TenantID, segmentID, fixture.AdminID, grading.RecordAnswerInput{AnswerText: "x=2", Source: "manual_entry"})
+	if err != nil {
 		t.Fatal(err)
 	}
 	artifacts := mathunderstanding.NewPostgresStore(db)
@@ -57,7 +63,7 @@ WHERE sub.exam_id=$1::uuid AND seg.id<>$2::uuid LIMIT 1`, fixture.ExamID, segmen
 	}
 	store := subjective.NewPostgresStore(db)
 	input := subjective.CreateRunInput{
-		AnswerSegmentID: segmentID, QuestionID: questionID, AnswerVersion: "answer-v1", RubricVersion: "rubric-v1", ModelVersion: "model-v1", PromptVersion: "prompt-v1", MinConfidence: .8, RequestID: "binding-" + suffix,
+		AnswerSegmentID: segmentID, QuestionID: questionID, ExamQuestionSnapshotID: snapshotID, AnswerVersion: answer.ID, RubricVersion: rubricVersion, ModelVersion: "model-v1", PromptVersion: "prompt-v1", MinConfidence: .8, RequestID: "binding-" + suffix,
 		MathArtifactID: artifact.ID, MathArtifactVersion: artifact.Version, MathCorrectionRevision: 3, MathScoringVersion: subjective.MathScoringVersionV1,
 	}
 	run, err := store.GetOrCreateRun(ctx, fixture.TenantID, fixture.AdminID, input)
@@ -69,8 +75,8 @@ WHERE sub.exam_id=$1::uuid AND seg.id<>$2::uuid LIMIT 1`, fixture.ExamID, segmen
 		t.Fatalf("run bindings not round-tripped: %#v %v", loaded, err)
 	}
 	gradeInput := subjective.Grade{
-		AnswerSegmentID: segmentID, QuestionID: questionID, QuestionNo: "Q1", QuestionType: "calculation", AnswerVersion: "answer-v1", GraderType: "llm_subjective",
-		ModelVersion: "model-v1", PromptVersion: "prompt-v1", RubricVersion: "rubric-v1", DeliveryMode: "teacher_suggestion", SuggestedScore: 1, MaxScore: 1, Confidence: .9,
+		AnswerSegmentID: segmentID, QuestionID: questionID, QuestionNo: "Q1", QuestionType: "calculation", AnswerVersion: answer.ID, GraderType: "llm_subjective",
+		ModelVersion: "model-v1", PromptVersion: "prompt-v1", RubricVersion: rubricVersion, DeliveryMode: "teacher_suggestion", SuggestedScore: 1, MaxScore: 1, Confidence: .9,
 		NeedsHumanReview: true, Status: "succeeded", AdapterRequestID: run.RequestID, RunID: run.ID,
 		MathArtifactID: artifact.ID, MathArtifactVersion: artifact.Version, MathCorrectionRevision: 3, MathScoringVersion: subjective.MathScoringVersionV1,
 	}
@@ -92,6 +98,19 @@ WHERE sub.exam_id=$1::uuid AND seg.id<>$2::uuid LIMIT 1`, fixture.ExamID, segmen
 	}
 }
 
+func e2ePrepareMathGradingBindingFixture(t *testing.T, db *sql.DB, router http.Handler, token, suffix string) story056AcceptanceFixture {
+	t.Helper()
+	fixture := e2eCreateStory056MutableTemplateFixture(t, db, router, token, suffix, nil, 2)
+	questionID := fixture.QuestionIDs["single_choice"]
+	// 在准备确认前把 Q1 配成有量规的计算题；复核只接纳真实作答版本和同一冻结快照的建议。
+	e2ePostJSON(t, router, http.MethodPatch, "/api/v1/questions/"+questionID, token, `{"question_type":"calculation","stem":"求解 x+1=3","answer_key":{"standard_answer":"x=2","equivalent_answers":[],"tolerance":{}}}`, http.StatusOK)
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/questions/"+questionID+"/rubric", token, `{"max_score":1,"points":[{"id":"p1","description":"求得 x=2","score":1}],"deductions":[],"examples":[],"status":"locked"}`, http.StatusCreated)
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+fixture.ExamID+"/readiness/confirm", token, `{}`, http.StatusOK)
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+fixture.ExamID+"/start-collection", token, `{}`, http.StatusOK)
+	e2eSeedStory056AcceptanceAnswersWithQuestionTypes(t, db, fixture, suffix, 2, []string{"single_choice"})
+	return fixture
+}
+
 type mathGradingBindingContext struct {
 	DB      *sql.DB
 	Store   *subjective.PostgresStore
@@ -105,8 +124,22 @@ func e2eAssertMathBindingReviewHistory(t *testing.T, ctx context.Context, bindin
 	segmentID := gradeInput.AnswerSegmentID
 	// 已分配任务的读取投影必须保留全部数学绑定，不能把持久化的 v2 建议静默变为无绑定的旧版 UI 材料。
 	second := gradeInput
-	second.AdapterRequestID, second.RunID = "history-"+suffix, ""
 	second.MathCorrectionRevision = 4
+	source, err := store.GetRun(ctx, fixture.TenantID, gradeInput.RunID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 成绩快照只从来源运行继承；第二次建议也必须有同一冻结快照的实际运行。
+	historyRun, err := store.GetOrCreateRun(ctx, fixture.TenantID, fixture.AdminID, subjective.CreateRunInput{
+		AnswerSegmentID: second.AnswerSegmentID, QuestionID: second.QuestionID, ExamQuestionSnapshotID: source.ExamQuestionSnapshotID,
+		AnswerVersion: second.AnswerVersion, RubricVersion: second.RubricVersion, ModelVersion: second.ModelVersion, PromptVersion: second.PromptVersion,
+		MinConfidence: source.MinConfidence, RequestID: "history-" + suffix, MathArtifactID: second.MathArtifactID,
+		MathArtifactVersion: second.MathArtifactVersion, MathCorrectionRevision: second.MathCorrectionRevision, MathScoringVersion: second.MathScoringVersion,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second.AdapterRequestID, second.RunID = historyRun.RequestID, historyRun.ID
 	newer, err := store.CreateGrade(ctx, fixture.TenantID, fixture.AdminID, second)
 	if err != nil {
 		t.Fatal(err)

@@ -422,6 +422,10 @@ func scopeQueryArgs(scope auth.AccessScope) []any {
 }
 
 func scopeIDsJSON(ids []string) string {
+	// PostgreSQL 按数组展开作用域；nil 编码为 JSON null 会让正常的空权限集合触发 SQL 错误。
+	if len(ids) == 0 {
+		return "[]"
+	}
 	raw, _ := json.Marshal(ids)
 	return string(raw)
 }

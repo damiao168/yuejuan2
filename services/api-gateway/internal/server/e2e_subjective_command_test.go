@@ -23,7 +23,7 @@ func TestSubjectiveCommandRecoveryWithPostgresTestDatabase(t *testing.T) {
 	router := e2ePostgresRouter(db)
 	token := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
 	suffix := time.Now().UTC().Format("20060102150405.000000000")
-	fixture := e2eCreateStory056AcceptanceFixture(t, db, router, token, suffix)
+	fixture := e2eCreateStory056AcceptanceFixture(t, db, router, token, suffix, story056AcceptanceAnswerCount)
 	e2eSeedStory056AcceptanceAnswers(t, db, fixture, suffix)
 	ctx := context.Background()
 	store := subjective.NewPostgresStore(db)

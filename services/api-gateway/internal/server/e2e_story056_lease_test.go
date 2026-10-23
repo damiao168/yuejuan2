@@ -474,7 +474,7 @@ func TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E(t *testing.T) {
 	router := e2ePostgresRouter(db)
 	suffix := time.Now().UTC().Format("20060102150405.000000000")
 	adminToken := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
-	fixture := e2eCreateStory056AcceptanceFixture(t, db, router, adminToken, suffix)
+	fixture := e2eCreateStory056AcceptanceFixture(t, db, router, adminToken, suffix, story056AcceptanceAnswerCount)
 	e2eSeedStory056AcceptanceAnswers(t, db, fixture, suffix)
 
 	run := e2eStartStory056Run(t, router, adminToken, fixture.ExamID, "story056-stale-lease-"+suffix)

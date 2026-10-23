@@ -24,7 +24,7 @@ func TestScoringDoubleMarkLifecycleWithPostgresTestDatabase(t *testing.T) {
 	router := e2ePostgresRouter(db)
 	token := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
 	suffix := time.Now().UTC().Format("20060102150405.000000000")
-	f := e2eCreateStory056MutableTemplateFixture(t, db, router, token, suffix, nil)
+	f := e2eCreateStory056MutableTemplateFixture(t, db, router, token, suffix, nil, 2)
 	if _, err := db.Exec(`UPDATE exam SET grading_mode='blind_double_mark' WHERE tenant_id=$1::uuid AND id=$2::uuid`, f.TenantID, f.ExamID); err != nil {
 		t.Fatal(err)
 	}

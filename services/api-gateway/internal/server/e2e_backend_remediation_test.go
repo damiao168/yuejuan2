@@ -93,7 +93,13 @@ CREATE TEMP TABLE grading_evaluation_run (tenant_id uuid, id uuid, status text);
 }
 
 func TestBackendMigratedSchemaReadinessAndAppealScopeWithPostgres(t *testing.T) {
-	db := backendRemediationPostgres(t)
+	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
+	if dsn == "" {
+		t.Skip("EDUGRADE_E2E_DATABASE_URL is required")
+	}
+	// 完整迁移查询使用独立新库，不假定 TEMP 夹具所在的连接库已预先迁移。
+	db := e2eOpenPostgresTestDB(t, dsn)
+	e2eApplyPostgresMigrations(t, db)
 	cipher, err := modelgovernance.NewCredentialCipher("synthetic-backend-regression-master-key-over-32-characters")
 	if err != nil {
 		t.Fatal(err)

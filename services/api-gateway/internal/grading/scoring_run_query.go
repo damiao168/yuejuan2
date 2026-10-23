@@ -7,7 +7,10 @@ import (
 	"errors"
 )
 
-const scoringRunSelect = `SELECT id::text,tenant_id::text,exam_id::text,idempotency_key,status,total_count,queued_count,auto_confirmed_count,human_confirmed_count,review_count,failed_count,started_by::text,started_at,completed_at,created_at,updated_at,COALESCE(rule_snapshot->'ai_plan','null'::jsonb) FROM scoring_run`
+// 查询和状态更新共用扫描列，冻结的 AI 方案也必须随刷新、取消结果返回。
+const scoringRunColumns = `id::text,tenant_id::text,exam_id::text,idempotency_key,status,total_count,queued_count,auto_confirmed_count,human_confirmed_count,review_count,failed_count,started_by::text,started_at,completed_at,created_at,updated_at,COALESCE(rule_snapshot->'ai_plan','null'::jsonb)`
+
+const scoringRunSelect = `SELECT ` + scoringRunColumns + ` FROM scoring_run`
 
 func scanScoringRun(row ruleScanner) (ScoringRun, error) {
 	var out ScoringRun
