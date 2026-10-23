@@ -102,7 +102,7 @@ func TestDomainDirectIDSegmentsHaveBoundaryResolvers(t *testing.T) {
 		"exams": "exam", "questions": "question", "paper-imports": "paper_import",
 		"answer-sheet-templates": "answer_sheet_template", "files": "file_asset",
 		"submissions": "submission", "submission-pages": "submission_page",
-		"capture-batches": "capture_batch", "capture-pages": "capture_page",
+		"capture-batches": "capture_batch", "capture-files": "capture_file", "capture-pages": "capture_page",
 		"page-registration-runs": "page_registration_run", "page-registration-corrections": "page_registration_correction",
 		"review-tasks": "review_task", "arbitration-tasks": "arbitration_task",
 		"ocr-tasks": "ocr_task", "omr-calibrations": "omr_calibration", "ai-grades": "ai_grade",
@@ -131,6 +131,7 @@ func TestResourceBoundaryQueryFamiliesKeepTenantAndOwnerPredicates(t *testing.T)
 		resourceType, ownerPredicate string
 	}{
 		{"paper_import", "p.tenant_id=$1::uuid AND p.id=$2::uuid"},
+		{"capture_file", "f.tenant_id=$1::uuid AND f.id=$2::uuid"},
 		{"answer_segment", "seg.tenant_id=s.tenant_id AND seg.submission_id=s.id AND seg.id=$2::uuid"},
 		{"review_task", "t.tenant_id=$1::uuid AND t.id=$2::uuid"},
 		{"school_class", "c.tenant_id=$1::uuid AND c.id=$2::uuid"},
@@ -156,7 +157,7 @@ func TestSchoolScopeRejectsKnownForeignDirectIDsAcrossCoreResources(t *testing.T
 		segment, resourceType string
 	}{
 		{"exams", "exam"}, {"questions", "question"}, {"paper-imports", "paper_import"},
-		{"files", "file_asset"}, {"submissions", "submission"}, {"capture-batches", "capture_batch"},
+		{"files", "file_asset"}, {"submissions", "submission"}, {"capture-batches", "capture_batch"}, {"capture-files", "capture_file"},
 	}
 	for _, resource := range resources {
 		store.AddResourceBoundary(resource.resourceType, "resource-a", ResourceBoundary{TenantID: "tenant-1", SchoolID: "school-a", ExamID: "exam-a"})

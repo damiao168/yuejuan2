@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/capture"
 	"errors"
 	"net/http"
@@ -71,6 +72,24 @@ func TestCaptureCollectionCompletionWithPostgresTestDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	boundaries := auth.NewPostgresStore(db)
+	fileScope := auth.AccessScope{TenantID: f.TenantID, ActorID: f.AdminID, ClassIDs: []string{f.ClassID}}
+	checkFileBoundary := func() {
+		t.Helper()
+		boundary, err := boundaries.ResolveResourceBoundary(ctx, fileScope, "capture_file", failedID)
+		if err != nil || boundary.ExamID != f.ExamID || boundary.SchoolID != f.SchoolID || !auth.AllowsResourceBoundary(fileScope, boundary) {
+			t.Fatalf("capture file must retain its owning exam scope: boundary=%+v error=%v", boundary, err)
+		}
+		foreignClass := auth.AccessScope{TenantID: f.TenantID, ClassIDs: []string{"00000000-0000-0000-0000-000000000001"}}
+		if auth.AllowsResourceBoundary(foreignClass, boundary) {
+			t.Fatal("capture file must reject an unrelated class scope")
+		}
+		foreignTenant := auth.AccessScope{TenantID: "00000000-0000-0000-0000-000000000001", TenantWide: true}
+		if _, err := boundaries.ResolveResourceBoundary(ctx, foreignTenant, "capture_file", failedID); !errors.Is(err, auth.ErrResourceBoundaryNotFound) {
+			t.Fatalf("capture file must not resolve in a foreign tenant: %v", err)
+		}
+	}
+	checkFileBoundary()
 	// 缓存状态即使被旧回调写成 ready，完成入口也必须重新看到失败文件。
 	if _, err = db.Exec(`UPDATE capture_batch SET status='ready' WHERE id=$1::uuid`, batch.ID); err != nil {
 		t.Fatal(err)
@@ -79,6 +98,8 @@ func TestCaptureCollectionCompletionWithPostgresTestDatabase(t *testing.T) {
 		t.Fatalf("failed file completion: %v", err)
 	}
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-files/"+failedID+"/exclude", token, `{"reason":"误传文件，经核对不计入本次导入"}`, http.StatusOK)
+	// 已排除文件仍按原考试授权恢复相同命令；其他租户或班级不能借恢复入口取得访问权限。
+	checkFileBoundary()
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-files/"+failedID+"/exclude", token, `{"reason":"误传文件，经核对不计入本次导入"}`, http.StatusOK)
 	seed(f.StudentIDs[1])
 	summary, err = store.GetCollectionSummary(ctx, f.TenantID, f.ExamID)

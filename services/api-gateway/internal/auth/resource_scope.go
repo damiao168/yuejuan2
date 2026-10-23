@@ -147,7 +147,7 @@ var resourceSegmentTypes = map[string]string{
 	"exams": "exam", "questions": "question", "papers": "exam_paper", "paper-imports": "paper_import",
 	"answer-sheet-templates": "answer_sheet_template", "answer-sheet-print-batches": "answer_sheet_print_batch",
 	"answer-sheet-print-sheets": "answer_sheet_print_sheet", "files": "file_asset", "submissions": "submission",
-	"submission-pages": "submission_page", "capture-batches": "capture_batch", "capture-pages": "capture_page",
+	"submission-pages": "submission_page", "capture-batches": "capture_batch", "capture-files": "capture_file", "capture-pages": "capture_page",
 	"page-registration-runs": "page_registration_run", "page-registration-corrections": "page_registration_correction",
 	"answer-segments": "answer_segment", "review-tasks": "review_task", "arbitration-tasks": "arbitration_task",
 	"double-mark-sessions": "double_mark_session", "scoring-rules": "scoring_rule", "scoring-runs": "scoring_run",
@@ -306,6 +306,9 @@ func examMaterialBoundaryQuery(resourceType string) string {
 		return `SELECT e.tenant_id::text,COALESCE(e.school_id::text,''),''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),e.id::text,s.student_id::text,''::text,''::text FROM answer_sheet_print_sheet s JOIN exam e ON e.tenant_id=s.tenant_id AND e.id=s.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE s.tenant_id=$1::uuid AND s.id=$2::uuid GROUP BY e.id,s.student_id`
 	case "capture_batch":
 		return `SELECT ` + examProjection + ` FROM capture_batch b JOIN exam e ON e.tenant_id=b.tenant_id AND e.id=b.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE b.tenant_id=$1::uuid AND b.id=$2::uuid AND b.deleted_at IS NULL GROUP BY e.id`
+	case "capture_file":
+		// 排除命令的幂等恢复仍需检查已排除文件所属考试；此边界查询不恢复文件下载或处理资格。
+		return `SELECT ` + examProjection + ` FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id AND b.id=f.capture_batch_id JOIN exam e ON e.tenant_id=b.tenant_id AND e.id=b.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE f.tenant_id=$1::uuid AND f.id=$2::uuid AND b.deleted_at IS NULL AND e.deleted_at IS NULL GROUP BY e.id`
 	case "omr_calibration":
 		return `SELECT ` + examProjection + ` FROM omr_calibration_session c JOIN answer_sheet_template t ON t.tenant_id=c.tenant_id AND t.id=c.template_id JOIN exam e ON e.tenant_id=t.tenant_id AND e.id=t.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE c.tenant_id=$1::uuid AND c.id=$2::uuid AND c.deleted_at IS NULL GROUP BY e.id`
 	default:
