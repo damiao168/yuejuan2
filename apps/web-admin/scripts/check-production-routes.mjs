@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { movedProductionRouteFailures } from "./production-route-contracts.mjs";
+import { movedProductionRouteFailures, personalGradingQueueFailures } from "./production-route-contracts.mjs";
 
 const root = process.cwd();
 
@@ -13,6 +13,7 @@ const dashboard = read("src/pages/DashboardPage.tsx");
 const appLayout = read("src/components/AppLayout.tsx");
 const appEntry = read("src/App.tsx");
 const appShell = read("src/AppShell.tsx");
+const routeStaging = read("src/router/RouteContent.tsx");
 const pageRendering = read("src/router/pageRendering.tsx");
 const layoutPresentation = read("src/components/appLayoutPresentation.tsx");
 const managementOverview = read("src/features/exams/management/ManagementExamOverviewPage.tsx");
@@ -20,6 +21,7 @@ const appRouter = read("src/router/appRouter.tsx");
 const login = read("src/pages/LoginPage.tsx");
 const grading = read("src/features/grading/workbench/GradingWorkbench.tsx");
 const gradingQueue = read("src/features/grading/workbench/hooks/useGradingQueue.ts");
+const gradingQueuePages = read("src/features/grading/workbench/hooks/useGradingQueuePages.ts");
 const gradingStyles = read("src/features/grading/workbench/grading-workbench.css");
 const experience = read("src/router/experience.ts");
 const teacherDashboard = read("src/pages/TeacherDashboardPage.tsx");
@@ -138,18 +140,7 @@ assert(
   "Teacher home must request only review and arbitration tasks assigned to the current user."
 );
 
-// 列表、分页和进度共用作用域对象；检查其接线，不再要求在每个请求处重复同一权限条件。
-const sharedPersonalScope = /const scopeQuery[\s\S]*?\n {2}\}\), \[[^\n]+\]\);/.exec(gradingQueue)?.[0] ?? "";
-const filteredTaskRequests = gradingQueue.match(/listReviewTasks\(\{\s*\.\.\.filterQuery,/g) ?? [];
-const scopedAggregateRequests = gradingQueue.match(/listReviewTasks\(\{\s*\.\.\.scopeQuery,/g) ?? [];
-assert(
-  /useGradingQueue/.test(grading)
-    && /personalScope\s*\|\|\s*\(canManageTasks\s*&&\s*canWork\s*&&\s*queueScope\s*===\s*"mine"\)/.test(sharedPersonalScope)
-    && /assigned_to:\s*currentUserId/.test(sharedPersonalScope)
-    && /const filterQuery[\s\S]*?\.\.\.scopeQuery/.test(gradingQueue)
-    && filteredTaskRequests.length >= 3 && scopedAggregateRequests.length >= 2,
-  "Teacher grading must enforce personal task scope in initial load, pagination, and aggregate refresh."
-);
+failures.push(...personalGradingQueueFailures({ grading, gradingQueue, gradingQueuePages }));
 
 assert(
   /\/assign/.test(appealApi) && /\/recommendation/.test(appealApi),
@@ -170,15 +161,6 @@ assert(
   /\.immersive-workspace \.grading-inspector\s*\{[\s\S]*?overflow-y:\s*auto;/.test(gradingStyles)
     && /@media \(min-width: 1100px\) and \(max-height: 820px\)[\s\S]*?\.immersive-workspace \.grading-workspace\s*\{[\s\S]*?overflow:\s*visible;[\s\S]*?\.immersive-workspace \.grading-inspector\s*\{[\s\S]*?overflow:\s*visible;/.test(gradingStyles),
   "Immersive grading must keep the scoring inspector scrollable and restore document flow on short desktops."
-);
-
-const reviewerProgress = /const reviewerProgress[\s\S]*?\n {2}\}, \[[^\n]+\]\);/.exec(gradingQueue)?.[0] ?? "";
-assert(
-  /taskAggregate\?\.reviewers/.test(reviewerProgress)
-    && /setTaskAggregate\(progress\.aggregate \?\? null\)/.test(gradingQueue)
-    && /listReviewTasks\(\{\s*\.\.\.scopeQuery,\s*limit:\s*1\s*\}\)/.test(gradingQueue)
-    && !/filteredTasks/.test(reviewerProgress),
-  "Reviewer progress must use the complete server-side task aggregate, independent of the current queue filter."
 );
 
 assert(
@@ -203,7 +185,7 @@ assert(
   "AppLayout must not expose top-bar controls without implemented behavior."
 );
 
-failures.push(...movedProductionRouteFailures({ routes, appLayout, layoutPresentation, appShell, pageRendering, examManagement, managementOverview, gradingFeature }));
+failures.push(...movedProductionRouteFailures({ routes, appLayout, layoutPresentation, appShell, routeStaging, pageRendering, examManagement, managementOverview, gradingFeature }));
 assert(
   !/Demo 教育集团|平台租户/.test(login) && /name="tenant_code"/.test(login),
   "Login must accept real tenant codes instead of a fixed demo tenant list."

@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { movedProductionRouteFailures } from "./production-route-contracts.mjs";
+import { movedProductionRouteFailures, personalGradingQueueFailures } from "./production-route-contracts.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (path) => readFileSync(join(root, path), "utf8");
@@ -16,6 +16,7 @@ function sourceFiles(directory) {
 const source = {
   routes: read("src/router/routes.tsx"), appLayout: read("src/components/AppLayout.tsx"),
   layoutPresentation: read("src/components/appLayoutPresentation.tsx"), appShell: read("src/AppShell.tsx"),
+  routeStaging: read("src/router/RouteContent.tsx"),
   pageRendering: read("src/router/pageRendering.tsx"), examManagement: read("src/pages/ExamManagementPage.tsx"),
   managementOverview: read("src/features/exams/management/ManagementExamOverviewPage.tsx"),
   gradingFeature: sourceFiles("src/features/grading/workbench").join("\n")
@@ -33,8 +34,11 @@ const mutations = [
   ["mobile drawer trigger", "layoutPresentation", "onClick={onOpenNavigation}", "onClick={() => undefined}", "navigation drawer"],
   ["teacher original image permission", "pageRendering", "canViewOriginalImage={false}", "canViewOriginalImage={true}", "original answer-sheet image"],
   ["original image retention", "gradingFeature", /originalImageUrl:\s*(?:scope\.)?allowOriginalImage\s*\?\s*artifact\.original_image_url\s*:\s*undefined/, "originalImageUrl: artifact.original_image_url", "original answer-sheet image"],
+  ["original image selector permission", "gradingFeature", '...(canViewOriginalImage ? [{ label: "原图", value: "original" as const }] : [])', '...([{ label: "原图", value: "original" as const }])', "original answer-sheet image"],
   ["eager page import", "pageRendering", "import { lazy, type ReactNode }", 'import { GradingWorkbenchPage as EagerPage } from "../pages/GradingWorkbenchPage";\nimport { lazy, type ReactNode }', "loaded on demand"],
-  ["suspense boundary", "appShell", "{content}</Suspense>", "{null}</Suspense>", "loaded on demand"]
+  ["staged route content", "appShell", /\{content\}\s*<\/RouteContent>/, "{null}</RouteContent>", "loaded on demand"],
+  ["staging scope identity", "routeStaging", "<StagedRouteContent key={scopeKey}", "<StagedRouteContent key=\"global\"", "loaded on demand"],
+  ["suspense boundary", "routeStaging", "{slot.children}</Suspense>", "{null}</Suspense>", "loaded on demand"]
 ];
 for (const [name, key, before, after, message] of mutations) {
   test(`rejects removal of ${name}`, () => {
@@ -48,3 +52,24 @@ test("rejects adding generic score publication to the management list", () => {
   assert.ok(movedProductionRouteFailures({ ...source, examManagement: `${source.examManagement}\nupdateExamStatus('exam', 'published', 1);` })
     .some((failure) => failure.includes("score-release workflows")));
 });
+
+const queueSources = {
+  grading: read("src/features/grading/workbench/GradingWorkbench.tsx"),
+  gradingQueue: read("src/features/grading/workbench/hooks/useGradingQueue.ts"),
+  gradingQueuePages: read("src/features/grading/workbench/hooks/useGradingQueuePages.ts"),
+};
+test("split queue pages preserve personal scope and complete reviewer progress", () => {
+  assert.deepEqual(personalGradingQueueFailures(queueSources), []);
+});
+for (const [name, key, before, after] of [
+  ["personal assignment", "gradingQueue", "assigned_to: currentUserId", "assigned_to: undefined"],
+  ["scope forwarding", "gradingQueue", /filterQuery, scopeQuery\s*\}\);/, "filterQuery\n    });"],
+  ["pagination scope", "gradingQueuePages", "listReviewTasks({ ...filterQuery, limit: 50, cursor })", "listReviewTasks({ limit: 50, cursor })"],
+  ["complete progress scope", "gradingQueuePages", /listReviewTasks\(\{ \.\.\.scopeQuery, limit: 1 \}\)/g, "listReviewTasks({ ...filterQuery, limit: 1 })"],
+]) {
+  test(`rejects removal of queue ${name}`, () => {
+    const changed = queueSources[key].replace(before, after);
+    assert.notEqual(changed, queueSources[key], "Fixture mutation must touch the actual implementation.");
+    assert.ok(personalGradingQueueFailures({ ...queueSources, [key]: changed }).length > 0);
+  });
+}
