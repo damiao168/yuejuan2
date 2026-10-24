@@ -31,8 +31,12 @@ func (p *autoSubmitPausingPostgresSource) ResolveTx(ctx context.Context, tx *sql
 // 用真实任务行锁保护首次标记尚无记录的窗口，并核对完整迁移、RLS、正式写分和回执重放。
 func TestPostgresAutomaticSubmitAndFirstBookmarkAreAtomic(t *testing.T) {
 	admin, runtimeDB, user, task := bookmarkIntegrationDB(t)
-	// 夹具原题型是物理 short_answer，当前有效默认配置将其阻断；本测试使用可冻结的计算题。
+	// 夹具没有考试年级，不走依赖学段的默认匹配；显式固定物理计算题配置，让本测试只验证标记与提交竞争。
 	bookmarkEvidenceExec(t, admin, `UPDATE question SET question_type='calculation' WHERE id=(SELECT question_id FROM review_task WHERE id=$1::uuid)`, task)
+	bookmarkEvidenceExec(t, admin, `INSERT INTO question_assessment_config(tenant_id,exam_id,question_id,subject_profile_id,archetype_code,allowed_evidence_types,risk_tier,scoring_policy_json)
+SELECT t.tenant_id,t.exam_id,t.question_id,p.id,'structured_steps','["text_span","math_step"]','R2','{"mode":"AI_ASSIST","require_evidence":true}'
+FROM review_task t JOIN subject_profile p ON p.tenant_id=t.tenant_id AND p.subject_code='physics' AND p.education_stage='senior' AND p.status='active'
+WHERE t.id=$1::uuid ORDER BY p.version DESC,p.id LIMIT 1`, task)
 	f := bookmarkSeedEvidenceFixture(t, admin, user, task)
 	runID := uuid.NewString()
 	bookmarkEvidenceExec(t, admin, `INSERT INTO scoring_run(id,tenant_id,exam_id,idempotency_key,status,total_count,review_count,started_by) VALUES($1::uuid,$2::uuid,$3::uuid,$1::text,'needs_review',1,1,$4::uuid)`, runID, user.TenantID, f.exam, user.ID)

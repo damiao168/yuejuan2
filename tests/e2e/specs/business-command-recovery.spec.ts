@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { installApiMocks } from "../fixtures/apiMocks";
 import { createGradingWorkbenchMockState, installGradingWorkbenchMocks } from "../fixtures/gradingWorkbenchMocks";
 
-test("stale human-submit command resumes after reload without changing score or revision", async ({ page }) => {
+test("stale automatic human-submit command resumes after reload without changing score or revision", async ({ page }) => {
   await installGradingWorkbenchMocks(page, createGradingWorkbenchMockState(2));
   const requests: { key: string; body: string }[] = [];
   await page.route("**/api/v1/review-tasks/*/submit", async route => {
@@ -16,12 +16,13 @@ test("stale human-submit command resumes after reload without changing score or 
   } }));
   await page.goto("/#/teacher/grading");
   await expect(page.getByRole("button", { name: "开始处理" })).toHaveCount(0);
-  await page.getByRole("spinbutton", { name: "最终得分" }).fill("4");
-  const submit = page.getByRole("button", { name: "提交并下一份" });
-  await expect(submit).toBeEnabled();
-  // 同一事件循环连续触发两次，绕过常规点击等待，验证提交锁能挡住同步双击。
-  await submit.evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
-  await expect.poll(() => requests.length).toBe(1);
+  const score = page.getByRole("spinbutton", { name: "最终得分" });
+  await score.fill("4");
+  // Enter 快捷提交已移除；连续确认不能增加命令，草稿保存后仅由自动提交创建原请求。
+  await score.press("Enter");
+  await score.press("Control+Enter");
+  await expect.poll(() => requests.length, { timeout: 10_000 }).toBe(1);
+  expect(JSON.parse(requests[0].body)).toMatchObject({ score: 4, expected_revision: 1, auto_submit: true });
   await page.reload();
   // 查看回执只能读取；用户核对服务端冻结内容后才显式重放原命令。
   await page.getByRole("button", { name: "查看操作结果", exact: true }).click();

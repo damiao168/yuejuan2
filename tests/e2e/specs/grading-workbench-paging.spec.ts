@@ -1,16 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { createGradingWorkbenchMockState, installGradingWorkbenchMocks, subjectFixtures } from "../fixtures/gradingWorkbenchMocks";
 
-test("120 份任务跨三页连续提交到最后，进度与下一份无重复遗漏", async ({ page }) => {
-  test.setTimeout(300_000);
+test("120 份任务跨三页自动提交并手动翻页到最后，进度与下一份无重复遗漏", async ({ page }) => {
+  test.setTimeout(420_000);
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.clock.install();
   const state = createGradingWorkbenchMockState(120);
   const taskOrder = subjectFixtures.flatMap((subject) => state.tasks.filter((task) => task.subject.code === subject.code));
   await installGradingWorkbenchMocks(page, state);
   await page.goto("/#/teacher/grading", { waitUntil: "domcontentloaded" });
 
   const score = page.getByRole("spinbutton", { name: "最终得分" });
-  const submit = page.getByRole("button", { name: "提交并下一份" });
+  const next = page.getByRole("button", { name: "下一份", exact: true });
   await expect(score).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(".grading-work-title")).toContainText("已完成 0/120");
   await expect.poll(() => [...new Set(state.listCursors)].filter(Boolean)).toEqual(["review-task-50", "review-task-100"]);
@@ -19,15 +20,26 @@ test("120 份任务跨三页连续提交到最后，进度与下一份无重复�
 
   for (let index = 0; index < 120; index += 1) {
     const task = taskOrder[index];
-    await score.fill("1");
     // 先订阅当前任务的提交响应，避免快速回执早于监听；成功后再核对模拟服务端账本。
     const submitted = page.waitForResponse((response) => response.request().method() === "POST"
-      && new URL(response.url()).pathname === `/api/v1/review-tasks/${task.id}/submit`, { timeout: 5_000 });
-    const [, response] = await Promise.all([submit.click(), submitted]);
+      && new URL(response.url()).pathname === `/api/v1/review-tasks/${task.id}/submit`, { timeout: 10_000 });
+    const saved = page.waitForResponse((response) => response.request().method() === "PUT"
+      && new URL(response.url()).pathname === `/api/v1/review-tasks/${task.id}/draft`, { timeout: 10_000 });
+    await score.fill("1");
+    // 这里只推进两次去抖等待；草稿和正式提交仍分别等待真实 HTTP 回执，不能跨过保存失败直接翻页。
+    await page.clock.fastForward(1_250);
+    expect((await saved).status()).toBe(200);
+    await expect(page.locator(".draft-save-status")).toHaveCount(0);
+    await page.clock.fastForward(1_250);
+    const response = await submitted;
     expect(response.status()).toBe(200);
+    expect(response.request().postDataJSON()).toMatchObject({ score: 1, auto_submit: true });
     expect(state.submissions).toHaveLength(index + 1);
     expect(state.submissions[index]).toBe(task.id);
+    await expect(page.locator(".answer-panel")).toContainText(task.anonymous_code);
+    await expect(page.getByRole("region", { name: "本题评分记录" })).toContainText("已提交得分：1 / 9");
     if (index + 1 < 120) {
+      await next.click();
       // 每份填分前已核实身份：首份在循环前，其余由上一轮切换后的检查覆盖，避免重复同一断言。
       const nextCode = taskOrder[index + 1].anonymous_code;
       // 每个动画帧核对下一份身份，保留原 5 秒上限；返回当时的正文供立即断言，不再叠加轮询等待。
@@ -83,8 +95,7 @@ test("任务转派后重新分页，筛选与服务端进度同步", async ({ pa
   await taskDrawer.locator(".ant-drawer-close").click();
 
   await score.fill("1");
-  await page.getByRole("button", { name: "提交并下一份" }).click();
-  await expect(page.locator(".grading-work-title")).toContainText("已完成 1/119");
+  await expect(page.locator(".grading-work-title")).toContainText("已完成 1/119", { timeout: 10_000 });
 
   await page.getByRole("button", { name: "任务", exact: true }).click();
   const statusFilter = taskDrawer.getByRole("combobox", { name: "任务状态", exact: true });

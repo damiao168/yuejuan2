@@ -8,6 +8,8 @@ test("当前 AI 失败隐藏历史建议，教师草稿和人工提交仍可使�
   const state = createGradingWorkbenchMockState(1);
   const task = state.tasks[0];
   state.fastConfirmTaskIds.add(task.id);
+  // 先标记以核对草稿和失败提示；取消标记后再验证人工录分自动提交。
+  Object.assign(state.bookmarks.get(task.id)!, { id: `bookmark-${task.id}`, marked: true, revision: 1 });
   let currentFailure = false;
   await installGradingWorkbenchMocks(page, state);
   await page.route(`**/api/v1/review-tasks/${task.id}/context`, async route => {
@@ -24,8 +26,8 @@ test("当前 AI 失败隐藏历史建议，教师草稿和人工提交仍可使�
   await page.getByText("评语与备注（可选）", { exact: true }).click();
   await page.locator("#grading-student-feedback-input").fill("教师保留的学生反馈");
   await page.locator("#grading-private-note-input").fill("教师保留的内部备注");
-  await expect(page.locator(".draft-save-status")).toHaveText("已保存到服务端", { timeout: 8_000 });
-  await expect.poll(() => state.drafts.get(task.id)?.private_note).toBe("教师保留的内部备注");
+  await expect.poll(() => state.drafts.get(task.id)?.private_note, { timeout: 8_000 }).toBe("教师保留的内部备注");
+  expect(state.submissions).toHaveLength(0);
 
   currentFailure = true;
   await page.getByRole("button", { name: "刷新", exact: true }).click();
@@ -43,8 +45,10 @@ test("当前 AI 失败隐藏历史建议，教师草稿和人工提交仍可使�
   await expect(drawer.getByText("本次检查的任务中，暂无可批量确认的 AI 建议分")).toBeVisible();
   await expect(drawer.getByRole("button", { name: /提交已核对/ })).toHaveCount(0);
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "提交并下一份" }).click();
-  await expect.poll(() => state.submissions).toEqual([task.id]);
+  await page.getByRole("button", { name: "已标记", exact: true }).click();
+  await expect.poll(() => state.submissions, { timeout: 10_000 }).toEqual([task.id]);
+  expect(state.grades.get(task.id)).toMatchObject({ score: 4, student_feedback: "教师保留的学生反馈", private_note: "教师保留的内部备注" });
+  await expect(page.locator(".answer-panel")).toContainText(task.anonymous_code);
 });
 
 test("主观题批次显示固定失败标签和未知用量，查看诊断不创建新批次（本地夹具）", async ({ page }) => {
