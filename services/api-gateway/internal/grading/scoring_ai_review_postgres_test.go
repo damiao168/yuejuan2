@@ -16,7 +16,7 @@ import (
 // 使用独立 schema 复现“模型成功但缺正式任务”的恢复；不调用供应商，也不改公共业务数据。
 func TestPostgresScoringAIReviewRecoveryKeepsVersionsAndTeacherWork(t *testing.T) {
 	ctx, db := newDurableScoringFixture(t)
-	for _, table := range []string{"ai_grade", "exam", "question_solution", "submission_page", "scoring_evidence"} {
+	for _, table := range []string{"ai_grade", "question_solution", "submission_page", "scoring_evidence"} {
 		aiReviewExec(t, ctx, db, "CREATE TABLE "+table+" (LIKE public."+table+" INCLUDING ALL)")
 	}
 	tenant, actor, exam, submission, run := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
