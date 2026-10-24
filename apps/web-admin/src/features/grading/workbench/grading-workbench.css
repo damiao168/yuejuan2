@@ -1598,14 +1598,21 @@
 
 .fast-confirm-preview img { display: block; margin: 0 auto 12px; }
 
-/* 教师以答题材料为主体；管理视图继续使用常驻任务栏。小屏保持先材料后评分。 */
+/* 教师桌面以左侧答题材料为主体，右侧集中录分；小屏仍按先材料后评分排列。 */
 .grading-teacher-simple .grading-workspace,
 .immersive-workspace .grading-teacher-simple .grading-workspace { grid-template-columns: minmax(0, 1fr); }
 .grading-teacher-simple .grading-panels,
-.immersive-workspace .grading-teacher-simple .grading-panels { grid-template-columns: 300px minmax(0, 1fr); grid-template-areas: "inspector answer"; }
+.immersive-workspace .grading-teacher-simple .grading-panels { grid-template-columns: minmax(0, 1fr) 280px; grid-template-areas: "answer inspector"; gap: 0; }
 .grading-teacher-simple .grading-inspector,
-.immersive-workspace .grading-teacher-simple .grading-inspector { border-right: 1px solid var(--border); grid-template-rows: auto auto; }
+.immersive-workspace .grading-teacher-simple .grading-inspector { border-left: 1px solid var(--border); border-right: 0; grid-template-rows: auto auto; }
 .grading-teacher-simple .answer-panel { border-right: 0; }
+.grading-teacher-simple .grading-inspector .panel-head { flex-wrap: wrap; align-items: flex-start; }
+/* 固定高度的桌面把评分详情留在右栏滚动，不能让长记录被工作区的裁切边界遮住。 */
+@media (min-width: 1100px) and (min-height: 821px) {
+  @container (min-width: 1051px) {
+    .immersive-workspace .grading-teacher-simple .grading-inspector { min-height: 0; overflow-y: auto; }
+  }
+}
 .grading-teacher-simple .grading-work-title { flex-wrap: wrap; min-width: 0; }
 .grading-personal-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .grading-current-task { overflow-wrap: anywhere; }
@@ -1646,10 +1653,14 @@
   .immersive-workspace .grading-personal-actions { display: contents; }
   .grading-teacher-simple .grading-panels,
   .immersive-workspace .grading-teacher-simple .grading-panels { grid-template-columns: minmax(0, 1fr); grid-template-areas: "answer" "inspector"; }
+  .grading-teacher-simple .grading-inspector,
+  .immersive-workspace .grading-teacher-simple .grading-inspector { border-left: 0; border-top: 1px solid var(--border); }
   .bookmark-readonly-layout { grid-template-columns: minmax(0, 1fr); }
   .bookmark-filters { grid-template-columns: minmax(0, 1fr); }
 }
 @container (max-width: 700px) {
   .grading-teacher-simple .grading-panels,
   .immersive-workspace .grading-teacher-simple .grading-panels { grid-template-columns: minmax(0, 1fr); grid-template-areas: "answer" "inspector"; }
+  .grading-teacher-simple .grading-inspector,
+  .immersive-workspace .grading-teacher-simple .grading-inspector { border-left: 0; border-top: 1px solid var(--border); }
 }

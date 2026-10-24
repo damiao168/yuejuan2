@@ -4,7 +4,7 @@ import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import type { RubricPoint } from "../../../../api/papers";
 import { EmptyState, LoadingState } from "../../../../components/PageState";
 import { ReviewAnnotationWorkspace } from "../../../../components/features/review-annotation";
-import { pointLabel, taskStatusLabels } from "../gradingWorkbench.model";
+import { pointLabel } from "../gradingWorkbench.model";
 import type { PreviewState, ViewerMode, WorkbenchContext } from "../gradingWorkbench.types";
 import type { MathStepSelection } from "../mathWorkbenchEvidence";
 import { GradingMathMarkdown } from "./GradingMathMarkdown";
@@ -66,6 +66,30 @@ export function AnswerEvidencePane({
   mathSelection
 }: Readonly<AnswerEvidencePaneProps>) {
   const viewerHelpId = useId();
+  const controls = <Space size={6} wrap>
+    <Segmented<ViewerMode> size="small" value={viewerMode} options={[
+      ...(context.gradingGroupImageUrl ? [{ label: "整区", value: "group" as const }] : []),
+      ...(context.answerScope !== "grading_group" ? [{ label: context.gradingGroupImageUrl ? "单题" : "答题区域", value: "segment" as const }] : []),
+      ...(canViewOriginalImage ? [{ label: "原图", value: "original" as const }] : []),
+      { label: "识别文本", value: "ocr" as const }
+    ]} onChange={onChangeViewerMode} />
+    <details className="answer-reading-tools" onKeyDown={event => { if (event.key === "Escape") event.currentTarget.open = false; }}>
+      <summary>图像工具</summary>
+      <div className="answer-reading-tool-popover"><Space wrap>
+        {!preview?.contentType.startsWith("image/") || viewerMode === "ocr" ? <><Tooltip title="缩小"><Button icon={<ZoomOut size={14} />} onClick={() => onZoom(-1)} aria-label="缩小答题图" /></Tooltip>
+        <span className="viewer-scale">{Math.round(scale * 100)}%</span>
+        <Tooltip title="放大"><Button icon={<ZoomIn size={14} />} onClick={() => onZoom(1)} aria-label="放大答题图" /></Tooltip></> : null}
+        <Tooltip title="顺时针旋转"><Button icon={<RotateCcw size={14} />} onClick={onRotate} aria-label="旋转答题图" /></Tooltip>
+        <Button aria-label="键盘平移答题图" aria-describedby={viewerHelpId} onKeyDown={onKeyDown}>键盘平移</Button>
+      </Space><p id={viewerHelpId} className="muted">聚焦“键盘平移”按钮后，放大时可用方向键平移，Shift + 方向键加速，Home 适配窗口，Esc 结束拖拽。</p>
+      {context.task.anonymous_code ? <p className="muted">答卷标识：{context.task.anonymous_code}</p> : null}</div>
+    </details>
+    {context.answerScope !== "grading_group" && context.segmentImageUrl ? <details className="answer-reading-tools answer-reading-annotation" onKeyDown={event => { if (event.key === "Escape") event.currentTarget.open = false; }}>
+      <summary>批注与评语</summary>
+      <div className="answer-reading-tool-popover"><ReviewAnnotationWorkspace key={context.task.id} reviewTaskId={context.task.id} imageUrl={context.segmentImageUrl}
+        imageAlt={`${context.task.question_no} 答题区域`} disabled={!canEditDraft} rubricCriteria={rubricPoints.map(point => ({ id: point.id, label: pointLabel(point) }))} /></div>
+    </details> : null}
+  </Space>;
   const viewer = () => {
     if (previewLoading) return <LoadingState label="正在读取答卷页面" />;
     if (viewerMode !== "ocr" && !preview) return <EmptyState title="暂无答卷页面" description="当前任务没有可下载的页面文件。" />;
@@ -73,6 +97,7 @@ export function AnswerEvidencePane({
     if (isImage && viewerMode !== "ocr") return <AdaptiveAnswerImage key={`${context.task.id}:${viewerMode}:${preview!.url}`} source={preview!.url}
       label={`${context.task.question_no} 答题图查看区`} helpId={viewerHelpId} imageSize={imageSize} scale={scale} autoFit={autoFit} rotation={rotation} offset={offset} dragging={dragging} viewportRef={viewportRef}
       onZoom={onZoom} onFit={onFit} onResetView={onResetView} onImageLoad={onImageLoad} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
+      controls={controls}
       mathSelection={viewerMode === "segment" && context.answerScope !== "grading_group" && mathSelection?.segmentId === context.task.answer_segment_id ? mathSelection : null} />;
     // 图片通过实际宽高缩放，让百分比证据框同步缩放；其他预览才使用 transform 的 scale。
     const viewerTransform = isImage
@@ -107,55 +132,11 @@ export function AnswerEvidencePane({
 
   return (
     <section className="answer-panel">
-      <div className="panel-head">
-        <div>
-          <h2>{context.task.question_no} · 学生答案</h2>
-          <p>{taskStatusLabels[context.task.status] ?? "待核对"}</p>
-        </div>
-        <Space wrap>
-          <Segmented<ViewerMode>
-            size="small"
-            value={viewerMode}
-            options={[
-              ...(context.gradingGroupImageUrl ? [{ label: "整区", value: "group" as const }] : []),
-              ...(context.answerScope !== "grading_group" ? [{ label: context.gradingGroupImageUrl ? "单题" : "答题区域", value: "segment" as const }] : []),
-              ...(canViewOriginalImage ? [{ label: "原图", value: "original" as const }] : []),
-              { label: "识别文本", value: "ocr" as const }
-            ]}
-            onChange={onChangeViewerMode}
-          />
-        </Space>
-      </div>
+      {!preview?.contentType.startsWith("image/") || viewerMode === "ocr" || previewLoading ? <div className="answer-reading-toolbar"><Space size={6} wrap>{controls}</Space></div> : null}
       {viewerMode === "group" ? <p className="muted">正在查看整区，当前录入第 {context.task.question_no} 题得分。</p> : null}
       {context.answerScope === "grading_group" ? <p className="muted">此题使用人工确认的整区作答图，尚无单题框；各题仍分别计分。</p> : null}
       {mathSelection?.segmentId === context.task.answer_segment_id && viewerMode === "segment" ? <output className="math-image-selection" style={{ display: "block" }}>已定位 {mathSelection.stepId} · {mathSelection.label}</output> : null}
       {viewer()}
-      <details className="grading-more-fields">
-        <summary>图像工具与键盘帮助</summary>
-        <div className="grading-more-fields-body"><Space wrap>
-          {!preview?.contentType.startsWith("image/") || viewerMode === "ocr" ? <><Tooltip title="缩小"><Button icon={<ZoomOut size={14} />} onClick={() => onZoom(-1)} aria-label="缩小答题图" /></Tooltip>
-          <span className="viewer-scale">{Math.round(scale * 100)}%</span>
-          <Tooltip title="放大"><Button icon={<ZoomIn size={14} />} onClick={() => onZoom(1)} aria-label="放大答题图" /></Tooltip></> : null}
-          <Tooltip title="顺时针旋转"><Button icon={<RotateCcw size={14} />} onClick={onRotate} aria-label="旋转答题图" /></Tooltip>
-          <Button aria-label="键盘平移答题图" aria-describedby={viewerHelpId} onKeyDown={onKeyDown}>键盘平移</Button>
-        </Space><p id={viewerHelpId} className="muted">聚焦“键盘平移”按钮后，放大时可用方向键平移，Shift + 方向键加速，Home 适配窗口，Esc 结束拖拽。</p>
-        {context.task.anonymous_code ? <p className="muted">答卷标识：{context.task.anonymous_code}</p> : null}</div>
-      </details>
-      {context.answerScope !== "grading_group" && context.segmentImageUrl ? (
-        <details className="grading-more-fields">
-          <summary>答题区域批注与常用评语</summary>
-          <div className="grading-more-fields-body">
-            <ReviewAnnotationWorkspace
-              key={context.task.id}
-              reviewTaskId={context.task.id}
-              imageUrl={context.segmentImageUrl}
-              imageAlt={`${context.task.question_no} 答题区域`}
-              disabled={!canEditDraft}
-              rubricCriteria={rubricPoints.map((point) => ({ id: point.id, label: pointLabel(point) }))}
-            />
-          </div>
-        </details>
-      ) : null}
     </section>
   );
 }

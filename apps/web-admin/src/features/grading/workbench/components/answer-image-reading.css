@@ -1,15 +1,28 @@
-.answer-image-reading { min-width: 0; }
-.answer-reading-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; min-height: 40px; padding: 0 0 8px; }
+.answer-image-reading { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; min-height: 0; }
+.answer-reading-toolbar { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; min-height: 32px; padding: 0 0 4px; }
 .answer-reading-toolbar .ant-btn { display: inline-flex; align-items: center; gap: 5px; }
 .answer-reading-scale { min-width: 44px; text-align: center; color: var(--text-secondary, #5b6575); font-variant-numeric: tabular-nums; }
 .answer-reading-count { color: var(--text-secondary, #5b6575); font-size: 12px; white-space: nowrap; }
-.answer-viewer.answer-image-viewport { height: clamp(320px, calc(100dvh - 260px), 1100px); min-height: 320px; overflow: auto; }
+.answer-viewer.answer-image-viewport { height: var(--answer-viewer-available-height, max(240px, calc(100dvh - 106px))); min-height: 240px; overflow: auto; }
+.immersive-workspace .answer-panel:has(> .answer-image-reading) { padding: 4px 6px; min-height: 0; }
+/* 分段包装层也参与剩余高度分配；否则画布按窗口估算的高度会被上层 overflow 裁掉。 */
+@media (min-width: 1100px) and (min-height: 821px) {
+  @container (min-width: 1051px) {
+    .immersive-workspace .answer-panel > .answer-image-reading > .answer-image-viewport { flex: 1 1 0; height: auto; min-height: 0; }
+  }
+}
 .answer-viewer.answer-viewer-tiled { display: block; }
-.answer-reading-tiles { box-sizing: border-box; display: grid; width: max-content; min-width: 100%; min-height: 100%; gap: 12px; padding: 12px; justify-content: center; align-content: center; align-items: start; }
+.answer-reading-tiles { box-sizing: border-box; display: grid; width: max-content; min-width: 100%; min-height: 100%; gap: 8px; padding: 8px; justify-content: safe center; align-content: safe center; align-items: start; }
 .answer-reading-tile { min-width: 0; margin: 0; }
-.answer-reading-tile figcaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 24px; font-size: 12px; color: var(--text-secondary, #5b6575); }
+.answer-reading-tile figcaption { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 20px; font-size: 12px; color: var(--text-secondary, #5b6575); }
 .answer-reading-tile figcaption > span { font-size: 11px; color: var(--text-muted, #7a8695); }
 /* SVG 的 viewBox 使用原图坐标；边界只截取显示窗口，不拉伸笔迹，也不生成新的图像资产。 */
 .answer-reading-tile svg { display: block; overflow: hidden; background: #fff; outline: 1px solid var(--border, #dce3ec); }
 .answer-reading-highlight { fill: rgb(22 119 255 / 12%); stroke: var(--primary, #1677ff); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
-@media (max-width: 700px) { .answer-viewer.answer-image-viewport { height: max(320px, calc(100dvh - 320px)); } .answer-reading-toolbar { gap: 6px; } }
+.answer-reading-tools { position: relative; }
+.answer-reading-tools > summary { padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface, #fff); cursor: pointer; white-space: nowrap; }
+.answer-reading-tool-popover { position: absolute; top: calc(100% + 8px); left: 0; z-index: 20; width: min(340px, 85vw); padding: 12px; background: var(--surface, #fff); border: 1px solid var(--border); box-shadow: 0 4px 20px rgb(0 0 0 / 12%); }
+.answer-reading-tool-popover > p:last-child { margin-bottom: 0; }
+/* 批注需要完整编辑画布；展开到工具栏下方，不能再挤占主答题图的布局高度。 */
+.answer-reading-annotation .answer-reading-tool-popover { position: fixed; inset: 100px 12px 12px; width: auto; overflow: auto; z-index: 30; }
+@media (max-width: 700px) { .answer-reading-toolbar { gap: 4px; } }

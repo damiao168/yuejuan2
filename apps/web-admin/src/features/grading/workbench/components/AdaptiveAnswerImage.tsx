@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, useEffect, type CSSProperties } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Button, Segmented, Space, Tooltip } from "antd";
 import { ArrowLeft, ArrowRight, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { planImageReadingLayout } from "../imageReadingLayout";
@@ -6,7 +6,7 @@ import type { AnswerEvidencePaneProps } from "./AnswerEvidencePane";
 import "./answer-image-reading.css";
 
 type Props = Pick<AnswerEvidencePaneProps, "scale" | "autoFit" | "imageSize" | "rotation" | "offset" | "dragging" | "viewportRef" | "onZoom" | "onFit" | "onPointerDown" | "onPointerMove" | "onPointerUp" | "onImageLoad" | "mathSelection"> & {
-  source: string; label: string; helpId: string; onResetView?: () => void;
+  source: string; label: string; helpId: string; onResetView?: () => void; controls?: ReactNode;
 };
 
 function rotatedImage(size: NonNullable<Props["imageSize"]>, rotation: number) {
@@ -34,25 +34,28 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
     const measure = () => {
       const width = element.clientWidth, height = element.clientHeight;
       if (!width || !height) return;
+      // 工具栏在窄窗口可能换行；文档流下按实际顶部位置留出余高，不能继续减固定工具栏高度。
+      element.style.setProperty("--answer-viewer-available-height", `${Math.max(240, window.innerHeight - Math.max(0, element.getBoundingClientRect().top) - 8)}px`);
       // 画布边距和分段标题先扣除；规划器接收的是图片真正可以使用的 CSS 像素。
-      setFrame(current => current.width === width - 24 && current.height === height - 48 ? current : { width: Math.max(1, width - 24), height: Math.max(1, height - 48) });
+      setFrame(current => current.width === width - 16 && current.height === height - 36 ? current : { width: Math.max(1, width - 16), height: Math.max(1, height - 36) });
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
-    return () => observer.disconnect();
+    window.addEventListener("resize", measure);
+    return () => { observer.disconnect(); window.removeEventListener("resize", measure); };
   }, []);
   const oriented = useMemo(() => imageSize ? rotatedImage(imageSize, rotation) : null, [imageSize, rotation]);
   const plan = useMemo(() => {
-    const input = { imageWidth: oriented?.width ?? 0, imageHeight: oriented?.height ?? 0, viewportWidth: frame.width, viewportHeight: frame.height };
+    const input = { imageWidth: oriented?.width ?? 0, imageHeight: oriented?.height ?? 0, viewportWidth: frame.width, viewportHeight: frame.height, gap: 8 };
     const initial = planImageReadingLayout(input);
     // 横长图按多行排布，每一行都有标题；先给这些标题留出空间，避免分段后又被迫上下滚动。
-    return initial.axis === "horizontal" && initial.rows > 1 ? planImageReadingLayout({ ...input, viewportHeight: Math.max(1, frame.height - (initial.rows - 1) * 24) }) : initial;
+    return initial.axis === "horizontal" && initial.rows > 1 ? planImageReadingLayout({ ...input, viewportHeight: Math.max(1, frame.height - (initial.rows - 1) * 20) }) : initial;
   }, [oriented, frame]);
   const segmented = layout === "smart" && plan.tiles.length > 1;
   const lastGroup = Math.max(0, plan.groupCount - 1), activeGroup = Math.min(group, lastGroup);
   const tiles = plan.tiles.slice(activeGroup * plan.perGroup, (activeGroup + 1) * plan.perGroup);
-  const wholeFit = oriented ? Math.min(4, Math.max(.1, Math.min((frame.width - 8) / oriented.width, (frame.height + 16) / oriented.height))) : 1;
+  const wholeFit = oriented ? Math.min(4, Math.max(.1, Math.min((frame.width - 16) / oriented.width, (frame.height + 4) / oriented.height))) : 1;
   const relativeZoom = autoFit ? 1 : scale / wholeFit;
   const tileScale = plan.scale * relativeZoom;
   const displayedScale = segmented ? tileScale : scale;
@@ -76,14 +79,15 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
   const imageStyle: CSSProperties | undefined = imageSize ? { width: imageSize.width * scale, height: imageSize.height * scale } : undefined;
   return <div className="answer-image-reading">
     <div className="answer-reading-toolbar">
-      <Space size={8} wrap>
+      <Space size={6} wrap>
+        {props.controls}
         <Tooltip title="按图像和窗口比例自动分段；整图内容完整保留"><Segmented value={layout} onChange={value => changeLayout(value as "smart" | "whole")} options={[{ label: "智能分段", value: "smart" }, { label: "整图查看", value: "whole" }]} size="small" aria-label="答题图阅读布局" /></Tooltip>
         <Button size="small" icon={<ZoomOut size={15} />} aria-label="缩小答题图" onClick={() => onZoom(-1)} />
         <output className="answer-reading-scale" aria-label="答题图缩放比例">{Math.round(displayedScale * 100)}%</output>
         <Button size="small" icon={<ZoomIn size={15} />} aria-label="放大答题图" onClick={() => onZoom(1)} />
         <Button size="small" icon={<RotateCcw size={15} />} onClick={resetView}>重置视图</Button>
       </Space>
-      {segmented ? <Space size={8}><span className="answer-reading-count">共 {plan.tiles.length} 段</span>{plan.groupCount > 1 ? <>
+      {segmented ? <Space size={6}><span className="answer-reading-count">第 {tiles[0].index + 1}{tiles.length > 1 ? `–${tiles[tiles.length - 1].index + 1}` : ""} 段 / 共 {plan.tiles.length} 段</span>{plan.groupCount > 1 ? <>
         <Button size="small" icon={<ArrowLeft size={14} />} disabled={activeGroup === 0} onClick={() => changeGroup(activeGroup - 1)}>上一组</Button>
         <output aria-live="polite">{activeGroup + 1} / {plan.groupCount}</output>
         <Button size="small" icon={<ArrowRight size={14} />} disabled={activeGroup === lastGroup} onClick={() => changeGroup(activeGroup + 1)}>下一组</Button>
