@@ -550,8 +550,8 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         readonlyLabel={ctx?.task.status === "submitted" || ctx?.task.status === "completed" ? "已提交·只读" : canManageTasks ? "管理员只读" : "任务只读"}
         canSubmit={canSubmit && !regionEditing}
         onSubmit={!regionEditing && !managing && canEditDraft && draftSaveStatus !== "readonly" ? () => void submitGrade() : undefined}
-        taskLabel={!managing && ctx ? `${regionEditing ? "填空整区" : ctx.task.question_no || "当前题目"} · ${ctx.task.anonymous_code || "匿名答卷"}` : undefined}
-        scoreLabel={!regionEditing && !managing && ctx ? typeof draft.score === "number" ? `${draft.score.toFixed(1)} / ${maxScore}` : "未评分" : undefined}
+        taskLabel={!managing && ctx ? regionEditing ? "填空整区" : ctx.task.question_no || "当前题目" : undefined}
+        scoreLabel={!regionEditing && !managing && ctx ? typeof draft.score === "number" ? `${Number(draft.score.toFixed(1))}/${maxScore} 分` : "未评分" : undefined}
         personalActions={<>
           {!managing ? <Button icon={<PanelLeft size={16} />} onClick={() => changeQueueScope(() => setTaskDrawerOpen(true))}>任务</Button> : null}
           {canWork ? <ReviewBookmarkControls scope={queryScope} controller={bookmarks} /> : null}

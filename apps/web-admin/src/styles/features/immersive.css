@@ -17,6 +17,15 @@
   padding: 0 12px;
 }
 
+/* 小屏只滚动操作容器，退出入口固定可见；桌面让题目与操作共用原顶栏高度。 */
+.immersive-topbar .topbar-left { flex-shrink: 0; }
+.grading-toolbar-slot { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; line-height: normal; }
+.grading-toolbar-slot .grading-topbar { min-width: max-content; min-height: 48px; padding: 0; border: 0; border-radius: 0; gap: 20px; }
+.grading-toolbar-slot .grading-work-title { flex-wrap: nowrap; flex-shrink: 0; gap: 8px; white-space: nowrap; }
+.grading-toolbar-slot .grading-current-task { overflow-wrap: normal; }
+.grading-toolbar-slot .grading-topbar > .ant-space { flex-wrap: nowrap; flex-shrink: 0; margin-left: auto; }
+.grading-toolbar-slot .grading-personal-actions { flex-wrap: nowrap; }
+
 .immersive-workspace {
   height: calc(100svh - 48px);
   min-height: 0;

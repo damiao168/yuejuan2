@@ -98,6 +98,7 @@ type ShellTopbarProps = Readonly<{
   accountMenu: MenuProps;
   onNavigate: (path: string) => void;
   onOpenNavigation: () => void;
+  onGradingToolbarMount?: (element: HTMLDivElement | null) => void;
 }>;
 
 function ShellAccount({ user, accountMenu }: Readonly<Pick<ShellTopbarProps, "user" | "accountMenu">>) {
@@ -108,7 +109,7 @@ function ShellAccount({ user, accountMenu }: Readonly<Pick<ShellTopbarProps, "us
   </Space>;
 }
 
-export function ShellTopbar({ mode, desktop, focusedContext, user, experience, title, mock, accountMenu, onNavigate, onOpenNavigation }: ShellTopbarProps) {
+export function ShellTopbar({ mode, desktop, focusedContext, user, experience, title, mock, accountMenu, onNavigate, onOpenNavigation, onGradingToolbarMount }: ShellTopbarProps) {
   if (mode === "focused") {
     return <Layout.Header className="topbar focused-topbar">
       <div className="topbar-left">
@@ -119,12 +120,13 @@ export function ShellTopbar({ mode, desktop, focusedContext, user, experience, t
     </Layout.Header>;
   }
   if (mode === "grading") {
-    // 题目信息由阅卷工作台展示，外壳只保留退出入口和环境标识。
+    // 工作台将题目、进度和操作放入右侧容器，避免退出入口单独占据一整行。
     return <Layout.Header className="topbar immersive-topbar">
       <div className="topbar-left">
         <Button type="text" icon={<ArrowLeft size={17} />} aria-label="退出阅卷" onClick={() => onNavigate("/dashboard")}>退出阅卷</Button>
         {mock ? <MockBadge compact={true} /> : null}
       </div>
+      <div id="grading-toolbar-slot" className="grading-toolbar-slot" ref={onGradingToolbarMount} tabIndex={0} role="region" aria-label="阅卷工具栏" />
     </Layout.Header>;
   }
   if (desktop) return null;

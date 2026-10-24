@@ -29,7 +29,7 @@ const baseProps: WorkbenchHeaderProps = {
 
 describe("WorkbenchHeader status rendering", () => {
   it.each([
-    [{}, "已完成 3 / 共 10"],
+    [{}, "已完成 3/10"],
     [{ progressComplete: false }, "已完成 3 / 已加载 10 · 数据未完整"],
     [{ canManageTasks: true }, "剩余 7 份"],
     [{ canManageTasks: true, progressComplete: false }, "已加载待处理 7 份 · 数据未完整"],

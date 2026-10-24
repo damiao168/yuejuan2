@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { GradingToolbarContext } from "../../../../components/GradingToolbarContext";
 import { Alert, Button, Progress, Space } from "antd";
 import { ArrowRight, BadgeCheck, CheckCircle2, RefreshCw } from "lucide-react";
 import type { DraftSaveStatus, ReviewerProgress } from "../gradingWorkbench.types";
@@ -61,7 +63,7 @@ function progressLabels({ canManageTasks, hasContext, myProgress, remainingCount
   const remainingLabel = progressComplete ? "剩余" : "已加载待处理";
   let progressSummary = "分配任务、查看进度和处理异常";
   if (!canManageTasks) {
-    progressSummary = `已完成 ${myProgress?.completed ?? 0} / ${totalLabel} ${myProgress?.total ?? 0}${incompleteProgress}`;
+    progressSummary = progressComplete ? `已完成 ${myProgress?.completed ?? 0}/${myProgress?.total ?? 0}` : `已完成 ${myProgress?.completed ?? 0} / 已加载 ${myProgress?.total ?? 0}${incompleteProgress}`;
   } else if (hasContext) {
     progressSummary = `${remainingLabel} ${remainingCount} 份${incompleteProgress}`;
   }
@@ -94,17 +96,16 @@ export function WorkbenchHeader({
   scoreLabel
 }: Readonly<WorkbenchHeaderProps>) {
   const showReviewerActions = !canManageTasks || queueScope === "mine";
+  const toolbarTarget = useContext(GradingToolbarContext);
   const { incompleteProgress, totalLabel, progressSummary } = progressLabels({ canManageTasks, hasContext, myProgress, remainingCount, progressComplete });
-  return (
-    <>
-      <section className="grading-topbar">
+  const toolbar = <section className="grading-topbar">
         <div className="grading-work-title">
-          <h1>{canManageTasks ? "阅卷管理" : "阅卷"}</h1>
-          {taskLabel ? <strong className="grading-current-task">{taskLabel}</strong> : null}
-          {scoreLabel ? <span className="grading-current-score">本题分 {scoreLabel}</span> : null}
+          {canManageTasks ? <h1>阅卷管理</h1> : null}
+          {taskLabel ? <strong className="grading-current-task">{/^(?:Q)?\d+(?:[.．-]\d+)*$/i.test(taskLabel) ? `第 ${taskLabel.replace(/^Q/i, "")} 题` : taskLabel}</strong> : null}
+          {scoreLabel ? <span className="grading-current-score">· {scoreLabel}</span> : null}
           <span>{progressSummary}</span>
         </div>
-        <Space wrap>
+        <Space wrap={!toolbarTarget}>
           {hasContext ? <span className={`draft-save-status ${draftSaveStatus}`}>{draftStatusText ?? (draftSaveStatus === "readonly" ? readonlyLabel || draftStatusLabel[draftSaveStatus] : draftStatusLabel[draftSaveStatus])}</span> : null}
           {personalActions ? <div className="grading-personal-actions">{personalActions}</div> : null}
           {onSubmit ? <Button type="primary" icon={<CheckCircle2 size={16} />} disabled={!canSubmit} loading={actioning === "submit"} onClick={onSubmit}>提交并下一份</Button> : null}
@@ -113,8 +114,10 @@ export function WorkbenchHeader({
           {/* 当前答卷打开后已自动续租；只有空选择且仍有任务时才需要显式领取，避免重复领取看起来毫无变化。 */}
           {canWork && showReviewerActions && !hasContext && !loading && remainingCount > 0 ? <Button type="primary" icon={<BadgeCheck size={16} />} disabled={Boolean(actioning)} loading={actioning === "claim-task"} onClick={() => void onClaim()}>领取任务</Button> : null}
         </Space>
-      </section>
-
+      </section>;
+  return (
+    <>
+      {toolbarTarget && !canManageTasks ? createPortal(toolbar, toolbarTarget) : toolbar}
       <DraftStatusNotice draftSaveStatus={draftSaveStatus} onResolveConflict={onResolveConflict} onReloadConflict={onReloadConflict} readonlyLabel={readonlyLabel} />
 
       {canManageTasks && queueScope === "all" ? (

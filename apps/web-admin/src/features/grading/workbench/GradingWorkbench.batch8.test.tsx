@@ -236,7 +236,7 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     expect(header().scoreLabel).toBe("未评分");
     await edit(0);
     expect(editor().canSubmit).toBe(true);
-    expect(header().scoreLabel).toBe("0.0 / 10");
+    expect(header().scoreLabel).toBe("0/10 分");
     expect(editor().hidePrimarySubmit).toBe(true);
     const submissions = mocks.asyncNoop.mock.calls.length;
     await act(async () => header().onSubmit?.());

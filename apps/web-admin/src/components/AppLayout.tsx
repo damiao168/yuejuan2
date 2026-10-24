@@ -11,6 +11,7 @@ import { isPublicComputerIdle, PUBLIC_COMPUTER_IDLE_LOCK_MS } from "../auth/logi
 import { getUserErrorMessage } from "../api/client";
 import { StepUpDialog, useStepUp } from "../auth/stepUpContext";
 import { selectedNavigationPath, shellClassNames, ShellNavigation, ShellTopbar } from "./appLayoutPresentation";
+import { GradingToolbarContext } from "./GradingToolbarContext";
 
 const { Sider, Content } = Layout;
 const DESKTOP_NAVIGATION_WIDTH = 192;
@@ -54,6 +55,7 @@ export function AppLayout({
   focusedContext?: FocusedShellContext;
 }>) {
   const immersive = shellMode !== "standard";
+  const [gradingToolbar, setGradingToolbar] = useState<HTMLDivElement | null>(null);
   const screens = Grid.useBreakpoint();
   const [readingSize, setReadingSize] = useState(readReadingSize);
   useEffect(() => { applyReadingSize(readingSize); }, [readingSize]);
@@ -303,6 +305,7 @@ export function AppLayout({
           </Drawer>
         ) : null}
         <Layout>
+          <GradingToolbarContext.Provider value={shellMode === "grading" ? gradingToolbar : null}>
           {user.publicComputer ? (
             <output className="public-computer-banner">
               <span><Tag color="orange">公共电脑</Tag>请勿让他人使用当前会话，离开前退出并清理本机数据。</span>
@@ -311,7 +314,7 @@ export function AppLayout({
           ) : null}
           <ShellTopbar mode={shellMode} desktop={desktopNavigation} focusedContext={focusedContext}
             user={user} experience={experience} title={currentPresentation.title} mock={currentRoute.mock}
-            accountMenu={accountMenu} onNavigate={onNavigate} onOpenNavigation={() => setNavigationOpen(true)} />
+            accountMenu={accountMenu} onNavigate={onNavigate} onOpenNavigation={() => setNavigationOpen(true)} onGradingToolbarMount={setGradingToolbar} />
           <Content
             id="main-workspace"
             tabIndex={-1}
@@ -322,6 +325,7 @@ export function AppLayout({
             {!immersive && desktopNavigation && currentRoute.mock ? <div className="workspace-route-indicator"><MockBadge compact={true} /></div> : null}
             {children}
           </Content>
+          </GradingToolbarContext.Provider>
         </Layout>
         <Modal
           rootClassName="public-computer-lock-modal"

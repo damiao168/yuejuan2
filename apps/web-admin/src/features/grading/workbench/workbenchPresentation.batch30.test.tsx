@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ReviewTaskContext } from "../../../api/review";
+import { GradingToolbarContext } from "../../../components/GradingToolbarContext";
 import { AIContextPanel } from "./AIContextPanel";
 import { WorkbenchHeader, type WorkbenchHeaderProps } from "./components/WorkbenchHeader";
 import { createInitialDraft, fallbackSnapshot } from "./gradingWorkbench.model";
@@ -100,6 +101,20 @@ function headerProps(): WorkbenchHeaderProps {
 }
 
 describe("batch30 header permission and callback boundaries", () => {
+  it("将简洁题目和操作移到外壳顶栏，告警仍留在评分正文且操作回调正常", () => {
+    const target = document.createElement("div"); document.body.append(target);
+    const props = headerProps();
+    const view = render(<GradingToolbarContext.Provider value={target}><WorkbenchHeader {...props} taskLabel="18" scoreLabel="未评分" draftSaveStatus="offline" /></GradingToolbarContext.Provider>);
+    try {
+      expect(view.container.querySelector(".grading-topbar")).toBeNull();
+      expect(target.querySelector(".grading-current-task")?.textContent).toBe("第 18 题");
+      expect(target.textContent).toContain("· 未评分");
+      expect(target.querySelector("h1")).toBeNull();
+      expect(view.container.textContent).toContain("当前离线");
+      fireEvent.click(screen.getByRole("button", { name: "下一份" }));
+      expect(props.onNext).toHaveBeenCalledOnce();
+    } finally { view.unmount(); target.remove(); }
+  });
   it.each([
     [false, "all", true],
     [true, "all", false],
