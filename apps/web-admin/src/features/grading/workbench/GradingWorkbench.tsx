@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { App, Button, Drawer } from "antd";
+import { App, Button } from "antd";
 import { BookmarkCheck, LogOut, PanelLeft } from "lucide-react";
 import { BackmarkQueue } from "../../../components/BackmarkQueue";
 import { RegradeQueue } from "../../../components/RegradeQueue";
@@ -52,6 +52,7 @@ import { AssignmentPreview } from "./components/AssignmentPreview";
 import type { ReviewTask } from "../../../api/review";
 import { usePersonalReviewBookmarks } from "./hooks/usePersonalReviewBookmarks";
 import { ReviewBookmarkControls, ReviewBookmarksDrawer } from "./components/ReviewBookmarks";
+import { TaskContentContainer, TaskRailContainer } from "./components/WorkbenchContainers";
 
 export interface GradingWorkbenchProps {
   canWork: boolean;
@@ -71,16 +72,6 @@ function mathRequestDisabledReason(canGrade: boolean, canEditDraft: boolean) {
   if (!canGrade) return "当前身份无重新生成数学建议的权限；请按冻结细则人工评分，需要重新生成时请联系管理员。";
   if (!canEditDraft) return "当前任务只读；请先领取属于你的可编辑任务，再重新生成建议。";
   return undefined;
-}
-
-function TaskRailContainer({ managed, open, onClose, children }: { managed: boolean; open: boolean; onClose: () => void; children: ReactNode }) {
-  if (managed) return <>{children}</>;
-  return <Drawer title="阅卷任务" open={open} width={420} onClose={onClose} destroyOnHidden={false} className="grading-task-drawer" styles={{ body: { padding: 0 } }}>{children}</Drawer>;
-}
-
-function TaskContentContainer({ managed, open, onClose, children }: { managed: boolean; open: boolean; onClose: () => void; children: ReactNode }) {
-  if (!managed) return <>{children}</>;
-  return <Drawer title="答卷详情" open={open} width="min(1440px, 96vw)" onClose={onClose} destroyOnHidden className="grading-inspection-drawer">{open ? children : null}</Drawer>;
 }
 
 export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage, canGrade, canVerifyEvidence, canReturn, currentUserId, currentTenantId, initialExamId = "", personalScope = false }: Readonly<GradingWorkbenchProps>) {
