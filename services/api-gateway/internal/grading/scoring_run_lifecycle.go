@@ -297,6 +297,9 @@ func (s *PostgresStore) refreshScoringRunTx(ctx context.Context, tx *sql.Tx, ten
 	if err = reconcileScoringAIReviewTasksTx(ctx, tx, tenantID, runID); err != nil {
 		return ScoringRun{}, err
 	}
+	if err = reconcileBlockedScoringReviewTasksTx(ctx, tx, tenantID, runID); err != nil {
+		return ScoringRun{}, err
+	}
 	var queued, review, failed, autoConfirmed, humanConfirmed int
 	err = tx.QueryRowContext(ctx, `
 SELECT

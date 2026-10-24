@@ -173,12 +173,13 @@ func (c *ScoringCoordinator) fail(ctx context.Context, task workerruntime.Task, 
 
 type pendingScoringItem struct {
 	tenantID, runID, segmentID, inputID, cropHash, snapshotID, actorID, route string
+	processingStatus                                                          string
 	observation                                                               json.RawMessage
 }
 
-// 成功建议若缺正式任务也进入恢复扫描；只补人工队列，不重新调用模型。
+// 成功建议或已阻塞条目缺正式任务时也进入恢复扫描；阻塞条目只补人工队列，不重试模型。
 func (c *ScoringCoordinator) resumePending(ctx context.Context) error {
-	rows, err := c.store.db.QueryContext(ctx, `SELECT item.tenant_id::text,item.scoring_run_id::text,item.answer_segment_id::text,item.input_version_id::text,iv.crop_sha256,item.assessment_snapshot_id::text,sr.started_by::text,item.route,item.observation_json FROM scoring_run_item item JOIN scoring_run sr ON sr.tenant_id=item.tenant_id AND sr.id=item.scoring_run_id JOIN answer_input_version iv ON iv.tenant_id=item.tenant_id AND iv.id=item.input_version_id WHERE sr.deleted_at IS NULL AND sr.status IN ('queued','processing','needs_review','failed','completed') AND ((item.route IN ('observe_rule','rule_input','image_ai') AND item.processing_status IN ('waiting_dependency','queued','running','retry_wait')) OR (item.route='image_ai' AND item.processing_status='succeeded' AND item.decision_status='suggestion_ready' AND sr.status<>'completed' AND NOT EXISTS(SELECT 1 FROM review_task rt WHERE rt.tenant_id=item.tenant_id AND rt.answer_segment_id=item.answer_segment_id AND rt.deleted_at IS NULL AND rt.status IN ('pending','assigned','in_progress','returned','submitted','completed'))) OR (item.decision_status<>'human_confirmed' AND EXISTS(SELECT 1 FROM question_grade g WHERE g.tenant_id=item.tenant_id AND g.answer_segment_id=item.answer_segment_id AND g.source='human' AND g.is_current AND g.deleted_at IS NULL))) ORDER BY item.updated_at LIMIT 100`)
+	rows, err := c.store.db.QueryContext(ctx, `SELECT item.tenant_id::text,item.scoring_run_id::text,item.answer_segment_id::text,item.input_version_id::text,iv.crop_sha256,item.assessment_snapshot_id::text,sr.started_by::text,item.route,item.processing_status,item.observation_json FROM scoring_run_item item JOIN scoring_run sr ON sr.tenant_id=item.tenant_id AND sr.id=item.scoring_run_id JOIN answer_input_version iv ON iv.tenant_id=item.tenant_id AND iv.id=item.input_version_id WHERE sr.deleted_at IS NULL AND sr.status IN ('queued','processing','needs_review','failed','completed') AND ((item.route IN ('observe_rule','rule_input','image_ai') AND item.processing_status IN ('waiting_dependency','queued','running','retry_wait')) OR (item.route='image_ai' AND item.processing_status='succeeded' AND item.decision_status='suggestion_ready' AND sr.status<>'completed' AND NOT EXISTS(SELECT 1 FROM review_task rt WHERE rt.tenant_id=item.tenant_id AND rt.answer_segment_id=item.answer_segment_id AND rt.deleted_at IS NULL AND rt.status IN ('pending','assigned','in_progress','returned','submitted','completed'))) OR (item.route IN ('observe_rule','rule_input','image_ai') AND item.processing_status='blocked' AND sr.status<>'completed' AND NOT EXISTS(SELECT 1 FROM review_task rt WHERE rt.tenant_id=item.tenant_id AND rt.answer_segment_id=item.answer_segment_id AND rt.deleted_at IS NULL AND rt.status IN ('pending','assigned','in_progress','returned','submitted','completed'))) OR (item.decision_status<>'human_confirmed' AND EXISTS(SELECT 1 FROM question_grade g WHERE g.tenant_id=item.tenant_id AND g.answer_segment_id=item.answer_segment_id AND g.source='human' AND g.is_current AND g.deleted_at IS NULL))) ORDER BY item.updated_at LIMIT 100`)
 	if err != nil {
 		return err
 	}
@@ -186,7 +187,7 @@ func (c *ScoringCoordinator) resumePending(ctx context.Context) error {
 	for rows.Next() {
 		var item pendingScoringItem
 		var raw []byte
-		if err = rows.Scan(&item.tenantID, &item.runID, &item.segmentID, &item.inputID, &item.cropHash, &item.snapshotID, &item.actorID, &item.route, &raw); err != nil {
+		if err = rows.Scan(&item.tenantID, &item.runID, &item.segmentID, &item.inputID, &item.cropHash, &item.snapshotID, &item.actorID, &item.route, &item.processingStatus, &raw); err != nil {
 			rows.Close()
 			return err
 		}
@@ -200,7 +201,10 @@ func (c *ScoringCoordinator) resumePending(ctx context.Context) error {
 	}
 	var first error
 	for _, item := range items {
-		if item.route == scoringRouteImageAI && len(item.observation) > 0 {
+		if item.processingStatus == "blocked" {
+			// blocked 的自动工作仍保留原失败原因；补任务不能顺带调用配置尚未恢复的供应商。
+			err = nil
+		} else if item.route == scoringRouteImageAI && len(item.observation) > 0 {
 			err = c.scheduleAI(ctx, item)
 		} else if item.route == scoringRouteRuleInput || (item.route == scoringRouteObserveRule && len(item.observation) > 0) {
 			err = c.store.ProcessRuleCandidates(ctx, item.tenantID, item.runID, item.actorID, NewEngine())

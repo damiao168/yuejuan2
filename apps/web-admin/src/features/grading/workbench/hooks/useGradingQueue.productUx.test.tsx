@@ -84,6 +84,24 @@ describe("task query and complete selection", () => {
     await act(async () => { await queue.selectAllMatchingAssignments(); });
     expect(queue.assignmentTaskIds).toEqual(["first", "last"]); expect(queue.hasMoreTasks).toBe(false);
   });
+  it("视觉模型不可用后，第14至19题的人工接管任务可见且可全选，已开始或结束的任务仍不可改派", async () => {
+    // 评分运行被模型配置阻塞后，服务端恢复的是 pending 人工任务；故障原因不能再挡住安排教师。
+    const recovered = Array.from({ length: 6 }, (_, index) => ({
+      ...task(`recovered-${index + 14}`, `q${index + 14}`), question_no: String(index + 14),
+      source: index % 2 ? "rule_review_required" : "subjective_default_review", reason_code: "visual_model_unavailable"
+    }));
+    const unavailable = ["in_progress", "submitted", "completed", "cancelled"].map(status => ({ ...recovered[0], id: status, status }));
+    const listed = [...recovered, ...unavailable, { ...recovered[0], id: "fixed-double-mark", source: "double_mark_required" }];
+    api.list.mockImplementation(async (filter) => ({ tasks: filter.limit === 1 ? [] : listed, aggregate: aggregate(listed.length), has_more: false }));
+    await mount();
+    expect(queue.filteredTasks.filter(item => item.status === "pending" && item.source !== "double_mark_required").map(item => item.question_no)).toEqual(["14", "15", "16", "17", "18", "19"]);
+    await act(async () => { queue.setTaskFilter("all"); });
+    expect(queue.filteredTasks).toHaveLength(listed.length);
+    expect(queue.assignableTasks.map(item => item.id)).toEqual(recovered.map(item => item.id));
+    await act(async () => { await queue.selectAllMatchingAssignments(); });
+    expect(queue.assignmentTaskIds).toEqual(recovered.map(item => item.id));
+    expect(api.info).not.toHaveBeenCalled();
+  });
   it("keeps cross-field search results visible and selectable with the same matched count", async () => {
     await mount();
     await act(async () => { queue.setKeyword("期中 math"); });

@@ -69,6 +69,8 @@ func TestPostgresDurableScoringCoordinatorStartObserveResume(t *testing.T) {
 	hash := strings.Repeat("a", 64)
 	templateID := uuid.NewString()
 	mustExec(`INSERT INTO tenant(id,tenant_id,name,code,status) VALUES($1,$1,'Synthetic coordinator',$2,'active')`, tenant, "coordinator-"+tenant)
+	// 冻结 AI 方案会先核对考试存在；使用隔离 schema 中的考试，不能依赖 public 的业务数据。
+	mustExec(`INSERT INTO exam(id,tenant_id,school_id,name,subject,exam_type,total_score,status,grading_mode,publish_policy,created_by) VALUES($1,$2,$3,'Synthetic coordinator','math','quiz',20,'draft','ai_assisted','manual_after_confirmation',$4)`, exam, tenant, uuid.NewString(), actor)
 	mustExec(`INSERT INTO submission(id,tenant_id,exam_id,candidate_no,source_type,status,collected_by) VALUES($1,$2,$3,'synthetic','manual_import','created',$4)`, submission, tenant, exam, actor)
 	for _, assetID := range []string{crop, otherCrop} {
 		mustExec(`INSERT INTO file_asset(id,tenant_id,exam_id,owner_type,owner_id,original_name,content_type,size_bytes,hash_sha256,storage_bucket,storage_key,visibility,uploaded_by) VALUES($1::uuid,$2,$3,'answer_segment',$1::uuid,'fixture.png','image/png',1,$4,'fixture',$1::uuid::text,'private',$5)`, assetID, tenant, exam, hash, actor)
@@ -183,7 +185,7 @@ func newDurableScoringFixture(t *testing.T) (context.Context, *sql.DB) {
 		}
 		admin.Close()
 	})
-	for _, table := range []string{"tenant", "question", "question_answer_key", "question_rubric", "rubric_version", "submission", "answer_segment", "file_asset", "exam_question_snapshot", "scoring_rule", "scoring_run", "omr_run", "answer_candidate", "answer_segment_answer", "review_task", "review_draft", "question_grade", "arbitration_task", "double_mark_session", "subjective_grading_run", "agent_worker_task", "agent_worker_task_attempt", "agent_worker_heartbeat"} {
+	for _, table := range []string{"tenant", "exam", "question", "question_answer_key", "question_rubric", "rubric_version", "submission", "answer_segment", "file_asset", "exam_question_snapshot", "scoring_rule", "scoring_run", "omr_run", "answer_candidate", "answer_segment_answer", "review_task", "review_draft", "question_grade", "arbitration_task", "double_mark_session", "subjective_grading_run", "agent_worker_task", "agent_worker_task_attempt", "agent_worker_heartbeat"} {
 		if _, err = db.ExecContext(ctx, "CREATE TABLE "+table+" (LIKE public."+table+" INCLUDING ALL)"); err != nil {
 			t.Fatal(err)
 		}

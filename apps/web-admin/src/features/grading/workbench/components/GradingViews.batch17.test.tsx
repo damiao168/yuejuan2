@@ -138,6 +138,24 @@ describe("阅卷展示分支回归", () => {
     expect(props.scope.selectAllMatchingAssignments).toHaveBeenCalledOnce();
   });
 
+  it.each(["subjective_default_review", "rule_review_required"])("模型不可用恢复的 %s 任务显示为教师评分并允许勾选和预览分配", async source => {
+    const recovered = task({ source, reason_code: "visual_model_unavailable", question_no: "14" });
+    const props = { ...rail(), tasks: [recovered], filteredTasks: [recovered], assignableTasks: [recovered] };
+    await render(<TaskRail {...props} />);
+    expect(host.querySelector("tr")?.textContent).toContain("第 14 题");
+    expect(host.querySelector("tr")?.textContent).toContain("教师评分");
+    expect(host.querySelector("tr")?.textContent).toContain("未安排教师");
+    const checkbox = host.querySelector<HTMLInputElement>('input[aria-label="选择任务 task"]')!;
+    expect(checkbox.disabled).toBe(false);
+    await act(async () => checkbox.click());
+    expect(props.onToggleAssignment).toHaveBeenCalledWith("task", true);
+    await render(<TaskRail {...props} assignmentTaskIds={["task"]} />);
+    const assignButton = Array.from(host.querySelectorAll("button")).find(button => button.textContent === "分配给教师")!;
+    expect(assignButton.disabled).toBe(false);
+    await act(async () => assignButton.click());
+    expect(props.onPreviewAssignments).toHaveBeenCalledOnce();
+  });
+
   it("管理者待我处理和教师队列仍使用旧任务导航，不出现分配表", async () => {
     const props = rail();
     await render(<TaskRail {...props} queueScope="mine" />);
