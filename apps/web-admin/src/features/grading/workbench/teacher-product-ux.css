@@ -6,8 +6,21 @@
 .grading-scope-filters { display: grid; gap: 8px; }
 .grading-scope-filters label { display: grid; gap: 4px; }
 .grading-assignment-preview { display: grid; gap: 12px; }
-.grading-assignment-preview-row { padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-.grading-assignment-preview-row .ant-select { width: 100%; margin-top: 6px; }
+.grading-assignment-preview-scope { margin: 0; font-size: 16px; font-weight: 600; color: #17314f; }
+.grading-assignment-preview-questions { display: flex; gap: 8px 20px; flex-wrap: wrap; max-height: 140px; overflow-y: auto; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.grading-assignment-preview-question { display: inline-flex; gap: 8px; }
+.grading-assignment-preview-question > span { color: #6b7b8e; }
+.grading-assignment-preview-field { display: grid; gap: 6px; }
+.grading-assignment-preview-field .ant-select { width: 100%; }
+.grading-assignment-preview-strategy { justify-self: start; }
+.grading-assignment-preview-hint, .grading-assignment-preview-empty { margin: 0; color: #6b7b8e; }
+.grading-assignment-preview-teachers { max-height: 280px; overflow-y: auto; }
+.grading-assignment-preview-teacher { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; border-bottom: 1px solid var(--border); }
+.grading-assignment-preview-teacher-name { min-width: 0; overflow-wrap: anywhere; }
+.grading-assignment-preview-teacher > strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.grading-assignment-preview-teacher .ant-input-number-group-wrapper { width: 140px; flex-shrink: 0; }
+.grading-assignment-preview-total { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.grading-assignment-preview-error { margin: 0; color: #cf1322; }
 .grading-task-select { display: flex; justify-content: space-between; gap: 8px; flex: 1; min-width: 0; border: 0; padding: 6px 0; background: transparent; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .grading-task-select:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
 .grading-task-select:disabled { cursor: wait; }

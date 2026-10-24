@@ -3,6 +3,7 @@ import { act, type Key, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AiGrade, ReviewTask } from "../../../../api/review";
+import type { assignmentGroups } from "../assignmentPlan";
 import { EvidenceInspector, type EvidenceInspectorProps } from "./EvidenceInspector";
 import { TaskRail, type TaskRailProps } from "./TaskRail";
 
@@ -25,6 +26,7 @@ vi.mock("antd", async () => {
       onChange: props.onChange as () => void
     }), props.children as ReactNode),
     Input: () => null, Select: () => null, Segmented: () => null,
+    Drawer: (props: Props) => props.open ? React.createElement("aside", { "aria-label": props.title as string }, props.children as ReactNode) : null,
     Empty: Object.assign(() => null, { PRESENTED_IMAGE_SIMPLE: "simple" }),
     Space: container, Tooltip: container, Tabs: () => null
   };
@@ -38,16 +40,16 @@ vi.mock("../../../../components/PageState", () => ({
 vi.mock("../../../../components/ResponsiveTable", () => ({
   // 响应式布局由共享表格测试覆盖；这里保留真实分配表的列渲染、选择回调和禁用条件。
   ResponsiveTable: ({ dataSource, columns, rowSelection, loading }: {
-    dataSource: ReviewTask[];
-    columns: { title?: ReactNode; render?: (value: unknown, task: ReviewTask, index: number) => ReactNode }[];
-    rowSelection: { selectedRowKeys: Key[]; getCheckboxProps: (task: ReviewTask) => { disabled: boolean }; onChange: (keys: Key[]) => void };
+    dataSource: ReturnType<typeof assignmentGroups>;
+    columns: { title?: ReactNode; render?: (value: unknown, group: ReturnType<typeof assignmentGroups>[number], index: number) => ReactNode }[];
+    rowSelection: { selectedRowKeys: Key[]; getCheckboxProps: (group: ReturnType<typeof assignmentGroups>[number]) => { disabled: boolean; indeterminate: boolean }; onSelect: (group: ReturnType<typeof assignmentGroups>[number], selected: boolean) => void; onSelectAll: (selected: boolean) => void };
     loading: boolean;
-  }) => <table aria-label="分配任务表" aria-busy={loading}><tbody>{dataSource.map((item, index) => <tr key={item.id}>
-    <td><input type="checkbox" aria-label={`选择任务 ${item.id}`} checked={rowSelection.selectedRowKeys.includes(item.id)}
-      disabled={rowSelection.getCheckboxProps(item).disabled} onChange={event => rowSelection.onChange(event.target.checked
-        ? [...rowSelection.selectedRowKeys, item.id] : rowSelection.selectedRowKeys.filter(key => key !== item.id))} /></td>
+  }) => <><input type="checkbox" aria-label="选择全部题目" onChange={event => rowSelection.onSelectAll(event.target.checked)} /><table aria-label="分配任务表" aria-busy={loading}><tbody>{dataSource.map((item, index) => <tr key={item.key}>
+    <td><input type="checkbox" aria-label={`选择任务 ${item.tasks[0].id}`} checked={rowSelection.selectedRowKeys.includes(item.key)}
+      data-indeterminate={rowSelection.getCheckboxProps(item).indeterminate}
+      disabled={rowSelection.getCheckboxProps(item).disabled} onChange={event => rowSelection.onSelect(item, event.target.checked)} /></td>
     {columns.map((column, columnIndex) => <td key={columnIndex}>{column.render?.(undefined, item, index)}</td>)}
-  </tr>)}</tbody></table>
+  </tr>)}</tbody></table></>
 }));
 vi.mock("../ReviewContextInspector", () => ({ ReviewContextInspector: () => null }));
 vi.mock("../MathEvidenceInspector", () => ({ MathEvidenceInspector: () => null }));
@@ -134,7 +136,7 @@ describe("阅卷展示分支回归", () => {
     await render(<TaskRail {...props} assignmentTaskIds={["task"]} />);
     await act(async () => (Array.from(host.querySelectorAll("button")).find(button => button.textContent === "分配给教师")!).click());
     expect(props.onPreviewAssignments).toHaveBeenCalledOnce();
-    await act(async () => (Array.from(host.querySelectorAll("button")).find(button => button.textContent === "选择筛选结果中的全部待分配项")!).click());
+    await act(async () => (Array.from(host.querySelectorAll("button")).find(button => button.textContent === "选择全部可分配题目")!).click());
     expect(props.scope.selectAllMatchingAssignments).toHaveBeenCalledOnce();
   });
 
@@ -171,7 +173,7 @@ describe("阅卷展示分支回归", () => {
     await render(<TaskRail {...props} filteredTasks={[task({ source: "double_mark_required" })]} assignableTasks={[]} hasMoreTasks pageError="分页失败" />);
     expect(host.querySelector<HTMLInputElement>('input[aria-label="选择任务 task"]')!.disabled).toBe(true);
     expect(host.querySelector('[role="alert"]')?.textContent).toBe("分页失败");
-    const more = Array.from(host.querySelectorAll("button")).find(button => button.textContent === "加载更多任务")!;
+    const more = Array.from(host.querySelectorAll("button")).find(button => button.textContent === "重试加载更多")!;
     await act(async () => more.click());
     expect(props.onLoadMoreTasks).toHaveBeenCalledOnce();
     await render(<TaskRail {...props} actioning="assign-tasks" assignmentTaskIds={["task"]} />);
@@ -181,16 +183,54 @@ describe("阅卷展示分支回归", () => {
     }
   });
 
-  it("分配表用一个安排状态解释等待管理员还是等待教师", async () => {
+  it("分配表汇总未安排与各教师份数", async () => {
     const props = rail();
     await render(<TaskRail {...props} />);
     const row = host.querySelector("tr")!;
     expect(row.textContent).toContain("未安排教师");
-    expect(row.textContent).toContain("等待管理员选择教师并分配");
+    expect(row.textContent).toContain("未安排教师 1 份");
     expect(row.textContent).not.toContain("待分配");
     await render(<TaskRail {...props} filteredTasks={[task({ assigned_to: "teacher", status: "assigned" })]} graderNames={{ teacher: "张老师" }} />);
-    expect(host.querySelector("tr")?.textContent).toContain("张老师 · 待评分");
-    expect(host.querySelector("tr")?.textContent).toContain("等待教师处理答卷");
+    expect(host.querySelector("tr")?.textContent).toContain("张老师 1 份");
+  });
+
+  it("同题多份答卷只显示一行，勾选本题仅选择可分配答卷并保留逐份查看", async () => {
+    const items = [task({ id: "a", question_no: "12" }), task({ id: "b", question_no: "12" }), task({ id: "working", question_no: "12", status: "in_progress", assigned_to: "teacher" }), task({ id: "done", question_no: "12", status: "completed" })];
+    const props = { ...rail(), tasks: items, filteredTasks: items, assignableTasks: items.slice(0, 2), graderNames: { teacher: "张老师" } };
+    await render(<TaskRail {...props} />);
+    expect(host.querySelectorAll("tr")).toHaveLength(1);
+    expect(host.textContent).toContain("剩余 3 份");
+    expect(host.textContent).toContain("张老师 1 份");
+    await act(async () => host.querySelector<HTMLInputElement>('input[aria-label="选择任务 a"]')!.click());
+    expect(vi.mocked(props.onToggleAssignment).mock.calls).toEqual([["a", true], ["b", true]]);
+    await act(async () => Array.from(host.querySelectorAll("button")).find(button => button.textContent === "查看答卷")!.click());
+    expect(host.querySelectorAll("aside .grading-assignment-answer")).toHaveLength(4);
+    await act(async () => host.querySelector<HTMLButtonElement>("aside button")!.click());
+    expect(props.onSelectTask).toHaveBeenCalledWith("a");
+  });
+
+  it("题号自然排序，半选题可全选也可清空，不影响不可改派任务", async () => {
+    const items = [task({ id: "t14", question_id: "q14", question_no: "14" }), task({ id: "t12a", question_id: "q12", question_no: "12" }), task({ id: "t12b", question_id: "q12", question_no: "12" }), task({ id: "fixed", question_id: "q12", question_no: "12", source: "double_mark_required" })];
+    const props = { ...rail(), tasks: items, filteredTasks: items, assignableTasks: items.slice(0, 3), assignmentTaskIds: ["t12a"] };
+    await render(<TaskRail {...props} />);
+    expect(Array.from(host.querySelectorAll("tr strong")).map(node => node.textContent)).toContain("第 12 题");
+    expect(host.querySelector("tr strong")?.textContent).toBe("第 12 题");
+    expect(host.querySelector('input[aria-label="选择任务 t12a"]')?.getAttribute("data-indeterminate")).toBe("true");
+    await act(async () => host.querySelector<HTMLInputElement>('input[aria-label="选择全部题目"]')!.click());
+    expect(vi.mocked(props.onToggleAssignment).mock.calls).toEqual([["t12b", true], ["t14", true]]);
+    vi.mocked(props.onToggleAssignment).mockClear();
+    await act(async () => host.querySelector<HTMLInputElement>('input[aria-label="选择全部题目"]')!.click());
+    expect(vi.mocked(props.onToggleAssignment).mock.calls).toEqual([["t12a", false]]);
+  });
+
+  it("后续页尚未加载完成时不显示部分数量为全题统计，也不能进入分配", async () => {
+    const props = { ...rail(), assignmentTaskIds: ["task"], hasMoreTasks: true, loadingMoreTasks: true };
+    await render(<TaskRail {...props} />);
+    expect(host.querySelector("tr")?.textContent).toContain("统计中");
+    expect(host.querySelector("tr")?.textContent).not.toContain("剩余 1 份");
+    expect(host.querySelector<HTMLInputElement>('input[aria-label="选择任务 task"]')!.disabled).toBe(true);
+    const button = Array.from(host.querySelectorAll("button")).find(button => button.textContent === "分配给教师")!;
+    expect(button.disabled).toBe(true);
   });
 
   it("教师导航分页错误仍允许重试，固定双评任务保持不可改派", async () => {
