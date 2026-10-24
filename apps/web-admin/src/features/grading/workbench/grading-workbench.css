@@ -255,7 +255,7 @@
 }
 
 .automation-results-head > div:first-child span,
-.automation-result-cell span {
+.automation-result-cell > span {
   color: var(--text-muted);
   font-size: var(--eg-font-caption);
 }
@@ -311,6 +311,11 @@
   color: var(--text);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.automation-standard-answer.grading-math-markdown {
+  overflow: visible;
+  white-space: normal;
 }
 
 .automation-image-preview {
@@ -748,20 +753,24 @@
   height: 640px;
 }
 
-.ocr-overlay-text {
+.ocr-overlay-text.grading-math-markdown {
   width: min(720px, 70vw);
   min-height: 420px;
   max-height: 640px;
   margin: 0;
   padding: 18px;
   overflow: auto;
-  white-space: pre-wrap;
-  font-family: Consolas, "JetBrains Mono", monospace;
+  white-space: normal;
+  font-family: inherit;
   font-size: var(--eg-font-body);
   line-height: 1.6;
   color: var(--text);
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid var(--border);
+}
+
+.ocr-overlay-text.grading-math-markdown p {
+  white-space: pre-wrap;
 }
 
 .ocr-bbox {
@@ -789,19 +798,17 @@
   border-radius: var(--radius);
 }
 
-.ocr-snippet span,
+.ocr-snippet > span,
 .ai-evidence-details small {
   color: var(--text-muted);
   font-size: var(--eg-font-caption);
 }
 
-.ocr-snippet p {
-  display: -webkit-box;
+.ocr-snippet > .grading-math-markdown {
+  max-height: 160px;
   margin: 0;
-  overflow: hidden;
+  overflow: auto;
   line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .task-automation-result {
@@ -827,7 +834,8 @@
   gap: 1px;
 }
 
-.task-automation-grid span,
+/* 标签样式只作用于直属文本，避免覆盖 KaTeX 内部 span 的字号和颜色。 */
+.task-automation-grid > div > span,
 .task-automation-note span {
   color: var(--text-muted);
   font-size: var(--eg-font-caption);
@@ -838,6 +846,11 @@
   font-size: var(--eg-font-body);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.task-automation-answer {
+  font-size: var(--eg-font-body);
+  font-weight: 600;
 }
 
 .task-automation-note {
@@ -943,8 +956,8 @@
   gap: 4px;
 }
 
-.evidence-item span,
-.evidence-item code {
+.evidence-item > span,
+.evidence-item > code {
   overflow: hidden;
   text-overflow: ellipsis;
 }

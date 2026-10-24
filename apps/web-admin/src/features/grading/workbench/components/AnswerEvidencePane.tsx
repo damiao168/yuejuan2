@@ -7,6 +7,7 @@ import { ReviewAnnotationWorkspace } from "../../../../components/features/revie
 import { pointLabel, taskStatusLabels } from "../gradingWorkbench.model";
 import type { PreviewState, ViewerMode, WorkbenchContext } from "../gradingWorkbench.types";
 import type { MathStepSelection } from "../mathWorkbenchEvidence";
+import { GradingMathMarkdown } from "./GradingMathMarkdown";
 
 export interface AnswerEvidencePaneProps {
   context: WorkbenchContext;
@@ -159,7 +160,7 @@ function AnswerOcrPreview({ context }: Readonly<{ context: WorkbenchContext }>) 
   const ocrText = context.ocrText || context.ocrResults.map((item) => item.text).filter(Boolean).join("\n") || missingText;
   return (
     <>
-      <pre className="ocr-overlay-text">{ocrText}</pre>
+      <GradingMathMarkdown className="ocr-overlay-text">{ocrText}</GradingMathMarkdown>
       {/* 显示上限按原结果顺序计算，先截取再跳过无效框；坐标仍是原像素，最小边长为 12px。 */}
       {context.ocrResults.slice(0, 12).map((result) =>
         result.bbox?.length === 4 ? (

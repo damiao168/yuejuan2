@@ -5,6 +5,7 @@ import type { WorkbenchContext } from "../gradingWorkbench.types";
 import { AnswerEvidencePane, type AnswerEvidencePaneProps } from "./AnswerEvidencePane";
 
 vi.mock("../../../../components/features/review-annotation", () => ({ ReviewAnnotationWorkspace: () => null }));
+vi.mock("./GradingMathMarkdown", () => ({ GradingMathMarkdown: ({ children, className }: { children: string; className?: string }) => <div className={className} data-grading-math="true">{children}</div> }));
 
 const context = {
   task: { id: "task-1", question_no: "1", anonymous_code: "A001", answer_segment_id: "segment-1", source: "manual", status: "in_progress" },
@@ -51,7 +52,7 @@ describe("AnswerEvidencePane batch13 rendering", () => {
     const empty = renderPane({ preview: null });
     expect(empty.textContent).toContain("暂无答卷页面");
     const ocr = renderPane({ preview: null, viewerMode: "ocr" });
-    expect(ocr.querySelector("pre")?.textContent).toBe("本题尚无识别文本，请查看答题区域。");
+    expect(ocr.querySelector(".ocr-overlay-text")?.textContent).toBe("本题尚无识别文本，请查看答题区域。");
     expect(ocr.querySelector<HTMLElement>(".answer-viewer-stage")?.style.transform).toBe("translate(7px, -3px) scale(2) rotate(90deg)");
   });
 
@@ -96,9 +97,18 @@ describe("AnswerEvidencePane batch13 rendering", () => {
     expect(boxes).toHaveLength(11);
     expect(host.querySelector('.ocr-bbox[title="文本12"]')).toBeNull();
     expect([boxes[0].style.left, boxes[0].style.top, boxes[0].style.width, boxes[0].style.height]).toEqual(["20px", "30px", "12px", "12px"]);
-    expect(host.querySelector("pre")?.textContent).toBe(ocrResults.map((result) => result.text).join("\n"));
-    expect(renderPane({ viewerMode: "ocr", context: { ...context, ocrResults, ocrText: "已合并文本" } }).querySelector("pre")?.textContent).toBe("已合并文本");
+    expect(host.querySelector(".ocr-overlay-text")?.textContent).toBe(ocrResults.map((result) => result.text).join("\n"));
+    expect(renderPane({ viewerMode: "ocr", context: { ...context, ocrResults, ocrText: "已合并文本" } }).querySelector(".ocr-overlay-text")?.textContent).toBe("已合并文本");
     expect(host.querySelector("img")).toBeNull();
+  });
+
+  it("识别原文及换行完整交给公式展示，不再使用预格式化纯文本", () => {
+    const ocrText = "计算过程\nP=p_1p_2...p_n\n" + String.raw`结果为 \frac13`;
+    const host = renderPane({ viewerMode: "ocr", preview: null, context: { ...context, ocrText } });
+    const content = host.querySelector(".ocr-overlay-text");
+    expect(content?.getAttribute("data-grading-math")).toBe("true");
+    expect(content?.textContent).toBe(ocrText);
+    expect(host.querySelector("pre")).toBeNull();
   });
 
   it("数学框仅覆盖当前答题区域图片，定位提示仍允许当前区域的 PDF", () => {

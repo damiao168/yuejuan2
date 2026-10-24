@@ -8,6 +8,7 @@ import { ScoreEditor, type ScoreEditorProps } from "./ScoreEditor";
 vi.mock("../ReviewContextInspector", () => ({ ReviewContextInspector: () => <div data-inspector="context" /> }));
 vi.mock("../MathEvidenceInspector", () => ({ MathEvidenceInspector: () => <div data-inspector="formula" /> }));
 vi.mock("./MathRubricMatrix", () => ({ MathRubricMatrix: () => <div data-inspector="matrix" /> }));
+vi.mock("./GradingMathMarkdown", () => ({ GradingMathMarkdown: ({ children, className }: { children: string; className?: string }) => <div className={className} data-grading-math="true">{children}</div> }));
 vi.mock("../../SharedScoreControl", () => ({ SharedScoreControl: ({ showRubric }: { showRubric?: boolean }) => <div data-inspector="score-control" data-show-rubric={String(showRubric)} /> }));
 
 function evidenceProps(questionType: string): EvidenceInspectorProps {
@@ -42,7 +43,8 @@ describe("single-question inspector focus", () => {
     expect(host.querySelector('[data-inspector="formula"]')).toBeNull();
     expect(host.querySelector('[data-inspector="matrix"]')).toBeNull();
     expect(host.querySelector("output.math-suggestion-note")).toBeNull();
-    expect(host.querySelectorAll(".task-automation-grid strong")).toHaveLength(4);
+    expect(host.querySelectorAll(".task-automation-grid > div")).toHaveLength(4);
+    expect(host.querySelectorAll(".task-automation-answer[data-grading-math]")).toHaveLength(2);
     expect(host.textContent).toContain("只提供参考结果");
     expect(host.textContent).not.toContain("歧义");
   });
@@ -51,6 +53,19 @@ describe("single-question inspector focus", () => {
     const host = parse(<EvidenceInspector {...evidenceProps("calculation")} />);
     expect(host.querySelector('[data-inspector="formula"]')).not.toBeNull();
     expect(host.querySelector('[data-inspector="matrix"]')).not.toBeNull();
+  });
+
+  it("识别摘要与规则结果中的作答和标准答案都使用公式展示", () => {
+    const props = evidenceProps("calculation");
+    const recognized = String.raw`P=p_1p_2...p_n`;
+    const standard = String.raw`\frac13`;
+    props.context.automationResult = { ...props.context.automationResult!, recognized_answer: recognized, standard_answer: standard };
+    const result = parse(<EvidenceInspector {...props} />);
+    expect(Array.from(result.querySelectorAll(".task-automation-answer[data-grading-math]")).map((node) => node.textContent)).toEqual([recognized, standard]);
+    props.context.automationResult = undefined;
+    props.draft.answerText = recognized;
+    const summary = parse(<EvidenceInspector {...props} />);
+    expect(summary.querySelector(".ocr-snippet [data-grading-math]")?.textContent).toBe(recognized);
   });
 
   it("shows image suggestions without the obsolete rule-result card or manual evidence action", () => {

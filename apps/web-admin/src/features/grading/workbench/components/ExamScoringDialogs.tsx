@@ -5,7 +5,6 @@ import type { ScoringRunItem } from "../../../../api/review";
 import { ResponsiveTable } from "../../../../components/ResponsiveTable";
 import { ScoringPaperMonitor } from "../../../../components/ScoringPaperMonitor";
 import { StatusTag } from "../../../../components/StatusTag";
-import { MathMarkdown } from "../../../../components/MathMarkdown";
 import { imageRecognitionSummary, scoringProgressLabel } from "../scoringProgress";
 import { confidenceTone, formatAnswer, gradingConclusion, questionTypeLabels, reasonLabels, recognitionDecisionLabels, recognitionSourceLabels, resultState, scoringItemStateLabels, taskStatusLabels } from "../gradingWorkbench.model";
 import type { ScoringResultState, ScoringResultType } from "../gradingWorkbench.types";
@@ -14,6 +13,7 @@ import { scoringModeLabels, scoringRiskLabels } from "../scoringPlan";
 import { scoringReviewCategory, type ScoringReviewFilter } from "../scoringReviewCategories";
 import { GradingAIPlanSummary } from "./GradingAIPlanSettings";
 import { ImageGradingRecordLoader } from "./ImageGradingRecord";
+import { GradingMathMarkdown } from "./GradingMathMarkdown";
 
 interface ControllerProps { scoring: ExamScoringController; }
 
@@ -47,7 +47,7 @@ function scoringRecognizedAnswer(item: ScoringRunItem) {
   const imageSummary = imageRecognitionSummary(item);
   const answer = item.recognized_answer?.trim();
   return <div className="automation-result-cell">
-    {answer && answer !== "-" ? <MathMarkdown>{answer}</MathMarkdown> : <strong>{imageSummary?.label ?? recognitionDecisionLabels[item.recognition_decision ?? ""] ?? "—"}</strong>}
+    {answer && answer !== "-" ? <GradingMathMarkdown>{answer}</GradingMathMarkdown> : <strong>{imageSummary?.label ?? recognitionDecisionLabels[item.recognition_decision ?? ""] ?? "—"}</strong>}
     <span title={[item.recognition_source, item.recognition_decision].filter(Boolean).join(" / ") || undefined}>{scoringReviewCategory(item) === "recognition" ? "识别结果待核对" : imageSummary?.detail ?? `${recognitionSourceLabels[item.recognition_source ?? ""] ?? "未识别"} · ${recognitionDecisionLabels[item.recognition_decision ?? ""] ?? "待处理"}`}</span>
   </div>;
 }
@@ -55,7 +55,7 @@ function scoringRecognizedAnswer(item: ScoringRunItem) {
 function scoringStandardAnswer(item: ScoringRunItem) {
   const answer = formatAnswer(item.standard_answer);
   // 缺省占位不是 Markdown 内容；单个负号会被解析成空列表项。
-  return answer === "-" ? <span className="automation-standard-answer">—</span> : <MathMarkdown className="automation-standard-answer">{answer}</MathMarkdown>;
+  return answer === "-" ? <span className="automation-standard-answer">—</span> : <GradingMathMarkdown className="automation-standard-answer">{answer}</GradingMathMarkdown>;
 }
 
 function ExamScoringResultsContent({ scoring }: Readonly<ControllerProps>) {

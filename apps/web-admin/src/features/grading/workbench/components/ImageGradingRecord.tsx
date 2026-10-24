@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Alert, Spin, Tabs } from "antd";
 import { getBusinessCommandSession } from "../../../../api/businessCommand";
 import { listAiGrades, type ScoringRunItem } from "../../../../api/review";
-import { MathMarkdown } from "../../../../components/MathMarkdown";
 import { formatAnswer, formatError } from "../gradingWorkbench.model";
 import { gradingAIModeLabels } from "./GradingAIPlanSettings";
+import { GradingMathMarkdown } from "./GradingMathMarkdown";
 
 type RecordValue = Record<string, unknown>;
 export interface ImageGradeRecordData {
@@ -44,7 +44,7 @@ function JudgmentRecord({ raw, questionId, basis }: Readonly<{ raw: RecordValue;
   const judgments = records(raw.judgments);
   const evidence = records(member?.evidence);
   return <div className="grading-record-body">
-    <div><h3>模型识别的作答</h3>{answerValue ? <MathMarkdown>{answerValue}</MathMarkdown> : <p>{member?.presence === "blank" ? "识别为空白作答" : "未保留可展示的转写，请查看原图。"}</p>}</div>
+    <div><h3>模型识别的作答</h3>{answerValue ? <GradingMathMarkdown>{answerValue}</GradingMathMarkdown> : <p>{member?.presence === "blank" ? "识别为空白作答" : "未保留可展示的转写，请查看原图。"}</p>}</div>
     <div><h3>逐项评分依据</h3>
       {judgments.length ? <div className="grading-record-points">{judgments.map((judgment, index) => {
         const point = points.find(value => value.id === judgment.criterion_id);
@@ -52,9 +52,9 @@ function JudgmentRecord({ raw, questionId, basis }: Readonly<{ raw: RecordValue;
         const evidenceIDs = Array.isArray(judgment.evidence_ids) ? judgment.evidence_ids : [];
         const snippets = evidence.filter(value => evidenceIDs.includes(value.evidence_id));
         return <article key={text(judgment.criterion_id) || index}>
-          <header><strong>{text(point?.description) || `采分点 ${index + 1}`}</strong><span>{supported ? `命中${score(point?.score) === undefined ? "" : ` · ${point?.score} 分`}` : judgment.status === "uncertain" ? "无法确定" : "未命中"}</span></header>
-          <MathMarkdown>{text(judgment.reason) || "未保留具体理由"}</MathMarkdown>
-          {snippets.length ? <div className="grading-record-quotes">{snippets.map((snippet, position) => <blockquote key={text(snippet.evidence_id) || position}><MathMarkdown>{text(snippet.text)}</MathMarkdown></blockquote>)}</div> : null}
+          <header><GradingMathMarkdown className="grading-record-point-title">{text(point?.description) || `采分点 ${index + 1}`}</GradingMathMarkdown><span>{supported ? `命中${score(point?.score) === undefined ? "" : ` · ${point?.score} 分`}` : judgment.status === "uncertain" ? "无法确定" : "未命中"}</span></header>
+          <GradingMathMarkdown>{text(judgment.reason) || "未保留具体理由"}</GradingMathMarkdown>
+          {snippets.length ? <div className="grading-record-quotes">{snippets.map((snippet, position) => <blockquote key={text(snippet.evidence_id) || position}><GradingMathMarkdown>{text(snippet.text)}</GradingMathMarkdown></blockquote>)}</div> : null}
         </article>;
       })}</div> : <p>这条历史记录未保留逐项判断。</p>}
     </div>
@@ -79,8 +79,8 @@ export function ImageGradingRecord({ grade }: Readonly<{ grade: ImageGradeRecord
     {panel.decision === "primary_consensus" ? <p>前两模型分差未超过允许的 {score(panel.primary_threshold) ?? "—"} 分，未调用第三模型。取 A、B 均分后向上取整。</p> : null}
     {panel.decision === "arbiter_weighted" || (panel.decision === "teacher_review" && roles.some(role => role.role === "arbiter")) ? <p>已调用第三模型，汇总权重为 A 25%、B 25%、第三模型 50%。{score(panel.raw_score) !== undefined ? `取整前 ${panel.raw_score} 分。` : ""}</p> : null}
     {noFinal || panel.decision === "teacher_review" ? <Alert type="warning" showIcon message={noFinal ? "本次未形成汇总分，请教师评分" : "模型分歧较大，请教师核对"} description={reasons.length ? reasons.map(reason => reasonLabels[reason] || "评分未能可靠汇总，请查看各模型记录").join("；") : "请结合原图、标准答案和各模型依据判断。"} /> : null}
-    <div><h3>本次冻结的标准答案</h3>{basis.standard_answer !== undefined && basis.standard_answer !== null ? <MathMarkdown>{formatAnswer(basis.standard_answer)}</MathMarkdown> : <p>历史记录未保留标准答案。</p>}</div>
-    {text(basis.solution_text) ? <details><summary>标准解答</summary><MathMarkdown>{text(basis.solution_text)}</MathMarkdown></details> : null}
+    <div><h3>本次冻结的标准答案</h3>{basis.standard_answer !== undefined && basis.standard_answer !== null ? <GradingMathMarkdown>{formatAnswer(basis.standard_answer)}</GradingMathMarkdown> : <p>历史记录未保留标准答案。</p>}</div>
+    {text(basis.solution_text) ? <details><summary>标准解答</summary><GradingMathMarkdown>{text(basis.solution_text)}</GradingMathMarkdown></details> : null}
     {successful.length ? <Tabs size="small" items={successful.map((role, index) => ({ key: text(role.role) || String(index), label: `${roleLabels[text(role.role)] || "评分记录"} · ${score(role.score) ?? "—"} 分`, children: <JudgmentRecord raw={record(role.raw_output)} questionId={grade.question_id} basis={basis} /> }))} /> : <JudgmentRecord raw={raw} questionId={grade.question_id} basis={basis} />}
   </section>;
 }

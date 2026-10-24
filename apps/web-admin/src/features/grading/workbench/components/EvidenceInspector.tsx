@@ -21,6 +21,7 @@ import {
 } from "../gradingWorkbench.model";
 import type { ScoreDraft, WorkbenchContext } from "../gradingWorkbench.types";
 import { ImageGradingRecord } from "./ImageGradingRecord";
+import { GradingMathMarkdown } from "./GradingMathMarkdown";
 
 export interface EvidenceInspectorProps {
   context: WorkbenchContext;
@@ -62,19 +63,19 @@ export function EvidenceInspector({
       if (choice) {
         const current = context.reviewContext.ai_candidates?.find((candidate) => candidate.is_current);
         return <div className="task-automation-result"><div className="task-automation-grid">
-          <div><span>识别选项</span><strong>{current?.display_text || draft.answerText || "暂无识别结果"}</strong></div>
-          <div><span>标准答案</span><strong>{formatAnswer(context.question?.answer_key?.standard_answer)}</strong></div>
+          <div><span>识别选项</span><GradingMathMarkdown className="task-automation-answer">{current?.display_text || draft.answerText || "暂无识别结果"}</GradingMathMarkdown></div>
+          <div><span>标准答案</span><GradingMathMarkdown className="task-automation-answer">{formatAnswer(context.question?.answer_key?.standard_answer)}</GradingMathMarkdown></div>
           <div><span>本题分值</span><strong>{maxScore} 分</strong></div>
         </div><p className="task-automation-note">{choiceReviewReason(context.reviewContext)}</p></div>;
       }
-      return <div className="ocr-snippet"><span>识别文本</span><p>{draft.answerText || "当前没有可用的识别结果"}</p></div>;
+      return <div className="ocr-snippet"><span>识别文本</span><GradingMathMarkdown>{draft.answerText || "当前没有可用的识别结果"}</GradingMathMarkdown></div>;
     }
     const automaticallyConfirmed = result.grade_source === "rule_confirmed" && typeof result.score === "number";
     return (
       <div className="task-automation-result">
         <div className="task-automation-grid">
-          <div><span>{choice ? "识别选项" : "识别答案"}</span><strong>{result.recognized_answer || recognitionDecisionLabels[result.decision ?? ""] || "-"}</strong></div>
-          <div><span>标准答案</span><strong>{formatAnswer(result.standard_answer)}</strong></div>
+          <div><span>{choice ? "识别选项" : "识别答案"}</span><GradingMathMarkdown className="task-automation-answer">{result.recognized_answer || recognitionDecisionLabels[result.decision ?? ""] || "-"}</GradingMathMarkdown></div>
+          <div><span>标准答案</span><GradingMathMarkdown className="task-automation-answer">{formatAnswer(result.standard_answer)}</GradingMathMarkdown></div>
           <div><span>置信度</span><strong>{typeof result.confidence === "number" ? `${Math.round(result.confidence * 100)}%` : "-"}</strong></div>
           <div><span>{choice ? "本题分值" : "自动判定"}</span><strong>{choice ? `${result.max_score ?? maxScore} 分` : automaticallyConfirmed ? `${result.score} / ${result.max_score ?? maxScore}` : "未生效 · 转人工"}</strong></div>
         </div>
@@ -121,15 +122,15 @@ export function EvidenceInspector({
               label: "采分点",
               children: (
                 <div className="point-result-list">
-                  <List size="small" dataSource={selectedGrade.matched_points} locale={{ emptyText: <Empty description="暂无命中采分点" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(point) => <List.Item><StatusTag tone="success">{`${point.score} 分`}</StatusTag><span>{point.label || "未命名采分点"}</span></List.Item>} />
-                  <List size="small" dataSource={selectedGrade.missing_points} locale={{ emptyText: <Empty description="暂无缺失采分点" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(point) => <List.Item><StatusTag tone="danger">{`${point.score} 分`}</StatusTag><span>{point.label || "未命名采分点"}</span></List.Item>} />
+                  <List size="small" dataSource={selectedGrade.matched_points} locale={{ emptyText: <Empty description="暂无命中采分点" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(point) => <List.Item><StatusTag tone="success">{`${point.score} 分`}</StatusTag><GradingMathMarkdown>{point.label || "未命名采分点"}</GradingMathMarkdown></List.Item>} />
+                  <List size="small" dataSource={selectedGrade.missing_points} locale={{ emptyText: <Empty description="暂无缺失采分点" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(point) => <List.Item><StatusTag tone="danger">{`${point.score} 分`}</StatusTag><GradingMathMarkdown>{point.label || "未命名采分点"}</GradingMathMarkdown></List.Item>} />
                 </div>
               )
             },
             {
               key: "evidence",
               label: "证据",
-              children: <List size="small" dataSource={selectedGrade.evidence} locale={{ emptyText: <Empty description="暂无证据" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(item) => <List.Item><div className="evidence-item"><strong title={item.type || undefined}>{evidenceTypeLabels[item.type] ?? "证据"}</strong><span>{item.answer_text || item.rule || item.standard_answer || "无文本证据"}</span></div></List.Item>} />
+              children: <List size="small" dataSource={selectedGrade.evidence} locale={{ emptyText: <Empty description="暂无证据" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(item) => <List.Item><div className="evidence-item"><strong title={item.type || undefined}>{evidenceTypeLabels[item.type] ?? "证据"}</strong><GradingMathMarkdown>{item.answer_text || item.rule || item.standard_answer || "无文本证据"}</GradingMathMarkdown></div></List.Item>} />
             },
             {
               key: "risk",
