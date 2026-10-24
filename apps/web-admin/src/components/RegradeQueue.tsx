@@ -16,8 +16,8 @@ import { useIndependentReviewGuard } from "../features/grading/workbench/hooks/u
 import { TaskScoringReference } from "./TaskScoringReference";
 import { MathMarkdown } from "./MathMarkdown";
 
-function errorMessage(error: unknown) {
-  return getUserErrorMessage(error, "重评任务暂时无法处理，请稍后重试");
+function errorMessage(error: unknown, label: string) {
+  return getUserErrorMessage(error, `${label}任务暂时无法处理，请稍后重试`);
 }
 
 function rubricPoints(context?: RegradeGraderContext) {
@@ -47,7 +47,7 @@ function RegradeAnswerEvidence({ context, imageUrl }: Readonly<{ context: Regrad
 // 评分细则，而不是先前评分、AI 建议或发布结果。
 // 提交只保存候选结果，供管理人员复核并在以后发布成绩；
 // 不会直接更新当前可见成绩。
-export function RegradeQueue({ canWork }: Readonly<{ canWork: boolean }>) {
+export function RegradeQueue({ canWork, label = "重评" }: Readonly<{ canWork: boolean; label?: string }>) {
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<RegradeWorkItem[]>([]);
@@ -58,7 +58,7 @@ export function RegradeQueue({ canWork }: Readonly<{ canWork: boolean }>) {
   const [score, setScore] = useState<SharedScoreValue>({ score: null, rubricSelections: {} });
   const [comment, setComment] = useState("");
   const [actioning, setActioning] = useState(false);
-  const { busyRef, isCurrent, leave } = useIndependentReviewGuard(Boolean(activeItem && (score.score !== null || comment || Object.keys(score.rubricSelections).length)), actioning, "重评", () => {
+  const { busyRef, isCurrent, leave } = useIndependentReviewGuard(Boolean(activeItem && (score.score !== null || comment || Object.keys(score.rubricSelections).length)), actioning, label, () => {
     if (imageUrl) URL.revokeObjectURL(imageUrl);
     setOpen(false); setItems([]); setActiveItem(undefined); setContext(undefined); setImageUrl(""); setComment(""); setScore({ score: null, rubricSelections: {} }); setActioning(false); setLoading(false);
   });
@@ -70,11 +70,11 @@ export function RegradeQueue({ canWork }: Readonly<{ canWork: boolean }>) {
       const response = await listMyRegradeItems();
       if (isCurrent()) setItems(response.regrade_items);
     } catch (error) {
-      if (isCurrent()) message.error(errorMessage(error));
+      if (isCurrent()) message.error(errorMessage(error, label));
     } finally {
       if (isCurrent()) setLoading(false);
     }
-  }, [canWork, message, isCurrent]);
+  }, [canWork, message, isCurrent, label]);
 
   useEffect(() => {
     if (open) void load();
@@ -125,7 +125,7 @@ export function RegradeQueue({ canWork }: Readonly<{ canWork: boolean }>) {
       setScore({ score: null, rubricSelections: {} });
       setComment("");
     } catch (error) {
-      if (isCurrent()) message.error(errorMessage(error));
+      if (isCurrent()) message.error(errorMessage(error, label));
     } finally {
       if (isCurrent()) { busyRef.current = false; setActioning(false); }
     }
@@ -144,11 +144,11 @@ export function RegradeQueue({ canWork }: Readonly<{ canWork: boolean }>) {
         require_manual_review: true
       });
       if (!isCurrent()) return;
-      message.success("新版细则下的重评意见已提交，原成绩不会在此处直接修改");
+      message.success(`新版细则下的${label}意见已提交，原成绩不会在此处直接修改`);
       closeActive();
       await load();
     } catch (error) {
-      if (isCurrent()) message.error(errorMessage(error));
+      if (isCurrent()) message.error(errorMessage(error, label));
     } finally {
       if (isCurrent()) { busyRef.current = false; setActioning(false); }
     }
@@ -158,9 +158,9 @@ export function RegradeQueue({ canWork }: Readonly<{ canWork: boolean }>) {
 
   return (
     <>
-      <Button icon={<ClipboardPenLine size={16} />} onClick={() => setOpen(true)}>重评任务</Button>
+      <Button icon={<ClipboardPenLine size={16} />} onClick={() => setOpen(true)}>{label}任务</Button>
       <Drawer
-        title={activeItem ? "按新版细则重评" : "我的重评任务"}
+        title={activeItem ? (label === "重评" ? "按新版细则重评" : label) : `我的${label}任务`}
         width={activeItem ? "min(1180px, 96vw)" : 520}
         open={open}
         onClose={() => leave(() => { closeActive(); setOpen(false); })}
@@ -171,23 +171,23 @@ export function RegradeQueue({ canWork }: Readonly<{ canWork: boolean }>) {
       >
         {activeItem && context ? (
           <div className="backmark-workspace">
-            <Alert showIcon type="info" message="独立重评" description="本页不显示旧分、旧评语、原阅卷人或历史成绩。请仅依据当前答题内容和新版冻结评分细则评分。" />
+            <Alert showIcon type="info" message={`独立${label}`} description="本页不显示旧分、旧评语、原阅卷人或历史成绩。请仅依据当前答题内容和新版冻结评分细则评分。" />
             <div className="backmark-workspace-grid">
               <RegradeAnswerEvidence context={context} imageUrl={imageUrl} />
               <section>
                 <h3>新版细则评分</h3>
                 <SharedScoreControl value={score} maxScore={context.question.score} rubricPoints={points} onChange={setScore} disabled={actioning} />
-                <Input.TextArea disabled={actioning} value={comment} onChange={(event) => setComment(event.target.value)} rows={4} maxLength={2000} showCount placeholder="可选：记录本次重评依据，供后续复核查看" />
+                <Input.TextArea disabled={actioning} value={comment} onChange={(event) => setComment(event.target.value)} rows={4} maxLength={2000} showCount placeholder={`可选：记录本次${label}依据，供后续复核查看`} />
                 <Space className="backmark-submit-actions">
                   <Button disabled={actioning} onClick={() => leave(closeActive)}>返回队列</Button>
-                  <Button type="primary" disabled={score.score === null} loading={actioning} onClick={() => void submit()}>提交重评意见</Button>
+                  <Button type="primary" disabled={score.score === null} loading={actioning} onClick={() => void submit()}>提交{label}意见</Button>
                 </Space>
               </section>
             </div>
           </div>
         ) : (
           <Spin spinning={loading}>
-            {items.length ? <List dataSource={items} renderItem={(item) => <List.Item actions={[<Button key="open" type="primary" loading={actioning} onClick={() => void openItem(item)}>开始重评</Button>]}><List.Item.Meta title={`重评任务 · 满分 ${item.max_score}`} description={`任务创建于 ${new Date(item.created_at).toLocaleString("zh-CN", { hour12: false })}`} /><Tag>{item.status === "claimed" ? "处理中" : "待处理"}</Tag></List.Item>} /> : <Empty description="暂无分配给你的重评任务" />}
+            {items.length ? <List dataSource={items} renderItem={(item) => <List.Item actions={[<Button key="open" type="primary" loading={actioning} onClick={() => void openItem(item)}>开始{label}</Button>]}><List.Item.Meta title={`${label}任务 · 满分 ${item.max_score}`} description={`任务创建于 ${new Date(item.created_at).toLocaleString("zh-CN", { hour12: false })}`} /><Tag>{item.status === "claimed" ? "处理中" : "待处理"}</Tag></List.Item>} /> : <Empty description={`暂无分配给你的${label}任务`} />}
           </Spin>
         )}
       </Drawer>

@@ -88,7 +88,7 @@ describe("个人复查写入的会话与恢复边界", () => {
     api.get.mockResolvedValue({ bookmark: state(3, true) });
     await act(async () => { await current.write(state(), "本页说明"); });
     const oldKey = api.put.mock.calls[0][3];
-    expect(current.uncertainTask).toBe(""); expect(current.error).toContain("本页说明已保留");
+    expect(current.uncertainTask).toBe(""); expect(current.error).toContain("标记状态已变化");
     api.put.mockResolvedValue({ bookmark_id: "bookmark-A", revision: 4, marked: true }); api.get.mockResolvedValue({ bookmark: state(4, true) });
     await act(async () => { await current.write(state(3, true), "本页说明"); });
     expect(api.put.mock.calls[1][3]).not.toBe(oldKey); expect(api.put.mock.calls[1][2]).toBe(3);

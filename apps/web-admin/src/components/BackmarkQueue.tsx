@@ -16,8 +16,8 @@ import { useIndependentReviewGuard } from "../features/grading/workbench/hooks/u
 import { TaskScoringReference } from "./TaskScoringReference";
 import { MathMarkdown } from "./MathMarkdown";
 
-function errorMessage(error: unknown) {
-  return getUserErrorMessage(error, "回标任务暂时无法处理，请稍后重试");
+function errorMessage(error: unknown, label: string) {
+  return getUserErrorMessage(error, `${label}任务暂时无法处理，请稍后重试`);
 }
 
 function rubricPoints(context?: BackmarkGraderContext) {
@@ -43,7 +43,7 @@ function BackmarkAnswerEvidence({ context, imageUrl }: Readonly<{ context: Backm
   );
 }
 
-export function BackmarkQueue({ canWork }: Readonly<{ canWork: boolean }>) {
+export function BackmarkQueue({ canWork, label = "回标" }: Readonly<{ canWork: boolean; label?: string }>) {
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<BackmarkGraderItem[]>([]);
@@ -55,7 +55,7 @@ export function BackmarkQueue({ canWork }: Readonly<{ canWork: boolean }>) {
   const [score, setScore] = useState<SharedScoreValue>({ score: null, rubricSelections: {} });
   const [comments, setComments] = useState("");
   const [actioning, setActioning] = useState(false);
-  const { busyRef, isCurrent, leave } = useIndependentReviewGuard(Boolean(activeItem && (score.score !== null || comments || Object.keys(score.rubricSelections).length)), actioning, "回标", () => {
+  const { busyRef, isCurrent, leave } = useIndependentReviewGuard(Boolean(activeItem && (score.score !== null || comments || Object.keys(score.rubricSelections).length)), actioning, label, () => {
     if (imageUrl) URL.revokeObjectURL(imageUrl);
     setOpen(false); setItems([]); setActiveItem(undefined); setContext(undefined); setImageUrl(""); setComments(""); setScore({ score: null, rubricSelections: {} }); setActioning(false); setNextCursor(""); setLoading(false);
   });
@@ -72,11 +72,11 @@ export function BackmarkQueue({ canWork }: Readonly<{ canWork: boolean }>) {
       const response = await listMyBackmarkItems({ limit: 50, cursor });
       if (isCurrent()) { setItems((current) => cursor ? [...current, ...response.backmark_items] : response.backmark_items); setNextCursor(response.has_more ? response.next_cursor : ""); }
     } catch (error) {
-      if (isCurrent()) message.error(errorMessage(error));
+      if (isCurrent()) message.error(errorMessage(error, label));
     } finally {
       if (isCurrent()) setLoading(false);
     }
-  }, [canWork, message, isCurrent]);
+  }, [canWork, message, isCurrent, label]);
 
   useEffect(() => {
     if (open) void load();
@@ -118,7 +118,7 @@ export function BackmarkQueue({ canWork }: Readonly<{ canWork: boolean }>) {
       setScore({ score: null, rubricSelections: {} });
       setComments("");
     } catch (error) {
-      if (isCurrent()) message.error(errorMessage(error));
+      if (isCurrent()) message.error(errorMessage(error, label));
     } finally {
       if (isCurrent()) { busyRef.current = false; setActioning(false); }
     }
@@ -137,11 +137,11 @@ export function BackmarkQueue({ canWork }: Readonly<{ canWork: boolean }>) {
         expected_revision: context.expected_revision
       });
       if (!isCurrent()) return;
-      message.success("回标意见已提交，原成绩不会在此处直接修改");
+      message.success(`${label}意见已提交，原成绩不会在此处直接修改`);
       closeActive();
       await load();
     } catch (error) {
-      if (isCurrent()) message.error(errorMessage(error));
+      if (isCurrent()) message.error(errorMessage(error, label));
     } finally {
       if (isCurrent()) { busyRef.current = false; setActioning(false); }
     }
@@ -151,9 +151,9 @@ export function BackmarkQueue({ canWork }: Readonly<{ canWork: boolean }>) {
 
   return (
     <>
-      <Button icon={<ClipboardCheck size={16} />} onClick={() => setOpen(true)}>回标任务</Button>
+      <Button icon={<ClipboardCheck size={16} />} onClick={() => setOpen(true)}>{label}任务</Button>
       <Drawer
-        title={activeItem ? "独立回标" : "我的回标任务"}
+        title={activeItem ? `独立${label}` : `我的${label}任务`}
         width={activeItem ? "min(1180px, 96vw)" : 520}
         open={open}
         onClose={() => leave(() => { closeActive(); setOpen(false); })}
@@ -164,7 +164,7 @@ export function BackmarkQueue({ canWork }: Readonly<{ canWork: boolean }>) {
       >
         {activeItem && context ? (
           <div className="backmark-workspace">
-            <Alert showIcon type="info" message="独立回标" description="本页不显示原得分、原阅卷人或历史意见。提交只形成回标候选，后续是否仲裁或重评由质量流程决定。" />
+            <Alert showIcon type="info" message={`独立${label}`} description={`本页不显示原得分、原阅卷人或历史意见。提交只形成${label}候选，后续是否仲裁或重评由质量流程决定。`} />
             <div className="backmark-workspace-grid">
               <BackmarkAnswerEvidence context={context} imageUrl={imageUrl} />
               <section>
@@ -180,7 +180,7 @@ export function BackmarkQueue({ canWork }: Readonly<{ canWork: boolean }>) {
           </div>
         ) : (
           <Spin spinning={loading}>
-            {items.length ? <List loadMore={nextCursor ? <div style={{ textAlign: "center", marginTop: 16 }}><Button loading={loading} onClick={() => void load(nextCursor)}>加载更多</Button></div> : undefined} dataSource={items} renderItem={(item) => <List.Item actions={[<Button key="open" type="primary" loading={actioning} onClick={() => void openItem(item)}>开始回标</Button>]}><List.Item.Meta title={`独立回标 · 满分 ${item.max_score}`} description={`任务创建于 ${new Date(item.created_at).toLocaleString("zh-CN", { hour12: false })}`} /><Tag>{item.status === "in_progress" ? "处理中" : "待处理"}</Tag></List.Item>} /> : <Empty description="暂无分配给你的回标任务" />}
+            {items.length ? <List loadMore={nextCursor ? <div style={{ textAlign: "center", marginTop: 16 }}><Button loading={loading} onClick={() => void load(nextCursor)}>加载更多</Button></div> : undefined} dataSource={items} renderItem={(item) => <List.Item actions={[<Button key="open" type="primary" loading={actioning} onClick={() => void openItem(item)}>开始{label}</Button>]}><List.Item.Meta title={`独立${label} · 满分 ${item.max_score}`} description={`任务创建于 ${new Date(item.created_at).toLocaleString("zh-CN", { hour12: false })}`} /><Tag>{item.status === "in_progress" ? "处理中" : "待处理"}</Tag></List.Item>} /> : <Empty description={`暂无分配给你的${label}任务`} />}
           </Spin>
         )}
       </Drawer>

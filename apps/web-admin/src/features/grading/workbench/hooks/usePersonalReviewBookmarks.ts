@@ -69,10 +69,10 @@ export function usePersonalReviewBookmarks(scope: ReviewTaskContextScope, taskId
         return true;
       }
       if (cause instanceof ApiClientError && [400, 409].includes(cause.status)) {
-        // 已明确拒绝的请求不能沿用旧命令键；保留编辑文字供用户按新版本再次确认。
+        // 已明确拒绝的请求不能沿用旧命令键；下次点击必须基于重新读取的标记版本。
         intents.current.delete(key); setUncertainTask("");
         if (intent.taskId) await client.invalidateQueries({ queryKey: reviewBookmarkKeys.task(scope, intent.taskId) });
-        setError(cause.status === 409 ? "书签已变化，请核对最新状态后重新保存；本页说明已保留。" : cause.message);
+        setError(cause.status === 409 ? "标记状态已变化，请核对最新状态后重试。" : "标记未能保存，请刷新后重试。");
       } else if (cause instanceof ApiClientError && [401, 403, 404].includes(cause.status)) {
         intents.current.delete(key); setUncertainTask("");
         client.removeQueries({ queryKey: reviewBookmarkKeys.scope(scope) });

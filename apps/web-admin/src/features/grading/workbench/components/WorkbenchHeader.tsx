@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
-import { Alert, Button, Progress, Space, Tooltip } from "antd";
-import { ArrowRight, BadgeCheck, CheckCircle2, LogOut, RefreshCw } from "lucide-react";
-import { BackmarkQueue } from "../../../../components/BackmarkQueue";
-import { RegradeQueue } from "../../../../components/RegradeQueue";
+import { Alert, Button, Progress, Space } from "antd";
+import { ArrowRight, BadgeCheck, CheckCircle2, RefreshCw } from "lucide-react";
 import type { DraftSaveStatus, ReviewerProgress } from "../gradingWorkbench.types";
 
 const draftStatusLabel: Record<DraftSaveStatus, string> = {
@@ -44,7 +42,7 @@ export interface WorkbenchHeaderProps {
   scoreLabel?: string;
 }
 
-// 告警只呈现当前草稿状态；是否显示操作以及能否暂放，仍由工具栏的权限和保存状态判断决定。
+// 告警只呈现当前草稿状态；冲突时仍保留合并和放弃本页修改的恢复入口。
 function DraftStatusNotice({ draftSaveStatus, onResolveConflict, onReloadConflict, readonlyLabel }: Readonly<Pick<WorkbenchHeaderProps, "draftSaveStatus" | "onResolveConflict" | "onReloadConflict" | "readonlyLabel">>) {
   return (
     <>
@@ -75,7 +73,6 @@ export function WorkbenchHeader({
   canManageTasks,
   queueScope,
   hasContext,
-  ownsSelectedTask,
   myProgress,
   reviewerProgress,
   remainingCount,
@@ -87,7 +84,6 @@ export function WorkbenchHeader({
   onRefresh,
   onNext,
   onClaim,
-  onRelease,
   onReloadConflict,
   onResolveConflict,
   personalActions,
@@ -114,15 +110,8 @@ export function WorkbenchHeader({
           {onSubmit ? <Button type="primary" icon={<CheckCircle2 size={16} />} disabled={!canSubmit} loading={actioning === "submit"} onClick={onSubmit}>提交并下一份</Button> : null}
           <Button icon={<RefreshCw size={16} />} onClick={() => void onRefresh()} loading={loading}>刷新</Button>
           {showReviewerActions ? <Button icon={<ArrowRight size={16} />} onClick={() => void onNext()} disabled={!canWork}>下一份</Button> : null}
-          {!canManageTasks ? <BackmarkQueue canWork={canWork} /> : null}
-          {!canManageTasks ? <RegradeQueue canWork={canWork} /> : null}
           {/* 当前答卷打开后已自动续租；只有空选择且仍有任务时才需要显式领取，避免重复领取看起来毫无变化。 */}
           {canWork && showReviewerActions && !hasContext && !loading && remainingCount > 0 ? <Button type="primary" icon={<BadgeCheck size={16} />} disabled={Boolean(actioning)} loading={actioning === "claim-task"} onClick={() => void onClaim()}>领取任务</Button> : null}
-          {showReviewerActions ? (
-            <Tooltip title="放回队列前请确认草稿已保存到服务端；未同步的修改无法保证恢复">
-              <Button icon={<LogOut size={16} />} disabled={!ownsSelectedTask || !["saved", "idle"].includes(draftSaveStatus)} loading={actioning === "release"} onClick={() => void onRelease()}>暂放</Button>
-            </Tooltip>
-          ) : null}
         </Space>
       </section>
 

@@ -30,7 +30,7 @@ export interface PersonalReviewBookmarkContext {
 }
 const base = "/api/v1/me/review-bookmarks";
 // 与后端 strings.TrimSpace 的 Unicode 空白范围一致；JS trim 还会移除 BOM，却不移除 NEL。
-// 输入框保留原文，计数只使用服务端换行和首尾空白规范化后的文本。
+// 兼容旧版说明载荷的计数规则；当前标记界面已移除说明输入，仅发送空字符串。
 export function normalizeReviewBookmarkReason(text: string) {
   return text.replace(/\r\n?/g, "\n").replace(/^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/g, "");
 }

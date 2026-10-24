@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { App, Button, Drawer } from "antd";
-import { ListChecks, PanelLeft } from "lucide-react";
+import { BookmarkCheck, LogOut, PanelLeft } from "lucide-react";
+import { BackmarkQueue } from "../../../components/BackmarkQueue";
+import { RegradeQueue } from "../../../components/RegradeQueue";
 import { removeReviewDraftFallback, saveReviewDraftFallback } from "../../../auth/reviewDraftFallback";
 import {
   renewReviewTask,
@@ -117,7 +119,6 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   useEffect(() => { setManagementView(initialExamId && canGrade ? "overview" : "assignment"); }, [initialExamId, canGrade, currentUserId, currentTenantId]);
   const [taskPreviewOpen, setTaskPreviewOpen] = useState(false);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
-  const [bookmarkReasonDirty, setBookmarkReasonDirty] = useState(false);
   const bookmarks = usePersonalReviewBookmarks(queryScope, canWork ? selectedTaskId : "");
   const [draft, setDraft] = useState<ScoreDraft>(() => createInitialDraft(null));
   const [regionDirty, setRegionDirty] = useState(false);
@@ -205,7 +206,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     hydrated: draftHydrated, saveStatus: draftSaveStatus, actioning,
     snapshot: createDraftSnapshot(draft, viewerMode, scale, rotation, offset, autoFit), lastSavedSnapshot: lastSavedDraft.current
   });
-  useUnsavedChangesGuard({ dirty: (regionEditing ? regionDirty : unsyncedDraft) || math.dirty || bookmarkReasonDirty, busy: Boolean(actioning) || bookmarks.busy || regionBusy, description: "当前评分、证据校正或复查说明尚未保存，离开后只能恢复已成功保存的版本。" });
+  useUnsavedChangesGuard({ dirty: (regionEditing ? regionDirty : unsyncedDraft) || math.dirty, busy: Boolean(actioning) || bookmarks.busy || regionBusy, description: "当前评分或证据校正尚未保存，离开后只能恢复已成功保存的版本。" });
   const canUndoScoreChange = scoreShortcuts.canUndo;
   const examScoring = useExamScoring({ initialExamId, currentUserId, currentTenantId, canGrade, onTasksChanged: loadTasks });
   // 启动评分后仍进入同一结果视图；明细读取返回不能重新弹出已经离开的管理页。
@@ -312,7 +313,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     setActioning(null);
     setRegionDirty(false); setRegionBusy(false);
     setAssignmentPreview(null);
-    setTaskDrawerOpen(false); setTaskPreviewOpen(false); setManagementView(initialExamId && canGrade ? "overview" : "assignment"); setBookmarksOpen(false); setBookmarkReasonDirty(false);
+    setTaskDrawerOpen(false); setTaskPreviewOpen(false); setManagementView(initialExamId && canGrade ? "overview" : "assignment"); setBookmarksOpen(false);
     contextRequestRef.current += 1;
     prefetchedTaskRef.current.clear();
     prefetchedPreviewRef.current.clear();
@@ -480,7 +481,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
       modal.confirm({ title: "本区还有未保存的评分，继续切换？", content: "已经保存或提交的各题结果会保留，尚未保存的评分将丢失。", okText: "放弃未保存内容并切换", cancelText: "继续评分", onOk: () => { if (isCurrentScope() && activeTask.current === taskId) change(); } });
       return;
     }
-    if (bookmarkReasonDirty || bookmarks.busy) { message.info("请先保存或关闭复查说明，等待复查操作完成后切换。"); return; }
+    if (bookmarks.busy) { message.info("正在保存标记，请稍后切换。"); return; }
     if (!regionEditing && unsyncedDraft && !math.dirty) {
       modal.confirm({ title: "评分草稿尚未同步，继续切换？", content: "未同步内容保留本机兜底；重新进入时仍需核对服务端保存状态。", okText: "继续切换", cancelText: "等待保存", onOk: () => { if (isCurrentScope()) change(); } });
       return;
@@ -562,7 +563,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         scoreLabel={!regionEditing && !managing && ctx ? typeof draft.score === "number" ? `${draft.score.toFixed(1)} / ${maxScore}` : "未评分" : undefined}
         personalActions={<>
           {!managing ? <Button icon={<PanelLeft size={16} />} onClick={() => changeQueueScope(() => setTaskDrawerOpen(true))}>任务</Button> : null}
-          {canWork ? <><ReviewBookmarkControls scope={queryScope} controller={bookmarks} onDirtyChange={setBookmarkReasonDirty} /><Button icon={<ListChecks size={16} />} onClick={() => changeQueueScope(() => setBookmarksOpen(true))}>我的复查</Button></> : null}
+          {canWork ? <ReviewBookmarkControls scope={queryScope} controller={bookmarks} /> : null}
         </>}
       /> : null}
 
@@ -570,6 +571,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
 
       {!managing || managementView === "assignment" ? <section className={`grading-workspace${managing ? " grading-management-workspace" : ""}`}>
         <TaskRailContainer managed={managing} open={taskDrawerOpen} onClose={() => setTaskDrawerOpen(false)}>
+        {!managing && canWork ? <div className="grading-task-tools"><Button block icon={<BookmarkCheck size={16} />} onClick={() => changeQueueScope(() => { setTaskDrawerOpen(false); setBookmarksOpen(true); })}>已标记试卷</Button></div> : null}
         <TaskRail
           scope={queue}
           fixedExam={Boolean(initialExamId)}
@@ -610,6 +612,13 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
           onLoadTasks={loadTasks}
           onLoadMoreTasks={loadMoreTasks}
         />
+        {!managing && canWork ? <section className="grading-task-secondary" aria-label="其他评分任务">
+          {ownsSelectedTask ? <div><Button icon={<LogOut size={16} />} disabled={Boolean(actioning) || bookmarks.busy || (regionEditing ? regionBusy || regionDirty : !["saved", "idle"].includes(draftSaveStatus))} loading={actioning === "release"} onClick={() => changeQueueScope(() => { void releaseCurrentTask(); })}>放回任务队列</Button><p>先保存草稿，再将当前答卷放回任务列表。</p></div> : null}
+          <h3>其他评分任务</h3>
+          {/* 质量复评和新版细则重评各有独立候选结果，不能作为个人标记改变普通评分。 */}
+          <div><BackmarkQueue canWork={canWork} label="质量检查重评" /><p>管理员安排的独立复评，用于检查评分质量。</p></div>
+          <div><RegradeQueue canWork={canWork} label="细则更新重评" /><p>使用更新后的评分细则重新评分。</p></div>
+        </section> : null}
         </TaskRailContainer>
 
         <TaskContentContainer managed={managing} open={taskPreviewOpen} onClose={() => changeQueueScope(() => setTaskPreviewOpen(false))}>
@@ -669,7 +678,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         />
         </TaskContentContainer>
       </section> : null}
-      {canWork ? <ReviewBookmarksDrawer scope={queryScope} controller={bookmarks} open={bookmarksOpen} initialExamId={initialExamId} onClose={() => { if (!bookmarkReasonDirty) setBookmarksOpen(false); }} onDirtyChange={setBookmarkReasonDirty} /> : null}
+      {canWork ? <ReviewBookmarksDrawer scope={queryScope} controller={bookmarks} open={bookmarksOpen} initialExamId={initialExamId} onClose={() => setBookmarksOpen(false)} /> : null}
       {assignmentPreview ? <AssignmentPreview tasks={assignmentPreview} defaultGrader={assignmentUserId} options={graderOptions} unassignedCount={queue.unassignedCount} busy={actioning === "assign-tasks"} onCancel={() => setAssignmentPreview(null)} onConfirm={assignPlannedTasks} /> : null}
       <WorkbenchOverlays
         goldPaperManagerOpen={goldPaperManagerOpen}

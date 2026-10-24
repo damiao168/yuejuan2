@@ -2,8 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { WorkbenchHeader, type WorkbenchHeaderProps } from "./WorkbenchHeader";
 
-vi.mock("../../../../components/BackmarkQueue", () => ({ BackmarkQueue: () => null }));
-vi.mock("../../../../components/RegradeQueue", () => ({ RegradeQueue: () => null }));
+vi.mock("../../../../components/BackmarkQueue", () => ({ BackmarkQueue: () => <span>退回队列</span> }));
+vi.mock("../../../../components/RegradeQueue", () => ({ RegradeQueue: () => <span>重评队列</span> }));
 
 const noop = async () => undefined;
 const baseProps: WorkbenchHeaderProps = {
@@ -54,5 +54,11 @@ describe("WorkbenchHeader status rendering", () => {
     const html = renderToStaticMarkup(<WorkbenchHeader {...baseProps} />);
     expect(html).not.toContain("ant-alert-message");
     expect(html).toContain("已保存到服务端");
+  });
+
+  it("keeps daily grading actions and the draft status without special queues or release controls", () => {
+    const html = renderToStaticMarkup(<WorkbenchHeader {...baseProps} personalActions={<button>标记试卷</button>} canSubmit onSubmit={vi.fn()} />);
+    for (const label of ["标记试卷", "提交并下一份", "刷新", "下一份", "已保存到服务端"]) expect(html).toContain(label);
+    for (const label of ["退回队列", "重评队列", "暂放"]) expect(html).not.toContain(label);
   });
 });

@@ -101,17 +101,17 @@ function headerProps(): WorkbenchHeaderProps {
 
 describe("batch30 header permission and callback boundaries", () => {
   it.each([
-    [false, "all", true, true],
-    [true, "all", false, false],
-    [true, "mine", true, false]
-  ] as const)("keeps reviewer controls scoped: manager=%s queue=%s", (canManageTasks, queueScope, actions, queues) => {
+    [false, "all", true],
+    [true, "all", false],
+    [true, "mine", true]
+  ] as const)("keeps reviewer controls scoped: manager=%s queue=%s", (canManageTasks, queueScope, actions) => {
     render(<WorkbenchHeader {...headerProps()} canManageTasks={canManageTasks} queueScope={queueScope} />);
     expect(Boolean(screen.queryByRole("button", { name: "下一份" }))).toBe(actions);
     expect(screen.queryByRole("button", { name: "开始处理" })).toBeNull();
     expect(screen.queryByRole("button", { name: "领取任务" })).toBeNull();
-    expect(Boolean(screen.queryByRole("button", { name: "暂放" }))).toBe(actions);
-    expect(Boolean(screen.queryByText("退回队列"))).toBe(queues);
-    expect(Boolean(screen.queryByText("重评队列"))).toBe(queues);
+    expect(screen.queryByRole("button", { name: "暂放" })).toBeNull();
+    expect(screen.queryByText("退回队列")).toBeNull();
+    expect(screen.queryByText("重评队列")).toBeNull();
     expect(Boolean(screen.queryByRole("region", { name: "阅卷员进度" }))).toBe(canManageTasks && queueScope === "all");
   });
 
@@ -122,10 +122,13 @@ describe("batch30 header permission and callback boundaries", () => {
     fireEvent.click(screen.getByRole("button", { name: "放弃本页修改" }));
     expect(props.onResolveConflict).toHaveBeenCalledTimes(1);
     expect(props.onReloadConflict).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("button", { name: "暂放" })).toHaveProperty("disabled", true);
-    view.rerender(<WorkbenchHeader {...props} />);
-    for (const label of ["刷新", "下一份", "暂放"]) fireEvent.click(screen.getByRole("button", { name: label }));
-    for (const callback of [props.onRefresh, props.onNext, props.onRelease]) expect(callback).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "暂放" })).toBeNull();
+    const onSubmit = vi.fn(), onBookmark = vi.fn();
+    view.rerender(<WorkbenchHeader {...props} canSubmit onSubmit={onSubmit} personalActions={<button onClick={onBookmark}>标记试卷</button>} />);
+    expect(screen.getByText("已保存到服务端")).toBeTruthy();
+    for (const label of ["刷新", "下一份", "提交并下一份", "标记试卷"]) fireEvent.click(screen.getByRole("button", { name: label }));
+    for (const callback of [props.onRefresh, props.onNext, onSubmit, onBookmark]) expect(callback).toHaveBeenCalledTimes(1);
+    expect(props.onRelease).not.toHaveBeenCalled();
     expect(props.onClaim).not.toHaveBeenCalled();
     view.rerender(<WorkbenchHeader {...props} hasContext={false} />);
     fireEvent.click(screen.getByRole("button", { name: "领取任务" }));
@@ -133,7 +136,7 @@ describe("batch30 header permission and callback boundaries", () => {
     view.rerender(<WorkbenchHeader {...props} hasContext={false} remainingCount={0} />);
     expect(screen.queryByRole("button", { name: "领取任务" })).toBeNull();
     view.rerender(<WorkbenchHeader {...props} ownsSelectedTask={false} />);
-    expect(screen.getByRole("button", { name: "暂放" })).toHaveProperty("disabled", true);
+    expect(screen.queryByRole("button", { name: "暂放" })).toBeNull();
     view.rerender(<WorkbenchHeader {...props} canWork={false} />);
     expect(screen.getByRole("button", { name: "下一份" })).toHaveProperty("disabled", true);
     expect(screen.queryByRole("button", { name: "开始处理" })).toBeNull();

@@ -1604,7 +1604,6 @@
 .grading-task-drawer .grading-taskbar { display: grid; grid-template-columns: minmax(0, 1fr); }
 .grading-task-drawer .grading-task-list { max-height: none; }
 .bookmark-inline-status { padding: 8px 12px; color: var(--eg-color-text-secondary, #666); }
-.bookmark-reason-count { text-align: right; padding-block: 6px; color: var(--eg-color-text-secondary, #666); }
 .bookmark-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .bookmark-filters > * { min-width: 0; width: 100%; }
 .bookmark-list-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; }

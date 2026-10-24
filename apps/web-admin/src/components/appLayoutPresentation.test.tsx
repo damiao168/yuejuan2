@@ -60,16 +60,20 @@ describe("shell presentation boundaries", () => {
     expect(mobile.querySelector(".mock-badge")).not.toBeNull();
   });
 
-  it("retains focused and grading account actions on either screen size", () => {
+  it("keeps focused account actions while grading only shows exit and environment on either screen size", () => {
     for (const desktop of [true, false]) {
       const focused = markup(<ShellTopbar {...topbar} desktop={desktop} mode="focused" mock={true} />);
       expect(focused.textContent).toContain("新建考试");
       expect(focused.querySelector('[aria-label="返回考试列表"]')).not.toBeNull();
       expect(focused.querySelector(".mock-badge")).toBeNull();
       expect(focused.querySelector(".user-button")?.textContent).toContain("teacher-1");
-      const grading = markup(<ShellTopbar {...topbar} desktop={desktop} mode="grading" mock={true} />);
+      const grading = markup(<ShellTopbar {...topbar} desktop={desktop} mode="grading" title="我的阅卷" mock={true} />);
       expect(grading.querySelector('[aria-label="退出阅卷"]')).not.toBeNull();
-      expect(grading.textContent).toContain("阅卷端 · 任务");
+      expect(grading.textContent).not.toContain("阅卷端");
+      expect(grading.textContent).not.toContain("我的阅卷");
+      expect(grading.textContent).not.toContain("teacher-1");
+      expect(grading.querySelector(".user-button")).toBeNull();
+      expect(grading.querySelector(".topbar-actions")).toBeNull();
       expect(grading.querySelector(".mock-badge")).not.toBeNull();
     }
   });

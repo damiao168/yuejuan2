@@ -119,15 +119,12 @@ export function ShellTopbar({ mode, desktop, focusedContext, user, experience, t
     </Layout.Header>;
   }
   if (mode === "grading") {
+    // 题目信息由阅卷工作台展示，外壳只保留退出入口和环境标识。
     return <Layout.Header className="topbar immersive-topbar">
       <div className="topbar-left">
-        <Space size="middle">
-          <Button type="text" icon={<ArrowLeft size={17} />} aria-label="退出阅卷" onClick={() => onNavigate("/dashboard")}>退出阅卷</Button>
-          <strong>{experienceLabel(experience)} · {title}</strong>
-        </Space>
+        <Button type="text" icon={<ArrowLeft size={17} />} aria-label="退出阅卷" onClick={() => onNavigate("/dashboard")}>退出阅卷</Button>
         {mock ? <MockBadge compact={true} /> : null}
       </div>
-      <ShellAccount user={user} accountMenu={accountMenu} />
     </Layout.Header>;
   }
   if (desktop) return null;

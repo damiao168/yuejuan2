@@ -22,6 +22,7 @@ describe("复查只读材料容器", () => {
     const scope = createReviewTaskContextScope();
     await act(async () => root.render(<ReviewBookmarkReadOnly scope={scope} bookmarkId="A" onClose={() => undefined} onUnavailable={() => undefined} />));
     expect(node.textContent).toContain("本人本次提交"); expect(node.textContent).toContain("8 / 10"); expect(node.textContent).not.toContain("提交并下一份");
+    expect(node.textContent).not.toContain("复查说明"); expect(node.textContent).not.toContain("核对末步");
     expect(api.image).toHaveBeenCalledWith("A", "version-A", expect.any(AbortSignal)); expect(node.querySelector("img")?.src).toBe("blob:synthetic");
     await act(async () => setBusinessCommandScope("tenant", "teacher"));
     expect(node.textContent).not.toContain("合成文字"); expect(node.querySelector("img")).toBeNull(); expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:synthetic");
