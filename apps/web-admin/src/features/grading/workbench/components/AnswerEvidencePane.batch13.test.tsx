@@ -57,7 +57,7 @@ describe("AnswerEvidencePane batch13 rendering", () => {
   });
 
   it.each([
-    ["image/png", "img", "alt", "答卷页面"],
+    ["image/png", "svg image", "href", "blob:answer-file"],
     ["application/pdf", "iframe", "title", "答卷 PDF"],
     ["text/plain", "a[download]", "download", "答卷文件"]
   ])("%s 保留原生查看区域及文件预览边界", (contentType, selector, attribute, fallback) => {
@@ -77,12 +77,18 @@ describe("AnswerEvidencePane batch13 rendering", () => {
     expect(viewport.getAttribute("role")).toBeNull();
   });
 
-  it("图片按真实尺寸缩放，PDF 使用 transform scale", () => {
-    const image = renderPane({ dragging: true }).querySelector<HTMLElement>(".answer-viewer-stage")!;
-    expect(image.style.width).toBe("200px");
-    expect(image.style.height).toBe("160px");
-    expect(image.style.transform).toBe("translate(7px, -3px) rotate(90deg)");
-    expect(image.parentElement?.className).toBe("answer-viewer dragging");
+  it("分段引用同一张原图并保留旋转和平移，PDF 继续使用 transform scale", () => {
+    const image = renderPane({ dragging: true });
+    expect(image.querySelector(".answer-reading-tiles")?.getAttribute("style")).toContain("translate(7px, -3px)");
+    const parts = image.querySelectorAll("svg image");
+    expect(parts.length).toBeGreaterThan(0);
+    for (const part of parts) {
+      expect(part.getAttribute("href")).toBe(imagePreview.url);
+      expect(part.getAttribute("width")).toBe("100");
+      expect(part.getAttribute("height")).toBe("80");
+      expect(part.parentElement?.getAttribute("transform")).toBe("translate(80 0) rotate(90)");
+    }
+    expect(image.querySelector(".answer-viewer")?.classList.contains("dragging")).toBe(true);
     const pdf = renderPane({ preview: { url: "blob:answer-pdf", contentType: "application/pdf", filename: "answer.pdf" } });
     expect(pdf.querySelector("iframe")?.getAttribute("title")).toBe("answer.pdf");
     const stage = pdf.querySelector<HTMLElement>(".answer-viewer-stage")!;
@@ -113,8 +119,8 @@ describe("AnswerEvidencePane batch13 rendering", () => {
 
   it("数学框仅覆盖当前答题区域图片，定位提示仍允许当前区域的 PDF", () => {
     const image = renderPane({ mathSelection });
-    const highlight = image.querySelector<HTMLElement>(".math-step-highlight")!;
-    expect([highlight.style.left, highlight.style.top, highlight.style.width, highlight.style.height]).toEqual(["10%", "20%", "30%", "40%"]);
+    const highlight = image.querySelector(".answer-reading-highlight")!;
+    expect([highlight.getAttribute("x"), highlight.getAttribute("y"), highlight.getAttribute("width"), highlight.getAttribute("height")]).toEqual(["10", "16", "30", "32"]);
     expect(highlight.getAttribute("aria-label")).toBe("步骤 S1 的答题位置");
     const status = image.querySelector<HTMLOutputElement>("output.math-image-selection")!;
     expect(status.textContent).toBe("已定位 S1 · 代入公式");
@@ -124,8 +130,8 @@ describe("AnswerEvidencePane batch13 rendering", () => {
     expect(pdf.querySelector("output")).not.toBeNull();
     for (const overrides of [{ viewerMode: "original" as const }, { mathSelection: { ...mathSelection, segmentId: "segment-2" } }]) {
       const other = renderPane({ mathSelection, ...overrides });
-      expect(other.querySelector(".math-step-highlight")).toBeNull();
-      expect(other.querySelector("output")).toBeNull();
+      expect(other.querySelector(".math-step-highlight, .answer-reading-highlight")).toBeNull();
+      expect(other.querySelector("output.math-image-selection")).toBeNull();
     }
   });
 });

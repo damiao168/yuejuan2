@@ -1,0 +1,15 @@
+.answer-image-reading { min-width: 0; }
+.answer-reading-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; min-height: 40px; padding: 0 0 8px; }
+.answer-reading-toolbar .ant-btn { display: inline-flex; align-items: center; gap: 5px; }
+.answer-reading-scale { min-width: 44px; text-align: center; color: var(--text-secondary, #5b6575); font-variant-numeric: tabular-nums; }
+.answer-reading-count { color: var(--text-secondary, #5b6575); font-size: 12px; white-space: nowrap; }
+.answer-viewer.answer-image-viewport { height: clamp(320px, calc(100dvh - 260px), 1100px); min-height: 320px; overflow: auto; }
+.answer-viewer.answer-viewer-tiled { display: block; }
+.answer-reading-tiles { box-sizing: border-box; display: grid; width: max-content; min-width: 100%; min-height: 100%; gap: 12px; padding: 12px; justify-content: center; align-content: center; align-items: start; }
+.answer-reading-tile { min-width: 0; margin: 0; }
+.answer-reading-tile figcaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 24px; font-size: 12px; color: var(--text-secondary, #5b6575); }
+.answer-reading-tile figcaption > span { font-size: 11px; color: var(--text-muted, #7a8695); }
+/* SVG 的 viewBox 使用原图坐标；边界只截取显示窗口，不拉伸笔迹，也不生成新的图像资产。 */
+.answer-reading-tile svg { display: block; overflow: hidden; background: #fff; outline: 1px solid var(--border, #dce3ec); }
+.answer-reading-highlight { fill: rgb(22 119 255 / 12%); stroke: var(--primary, #1677ff); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
+@media (max-width: 700px) { .answer-viewer.answer-image-viewport { height: max(320px, calc(100dvh - 320px)); } .answer-reading-toolbar { gap: 6px; } }

@@ -8,6 +8,7 @@ import { pointLabel, taskStatusLabels } from "../gradingWorkbench.model";
 import type { PreviewState, ViewerMode, WorkbenchContext } from "../gradingWorkbench.types";
 import type { MathStepSelection } from "../mathWorkbenchEvidence";
 import { GradingMathMarkdown } from "./GradingMathMarkdown";
+import { AdaptiveAnswerImage } from "./AdaptiveAnswerImage";
 
 export interface AnswerEvidencePaneProps {
   context: WorkbenchContext;
@@ -28,6 +29,7 @@ export interface AnswerEvidencePaneProps {
   onZoom: (direction: -1 | 1) => void;
   onRotate: () => void;
   onFit: () => void;
+  onResetView?: () => void;
   onPointerDown: (event: PointerEvent<HTMLElement>) => void;
   onPointerMove: (event: PointerEvent<HTMLElement>) => void;
   onPointerUp: (event: PointerEvent<HTMLElement>) => void;
@@ -42,6 +44,7 @@ export function AnswerEvidencePane({
   previewLoading,
   viewerMode,
   scale,
+  autoFit,
   imageSize,
   rotation,
   offset,
@@ -53,6 +56,8 @@ export function AnswerEvidencePane({
   onChangeViewerMode,
   onZoom,
   onRotate,
+  onFit,
+  onResetView,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -65,6 +70,10 @@ export function AnswerEvidencePane({
     if (previewLoading) return <LoadingState label="正在读取答卷页面" />;
     if (viewerMode !== "ocr" && !preview) return <EmptyState title="暂无答卷页面" description="当前任务没有可下载的页面文件。" />;
     const isImage = Boolean(preview?.contentType.startsWith("image/"));
+    if (isImage && viewerMode !== "ocr") return <AdaptiveAnswerImage key={`${context.task.id}:${viewerMode}:${preview!.url}`} source={preview!.url}
+      label={`${context.task.question_no} 答题图查看区`} helpId={viewerHelpId} imageSize={imageSize} scale={scale} autoFit={autoFit} rotation={rotation} offset={offset} dragging={dragging} viewportRef={viewportRef}
+      onZoom={onZoom} onFit={onFit} onResetView={onResetView} onImageLoad={onImageLoad} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
+      mathSelection={viewerMode === "segment" && context.answerScope !== "grading_group" && mathSelection?.segmentId === context.task.answer_segment_id ? mathSelection : null} />;
     // 图片通过实际宽高缩放，让百分比证据框同步缩放；其他预览才使用 transform 的 scale。
     const viewerTransform = isImage
       ? `translate(${offset.x}px, ${offset.y}px) rotate(${rotation}deg)`
@@ -124,9 +133,9 @@ export function AnswerEvidencePane({
       <details className="grading-more-fields">
         <summary>图像工具与键盘帮助</summary>
         <div className="grading-more-fields-body"><Space wrap>
-          <Tooltip title="缩小"><Button icon={<ZoomOut size={14} />} onClick={() => onZoom(-1)} aria-label="缩小答题图" /></Tooltip>
+          {!preview?.contentType.startsWith("image/") || viewerMode === "ocr" ? <><Tooltip title="缩小"><Button icon={<ZoomOut size={14} />} onClick={() => onZoom(-1)} aria-label="缩小答题图" /></Tooltip>
           <span className="viewer-scale">{Math.round(scale * 100)}%</span>
-          <Tooltip title="放大"><Button icon={<ZoomIn size={14} />} onClick={() => onZoom(1)} aria-label="放大答题图" /></Tooltip>
+          <Tooltip title="放大"><Button icon={<ZoomIn size={14} />} onClick={() => onZoom(1)} aria-label="放大答题图" /></Tooltip></> : null}
           <Tooltip title="顺时针旋转"><Button icon={<RotateCcw size={14} />} onClick={onRotate} aria-label="旋转答题图" /></Tooltip>
           <Button aria-label="键盘平移答题图" aria-describedby={viewerHelpId} onKeyDown={onKeyDown}>键盘平移</Button>
         </Space><p id={viewerHelpId} className="muted">聚焦“键盘平移”按钮后，放大时可用方向键平移，Shift + 方向键加速，Home 适配窗口，Esc 结束拖拽。</p>

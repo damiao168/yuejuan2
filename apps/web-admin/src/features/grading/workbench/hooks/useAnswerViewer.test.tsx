@@ -51,6 +51,18 @@ describe("答题图局部键盘操作", () => {
     expect(viewer.offset).toEqual({ x: 0, y: 0 });
   });
 
+  it("重置阅读视图恢复原始方向、自动适配和零偏移", async () => {
+    await mount();
+    await act(async () => viewer.rotate());
+    await act(async () => viewer.zoom(1));
+    await key("ArrowDown");
+    await act(async () => viewer.resetView());
+    expect(viewer.rotation).toBe(0);
+    expect(viewer.offset).toEqual({ x: 0, y: 0 });
+    expect(viewer.autoFit).toBe(true);
+    expect(viewer.scale).toBe(viewer.fitScale);
+  });
+
   it("Escape释放当前拖拽，后续pointermove不会继续移动", async () => {
     await mount(); const viewport = viewer.viewportRef.current!;
     viewport.setPointerCapture = vi.fn(); viewport.hasPointerCapture = vi.fn(() => true); viewport.releasePointerCapture = vi.fn();

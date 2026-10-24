@@ -102,6 +102,12 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
     setOffset({ x: 0, y: 0 });
   }, []);
 
+  const resetView = useCallback(() => {
+    const nextScale = imageSize ? calculateFitScale(imageSize, 0) : 1;
+    setRotation(0); setOffset({ x: 0, y: 0 }); setAutoFit(true);
+    setFitScale(nextScale); setScale(nextScale); setDragging(false);
+  }, [calculateFitScale, imageSize]);
+
   const onPointerDown = useCallback((event: PointerEvent<HTMLElement>) => {
     if (scale <= fitScale * 1.001) return;
     setDragging(true);
@@ -223,6 +229,7 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
     changeMode,
     zoom,
     rotate,
+    resetView,
     onPointerDown,
     onPointerMove,
     onPointerUp,

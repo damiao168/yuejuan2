@@ -172,7 +172,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     fit: applyViewerFit,
     changeMode: changeViewerMode,
     zoom: zoomViewer,
-    rotate: rotateViewer,
+    rotate: rotateViewer, resetView: resetImageView,
     onPointerDown,
     onPointerMove,
     onPointerUp,
@@ -642,7 +642,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
             preview, previewLoading, viewerMode, scale, autoFit, imageSize, rotation, offset, dragging,
             viewportRef, canViewOriginalImage, canEditDraft, rubricPoints,
             onChangeViewerMode: changeViewerMode, onZoom: zoomViewer, onRotate: rotateViewer,
-            onFit: () => applyViewerFit(imageSize, true), onPointerDown, onPointerMove, onPointerUp,
+            onFit: () => applyViewerFit(imageSize, true), onResetView: resetImageView, onPointerDown, onPointerMove, onPointerUp,
             onImageLoad, onKeyDown: onViewerKeyDown, mathSelection: currentMathSelection
           }}
           evidence={{
