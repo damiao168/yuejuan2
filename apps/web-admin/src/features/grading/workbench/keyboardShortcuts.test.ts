@@ -8,6 +8,7 @@ const allowed = (overrides: Partial<GradingShortcutContext> = {}): GradingShortc
   canEditDraft: true,
   canSubmit: true,
   canReturn: true,
+  canToggleBookmark: true,
   canUndoScoreChange: true,
   hasAiSuggestion: true,
   maxScore: 9,
@@ -24,7 +25,8 @@ describe("grading workbench keyboard shortcuts", () => {
     expect(gradingShortcutIntent(allowed({ key: "1" }))).toEqual({ type: "set_score", score: 1 });
     expect(gradingShortcutIntent(allowed({ key: "2", rubricPointCount: 3 }))).toEqual({ type: "toggle_criterion", index: 1 });
     expect(gradingShortcutIntent(allowed({ key: "A" }))).toEqual({ type: "adopt_ai" });
-    expect(gradingShortcutIntent(allowed({ key: "F" }))).toEqual({ type: "flag_exception" });
+    expect(gradingShortcutIntent(allowed({ key: "G" }))).toEqual({ type: "focus_score" });
+    expect(gradingShortcutIntent(allowed({ key: "F" }))).toEqual({ type: "toggle_bookmark" });
     expect(gradingShortcutIntent(allowed({ key: "R" }))).toEqual({ type: "return_task" });
     expect(gradingShortcutIntent(allowed({ key: "Z" }))).toEqual({ type: "undo_score_change" });
     expect(gradingShortcutIntent(allowed({ key: "+" }))).toEqual({ type: "zoom", direction: 1 });
@@ -34,7 +36,7 @@ describe("grading workbench keyboard shortcuts", () => {
   });
 
   it("never handles a shortcut while an editable input is focused", () => {
-    for (const key of ["Enter", "1", "A", "F", "R", "Z", "+", "-"]) {
+    for (const key of ["Enter", "1", "G", "A", "F", "R", "Z", "+", "-"]) {
       expect(gradingShortcutIntent(allowed({ key, isInputTarget: true }))).toBeNull();
     }
   });
@@ -56,7 +58,10 @@ describe("grading workbench keyboard shortcuts", () => {
     expect(gradingShortcutIntent(allowed({ key: "Enter", canSubmit: false }))).toBeNull();
     expect(gradingShortcutIntent(allowed({ key: "A", ctrlKey: true }))).toBeNull();
     expect(gradingShortcutIntent(allowed({ key: "1", canEditDraft: false }))).toBeNull();
-    expect(gradingShortcutIntent(allowed({ key: "F", canReturn: false }))).toBeNull();
+    expect(gradingShortcutIntent(allowed({ key: "F", canToggleBookmark: false }))).toBeNull();
+    expect(gradingShortcutIntent(allowed({ key: "F", canReturn: false, canEditDraft: false }))).toEqual({ type: "toggle_bookmark" });
+    expect(gradingShortcutIntent(allowed({ key: "G", canEditDraft: false }))).toBeNull();
+    expect(gradingShortcutIntent(allowed({ key: "1", hasTask: false }))).toBeNull();
     expect(gradingShortcutIntent(allowed({ key: "R", canReturn: false }))).toBeNull();
     expect(gradingShortcutIntent(allowed({ key: "Z", canUndoScoreChange: false }))).toBeNull();
     expect(gradingShortcutIntent(allowed({ key: "A", hasAiSuggestion: false }))).toBeNull();
@@ -67,7 +72,7 @@ describe("grading workbench keyboard shortcuts", () => {
 
   it("respects a consumed event and a disabled single-character preference", () => {
     expect(gradingShortcutIntent(allowed({ key: "Enter", ctrlKey: true, defaultPrevented: true }))).toBeNull();
-    for (const key of ["1", "A", "F", "R", "Z", "+", "-"]) {
+    for (const key of ["1", "G", "A", "F", "R", "Z", "+", "-"]) {
       expect(gradingShortcutIntent(allowed({ key, singleKeyShortcutsEnabled: false }))).toBeNull();
     }
     expect(gradingShortcutIntent(allowed({ key: "Enter", ctrlKey: true, singleKeyShortcutsEnabled: false }))).toEqual({ type: "submit" });

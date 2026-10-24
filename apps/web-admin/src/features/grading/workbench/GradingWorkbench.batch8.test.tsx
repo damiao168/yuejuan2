@@ -63,7 +63,7 @@ vi.mock("./hooks/useAnswerViewer", () => ({ useAnswerViewer: () => ({
 }) }));
 vi.mock("./hooks/useMathWorkbenchEvidence", () => ({ useMathWorkbenchEvidence: () => ({ state: { phase: "unavailable", understanding: null }, dirty: false, refresh: mocks.asyncNoop }) }));
 vi.mock("./hooks/useExamScoring", () => ({ useExamScoring: () => ({ loadSummary: mocks.asyncNoop }) }));
-vi.mock("./hooks/useGradingScoreShortcuts", () => ({ useGradingScoreShortcuts: () => ({ reset: mocks.resetShortcuts, canUndo: false, setScore: mocks.noop, toggleCriterion: mocks.noop, undo: mocks.noop }) }));
+vi.mock("./hooks/useGradingScoreShortcuts", () => ({ useGradingScoreShortcuts: ({ setDraft }: { setDraft: unknown }) => ({ reset: mocks.resetShortcuts, updateDraft: setDraft, canUndo: false, setScore: mocks.noop, toggleCriterion: mocks.noop, undo: mocks.noop }) }));
 vi.mock("./hooks/useGradingQueueActions", () => ({ useGradingQueueActions: () => ({ assignSelectedTasks: mocks.asyncNoop, claimTask: mocks.asyncNoop, goNext: mocks.asyncNoop, releaseCurrentTask: mocks.asyncNoop }) }));
 vi.mock("./hooks/useGradingReviewActions", () => ({ useGradingReviewActions: (options: Record<string, unknown>) => {
   mocks.review = options;

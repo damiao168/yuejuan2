@@ -132,7 +132,7 @@ export function ScoreEditor({
         </div>
       </details>
 
-      <details className="grading-shortcut-help"><summary>键盘帮助</summary><Checkbox checked={singleKeyShortcutsEnabled} onChange={(event) => setSingleKeyShortcutsEnabled(event.target.checked)}>启用单字符快捷键（数字、A / F / R / Z、+ / -）</Checkbox><p>1–9 直接打分，0分或小数请在最终分输入框填写。A 采纳建议分（不采用反馈） · F 标记异常 · R 退回 · Z 撤销本次评分编辑 · +/- 缩放。关闭单字符快捷键后仍可使用答题图工具按钮。</p></details>
+      <details className="grading-shortcut-help"><summary>键盘帮助</summary><Checkbox data-grading-shortcuts-toggle="true" checked={singleKeyShortcutsEnabled} onChange={(event) => setSingleKeyShortcutsEnabled(event.target.checked)}>启用单字符快捷键</Checkbox><p>{!singleKeyShortcutsEnabled ? "单字符快捷键已关闭。" : actioning ? "当前操作处理中，录分快捷键暂不可用。" : "当前单题可编辑，快捷键可用。"}输入框内正常输入，不触发单字符操作。</p><p>录分：G 聚焦并选中最终分，可输入 0、多位数或小数；1–9 直接打分（不超过满分）。A 采纳建议分，不采用反馈。</p><p>操作：F 标记/取消标记 · R 退回重评（需确认） · Z 撤销尚未正式提交的评分修改 · +/- 缩放。</p><p>填分后自动提交；标记的试卷只保存草稿，取消标记后恢复自动提交。关闭快捷键后仍可使用页面按钮。</p></details>
 
       <Space wrap className="grading-submit-bar">
         {canReturn ? (

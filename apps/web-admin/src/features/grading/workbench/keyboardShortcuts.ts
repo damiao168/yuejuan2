@@ -2,8 +2,9 @@ export type GradingShortcutIntent =
   | { type: "submit" }
   | { type: "set_score"; score: number }
   | { type: "toggle_criterion"; index: number }
+  | { type: "focus_score" }
   | { type: "adopt_ai" }
-  | { type: "flag_exception" }
+  | { type: "toggle_bookmark" }
   | { type: "return_task" }
   | { type: "undo_score_change" }
   | { type: "zoom"; direction: -1 | 1 };
@@ -25,6 +26,7 @@ export interface GradingShortcutContext {
   canEditDraft: boolean;
   canSubmit: boolean;
   canReturn: boolean;
+  canToggleBookmark: boolean;
   canUndoScoreChange: boolean;
   hasAiSuggestion: boolean;
   maxScore: number;
@@ -42,10 +44,10 @@ function numericShortcutIntent(context: GradingShortcutContext, key: string): Gr
 function draftShortcutIntent(context: GradingShortcutContext, key: string): GradingShortcutIntent | null {
   if (/^[1-9]$/.test(key)) return numericShortcutIntent(context, key);
   switch (key) {
+    case "g":
+      return { type: "focus_score" };
     case "a":
       return context.hasAiSuggestion ? { type: "adopt_ai" } : null;
-    case "f":
-      return context.canReturn ? { type: "flag_exception" } : null;
     case "r":
       return context.canReturn ? { type: "return_task" } : null;
     case "z":
@@ -82,7 +84,10 @@ export function gradingShortcutIntent(context: GradingShortcutContext): GradingS
     return context.hasTask ? { type: "zoom", direction: -1 } : null;
   }
 
-  if (!context.canEditDraft) return null;
+  // 个人标记有独立的资格与版本校验；取消既有标记不依赖当前任务还能否写分或退回。
+  if (key === "f") return context.hasTask && context.canToggleBookmark ? { type: "toggle_bookmark" } : null;
+
+  if (!context.hasTask || !context.canEditDraft) return null;
 
   return draftShortcutIntent(context, key);
 }

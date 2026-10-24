@@ -22,10 +22,10 @@ describe("输入法组合与确认键的快捷键边界", () => {
     document.body.appendChild(host);
     root = createRoot(host);
     options = {
-      hasTask: true, canEditDraft: true, canSubmit: true, canReturn: true, canUndoScoreChange: true,
+      hasTask: true, canEditDraft: true, canSubmit: true, canReturn: true, canToggleBookmark: true, canUndoScoreChange: true,
       hasAiSuggestion: true, maxScore: 10, rubricPointCount: 0,
       onSubmit: vi.fn(), onSetScore: vi.fn(), onToggleCriterion: vi.fn(), onAdoptAi: vi.fn(),
-      onFlagException: vi.fn(), onReturnTask: vi.fn(), onUndoScoreChange: vi.fn(), onZoom: vi.fn(),
+      onToggleBookmark: vi.fn(), onReturnTask: vi.fn(), onUndoScoreChange: vi.fn(), onZoom: vi.fn(),
     };
   });
 

@@ -445,9 +445,9 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   });
 
   useGradingKeyboard({
-    quickSubmit: false,
-    hasTask: Boolean(ctx),
-    canEditDraft: canEditDraft && !regionEditing,
+    quickSubmit: false, canToggleBookmark: Boolean(bookmarks.state.data && !bookmarks.busy && !bookmarks.uncertainTask && (bookmarks.state.data.marked || bookmarks.state.data.can_edit_reason)),
+    hasTask: Boolean(ctx) && (!managing || taskPreviewOpen),
+    canEditDraft: canEditDraft && !regionEditing && !actioning,
     canSubmit: false,
     canReturn: canReturn && !regionEditing,
     canUndoScoreChange,
@@ -458,7 +458,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     onSetScore: scoreShortcuts.setScore,
     onToggleCriterion: scoreShortcuts.toggleCriterion,
     onAdoptAi: () => void adoptAiScore(),
-    onFlagException: () => confirmReturnTask(true),
+    onToggleBookmark: () => { const bookmark = bookmarks.state.data; if (bookmark) void bookmarks.write(bookmark, bookmark.marked ? null : ""); },
     onReturnTask: () => confirmReturnTask(false),
     onUndoScoreChange: scoreShortcuts.undo,
     onZoom: zoomViewer
@@ -664,7 +664,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
             }
           }}
           editor={{
-            draft, setDraft: setEditingDraft, maxScore, rubricPoints,
+            draft, setDraft: scoreShortcuts.updateDraft, maxScore, rubricPoints,
             selectedGrade, canEditDraft, canReturn, actioning,
             onAdoptAiScore: () => void adoptAiScore(), onAdoptAiFeedback: adoptAiFeedback, canAdoptAiScore, onMarkDispute: markDispute
           }}

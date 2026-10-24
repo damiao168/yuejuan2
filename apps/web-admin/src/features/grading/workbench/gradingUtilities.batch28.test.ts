@@ -49,7 +49,7 @@ async function loadedContext(context: ReviewTaskContext) {
 
 function shortcut(overrides: Partial<GradingShortcutContext>): GradingShortcutContext {
   return {
-    key: "", isInputTarget: false, hasTask: true, canEditDraft: true, canSubmit: true, canReturn: true,
+    key: "", isInputTarget: false, hasTask: true, canEditDraft: true, canSubmit: true, canReturn: true, canToggleBookmark: true,
     canUndoScoreChange: true, hasAiSuggestion: true, maxScore: 9, rubricPointCount: 0, ...overrides
   };
 }

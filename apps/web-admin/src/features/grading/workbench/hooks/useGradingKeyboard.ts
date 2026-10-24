@@ -8,6 +8,7 @@ export interface UseGradingKeyboardOptions {
   canEditDraft: boolean;
   canSubmit: boolean;
   canReturn: boolean;
+  canToggleBookmark: boolean;
   canUndoScoreChange: boolean;
   hasAiSuggestion: boolean;
   maxScore: number;
@@ -17,7 +18,7 @@ export interface UseGradingKeyboardOptions {
   onSetScore: (score: number) => void;
   onToggleCriterion: (index: number) => void;
   onAdoptAi: () => void;
-  onFlagException: () => void;
+  onToggleBookmark: () => void;
   onReturnTask: () => void;
   onUndoScoreChange: () => void;
   onZoom: (direction: -1 | 1) => void;
@@ -41,6 +42,10 @@ export function useGradingKeyboard(options: UseGradingKeyboardOptions) {
       const submitInputEnter = event.key === "Enter" && event.target instanceof HTMLInputElement
         && (event.target.dataset.gradingScoreInput === "true" || (event.target.dataset.gradingQuickSubmit === "true" && event.target.checked))
         && !event.target.disabled && !event.target.readOnly;
+      const preferenceToggle = event.target instanceof HTMLInputElement && event.target.dataset.gradingShortcutsToggle === "true";
+      // 答卷详情抽屉本身承载评分；只放行它内部的按键，其它弹层仍隔离后台评分操作。
+      const blocked = Array.from(document.querySelectorAll('.ant-modal-wrap:not([style*="display: none"]), .ant-drawer-open, .ant-popover:not(.ant-popover-hidden)')).some((overlay) =>
+        !(overlay.matches(".ant-drawer-open") && overlay.querySelector(".grading-inspection-drawer .score-panel") && event.target instanceof Node && overlay.contains(event.target)));
       // 输入法组合、弹层和控件已消费的事件仍优先，不能因分数框例外而误交评分。
       const intent = gradingShortcutIntent({
         key: event.key,
@@ -52,13 +57,14 @@ export function useGradingKeyboard(options: UseGradingKeyboardOptions) {
         repeat: event.repeat,
         defaultPrevented: event.defaultPrevented,
         singleKeyShortcutsEnabled,
-        blocked: Boolean(document.querySelector('.ant-modal-wrap:not([style*="display: none"]), .ant-drawer-open, .ant-popover:not(.ant-popover-hidden)')),
+        blocked,
         quickSubmit: options.quickSubmit,
-        isInputTarget: !submitInputEnter && (isInputTarget(event.target) || (event.key === "Enter" && !event.ctrlKey && !event.metaKey && event.target instanceof Element && Boolean(event.target.closest('button, a, [role="button"], [role="checkbox"], [role="combobox"]')))),
+        isInputTarget: !submitInputEnter && ((!preferenceToggle && isInputTarget(event.target)) || (event.key === "Enter" && !event.ctrlKey && !event.metaKey && event.target instanceof Element && Boolean(event.target.closest('button, a, [role="button"], [role="checkbox"], [role="combobox"]')))),
         hasTask: options.hasTask,
         canEditDraft: options.canEditDraft,
         canSubmit: options.canSubmit,
         canReturn: options.canReturn,
+        canToggleBookmark: options.canToggleBookmark,
         canUndoScoreChange: options.canUndoScoreChange,
         hasAiSuggestion: options.hasAiSuggestion,
         maxScore: options.maxScore,
@@ -79,9 +85,14 @@ export function useGradingKeyboard(options: UseGradingKeyboardOptions) {
         case "adopt_ai":
           options.onAdoptAi();
           break;
-        case "flag_exception":
-          options.onFlagException();
+        case "toggle_bookmark":
+          options.onToggleBookmark();
           break;
+        case "focus_score": {
+          const input = document.querySelector<HTMLInputElement>('.score-panel input[aria-label="最终得分"]:not(:disabled):not([readonly])');
+          input?.focus(); input?.select();
+          break;
+        }
         case "return_task":
           options.onReturnTask();
           break;
