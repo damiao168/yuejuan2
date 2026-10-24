@@ -7,7 +7,7 @@ WORKDIR /app
 COPY packages/worker-runtime-python /tmp/worker-runtime-python
 COPY services/subjective-grading-worker/pyproject.toml ./pyproject.toml
 COPY services/subjective-grading-worker/subjective_grading_worker ./subjective_grading_worker
-RUN python -m pip install --no-cache-dir --timeout 180 --retries 10 "pip==26.2.2" "setuptools==83.0.0" \
+RUN python -m pip install --no-cache-dir --timeout 180 --retries 10 "pip==26.2.2" "setuptools==84.1.0" \
     && python -m pip install --no-cache-dir --no-deps /tmp/worker-runtime-python . \
     && mkdir -p /app/state && chown nobody:nogroup /app/state && chmod 0700 /app/state
 USER nobody

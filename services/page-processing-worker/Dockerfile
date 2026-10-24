@@ -20,7 +20,7 @@ COPY packages/worker-runtime-python /tmp/worker-runtime-python
 COPY services/page-processing-worker/pyproject.toml ./pyproject.toml
 COPY services/page-processing-worker/page_processing ./page_processing
 RUN python -m pip install --no-cache-dir --retries "${PIP_RETRIES}" --timeout "${PIP_TIMEOUT}" \
-      "pip==26.2.2" "setuptools==83.0.0" \
+      "pip==26.2.2" "setuptools==84.1.0" \
     && python -m pip install --no-cache-dir --retries "${PIP_RETRIES}" --timeout "${PIP_TIMEOUT}" \
       /tmp/worker-runtime-python .
 
