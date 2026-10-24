@@ -11,7 +11,6 @@ import type { PersonalReviewBookmarkController } from "../hooks/usePersonalRevie
 
 export function ReviewBookmarkControls({ scope, controller }: { scope: ReviewTaskContextScope; controller: PersonalReviewBookmarkController }) {
   const { message } = App.useApp();
-  const client = useQueryClient();
   const writing = useRef(false);
   const { state } = controller;
   const marked = Boolean(state.data?.marked);
@@ -21,9 +20,7 @@ export function ReviewBookmarkControls({ scope, controller }: { scope: ReviewTas
     writing.current = true;
     try {
       if (!await controller.write(bookmark, bookmark.marked ? null : "") || !isReviewTaskContextScopeCurrent(scope)) return;
-      // 提示以重新读取的最新状态为准，旧命令的回执不能把已取消的标记说成成功添加。
-      const latest = client.getQueryData<PersonalReviewBookmark>(reviewBookmarkKeys.task(scope, bookmark.task_id));
-      if (latest && latest.revision > bookmark.revision) message.success(latest.marked ? "已标记，可在“任务 → 已标记试卷”查看" : "已取消标记");
+      // 按钮直接呈现重新读取的标记状态；成功浮层会遮住紧凑顶栏，使教师无法立即取消标记。
     } catch {
       if (isReviewTaskContextScopeCurrent(scope)) message.error("标记未能保存，请重试");
     } finally { writing.current = false; }

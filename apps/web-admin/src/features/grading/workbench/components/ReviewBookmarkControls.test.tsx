@@ -39,17 +39,17 @@ describe("一键标记答卷", () => {
     mocks.remove.mockImplementation(async () => { server = { ...server, id: null, marked: false, revision: server.revision + 1 }; return ack(); });
   });
   afterEach(() => { cleanup(); client.clear(); });
-  it("点击标记后显示已标记并提示入口，再次点击取消，全程没有说明输入", async () => {
+  it("点击后由按钮显示标记状态，可立即取消且没有遮挡操作的成功提示", async () => {
     await mount();
     fireEvent.click(screen.getByRole("button", { name: "标记试卷" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "已标记" }).getAttribute("aria-pressed")).toBe("true"));
     expect(mocks.put).toHaveBeenCalledWith("task-A", "", 0, expect.any(String), expect.any(AbortSignal));
-    expect(mocks.success).toHaveBeenCalledWith("已标记，可在“任务 → 已标记试卷”查看");
+    expect(mocks.success).not.toHaveBeenCalled();
     expect(screen.queryByRole("textbox")).toBeNull(); expect(screen.queryByRole("button", { name: "编辑复查说明" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "已标记" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "标记试卷" }).getAttribute("aria-pressed")).toBe("false"));
     expect(mocks.remove).toHaveBeenCalledWith("mark-A", 1, expect.any(String), expect.any(AbortSignal));
-    expect(mocks.success).toHaveBeenLastCalledWith("已取消标记");
+    expect(mocks.success).not.toHaveBeenCalled();
   });
   it("请求期间显示加载且阻止重复写入，失败时不显示成功", async () => {
     let reject!: (cause: unknown) => void;
@@ -63,10 +63,11 @@ describe("一键标记答卷", () => {
     await waitFor(() => expect(screen.getByRole("status").textContent).toContain("尚未确定"));
     expect(mocks.success).not.toHaveBeenCalled(); expect(screen.queryByRole("button", { name: "已标记" })).toBeNull();
   });
-  it("旧新增命令回执之后读取到已取消的新版本，只提示真实取消状态", async () => {
+  it("旧新增命令回执之后读取到已取消的新版本，按钮以真实取消状态为准", async () => {
     mocks.put.mockImplementation(async () => { server = { ...server, revision: 2 }; return { bookmark_id: "mark-A", revision: 1, marked: true }; });
     await mount(); fireEvent.click(screen.getByRole("button", { name: "标记试卷" }));
-    await waitFor(() => expect(mocks.success).toHaveBeenCalledWith("已取消标记"));
+    await waitFor(() => expect(mocks.get).toHaveBeenCalledTimes(2));
+    expect(mocks.success).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "已标记" })).toBeNull();
   });
   it("没有标记资格时不能新增，历史说明也不会重新出现编辑入口", async () => {
