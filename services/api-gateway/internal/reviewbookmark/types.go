@@ -45,7 +45,7 @@ type SourceProvider interface {
 	Resolve(context.Context, auth.User, string) (Source, error)
 }
 
-// TransactionalSourceProvider 与书签共用事务；lock=true 时锁住源任务，
+// TransactionalSourceProvider 与书签共用事务；lock=true 时先锁父评分运行，再锁住源任务，
 // 避免刚核验负责人后，另一事务转派任务而本次仍继续写入。
 type TransactionalSourceProvider interface {
 	ResolveTx(context.Context, *sql.Tx, auth.User, string, bool) (Source, error)

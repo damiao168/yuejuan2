@@ -65,12 +65,18 @@ export function QuestionReferenceContent({ question }: Readonly<{ question: Ques
   </div>;
 }
 
-export function FrozenQuestionReference({ context }: Readonly<{ context: WorkbenchContext }>) {
+export type FrozenReferenceTab = "question" | "rules";
+
+export function FrozenQuestionReference({ context, activeTab, onTabChange }: Readonly<{
+  context: WorkbenchContext;
+  activeTab?: FrozenReferenceTab;
+  onTabChange?: (tab: FrozenReferenceTab) => void;
+}>) {
   const question = context.question;
   if (!question) return null;
   return <section className="frozen-question-reference" aria-label="本任务题目与完整评分依据">
     <strong>{context.task.exam_name || "本次考试"} · {examSubjectLabel(context.task.subject || context.reviewContext.subject_tool_hints.subject_code || "")} · 第 {context.task.question_no} 题</strong>
-    <Tabs size="small" items={[
+    <Tabs size="small" activeKey={activeTab} defaultActiveKey="question" onChange={(tab) => onTabChange?.(tab as FrozenReferenceTab)} items={[
       { key: "question", label: "题目与参考解答", children: <><QuestionReferenceContent question={question} />{question.reference_materials && <FrozenReferenceImages taskId={context.task.id}/>}</> },
       { key: "rules", label: "完整评分依据", children: <div>{question.rubric?.status === "missing" ? <Alert type="warning" showIcon message="本任务的冻结评分细则缺失" description="请联系考试管理员核对历史评分依据。当前题库的细则不会替代本任务的冻结版本。" /> : <p>任务冻结细则：{question.rubric?.version || "未记录版本"}；此处只供核对，给分请在最终评分区操作。</p>}
         <h3>评分点</h3><ReferenceList values={question.rubric?.points ?? []} empty="本题没有评分点" />

@@ -138,11 +138,13 @@ describe("batch30 header permission and callback boundaries", () => {
     expect(props.onResolveConflict).toHaveBeenCalledTimes(1);
     expect(props.onReloadConflict).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "暂放" })).toBeNull();
-    const onSubmit = vi.fn(), onBookmark = vi.fn();
-    view.rerender(<WorkbenchHeader {...props} canSubmit onSubmit={onSubmit} personalActions={<button onClick={onBookmark}>标记试卷</button>} />);
-    expect(screen.getByText("已保存到服务端")).toBeTruthy();
-    for (const label of ["刷新", "下一份", "提交并下一份", "标记试卷"]) fireEvent.click(screen.getByRole("button", { name: label }));
-    for (const callback of [props.onRefresh, props.onNext, onSubmit, onBookmark]) expect(callback).toHaveBeenCalledTimes(1);
+    const onPrevious = vi.fn(), onOpenReference = vi.fn(), onBookmark = vi.fn();
+    view.rerender(<WorkbenchHeader {...props} onPrevious={onPrevious} canPrevious onOpenReference={onOpenReference} personalActions={<button onClick={onBookmark}>标记试卷</button>} />);
+    expect(screen.queryByText("已保存到服务端")).toBeNull();
+    expect(screen.queryByRole("button", { name: "提交并下一份" })).toBeNull();
+    for (const label of ["刷新", "上一份", "下一份", "标记试卷", "评分细则", "题目与答案"]) fireEvent.click(screen.getByRole("button", { name: label }));
+    for (const callback of [props.onRefresh, props.onNext, onPrevious, onBookmark]) expect(callback).toHaveBeenCalledTimes(1);
+    expect(onOpenReference.mock.calls).toEqual([["rules"], ["question"]]);
     expect(props.onRelease).not.toHaveBeenCalled();
     expect(props.onClaim).not.toHaveBeenCalled();
     view.rerender(<WorkbenchHeader {...props} hasContext={false} />);
@@ -155,6 +157,19 @@ describe("batch30 header permission and callback boundaries", () => {
     view.rerender(<WorkbenchHeader {...props} canWork={false} />);
     expect(screen.getByRole("button", { name: "下一份" })).toHaveProperty("disabled", true);
     expect(screen.queryByRole("button", { name: "开始处理" })).toBeNull();
+  });
+
+  it("disables unavailable previous and reference actions while retaining their toolbar positions", () => {
+    const props = headerProps();
+    const onPrevious = vi.fn(), onOpenReference = vi.fn();
+    render(<WorkbenchHeader {...props} hasContext={false} onPrevious={onPrevious} onOpenReference={onOpenReference} />);
+    for (const label of ["上一份", "评分细则", "题目与答案"]) {
+      const button = screen.getByRole("button", { name: label });
+      expect(button).toHaveProperty("disabled", true);
+      fireEvent.click(button);
+    }
+    expect(onPrevious).not.toHaveBeenCalled();
+    expect(onOpenReference).not.toHaveBeenCalled();
   });
 });
 

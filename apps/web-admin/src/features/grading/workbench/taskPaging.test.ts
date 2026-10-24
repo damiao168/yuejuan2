@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { ReviewTask } from "../../../api/review";
-import { appendTaskPage, followingVisibleActionableTask, visibleTasks } from "./taskPaging";
+import { appendTaskPage, followingVisibleActionableTask, precedingVisibleTask, visibleTasks } from "./taskPaging";
 
 describe("review task paging", () => {
+  it("上一份能回看已提交答卷且不越过当前筛选范围或回绕", () => {
+    const tasks = ["submitted", "assigned", "assigned"].map((status, index) => ({ id: `task-${index}`, exam_id: "exam", question_id: "q", status, question_no: "18" } as ReviewTask));
+    const options = { canManageTasks: false, initialExamId: "exam", keyword: "", taskFilter: "active" };
+    expect(precedingVisibleTask(tasks, "task-1", options)?.id).toBe("task-0");
+    expect(precedingVisibleTask(tasks, "task-0", options)).toBeUndefined();
+    expect(precedingVisibleTask(tasks, "task-2", { ...options, initialExamId: "other" })).toBeUndefined();
+  });
   it("uses the server literal cross-field search with omitted labels, separators and percent signs", () => {
     const task = { id: "task-A", anonymous_code: "A001", question_no: "1", source: "human", exam_name: "期中", subject: "mathematics", exam_id: "exam", question_id: "q1", status: "assigned" } as ReviewTask;
     const options = { canManageTasks: true, initialExamId: "", taskFilter: "active", keyword: "期中 mathematics" };

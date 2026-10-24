@@ -11,7 +11,6 @@ import {
   type AiGrade
 } from "../../../../api/review";
 import { isReviewTaskContextScopeCurrent, reviewTaskContextKeys } from "../../../../query/reviewTaskContext";
-import { createInitialDraft } from "../gradingWorkbench.model";
 import type { ScoreDraft } from "../gradingWorkbench.types";
 import { mathSuggestionState } from "../mathWorkbenchEvidence";
 import { aiPointAdoption } from "../aiAdoption";
@@ -29,11 +28,8 @@ export function useGradingReviewActions({
   canEditDraft,
   canAdoptAiScore,
   canViewOriginalImage,
-  canManageTasks,
-  hasMoreTasks,
   currentUserId,
   selectedTaskId,
-  nextTask,
   selectedGrade,
   subjectCode,
   maxScore,
@@ -48,12 +44,9 @@ export function useGradingReviewActions({
   examScoring,
   runAction,
   refreshCurrent,
-  loadMoreTasks,
   refreshTaskAggregate,
   restoreViewer,
-  invalidateViewerContent,
   setTasks,
-  setSelectedTaskId,
   setDraftHydrated,
   setDraftSaveStatus,
   setDraftRevision,
@@ -71,8 +64,6 @@ export function useGradingReviewActions({
   lastSavedDraft,
   conflictServerContext,
   prefetchedTaskRef,
-  pendingNextRef,
-  suppressAutoSelectRef,
   notify
 }: UseGradingReviewActionsOptions) {
   const queryClient = useQueryClient();
@@ -89,14 +80,14 @@ export function useGradingReviewActions({
   const { openDraftConflict, applyDraftConflict } = useGradingDraftConflict({
     ctx, currentUserId, draft, viewerMode, scale, rotation, offset, autoFit, setResolvingConflict, queryScope, prefetchedTaskRef, activeTask, activeUserId, canViewOriginalImage, conflictServerContext, setDraftConflict, notify, draftConflict, conflictedDrafts, draftSaves, setCtx, setDraftRevision, lastSavedDraft, setDraft, restoreViewer, setDraftSaveStatus, isCurrentSession
   });
-  const submitGrade = async (nominateAsGold = false) => {
+  const submitGrade = async (nominateAsGold = false, automatic = false) => {
     if (!isCurrentSession()) return;
     if (!ctx) {
       notify.error("请先选择任务");
       return;
     }
     if (!canSubmit || draft.score === null) { notify.error("请先填写最终分，0分也需要明确输入"); return; }
-    if (rubricPoints.length && Math.abs(draft.score - rubricPoints.reduce((sum, point) => sum + (draft.rubricSelections[point.id] ?? 0), 0)) > 0.001 && (!draft.reason.trim() || draft.reason === "教师复核完成")) {
+    if (!automatic && rubricPoints.length && Math.abs(draft.score - rubricPoints.reduce((sum, point) => sum + (draft.rubricSelections[point.id] ?? 0), 0)) > 0.001 && (!draft.reason.trim() || draft.reason === "教师复核完成")) {
       notify.error("最终分与评分细则合计不同，请填写人工调整原因"); return;
     }
     const score = Number(draft.score);
@@ -109,11 +100,11 @@ export function useGradingReviewActions({
       async () => {
         if (!isCurrentSession()) return;
         const submittedTaskId = ctx.task.id;
-        const nextTaskId = nextTask?.id ?? "";
-        const selections = Object.entries(draft.rubricSelections)
+        const selections = automatic ? [] : Object.entries(draft.rubricSelections)
           .filter(([, value]) => Number(value) > 0)
           .map(([point_id, value]) => ({ point_id, score: Number(value) }));
         const result = await submitHumanGrade(submittedTaskId, {
+          ...(automatic ? { auto_submit: true } : {}),
           expected_revision: ctx.reviewContext.expected_revision,
           score,
           rubric_selections: selections,
@@ -127,9 +118,10 @@ export function useGradingReviewActions({
         removeReviewDraftFallback(currentUserId, submittedTaskId);
         queryClient.removeQueries({ queryKey: reviewTaskContextKeys.task(queryScope, submittedTaskId) });
         prefetchedTaskRef.current.delete(submittedTaskId);
-        setTasks((current) => current.map((task) => task.id === submittedTaskId ? { ...task, status: "submitted" } : task));
+        const submittedTask = result.task ?? { ...ctx.task, status: "submitted" };
+        setTasks((current) => current.map((task) => task.id === submittedTaskId ? { ...task, ...submittedTask } : task));
 
-        // 提交期间用户仍可切换题目；只有当前仍显示刚提交的任务时，才清空编辑器并推进到下一题。
+        // 正式提交只更新原答卷，不再推进队列；上一份、下一份由教师明确选择。
         const stillActive = activeTask.current === submittedTaskId;
         if (nominateAsGold && stillActive) {
           setGoldPaperCandidate({
@@ -148,28 +140,17 @@ export function useGradingReviewActions({
         }
         if (stillActive) {
           contextRequestRef.current += 1;
-          invalidateViewerContent();
-          setCtx(null);
-          if (!nextTaskId && hasMoreTasks) {
-            pendingNextRef.current = submittedTaskId;
-            suppressAutoSelectRef.current = true;
-            void loadMoreTasks();
-          }
-          setSelectedTaskId(nextTaskId);
-          setDraft(createInitialDraft(null));
-          scoreShortcuts.reset();
+          setCtx(current => current?.task.id === submittedTaskId ? { ...current, task: submittedTask, reviewContext: { ...current.reviewContext, task: submittedTask, expected_revision: submittedTask.revision } } : current);
+          setDraft(current => ({ ...current, score: result.human_grade.score ?? score }));
           setDraftHydrated(false);
-          setDraftSaveStatus("idle");
+          setDraftSaveStatus("saved");
           lastSavedDraft.current = "";
         }
         await refreshTaskAggregate();
         if (!isCurrentSession()) return;
         await examScoring.loadSummary();
-        if (stillActive && isCurrentSession() && !activeTask.current && !nextTaskId && !canManageTasks && !hasMoreTasks) {
-          notify.info("当前没有更多已分配给你的阅卷任务");
-        }
       },
-      "人工评分已提交"
+      automatic ? "" : "人工评分已提交"
     );
   };
 

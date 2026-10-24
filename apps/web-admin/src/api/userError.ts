@@ -11,6 +11,7 @@ const apiErrorMessages: Record<string, string> = {
   grading_model_selection_changed: "自动阅卷模型设置已变化，请刷新核对后保存。",
   grading_model_required: "请平台管理员为本校选择已启用且已配置密钥的自动阅卷 API 模型。",
   visual_model_unavailable: "请平台管理员配置本校自动阅卷 API 模型，系统不会回退本地模型。",
+  review_task_marked: "本题已标记，评分暂不提交；取消标记后会继续自动提交。",
   visual_model_probe_failed: "图片能力检测未通过，请核对所选模型是否支持图片及接口配置。",
   ai_output_incomplete: "AI 建议未完成，请人工评分。",
   scoring_trial_conflict: "试改状态或评分依据已变化，请刷新试改记录后核对。",

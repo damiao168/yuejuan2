@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { Alert, Button, Input, Space } from "antd";
+import { Alert, Button } from "antd";
+import { ApiClientError } from "../../../../api/client";
 import { getReviewTaskContext, renewReviewTask, saveReviewDraft, submitHumanGrade, type ReviewTask, type ReviewTaskContext } from "../../../../api/review";
 import { SharedScoreControl } from "../../SharedScoreControl";
 import { MathMarkdown } from "../../../../components/MathMarkdown";
@@ -9,7 +10,7 @@ import type { ScoreDraft, WorkbenchContext } from "../gradingWorkbench.types";
 
 type GroupRef = NonNullable<ReviewTaskContext["answer_artifact"]["grading_group_tasks"]>[number];
 type Member = { context: ReviewTaskContext; score: number | null; points: Record<string, number>; reason: string;
-  dirty: boolean; saved: boolean; busy: boolean; submittedScore?: number; error?: string };
+  dirty: boolean; saved: boolean; busy: boolean; edit?: number; submittedScore?: number; error?: string };
 
 export function groupTaskRefs(context: WorkbenchContext): GroupRef[] {
   return context.reviewContext.answer_artifact?.grading_group_tasks ?? [];
@@ -30,6 +31,8 @@ export function RegionScoreEditor({ context, currentUserId, canGrade, draft, set
   const [loading, setLoading] = useState(false);
   const generation = useRef(0);
   const inFlight = useRef(new Set<string>());
+  const editSequence = useRef(0);
+  const autoAttempts = useRef(new Set<number>());
   const live = useRef(rows); live.current = rows;
   const currentDraft = useRef(draft); currentDraft.current = draft;
   const tasksKey = refs.map(ref => ref.id).sort().join("|");
@@ -50,7 +53,7 @@ export function RegionScoreEditor({ context, currentUserId, canGrade, draft, set
         || current.studentFeedback !== (value.draft?.student_feedback ?? "")
         || current.reason !== (value.draft?.viewer_state.grading_reason ?? "")
         || Object.entries(current.rubricSelections).some(([id, score]) => score !== (value.draft?.rubric_selections.find(point => point.point_id === id)?.score ?? 0))));
-      return { context: value, score: value.draft?.score ?? null,
+      return { context: value, score: value.draft?.score ?? null, submittedScore: value.human_grade?.score,
         points: Object.fromEntries((value.draft?.rubric_selections ?? []).map(point => [point.point_id, point.score])),
         reason: typeof value.draft?.viewer_state.grading_reason === "string" ? value.draft.viewer_state.grading_reason : "", dirty, saved: false, busy: false } as Member;
     })).then(values => { if (generation.current === version && isCurrentScope()) setRows(values); })
@@ -62,20 +65,15 @@ export function RegionScoreEditor({ context, currentUserId, canGrade, draft, set
   }, [key, tasksKey]);
   useEffect(() => { onStateChange(rows.some(row => row.dirty), rows.some(row => row.busy)); }, [rows, onStateChange]);
   const update = (id: string, patch: Partial<Member>) => setRows(values => values.map(row => row.context.task.id === id ? { ...row, ...patch } : row));
-  const action = async (id: string, submit: boolean) => {
+  const action = async (id: string) => {
     const version = generation.current;
     const row = live.current.find(item => item.context.task.id === id);
     if (!isCurrentScope() || !row || inFlight.current.has(id) || row.busy || !canGrade || row.context.task.assigned_to !== currentUserId
         || !row.context.claim.can_renew || !["assigned", "in_progress", "returned"].includes(row.context.task.status)) return;
     const isCurrent = id === context.task.id;
     const value = isCurrent ? { score: currentDraft.current.score, points: currentDraft.current.rubricSelections, reason: currentDraft.current.reason } : row;
-    // 草稿可以暂缺最终分或调整原因；只有正式提交才要求评分完整，避免未完成内容无法保存。
-    if (submit && value.score === null) { update(id, { error: "请先填写本题分数。" }); return; }
-    const rubric = frozenRubricFromContext(row.context);
+    if (value.score === null) return;
     if (value.score !== null && (!Number.isFinite(value.score) || value.score < 0 || value.score > row.context.question.score)) { update(id, { error: "本题得分超出分值范围。" }); return; }
-    if (submit && value.score !== null && rubric.points.length && Math.abs(value.score - rubric.points.reduce((sum, point) => sum + (value.points[point.id] ?? 0), 0)) > .001 && (!value.reason.trim() || value.reason === "教师复核完成")) {
-      update(id, { error: "最终分与评分点合计不同，请填写调整原因。" }); return;
-    }
     inFlight.current.add(id);
     update(id, { busy: true, error: undefined });
     try {
@@ -85,24 +83,29 @@ export function RegionScoreEditor({ context, currentUserId, canGrade, draft, set
       const source = row.context.draft;
       const fields = isCurrent ? { comments: currentDraft.current.comments, private_note: currentDraft.current.privateNote,
         student_feedback: currentDraft.current.studentFeedback } : { comments: source?.comments ?? "", private_note: source?.private_note ?? "", student_feedback: source?.student_feedback ?? "" };
-      if (submit && value.score !== null) {
-        const result = await submitHumanGrade(id, { ...fields, expected_revision: row.context.expected_revision,
-          score: value.score, rubric_selections: selections, reason: value.reason || "教师复核完成" });
-        if (generation.current !== version || !isCurrentScope()) return;
-        update(id, { context: { ...row.context, task: result.task, expected_revision: result.task.revision }, submittedScore: value.score, dirty: false, saved: true });
-        onSubmitted(result.task);
-      } else {
-        const saved = await saveReviewDraft(id, { ...fields, score: value.score, rubric_selections: selections,
-          viewer_state: { ...source?.viewer_state, grading_reason: value.reason }, expected_revision: source?.revision ?? 0,
-          client_updated_at: new Date().toISOString() });
-        if (generation.current === version && isCurrentScope()) {
-          update(id, { context: { ...row.context, draft: saved.draft }, dirty: false, saved: true });
-          onDraftSaved(id);
-        }
-      }
-    } catch { if (generation.current === version) update(id, { error: "本题未能保存，请核对任务状态后重试；其它题已保存的结果保留。" }); }
+      // 先保存本题草稿，标记拦截或正式提交失败时仍可恢复教师已填的分数。
+      const saved = await saveReviewDraft(id, { ...fields, score: value.score, rubric_selections: selections,
+        viewer_state: source?.viewer_state ?? {}, expected_revision: source?.revision ?? 0, client_updated_at: new Date().toISOString() });
+      if (generation.current !== version || !isCurrentScope()) return;
+      update(id, { context: { ...row.context, draft: saved.draft }, saved: true, dirty: false });
+      onDraftSaved(id);
+      const result = await submitHumanGrade(id, { ...fields, expected_revision: row.context.expected_revision,
+        auto_submit: true, score: value.score, rubric_selections: [], reason: value.reason || "教师复核完成" });
+      if (generation.current !== version || !isCurrentScope()) return;
+      update(id, { context: { ...row.context, task: result.task, expected_revision: result.task.revision }, submittedScore: result.human_grade?.score ?? value.score, dirty: false, saved: true });
+      onSubmitted(result.task);
+    } catch (cause) { if (generation.current === version) update(id, { error: cause instanceof ApiClientError && cause.code === "review_task_marked" ? "本题已标记，分数仅保存为草稿。" : "本题未能提交，请重试；其它题已提交的结果保留。" }); }
     finally { inFlight.current.delete(id); if (generation.current === version) update(id, { busy: false }); }
   };
+  const autoAction = useRef(action); autoAction.current = action;
+  useEffect(() => {
+    // 每行独立去抖，只有教师本次主动填写才提交；失败不循环重试，也不提交其它行。
+    const timers = rows.filter(row => row.edit && !autoAttempts.current.has(row.edit) && row.dirty && !row.busy && row.score !== null).map(row => window.setTimeout(() => {
+      autoAttempts.current.add(row.edit!);
+      void autoAction.current(row.context.task.id);
+    }, 1200));
+    return () => timers.forEach(timer => window.clearTimeout(timer));
+  }, [rows]);
   const missing = (context.reviewContext.answer_artifact.grading_group_question_ids?.length ?? refs.length) - refs.length;
   return <section className="score-panel" aria-label="整区逐题录分">
     <div className="panel-head"><div><h2>整区批阅 · 各题分别录分</h2><p>共用左侧答题图，各题使用独立评分细则并分别保存。</p></div></div>
@@ -118,18 +121,13 @@ export function RegionScoreEditor({ context, currentUserId, canGrade, draft, set
       return <section key={id} aria-label={`第 ${row.context.task.question_no} 题评分`}>
         <h3>第 {row.context.task.question_no} 题 · 满分 {row.context.question.score}{finished ? " · 已提交" : ""}</h3>
         <details><summary>标准答案与本题评分细则</summary><MathMarkdown>{referenceText(row.context.question.answer_key) || "未保存参考答案"}</MathMarkdown>
-          {rubric.points.map(point => <p key={point.id}>{point.description}（{point.score} 分）</p>)}</details>
-        {/* 历史上下文没有返回正式人工得分，不能把草稿值或空值显示成已提交结果。 */}
+          {rubric.points.map(point => <div key={point.id}><MathMarkdown>{point.description}</MathMarkdown><span>{point.score} 分</span></div>)}</details>
         {finished ? <p role="status">{row.submittedScore === undefined ? "本题已提交，得分请查看提交记录。" : `本题已提交：${row.submittedScore} / ${row.context.question.score} 分`}</p> : <>
-        <SharedScoreControl disabled={!editable || row.busy} maxScore={row.context.question.score} rubricPoints={rubric.points} value={value}
-          onChange={change => { if (isCurrent) setDraft(current => ({ ...current, ...change })); update(id, { score: change.score, points: change.rubricSelections, dirty: true, saved: false }); }} />
-        <Input aria-label={`第 ${row.context.task.question_no} 题调整原因`} placeholder="评分调整原因（需要时填写）" disabled={!editable || row.busy}
-          value={isCurrent ? draft.reason : row.reason} onChange={event => { if (isCurrent) setDraft(current => ({ ...current, reason: event.target.value })); update(id, { reason: event.target.value, dirty: true, saved: false }); }} />
+        <SharedScoreControl disabled={!editable || row.busy} maxScore={row.context.question.score} rubricPoints={rubric.points} showRubric={false} value={value}
+          onChange={change => { if (isCurrent) setDraft(current => ({ ...current, ...change })); update(id, { score: change.score, points: change.rubricSelections, dirty: true, saved: false, edit: ++editSequence.current, error: undefined }); }} />
         </>}
         {row.error ? <p role="alert">{row.error}</p> : null}
-        {!finished ? <Space><Button disabled={!editable || row.busy} onClick={() => void action(id, false)}>保存第 {row.context.task.question_no} 题草稿</Button>
-          <Button type="primary" disabled={!editable || row.busy} loading={row.busy} onClick={() => void action(id, true)}>提交第 {row.context.task.question_no} 题</Button>
-          {row.saved ? <span role="status">草稿已保存</span> : null}</Space> : null}
+        {!finished && row.error ? <Button disabled={!editable || row.busy} loading={row.busy} onClick={() => void action(id)}>重试本题提交</Button> : null}
       </section>;
     })}
   </section>;

@@ -153,7 +153,6 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     await render({ canGrade: true });
     const region = () => mocks.region as unknown as ComponentProps<typeof RegionScoreEditor>;
     expect(mocks.editor).toBeNull();
-    expect(header().onSubmit).toBeUndefined();
     expect(header().scoreLabel).toBeUndefined();
     await act(async () => region().onStateChange(true, false));
     expect(header().draftSaveStatus).toBe("pending");
@@ -222,7 +221,6 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     mocks.loadContext.mockResolvedValue(context("A", owner, renewable));
     await render();
     expect(header().draftSaveStatus).toBe("readonly");
-    expect(header().onSubmit).toBeUndefined();
     expect(mocks.renew).not.toHaveBeenCalled();
     await edit(0);
     await act(async () => { vi.advanceTimersByTime(1200); });
@@ -235,12 +233,8 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     expect(mocks.renew).toHaveBeenCalledWith("A");
     expect(header().scoreLabel).toBe("未评分");
     await edit(0);
-    expect(editor().canSubmit).toBe(true);
+    expect(editor().canEditDraft).toBe(true);
     expect(header().scoreLabel).toBe("0/10 分");
-    expect(editor().hidePrimarySubmit).toBe(true);
-    const submissions = mocks.asyncNoop.mock.calls.length;
-    await act(async () => header().onSubmit?.());
-    expect(mocks.asyncNoop).toHaveBeenCalledTimes(submissions + 1);
     await act(async () => { vi.advanceTimersByTime(1199); });
     expect(mocks.save).not.toHaveBeenCalled();
     await act(async () => { vi.advanceTimersByTime(1); });

@@ -7,6 +7,13 @@ import { requiresExplicitSecondOpinion } from "./reviewContext";
 
 type MathEvidenceState = ReturnType<typeof useMathWorkbenchEvidence>["state"];
 
+export function mathRequestDisabledReason(canGrade: boolean, canEditDraft: boolean) {
+  // 无评分权限时先解释身份限制，不能被当前任务只读的原因覆盖。
+  if (!canGrade) return "当前身份无重新生成数学建议的权限；请按冻结细则人工评分，需要重新生成时请联系管理员。";
+  if (!canEditDraft) return "当前任务只读；请先领取属于你的可编辑任务，再重新生成建议。";
+  return undefined;
+}
+
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }

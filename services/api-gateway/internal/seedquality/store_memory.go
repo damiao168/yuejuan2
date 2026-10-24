@@ -33,12 +33,13 @@ type memoryObservation struct {
 }
 
 type MemoryStore struct {
-	receipts     commandreceipt.Memory
-	mu           sync.RWMutex
-	policies     map[string]memoryPolicy
-	cursors      map[string]samplingCursor
-	tasks        map[string]memoryTask
-	observations map[string]memoryObservation
+	autoSubmitBookmarks AutoSubmitBookmarkGuard
+	receipts            commandreceipt.Memory
+	mu                  sync.RWMutex
+	policies            map[string]memoryPolicy
+	cursors             map[string]samplingCursor
+	tasks               map[string]memoryTask
+	observations        map[string]memoryObservation
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -133,7 +134,7 @@ func (s *MemoryStore) GetTask(_ context.Context, tenantID, id string) (Task, err
 }
 
 // 命令收据和任务状态一起更新，重复提交返回第一次结果，不重复写观察记录。
-func (s *MemoryStore) CompleteTask(ctx context.Context, tenantID, taskID, graderID string, input SubmitInput, observation Observation) (Task, Observation, error) {
+func (s *MemoryStore) completeTask(ctx context.Context, tenantID, taskID, graderID string, input SubmitInput, observation Observation, marked bool) (Task, Observation, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var replay commandResult
@@ -150,6 +151,9 @@ func (s *MemoryStore) CompleteTask(ctx context.Context, tenantID, taskID, grader
 	}
 	if item.task.Status != "in_progress" || item.task.Revision != input.ExpectedRevision {
 		return Task{}, Observation{}, ErrConflict
+	}
+	if input.AutoSubmit && marked {
+		return Task{}, Observation{}, ErrTaskMarked
 	}
 	item.task.Status, item.task.Revision, item.task.UpdatedAt = "completed", item.task.Revision+1, observation.ObservedAt.UTC()
 	s.tasks[key] = item

@@ -28,6 +28,7 @@ type TaskContext struct {
 	AISecondOpinion  *AISecondOpinion                `json:"ai_second_opinion,omitempty"`
 	Claim            TaskClaim                       `json:"claim"`
 	Draft            *ReviewDraft                    `json:"draft"`
+	HumanGrade       *HumanGrade                     `json:"human_grade,omitempty"`
 	SubjectToolHints SubjectToolHints                `json:"subject_tool_hints"`
 	AutomationResult *AutomationResult               `json:"automation_result,omitempty"`
 	// AIFailure 只标记当前版本的 AI 建议不可用；失败正文和供应商细节不进入教师载荷。
@@ -133,7 +134,13 @@ func taskContextFromWorkspace(workspace Workspace) TaskContext {
 		out.AnswerArtifact.Source = "answer_segment_answer"
 	}
 	// 当前建议及其可采纳历史必须属于同一答案、快照和冻结量规；旧版本仍保存在管理端成绩历史中。
-	out.AISecondOpinion = aiSecondOpinionFromSuggestion(currentTaskAISuggestion(workspace.Context), allowsAIScorePrefill(snapshot))
+	suggestion := currentTaskAISuggestion(workspace.Context)
+	// 作答转写属于答题材料，可先于第二意见展示；评分理由和分数仍留在原有揭示入口。
+	if text := taskImageStudentText(suggestion, workspace.Context); text != "" {
+		out.AnswerArtifact.OCRText = text
+		out.AnswerArtifact.Source = imageObservationSource
+	}
+	out.AISecondOpinion = aiSecondOpinionFromSuggestion(suggestion, allowsAIScorePrefill(snapshot))
 	return out
 }
 

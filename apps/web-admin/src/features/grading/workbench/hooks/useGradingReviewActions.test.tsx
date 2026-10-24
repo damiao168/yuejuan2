@@ -213,15 +213,25 @@ describe("grading review submission lifecycle", () => {
     expect(mocks.nominate).not.toHaveBeenCalled();
   });
 
-  it("still advances and nominates when the submitted task remains active", async () => {
+  it("keeps the submitted answer open and nominates without advancing", async () => {
     await mount();
     const pending = submitGrade(true);
     await act(async () => { finishSubmit({ human_grade: { id: "grade-A" } }); await pending; });
-    expect(current.selectedTaskId).toBe("B");
-    expect(current.ctx?.task.id).toBe("B");
-    expect(mocks.invalidateViewer).toHaveBeenCalledTimes(1);
-    expect(mocks.resetShortcuts).toHaveBeenCalledTimes(1);
+    expect(current.selectedTaskId).toBe("A");
+    expect(current.ctx?.task.id).toBe("A");
+    expect(current.ctx?.task.status).toBe("submitted");
+    expect(mocks.invalidateViewer).not.toHaveBeenCalled();
+    expect(mocks.resetShortcuts).not.toHaveBeenCalled();
     expect(mocks.nominate).toHaveBeenCalledWith(expect.objectContaining({ sourceGradeId: "grade-A", referenceScore: 6 }));
+  });
+
+  it("自动提交只传最终分，不再用隐藏的评分点或自动跳题", async () => {
+    await mount();
+    const pending = actions.submitGrade(false, true);
+    await act(async () => { finishSubmit({ human_grade: { id: "grade-A", score: 6 } }); await pending; });
+    expect(mocks.submitHumanGrade).toHaveBeenCalledWith("A", expect.objectContaining({ auto_submit: true, score: 6, rubric_selections: [] }));
+    expect(current.selectedTaskId).toBe("A");
+    expect(current.ctx?.task.status).toBe("submitted");
   });
 
   it("does not queue a later page or suppress selection after the user leaves A", async () => {

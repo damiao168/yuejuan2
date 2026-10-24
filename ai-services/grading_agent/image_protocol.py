@@ -183,6 +183,7 @@ class ImageGradingApplication:
         self._probe_lock = threading.Lock()
         self._probe_identities = {}
         self._probe_failures = {}
+        self._automatic_probe_keys = {}
 
     @staticmethod
     def _model_binding(config):
@@ -205,6 +206,30 @@ class ImageGradingApplication:
             return cls._model_binding(config)
         identity = dict(config, config_revision=revision)
         return cls._model_binding(identity)
+
+    def _ensure_visual_capability(self, config, request_id):
+        # 能力缓存随进程重启消失，首次正式请求应先重建真实图片证据，不能把缓存缺失当成模型不支持。
+        # 同一连接在既有幂等 TTL 内共用探测身份；失败不会并发轰击供应商，也不会放行学生识别。
+        capability_key = self._capability_key(config)
+        with self._lock:
+            capability = self._visual_capabilities.get(capability_key)
+            if isinstance(capability, AgentError):
+                raise capability.copy(request_id)
+            if capability:
+                return
+            now = time.monotonic()
+            for cached_key, (created, probe_key) in list(self._automatic_probe_keys.items()):
+                if now - created > self.settings.idempotency_ttl_seconds:
+                    self._automatic_probe_keys.pop(cached_key)
+                    self._probe_identities.pop(probe_key, None)
+                    self._probe_failures.pop(probe_key, None)
+            if capability_key not in self._automatic_probe_keys:
+                self._automatic_probe_keys[capability_key] = (now, "automatic-image-probe-" + secrets.token_hex(16))
+            probe_key = self._automatic_probe_keys[capability_key][1]
+        try:
+            self.probe({"request_id": probe_key, "managed_model": config}, probe_key)
+        except AgentError as exc:
+            raise exc.copy(request_id) from exc
 
     def _probe(self, payload, key):
         """合成图探测验证本配置的实际图片通路；不据模型名或 modalities 标签判定。"""
@@ -313,10 +338,7 @@ class ImageGradingApplication:
         binding = self._model_binding(config)
         if policy.get("model_version") != config["model_version"]:
             raise _invalid(request_id, "requested model version is not configured")
-        with self._lock:
-            capability = self._visual_capabilities.get(self._capability_key(config))
-        if not capability or isinstance(capability, AgentError):
-            raise AgentError("visual_model_unavailable", "selected grading model requires a successful visual probe", status=422, request_id=request_id)
+        self._ensure_visual_capability(config, request_id)
         digest = hashlib.sha256(json.dumps([operation, request], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         with self._lock:
             now = time.monotonic()

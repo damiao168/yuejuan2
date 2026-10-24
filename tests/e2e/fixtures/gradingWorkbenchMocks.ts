@@ -58,6 +58,8 @@ export interface GradingWorkbenchMockState {
   contextsRead: string[];
   listCursors: string[];
   fastConfirmTaskIds: Set<string>;
+  bookmarks: Map<string, { id: string | null; task_id: string; marked: boolean; reason: string; revision: number; can_edit_reason: boolean }>;
+  grades: Map<string, Record<string, unknown>>;
 }
 
 export function createGradingWorkbenchMockState(count = 20): GradingWorkbenchMockState {
@@ -85,7 +87,8 @@ export function createGradingWorkbenchMockState(count = 20): GradingWorkbenchMoc
       subject
     } satisfies FixtureTask;
   });
-  return { tasks, drafts: new Map(), claims: [], submissions: [], draftWrites: [], contextsRead: [], listCursors: [], fastConfirmTaskIds: new Set() };
+  return { tasks, drafts: new Map(), claims: [], submissions: [], draftWrites: [], contextsRead: [], listCursors: [], fastConfirmTaskIds: new Set(),
+    bookmarks: new Map(tasks.map(task => [task.id, { id: null, task_id: task.id, marked: false, reason: "", revision: 0, can_edit_reason: true }])), grades: new Map() };
 }
 
 function json(route: Route, body: unknown, status = 200) {
@@ -206,6 +209,26 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
     const method = request.method();
     const url = new URL(request.url());
     const path = url.pathname;
+    const bookmarkMatch = path.match(/^\/api\/v1\/me\/review-bookmarks\/by-task\/([^/]+)$/);
+    if (bookmarkMatch) {
+      const id = decodeURIComponent(bookmarkMatch[1]);
+      const bookmark = state.bookmarks.get(id);
+      if (!bookmark) return json(route, { error: { code: "bookmark_not_found" } }, 404);
+      if (method === "GET") return json(route, { bookmark });
+      if (method === "PUT") {
+        const body = requestBody(route);
+        if (body.expected_revision !== bookmark.revision) return json(route, { error: { code: "bookmark_revision_conflict" } }, 409);
+        Object.assign(bookmark, { id: `bookmark-${id}`, marked: true, reason: body.reason, revision: bookmark.revision + 1 });
+        return json(route, { bookmark_id: bookmark.id, revision: bookmark.revision, marked: true });
+      }
+    }
+    if (path.startsWith("/api/v1/me/review-bookmarks/bookmark-") && method === "DELETE") {
+      const id = decodeURIComponent(path.slice("/api/v1/me/review-bookmarks/bookmark-".length));
+      const bookmark = state.bookmarks.get(id);
+      if (!bookmark) return json(route, { error: { code: "bookmark_not_found" } }, 404);
+      bookmark.marked = false; bookmark.revision += 1;
+      return json(route, { bookmark_id: bookmark.id, revision: bookmark.revision, marked: false });
+    }
 
     if (path.startsWith("/api/v1/review-assets/") && method === "GET") {
       return route.fulfill({
@@ -264,7 +287,8 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
     const task = taskFromPath(path, state.tasks);
     if (task && path.endsWith("/context") && method === "GET") {
       state.contextsRead.push(task.id);
-      return json(route, { context: contextFor(task, state.drafts.get(task.id), state.fastConfirmTaskIds.has(task.id)) });
+      return json(route, { context: { ...contextFor(task, state.drafts.get(task.id), state.fastConfirmTaskIds.has(task.id)),
+        ...(state.grades.has(task.id) ? { human_grade: state.grades.get(task.id), draft: null, claim: { can_renew: false } } : {}) } });
     }
     if (task && path.endsWith("/renew") && method === "POST") return json(route, { renewed: true });
 
@@ -300,11 +324,13 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
 
     if (task && path.endsWith("/submit") && method === "POST") {
       const body = requestBody(route);
+      if (body.auto_submit && state.bookmarks.get(task.id)?.marked) return json(route, { error: { code: "review_task_marked" } }, 409);
+      if (state.grades.has(task.id)) return json(route, { task: wireTask(task), human_grade: state.grades.get(task.id) });
       task.status = "submitted";
       task.revision += 1;
       task.updated_at = now;
       state.submissions.push(task.id);
-      return json(route, {
+      const response = {
         task: wireTask(task),
         human_grade: {
           id: `grade-${task.id}`,
@@ -322,7 +348,10 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
           grade_round: "first",
           created_at: now
         }
-      });
+      };
+      state.grades.set(task.id, response.human_grade);
+      state.drafts.delete(task.id);
+      return json(route, response);
     }
 
     if (path === "/api/v1/review-annotations" && method === "GET") return json(route, { annotations: [] });

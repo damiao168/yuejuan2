@@ -94,6 +94,7 @@ type GraderTaskContext struct {
 	ScoringEvidence  []assessment.ScoringEvidence    `json:"scoring_evidence"`
 	Claim            GraderClaim                     `json:"claim"`
 	Draft            any                             `json:"draft"`
+	HumanGrade       *GraderHumanGrade               `json:"human_grade,omitempty"`
 	SubjectToolHints GraderSubjectToolHints          `json:"subject_tool_hints"`
 }
 
@@ -128,10 +129,14 @@ func (s *Service) GetGraderTaskContext(ctx context.Context, tenantID, taskID, gr
 	question := paper.Question{ID: task.QuestionID, TenantID: tenantID, ExamID: task.ExamID,
 		QuestionNo: task.QuestionNo, QuestionType: snapshot.ArchetypeCode, Score: task.MaxScore,
 		KnowledgePoints: []string{}, Status: "ready"}
+	humanGrade, err := s.graderSubmittedGrade(ctx, tenantID, task)
+	if err != nil {
+		return GraderTaskContext{}, true, err
+	}
 	return GraderTaskContext{
 		Task: graderTask, ExpectedRevision: task.Revision, QuestionSnapshot: safeSnapshot(snapshot), Question: question,
 		AnswerArtifact: GraderAnswerArtifact{AnswerSegmentID: answerSegmentID, Source: "answer_image", Status: "ready", SegmentImageURL: task.AnswerImageURL},
-		FrozenRubric:   rubric, AICandidates: []any{}, ScoringEvidence: []assessment.ScoringEvidence{},
+		FrozenRubric:   rubric, AICandidates: []any{}, ScoringEvidence: []assessment.ScoringEvidence{}, HumanGrade: humanGrade,
 		// Seed 任务不属于普通领取租约或草稿 API。
 		// 因此正常工作台不能尝试通过 review 存储为这个合成任务续租或自动保存。
 		Claim: GraderClaim{OwnerID: task.AssignedTo, State: "claimed", CanRenew: false}, Draft: nil,

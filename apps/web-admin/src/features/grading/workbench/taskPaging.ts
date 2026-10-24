@@ -53,3 +53,13 @@ export function followingVisibleActionableTask(tasks: ReviewTask[], selectedTask
     .find((task) => task.id !== selectedTaskId && !["submitted", "completed"].includes(task.status));
   return actionable(ordered.slice(index + 1)) ?? (wrap ? actionable(ordered.slice(0, Math.max(index, 0))) : undefined);
 }
+
+export function precedingVisibleTask(tasks: ReviewTask[], selectedTaskId: string, options: Parameters<typeof visibleTasks>[1]): ReviewTask | undefined {
+  const ordered = groupTasksByQuestion(tasks);
+  const index = ordered.findIndex(task => task.id === selectedTaskId);
+  if (index <= 0) return undefined;
+  // 上一份允许回看刚提交的答卷；保持考试、题目和搜索范围，不回绕或重新领取任务。
+  const previous = visibleTasks(ordered.slice(0, index), { ...options, taskFilter: options.taskFilter === "active" ? "all" : options.taskFilter })
+    .filter(task => !["cancelled", "pending"].includes(task.status));
+  return previous[previous.length - 1];
+}

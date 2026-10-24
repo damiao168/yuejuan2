@@ -24,6 +24,7 @@ export interface RubricSelection {
 }
 
 export interface SubmitHumanGradePayload {
+  auto_submit?: boolean;
   expected_revision: number;
   score: number;
   rubric_selections: RubricSelection[];

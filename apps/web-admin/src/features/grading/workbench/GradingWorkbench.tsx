@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { App, Button } from "antd";
+import { App, Button, Drawer } from "antd";
 import { BookmarkCheck, LogOut, PanelLeft } from "lucide-react";
 import { BackmarkQueue } from "../../../components/BackmarkQueue";
 import { RegradeQueue } from "../../../components/RegradeQueue";
@@ -44,7 +44,7 @@ import { useGradingReviewActions } from "./hooks/useGradingReviewActions";
 import { useGradingMathActions } from "./hooks/useGradingMathActions";
 import type { MathStepSelection } from "./mathWorkbenchEvidence";
 import { commitWorkbenchDraft, readQueuedWorkbenchContext, restoreWorkbenchDraft } from "./workbenchDraftLifecycle";
-import { canAdoptWorkbenchGrade, reviewDraftState, selectWorkbenchGrade, visibleMathSelection } from "./workbenchReviewState";
+import { canAdoptWorkbenchGrade, mathRequestDisabledReason, reviewDraftState, selectWorkbenchGrade, visibleMathSelection } from "./workbenchReviewState";
 import { isChoiceReview, requiresExplicitSecondOpinion } from "./reviewContext";
 import "./grading-management.css";
 import { useUnsavedChangesGuard } from "../../../router/useUnsavedChangesGuard";
@@ -53,6 +53,8 @@ import type { ReviewTask } from "../../../api/review";
 import { usePersonalReviewBookmarks } from "./hooks/usePersonalReviewBookmarks";
 import { ReviewBookmarkControls, ReviewBookmarksDrawer } from "./components/ReviewBookmarks";
 import { TaskContentContainer, TaskRailContainer } from "./components/WorkbenchContainers";
+import { FrozenQuestionReference, type FrozenReferenceTab } from "./components/FrozenQuestionReference";
+import { useAutomaticGradeSubmission, useScoringDraftIntent } from "./hooks/useAutomaticGradeSubmission";
 
 export interface GradingWorkbenchProps {
   canWork: boolean;
@@ -65,13 +67,6 @@ export interface GradingWorkbenchProps {
   currentTenantId: string;
   initialExamId?: string;
   personalScope?: boolean;
-}
-
-function mathRequestDisabledReason(canGrade: boolean, canEditDraft: boolean) {
-  // 无评分权限时先解释身份限制，不能被当前任务只读的原因覆盖。
-  if (!canGrade) return "当前身份无重新生成数学建议的权限；请按冻结细则人工评分，需要重新生成时请联系管理员。";
-  if (!canEditDraft) return "当前任务只读；请先领取属于你的可编辑任务，再重新生成建议。";
-  return undefined;
 }
 
 export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage, canGrade, canVerifyEvidence, canReturn, currentUserId, currentTenantId, initialExamId = "", personalScope = false }: Readonly<GradingWorkbenchProps>) {
@@ -95,7 +90,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     selectedTaskId, setSelectedTaskId, loadingTasks, loadingMoreTasks, hasMoreTasks, pageError, taskError,
     gradersError, assignmentUserId, setAssignmentUserId, assignmentTaskIds, setAssignmentTaskIds,
     filteredTasks, assignableTasks, graderOptions, graderNames, reviewerProgress, myProgress, remainingCount,
-    prefetchTasks, nextTask, pendingNextRef, suppressAutoSelectRef,
+    prefetchTasks, nextTask, previousTask, pendingNextRef, suppressAutoSelectRef,
     loadTasks, loadMoreTasks, refreshTaskAggregate, loadGraders, reset: resetQueue
   } = queue;
   const actionLock = useRef(false);
@@ -115,9 +110,9 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const [regionDirty, setRegionDirty] = useState(false);
   const [regionBusy, setRegionBusy] = useState(false);
   const regionEditing = Boolean(ctx?.gradingGroupImageUrl && ctx.gradingGroupId && groupTaskRefs(ctx).length >= 2);
-  heldGroupTask.current = regionEditing ? ctx!.task.id : "";
+  heldGroupTask.current = regionEditing || ctx?.task.status === "submitted" ? ctx!.task.id : "";
   const updateRegionState = useCallback((dirty: boolean, busy: boolean) => { setRegionDirty(dirty); setRegionBusy(busy); }, []);
-  const [quickSubmit, setQuickSubmit] = useState(false);
+  const [referenceTab, setReferenceTab] = useState<FrozenReferenceTab | null>(null);
   const [aiSuggestionEntry, setAISuggestionEntry] = useState<HTMLDivElement | null>(null);
   const [actioning, setActioning] = useState<string | null>(null);
   const [assignmentPreview, setAssignmentPreview] = useState<ReviewTask[] | null>(null);
@@ -131,6 +126,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   activeUserId.current = currentUserId;
   const liveDraft = useRef(draft);
   liveDraft.current = draft;
+  const { edit: scoreEdit, updateDraft: setEditingDraft } = useScoringDraftIntent(selectedTaskId, liveDraft, setDraft);
   const [goldPaperManagerOpen, setGoldPaperManagerOpen] = useState(false);
   const [calibrationQuestionId, setCalibrationQuestionId] = useState("");
   const [goldPaperCandidate, setGoldPaperCandidate] = useState<GoldPaperNominationCandidate | null>(null);
@@ -187,10 +183,10 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const canAdoptAiScore = canAdoptWorkbenchGrade(selectedGrade, ctx, mathRequesting, subjectCode, math.state, math.dirty);
   const currentMathSelection = visibleMathSelection(mathSelection, math.state, math.dirty);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 切题必须清除数学建议请求提示及选择；不能将上一题的忙碌状态沿用到新题。
-  useEffect(() => { setMathRequestNotice(""); setMathSelection(null); setMathRequesting(false); }, [selectedTaskId]);
+  useEffect(() => { setMathRequestNotice(""); setMathSelection(null); setMathRequesting(false); setReferenceTab(null); }, [selectedTaskId]);
   const maxScore = ctx?.question?.score ?? selectedGrade?.max_score ?? 0;
   const rubricPoints = ctx?.question?.rubric?.points ?? [];
-  const scoreShortcuts = useGradingScoreShortcuts({ draft, setDraft, rubricPoints, onInfo: (text) => message.info(text) });
+  const scoreShortcuts = useGradingScoreShortcuts({ draft, setDraft: setEditingDraft, rubricPoints: [], onInfo: (text) => message.info(text) });
   const resetScoreShortcuts = scoreShortcuts.reset;
   const { ownsSelectedTask, canEditDraft, unsyncedDraft, canSubmit } = reviewDraftState({
     ctx, currentUserId, canWork, hasSession, resolvingConflict, hasConflict: Boolean(draftConflict),
@@ -372,7 +368,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     setActioning(key);
     try {
       await action();
-      if (generation === actionGeneration.current && isCurrentScope()) message.success(successText);
+      if (successText && generation === actionGeneration.current && isCurrentScope()) message.success(successText);
     } catch (currentError) {
       if (generation === actionGeneration.current && isCurrentScope()) message.error(formatError(currentError));
     } finally {
@@ -422,7 +418,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const reviewActions = useGradingReviewActions({
     isCurrentScope,
     queryScope,
-    ctx, setCtx, draft, setDraft, draftConflict, canSubmit, canReturn, canEditDraft,
+    ctx, setCtx, draft, setDraft: setEditingDraft, draftConflict, canSubmit, canReturn, canEditDraft,
     canAdoptAiScore, canViewOriginalImage, canManageTasks, hasMoreTasks, currentUserId, selectedTaskId,
     nextTask, selectedGrade, subjectCode, maxScore, rubricPoints, viewerMode, scale, rotation, offset, autoFit,
     math, scoreShortcuts, examScoring, runAction, refreshCurrent, loadMoreTasks, refreshTaskAggregate,
@@ -438,6 +434,9 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     }
   });
   const { submitGrade, markDispute, adoptAiScore, adoptAiFeedback, openDraftConflict, applyDraftConflict, confirmReturnTask } = reviewActions;
+  useAutomaticGradeSubmission({ taskId: selectedTaskId, edit: scoreEdit,
+    ready: canSubmit && !regionEditing && !unsyncedDraft && draftSaveStatus === "saved" && online && !math.dirty && bookmarks.state.isSuccess && !bookmarks.busy && !bookmarks.error && !bookmarks.uncertainTask,
+    marked: bookmarks.state.data?.marked ?? true, submit: () => submitGrade(false, true) });
   const { refreshMath, selectMathEvidenceStep, requestMathSuggestion } = useGradingMathActions({
     queryScope, isCurrentScope,
     ctx, canGrade: canGrade && ctx?.answerScope !== "grading_group", canEditDraft, viewerMode, math, activeTask, mathActionLock,
@@ -446,16 +445,16 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   });
 
   useGradingKeyboard({
-    quickSubmit,
+    quickSubmit: false,
     hasTask: Boolean(ctx),
     canEditDraft: canEditDraft && !regionEditing,
-    canSubmit: canSubmit && !regionEditing,
+    canSubmit: false,
     canReturn: canReturn && !regionEditing,
     canUndoScoreChange,
     hasAiSuggestion: canAdoptAiScore,
     maxScore,
-    rubricPointCount: rubricPoints.length,
-    onSubmit: () => void submitGrade(),
+    rubricPointCount: 0,
+    onSubmit: () => undefined,
     onSetScore: scoreShortcuts.setScore,
     onToggleCriterion: scoreShortcuts.toggleCriterion,
     onAdoptAi: () => void adoptAiScore(),
@@ -473,6 +472,9 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
       return;
     }
     if (bookmarks.busy) { message.info("正在保存标记，请稍后切换。"); return; }
+    if (scoreEdit?.taskId === selectedTaskId && draft.score !== null && ctx?.task.status !== "submitted" && !regionEditing && !bookmarks.state.data?.marked) {
+      message.info("本题分数尚未提交，请等待自动提交；稍后处理可先标记试卷。"); return;
+    }
     if (!regionEditing && unsyncedDraft && !math.dirty) {
       modal.confirm({ title: "评分草稿尚未同步，继续切换？", content: "未同步内容保留本机兜底；重新进入时仍需核对服务端保存状态。", okText: "继续切换", cancelText: "等待保存", onOk: () => { if (isCurrentScope()) change(); } });
       return;
@@ -543,13 +545,14 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         actioning={actioning}
         onRefresh={async () => changeQueueScope(() => { void refreshCurrent(); })}
         onNext={async () => changeQueueScope(() => { void goNext(); })}
+        onPrevious={() => changeQueueScope(() => { if (previousTask) setSelectedTaskId(previousTask.id); })}
+        canPrevious={Boolean(previousTask)}
+        onOpenReference={setReferenceTab}
         onClaim={async () => changeQueueScope(() => { void claimTask(); })}
         onRelease={async () => changeQueueScope(() => { void releaseCurrentTask(); })}
         onResolveConflict={openDraftConflict}
         onReloadConflict={() => loadContext(selectedTaskId, true)}
         readonlyLabel={ctx?.task.status === "submitted" || ctx?.task.status === "completed" ? "已提交·只读" : canManageTasks ? "管理员只读" : "任务只读"}
-        canSubmit={canSubmit && !regionEditing}
-        onSubmit={!regionEditing && !managing && canEditDraft && draftSaveStatus !== "readonly" ? () => void submitGrade() : undefined}
         taskLabel={!managing && ctx ? regionEditing ? "填空整区" : ctx.task.question_no || "当前题目" : undefined}
         scoreLabel={!regionEditing && !managing && ctx ? typeof draft.score === "number" ? `${Number(draft.score.toFixed(1))}/${maxScore} 分` : "未评分" : undefined}
         personalActions={<>
@@ -661,15 +664,15 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
             }
           }}
           editor={{
-            draft, setDraft, quickSubmit, onQuickSubmitChange: setQuickSubmit, maxScore, rubricPoints,
-            selectedGrade, canEditDraft, canSubmit, canReturn, canManageTasks, actioning,
-            onAdoptAiScore: () => void adoptAiScore(), onAdoptAiFeedback: adoptAiFeedback, canAdoptAiScore, onMarkDispute: markDispute, onSubmit: submitGrade
-            , hidePrimarySubmit: !managing
+            draft, setDraft: setEditingDraft, maxScore, rubricPoints,
+            selectedGrade, canEditDraft, canReturn, actioning,
+            onAdoptAiScore: () => void adoptAiScore(), onAdoptAiFeedback: adoptAiFeedback, canAdoptAiScore, onMarkDispute: markDispute
           }}
         />
         </TaskContentContainer>
       </section> : null}
       {canWork ? <ReviewBookmarksDrawer scope={queryScope} controller={bookmarks} open={bookmarksOpen} initialExamId={initialExamId} onClose={() => setBookmarksOpen(false)} /> : null}
+      <Drawer className="grading-reference-drawer" title="题目与评分细则" open={Boolean(referenceTab && ctx)} width="min(1100px, 94vw)" onClose={() => setReferenceTab(null)} destroyOnHidden>{referenceTab && ctx ? <FrozenQuestionReference context={ctx} activeTab={referenceTab} onTabChange={setReferenceTab} /> : null}</Drawer>
       {assignmentPreview ? <AssignmentPreview tasks={assignmentPreview} defaultGrader={assignmentUserId} options={graderOptions} unassignedCount={queue.unassignedCount} busy={actioning === "assign-tasks"} onCancel={() => setAssignmentPreview(null)} onConfirm={assignPlannedTasks} /> : null}
       <WorkbenchOverlays
         goldPaperManagerOpen={goldPaperManagerOpen}

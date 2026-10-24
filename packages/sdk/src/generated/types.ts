@@ -386,7 +386,7 @@ export type ReviewSubjectToolHints = { "subject_code": SubjectCode; "archetype_c
 
 export type ReviewAutomationResult = { "source"?: string; "recognized_answer"?: string; "confidence"?: number; "decision"?: string; "standard_answer"?: unknown; "rule_type"?: string; "score"?: number; "max_score"?: number; "grade_source"?: string; };
 
-export type ReviewTaskContext = { "task": ReviewTask; "expected_revision": number; "question_snapshot": ExamQuestionAssessmentSnapshot; "question": ReviewQuestion; "answer_artifact": ReviewAnswerArtifact; "frozen_rubric": FrozenReviewRubric; "ai_candidates": Array<ReviewAnswerCandidate>; "scoring_evidence": Array<ScoringEvidence>; "ai_second_opinion"?: ReviewAISecondOpinion; "ai_failure"?: ReviewAIFailure; "claim": ReviewTaskClaim; "draft": ReviewDraft | null; "subject_tool_hints": ReviewSubjectToolHints; "automation_result"?: ReviewAutomationResult; };
+export type ReviewTaskContext = { "task": ReviewTask; "expected_revision": number; "question_snapshot": ExamQuestionAssessmentSnapshot; "question": ReviewQuestion; "answer_artifact": ReviewAnswerArtifact; "frozen_rubric": FrozenReviewRubric; "ai_candidates": Array<ReviewAnswerCandidate>; "scoring_evidence": Array<ScoringEvidence>; "ai_second_opinion"?: ReviewAISecondOpinion; "ai_failure"?: ReviewAIFailure; "claim": ReviewTaskClaim; "draft": ReviewDraft | null; "human_grade"?: ReviewCommandHumanGrade; "subject_tool_hints": ReviewSubjectToolHints; "automation_result"?: ReviewAutomationResult; };
 
 export type ReviewTaskContextResponse = { "context": ReviewTaskContext; };
 
@@ -1162,7 +1162,7 @@ export type ReviewCommandArbitrationTask = { "id": string; "tenant_id": string; 
 
 export type ReviewCommandReviewContext = { "question"?: ReviewQuestion; "rubric"?: FrozenReviewRubric; "raw_answer"?: string; "ocr_text"?: string; "ai_suggestion"?: Record<string, unknown>; };
 
-export type ReviewCommandSubmitGradeInput = { "score": number; "rubric_selections": Array<ReviewCommandRubricSelection> | null; "comments": string; "private_note": string; "student_feedback": string; "reason": string; "expected_revision": number; };
+export type ReviewCommandSubmitGradeInput = { "auto_submit"?: boolean; "score": number; "rubric_selections": Array<ReviewCommandRubricSelection> | null; "comments": string; "private_note": string; "student_feedback": string; "reason": string; "expected_revision": number; };
 
 export type ReviewCommandArbitrationSubmitResult = { "arbitration_task": ReviewCommandArbitrationTask; "final_grade": ReviewCommandFinalGrade; };
 

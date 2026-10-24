@@ -12,12 +12,14 @@ export function SharedScoreControl({
   value,
   maxScore,
   rubricPoints,
+  showRubric = true,
   disabled = false,
   onChange
 }: Readonly<{
   value: SharedScoreValue;
   maxScore: number;
   rubricPoints: RubricPoint[];
+  showRubric?: boolean;
   disabled?: boolean;
   onChange: (value: SharedScoreValue) => void;
 }>) {
@@ -45,7 +47,7 @@ export function SharedScoreControl({
         <span>/ {maxScore || "-"}</span>
       </div>
 
-      {rubricPoints.length > 0 ? (
+      {showRubric && (rubricPoints.length > 0 ? (
         <div className="rubric-score-list">
           <div className="rubric-score-head">
             <strong>评分细则</strong>
@@ -87,7 +89,7 @@ export function SharedScoreControl({
             </RubricCriterion>
           ))}
         </div>
-      ) : <p className="grading-inline-note">当前题目没有评分细则，请直接填写最终得分。</p>}
+      ) : <p className="grading-inline-note">当前题目没有评分细则，请直接填写最终得分。</p>)}
     </>
   );
 }

@@ -16,6 +16,7 @@ var (
 	ErrGoldSetChanged      = errors.New("active Gold Set changed after policy configuration")
 	ErrQualificationNeeded = errors.New("current grader qualification is required")
 	ErrSeedTaskForbidden   = errors.New("seed task does not belong to grader")
+	ErrTaskMarked          = errors.New("review task is marked")
 )
 
 type PolicyStatus string
@@ -77,6 +78,7 @@ type Task struct {
 }
 
 type SubmitInput struct {
+	AutoSubmit       bool           `json:"auto_submit,omitempty"`
 	Score            float64        `json:"score"`
 	RubricSelections map[string]any `json:"rubric_selections"`
 	ExpectedRevision int64          `json:"expected_revision"`

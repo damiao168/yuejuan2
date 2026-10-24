@@ -8,7 +8,7 @@ import { ScoreEditor, type ScoreEditorProps } from "./ScoreEditor";
 vi.mock("../ReviewContextInspector", () => ({ ReviewContextInspector: () => <div data-inspector="context" /> }));
 vi.mock("../MathEvidenceInspector", () => ({ MathEvidenceInspector: () => <div data-inspector="formula" /> }));
 vi.mock("./MathRubricMatrix", () => ({ MathRubricMatrix: () => <div data-inspector="matrix" /> }));
-vi.mock("../../SharedScoreControl", () => ({ SharedScoreControl: () => <div data-inspector="score-control" /> }));
+vi.mock("../../SharedScoreControl", () => ({ SharedScoreControl: ({ showRubric }: { showRubric?: boolean }) => <div data-inspector="score-control" data-show-rubric={String(showRubric)} /> }));
 
 function evidenceProps(questionType: string): EvidenceInspectorProps {
   const task = { id: "task", question_id: "question", question_no: "1", answer_segment_id: "segment", source: "omr_ambiguous", status: "in_progress" };
@@ -68,12 +68,14 @@ describe("single-question inspector focus", () => {
 
   it("does not mount editors or submission actions in a read-only task even for an administrator", () => {
     const props = evidenceProps("calculation");
-    const editor = { ...props, setDraft: vi.fn(), rubricPoints: [], canSubmit: false, canReturn: true, canManageTasks: true,
-      onAdoptAiScore: vi.fn(), onMarkDispute: vi.fn(async () => undefined), onSubmit: vi.fn(async () => undefined) } as ScoreEditorProps;
+    const editor = { ...props, setDraft: vi.fn(), rubricPoints: [], canReturn: true,
+      onAdoptAiScore: vi.fn(), onMarkDispute: vi.fn(async () => undefined) } as ScoreEditorProps;
     const readonly = parse(<ScoreEditor {...editor} />);
     expect(readonly.querySelector('[data-inspector="score-control"]')).toBeNull();
     expect(readonly.querySelector("button, input, textarea")).toBeNull();
     const editable = parse(<ScoreEditor {...editor} canEditDraft />);
     expect(editable.querySelector('[data-inspector="score-control"]')).not.toBeNull();
+    expect(editable.querySelector('[data-inspector="score-control"]')?.getAttribute("data-show-rubric")).toBe("false");
+    for (const obsolete of ["提交并下一份", "提交并提名标准卷", "连续阅卷", "Ctrl / ⌘ + Enter"]) expect(editable.textContent).not.toContain(obsolete);
   });
 });

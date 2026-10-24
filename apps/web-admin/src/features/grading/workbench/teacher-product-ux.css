@@ -1,5 +1,6 @@
 .frozen-question-reference { padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
 .frozen-question-reference .ant-tabs-tabpane { max-height: 360px; overflow-y: auto; padding-right: 8px; }
+.grading-reference-drawer .frozen-question-reference .ant-tabs-tabpane { max-height: none; overflow: visible; }
 .frozen-reference-list, .frozen-question-options { padding-left: 24px; }
 .frozen-reference-list li + li { margin-top: 12px; }
 .frozen-question-content h3 { margin: 18px 0 8px; }

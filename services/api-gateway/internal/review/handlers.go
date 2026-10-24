@@ -308,7 +308,7 @@ func (h *Handler) trySubmitSeedGrade(w http.ResponseWriter, r *http.Request, use
 		selections[selection.PointID] = selection.Score
 	}
 	receipt, handled, seedErr := h.seedHook.TrySubmit(r.Context(), user.TenantID, r.PathValue("id"), user.ID, seedquality.SubmitInput{
-		Score: input.Score, RubricSelections: selections, ExpectedRevision: input.ExpectedRevision,
+		AutoSubmit: input.AutoSubmit, Score: input.Score, RubricSelections: selections, ExpectedRevision: input.ExpectedRevision,
 	})
 	// 钩子错误优先于 handled；失败不能回退普通存储，避免同次请求提交另一种任务。
 	if seedErr != nil {
@@ -955,6 +955,8 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusConflict, "invalid_review_transition", "review task transition is invalid")
 	case errors.Is(err, ErrRevisionConflict):
 		httpx.Error(w, r, http.StatusConflict, "resource_version_conflict", "resource was updated in another session; refresh and retry")
+	case errors.Is(err, ErrTaskMarked):
+		httpx.Error(w, r, http.StatusConflict, "review_task_marked", "该答卷已标记，已暂停自动提交；取消标记后可继续")
 	default:
 		httpx.Error(w, r, http.StatusInternalServerError, "review_operation_failed", "review operation failed")
 	}
@@ -998,6 +1000,10 @@ func arbitrationManagerScoped(user auth.User) bool {
 }
 
 func writeSeedHookError(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, seedquality.ErrTaskMarked) {
+		writeStoreError(w, r, ErrTaskMarked)
+		return
+	}
 	if errors.Is(err, commandreceipt.ErrConflict) {
 		writeStoreError(w, r, err)
 		return

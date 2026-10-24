@@ -5,8 +5,10 @@ import json
 import os
 import struct
 import tempfile
+import threading
 import unittest
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
@@ -176,15 +178,89 @@ class ImageProtocolTests(unittest.TestCase):
             self.assertEqual(raised.exception.code, "invalid_request")
             self.assertEqual(len(model.calls), 3)
 
-    def test_no_managed_model_or_unprobed_revision_never_calls_local_text_model(self):
+    def test_no_managed_model_never_calls_local_text_model(self):
         model = StructuredModel()
         app = ImageGradingApplication(settings(), model)
         payload = request()
-        for variant in (payload, {key: value for key, value in payload.items() if key != "managed_model"}):
+        for variant in ({key: value for key, value in payload.items() if key != "managed_model"}, {**payload, "managed_model": {}}):
             with self.assertRaises(AgentError) as raised:
                 app.execute(variant, payload["request_id"], "observe")
             self.assertEqual(raised.exception.code, "visual_model_unavailable")
         self.assertEqual(model.calls, [])
+
+    def test_first_image_request_probes_current_connection_and_reuses_success(self):
+        model = StructuredModel([{"members": [member()]}, {"members": [member()]}])
+        app = ImageGradingApplication(settings(), object())
+        with patch("grading_agent.image_protocol.create_managed_model", return_value=model):
+            first = request()
+            app.execute(first, first["request_id"], "observe")
+            second = {**request(), "request_id": "image-request-2"}
+            app.execute(second, second["request_id"], "observe")
+        self.assertEqual(["image_transport_probe_v3", "student_observation_v3", "student_observation_v3"], [name for name, _ in model.calls])
+
+    def test_changed_connection_requires_new_successful_probe(self):
+        model = StructuredModel([{"members": [member()]}, {"members": [member()]}])
+        app = ImageGradingApplication(settings(), object())
+        with patch("grading_agent.image_protocol.create_managed_model", return_value=model):
+            first = request()
+            app.execute(first, first["request_id"], "observe")
+            second = {**request(), "request_id": "image-request-2", "managed_model": {**CONFIG, "config_revision": "revision-2"}}
+            app.execute(second, second["request_id"], "observe")
+        self.assertEqual(2, sum(name == "image_transport_probe_v3" for name, _ in model.calls))
+
+    def test_restart_reestablishes_probe_without_manual_model_configuration(self):
+        model = StructuredModel([{"members": [member()]}, {"members": [member()]}])
+        with patch("grading_agent.image_protocol.create_managed_model", return_value=model):
+            for _ in range(2):
+                app = ImageGradingApplication(settings(), object())
+                payload = request()
+                app.execute(payload, payload["request_id"], "observe")
+        self.assertEqual(2, sum(name == "image_transport_probe_v3" for name, _ in model.calls))
+
+    def test_automatic_transient_failure_is_shared_until_existing_ttl_expires(self):
+        class RecoveringModel(StructuredModel):
+            def request_structured(self, request_id, messages, schema, name):
+                if not self.calls:
+                    self.calls.append((name, copy.deepcopy(messages)))
+                    raise AgentError("model_timeout", "temporary probe timeout", status=504)
+                return super().request_structured(request_id, messages, schema, name)
+
+        model = RecoveringModel([{"members": [member()]}])
+        app = ImageGradingApplication(settings(), object())
+        with patch("grading_agent.image_protocol.create_managed_model", return_value=model):
+            for key in ("first-image-failure", "second-image-failure"):
+                with self.assertRaises(AgentError):
+                    app.execute({**request(), "request_id": key}, key, "observe")
+            self.assertEqual(1, len(model.calls))
+            created = next(iter(app._automatic_probe_keys.values()))[0]
+            with patch("grading_agent.image_protocol.time.monotonic", return_value=created + app.settings.idempotency_ttl_seconds + 1):
+                payload = {**request(), "request_id": "image-after-transient-ttl"}
+                app.execute(payload, payload["request_id"], "observe")
+        self.assertEqual(["image_transport_probe_v3", "image_transport_probe_v3", "student_observation_v3"], [name for name, _ in model.calls])
+
+    def test_parallel_first_requests_share_probe_before_observing_students(self):
+        entered, release = threading.Event(), threading.Event()
+
+        class PausingModel(StructuredModel):
+            def request_structured(self, request_id, messages, schema, name):
+                if name == "image_transport_probe_v3":
+                    entered.set()
+                    if not release.wait(5):
+                        raise RuntimeError("test probe was not released")
+                return super().request_structured(request_id, messages, schema, name)
+
+        model = PausingModel([{"members": [member()]}, {"members": [member()]}])
+        app = ImageGradingApplication(settings(), object())
+        with patch("grading_agent.image_protocol.create_managed_model", return_value=model), ThreadPoolExecutor(max_workers=2) as executor:
+            first = request()
+            pending = executor.submit(app.execute, first, first["request_id"], "observe")
+            self.assertTrue(entered.wait(5))
+            second = {**request(), "request_id": "parallel-request-2"}
+            other = executor.submit(app.execute, second, second["request_id"], "observe")
+            release.set()
+            pending.result(timeout=5)
+            other.result(timeout=5)
+        self.assertEqual(1, sum(name == "image_transport_probe_v3" for name, _ in model.calls))
 
     def test_provider_question_number_echo_must_match_input_and_unknown_fields_still_fail(self):
         payload = request()
@@ -280,22 +356,21 @@ class ImageProtocolTests(unittest.TestCase):
                                      upstream_http_status=503, upstream_error_code="provider-secret-raw-code")
                 return super().request_structured(request_id, messages, schema, name)
 
-        model = TransientModel()
+        model = TransientModel([{"members": [member()]}])
         app = ImageGradingApplication(settings(), object())
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {
                 "EDUGRADE_TEMPLATE_ANALYSIS_DIAGNOSTICS_DIR": directory}), patch(
                 "grading_agent.image_protocol.create_managed_model", return_value=model):
-            # 同一失败身份不能重新派发；只有新的显式探测通过后，学生观察才取得能力许可。
+            # 同一失败身份不能重新派发；正式请求可建立新探测，但仍须读对图片才能观察学生作答。
             for _ in range(2):
                 with self.assertRaises(AgentError):
                     app.probe({"request_id": "probe-transient-1", "managed_model": CONFIG}, "probe-transient-1")
             self.assertEqual(len(model.calls), 1)
-            with self.assertRaises(AgentError):
-                app.execute(request(), "image-request-1", "observe")
+            app.execute(request(), "image-request-1", "observe")
             result, replay = app.probe({"request_id": "probe-transient-2", "managed_model": CONFIG}, "probe-transient-2")
             self.assertTrue(result["capability"]["visual_supported"])
-            self.assertFalse(replay)
-            self.assertEqual(len(model.calls), 2)
+            self.assertTrue(replay)
+            self.assertEqual(len(model.calls), 3)
             records = [json.loads(path.read_text()) for path in Path(directory).glob("*.json")]
             failed = next(record for record in records if record["metadata"]["status"] == "failed")
             self.assertEqual(failed["metadata"]["probe_failure"]["upstream_http_status"], 503)
@@ -315,6 +390,9 @@ class ImageProtocolTests(unittest.TestCase):
             for key in ("probe-mismatch-1", "probe-mismatch-2"):
                 with self.assertRaises(AgentError):
                     app.probe({"request_id": key, "managed_model": CONFIG}, key)
+            self.assertEqual(len(model.calls), 1)
+            with self.assertRaises(AgentError):
+                app.execute(request(), "image-request-1", "observe")
             self.assertEqual(len(model.calls), 1)
 
     def test_missing_input_blank_without_evidence_and_teacher_evidence_are_rejected(self):

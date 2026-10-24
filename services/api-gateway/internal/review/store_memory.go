@@ -13,19 +13,20 @@ import (
 )
 
 type MemoryStore struct {
-	receipts      commandreceipt.Memory
-	mu            sync.RWMutex
-	next          int
-	contexts      map[string]Context
-	tasks         map[string]ReviewTask
-	claims        map[string]memoryTaskClaim
-	drafts        map[string]ReviewDraft
-	grades        map[string][]HumanGrade
-	policies      map[string]DoubleMarkPolicy
-	sessions      map[string]DoubleMarkSession
-	sessionByTask map[string]string
-	arbitrations  map[string]ArbitrationTask
-	finalGrades   map[string]FinalGrade
+	autoSubmitBookmarks AutoSubmitBookmarkGuard
+	receipts            commandreceipt.Memory
+	mu                  sync.RWMutex
+	next                int
+	contexts            map[string]Context
+	tasks               map[string]ReviewTask
+	claims              map[string]memoryTaskClaim
+	drafts              map[string]ReviewDraft
+	grades              map[string][]HumanGrade
+	policies            map[string]DoubleMarkPolicy
+	sessions            map[string]DoubleMarkSession
+	sessionByTask       map[string]string
+	arbitrations        map[string]ArbitrationTask
+	finalGrades         map[string]FinalGrade
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -320,7 +321,7 @@ type memoryTaskClaim struct {
 	ExpiresAt time.Time
 }
 
-func (s *MemoryStore) SubmitGrade(requestCtx context.Context, tenantID string, id string, reviewerID string, input SubmitGradeInput) (SubmitResult, error) {
+func (s *MemoryStore) submitGrade(requestCtx context.Context, tenantID string, id string, reviewerID string, input SubmitGradeInput, marked bool) (SubmitResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var replay SubmitResult
@@ -334,11 +335,26 @@ func (s *MemoryStore) SubmitGrade(requestCtx context.Context, tenantID string, i
 	if task.AssignedTo != reviewerID {
 		return SubmitResult{}, ErrForbidden
 	}
+	// 新自动命令只读回已提交的正式分，绝不把新输入当作改分；原命令重放已在上方返回。
+	if input.AutoSubmit && submittedReviewStatus(task.Status) {
+		grade, found := s.latestGradeLocked(tenantID, task.ID)
+		if !found || grade.ReviewerID != reviewerID {
+			return SubmitResult{}, ErrInvalidTransition
+		}
+		result := SubmitResult{Task: cloneTask(task), Grade: cloneGrade(grade)}
+		if err := s.receipts.Save(requestCtx, tenantID, reviewerID, "review.submit", id, input, result); err != nil {
+			return SubmitResult{}, err
+		}
+		return result, nil
+	}
 	if !canSubmit(task.Status) {
 		return SubmitResult{}, ErrInvalidTransition
 	}
 	if input.ExpectedRevision <= 0 || task.Revision != input.ExpectedRevision {
 		return SubmitResult{}, ErrRevisionConflict
+	}
+	if input.AutoSubmit && marked {
+		return SubmitResult{}, ErrTaskMarked
 	}
 	ctx, ok := s.contexts[key(tenantID, task.AnswerSegmentID)]
 	if !ok {
@@ -1069,8 +1085,9 @@ func validateSubmit(input SubmitGradeInput, ctx Context) error {
 	if err != nil {
 		return err
 	}
-	// 有细则时总分须等于所选得分点之和；只容忍 0.0001 分的浮点误差，不在这里改分或四舍五入。
-	if hasRubric && math.Abs(input.Score-selectedScore) > 0.0001 {
+	// 自动模式未勾选采分点时，最终分直接作为人工评分；已有真实选择仍须核对累计值。
+	// 普通提交继续要求总分与所选得分点之和相等，只容忍 0.0001 分浮点误差。
+	if hasRubric && (!input.AutoSubmit || len(input.RubricSelections) > 0) && math.Abs(input.Score-selectedScore) > 0.0001 {
 		return ErrInvalidInput
 	}
 	return nil

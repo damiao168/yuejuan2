@@ -339,7 +339,7 @@ func (s *PostgresStore) SubmitGrade(ctx context.Context, tenantID string, id str
 		return replay, err
 	}
 	// 回执未命中后，必须先锁父评分运行，再执行下面的任务行锁。
-	runID, err := lockScoringRunForGradeSubmissionTx(ctx, tx, tenantID, id)
+	runID, readOnlyParent, err := lockScoringRunForGradeSubmissionTx(ctx, tx, tenantID, id, input.AutoSubmit)
 	if err != nil {
 		return SubmitResult{}, err
 	}
@@ -355,11 +355,41 @@ FOR UPDATE
 	if task.AssignedTo != reviewerID {
 		return SubmitResult{}, ErrForbidden
 	}
+	if input.AutoSubmit && submittedReviewStatus(task.Status) {
+		// 重新打开已提交任务只能读回本人正式分；传入的新分数和旧版本号均不构成改分授权。
+		grade, err := scanGrade(tx.QueryRowContext(ctx, `
+SELECT id::text, tenant_id::text, review_task_id::text, answer_segment_id::text, reviewer_id::text,
+  score::float8, max_score::float8, rubric_selections, comments, private_note, student_feedback,
+  reason, grade_round, COALESCE(ai_grade_id::text, ''), created_at
+FROM human_grade WHERE tenant_id=$1::uuid AND review_task_id=$2::uuid AND reviewer_id=$3::uuid AND deleted_at IS NULL
+ORDER BY created_at DESC,id DESC LIMIT 1`, tenantID, task.ID, reviewerID))
+		if err != nil {
+			return SubmitResult{}, err
+		}
+		result := SubmitResult{Task: task, Grade: grade}
+		if err := commandreceipt.Save(ctx, tx, identity, input, result); err != nil {
+			return SubmitResult{}, err
+		}
+		return result, tx.Commit()
+	}
+	if readOnlyParent {
+		return SubmitResult{}, ErrInvalidTransition
+	}
 	if !canSubmit(task.Status) {
 		return SubmitResult{}, ErrInvalidTransition
 	}
 	if input.ExpectedRevision <= 0 || task.Revision != input.ExpectedRevision {
 		return SubmitResult{}, ErrRevisionConflict
+	}
+	if input.AutoSubmit {
+		// 与标记 Put 共用父运行→任务锁；持有任务锁后再查标记，首次新增也不能插入检查与写分之间。
+		var marked bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM review_bookmark WHERE tenant_id=$1::uuid AND owner_id=$2::uuid AND review_task_id=$3::uuid AND deleted_at IS NULL)`, tenantID, reviewerID, task.ID).Scan(&marked); err != nil {
+			return SubmitResult{}, err
+		}
+		if marked {
+			return SubmitResult{}, ErrTaskMarked
+		}
 	}
 	taskContext, err := s.loadContextTx(ctx, tx, tenantID, task.AnswerSegmentID)
 	if err != nil {
@@ -479,28 +509,32 @@ FROM review_task rt WHERE rt.tenant_id=$1::uuid AND rt.id=$2::uuid AND rt.scorin
 	return result, nil
 }
 
-// 先锁父评分运行再锁任务，与取消流程保持同一锁序；已取消的运行不能再写入成绩。
-func lockScoringRunForGradeSubmissionTx(ctx context.Context, tx *sql.Tx, tenantID, id string) (sql.NullString, error) {
+// 先锁父评分运行再锁任务，与取消和标记写入保持同一锁序；已取消的运行不能再写入成绩。
+// 已完成父运行只允许自动请求读回已提交分数，调用方必须在锁住任务后再次核对终态。
+func lockScoringRunForGradeSubmissionTx(ctx context.Context, tx *sql.Tx, tenantID, id string, autoSubmit bool) (sql.NullString, bool, error) {
 	var runID sql.NullString
 	if err := tx.QueryRowContext(ctx, `SELECT scoring_run_id::text FROM review_task WHERE tenant_id=$1::uuid AND id::text=$2 AND deleted_at IS NULL`, tenantID, id).Scan(&runID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return runID, ErrNotFound
+			return runID, false, ErrNotFound
 		}
-		return runID, err
+		return runID, false, err
 	}
 	if runID.Valid {
 		var runStatus string
 		if err := tx.QueryRowContext(ctx, `SELECT status FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, runID.String).Scan(&runStatus); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return runID, ErrInvalidTransition
+				return runID, false, ErrInvalidTransition
 			}
-			return runID, err
+			return runID, false, err
+		}
+		if runStatus == "completed" && autoSubmit {
+			return runID, true, nil
 		}
 		if runStatus != "queued" && runStatus != "processing" && runStatus != "needs_review" && runStatus != "failed" {
-			return runID, ErrInvalidTransition
+			return runID, false, ErrInvalidTransition
 		}
 	}
-	return runID, nil
+	return runID, false, nil
 }
 
 // 双评尚无终分也同步待复核数；已有终分先写当前成绩，写入失败不能继续更新运行统计。

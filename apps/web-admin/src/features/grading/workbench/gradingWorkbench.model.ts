@@ -234,12 +234,17 @@ export function createInitialDraft(ctx: WorkbenchContext | null): ScoreDraft {
   const ocrText = ctx?.ocrText || ctx?.ocrResults.map((item) => item.text).filter(Boolean).join("\n") || "";
   const selections: Record<string, number> = {};
   for (const point of ctx?.question?.rubric?.points ?? []) selections[point.id] = 0;
+  const grade = ctx?.reviewContext?.human_grade;
+  // 回看本人已交答卷必须使用正式分，不能用已删除的草稿或 AI 建议代替。
+  const submitted = ctx?.task && ["submitted", "completed"].includes(ctx.task.status) && grade?.review_task_id === ctx.task.id
+    && grade.reviewer_id === ctx.task.assigned_to ? grade : undefined;
+  for (const point of submitted?.rubric_selections ?? []) selections[point.point_id] = point.score;
   return {
-    score: null,
-    comments: "",
-    privateNote: "",
-    studentFeedback: "",
-    reason: "",
+    score: submitted?.score ?? null,
+    comments: submitted?.comments ?? "",
+    privateNote: submitted?.private_note ?? "",
+    studentFeedback: submitted?.student_feedback ?? "",
+    reason: submitted?.reason ?? "",
     disputeReason: "",
     rubricSelections: selections,
     answerText: ocrText

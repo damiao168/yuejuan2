@@ -90,6 +90,11 @@ func (h *Handler) GetTaskContext(w http.ResponseWriter, r *http.Request) {
 			contextValue.AIFailure = &AIFailure{FailureKind: taskContextFailureKind(failureKind)}
 			contextValue.AICandidates = []AnswerCandidate{}
 			contextValue.AISecondOpinion = nil
+			// 当前执行已失败时，旧成功建议中的转写也不能继续冒充本次图像识别结果。
+			if contextValue.AnswerArtifact.Source == imageObservationSource {
+				contextValue.AnswerArtifact.OCRText = ""
+				contextValue.AnswerArtifact.Source = ""
+			}
 			if contextValue.AutomationResult != nil && contextValue.AutomationResult.GradeSource == "ai_suggestion" {
 				copy := *contextValue.AutomationResult
 				copy.Score, copy.MaxScore = nil, nil
@@ -101,6 +106,18 @@ func (h *Handler) GetTaskContext(w http.ResponseWriter, r *http.Request) {
 		contextValue.AnswerArtifact.OriginalImageURL = ""
 	}
 	contextValue.Claim.CanRenew = contextValue.Claim.CanRenew && contextValue.Task.AssignedTo == user.ID
+	if contextValue.Task.AssignedTo == user.ID && submittedReviewStatus(contextValue.Task.Status) {
+		if reader, supported := h.store.(SubmittedGradeReader); supported {
+			// 正式提交会清除草稿；回看必须展示本人正式评分，不能用 AI 建议或另一阅卷人的成绩代替。
+			grade, gradeErr := reader.GetSubmittedGrade(r.Context(), user.TenantID, contextValue.Task.ID, user.ID)
+			if gradeErr == nil {
+				contextValue.HumanGrade = &grade
+			} else if !errors.Is(gradeErr, ErrNotFound) {
+				writeStoreError(w, r, gradeErr)
+				return
+			}
+		}
+	}
 	// 管理员可查看任务，但这里也只附带当前登录者本人负责的草稿。
 	if contextValue.Task.AssignedTo == user.ID {
 		draft, draftErr := h.store.(DraftStore).GetDraft(r.Context(), user.TenantID, contextValue.Task.ID, user.ID)

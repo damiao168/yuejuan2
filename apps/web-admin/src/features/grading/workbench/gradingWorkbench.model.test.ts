@@ -12,6 +12,12 @@ function contextWith(points: Array<{ id: string; description: string; score: num
 }
 
 describe("grading workbench draft model", () => {
+  it("回看已提交答卷只使用本任务本人正式分，保留明确的零分", () => {
+    const context = { ...contextWith([], "作答"), task: { id: "task", status: "submitted", assigned_to: "teacher" },
+      reviewContext: { human_grade: { review_task_id: "task", reviewer_id: "teacher", score: 0, comments: "教师记录", rubric_selections: [] } } } as unknown as WorkbenchContext;
+    expect(createInitialDraft(context)).toMatchObject({ score: 0, comments: "教师记录" });
+    expect(createInitialDraft({ ...context, task: { ...context.task, id: "other" } }).score).toBeNull();
+  });
   it("creates a fresh draft for each task without leaking rubric selections", () => {
     const first = createInitialDraft(contextWith([
       { id: "step-1", description: "步骤一", score: 2 },

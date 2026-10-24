@@ -9,7 +9,6 @@ import { choiceReviewReason, isChoiceReview, requiresExplicitSecondOpinion } fro
 import { AnswerEvidencePane } from "./AnswerEvidencePane";
 import { EvidenceInspector } from "./EvidenceInspector";
 import { ScoreEditor } from "./ScoreEditor";
-import { FrozenQuestionReference } from "./FrozenQuestionReference";
 
 function emptyQueueDescription(hasTasks: boolean, canManageTasks: boolean): string {
   if (hasTasks) {
@@ -57,7 +56,6 @@ export function WorkbenchTaskContent({ context, loading, error, hasTasks, canMan
     <main className="grading-main">
       {context.warnings.length > 0 ? <Alert type="warning" showIcon message="AI 辅助不可用" description={context.warnings.map((warning) => getSafeUserText(warning, "智能辅助暂时不可用")).join("；")} /> : null}
       {canManageTasks && !isChoiceReview(context.reviewContext) ? <WorkbenchReasonBanner context={context} selectedGrade={selectedGrade} subjectCode={subjectCode} canAdoptAiScore={canAdoptAiScore} /> : null}
-      <details className="grading-reference-details" key={context.task.id}><summary>题目、参考答案与评分细则</summary><FrozenQuestionReference context={context} /></details>
       <section className="grading-panels">
         <AnswerEvidencePane {...answer} context={context} />
         <aside className="grading-inspector">

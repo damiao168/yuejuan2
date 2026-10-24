@@ -2,7 +2,9 @@ package server
 
 import (
 	"edugrade-enterprise/services/api-gateway/internal/config"
+	"edugrade-enterprise/services/api-gateway/internal/review"
 	"edugrade-enterprise/services/api-gateway/internal/reviewbookmark"
+	"edugrade-enterprise/services/api-gateway/internal/seedquality"
 	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
 
@@ -27,6 +29,16 @@ func newPersonalReviewBookmarkHandler(cfg config.Config, stores GradingQualitySt
 	}
 	if store == nil && dependencies.DB == nil {
 		store = reviewbookmark.NewMemoryStore(provider)
+	}
+	if reviews, ok := stores.Review.(*review.MemoryStore); ok {
+		if guard, supported := store.(review.AutoSubmitBookmarkGuard); supported {
+			reviews.WithAutoSubmitBookmarkGuard(guard)
+		}
+	}
+	if seeds, ok := stores.SeedQuality.(*seedquality.MemoryStore); ok {
+		if guard, supported := store.(seedquality.AutoSubmitBookmarkGuard); supported {
+			seeds.WithAutoSubmitBookmarkGuard(guard)
+		}
 	}
 	images, _ := dependencies.SegmentImage.(segment.VersionedCropImageReader)
 	evidence := reviewbookmark.NewEvidenceService(provider, images, []byte(cfg.ModelSecrets.MasterKey))

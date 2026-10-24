@@ -30,6 +30,17 @@ func (s *MemoryStore) WithProvider(provider SourceProvider) *MemoryStore {
 	return s
 }
 
+// WithReviewTaskBookmarkLock 供正式自动提交核对个人标记；不调用来源提供器，任务归属由回调在任务锁内检查。
+// 先持标记锁再进入任务锁，与 Put 的来源读取顺序相同，避免检查标记后又被并发新增。
+func (s *MemoryStore) WithReviewTaskBookmarkLock(_ context.Context, tenantID, reviewerID, taskID string, operation func(marked bool) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	id := s.targets[targetKey(auth.User{TenantID: tenantID, ID: reviewerID}, taskID)]
+	record, found := s.records[id]
+	marked := found && record.TenantID == tenantID && record.OwnerID == reviewerID && (record.ReviewTaskID == taskID || record.SeedTaskID == taskID) && record.DeletedAt == nil
+	return operation(marked)
+}
+
 func targetKey(user auth.User, task string) string { return user.TenantID + ":" + user.ID + ":" + task }
 
 func (s *MemoryStore) resolve(ctx context.Context, user auth.User, task string) (Source, error) {

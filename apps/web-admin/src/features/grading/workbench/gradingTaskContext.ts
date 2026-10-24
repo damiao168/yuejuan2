@@ -57,7 +57,8 @@ export async function loadTaskContext(queryClient: QueryClient, scope: ReviewTas
     created_at: task.created_at,
     confidence: artifact.confidence
   } as AnswerSegment;
-  const recognizedText = reviewContext.automation_result?.recognized_answer || artifact.ocr_text || artifact.raw_answer || "";
+  const recognizedText = artifact.source === "image_observation" ? artifact.ocr_text || ""
+    : reviewContext.automation_result?.recognized_answer || artifact.ocr_text || artifact.raw_answer || "";
   return {
     task,
     reviewContext,

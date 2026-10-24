@@ -194,6 +194,16 @@ func (s *PostgresStore) CompleteTask(ctx context.Context, tenantID, taskID, grad
 	if task.Status != "in_progress" || task.Revision != input.ExpectedRevision {
 		return Task{}, Observation{}, ErrConflict
 	}
+	if input.AutoSubmit {
+		// 标记 Put 同样先锁种子任务；检查与写观察处于同一事务，不能被首次新增标记穿过。
+		var marked bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM review_bookmark WHERE tenant_id=$1::uuid AND owner_id=$2::uuid AND seed_task_id=$3::uuid AND deleted_at IS NULL)`, tenantID, graderID, taskID).Scan(&marked); err != nil {
+			return Task{}, Observation{}, err
+		}
+		if marked {
+			return Task{}, Observation{}, ErrTaskMarked
+		}
+	}
 	selections, _ := json.Marshal(cloneObject(observation.RubricSelections))
 	traits, criteria := nullableJSON(observation.TraitObservation), nullableJSON(observation.CriterionObservation)
 	var agreement any

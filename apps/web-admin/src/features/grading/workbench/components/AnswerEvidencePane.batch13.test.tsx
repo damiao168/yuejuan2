@@ -51,7 +51,7 @@ describe("AnswerEvidencePane batch13 rendering", () => {
     const empty = renderPane({ preview: null });
     expect(empty.textContent).toContain("暂无答卷页面");
     const ocr = renderPane({ preview: null, viewerMode: "ocr" });
-    expect(ocr.querySelector("pre")?.textContent).toBe("当前页面暂无识别文本。");
+    expect(ocr.querySelector("pre")?.textContent).toBe("本题尚无识别文本，请查看答题区域。");
     expect(ocr.querySelector<HTMLElement>(".answer-viewer-stage")?.style.transform).toBe("translate(7px, -3px) scale(2) rotate(90deg)");
   });
 

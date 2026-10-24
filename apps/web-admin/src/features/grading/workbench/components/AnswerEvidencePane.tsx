@@ -1,6 +1,6 @@
 import { useId, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
 import { Alert, Button, Segmented, Space, Tooltip } from "antd";
-import { Maximize2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import type { RubricPoint } from "../../../../api/papers";
 import { EmptyState, LoadingState } from "../../../../components/PageState";
 import { ReviewAnnotationWorkspace } from "../../../../components/features/review-annotation";
@@ -41,7 +41,6 @@ export function AnswerEvidencePane({
   previewLoading,
   viewerMode,
   scale,
-  autoFit,
   imageSize,
   rotation,
   offset,
@@ -53,7 +52,6 @@ export function AnswerEvidencePane({
   onChangeViewerMode,
   onZoom,
   onRotate,
-  onFit,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -116,7 +114,6 @@ export function AnswerEvidencePane({
             ]}
             onChange={onChangeViewerMode}
           />
-          <Tooltip title="适配窗口"><Button type={autoFit ? "primary" : "default"} icon={<Maximize2 size={14} />} onClick={onFit} aria-label="适配窗口" /></Tooltip>
         </Space>
       </div>
       {viewerMode === "group" ? <p className="muted">正在查看整区，当前录入第 {context.task.question_no} 题得分。</p> : null}
@@ -153,8 +150,13 @@ export function AnswerEvidencePane({
   );
 }
 
-function AnswerOcrPreview({ context }: Readonly<{ context: Pick<WorkbenchContext, "ocrText" | "ocrResults"> }>) {
-  const ocrText = context.ocrText || context.ocrResults.map((item) => item.text).filter(Boolean).join("\n") || "当前页面暂无识别文本。";
+function AnswerOcrPreview({ context }: Readonly<{ context: WorkbenchContext }>) {
+  const reason = context.task.reason_code;
+  const missingText = ["visual_model_unavailable", "visual_model_not_configured"].includes(reason ?? "")
+    ? "本轮尚未生成识别文本：图像阅卷模型当时不可用，请联系管理员恢复后继续识别。"
+    : context.reviewContext?.ai_failure ? "本轮识别未完成，请先查看答题区域。"
+    : "本题尚无识别文本，请查看答题区域。";
+  const ocrText = context.ocrText || context.ocrResults.map((item) => item.text).filter(Boolean).join("\n") || missingText;
   return (
     <>
       <pre className="ocr-overlay-text">{ocrText}</pre>

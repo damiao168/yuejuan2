@@ -2,14 +2,15 @@ import { useContext, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { GradingToolbarContext } from "../../../../components/GradingToolbarContext";
 import { Alert, Button, Progress, Space } from "antd";
-import { ArrowRight, BadgeCheck, CheckCircle2, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, BadgeCheck, RefreshCw } from "lucide-react";
 import type { DraftSaveStatus, ReviewerProgress } from "../gradingWorkbench.types";
+import type { FrozenReferenceTab } from "./FrozenQuestionReference";
 
 const draftStatusLabel: Record<DraftSaveStatus, string> = {
   idle: "尚未修改",
   pending: "有未保存修改",
   saving: "正在保存到服务端",
-  saved: "已保存到服务端",
+  saved: "",
   offline: "仅本页暂存，待同步",
   conflict: "草稿冲突",
   error: "保存失败，仅本页暂存",
@@ -32,14 +33,15 @@ export interface WorkbenchHeaderProps {
   actioning: string | null;
   onRefresh: () => Promise<void>;
   onNext: () => Promise<void>;
+  onPrevious?: () => void | Promise<void>;
+  canPrevious?: boolean;
+  onOpenReference?: (tab: FrozenReferenceTab) => void;
   onClaim: () => Promise<void>;
   onRelease: () => Promise<void>;
   onReloadConflict: () => Promise<void>;
   onResolveConflict: () => Promise<void>;
   personalActions?: ReactNode;
   readonlyLabel?: string;
-  canSubmit?: boolean;
-  onSubmit?: () => void;
   taskLabel?: string;
   scoreLabel?: string;
 }
@@ -51,7 +53,7 @@ function DraftStatusNotice({ draftSaveStatus, onResolveConflict, onReloadConflic
       {draftSaveStatus === "conflict" && <Alert type="error" showIcon message="草稿已被其他会话更新" description="为防止覆盖其他会话的修改，自动保存已暂停。可逐项选择本页或服务端内容，再按服务端新版本重新保存。" action={<Space wrap><Button type="primary" onClick={() => void onResolveConflict()}>逐项合并</Button><Button onClick={() => void onReloadConflict()}>放弃本页修改</Button></Space>} />}
       {draftSaveStatus === "offline" && <Alert type="warning" showIcon message="当前离线，未同步内容仅在本页暂存" description="关闭或刷新页面可能丢失未同步内容；恢复网络后会尝试保存到服务端。" />}
       {draftSaveStatus === "error" && <Alert type="warning" showIcon message="草稿尚未保存到服务端" description="未同步内容仅在本页短暂保留，关闭或刷新可能丢失；检查网络后再确认保存状态。" />}
-      {draftSaveStatus === "readonly" && <Alert type="info" showIcon message={readonlyLabel || "管理员只读检查"} description="当前材料只读；评分草稿与最终提交只能在本人可编辑的任务中完成。" />}
+      {draftSaveStatus === "readonly" && readonlyLabel !== "已提交·只读" && <Alert type="info" showIcon message={readonlyLabel || "管理员只读检查"} description="当前材料只读；评分草稿与最终提交只能在本人可编辑的任务中完成。" />}
     </>
   );
 }
@@ -85,19 +87,22 @@ export function WorkbenchHeader({
   actioning,
   onRefresh,
   onNext,
+  onPrevious,
+  canPrevious = false,
+  onOpenReference,
   onClaim,
   onReloadConflict,
   onResolveConflict,
   personalActions,
   readonlyLabel,
-  canSubmit,
-  onSubmit,
   taskLabel,
   scoreLabel
 }: Readonly<WorkbenchHeaderProps>) {
   const showReviewerActions = !canManageTasks || queueScope === "mine";
   const toolbarTarget = useContext(GradingToolbarContext);
   const { incompleteProgress, totalLabel, progressSummary } = progressLabels({ canManageTasks, hasContext, myProgress, remainingCount, progressComplete });
+  // 正常保存不占据顶栏；分区评分提示及未保存、异常状态仍按原规则显示。
+  const draftLabel = draftStatusText ?? (draftSaveStatus === "readonly" ? readonlyLabel || draftStatusLabel[draftSaveStatus] : draftStatusLabel[draftSaveStatus]);
   const toolbar = <section className="grading-topbar">
         <div className="grading-work-title">
           {canManageTasks ? <h1>阅卷管理</h1> : null}
@@ -106,10 +111,11 @@ export function WorkbenchHeader({
           <span>{progressSummary}</span>
         </div>
         <Space wrap={!toolbarTarget}>
-          {hasContext ? <span className={`draft-save-status ${draftSaveStatus}`}>{draftStatusText ?? (draftSaveStatus === "readonly" ? readonlyLabel || draftStatusLabel[draftSaveStatus] : draftStatusLabel[draftSaveStatus])}</span> : null}
+          {hasContext && draftLabel ? <span className={`draft-save-status ${draftSaveStatus}`}>{draftLabel}</span> : null}
           {personalActions ? <div className="grading-personal-actions">{personalActions}</div> : null}
-          {onSubmit ? <Button type="primary" icon={<CheckCircle2 size={16} />} disabled={!canSubmit} loading={actioning === "submit"} onClick={onSubmit}>提交并下一份</Button> : null}
+          {onOpenReference ? <><Button disabled={!hasContext} onClick={() => onOpenReference("rules")}>评分细则</Button><Button disabled={!hasContext} onClick={() => onOpenReference("question")}>题目与答案</Button></> : null}
           <Button icon={<RefreshCw size={16} />} onClick={() => void onRefresh()} loading={loading}>刷新</Button>
+          {showReviewerActions && onPrevious ? <Button icon={<ArrowLeft size={16} />} onClick={() => void onPrevious()} disabled={!canWork || !canPrevious}>上一份</Button> : null}
           {showReviewerActions ? <Button icon={<ArrowRight size={16} />} onClick={() => void onNext()} disabled={!canWork}>下一份</Button> : null}
           {/* 当前答卷打开后已自动续租；只有空选择且仍有任务时才需要显式领取，避免重复领取看起来毫无变化。 */}
           {canWork && showReviewerActions && !hasContext && !loading && remainingCount > 0 ? <Button type="primary" icon={<BadgeCheck size={16} />} disabled={Boolean(actioning)} loading={actioning === "claim-task"} onClick={() => void onClaim()}>领取任务</Button> : null}

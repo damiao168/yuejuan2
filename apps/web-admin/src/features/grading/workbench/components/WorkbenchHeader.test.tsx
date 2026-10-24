@@ -50,15 +50,15 @@ describe("WorkbenchHeader status rendering", () => {
     expect(html.match(/class="ant-alert-message"/g)).toHaveLength(1);
   });
 
-  it("does not show a failure notice for a saved draft", () => {
+  it("does not show routine save text or a failure notice for a saved draft", () => {
     const html = renderToStaticMarkup(<WorkbenchHeader {...baseProps} />);
     expect(html).not.toContain("ant-alert-message");
-    expect(html).toContain("已保存到服务端");
+    expect(html).not.toContain("draft-save-status");
   });
 
-  it("keeps daily grading actions and the draft status without special queues or release controls", () => {
-    const html = renderToStaticMarkup(<WorkbenchHeader {...baseProps} personalActions={<button>标记试卷</button>} canSubmit onSubmit={vi.fn()} />);
-    for (const label of ["标记试卷", "提交并下一份", "刷新", "下一份", "已保存到服务端"]) expect(html).toContain(label);
-    for (const label of ["退回队列", "重评队列", "暂放"]) expect(html).not.toContain(label);
+  it("keeps daily grading actions without routine save text, special queues or release controls", () => {
+    const html = renderToStaticMarkup(<WorkbenchHeader {...baseProps} personalActions={<button>标记试卷</button>} onOpenReference={vi.fn()} onPrevious={noop} canPrevious />);
+    for (const label of ["标记试卷", "评分细则", "题目与答案", "刷新", "上一份", "下一份"]) expect(html).toContain(label);
+    for (const label of ["退回队列", "重评队列", "暂放", "提交并下一份"]) expect(html).not.toContain(label);
   });
 });

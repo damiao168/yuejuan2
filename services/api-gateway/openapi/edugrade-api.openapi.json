@@ -32663,6 +32663,10 @@
             "nullable": true,
             "description": "The assigned reviewer's current draft, or null on first open and for queue managers."
           },
+          "human_grade": {
+            "$ref": "#/components/schemas/ReviewCommandHumanGrade",
+            "description": "Only the currently assigned reviewer's own latest submitted grade on this submitted/completed task. Read-only; never another reviewer's score or a reference score."
+          },
           "subject_tool_hints": {
             "$ref": "#/components/schemas/ReviewSubjectToolHints"
           },
@@ -46334,6 +46338,11 @@
       "ReviewCommandSubmitGradeInput": {
         "type": "object",
         "properties": {
+          "auto_submit": {
+            "type": "boolean",
+            "description": "为 true 时，持锁核对本人的未删除标记；已标记返回 409 review_task_marked，不写入成绩。未提供采分点选择时直接使用最终分；已提交任务仅返回本人实际正式分，不修改成绩。",
+            "default": false
+          },
           "score": {
             "type": "number"
           },

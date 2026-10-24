@@ -17,6 +17,7 @@ var (
 	ErrForbidden         = errors.New("review action forbidden")
 	ErrInvalidTransition = errors.New("invalid review task transition")
 	ErrRevisionConflict  = errors.New("resource revision conflict")
+	ErrTaskMarked        = errors.New("review task is marked")
 )
 
 type Context struct {
@@ -119,6 +120,8 @@ type BatchAssignInput struct {
 }
 
 type SubmitGradeInput struct {
+	// 自动提交仍走正式写分门禁；省略此字段保留原有人工提交与命令指纹。
+	AutoSubmit       bool              `json:"auto_submit,omitempty"`
 	Score            float64           `json:"score"`
 	RubricSelections []RubricSelection `json:"rubric_selections"`
 	Comments         string            `json:"comments"`

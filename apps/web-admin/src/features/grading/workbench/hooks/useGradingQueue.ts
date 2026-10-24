@@ -5,7 +5,7 @@ import { listAllActiveGraders, type ManagedUser } from "../../../../api/users";
 import { displayNameOrUsername } from "../../../../auth/session";
 import { formatError } from "../gradingWorkbench.model";
 import type { ReviewerProgress, TaskFilter } from "../gradingWorkbench.types";
-import { appendTaskPage, followingVisibleActionableTask, visibleTasks } from "../taskPaging";
+import { appendTaskPage, followingVisibleActionableTask, precedingVisibleTask, visibleTasks } from "../taskPaging";
 import { hashQueryParam } from "../../../../router/query";
 import { useGradingQueuePages } from "./useGradingQueuePages";
 import { examSubjectLabel } from "../../../../constants/examStatus";
@@ -147,11 +147,12 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
   useEffect(() => {
     // 整区内提交当前题后，其它评分行可能尚未保存；由教师明确切换，再离开这张共享图。
     if (selectedTaskId && heldGroupTask?.current === selectedTaskId) return;
+    if (taskFilter === "active" && tasks.some(task => task.id === selectedTaskId && task.assigned_to === currentUserId && ["submitted", "completed"].includes(task.status))) return;
     if (loadingTasks || filteredTasks.some((task) => task.id === selectedTaskId)) return;
     if (selectedTaskId && hasMoreTasks && !tasks.some((task) => task.id === selectedTaskId)) return;
     if (!selectedTaskId && suppressAutoSelectRef.current) return;
     setSelectedTaskId(filteredTasks[0]?.id ?? "");
-  }, [filteredTasks, hasMoreTasks, loadingTasks, selectedTaskId, tasks, heldGroupTask]);
+  }, [filteredTasks, hasMoreTasks, loadingTasks, selectedTaskId, tasks, heldGroupTask, currentUserId, taskFilter]);
   useEffect(() => {
     const available = new Set(assignableTasks.map((task) => task.id));
     setAssignmentTaskIds((current) => current.filter((taskId) => available.has(taskId)));
@@ -211,6 +212,9 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
   const nextTask = useMemo(() => followingVisibleActionableTask(tasks, selectedTaskId,
     { canManageTasks, initialExamId: effectiveExamId, keyword, taskFilter, questionId: questionFilter, subject: subjectFilter }, !hasMoreTasks),
     [canManageTasks, hasMoreTasks, effectiveExamId, keyword, questionFilter, subjectFilter, selectedTaskId, taskFilter, tasks]);
+  const previousTask = useMemo(() => precedingVisibleTask(tasks, selectedTaskId,
+    { canManageTasks, initialExamId: effectiveExamId, keyword, taskFilter, questionId: questionFilter, subject: subjectFilter }),
+    [canManageTasks, effectiveExamId, keyword, questionFilter, subjectFilter, selectedTaskId, taskFilter, tasks]);
   useEffect(() => {
     const fromTaskId = pendingNextRef.current;
     if (!fromTaskId || loadingTasks || loadingMoreTasks) return;
@@ -256,7 +260,7 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
     selectedTaskId, setSelectedTaskId, loadingTasks, loadingMoreTasks, hasMoreTasks, pageError, taskError,
     nextTaskCursor, graders, gradersError, assignmentUserId, setAssignmentUserId, assignmentTaskIds,
     setAssignmentTaskIds, filteredTasks, assignableTasks, graderOptions, graderNames, reviewerProgress,
-    myProgress, remainingCount, selectedIndex, prefetchTasks, nextTask, pendingNextRef, suppressAutoSelectRef,
+    myProgress, remainingCount, selectedIndex, prefetchTasks, nextTask, previousTask, pendingNextRef, suppressAutoSelectRef,
     loadTasks, loadMoreTasks, refreshTaskAggregate, loadGraders, reset,
     examFilter, effectiveExamId, setExamFilter: updateExamFilter, subjectFilter, setSubjectFilter: updateSubjectFilter, questionFilter, setQuestionFilter: updateQuestionFilter,
     unassignedOnly, setUnassignedOnly: updateUnassignedOnly, subjectOptions, examOptions, questionOptions, matchedAggregate, unassignedCount,

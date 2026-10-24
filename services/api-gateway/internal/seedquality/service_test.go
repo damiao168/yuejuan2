@@ -200,6 +200,16 @@ func TestSeedContextUsesNormalWorkbenchShapeWithoutGoldDisclosure(t *testing.T) 
 	}); err != nil || !handled {
 		t.Fatalf("same-route submit hook handled=%v err=%v", handled, err)
 	}
+	reopened, handled, err := service.GetGraderTaskContext(context.Background(), "tenant-a", task.ID, "grader-a")
+	if err != nil || !handled || reopened.HumanGrade == nil || reopened.HumanGrade.Score != 4 || reopened.HumanGrade.ReviewerID != "grader-a" || reopened.HumanGrade.AnswerSegmentID != reopened.Task.AnswerSegmentID {
+		t.Fatalf("reopened quality task lost its own submitted score: %#v %v", reopened.HumanGrade, err)
+	}
+	reopenedJSON, _ := json.Marshal(reopened)
+	for _, forbidden := range []string{"gold-secret", "reference_score", "hidden-submission", "answer-segments/hidden", "is_seed", "seed_task"} {
+		if strings.Contains(strings.ToLower(string(reopenedJSON)), forbidden) {
+			t.Fatalf("own submitted grade leaked quality facts %q: %s", forbidden, reopenedJSON)
+		}
+	}
 }
 
 func activeGold(id string, version int, archetype string, criteria map[string]any) goldpaper.GoldPaper {

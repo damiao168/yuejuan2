@@ -68,6 +68,23 @@ func (p *PostgresSourceProvider) resolve(ctx context.Context, q sourceQueryer, u
 	if ambiguous {
 		return Source{}, ErrNotFound
 	}
+	if lock {
+		// 自动正式提交先锁父评分运行再锁任务；标记新增也用同一顺序，避免与写分和取消流程反向持锁。
+		var runID sql.NullString
+		err := q.QueryRowContext(ctx, `SELECT scoring_run_id::text FROM review_task WHERE tenant_id=$1::uuid AND id::text=$2 AND assigned_to=$3::uuid AND deleted_at IS NULL`, user.TenantID, taskID, user.ID).Scan(&runID)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return Source{}, err
+		}
+		if runID.Valid {
+			var lockedID string
+			if err = q.QueryRowContext(ctx, `SELECT id::text FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, user.TenantID, runID.String).Scan(&lockedID); err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return Source{}, ErrNotFound
+				}
+				return Source{}, err
+			}
+		}
+	}
 	// 作用域必须由数据库实时核对；会话中旧的 task IDs 或 role 声明不能延长材料访问权。
 	query := `SELECT t.id::text,t.answer_segment_id::text,t.exam_id::text,e.name,e.subject,t.question_id::text,t.question_no,t.anonymous_code,t.status,COALESCE(e.archived_at IS NOT NULL OR e.status='archived' OR es.archived_at IS NOT NULL OR es.status='archived',false),qu.score::float8,COALESCE(seg.crop_sha256,''),COALESCE(eqs.id::text,'')
 FROM review_task t ` + sourceIdentityJoin + `
