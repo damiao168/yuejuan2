@@ -37,6 +37,8 @@
 .grading-assignment-workspace { background: #fff; border: 1px solid #e5e9ef; border-radius: 8px; padding: 28px; }
 .grading-assignment-workspace > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
 .grading-assignment-workspace > header > .ant-btn { flex-shrink: 0; }
+/* 共享表格样式会强制缩至容器宽度；分配表保留列宽，由内部容器承接窄屏横向滚动。 */
+.grading-assignment-workspace .responsive-desktop-table table { min-width: max(100%, 760px) !important; max-width: none; }
 .grading-assignment-workspace h1 { font-size: 24px; margin: 0 0 7px; color: #17314f; }
 .grading-assignment-workspace > header p { color: #6b7b8e; margin: 0; }
 .grading-assignment-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 24px 0 18px; }

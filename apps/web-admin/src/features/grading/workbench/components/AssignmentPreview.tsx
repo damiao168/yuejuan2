@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { InputNumber, Modal, Segmented, Select } from "antd";
 import type { ReviewTask } from "../../../../api/review";
-import { assignmentGroups, buildAssignmentPlan, buildQuotaAssignmentPlan, type AssignmentBatch } from "../assignmentPlan";
+import { assignmentGroups, AssignmentPlanValidationError, buildAssignmentPlan, buildQuotaAssignmentPlan, type AssignmentBatch } from "../assignmentPlan";
 import "../teacher-product-ux.css";
 
 export function AssignmentPreview({ tasks, defaultGrader, options, busy, onCancel, onConfirm }: Readonly<{
@@ -24,7 +24,7 @@ export function AssignmentPreview({ tasks, defaultGrader, options, busy, onCance
     try {
       return { plan: buildQuotaAssignmentPlan(tasks, graders.map(graderId => ({ graderId, count: counts[graderId]! }))), error: "" };
     } catch (error) {
-      return { plan: [], error: error instanceof Error ? error.message : "请检查分配数量" };
+      return { plan: [], error: error instanceof AssignmentPlanValidationError ? error.userMessage : "请刷新答卷列表后重试" };
     }
   }, [balanced, counts, graders, mode, tasks]);
   const plan = result.plan;

@@ -85,7 +85,7 @@ describe("自定义教师分配数量", () => {
   });
 
   it.each([-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])("拒绝非法份数 %s", count => {
-    expect(() => buildQuotaAssignmentPlan([task("a", "12")], [{ graderId: "teacher", count }])).toThrow("非负安全整数");
+    expect(() => buildQuotaAssignmentPlan([task("a", "12")], [{ graderId: "teacher", count }])).toThrow("0 或正整数");
   });
 
   it("拒绝重复教师，即使重复项为零份", () => {

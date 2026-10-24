@@ -3,6 +3,10 @@ import { examSubjectLabel } from "../../../constants/examStatus";
 
 export interface AssignmentBatch { graderId: string; tasks: ReviewTask[] }
 export interface AssignmentQuota { graderId: string; count: number }
+// 弹窗只展示本地业务校验的文案；其他异常不能直接把原生 message 暴露给用户。
+export class AssignmentPlanValidationError extends Error {
+  constructor(readonly userMessage: string) { super(userMessage); this.name = "AssignmentPlanValidationError"; }
+}
 const naturalOrder = new Intl.Collator("zh-CN", { numeric: true });
 function fixedOrder(left: string, right: string) { return left < right ? -1 : left > right ? 1 : 0; }
 export function assignmentGroupKey(task: ReviewTask) { return JSON.stringify([task.exam_id, task.question_id]); }
@@ -52,15 +56,15 @@ export function buildQuotaAssignmentPlan(tasks: ReviewTask[], quotas: Assignment
   const graders = new Set<string>();
   let total = 0;
   for (const quota of quotas) {
-    if (!quota.graderId.trim()) throw new Error("请选择自定义分配的教师");
-    if (graders.has(quota.graderId)) throw new Error("同一教师不能重复设置分配数量");
-    if (!Number.isSafeInteger(quota.count) || quota.count < 0) throw new Error("每位教师的分配数量必须是非负安全整数");
+    if (!quota.graderId.trim()) throw new AssignmentPlanValidationError("请选择自定义分配的教师");
+    if (graders.has(quota.graderId)) throw new AssignmentPlanValidationError("同一教师不能重复设置分配数量");
+    if (!Number.isSafeInteger(quota.count) || quota.count < 0) throw new AssignmentPlanValidationError("每位教师的分配数量必须为 0 或正整数");
     graders.add(quota.graderId);
     total += quota.count;
   }
   // 先完整校验再生成计划；不能把少填、多填或重复任务悄悄截断成可提交的部分分配。
-  if (!Number.isSafeInteger(total) || total !== tasks.length) throw new Error(`自定义分配数量合计必须等于待分配任务数（${tasks.length} 份）`);
-  if (new Set(tasks.map(task => task.id)).size !== tasks.length) throw new Error("待分配任务重复，请刷新任务列表后重试");
+  if (!Number.isSafeInteger(total) || total !== tasks.length) throw new AssignmentPlanValidationError(`自定义分配数量合计必须等于待分配任务数（${tasks.length} 份）`);
+  if (new Set(tasks.map(task => task.id)).size !== tasks.length) throw new AssignmentPlanValidationError("待分配任务重复，请刷新任务列表后重试");
   const ordered = assignmentGroups(tasks).flatMap(group => group.tasks);
   const batches: AssignmentBatch[] = [];
   let offset = 0;
