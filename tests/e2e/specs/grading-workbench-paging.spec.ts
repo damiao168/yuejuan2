@@ -12,7 +12,7 @@ test("120 份任务跨三页连续提交到最后，进度与下一份无重复�
   const score = page.getByRole("spinbutton", { name: "最终得分" });
   const submit = page.getByRole("button", { name: "提交并下一份" });
   await expect(score).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator(".grading-work-title")).toContainText("已完成 0 / 共 120");
+  await expect(page.locator(".grading-work-title")).toContainText("已完成 0/120");
   await expect.poll(() => [...new Set(state.listCursors)].filter(Boolean)).toEqual(["review-task-50", "review-task-100"]);
   // 连续阅卷沿用默认收起的任务抽屉；分页范围由游标和最终逐份提交账本共同核对。
   await expect(page.locator(".answer-panel")).toContainText(taskOrder[0].anonymous_code);
@@ -47,7 +47,7 @@ test("120 份任务跨三页连续提交到最后，进度与下一份无重复�
       }
     }
     if (index === 59 || index === 119) {
-      await expect(page.locator(".grading-work-title")).toContainText(`已完成 ${index + 1} / 共 120`);
+      await expect(page.locator(".grading-work-title")).toContainText(`已完成 ${index + 1}/120`);
     }
   }
 
@@ -56,7 +56,7 @@ test("120 份任务跨三页连续提交到最后，进度与下一份无重复�
   await page.getByRole("button", { name: "任务", exact: true }).click();
   const taskDrawer = page.getByRole("dialog", { name: "阅卷任务", exact: true });
   await expect(taskDrawer.locator(".grading-task-item")).toHaveCount(0);
-  await expect(page.locator(".grading-work-title")).toContainText("已完成 120 / 共 120");
+  await expect(page.locator(".grading-work-title")).toContainText("已完成 120/120");
 });
 
 test("任务转派后重新分页，筛选与服务端进度同步", async ({ page }) => {
@@ -76,7 +76,7 @@ test("任务转派后重新分页，筛选与服务端进度同步", async ({ pa
   // 管理人员把一项任务转移到此阅卷人的分配范围之外。
   state.tasks[50].assigned_to = "other-reviewer";
   await page.getByRole("button", { name: "刷新" }).click();
-  await expect(page.locator(".grading-work-title")).toContainText("已完成 0 / 共 119");
+  await expect(page.locator(".grading-work-title")).toContainText("已完成 0/119");
   await page.getByRole("button", { name: "任务", exact: true }).click();
   await expect(taskDrawer.locator(".grading-task-item")).toHaveCount(119);
   await expect(taskDrawer.locator(".grading-task-rail")).not.toContainText(state.tasks[50].anonymous_code);
@@ -84,7 +84,7 @@ test("任务转派后重新分页，筛选与服务端进度同步", async ({ pa
 
   await score.fill("1");
   await page.getByRole("button", { name: "提交并下一份" }).click();
-  await expect(page.locator(".grading-work-title")).toContainText("已完成 1 / 共 119");
+  await expect(page.locator(".grading-work-title")).toContainText("已完成 1/119");
 
   await page.getByRole("button", { name: "任务", exact: true }).click();
   const statusFilter = taskDrawer.getByRole("combobox", { name: "任务状态", exact: true });
@@ -96,5 +96,5 @@ test("任务转派后重新分页，筛选与服务端进度同步", async ({ pa
   await statusFilter.press("ArrowDown");
   await page.getByText("可处理", { exact: true }).last().click({ timeout: 5_000 });
   await expect(taskDrawer.locator(".grading-task-item")).toHaveCount(118);
-  await expect(page.locator(".grading-work-title")).toContainText("已完成 1 / 共 119");
+  await expect(page.locator(".grading-work-title")).toContainText("已完成 1/119");
 });
