@@ -8,7 +8,7 @@ import { MathRubricMatrix } from "./MathRubricMatrix";
 import type { useMathWorkbenchEvidence } from "../hooks/useMathWorkbenchEvidence";
 import { mathSuggestionState } from "../mathWorkbenchEvidence";
 import { ReviewContextInspector } from "../ReviewContextInspector";
-import { imageSuggestionState, isImageWorkbenchGrade } from "../workbenchReviewState";
+import { isImageWorkbenchGrade } from "../workbenchReviewState";
 import { choiceReviewReason, isChoiceReview, requiresExplicitSecondOpinion } from "../reviewContext";
 import {
   confidenceTone,
@@ -42,6 +42,60 @@ export interface EvidenceInspectorProps {
   mathRequestNotice: string;
 }
 
+/** 只读展示工作台已经选出的建议；查看记录不重新选取或请求 AI 评分。 */
+export function WorkbenchAiRecord({ context, selectedGrade, math }: Readonly<Pick<EvidenceInspectorProps, "context" | "selectedGrade" | "math">>) {
+  // 独立评分仍须通过原来的显式第二意见入口，不能从记录抽屉提前看到分数。
+  if (isChoiceReview(context.reviewContext) || requiresExplicitSecondOpinion(context.reviewContext) || selectedGrade?.delivery_mode === "shadow_only") return null;
+  if (!selectedGrade) return <div className="ai-empty-state"><strong>暂无 AI 评分记录</strong><span>请按评分细则人工判定。</span></div>;
+  if (isImageWorkbenchGrade(selectedGrade)) return <ImageGradingRecord grade={selectedGrade} />;
+  const confidenceCalibrated = selectedGrade.confidence > 0;
+  const mathState = context.reviewContext.subject_tool_hints.subject_code === "mathematics" ? mathSuggestionState(selectedGrade, math.state, math.dirty) : null;
+  const decisionTone = selectedGrade.needs_human_review || selectedGrade.mock ? "warning" : confidenceTone(selectedGrade.confidence);
+  let decisionLabel = "未标记风险";
+  // 历史数学建议先说明不可采纳的原因；风险颜色仍按原人工复核与模拟标记判断。
+  if (mathState && !mathState.current) decisionLabel = mathState.label;
+  else if (selectedGrade.needs_human_review) decisionLabel = "需人工复核";
+  return (
+    <div className="evidence-stack">
+      <div className="ai-score-strip">
+        <div><span>{mathState && !mathState.current ? "历史建议 · 不可采纳" : "建议分"}</span><strong>{selectedGrade.suggested_score} / {selectedGrade.max_score}</strong></div>
+        <div>
+          <span>置信度</span>
+          {confidenceCalibrated
+            ? <strong>{Math.round(selectedGrade.confidence * 100)}%</strong>
+            : <Tooltip title="该 AI 建议暂无可靠置信度，请以人工判断为准"><span><StatusTag tone="neutral">暂无置信度</StatusTag></span></Tooltip>}
+        </div>
+        <div>
+          <span>判定</span>
+          <StatusTag tone={decisionTone}>{decisionLabel}</StatusTag>
+        </div>
+      </div>
+      <Tabs size="small" items={[
+        {
+          key: "points",
+          label: "采分点",
+          children: (
+            <div className="point-result-list">
+              <List size="small" dataSource={selectedGrade.matched_points} locale={{ emptyText: <Empty description="暂无命中采分点" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(point) => <List.Item><StatusTag tone="success">{`${point.score} 分`}</StatusTag><GradingMathMarkdown>{point.label || "未命名采分点"}</GradingMathMarkdown></List.Item>} />
+              <List size="small" dataSource={selectedGrade.missing_points} locale={{ emptyText: <Empty description="暂无缺失采分点" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(point) => <List.Item><StatusTag tone="danger">{`${point.score} 分`}</StatusTag><GradingMathMarkdown>{point.label || "未命名采分点"}</GradingMathMarkdown></List.Item>} />
+            </div>
+          )
+        },
+        {
+          key: "evidence",
+          label: "证据",
+          children: <List size="small" dataSource={selectedGrade.evidence} locale={{ emptyText: <Empty description="暂无证据" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(item) => <List.Item><div className="evidence-item"><strong title={item.type || undefined}>{evidenceTypeLabels[item.type] ?? "证据"}</strong><GradingMathMarkdown>{item.answer_text || item.rule || item.standard_answer || "无文本证据"}</GradingMathMarkdown></div></List.Item>} />
+        },
+        {
+          key: "risk",
+          label: "风险",
+          children: <Space wrap>{selectedGrade.risk_flags.length > 0 ? selectedGrade.risk_flags.map((flag) => <span key={flag} title={flag}><StatusTag tone="warning">{riskFlagLabels[flag] ?? "其他风险"}</StatusTag></span>) : <StatusTag tone="success">无风险标记</StatusTag>}</Space>
+        }
+      ]} />
+    </div>
+  );
+}
+
 export function EvidenceInspector({
   context,
   draft,
@@ -54,7 +108,7 @@ export function EvidenceInspector({
   math, onRefreshMath, onSelectMathStep, canRequestMath, mathDisabledReason, requestingMath, onRequestMath, mathRequestNotice
 }: Readonly<EvidenceInspectorProps>) {
   const choice = isChoiceReview(context.reviewContext);
-  // 图像评分直接展示当前建议；旧规则结果卡和手动证据校验不适用于这条评分链路。
+  // 图像评分的完整记录由顶部入口展示；旧规则结果卡和手动证据校验不适用于这条评分链路。
   const imageGrade = isImageWorkbenchGrade(selectedGrade);
   const formulaEvidence = !choice && !imageGrade && ["mathematics", "physics", "chemistry"].includes(context.reviewContext.subject_tool_hints.subject_code);
   const automationSummary = () => {
@@ -87,62 +141,6 @@ export function EvidenceInspector({
     );
   };
 
-  const evidence = () => {
-    if (!selectedGrade) return <div className="ai-empty-state"><strong>暂无 AI 建议</strong><span>请按评分细则人工判定。</span></div>;
-    if (imageGrade) return <ImageGradingRecord grade={selectedGrade} />;
-    const confidenceCalibrated = selectedGrade.confidence > 0;
-    const mathState = imageGrade ? imageSuggestionState(selectedGrade, context) : formulaEvidence && context.reviewContext.subject_tool_hints.subject_code === "mathematics" ? mathSuggestionState(selectedGrade, math.state, math.dirty) : null;
-    const decisionTone = selectedGrade.needs_human_review || selectedGrade.mock ? "warning" : confidenceTone(selectedGrade.confidence);
-    let decisionLabel = "未标记风险";
-    // 历史数学建议先说明不可采纳的原因；风险颜色仍按原人工复核与模拟标记判断。
-    if (mathState && !mathState.current) decisionLabel = mathState.label;
-    else if (selectedGrade.needs_human_review) decisionLabel = "需人工复核";
-    return (
-      <div className="evidence-stack">
-        <div className="ai-score-strip">
-          <div><span>{mathState && !mathState.current ? "历史建议 · 不可采纳" : "建议分"}</span><strong>{selectedGrade.suggested_score} / {selectedGrade.max_score}</strong></div>
-          <div>
-            <span>置信度</span>
-            {confidenceCalibrated
-              ? <strong>{Math.round(selectedGrade.confidence * 100)}%</strong>
-              : <Tooltip title="该 AI 建议暂无可靠置信度，请以人工判断为准"><span><StatusTag tone="neutral">暂无置信度</StatusTag></span></Tooltip>}
-          </div>
-          <div>
-            <span>判定</span>
-            <StatusTag tone={decisionTone}>
-              {decisionLabel}
-            </StatusTag>
-          </div>
-        </div>
-        <details className="ai-evidence-details">
-          <summary><span>查看 AI 依据</span><small>{selectedGrade.matched_points.length} 个采分点 · {selectedGrade.evidence.length} 条证据 · {selectedGrade.risk_flags.length} 个风险</small></summary>
-          <Tabs size="small" items={[
-            {
-              key: "points",
-              label: "采分点",
-              children: (
-                <div className="point-result-list">
-                  <List size="small" dataSource={selectedGrade.matched_points} locale={{ emptyText: <Empty description="暂无命中采分点" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(point) => <List.Item><StatusTag tone="success">{`${point.score} 分`}</StatusTag><GradingMathMarkdown>{point.label || "未命名采分点"}</GradingMathMarkdown></List.Item>} />
-                  <List size="small" dataSource={selectedGrade.missing_points} locale={{ emptyText: <Empty description="暂无缺失采分点" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(point) => <List.Item><StatusTag tone="danger">{`${point.score} 分`}</StatusTag><GradingMathMarkdown>{point.label || "未命名采分点"}</GradingMathMarkdown></List.Item>} />
-                </div>
-              )
-            },
-            {
-              key: "evidence",
-              label: "证据",
-              children: <List size="small" dataSource={selectedGrade.evidence} locale={{ emptyText: <Empty description="暂无证据" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }} renderItem={(item) => <List.Item><div className="evidence-item"><strong title={item.type || undefined}>{evidenceTypeLabels[item.type] ?? "证据"}</strong><GradingMathMarkdown>{item.answer_text || item.rule || item.standard_answer || "无文本证据"}</GradingMathMarkdown></div></List.Item>} />
-            },
-            {
-              key: "risk",
-              label: "风险",
-              children: <Space wrap>{selectedGrade.risk_flags.length > 0 ? selectedGrade.risk_flags.map((flag) => <span key={flag} title={flag}><StatusTag tone="warning">{riskFlagLabels[flag] ?? "其他风险"}</StatusTag></span>) : <StatusTag tone="success">无风险标记</StatusTag>}</Space>
-            }
-          ]} />
-        </details>
-      </div>
-    );
-  };
-
   const evidenceJob = () => {
     const job = context.evidenceJob;
     if (!job) return null;
@@ -162,7 +160,6 @@ export function EvidenceInspector({
       {formulaEvidence ? <details className="grading-reference-details"><summary>公式与解题步骤证据</summary><MathEvidenceInspector key={`math-${context.task.id}`} segmentId={context.task.answer_segment_id} subjectCode={context.reviewContext.subject_tool_hints.subject_code} disabled={!canEditDraft || math.state.phase === "conflict" || math.state.phase === "unavailable"} data={math.state.understanding} loading={math.state.phase === "loading"} onRefresh={onRefreshMath} onCorrectionSaved={math.correctionSaved} onDirtyChange={math.setDirty} onSelectStep={onSelectMathStep} /></details> : null}
       {!imageGrade && !requiresExplicitSecondOpinion(context.reviewContext) ? automationSummary() : null}
       {choice ? <ReviewContextInspector key={context.task.id} context={context.reviewContext} /> : null}
-      {selectedGrade && !choice ? evidence() : null}
       {evidenceJob()}
       {canVerifyEvidence && selectedGrade && !imageGrade ? (
         <Button icon={<BadgeCheck size={14} />} loading={actioning === "evidence"} onClick={() => void onVerifyEvidence()}>

@@ -186,13 +186,29 @@
   flex: 1;
   min-height: 0;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "canvas";
   align-items: stretch;
   overflow: hidden;
 }
 
 .review-annotation-workspace--editing .review-annotation-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  grid-template-columns: 112px minmax(0, 1fr) minmax(260px, 300px);
+  grid-template-areas: "tools canvas inspector";
+  gap: 8px;
 }
+
+/* 高频绘制与新增入口固定在图像左侧；工具名称保留文字，教师无需记忆图标。 */
+.review-annotation-tools { grid-area: tools; min-height: 0; overflow-y: auto; padding: 6px 6px 6px 0; border-right: 1px solid var(--border, #e5e8eb); }
+.review-annotation-tools .review-annotation-toolbar { flex-direction: column; align-items: stretch; gap: 12px; }
+.review-annotation-tools .review-annotation-toolbar > .ant-space { flex-direction: column; align-items: stretch; width: 100%; }
+.review-annotation-tools .ant-space-item { min-width: 0; }
+.review-annotation-tools .ant-segmented, .review-annotation-tools .ant-btn { width: 100%; }
+.review-annotation-tools .ant-segmented-group { flex-direction: column; align-items: stretch; }
+.review-annotation-tools .ant-segmented-item-label { text-align: left; padding-inline: 8px; }
+.review-annotation-tools .ant-btn { display: inline-flex; justify-content: center; align-items: center; font-size: 12px; padding-inline: 6px; }
+.review-annotation-tools .ant-tag { margin: 0; text-align: center; }
+.review-annotation-tools .review-save-state { display: block; text-align: center; font-size: 12px; }
+.review-annotation-view-tools { display: grid; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border, #e5e8eb); }
 
 .review-annotation-custom-canvas {
   display: flex;
@@ -200,6 +216,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  grid-area: canvas;
 }
 
 .review-annotation-custom-canvas > * {
@@ -209,6 +226,7 @@
 }
 
 .review-annotation-workspace--inline .review-annotation-inspector {
+  grid-area: inspector;
   min-width: 0;
   min-height: 0;
   padding-right: 4px;
@@ -228,6 +246,13 @@
     height: min(560px, 65dvh);
     min-height: 280px;
   }
+
+  .review-annotation-tools { flex: none; overflow: visible; border-right: 0; border-bottom: 1px solid var(--border, #e5e8eb); padding: 4px 0 8px; }
+  .review-annotation-tools .review-annotation-toolbar, .review-annotation-tools .review-annotation-toolbar > .ant-space { flex-direction: row; width: auto; align-items: center; }
+  .review-annotation-tools .review-annotation-toolbar { justify-content: flex-start; }
+  .review-annotation-tools .ant-segmented-group { flex-direction: row; }
+  .review-annotation-tools .ant-btn, .review-annotation-tools .ant-segmented { width: auto; }
+  .review-annotation-view-tools { display: flex; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; }
 
   .review-annotation-workspace--editing .review-annotation-inspector {
     flex: none;

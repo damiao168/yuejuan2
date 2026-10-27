@@ -1,5 +1,5 @@
-import type { ComponentProps, ReactNode, RefCallback } from "react";
-import { Alert } from "antd";
+import { useEffect, useState, type ComponentProps, type ReactNode, type RefCallback } from "react";
+import { Alert, Drawer } from "antd";
 import type { AiGrade } from "../../../../api/review";
 import { getSafeUserText } from "../../../../api/client";
 import { EmptyState, ErrorState, LoadingState } from "../../../../components/PageState";
@@ -7,7 +7,7 @@ import { sourceDescriptions, sourceLabels } from "../gradingWorkbench.model";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
 import { choiceReviewReason, isChoiceReview, requiresExplicitSecondOpinion } from "../reviewContext";
 import { AnswerEvidencePane } from "./AnswerEvidencePane";
-import { EvidenceInspector } from "./EvidenceInspector";
+import { EvidenceInspector, WorkbenchAiRecord } from "./EvidenceInspector";
 import { ScoreEditor } from "./ScoreEditor";
 
 function emptyQueueDescription(hasTasks: boolean, canManageTasks: boolean): string {
@@ -43,12 +43,19 @@ interface WorkbenchTaskContentProps {
   canAdoptAiScore: boolean;
   answer: Omit<ComponentProps<typeof AnswerEvidencePane>, "context">;
   evidence: Omit<ComponentProps<typeof EvidenceInspector>, "context">;
-  editor: Omit<ComponentProps<typeof ScoreEditor>, "context">;
+  editor: Omit<ComponentProps<typeof ScoreEditor>, "context" | "onShowAiRecord">;
   regionEditor?: ReactNode;
   aiSuggestionEntryRef?: RefCallback<HTMLDivElement>;
 }
 
 export function WorkbenchTaskContent({ context, loading, error, hasTasks, canManageTasks, onRetry, selectedGrade, subjectCode, canAdoptAiScore, answer, evidence, editor, regionEditor, aiSuggestionEntryRef }: Readonly<WorkbenchTaskContentProps>) {
+  const [recordOpenFor, setRecordOpenFor] = useState<string | null>(null);
+  const recordScope = context ? `${context.task.id}:${context.task.answer_segment_id}:${context.task.question_id}` : "";
+  const canShowRecord = Boolean(context && !isChoiceReview(context.reviewContext) && !requiresExplicitSecondOpinion(context.reviewContext));
+  const recordOpen = canShowRecord && recordOpenFor === recordScope && !loading && !error;
+  // 切题与重载时先按作用域隐藏记录，再清理打开状态，不能把上一份答卷留在抽屉中。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 作用域或可见条件变化时必须清理打开状态，返回原题也不自动恢复。
+  useEffect(() => { setRecordOpenFor(null); }, [recordScope, loading, error, canShowRecord]);
   if (loading) return <main className="grading-main-empty"><LoadingState label="正在加载答卷" /></main>;
   if (error) return <main className="grading-main-empty"><ErrorState message={error} onRetry={onRetry} /></main>;
   if (!context) return <main className="grading-main-empty"><EmptyState title="请选择一份答卷" description={emptyQueueDescription(hasTasks, canManageTasks)} />{aiSuggestionEntryRef ? <div className="grading-ai-entry" ref={aiSuggestionEntryRef} /> : null}</main>;
@@ -59,11 +66,14 @@ export function WorkbenchTaskContent({ context, loading, error, hasTasks, canMan
       <section className="grading-panels">
         <AnswerEvidencePane {...answer} context={context} />
         <aside className="grading-inspector">
-          {editor.canEditDraft && regionEditor ? regionEditor : <ScoreEditor {...editor} context={context} />}
+          {editor.canEditDraft && regionEditor ? regionEditor : <ScoreEditor {...editor} context={context} onShowAiRecord={canShowRecord ? () => setRecordOpenFor(recordScope) : undefined} />}
           {aiSuggestionEntryRef ? <div className="grading-ai-entry" ref={aiSuggestionEntryRef} /> : null}
           <EvidenceInspector {...evidence} context={context} />
         </aside>
       </section>
+      <Drawer title="AI评分记录" open={recordOpen} width="min(900px, 94vw)" onClose={() => setRecordOpenFor(null)} destroyOnHidden>
+        {recordOpen ? <WorkbenchAiRecord context={context} selectedGrade={selectedGrade} math={evidence.math} /> : null}
+      </Drawer>
     </main>
   );
 }

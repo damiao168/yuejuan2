@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
+import { cleanup, fireEvent, render } from "@testing-library/react";
+import { Modal } from "antd";
 import { describe, expect, it, vi } from "vitest";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
 import { EvidenceInspector, type EvidenceInspectorProps } from "./EvidenceInspector";
@@ -68,7 +70,7 @@ describe("single-question inspector focus", () => {
     expect(summary.querySelector(".ocr-snippet [data-grading-math]")?.textContent).toBe(recognized);
   });
 
-  it("shows image suggestions without the obsolete rule-result card or manual evidence action", () => {
+  it("图像 AI 评分记录不再占据底部面板，原有无关工具也不展示", () => {
     const props = evidenceProps("calculation");
     const selectedGrade = { id: "image-grade", suggested_score: 8, max_score: 15, confidence: 0.9, needs_human_review: true,
       matched_points: [], missing_points: [], evidence: [], risk_flags: [], raw_output: { schema_version: "grading-image-v3" } } as unknown as NonNullable<EvidenceInspectorProps["selectedGrade"]>;
@@ -76,7 +78,8 @@ describe("single-question inspector focus", () => {
     expect(host.querySelector(".task-automation-result")).toBeNull();
     expect(host.querySelector('[data-inspector="matrix"]')).toBeNull();
     expect(host.querySelector('[data-inspector="formula"]')).toBeNull();
-    expect(host.textContent).toContain("8 / 15");
+    expect(host.textContent).not.toContain("8 / 15");
+    expect(host.querySelector(".ai-evidence-details")).toBeNull();
     expect(host.textContent).not.toContain("校验 AI 证据");
     expect(host.textContent).not.toContain("未生效 · 转人工");
   });
@@ -92,5 +95,54 @@ describe("single-question inspector focus", () => {
     expect(editable.querySelector('[data-inspector="score-control"]')).not.toBeNull();
     expect(editable.querySelector('[data-inspector="score-control"]')?.getAttribute("data-show-rubric")).toBe("false");
     for (const obsolete of ["提交并下一份", "提交并提名标准卷", "连续阅卷", "Ctrl / ⌘ + Enter"]) expect(editable.textContent).not.toContain(obsolete);
+  });
+
+  it.each([0, 5])("评分栏首行显示真实 AI 建议 %s 分，并保留采纳禁用条件", (score) => {
+    const editor = { ...evidenceProps("calculation"), setDraft: vi.fn(), rubricPoints: [], canEditDraft: true, canReturn: false,
+      maxScore: 17, selectedGrade: { suggested_score: score, student_feedback: "检查推导" }, canAdoptAiScore: false,
+      onAdoptAiScore: vi.fn(), onAdoptAiFeedback: vi.fn(), onShowAiRecord: vi.fn(), onMarkDispute: vi.fn(async () => undefined) } as unknown as ScoreEditorProps;
+    const host = parse(<ScoreEditor {...editor} />);
+    expect(host.querySelector(".score-ai-summary")?.textContent).toBe(`AI 建议 ${score} / 17 分采纳评分依据`);
+    expect(host.querySelector('[aria-label="采纳 AI 建议分"]')?.hasAttribute("disabled")).toBe(true);
+    expect(host.querySelector(".score-ai-basis")?.hasAttribute("disabled")).toBe(false);
+    expect(host.querySelector(".grading-more-fields .grading-ai-feedback-adoption")?.hasAttribute("disabled")).toBe(true);
+    expect(host.querySelector("h2")).toBeNull();
+    expect(host.textContent).not.toContain("审读 AI 反馈");
+  });
+
+  it.each([true, false])("完整 AI 记录没有反馈文字时仍可查看，可编辑状态为 %s", (canEditDraft) => {
+    const onShowAiRecord = vi.fn();
+    const confirm = vi.spyOn(Modal, "confirm");
+    const editor = { ...evidenceProps("calculation"), setDraft: vi.fn(), rubricPoints: [], canEditDraft, canReturn: false,
+      selectedGrade: { suggested_score: 5 }, canAdoptAiScore: false,
+      onAdoptAiScore: vi.fn(), onAdoptAiFeedback: vi.fn(), onShowAiRecord, onMarkDispute: vi.fn(async () => undefined) } as unknown as ScoreEditorProps;
+    const view = render(<ScoreEditor {...editor} />);
+    try {
+      fireEvent.click(view.getByRole("button", { name: "评分依据" }));
+      expect(onShowAiRecord).toHaveBeenCalledOnce();
+      expect(confirm).not.toHaveBeenCalled();
+      expect(view.container.querySelector(".grading-ai-feedback-adoption")).toBeNull();
+    } finally {
+      cleanup();
+      confirm.mockRestore();
+    }
+  });
+
+  it("没有 AI 建议时不展示分数或采纳入口，独立评分继续隐藏 AI 摘要", () => {
+    const editor = { ...evidenceProps("calculation"), setDraft: vi.fn(), rubricPoints: [], canEditDraft: true, canReturn: false,
+      onAdoptAiScore: vi.fn(), onMarkDispute: vi.fn(async () => undefined) } as ScoreEditorProps;
+    const empty = parse(<ScoreEditor {...editor} />);
+    expect(empty.querySelector(".score-ai-summary")?.textContent).toBe("暂无 AI 建议");
+    expect(empty.querySelector('[aria-label="采纳 AI 建议分"]')).toBeNull();
+    editor.onShowAiRecord = vi.fn();
+    const recordOnly = parse(<ScoreEditor {...editor} />);
+    expect(recordOnly.querySelector(".score-ai-basis")).not.toBeNull();
+    expect(recordOnly.querySelector('[aria-label="采纳 AI 建议分"]')).toBeNull();
+    editor.context.reviewContext.question_snapshot.risk_tier = "R3";
+    editor.context.reviewContext.question_snapshot.scoring_policy_snapshot.mode = "HUMAN_PRIMARY";
+    editor.selectedGrade = { suggested_score: 5 } as ScoreEditorProps["selectedGrade"];
+    const independent = parse(<ScoreEditor {...editor} />);
+    expect(independent.querySelector(".score-ai-summary")).toBeNull();
+    expect(independent.querySelector('[aria-label="采纳 AI 建议分"]')).toBeNull();
   });
 });

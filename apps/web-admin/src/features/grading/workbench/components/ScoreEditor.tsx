@@ -23,6 +23,7 @@ export interface ScoreEditorProps {
   actioning: string | null;
   onAdoptAiScore: () => void;
   onAdoptAiFeedback?: () => void;
+  onShowAiRecord?: () => void;
   canAdoptAiScore?: boolean;
   onMarkDispute: () => Promise<void>;
 }
@@ -39,6 +40,7 @@ export function ScoreEditor({
   actioning,
   onAdoptAiScore,
   onAdoptAiFeedback,
+  onShowAiRecord,
   canAdoptAiScore = true,
   onMarkDispute
 }: Readonly<ScoreEditorProps>) {
@@ -62,9 +64,11 @@ export function ScoreEditor({
         <strong>内部备注（教师与授权管理员可见）</strong><p>{selectedGrade.teacher_note ?? "没有建议，保留原文"}</p></div>,
       onOk: () => { onAdoptAiFeedback(); setFeedbackOpen(true); } });
   };
+  const requiresSecondOpinion = requiresExplicitSecondOpinion(context.reviewContext);
+  const aiRecordButton = onShowAiRecord ? <Button className="score-ai-basis" type="link" size="small" onClick={onShowAiRecord}>评分依据</Button> : null;
   // 管理端查看和不可编辑任务只展示已有记录；草稿分不能冒充已确认成绩，也不展示无法执行的评分按钮。
   if (!canEditDraft) return <section className="score-panel" aria-label="本题评分记录">
-    <div className="panel-head"><div><h2>评分记录</h2><p>满分 {maxScore || "—"}</p></div><StatusTag tone="neutral">只读</StatusTag></div>
+    <div className="panel-head"><div><h2>评分记录</h2><p>满分 {maxScore || "—"}</p></div><Space size={8}>{!requiresSecondOpinion ? aiRecordButton : null}<StatusTag tone="neutral">只读</StatusTag></Space></div>
     <p>{draft.score === null ? "当前没有可展示的评分记录。" : `${["submitted", "completed"].includes(context.task.status) ? "已提交得分" : "评分草稿"}：${draft.score} / ${maxScore}`}</p>
     {draft.comments || draft.studentFeedback || draft.privateNote ? <details className="grading-more-fields"><summary>评语与备注</summary><div className="grading-more-fields-body">
       {draft.comments ? <p>教师评语：{draft.comments}</p> : null}
@@ -73,18 +77,17 @@ export function ScoreEditor({
     </div></details> : null}
   </section>;
   return (
-    <section className="score-panel">
-      <div className="panel-head">
-        <div>
-          <h2>本题评分</h2>
-          <p>满分 {maxScore || "—"}</p>
+    <section className="score-panel" aria-label="题目评分">
+      {/* 高风险独立评分只开放第二意见展示，不从此入口显示或采纳预填分数。 */}
+      {!requiresSecondOpinion ? (
+        <div className="score-ai-summary">
+          {selectedGrade ? <>
+            <span className="score-ai-result">AI 建议 <strong>{selectedGrade.suggested_score} / {maxScore}</strong> 分</span>
+            <Button size="small" icon={<Check size={14} />} aria-label="采纳 AI 建议分" disabled={!canEditDraft || !canAdoptAiScore} onClick={previewScore}>采纳</Button>
+          </> : <span className="muted">暂无 AI 建议</span>}
+          {aiRecordButton}
         </div>
-        {/* 高风险独立评分只开放第二意见展示，不从此入口采纳预填分数。 */}
-        {selectedGrade && !requiresExplicitSecondOpinion(context.reviewContext) ? (
-          <Space wrap><Button icon={<Check size={14} />} disabled={!canEditDraft || !canAdoptAiScore} onClick={previewScore}>采纳 AI 建议分</Button>
-            {onAdoptAiFeedback && (selectedGrade.student_feedback || selectedGrade.teacher_note) ? <Button disabled={!canEditDraft || !canAdoptAiScore} onClick={previewFeedback}>审读 AI 反馈</Button> : null}</Space>
-        ) : null}
-      </div>
+      ) : null}
 
       <SharedScoreControl
         disabled={!canEditDraft || actioning === "submit"}
@@ -98,6 +101,7 @@ export function ScoreEditor({
       <details className="grading-more-fields" open={feedbackOpen} onToggle={(event) => setFeedbackOpen(event.currentTarget.open)}>
         <summary>评语与备注（可选）</summary>
         <div className="grading-more-fields-body">
+          {!requiresSecondOpinion && selectedGrade && onAdoptAiFeedback && (selectedGrade.student_feedback || selectedGrade.teacher_note) ? <div><Button className="grading-ai-feedback-adoption" size="small" disabled={!canEditDraft || !canAdoptAiScore} onClick={previewFeedback}>采用 AI 评语</Button></div> : null}
           <div className="grading-comment-presets">
             <span className="muted">常用评语（点击追加）</span>
             <Space wrap size={4}>

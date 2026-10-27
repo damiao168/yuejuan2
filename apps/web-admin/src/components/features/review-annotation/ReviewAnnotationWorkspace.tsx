@@ -58,6 +58,7 @@ export interface ReviewAnnotationWorkspaceProps {
   disabled?: boolean;
   editing?: boolean;
   renderCanvas?: (controls: ReviewAnnotationCanvasControls) => ReactNode;
+  viewTools?: ReactNode;
 }
 
 function draftFromAnnotation(annotation: ReviewAnnotation): AnnotationDraft {
@@ -210,7 +211,7 @@ export function ReviewAnnotationWorkspace({
   rubricCriteria = [],
   disabled = false,
   editing = true,
-  renderCanvas
+  renderCanvas, viewTools
 }: Readonly<ReviewAnnotationWorkspaceProps>) {
   const workspace = useReviewAnnotations(reviewTaskId);
   const editingVisible = !renderCanvas || editing;
@@ -376,7 +377,7 @@ export function ReviewAnnotationWorkspace({
         </Space>
         <Space>
           <Tooltip title="只刷新批注，不会认领其他任务">
-            <Button type="text" icon={<RefreshCw size={16} />} onClick={() => void workspace.reloadAnnotations()} aria-label="刷新批注" />
+            <Button type="text" icon={<RefreshCw size={16} />} onClick={() => void workspace.reloadAnnotations()} aria-label="刷新批注">{renderCanvas ? "刷新批注" : null}</Button>
           </Tooltip>
           {!disabled ? <Button icon={<Settings2 size={16} />} onClick={() => setTemplateManagerOpen(true)}>常用评语</Button> : null}
         </Space>
@@ -391,13 +392,13 @@ export function ReviewAnnotationWorkspace({
       {editingVisible && templateFailure ? <Alert type="error" showIcon message={templateFailure.error} action={<Button loading={applyingTemplate} disabled={!draft || disabled || saving} onClick={() => void insertTemplate(templateFailure.shortcut)}>重试插入评语</Button>} /> : null}
 
       <div className="review-annotation-layout">
-        <div className={renderCanvas ? "review-annotation-custom-canvas" : "review-annotation-canvas-scroll"}>
+        {renderCanvas && editing ? <aside className="review-annotation-tools" aria-label="批注工具">{toolbar}{viewTools ? <div className="review-annotation-view-tools">{viewTools}</div> : null}</aside> : null}
+        <div key="canvas" className={renderCanvas ? "review-annotation-custom-canvas" : "review-annotation-canvas-scroll"}>
           {renderCanvas ? renderCanvas({
             tool: disabled || !editing ? "select" : tool,
             annotations: workspace.annotations,
             selectedId: draft?.current?.id,
             disabled: disabled || saving || !editing,
-            toolbar: editing ? toolbar : undefined,
             onPointerDown: startDrawingAt,
             onPointerUp: finishDrawingAt,
             onSelect: selectAnnotation

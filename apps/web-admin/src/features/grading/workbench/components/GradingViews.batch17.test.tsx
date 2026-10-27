@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AiGrade, ReviewTask } from "../../../../api/review";
 import type { assignmentGroups } from "../assignmentPlan";
-import { EvidenceInspector, type EvidenceInspectorProps } from "./EvidenceInspector";
+import { EvidenceInspector, WorkbenchAiRecord, type EvidenceInspectorProps } from "./EvidenceInspector";
 import { TaskRail, type TaskRailProps } from "./TaskRail";
 
 vi.mock("antd", async () => {
@@ -250,7 +250,7 @@ describe("阅卷展示分支回归", () => {
     [{ confidence: 0.9 }, "success", "未标记风险"],
     [{ confidence: 0.5 }, "danger", "未标记风险"]
   ] as const)("保持判定颜色与原标签规则 %j", async (overrides, tone, label) => {
-    await render(<EvidenceInspector {...evidence(overrides)} />);
+    await render(<WorkbenchAiRecord {...evidence(overrides)} />);
     const decision = Array.from(host.querySelectorAll(".ai-score-strip > div")).find((item) => item.firstElementChild?.textContent === "判定")!;
     expect(decision.querySelector("[data-tone]")?.getAttribute("data-tone")).toBe(tone);
     expect(decision.textContent).toContain(label);
@@ -259,7 +259,7 @@ describe("阅卷展示分支回归", () => {
   it("历史数学建议原因优先于人工复核标签，请求提示使用原生状态输出", async () => {
     const props = evidence({ needs_human_review: true });
     props.context.reviewContext.subject_tool_hints.subject_code = "mathematics";
-    await render(<EvidenceInspector {...props} mathRequestNotice="正在确认数学证据" />);
+    await render(<><EvidenceInspector {...props} mathRequestNotice="正在确认数学证据" /><WorkbenchAiRecord {...props} /></>);
     expect(host.textContent).toContain("缺少数学版本绑定");
     expect(host.textContent).toContain("历史建议 · 不可采纳");
     expect(host.querySelector("output.math-suggestion-note")?.textContent).toBe("正在确认数学证据");

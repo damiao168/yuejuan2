@@ -686,6 +686,30 @@
   overflow: hidden;
 }
 
+.score-ai-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+  font-size: var(--eg-font-body);
+}
+
+.score-ai-result {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.score-ai-result strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.score-ai-basis.ant-btn {
+  padding-inline: 0;
+}
+
 .panel-head {
   display: flex;
   justify-content: space-between;
