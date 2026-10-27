@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useRef } from "react";
-import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { downloadReviewWorkspaceImage } from "../../../../api/review";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
@@ -22,6 +22,18 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("交分与历史答卷图片", () => {
+  it("原图权限撤销后清除原图，不再保留或请求该来源", async () => {
+    const source = { ...context("A"), originalImageUrl: "/full-original-A" };
+    const view = renderHook(({ allowed }) => useAnswerViewer({ context: source, canViewOriginalImage: allowed, prefetchedPreviewRef: useRef(new Map()) }),
+      { initialProps: { allowed: true } });
+    await waitFor(() => expect(view.result.current.preview).not.toBeNull());
+    await act(async () => view.result.current.changeMode("original"));
+    await waitFor(() => expect(downloadReviewWorkspaceImage).toHaveBeenLastCalledWith("/full-original-A"));
+    view.rerender({ allowed: false });
+    await waitFor(() => expect(view.result.current.preview).toBeNull());
+    expect(downloadReviewWorkspaceImage).toHaveBeenCalledTimes(2);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:answer-2");
+  });
   it("同一题提交成功仍保留原图，不因只读状态重下图片", async () => {
     const view = renderHook(({ value }) => useAnswerViewer({ context: value, canViewOriginalImage: false, prefetchedPreviewRef: useRef(new Map()) }),
       { initialProps: { value: context("A") } });

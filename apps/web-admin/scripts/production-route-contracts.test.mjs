@@ -34,6 +34,8 @@ const mutations = [
   ["mobile drawer trigger", "layoutPresentation", "onClick={onOpenNavigation}", "onClick={() => undefined}", "navigation drawer"],
   ["teacher original image permission", "pageRendering", "canViewOriginalImage={false}", "canViewOriginalImage={true}", "original answer-sheet image"],
   ["original image retention", "gradingFeature", /originalImageUrl:\s*(?:scope\.)?allowOriginalImage\s*\?\s*artifact\.original_image_url\s*:\s*undefined/, "originalImageUrl: artifact.original_image_url", "original answer-sheet image"],
+  ["original image download permission", "gradingFeature", ': canViewOriginalImage ? context.originalImageUrl ?? "" : "";', ': context.originalImageUrl ?? "";', "original answer-sheet image"],
+  ["empty preview download guard", "gradingFeature", "if (!previewTaskId || !imagePath)", "if (!previewTaskId)", "original answer-sheet image"],
   ["original image selector permission", "gradingFeature", '...(canViewOriginalImage ? [{ label: "原图", value: "original" as const }] : [])', '...([{ label: "原图", value: "original" as const }])', "original answer-sheet image"],
   ["eager page import", "pageRendering", "import { lazy, type ReactNode }", 'import { GradingWorkbenchPage as EagerPage } from "../pages/GradingWorkbenchPage";\nimport { lazy, type ReactNode }', "loaded on demand"],
   ["staged route content", "appShell", /\{content\}\s*<\/RouteContent>/, "{null}</RouteContent>", "loaded on demand"],

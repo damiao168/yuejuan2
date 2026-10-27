@@ -24,6 +24,7 @@ export function movedProductionRouteFailures({ routes, appLayout, layoutPresenta
   const routeContent = functionSource(pageRendering, "renderAppRouteContent");
   const grading = functionSource(pageRendering, "renderGrading");
   const workspaceModule = functionSource(pageRendering, "renderExamWorkspaceModule");
+  const answerViewer = functionSource(gradingFeature, "useAnswerViewer");
   check(/experienceLabel\(experience\)/.test(layoutPresentation)
     && /onExperienceChange\(value as ProductExperience\)/.test(layoutPresentation)
     && /<ShellNavigation[\s\S]*?onExperienceChange=\{onExperienceChange\}/.test(appLayout)
@@ -43,7 +44,10 @@ export function movedProductionRouteFailures({ routes, appLayout, layoutPresenta
     && /originalImageUrl:\s*(?:scope\.)?allowOriginalImage\s*\?\s*artifact\.original_image_url\s*:\s*undefined/.test(gradingFeature)
     && /canViewOriginalImage=\{false\}/.test(grading)
     && /canViewOriginalImage=\{experience === "admin"\}/.test(workspaceModule)
-    && /mode === "original" && \(!canViewOriginalImage/.test(gradingFeature)
+    // 预览先按权限生成路径，再拒绝空路径；门禁同时核对两步，不能只依赖原图选择器隐藏。
+    && /const imagePath =[\s\S]*?: canViewOriginalImage \? context\.originalImageUrl \?\? "" : ""/.test(answerViewer)
+    && /if \(!previewTaskId \|\| !imagePath\) \{[\s\S]*?return;/.test(answerViewer)
+    && /downloadReviewWorkspaceImage\(imagePath\)/.test(answerViewer)
     && /\.\.\.\(canViewOriginalImage\s*\?\s*\[\{[^}]*value:\s*"original"[^}]*\}\]\s*:\s*\[\]\)/.test(gradingFeature),
   "Teacher grading must neither retain nor request the original answer-sheet image.");
   // 当前列表不提供通用阶段变更，已发布是筛选值；不能为满足旧 nextStatus 规则重新添写入口。
