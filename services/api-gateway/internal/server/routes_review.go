@@ -60,10 +60,4 @@ func registerReviewRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("GET /api/v1/review/annotations/{annotationId}", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewAnnotationHandler.GetAnnotation))
 	mux.Handle("PUT /api/v1/review/annotations/{annotationId}", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewAnnotationHandler.UpdateAnnotation))
 	mux.Handle("DELETE /api/v1/review/annotations/{annotationId}", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewAnnotationHandler.DeleteAnnotation))
-	mux.Handle("GET /api/v1/review/comment-templates", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewAnnotationHandler.ListCommentTemplates))
-	mux.Handle("POST /api/v1/review/comment-templates", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewAnnotationHandler.CreateCommentTemplate))
-	mux.Handle("GET /api/v1/review/comment-templates/{templateId}", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewAnnotationHandler.GetCommentTemplate))
-	mux.Handle("PUT /api/v1/review/comment-templates/{templateId}", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewAnnotationHandler.UpdateCommentTemplate))
-	mux.Handle("DELETE /api/v1/review/comment-templates/{templateId}", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewAnnotationHandler.DeleteCommentTemplate))
-	mux.Handle("POST /api/v1/review/comment-templates/{shortcut}/use", ctx.guards.requireReviewWork(ctx.modules.Grading.ReviewAnnotationHandler.UseCommentTemplate))
 }

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useId, useState, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
+import { useId, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
 import { Alert, Button, Segmented, Space, Tooltip } from "antd";
+import { Move, RotateCw } from "lucide-react";
 import type { RubricPoint } from "../../../../api/papers";
 import { EmptyState, LoadingState } from "../../../../components/PageState";
 import { ReviewAnnotationWorkspace, type ReviewAnnotationCanvasControls } from "../../../../components/features/review-annotation";
-import { pointLabel } from "../gradingWorkbench.model";
 import type { PreviewState, ViewerMode, WorkbenchContext } from "../gradingWorkbench.types";
 import type { MathStepSelection } from "../mathWorkbenchEvidence";
 import { GradingMathMarkdown } from "./GradingMathMarkdown";
@@ -35,12 +35,6 @@ export interface AnswerEvidencePaneProps {
   onKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
   onImageLoad: (size: { width: number; height: number }) => void;
   mathSelection?: MathStepSelection | null;
-  studentFeedback?: string;
-  onStudentFeedbackChange?: (value: string) => void;
-  historicalComments?: string;
-  historicalPrivateNote?: string;
-  onAdoptAiFeedback?: () => void;
-  canAdoptAiFeedback?: boolean;
 }
 
 export function AnswerEvidencePane({
@@ -57,7 +51,6 @@ export function AnswerEvidencePane({
   viewportRef,
   canViewOriginalImage,
   canEditDraft,
-  rubricPoints,
   onChangeViewerMode,
   onZoom,
   onRotate,
@@ -68,25 +61,11 @@ export function AnswerEvidencePane({
   onPointerUp,
   onKeyDown,
   onImageLoad,
-  mathSelection,
-  studentFeedback,
-  onStudentFeedbackChange,
-  historicalComments,
-  historicalPrivateNote,
-  onAdoptAiFeedback,
-  canAdoptAiFeedback
+  mathSelection
 }: Readonly<AnswerEvidencePaneProps>) {
   const viewerHelpId = useId();
-  const [annotationOpen, setAnnotationOpen] = useState(false);
-  const [imageAnnotations, setImageAnnotations] = useState({ taskId: context.task.id, count: 0 });
   const canAnnotate = context.answerScope !== "grading_group" && Boolean(context.segmentImageUrl);
-  const hasAnnotationPanel = canAnnotate || studentFeedback !== undefined;
-  const annotationCount = (imageAnnotations.taskId === context.task.id ? imageAnnotations.count : 0) + (studentFeedback?.trim() ? 1 : 0);
-  const updateAnnotationCount = useCallback((count: number) => setImageAnnotations(current => current.taskId === context.task.id && current.count === count ? current : { taskId: context.task.id, count }), [context.task.id]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 切题后回到普通阅读，不能把上一题的绘制工具带入下一份。
-  useEffect(() => { setAnnotationOpen(false); }, [context.task.id]);
   const controls = <Space size={6} wrap>
-    {hasAnnotationPanel ? <Button size="small" aria-pressed={annotationOpen} onClick={() => setAnnotationOpen(value => !value)}>批注{annotationCount ? ` ${annotationCount}` : ""}</Button> : null}
     <Segmented<ViewerMode> size="small" value={viewerMode} options={[
       ...(context.gradingGroupImageUrl ? [{ label: "整区", value: "group" as const }] : []),
       ...(context.answerScope !== "grading_group" ? [{ label: context.gradingGroupImageUrl ? "单题" : "答题区域", value: "segment" as const }] : []),
@@ -138,20 +117,17 @@ export function AnswerEvidencePane({
   };
 
   return (
-    <section className={`answer-panel${annotationOpen ? " answer-panel--annotating" : ""}`}>
+    <section className="answer-panel">
       <span id={viewerHelpId} className="answer-reading-assistive">放大时可在“键盘平移”按钮上用方向键平移，Shift + 方向键加速，Home 适配窗口，Esc 结束拖拽。{context.task.anonymous_code ? `答卷标识：${context.task.anonymous_code}` : ""}</span>
       {!preview?.contentType.startsWith("image/") || viewerMode === "ocr" || previewLoading ? <div className="answer-reading-toolbar"><Space size={6} wrap>{controls}</Space></div> : null}
       {viewerMode === "group" ? <p className="muted">正在查看整区，当前录入第 {context.task.question_no} 题得分。</p> : null}
       {context.answerScope === "grading_group" ? <p className="muted">此题使用人工确认的整区作答图，尚无单题框；各题仍分别计分。</p> : null}
       {mathSelection?.segmentId === context.task.answer_segment_id && viewerMode === "segment" ? <output className="math-image-selection" style={{ display: "block" }}>已定位 {mathSelection.stepId} · {mathSelection.label}</output> : null}
-      {/* 收放批注仅影响左栏，保持当前整组/切分画布及视图模式；评语沿用评分草稿的保存流程。 */}
-      {hasAnnotationPanel ? <ReviewAnnotationWorkspace key={context.task.id} reviewTaskId={context.task.id} imageUrl={context.segmentImageUrl}
-        imageAlt={`${context.task.question_no} 答题区域`} disabled={!canEditDraft} editing={annotationOpen}
+      {/* 常驻窄工具栏直接写入原切分画布，不展开面板，也不改变当前图像模式。 */}
+      {canAnnotate ? <ReviewAnnotationWorkspace key={context.task.id} reviewTaskId={context.task.id} disabled={!canEditDraft}
         drawingAvailable={canAnnotate && viewerMode === "segment" && Boolean(preview?.contentType.startsWith("image/"))}
-        studentFeedback={studentFeedback} onStudentFeedbackChange={onStudentFeedbackChange} onAnnotationCountChange={updateAnnotationCount}
-        historicalComments={historicalComments} historicalPrivateNote={historicalPrivateNote} onAdoptAiFeedback={onAdoptAiFeedback} canAdoptAiFeedback={canAdoptAiFeedback}
-        rubricCriteria={rubricPoints.map(point => ({ id: point.id, label: pointLabel(point) }))} renderCanvas={viewer}
-        viewTools={<><Button size="small" onClick={onRotate}>旋转</Button><Tooltip title="放大后聚焦此按钮，用方向键移动答题图"><Button size="small" aria-label="键盘平移答题图" aria-describedby={viewerHelpId} onKeyDown={onKeyDown}>键盘平移</Button></Tooltip></>} /> : viewer()}
+        renderCanvas={viewer}
+        viewTools={<><Tooltip title="旋转答题图" placement="right"><Button type="text" icon={<RotateCw size={18} />} aria-label="旋转答题图" onClick={onRotate} /></Tooltip><Tooltip title="放大后聚焦此按钮，用方向键移动答题图" placement="right"><Button type="text" icon={<Move size={18} />} aria-label="键盘平移答题图" aria-describedby={viewerHelpId} onKeyDown={onKeyDown} /></Tooltip></>} /> : viewer()}
     </section>
   );
 }

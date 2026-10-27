@@ -49,7 +49,7 @@ describe("阅卷概览按实际待办分类", () => {
   it("平静呈现19道题的11+5+1待办，每行直接进入对应结果筛选", () => {
     const onOpenResults = vi.fn();
     const onOpenAssignments = vi.fn();
-    render(<ExamScoringOverview scoring={controller()} canManageTasks onOpenResults={onOpenResults} onOpenAssignments={onOpenAssignments} fastConfirm={<span>快捷确认入口</span>} />);
+    render(<ExamScoringOverview scoring={controller()} canManageTasks onOpenResults={onOpenResults} onOpenAssignments={onOpenAssignments} />);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("阅卷概览");
     expect(screen.getByText("共 19 道题 · 已确认 2 · 待处理 17")).toBeTruthy();
     const tasks = screen.getByLabelText("待确认事项");
@@ -68,7 +68,6 @@ describe("阅卷概览按实际待办分类", () => {
     expect(assign.getAttribute("data-variant")).toBe("primary");
     fireEvent.click(assign);
     expect(onOpenAssignments).toHaveBeenCalledOnce();
-    expect(screen.getByText("快捷确认入口")).toBeTruthy();
     expect(screen.queryByText("各题进度表")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "各题进度" }));
     expect(screen.getByText("各题进度表")).toBeTruthy();

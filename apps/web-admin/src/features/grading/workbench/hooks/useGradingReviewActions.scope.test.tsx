@@ -261,11 +261,11 @@ describe("grading review scope and conflict boundaries", () => {
     expect(mocks.rememberCurrent).not.toHaveBeenCalled();
   });
 
-  it("keeps stale adoption callbacks from filling score or feedback after a current failure", async () => {
+  it("keeps stale adoption callbacks from filling score after a current failure", async () => {
     await mount({ suggestedText: true });
     const previous = actions;
     await act(async () => { receiveCurrentFailure(); });
-    await act(async () => { await previous.adoptAiScore(); previous.adoptAiFeedback(); });
+    await act(async () => { await previous.adoptAiScore(); });
     expect(current.draft.score).toBe(6);
     expect(current.draft.comments).toBe("A feedback");
     expect(current.draft.studentFeedback).toBe("");

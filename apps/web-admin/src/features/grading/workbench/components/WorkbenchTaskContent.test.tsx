@@ -60,23 +60,19 @@ function props(taskId = "task-1", selectedGrade: AiGrade | undefined = imageGrad
       math: { enabled: false, state: { segmentId: "segment-1", phase: "unavailable", understanding: null, score: null, message: "" }, dirty: false, setDirty: vi.fn(), refresh: vi.fn(async () => null), correctionSaved: vi.fn() },
       onRefreshMath: vi.fn(), onSelectMathStep: vi.fn(), canRequestMath: false, requestingMath: false, onRequestMath: vi.fn(), mathRequestNotice: ""
     },
-    editor: { draft, selectedGrade, maxScore: 10, rubricPoints: [], canEditDraft: false, canReturn: false, actioning: null, setDraft: vi.fn(), onAdoptAiScore: vi.fn(), onAdoptAiFeedback: vi.fn(), canAdoptAiScore: false, onMarkDispute: vi.fn(async () => undefined) }
+    editor: { draft, selectedGrade, maxScore: 10, rubricPoints: [], canEditDraft: false, canReturn: false, actioning: null, setDraft: vi.fn(), onAdoptAiScore: vi.fn(), canAdoptAiScore: false, onMarkDispute: vi.fn(async () => undefined) }
   };
 }
 
 describe("顶部查看 AI 评分记录", () => {
-  it("本题评语只写 studentFeedback，保留得分和历史教师评语及内部备注", () => {
+  it("作答面板不再接收评语或备注字段，存量草稿保持原值", () => {
     const initial = props();
     const value = { ...initial, editor: { ...initial.editor, canEditDraft: true, draft: { ...initial.editor.draft, score: 7, comments: "历史教师评语", privateNote: "历史内部备注", studentFeedback: "原学生反馈" } } };
     render(<WorkbenchTaskContent {...value} />);
     const pane = answerPane.mock.lastCall![0];
-    expect(pane.studentFeedback).toBe("原学生反馈");
-    expect(pane.historicalComments).toBe("历史教师评语");
-    expect(pane.historicalPrivateNote).toBe("历史内部备注");
-    pane.onStudentFeedbackChange("新本题评语");
-    const update = vi.mocked(value.editor.setDraft).mock.calls[0][0] as (draft: ScoreDraft) => ScoreDraft;
-    expect(update(value.editor.draft)).toEqual({ ...value.editor.draft, studentFeedback: "新本题评语" });
-    expect(value.editor.onAdoptAiScore).not.toHaveBeenCalled();
+    for (const field of ["studentFeedback", "historicalComments", "historicalPrivateNote", "onStudentFeedbackChange", "onAdoptAiFeedback", "canAdoptAiFeedback"]) expect(pane).not.toHaveProperty(field);
+    expect(value.editor.setDraft).not.toHaveBeenCalled();
+    expect(value.editor.draft).toMatchObject({ score: 7, comments: "历史教师评语", privateNote: "历史内部备注", studentFeedback: "原学生反馈" });
   });
 
   it("只读或建议不可采纳时仍能打开完整记录，保留公式且不请求评分或修改草稿", () => {
@@ -90,7 +86,6 @@ describe("顶部查看 AI 评分记录", () => {
     expect(dialog.querySelectorAll(".katex").length).toBeGreaterThanOrEqual(6);
     expect(dialog.textContent).not.toContain("不应展示的供应商私有内容");
     expect(value.editor.onAdoptAiScore).not.toHaveBeenCalled();
-    expect(value.editor.onAdoptAiFeedback).not.toHaveBeenCalled();
     expect(value.editor.setDraft).not.toHaveBeenCalled();
     expect(value.evidence.onRequestMath).not.toHaveBeenCalled();
     expect(listAiGrades).not.toHaveBeenCalled();

@@ -103,10 +103,6 @@ import type {
   DeleteRevisionRequest,
   ReviewAnnotationResponse,
   ReviewAnnotationListResponse,
-  CreateReviewCommentTemplateRequest,
-  UpdateReviewCommentTemplateRequest,
-  ReviewCommentTemplateResponse,
-  ReviewCommentTemplateListResponse,
   AppealPage,
   BatchEnqueueResponse,
   EducationStage,
@@ -488,12 +484,6 @@ export interface operations {
   "getReviewAnnotation": { args: { path: { "annotationId": string; }; signal?: AbortSignal; }; response: ReviewAnnotationResponse; };
   "updateReviewAnnotation": { args: { path: { "annotationId": string; }; body: UpdateReviewAnnotationRequest; signal?: AbortSignal; }; response: ReviewAnnotationResponse; };
   "deleteReviewAnnotation": { args: { path: { "annotationId": string; }; body: DeleteRevisionRequest; signal?: AbortSignal; }; response: void; };
-  "listReviewCommentTemplates": { args: { signal?: AbortSignal; }; response: ReviewCommentTemplateListResponse; };
-  "createReviewCommentTemplate": { args: { body: CreateReviewCommentTemplateRequest; signal?: AbortSignal; }; response: ReviewCommentTemplateResponse; };
-  "getReviewCommentTemplate": { args: { path: { "templateId": string; }; signal?: AbortSignal; }; response: ReviewCommentTemplateResponse; };
-  "updateReviewCommentTemplate": { args: { path: { "templateId": string; }; body: UpdateReviewCommentTemplateRequest; signal?: AbortSignal; }; response: ReviewCommentTemplateResponse; };
-  "deleteReviewCommentTemplate": { args: { path: { "templateId": string; }; body: DeleteRevisionRequest; signal?: AbortSignal; }; response: void; };
-  "useReviewCommentTemplate": { args: { path: { "shortcut": string; }; signal?: AbortSignal; }; response: ReviewCommentTemplateResponse; };
   "nominateGoldPaper": { args: { path: { "examId": string; "questionId": string; }; body: NominateGoldPaperRequest; signal?: AbortSignal; }; response: GoldPaperResponse; };
   "getGoldCoverage": { args: { path: { "examId": string; "questionId": string; }; signal?: AbortSignal; }; response: GoldCoverageResponse; };
   "listGoldPapers": { args: { query?: { "exam_id"?: string; "question_id"?: string; "status"?: GoldPaperStatus; }; signal?: AbortSignal; }; response: GoldPaperListResponse; };
@@ -1238,36 +1228,6 @@ export class EduGradeApi {
   deleteReviewAnnotation(args: operations["deleteReviewAnnotation"]["args"]): Promise<operations["deleteReviewAnnotation"]["response"]> {
     const requestPath = fillPath("/api/v1/review/annotations/{annotationId}", args.path);
     return this.transport.request(requestPath, { method: "DELETE", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
-  }
-
-  listReviewCommentTemplates(args: operations["listReviewCommentTemplates"]["args"] = {}): Promise<operations["listReviewCommentTemplates"]["response"]> {
-    const requestPath = "/api/v1/review/comment-templates";
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
-  }
-
-  createReviewCommentTemplate(args: operations["createReviewCommentTemplate"]["args"]): Promise<operations["createReviewCommentTemplate"]["response"]> {
-    const requestPath = "/api/v1/review/comment-templates";
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
-  }
-
-  getReviewCommentTemplate(args: operations["getReviewCommentTemplate"]["args"]): Promise<operations["getReviewCommentTemplate"]["response"]> {
-    const requestPath = fillPath("/api/v1/review/comment-templates/{templateId}", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
-  }
-
-  updateReviewCommentTemplate(args: operations["updateReviewCommentTemplate"]["args"]): Promise<operations["updateReviewCommentTemplate"]["response"]> {
-    const requestPath = fillPath("/api/v1/review/comment-templates/{templateId}", args.path);
-    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
-  }
-
-  deleteReviewCommentTemplate(args: operations["deleteReviewCommentTemplate"]["args"]): Promise<operations["deleteReviewCommentTemplate"]["response"]> {
-    const requestPath = fillPath("/api/v1/review/comment-templates/{templateId}", args.path);
-    return this.transport.request(requestPath, { method: "DELETE", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
-  }
-
-  useReviewCommentTemplate(args: operations["useReviewCommentTemplate"]["args"]): Promise<operations["useReviewCommentTemplate"]["response"]> {
-    const requestPath = fillPath("/api/v1/review/comment-templates/{shortcut}/use", args.path);
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
   }
 
   nominateGoldPaper(args: operations["nominateGoldPaper"]["args"]): Promise<operations["nominateGoldPaper"]["response"]> {

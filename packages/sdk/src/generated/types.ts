@@ -414,16 +414,6 @@ export type ReviewAnnotationResponse = { "annotation": ReviewAnnotation; };
 
 export type ReviewAnnotationListResponse = { "annotations": Array<ReviewAnnotation>; };
 
-export type ReviewCommentTemplate = { "id": string; "tenant_id": string; "owner_id": string; "title": string; "content": string; "shortcut": string; "usage_count": number; "revision": number; "created_at": string; "updated_at": string; };
-
-export type CreateReviewCommentTemplateRequest = { "title": string; "content": string; "shortcut": string; };
-
-export type UpdateReviewCommentTemplateRequest = { "title": string; "content": string; "shortcut": string; "expected_revision": number; };
-
-export type ReviewCommentTemplateResponse = { "comment_template": ReviewCommentTemplate; };
-
-export type ReviewCommentTemplateListResponse = { "comment_templates": Array<ReviewCommentTemplate>; };
-
 export type AppealPage = (CursorPageMeta) & ({ "appeals": Array<Record<string, unknown>>; });
 
 export type BatchEnqueueResponse = { "batch": SubjectiveGradingBatch; "tasks": Array<Record<string, unknown>>; "enqueue_result": { "requested_count": number; "accepted_count": number; "task_count": number; "failed_count": number; "partial_success": boolean; "failures": Array<{ "segment_id": string; "code": string; }>; }; };
@@ -1841,11 +1831,6 @@ export interface components {
     "DeleteRevisionRequest": DeleteRevisionRequest;
     "ReviewAnnotationResponse": ReviewAnnotationResponse;
     "ReviewAnnotationListResponse": ReviewAnnotationListResponse;
-    "ReviewCommentTemplate": ReviewCommentTemplate;
-    "CreateReviewCommentTemplateRequest": CreateReviewCommentTemplateRequest;
-    "UpdateReviewCommentTemplateRequest": UpdateReviewCommentTemplateRequest;
-    "ReviewCommentTemplateResponse": ReviewCommentTemplateResponse;
-    "ReviewCommentTemplateListResponse": ReviewCommentTemplateListResponse;
     "AppealPage": AppealPage;
     "BatchEnqueueResponse": BatchEnqueueResponse;
     "EducationStage": EducationStage;

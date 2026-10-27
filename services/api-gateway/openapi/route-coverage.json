@@ -4,8 +4,8 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 594,
-    "openapi": 351,
+    "registered": 588,
+    "openapi": 345,
     "registered_gaps": 243
   },
   "routes": [
@@ -4779,48 +4779,6 @@
       "source": "services/api-gateway/internal/server/routes_review.go",
       "coverage": "openapi",
       "operation_id": "updateReviewAnnotation"
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/review/comment-templates",
-      "source": "services/api-gateway/internal/server/routes_review.go",
-      "coverage": "openapi",
-      "operation_id": "listReviewCommentTemplates"
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/review/comment-templates",
-      "source": "services/api-gateway/internal/server/routes_review.go",
-      "coverage": "openapi",
-      "operation_id": "createReviewCommentTemplate"
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/review/comment-templates/{shortcut}/use",
-      "source": "services/api-gateway/internal/server/routes_review.go",
-      "coverage": "openapi",
-      "operation_id": "useReviewCommentTemplate"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/v1/review/comment-templates/{templateId}",
-      "source": "services/api-gateway/internal/server/routes_review.go",
-      "coverage": "openapi",
-      "operation_id": "deleteReviewCommentTemplate"
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/review/comment-templates/{templateId}",
-      "source": "services/api-gateway/internal/server/routes_review.go",
-      "coverage": "openapi",
-      "operation_id": "getReviewCommentTemplate"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/v1/review/comment-templates/{templateId}",
-      "source": "services/api-gateway/internal/server/routes_review.go",
-      "coverage": "openapi",
-      "operation_id": "updateReviewCommentTemplate"
     },
     {
       "method": "GET",

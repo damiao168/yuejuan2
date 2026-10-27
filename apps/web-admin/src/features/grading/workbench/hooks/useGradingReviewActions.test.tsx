@@ -164,17 +164,14 @@ describe("grading review submission lifecycle", () => {
     await act(async () => { root.render(<QueryClientProvider client={queryClient}><Harness /></QueryClientProvider>); });
   }
 
-  it("adopts score and feedback through separate actions", async () => {
+  it("采纳分数保留存量评语与备注，不再提供采用 AI 评语动作", async () => {
     await mount({ suggestedText: true });
     await act(async () => { await actions.adoptAiScore(); });
     expect(current.draft.score).toBe(9);
     expect(current.draft.studentFeedback).toBe("");
     expect(current.draft.privateNote).toBe("");
-    await act(async () => { actions.adoptAiFeedback(); });
-    expect(current.draft.score).toBe(9);
-    expect(current.draft.studentFeedback).toBe("AI 学生反馈");
-    expect(current.draft.privateNote).toBe("");
     expect(current.draft.comments).toBe("A feedback");
+    expect(actions).not.toHaveProperty("adoptAiFeedback");
   });
 
   it.each([0, 9])("当前图像数学建议 %s 分直接采纳，不再要求旧版数学工件", async score => {

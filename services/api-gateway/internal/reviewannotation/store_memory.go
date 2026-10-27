@@ -12,7 +12,6 @@ type MemoryStore struct {
 	mu                         sync.RWMutex
 	next                       int
 	annotations                map[string]Annotation
-	templates                  map[string]CommentTemplate
 	taskRefs                   map[string]memoryTaskReference
 	published                  map[string]bool
 	studentQuestionAnnotations map[string][]StudentAnnotation
@@ -21,7 +20,7 @@ type MemoryStore struct {
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		next: 1, annotations: map[string]Annotation{}, templates: map[string]CommentTemplate{},
+		next: 1, annotations: map[string]Annotation{},
 		taskRefs: map[string]memoryTaskReference{}, published: map[string]bool{},
 		studentQuestionAnnotations: map[string][]StudentAnnotation{}, studentPublishedReleases: map[string]string{},
 	}
@@ -177,124 +176,6 @@ func (s *MemoryStore) DeleteAnnotation(_ context.Context, tenantID, id, _ string
 	}
 	delete(s.annotations, key)
 	return nil
-}
-
-func (s *MemoryStore) CreateCommentTemplate(_ context.Context, tenantID, actorID string, input CreateCommentTemplateInput) (CommentTemplate, error) {
-	input.Title, input.Content, input.Shortcut = normalizeTemplate(input.Title, input.Content, input.Shortcut)
-	if tenantID == "" || actorID == "" || validateTemplate(input.Title, input.Content, input.Shortcut) != nil {
-		return CommentTemplate{}, ErrInvalidInput
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.shortcutExists(tenantID, actorID, input.Shortcut, "") {
-		return CommentTemplate{}, ErrShortcutConflict
-	}
-	now := time.Now().UTC()
-	item := CommentTemplate{
-		ID: s.id("comment-template"), TenantID: tenantID, OwnerID: actorID,
-		Title: input.Title, Content: input.Content, Shortcut: input.Shortcut,
-		UsageCount: 0, Revision: 1, CreatedAt: now, UpdatedAt: now,
-	}
-	s.templates[memoryKey(tenantID, item.ID)] = item
-	return item, nil
-}
-
-// 模板按租户和拥有者隔离，并按使用次数降序返回，便于前端优先展示常用快捷语句。
-func (s *MemoryStore) ListCommentTemplates(_ context.Context, tenantID, ownerID string) ([]CommentTemplate, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	out := []CommentTemplate{}
-	for _, item := range s.templates {
-		if item.TenantID == tenantID && item.OwnerID == ownerID {
-			out = append(out, item)
-		}
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].UsageCount == out[j].UsageCount {
-			return out[i].UpdatedAt.After(out[j].UpdatedAt)
-		}
-		return out[i].UsageCount > out[j].UsageCount
-	})
-	return out, nil
-}
-
-func (s *MemoryStore) GetCommentTemplate(_ context.Context, tenantID, ownerID, id string) (CommentTemplate, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	item, ok := s.templates[memoryKey(tenantID, id)]
-	if !ok || item.OwnerID != ownerID {
-		return CommentTemplate{}, ErrNotFound
-	}
-	return item, nil
-}
-
-func (s *MemoryStore) UpdateCommentTemplate(_ context.Context, tenantID, ownerID, id string, input UpdateCommentTemplateInput) (CommentTemplate, error) {
-	input.Title, input.Content, input.Shortcut = normalizeTemplate(input.Title, input.Content, input.Shortcut)
-	if tenantID == "" || ownerID == "" || id == "" || input.ExpectedRevision <= 0 || validateTemplate(input.Title, input.Content, input.Shortcut) != nil {
-		return CommentTemplate{}, ErrInvalidInput
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	key := memoryKey(tenantID, id)
-	item, ok := s.templates[key]
-	if !ok || item.OwnerID != ownerID {
-		return CommentTemplate{}, ErrNotFound
-	}
-	if item.Revision != input.ExpectedRevision {
-		return CommentTemplate{}, ErrRevisionConflict
-	}
-	if s.shortcutExists(tenantID, ownerID, input.Shortcut, id) {
-		return CommentTemplate{}, ErrShortcutConflict
-	}
-	item.Title, item.Content, item.Shortcut = input.Title, input.Content, input.Shortcut
-	item.Revision++
-	item.UpdatedAt = time.Now().UTC()
-	s.templates[key] = item
-	return item, nil
-}
-
-func (s *MemoryStore) DeleteCommentTemplate(_ context.Context, tenantID, ownerID, id string, expectedRevision int64) error {
-	if tenantID == "" || ownerID == "" || id == "" || expectedRevision <= 0 {
-		return ErrInvalidInput
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	key := memoryKey(tenantID, id)
-	item, ok := s.templates[key]
-	if !ok || item.OwnerID != ownerID {
-		return ErrNotFound
-	}
-	if item.Revision != expectedRevision {
-		return ErrRevisionConflict
-	}
-	delete(s.templates, key)
-	return nil
-}
-
-// 使用快捷语句和 usage_count 更新放在同一把锁内，列表排序不会看到半更新状态。
-func (s *MemoryStore) UseCommentTemplate(_ context.Context, tenantID, ownerID, shortcut string) (CommentTemplate, error) {
-	_, _, shortcut = normalizeTemplate("", "", shortcut)
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for key, item := range s.templates {
-		if item.TenantID == tenantID && item.OwnerID == ownerID && item.Shortcut == shortcut {
-			item.UsageCount++
-			item.Revision++
-			item.UpdatedAt = time.Now().UTC()
-			s.templates[key] = item
-			return item, nil
-		}
-	}
-	return CommentTemplate{}, ErrNotFound
-}
-
-func (s *MemoryStore) shortcutExists(tenantID, ownerID, shortcut, exceptID string) bool {
-	for _, item := range s.templates {
-		if item.TenantID == tenantID && item.OwnerID == ownerID && item.Shortcut == shortcut && item.ID != exceptID {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *MemoryStore) id(prefix string) string {

@@ -105,7 +105,6 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   heldGroupTask.current = regionEditing || ctx?.task.status === "submitted" ? ctx!.task.id : "";
   const updateRegionState = useCallback((dirty: boolean, busy: boolean) => { setRegionDirty(dirty); setRegionBusy(busy); }, []);
   const [referenceTab, setReferenceTab] = useState<FrozenReferenceTab | null>(null);
-  const [aiSuggestionEntry, setAISuggestionEntry] = useState<HTMLDivElement | null>(null);
   const [actioning, setActioning] = useState<string | null>(null);
   const [assignmentPreview, setAssignmentPreview] = useState<ReviewTask[] | null>(null);
   const [mathRequesting, setMathRequesting] = useState(false);
@@ -280,7 +279,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
       error: (text) => message.error(text)
     }
   });
-  const { submitGrade, markDispute, adoptAiScore, adoptAiFeedback, openDraftConflict, applyDraftConflict, confirmReturnTask } = reviewActions;
+  const { submitGrade, markDispute, adoptAiScore, openDraftConflict, applyDraftConflict, confirmReturnTask } = reviewActions;
   // 不提供普通草稿/续租的任务直接按任务修订号交分；不能等待一个永远不会发生的草稿保存。
   const submissionDraftReady = ctx?.reviewContext.claim.can_renew
     ? !unsyncedDraft && draftSaveStatus === "saved"
@@ -345,7 +344,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         onOpenCalibration={setCalibrationQuestionId}
         onOpenAssignments={() => changeQueueScope(() => { examScoring.setDetailOpen(false); setManagementView("assignment"); setQueueScope("all"); })}
         onViewChange={value => changeQueueScope(() => { examScoring.setDetailOpen(false); examScoring.closeImage(); setTaskPreviewOpen(false); setManagementView(value); setQueueScope(value === "work" ? "mine" : "all"); })}
-        onOpenResults={openResults} fastConfirmTriggerTarget={aiSuggestionEntry} />
+        onOpenResults={openResults} />
       {!managing ? <WorkbenchHeader
         canWork={canWork}
         canManageTasks={false}
@@ -391,7 +390,6 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         <WorkbenchTaskContent
           context={ctx} loading={contextLoading} error={contextError} hasTasks={tasks.length > 0}
           canManageTasks={managing} onRetry={() => void loadContext(selectedTaskId)}
-          aiSuggestionEntryRef={managing ? undefined : setAISuggestionEntry}
           selectedGrade={selectedGrade} subjectCode={subjectCode} canAdoptAiScore={canAdoptAiScore}
           regionEditor={regionEditing && ctx ? <RegionScoreEditor context={ctx} currentUserId={currentUserId}
             canGrade={canGrade && canWork && hasSession && !draftConflict} draft={draft} setDraft={setDraft}
@@ -438,7 +436,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
           editor={{
             draft, setDraft: scoreShortcuts.updateDraft, maxScore, rubricPoints,
             selectedGrade, canEditDraft, canReturn, actioning,
-            onAdoptAiScore: () => void adoptAiScore(), onAdoptAiFeedback: adoptAiFeedback, canAdoptAiScore, onMarkDispute: markDispute
+            onAdoptAiScore: () => void adoptAiScore(), canAdoptAiScore, onMarkDispute: markDispute
           }}
         />
         </TaskContentContainer>

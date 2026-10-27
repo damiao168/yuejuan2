@@ -184,7 +184,7 @@ Go import 图也不是全部业务依赖图：很多跨域关系通过 SQL JOIN�
 | subjective | 受治理 AI 建议、批次／run、模型输入构造、数学证据、结果校验 | handlers.go、batch_command.go、adapter_http*.go | 单题／批次 API、subjective worker；调用准入／评估／校准、AI service | Grade、GradingRun、GradingBatch |
 | evidence | 检查评分点命中与答案／rubric 证据一致性 | engine.go、handlers.go | ai-grade verify API；读取 ai_grade、答案、rubric | VerificationResult、Issue、agent_job |
 | review | 人工任务、领取／续期、草稿、提交、双评与仲裁、工作区上下文 | handlers.go、workbench_postgres.go、store_postgres_*.go | 阅卷／仲裁 UI；读冻结配置、AI／OCR；接 qualification／Seed／disagreement | ReviewTask、HumanGrade、DoubleMarkSession、ArbitrationTask |
-| reviewannotation | 答卷批注、私有／学生视图、快捷评语模板 | handlers.go、store_postgres.go | review UI 与发布后的学生逐题 API | Annotation、CommentTemplate |
+| reviewannotation | 答卷批注、私有／学生视图 | handlers.go、store_postgres.go | review UI 与发布后的学生逐题 API | Annotation |
 | goldpaper | 金标答案提名、版本、审批／退役及分数带覆盖 | handlers.go、store_postgres.go | 质控管理员；calibration／seed／group 读取 | GoldPaper、Version |
 | calibration | 阅卷员校准、对金标评分、题目级资格 | service.go | 质控／阅卷领取；读 goldpaper；资格供 review／Seed | Session、Attempt、Qualification |
 | answergroup | 答案确定性相似分组、抽样、确认／回滚、候选与参考例 | algorithm.go、handlers.go、store_postgres.go | 质控页面；读 segment／answer／snapshot／goldpaper | Group、Member、Decision、Candidate |
@@ -266,7 +266,7 @@ flowchart LR
 | AI Grade／SubjectiveRun／Batch：subjective/types.go、grading/types.go | Grade／CreateBatch／EnqueueBatch／run 创建 | Execute／WorkerResult／Failure；验证、证据、candidate | 建议记录和 run 历史，不能当公开最终分直接覆盖 | evidence、review、evaluation／disagreement；model／prompt／rubric／contract 版本 |
 | ReviewTask／ReviewDraft／HumanGrade：review/types.go | CreateTask／BatchAssign／ClaimNext；SaveDraft | Assign、renew／release、SubmitGrade／ReturnTask | 草稿与任务状态不同；human grade 为证据记录 | 阅卷员工作区、双评、score／backmark；revision、assigned_to、claim、grade_round |
 | DoubleMarkSession／ArbitrationTask／FinalGrade：review/types.go | policy + CreateDoubleMarkSession／CreateArbitrationTask | 两轮提交、分歧处理、SubmitArbitration、resolution | 无通用删除；决议保留 | score；盲评需分别控制“可看见的上下文”和“可操作的任务” |
-| Annotation／CommentTemplate：reviewannotation/types.go | CreateAnnotation／CreateCommentTemplate | Update／UseCommentTemplate | DeleteAnnotation／DeleteCommentTemplate | review 与公开学生视图；private_note 不等于 student_feedback |
+| Annotation：reviewannotation/types.go | CreateAnnotation | UpdateAnnotation | DeleteAnnotation | review 与公开学生视图；private_note 不等于 student_feedback |
 | GoldPaper／Version：goldpaper/types.go | 提名／CreateVersion | 审批、Retire | 退役保留版本 | calibration、Seed、group；pending_approval／active／retired |
 | CalibrationSession／Attempt／Qualification：calibration/types.go | CreateSession／CreateAttempt | CompleteSession、InvalidateQualification／质量暂停 | 资格失效，历史尝试保留 | review 领取与 Seed；资格依赖题目／金标版本 |
 | AnswerGroup／Decision／Candidate：answergroup/types.go | build／抽样分组写入 | 抽样评审、Confirm／Rollback | rolled_back；保留决策与候选 | 质控；sampling→ready_for_confirmation→confirmed／rolled_back，不应把群组候选当最终成绩 |

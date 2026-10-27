@@ -121,31 +121,3 @@ export function choiceReviewReason(context: ReviewTaskContext): string {
   }
   return "选择题待确认，请对照答题图核对选项与得分。";
 }
-
-export interface SubjectToolDescriptor {
-  group: "writing" | "math_science" | "chemistry" | "humanities" | "geo_bio" | "general";
-  label: string;
-  capabilities: string[];
-}
-
-export function subjectToolDescriptor(context: ReviewTaskContext): SubjectToolDescriptor {
-  if (isChoiceReview(context)) return { group: "general", label: "选项核对", capabilities: [] };
-  const subject = context.subject_tool_hints.subject_code;
-  const evidence = new Set(context.subject_tool_hints.allowed_evidence_types);
-  if (subject === "chinese" || subject === "english") {
-    return { group: "writing", label: "全文与分项评价", capabilities: ["连续阅读", "段落定位", "分项评分"] };
-  }
-  if (subject === "mathematics" || subject === "physics") {
-    return { group: "math_science", label: "公式与步骤核对", capabilities: ["公式放大", "步骤评分", ...(evidence.has("unit_value") ? ["单位校验"] : [])] };
-  }
-  if (subject === "chemistry") {
-    return { group: "chemistry", label: "化学表达核对", capabilities: ["反应式证据", "条件与状态", "步骤评分"] };
-  }
-  if (subject === "history" || subject === "ethics_politics") {
-    return { group: "humanities", label: "材料证据核对", capabilities: ["材料高亮", "概念证据", "关系证据"] };
-  }
-  if (subject === "geography" || subject === "biology") {
-    return { group: "geo_bio", label: "图表与概念核对", capabilities: ["图表证据", "概念证据", "关系证据"] };
-  }
-  return { group: "general", label: "通用评分工具", capabilities: ["答题产物", "评分细则", "证据"] };
-}

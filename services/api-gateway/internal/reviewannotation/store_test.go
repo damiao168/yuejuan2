@@ -108,36 +108,5 @@ func TestMemoryStudentQuestionAnnotationsAreScopedAndPrivateAnnotationsNeverPers
 	}
 }
 
-func TestCommentTemplateShortcutUsageAndTenantIsolation(t *testing.T) {
-	ctx := context.Background()
-	store := NewMemoryStore()
-	created, err := store.CreateCommentTemplate(ctx, "tenant-a", "reviewer-1", CreateCommentTemplateInput{
-		Title: "Clear method", Content: "Method is clear and complete.", Shortcut: " GOOD.METHOD ",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if created.Shortcut != "good.method" {
-		t.Fatalf("shortcut = %q", created.Shortcut)
-	}
-	if _, err := store.CreateCommentTemplate(ctx, "tenant-a", "reviewer-1", CreateCommentTemplateInput{
-		Title: "Duplicate", Content: "Duplicate shortcut", Shortcut: "good.method",
-	}); !errors.Is(err, ErrShortcutConflict) {
-		t.Fatalf("duplicate shortcut error = %v", err)
-	}
-	if _, err := store.CreateCommentTemplate(ctx, "tenant-b", "reviewer-1", CreateCommentTemplateInput{
-		Title: "Other tenant", Content: "Same shortcut is isolated", Shortcut: "good.method",
-	}); err != nil {
-		t.Fatalf("cross-tenant shortcut should be allowed: %v", err)
-	}
-	used, err := store.UseCommentTemplate(ctx, "tenant-a", "reviewer-1", "GOOD.METHOD")
-	if err != nil || used.UsageCount != 1 || used.Revision != created.Revision+1 {
-		t.Fatalf("used template = %#v, %v", used, err)
-	}
-	if _, err := store.GetCommentTemplate(ctx, "tenant-a", "reviewer-2", created.ID); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("cross-owner read error = %v", err)
-	}
-}
-
 var _ Store = (*MemoryStore)(nil)
 var _ Store = (*PostgresStore)(nil)

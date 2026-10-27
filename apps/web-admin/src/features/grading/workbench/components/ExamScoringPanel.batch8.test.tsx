@@ -2,16 +2,14 @@
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReviewTask, ScoringRunItem } from "../../../../api/review";
+import type { ScoringRunItem } from "../../../../api/review";
 import { setBusinessCommandScope } from "../../../../api/businessCommand";
 import type { ExamScoringController } from "../hooks/useExamScoring";
 import { ExamScoringPanel, type ExamScoringPanelProps } from "./ExamScoringPanel";
 
 const rendered = vi.hoisted(() => ({
   widgets: [] as Array<{ name: string; props: Record<string, unknown> }>,
-  tables: [] as Array<Record<string, unknown>>,
-  fast: [] as Array<{ token: number; props: Record<string, unknown> }>,
-  nextToken: 0
+  tables: [] as Array<Record<string, unknown>>
 }));
 
 vi.mock("antd", async () => {
@@ -36,14 +34,6 @@ vi.mock("./GradingAIPlanSettings", () => ({
 vi.mock("../../../../components/StatusTag", async () => {
   const React = await vi.importActual<typeof import("react")>("react");
   return { StatusTag: (props: Record<string, unknown>) => React.createElement("span", { "data-tone": props.tone }, props.children as ReactNode) };
-});
-vi.mock("./FastConfirmDrawer", async () => {
-  const React = await vi.importActual<typeof import("react")>("react");
-  return { FastConfirmDrawer: function FastConfirm(props: Record<string, unknown>) {
-    const [token] = React.useState(() => ++rendered.nextToken);
-    rendered.fast.push({ token, props });
-    return React.createElement("span", { "data-fast-token": token }, String(props.examId));
-  } };
 });
 
 function run(status = "completed") {
@@ -78,10 +68,10 @@ describe("batch8 scoring panel common original/current contract (mock UI/control
   beforeEach(() => {
     setBusinessCommandScope("tenant", "teacher");
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-    rendered.widgets.length = 0; rendered.tables.length = 0; rendered.fast.length = 0; rendered.nextToken = 0;
+    rendered.widgets.length = 0; rendered.tables.length = 0;
     host = document.createElement("div");
     root = createRoot(host);
-    props = { initialExamId: "exam-A", canGrade: true, canWork: true, canManageTasks: true, currentQuestionId: "", scoring: controller(), onOpenGoldPapers: vi.fn(), onOpenCalibration: vi.fn(), tasks: [], currentUserId: "teacher", onTasksChanged: vi.fn(async () => undefined) };
+    props = { initialExamId: "exam-A", canGrade: true, canWork: true, currentUserId: "teacher", canManageTasks: true, currentQuestionId: "", scoring: controller(), onOpenGoldPapers: vi.fn(), onOpenCalibration: vi.fn() };
   });
   afterEach(async () => { await act(async () => root.unmount()); });
 
@@ -210,11 +200,10 @@ describe("batch8 scoring panel common original/current contract (mock UI/control
     await act(async () => click("各题进度"));
     expect(rendered.tables.filter(table => table.rowKey === "question_id")).toHaveLength(1);
     expect(host.querySelector("details")?.open).toBe(false);
-    expect(rendered.fast).toHaveLength(0);
   });
 
   it("管理者只在对应专页显示答卷结果和阅卷设置", async () => {
-    await render({ showOverview: false, showFastConfirmEntry: false, scoring: controller({ summary: summary(), detailOpen: true }) });
+    await render({ showOverview: false, scoring: controller({ summary: summary(), detailOpen: true }) });
     expect(host.querySelector(".grading-overview")).toBeNull();
     expect(host.querySelector('[aria-label="答卷结果"]')).toBeNull();
     expect(host.querySelector('[aria-label="阅卷设置"]')).toBeNull();
@@ -235,40 +224,10 @@ describe("batch8 scoring panel common original/current contract (mock UI/control
     expect(host.querySelector('[aria-label="阅卷设置"]')).toBeNull();
   });
 
-  it("retains FastConfirm state across unrelated renders and resets only on exam key change", async () => {
-    await render({ tasks: [{ assigned_to: "teacher", exam_id: "exam-A", status: "assigned" }] as ReviewTask[] });
-    const first = rendered.fast[rendered.fast.length - 1]!;
-    await render({ tasks: [{ assigned_to: "teacher", exam_id: "exam-A", status: "assigned" }] as ReviewTask[], scoring: controller({ loading: true }) });
-    expect(rendered.fast[rendered.fast.length - 1]?.token).toBe(first.token);
-    await render({ initialExamId: "exam-B", tasks: [{ assigned_to: "teacher", exam_id: "exam-B", status: "assigned" }] as ReviewTask[] });
-    expect(rendered.fast[rendered.fast.length - 1]?.token).not.toBe(first.token);
-    expect(rendered.fast[rendered.fast.length - 1]?.props.examId).toBe("exam-B");
-  });
-
-  it("derives FastConfirm's exam from the first own task, without granting scoring controls", async () => {
-    await render({ initialExamId: "", canGrade: false, tasks: [{ assigned_to: "other", exam_id: "other" }, { assigned_to: "teacher", exam_id: "own-exam", status: "assigned" }] as ReviewTask[] });
-    expect(rendered.fast[rendered.fast.length - 1]?.props.examId).toBe("own-exam");
-    expect(button("开始评分")).toBeUndefined();
-    await (rendered.fast[rendered.fast.length - 1]!.props.onScoringChanged as () => Promise<void>)();
-    expect(props.scoring.loadSummary).not.toHaveBeenCalled();
-  });
-
-  it("keeps the final fast-confirm receipt mounted after its own queue becomes empty", async () => {
-    await render({ initialExamId: "", canGrade: false, tasks: [{ exam_id: "exam-A", assigned_to: "teacher", status: "assigned" } as ReviewTask] });
-    const token = host.querySelector("[data-fast-token]")?.getAttribute("data-fast-token");
-    await render({ tasks: [] });
-    expect(host.querySelector("[data-fast-token]")?.getAttribute("data-fast-token")).toBe(token);
-    expect(host.querySelector("[data-fast-token]")?.textContent).toBe("exam-A");
-    expect(rendered.fast[rendered.fast.length - 1]?.props.tasks).toEqual([]);
-    expect(props.scoring.loadSummary).not.toHaveBeenCalled();
-  });
-
-  it.each(["different-user", "new-session"])("does not reuse an empty-queue receipt in a %s", async (change) => {
-    await render({ initialExamId: "", canGrade: false, tasks: [{ exam_id: "exam-A", assigned_to: "teacher", status: "assigned" } as ReviewTask] });
-    await render({ tasks: [] });
-    if (change === "new-session") setBusinessCommandScope("tenant", "teacher");
-    await render(change === "different-user" ? { currentUserId: "other" } : {});
-    expect(host.querySelector("[data-fast-token]")).toBeNull();
+  it("does not provide the removed batch suggestion entry", async () => {
+    await render();
+    expect(button("AI 建议分")).toBeUndefined();
+    expect(rendered.widgets.some(entry => entry.name === "Drawer" && entry.props.title === "批量确认 AI 建议分")).toBe(false);
   });
 
   it("preserves result row identity, pagination, filter setters and callback return values", async () => {

@@ -43,16 +43,17 @@ test("阅卷教师核对异常来源，快捷录分后自动提交并手动切�
   await expect.poll(() => state.drafts.get("review-task-01")?.score, { timeout: 8_000 }).toBe(1);
   expect(state.submissions).toHaveLength(0);
 
+  // 已保存草稿仍未正式交分；刷新须明确确认离开，不能绕过评分未提交的保护。
   await page.getByRole("button", { name: "刷新" }).click();
+  const refreshConfirmation = page.getByRole("dialog", { name: "评分尚未提交，继续离开？", exact: true });
+  await expect(refreshConfirmation).toBeVisible();
+  await refreshConfirmation.getByRole("button", { name: "继续离开", exact: true }).click();
+  await expect(refreshConfirmation).toHaveCount(0);
   await expect(score).toHaveValue("1.0");
 
   for (let index = 0; index < taskOrder.length; index += 1) {
     const task = taskOrder[index];
-    const expectedTool = task.subject.tool;
     await expect(page.locator(".answer-panel")).toContainText(task.anonymous_code);
-    await page.getByText("学科工具与任务信息", { exact: true }).click();
-    await expect(page.locator(".subject-tool-panel h2")).toHaveText(expectedTool);
-    await page.getByText("学科工具与任务信息", { exact: true }).click();
 
     // 首份取消标记后提交已有编辑，其余任务用数字快捷键录分；提交成功不再自动翻页。
     const submitted = page.waitForResponse((response) => response.request().method() === "POST"
@@ -120,12 +121,12 @@ test("两个浏览器窗口保存同一草稿时，后写窗口收到 revision c
   }
 });
 
-test("教师核对完整冻结资料后分别审读采纳建议分和学生反馈", async ({ page }) => {
+test("教师核对完整冻结资料后直接采纳建议分，批注工具保持常驻", async ({ page }) => {
   test.setTimeout(90_000);
   const state = createGradingWorkbenchMockState(1);
   const task = state.tasks[0];
-  state.fastConfirmTaskIds.add(task.id);
-  // 本场景逐项审读建议和反馈，先标记以保留可编辑草稿。
+  state.currentAiSuggestionTaskIds.add(task.id);
+  // 先标记保留可编辑草稿，核对资料与采纳分数都不能绕过标记自动提交。
   Object.assign(state.bookmarks.get(task.id)!, { id: `bookmark-${task.id}`, marked: true, revision: 1 });
   await installGradingWorkbenchMocks(page, state);
   await page.route(`**/api/v1/review-tasks/${task.id}/context`, async (route) => {
@@ -155,19 +156,13 @@ test("教师核对完整冻结资料后分别审读采纳建议分和学生反�
   await expect(drawer.getByRole("tab", { name: "完整评分依据" })).toHaveAttribute("aria-selected", "true");
   await expect(drawer.locator(".ant-tabs-tabpane-active .katex")).toHaveCount(1);
   await drawer.locator(".ant-drawer-close").click();
+  const tools = page.getByRole("toolbar", { name: "批注工具" });
+  await expect(tools).toBeVisible();
+  for (const name of ["选择批注", "打勾", "打叉", "框选批注", "删除选中批注"]) await expect(tools.getByRole("button", { name, exact: true })).toBeVisible();
   await page.getByRole("button", { name: "采纳 AI 建议分" }).click();
-  await expect(page.getByRole("dialog")).toContainText("学生反馈和内部备注保持原文");
-  await page.getByRole("button", { name: "填入评分草稿" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("spinbutton", { name: "最终得分" })).toHaveValue("7.0");
-  const feedback = page.locator("#grading-student-feedback-input");
-  await expect(feedback).toHaveValue("");
-  await page.getByRole("button", { name: "审读 AI 反馈" }).click();
-  await expect(page.getByRole("dialog")).toContainText("AI 学生反馈草稿");
-  await expect(page.getByRole("dialog")).toContainText("AI 内部备注草稿");
-  await page.getByRole("button", { name: "采用并展开编辑" }).click();
-  await expect(feedback).toBeVisible();
-  await expect(feedback).toHaveValue("AI 学生反馈草稿");
-  await expect(page.locator("#grading-private-note-input")).toHaveValue("AI 内部备注草稿");
-  await expect(page.getByRole("spinbutton", { name: "最终得分" })).toHaveValue("7.0");
+  await expect.poll(() => state.drafts.get(task.id)?.score, { timeout: 8_000 }).toBe(7);
+  expect(state.drafts.get(task.id)).toMatchObject({ comments: "", private_note: "", student_feedback: "" });
   expect(state.submissions).toHaveLength(0);
 });

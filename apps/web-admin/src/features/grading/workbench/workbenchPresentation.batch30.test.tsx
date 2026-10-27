@@ -29,7 +29,7 @@ function panelContext(explicit = false): ReviewTaskContext {
       available: true,
       presentation: explicit ? "explicit_second_opinion" : "inline",
       score_prefill_allowed: !explicit,
-      metadata: { model_version: "MODEL_SECRET", confidence: 0, risks: ["low_confidence"] }
+      metadata: { suggested_score: 0, max_score: 10, model_version: "MODEL_SECRET", confidence: 0, risks: ["low_confidence"] }
     },
     ai_candidates: [{
       id: "candidate", source: "ai", engine_version: "ENGINE_SECRET", profile_version: "profile",
@@ -39,55 +39,45 @@ function panelContext(explicit = false): ReviewTaskContext {
   } as unknown as ReviewTaskContext;
 }
 
-describe("batch30 candidate presentation boundaries", () => {
-  it("keeps the entire candidate and evidence panel hidden until explicit reveal", () => {
+describe("独立评分的 AI 参考边界", () => {
+  it("教师主动查看前不透露 AI 分数，查看后只提供只读参考分", () => {
     const context = panelContext(true);
     const onReveal = vi.fn();
     const view = render(<AIContextPanel context={context} visible={false} onReveal={onReveal} />);
-    expect(screen.queryByText("MODEL_SECRET")).toBeNull();
-    expect(screen.queryByText(/ENGINE_SECRET/)).toBeNull();
-    expect(screen.queryByText(/评分证据/)).toBeNull();
-    expect(screen.queryByText(/个候选/)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "查看第二意见" }));
-    expect(onReveal).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("AI 参考分：0 / 10")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "查看 AI 参考" }));
+    expect(onReveal).toHaveBeenCalledOnce();
     view.rerender(<AIContextPanel context={context} visible onReveal={onReveal} />);
-    expect(screen.getByText("MODEL_SECRET")).toBeTruthy();
-    fireEvent.click(screen.getByText(/ENGINE_SECRET/));
-    expect(screen.getByText("候选秘密")).toBeTruthy();
-    expect(screen.getByText("置信度较低")).toBeTruthy();
+    expect(screen.getByText("AI 参考分：0 / 10")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+    for (const text of ["MODEL_SECRET", "ENGINE_SECRET", "候选秘密", "评分证据", "校准状态", "风险"]) expect(view.container.textContent).not.toContain(text);
   });
 
-  it("does not offer reveal when the explicit second opinion is unavailable", () => {
+  it("普通题不重复显示已删除的详情面板", () => {
+    const view = render(<AIContextPanel context={panelContext()} visible={false} onReveal={vi.fn()} />);
+    expect(view.container.textContent).toBe("");
+  });
+
+  it("没有可用 AI 参考时不提供查看入口", () => {
     const context = panelContext(true);
     context.ai_second_opinion!.available = false;
-    render(<AIContextPanel context={context} visible={false} onReveal={vi.fn()} />);
-    expect(screen.queryByRole("button", { name: "查看第二意见" })).toBeNull();
-    expect(screen.queryByText(/ENGINE_SECRET/)).toBeNull();
+    const view = render(<AIContextPanel context={context} visible={false} onReveal={vi.fn()} />);
+    expect(view.container.textContent).toBe("");
   });
 
-  it.each([false, true])("does not expose old metadata or candidates after a current failure (revealed=%s)", (visible) => {
+  it.each([false, true])("当前失败不展示历史 AI 参考，已查看=%s", visible => {
     const context = panelContext(true);
     context.ai_failure = { failure_kind: "output_truncated" };
-    const onReveal = vi.fn();
-    render(<AIContextPanel context={context} visible={visible} onReveal={onReveal} />);
-    expect(screen.queryByText("MODEL_SECRET")).toBeNull();
-    expect(screen.queryByText(/ENGINE_SECRET/)).toBeNull();
-    expect(screen.queryByText(/评分证据/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "查看第二意见" })).toBeNull();
-    expect(onReveal).not.toHaveBeenCalled();
+    const view = render(<AIContextPanel context={context} visible={visible} onReveal={vi.fn()} />);
+    expect(view.container.textContent).toBe("");
   });
 
-  it.each([[false, false], [false, true], [true, false], [true, true]])(
-    "keeps candidate/metadata presence distinct: candidates=%s metadata=%s", (hasCandidates, hasMetadata) => {
-      const context = panelContext();
-      if (!hasCandidates) context.ai_candidates = [];
-      context.ai_second_opinion!.available = hasMetadata;
-      render(<AIContextPanel context={context} visible={false} onReveal={vi.fn()} />);
-      expect(Boolean(screen.queryByText(/ENGINE_SECRET/))).toBe(hasCandidates);
-      expect(Boolean(screen.queryByText("MODEL_SECRET"))).toBe(hasMetadata);
-      expect(Boolean(screen.queryByText("暂无 AI 候选，按评分细则人工评分"))).toBe(!hasCandidates && !hasMetadata);
-    }
-  );
+  it.each(["shadow_only", "failed"])("不展示不可用的 AI 参考 %s", state => {
+    const context = panelContext(true);
+    context.ai_second_opinion!.metadata[state === "failed" ? "status" : "delivery_mode"] = state;
+    const view = render(<AIContextPanel context={context} visible onReveal={vi.fn()} />);
+    expect(view.container.textContent).toBe("");
+  });
 });
 
 function headerProps(): WorkbenchHeaderProps {

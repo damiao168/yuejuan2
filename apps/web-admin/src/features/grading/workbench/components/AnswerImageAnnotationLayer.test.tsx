@@ -53,6 +53,17 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("分段图批注坐标与指针边界", () => {
+  it.each(["✓", "×"])("点标记%s直接渲染符号，字号按屏幕缩放保持可见", content => {
+    const annotation = { id: "symbol", type: "note", content, visibility: "private", revision: 1, payload: {},
+      geometry: { coordinate_space: "canonical_image_normalized", x: .25, y: .45, width: 0, height: 0 } } as ReviewAnnotation;
+    const { container } = fixture({ annotations: [annotation] });
+    const symbol = container.querySelector(".answer-annotation-symbol")!;
+    expect(symbol.textContent).toBe(content);
+    expect(symbol.getAttribute("font-size")).toBe("56");
+    expect(symbol.getAttribute("x")).toBe("150");
+    expect(container.querySelector("circle")).toBeNull();
+    expect(Number(container.querySelector(".answer-annotation-hit-target")?.getAttribute("width"))).toBeCloseTo(57.6);
+  });
   it("框选将分段屏幕起止点逆变换为整张原图比例，预览完成后释放指针", () => {
     const { controls, layer, inverse, container, setPointerCapture, releasePointerCapture } = fixture();
     fireEvent.pointerDown(layer, { pointerId: 7, button: 0, clientX: 175, clientY: 200 });

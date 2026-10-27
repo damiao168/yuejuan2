@@ -5,10 +5,10 @@ import { installApiMocks } from "./apiMocks";
 const now = "2026-08-13T08:00:00Z";
 
 const subjectFixtures = [
-  { code: "chinese", label: "语文", archetype: "extended_response", evidence: ["text_span"], tool: "全文与分项评价" },
-  { code: "mathematics", label: "数学", archetype: "structured_steps", evidence: ["math_step", "unit_value"], tool: "公式与步骤核对" },
-  { code: "physics", label: "物理", archetype: "structured_steps", evidence: ["math_step", "unit_value"], tool: "公式与步骤核对" },
-  { code: "history", label: "历史", archetype: "short_constructed", evidence: ["concept", "relation"], tool: "材料证据核对" }
+  { code: "chinese", label: "语文", archetype: "extended_response", evidence: ["text_span"] },
+  { code: "mathematics", label: "数学", archetype: "structured_steps", evidence: ["math_step", "unit_value"] },
+  { code: "physics", label: "物理", archetype: "structured_steps", evidence: ["math_step", "unit_value"] },
+  { code: "history", label: "历史", archetype: "short_constructed", evidence: ["concept", "relation"] }
 ] as const;
 
 type FixtureSubject = (typeof subjectFixtures)[number];
@@ -57,7 +57,7 @@ export interface GradingWorkbenchMockState {
   draftWrites: string[];
   contextsRead: string[];
   listCursors: string[];
-  fastConfirmTaskIds: Set<string>;
+  currentAiSuggestionTaskIds: Set<string>;
   bookmarks: Map<string, { id: string | null; task_id: string; marked: boolean; reason: string; revision: number; can_edit_reason: boolean }>;
   grades: Map<string, Record<string, unknown>>;
 }
@@ -87,7 +87,7 @@ export function createGradingWorkbenchMockState(count = 20): GradingWorkbenchMoc
       subject
     } satisfies FixtureTask;
   });
-  return { tasks, drafts: new Map(), claims: [], submissions: [], draftWrites: [], contextsRead: [], listCursors: [], fastConfirmTaskIds: new Set(),
+  return { tasks, drafts: new Map(), claims: [], submissions: [], draftWrites: [], contextsRead: [], listCursors: [], currentAiSuggestionTaskIds: new Set(),
     bookmarks: new Map(tasks.map(task => [task.id, { id: null, task_id: task.id, marked: false, reason: "", revision: 0, can_edit_reason: true }])), grades: new Map() };
 }
 
@@ -101,7 +101,7 @@ function requestBody(route: Route): Record<string, unknown> {
   return JSON.parse(body) as Record<string, unknown>;
 }
 
-export function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, fastConfirm = false) {
+export function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, withCurrentAiSuggestion = false) {
   const { subject } = task;
   return {
     task: wireTask(task),
@@ -123,7 +123,7 @@ export function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, f
       profile_snapshot: {},
       archetype_snapshot: {},
       rubric_snapshot: {},
-      scoring_policy_snapshot: fastConfirm ? { mode: "AI_FAST_CONFIRM", confidence_threshold: 0.95 } : {},
+      scoring_policy_snapshot: withCurrentAiSuggestion ? { mode: "AI_ASSIST" } : {},
       content_hash: `hash-${task.id}`,
       created_at: now
     },
@@ -146,10 +146,8 @@ export function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, f
       ocr_text: `${subject.label} 作答`,
       status: "ready",
       confidence: 0.99,
-      // 键盘和修订号流程不需要渲染图像。这里保持为空，
-      // 也可避免在任一浏览器窗口开始冲突场景前，
-      // 图像适配状态触发无关的草稿写入。
-      segment_image_url: fastConfirm ? `/api/v1/review-assets/${task.id}` : ""
+      // 普通键盘和修订号场景不加载图片，避免图像适配触发无关草稿写入；核对 AI 建议时再提供作答图。
+      segment_image_url: withCurrentAiSuggestion ? `/api/v1/review-assets/${task.id}` : ""
     },
     frozen_rubric: {
       id: `rubric-${task.id}`,
@@ -160,8 +158,8 @@ export function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, f
       points: [], deductions: [{ condition: "单位遗漏", deduction: 1 }], examples: [{ answer: "冻结评分样例", score: 7 }]
     },
     ai_candidates: [],
-    ...(fastConfirm ? { ai_second_opinion: {
-      available: true, presentation: "explicit_second_opinion", score_prefill_allowed: true,
+    ...(withCurrentAiSuggestion ? { ai_second_opinion: {
+      available: true, presentation: "suggestion", score_prefill_allowed: true,
       metadata: { id: `ai-${task.id}`, answer_segment_id: task.answer_segment_id, suggested_score: 7, max_score: 9,
         confidence: 0.98, matched_points: [], missing_points: [], evidence: [{ type: "text", answer_text: "作答要点与标准答案一致" }],
         risk_flags: [], mock: false, status: "succeeded", delivery_mode: "teacher_review", student_feedback: "AI 学生反馈草稿", teacher_note: "AI 内部备注草稿" }
@@ -187,7 +185,7 @@ export function contextFor(task: FixtureTask, draft: FixtureDraft | undefined, f
 }
 
 function wireTask(task: FixtureTask) {
-  // 学科工具夹具保留内部描述对象；API 只按权威 ReviewTask 契约返回展示用编码和考试名称。
+  // 夹具保留学科描述用于组织任务；API 只按权威 ReviewTask 契约返回编码和考试名称。
   return { ...task, subject: task.subject.code, exam_name: "连续阅卷测试考试" };
 }
 
@@ -287,7 +285,7 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
     const task = taskFromPath(path, state.tasks);
     if (task && path.endsWith("/context") && method === "GET") {
       state.contextsRead.push(task.id);
-      return json(route, { context: { ...contextFor(task, state.drafts.get(task.id), state.fastConfirmTaskIds.has(task.id)),
+      return json(route, { context: { ...contextFor(task, state.drafts.get(task.id), state.currentAiSuggestionTaskIds.has(task.id)),
         ...(state.grades.has(task.id) ? { human_grade: state.grades.get(task.id), draft: null, claim: { can_renew: false } } : {}) } });
     }
     if (task && path.endsWith("/renew") && method === "POST") return json(route, { renewed: true });

@@ -176,7 +176,7 @@ export function useGradingReviewActions({
   const applyAiScore = (grade: AiGrade) => {
     scoreShortcuts.rememberCurrent();
     const selections = aiPointAdoption(grade, rubricPoints, ctx?.question?.rubric?.version);
-    // 采纳分数不顺带替换评语；教师可在左侧本题评语中单独采用模型文字。
+    // 采纳只更新分数与评分点；历史评语字段按原值保留，不能因入口删除而覆盖存量记录。
     setDraft((current) => {
       let adoption: Partial<Pick<ScoreDraft, "rubricSelections" | "reason">> = {};
       if (selections) {
@@ -238,16 +238,6 @@ export function useGradingReviewActions({
     applyAiScore(selectedGrade);
   };
 
-  const adoptAiFeedback = () => {
-    if (!isCurrentSession() || activeTask.current !== ctx?.task.id || !selectedGrade || !canEditDraft || !canAdoptAiScore) return;
-    if (!isAdoptionCurrent(selectedGrade)) return;
-    // 统一评语入口只填写学生反馈，旧教师备注保持原来的可见性和内容。
-    setDraft((current) => ({ ...current,
-      studentFeedback: selectedGrade.student_feedback ?? current.studentFeedback
-    }));
-    notify.info("已采用 AI 评语，可继续编辑");
-  };
-
   const confirmReturnTask = (asException: boolean) => {
     if (!isCurrentSession() || !canReturn || !canEditDraft || !ctx) return;
     Modal.confirm({
@@ -262,5 +252,5 @@ export function useGradingReviewActions({
     });
   };
 
-  return { submitGrade, markDispute, adoptAiScore, adoptAiFeedback, openDraftConflict, applyDraftConflict, confirmReturnTask };
+  return { submitGrade, markDispute, adoptAiScore, openDraftConflict, applyDraftConflict, confirmReturnTask };
 }

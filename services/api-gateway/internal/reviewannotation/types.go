@@ -12,7 +12,6 @@ var (
 	ErrStudentReleaseChanged = errors.New("student published release changed")
 	ErrInvalidInput          = errors.New("invalid review annotation input")
 	ErrRevisionConflict      = errors.New("review annotation revision conflict")
-	ErrShortcutConflict      = errors.New("review comment template shortcut conflict")
 )
 
 type Visibility string
@@ -132,32 +131,6 @@ type DeleteInput struct {
 	ExpectedRevision int64 `json:"expected_revision"`
 }
 
-type CommentTemplate struct {
-	ID         string    `json:"id"`
-	TenantID   string    `json:"tenant_id"`
-	OwnerID    string    `json:"owner_id"`
-	Title      string    `json:"title"`
-	Content    string    `json:"content"`
-	Shortcut   string    `json:"shortcut"`
-	UsageCount int64     `json:"usage_count"`
-	Revision   int64     `json:"revision"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
-}
-
-type CreateCommentTemplateInput struct {
-	Title    string `json:"title"`
-	Content  string `json:"content"`
-	Shortcut string `json:"shortcut"`
-}
-
-type UpdateCommentTemplateInput struct {
-	Title            string `json:"title"`
-	Content          string `json:"content"`
-	Shortcut         string `json:"shortcut"`
-	ExpectedRevision int64  `json:"expected_revision"`
-}
-
 type Store interface {
 	CreateAnnotation(context.Context, string, string, string, CreateAnnotationInput) (Annotation, error)
 	ListAnnotations(context.Context, string, string) ([]Annotation, error)
@@ -168,13 +141,6 @@ type Store interface {
 	// 学生查询必须沿当前不可变发布版本解析答案，并使用学生和题目范围；
 	// 不接收调用方提交 ID，避免枚举他人批注。
 	ListStudentQuestionAnnotations(context.Context, string, string, string, string, ...string) ([]StudentAnnotation, error)
-
-	CreateCommentTemplate(context.Context, string, string, CreateCommentTemplateInput) (CommentTemplate, error)
-	ListCommentTemplates(context.Context, string, string) ([]CommentTemplate, error)
-	GetCommentTemplate(context.Context, string, string, string) (CommentTemplate, error)
-	UpdateCommentTemplate(context.Context, string, string, string, UpdateCommentTemplateInput) (CommentTemplate, error)
-	DeleteCommentTemplate(context.Context, string, string, string, int64) error
-	UseCommentTemplate(context.Context, string, string, string) (CommentTemplate, error)
 }
 
 // 缺省坐标系和可见性只在输入层补齐；存储层仍会校验最终值，避免写入未定义坐标。
@@ -195,24 +161,6 @@ func normalizeAnnotationInput(input CreateAnnotationInput) CreateAnnotationInput
 func validateAnnotationInput(input CreateAnnotationInput) error {
 	if !input.Type.Valid() || !input.Geometry.Valid() || !input.Visibility.Valid() || len(input.Content) > 4000 {
 		return ErrInvalidInput
-	}
-	return nil
-}
-
-// 快捷键统一去空格并转小写，创建、更新和使用必须共享同一规范化规则。
-func normalizeTemplate(title, content, shortcut string) (string, string, string) {
-	return strings.TrimSpace(title), strings.TrimSpace(content), strings.ToLower(strings.TrimSpace(shortcut))
-}
-
-func validateTemplate(title, content, shortcut string) error {
-	if title == "" || len(title) > 120 || content == "" || len(content) > 4000 || len(shortcut) == 0 || len(shortcut) > 32 {
-		return ErrInvalidInput
-	}
-	for index, value := range shortcut {
-		valid := value >= 'a' && value <= 'z' || value >= '0' && value <= '9' || (index > 0 && (value == '.' || value == '_' || value == '-'))
-		if !valid {
-			return ErrInvalidInput
-		}
 	}
 	return nil
 }

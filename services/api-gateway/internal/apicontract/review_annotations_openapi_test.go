@@ -27,9 +27,16 @@ func TestStoryA06ReviewAnnotationOpenAPIContract(t *testing.T) {
 		{"/api/v1/review-tasks/{taskId}/annotations", "post", "createReviewAnnotation"},
 		{"/api/v1/review/annotations/{annotationId}", "put", "updateReviewAnnotation"},
 		{"/api/v1/review/annotations/{annotationId}", "delete", "deleteReviewAnnotation"},
-		{"/api/v1/review/comment-templates", "get", "listReviewCommentTemplates"},
-		{"/api/v1/review/comment-templates", "post", "createReviewCommentTemplate"},
-		{"/api/v1/review/comment-templates/{shortcut}/use", "post", "useReviewCommentTemplate"},
+	}
+	// 评语模板已经退役，契约不能继续生成可调用的 SDK 入口。
+	for _, removed := range []string{
+		"/api/v1/review/comment-templates",
+		"/api/v1/review/comment-templates/{templateId}",
+		"/api/v1/review/comment-templates/{shortcut}/use",
+	} {
+		if _, exists := paths[removed]; exists {
+			t.Fatalf("retired review comment template path remains: %s", removed)
+		}
 	}
 	for _, expected := range operations {
 		operation := object(t, object(t, paths, expected.path), expected.method)
@@ -49,7 +56,14 @@ func TestStoryA06ReviewAnnotationOpenAPIContract(t *testing.T) {
 	schemas := object(t, object(t, document, "components"), "schemas")
 	assertRequired(t, object(t, schemas, "CanonicalImageGeometry"), []string{"coordinate_space", "x", "y", "width", "height"})
 	assertRequired(t, object(t, schemas, "UpdateReviewAnnotationRequest"), []string{"type", "geometry", "content", "visibility", "expected_revision"})
-	assertRequired(t, object(t, schemas, "UpdateReviewCommentTemplateRequest"), []string{"title", "content", "shortcut", "expected_revision"})
+	for _, removed := range []string{
+		"ReviewCommentTemplate", "CreateReviewCommentTemplateRequest", "UpdateReviewCommentTemplateRequest",
+		"ReviewCommentTemplateResponse", "ReviewCommentTemplateListResponse",
+	} {
+		if _, exists := schemas[removed]; exists {
+			t.Fatalf("retired review comment template schema remains: %s", removed)
+		}
+	}
 
 	studentProperties := object(t, object(t, schemas, "StudentReviewAnnotation"), "properties")
 	for _, forbidden := range []string{"tenant_id", "review_task_id", "payload", "visibility", "revision", "created_by", "updated_by"} {

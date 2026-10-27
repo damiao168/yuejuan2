@@ -1,42 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction } from "react";
-import { Alert, Button, Empty, Input, InputNumber, Popconfirm, Segmented, Select, Space, Spin, Tag } from "antd";
-import { Check, MessageSquareText, MousePointer2, Settings2, Square, Trash2 } from "lucide-react";
-import type {
-  CanonicalImageGeometry,
-  CreateReviewAnnotationRequest,
-  ReviewAnnotation,
-  ReviewAnnotationType,
-  ReviewAnnotationVisibility
-} from "@edugrade/sdk";
-import { CommentTemplateManager } from "./CommentTemplateManager";
-import { AnnotationRevisionConflict, useReviewAnnotations } from "./useReviewAnnotations";
-import { replaceTrailingTemplateShortcut, trailingTemplateShortcut } from "./templateShortcuts";
-import { getUserErrorMessage } from "../../../api/client";
-import {
-  canonicalPoint,
-  canonicalRectangle,
-  clientPointToCanonical,
-  geometryStyle,
-  hasDrawableArea,
-  type ClientPoint
-} from "./geometry";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Alert, Button, Tooltip } from "antd";
+import { Check, MousePointer2, Square, Trash2, X } from "lucide-react";
+import type { CanonicalImageGeometry, ReviewAnnotation } from "@edugrade/sdk";
+import { canonicalPoint, canonicalRectangle, hasDrawableArea, type ClientPoint } from "./geometry";
+import { useReviewAnnotations } from "./useReviewAnnotations";
 import "./reviewAnnotations.css";
 
-type DrawTool = "select" | "note" | "rectangle";
-
-interface CriterionOption {
-  id: string;
-  label: string;
-}
-
-interface AnnotationDraft {
-  current?: ReviewAnnotation;
-  type: ReviewAnnotationType;
-  geometry: CanonicalImageGeometry;
-  content: string;
-  visibility: ReviewAnnotationVisibility;
-  rubricCriterionId?: string;
-}
+type MarkTool = "select" | "correct" | "incorrect" | "rectangle";
 
 export interface ReviewAnnotationCanvasControls {
   tool: "select" | "note" | "rectangle";
@@ -44,475 +14,106 @@ export interface ReviewAnnotationCanvasControls {
   selectedId?: string;
   disabled: boolean;
   toolbar?: ReactNode;
-  // 切分窗口须先换算回整张原图的 0～1 坐标，不能传入窗口内的局部比例。
-  onPointerDown: (point: { x: number; y: number }) => void;
-  onPointerUp: (point: { x: number; y: number }) => void;
+  // 切分窗口先换算回整张原图的 0～1 坐标，保存时不能使用分段内的局部比例。
+  onPointerDown: (point: ClientPoint) => void;
+  onPointerUp: (point: ClientPoint) => void;
   onSelect: (annotation: ReviewAnnotation) => void;
 }
 
 export interface ReviewAnnotationWorkspaceProps {
   reviewTaskId: string;
-  imageUrl: string;
-  imageAlt?: string;
-  rubricCriteria?: CriterionOption[];
   disabled?: boolean;
-  editing?: boolean;
   drawingAvailable?: boolean;
-  studentFeedback?: string;
-  onStudentFeedbackChange?: (value: string) => void;
-  onAnnotationCountChange?: (count: number) => void;
-  historicalComments?: string;
-  historicalPrivateNote?: string;
-  onAdoptAiFeedback?: () => void;
-  canAdoptAiFeedback?: boolean;
-  renderCanvas?: (controls: ReviewAnnotationCanvasControls) => ReactNode;
+  renderCanvas: (controls: ReviewAnnotationCanvasControls) => ReactNode;
   viewTools?: ReactNode;
 }
 
-function draftFromAnnotation(annotation: ReviewAnnotation): AnnotationDraft {
-  const criterion = typeof annotation.payload.rubric_criterion_id === "string"
-    ? annotation.payload.rubric_criterion_id
-    : undefined;
-  return {
-    current: annotation,
-    type: annotation.type,
-    geometry: annotation.geometry,
-    content: annotation.content,
-    visibility: annotation.visibility,
-    rubricCriterionId: criterion
-  };
-}
-
-function statusLabel(state: ReturnType<typeof useReviewAnnotations>["saveState"]) {
-  if (state === "saving") return "正在保存";
-  if (state === "saved") return "已保存";
-  if (state === "conflict") return "版本已刷新";
-  if (state === "error") return "保存失败";
-  return "";
-}
-
-function canvasLabel(tool: DrawTool) {
-  if (tool === "rectangle") return "在答题卡上拖动框选批注区域";
-  if (tool === "note") return "在答题卡上点击添加批注";
-  return "答题卡批注画布";
-}
-
-function AnnotationEditor({ draft, setDraft, annotationCount, readOnly, disabled, saving, rubricCriteria, trailingShortcut, templates, templateSuggestions, updateGeometry, insertTemplate, saveDraft, removeAnnotation, showCoordinates, onOpenTemplates }: Readonly<{
-  draft?: AnnotationDraft;
-  setDraft: Dispatch<SetStateAction<AnnotationDraft | undefined>>;
-  annotationCount: number;
-  readOnly: boolean;
-  disabled: boolean;
-  saving: boolean;
-  rubricCriteria: CriterionOption[];
-  trailingShortcut: string | undefined;
-  templates: ReturnType<typeof useReviewAnnotations>["templates"];
-  templateSuggestions: ReturnType<typeof useReviewAnnotations>["templates"];
-  updateGeometry: (field: "x" | "y" | "width" | "height", percentage: number | null) => void;
-  insertTemplate: (shortcut: string) => Promise<void>;
-  saveDraft: () => Promise<void>;
-  removeAnnotation: ReturnType<typeof useReviewAnnotations>["removeAnnotation"];
-  showCoordinates: boolean;
-  onOpenTemplates: () => void;
-}>) {
-  // 查看权限保留批注内容与原图定位，不用禁用表单暗示用户还能编辑。
-  if (readOnly) return draft ? <div className="review-annotation-editor"><strong>批注内容</strong><p>{draft.content}</p><Tag>{draft.visibility === "private" ? "仅教师可见" : "成绩发布后学生可见"}</Tag></div>
-    : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={annotationCount ? "选择图上批注查看内容" : "本题暂无批注"} />;
-  // 编辑器只展示父层草稿；保存和删除继续使用父层回调及原批注对象，版本处理仍由共享 hook 负责。
-  if (!draft) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={annotationCount ? "选择已有批注，或在原图上新增" : "选择点批注或框选工具开始"} />;
-  }
-  return (
-    <div className="review-annotation-editor">
-      <div className="review-annotation-editor-title">
-        <strong>{draft.current ? "编辑批注" : "新增批注"}</strong>
-        <Tag>{draft.type === "note" ? "点批注" : "矩形批注"}</Tag>
-      </div>
-      {showCoordinates ? <fieldset className="review-annotation-coordinate-fields" disabled={disabled || saving}>
-        <legend>批注位置（原图百分比）</legend>
-        {(draft.type === "note" ? ["x", "y"] as const : ["x", "y", "width", "height"] as const).map((field) => (
-          <label key={field}>
-            <span>{{ x: "距左侧", y: "距顶部", width: "宽度", height: "高度" }[field]}</span>
-            <InputNumber aria-label={`批注${{ x: "距左侧", y: "距顶部", width: "宽度", height: "高度" }[field]}百分比`} min={field === "width" || field === "height" ? 0.3 : 0} max={draft.type === "note" || field === "width" || field === "height" ? 100 : 99.7} step={0.1} precision={1} value={Number((draft.geometry[field] * 100).toFixed(1))} disabled={disabled || saving} onChange={(value) => updateGeometry(field, value)} />
-          </label>
-        ))}
-      </fieldset> : null}
-      <div className="review-annotation-input-heading"><span>批注内容</span><Button size="small" type="text" icon={<Settings2 size={14} />} disabled={disabled || saving} onClick={onOpenTemplates}>常用评语</Button></div>
-      <Input.TextArea
-        autoFocus
-        aria-label="批注内容"
-        rows={5}
-        maxLength={4000}
-        showCount
-        disabled={disabled || saving}
-        value={draft.content}
-        placeholder="输入评语；键入 /快捷码 后按 Enter 插入个人常用评语"
-        onChange={(event) => setDraft((current) => current ? { ...current, content: event.target.value } : current)}
-        onKeyDown={(event) => {
-          if (event.key !== "Enter" || !trailingShortcut) return;
-          const exactTemplate = templates.find((template) => template.shortcut === trailingShortcut);
-          if (!exactTemplate) return;
-          event.preventDefault();
-          void insertTemplate(exactTemplate.shortcut);
-        }}
-      />
-      {templateSuggestions.length ? (
-        <div className="review-template-suggestions" aria-label="匹配的常用评语">
-          {templateSuggestions.map((template) => (
-            <Button key={template.id} size="small" disabled={disabled || saving} onClick={() => void insertTemplate(template.shortcut)}>
-              /{template.shortcut} · {template.title}
-            </Button>
-          ))}
-        </div>
-      ) : null}
-      <label>
-        <span>学生可见性</span>
-        <Select
-          disabled={disabled || saving}
-          aria-label="批注学生可见性"
-          value={draft.visibility}
-          onChange={(visibility) => setDraft((current) => current ? { ...current, visibility } : current)}
-          options={[
-            { value: "private", label: "仅教师可见" },
-            { value: "student_after_publish", label: "成绩发布后学生可见" }
-          ]}
-        />
-      </label>
-      {rubricCriteria.length ? (
-        <label>
-          <span>关联评分点（可选）</span>
-          <Select
-            disabled={disabled || saving}
-            aria-label="批注关联评分点"
-            allowClear
-            value={draft.rubricCriterionId}
-            onChange={(rubricCriterionId) => setDraft((current) => current ? { ...current, rubricCriterionId } : current)}
-            options={rubricCriteria.map((criterion) => ({ value: criterion.id, label: criterion.label }))}
-          />
-        </label>
-      ) : null}
-      <Space wrap>
-        <Button type="primary" icon={<Check size={16} />} loading={saving} disabled={disabled || !draft.content.trim()} onClick={() => void saveDraft()}>
-          保存批注
-        </Button>
-        <Button disabled={saving} onClick={() => setDraft(undefined)}>取消</Button>
-        {draft.current ? (
-          <Popconfirm
-            title="删除这条批注？"
-            okText="删除"
-            cancelText="取消"
-            onConfirm={async () => {
-              if (disabled || saving || !draft.current) return;
-              await removeAnnotation(draft.current);
-              setDraft(undefined);
-            }}
-          >
-            <Button danger disabled={disabled || saving} type="text" icon={<Trash2 size={16} />}>删除</Button>
-          </Popconfirm>
-        ) : null}
-      </Space>
-    </div>
-  );
-}
-
-export function ReviewAnnotationWorkspace({
-  reviewTaskId,
-  imageUrl,
-  imageAlt = "答题卡原图",
-  rubricCriteria = [],
-  disabled = false,
-  editing = true,
-  drawingAvailable = true,
-  studentFeedback,
-  onStudentFeedbackChange,
-  onAnnotationCountChange,
-  historicalComments,
-  historicalPrivateNote,
-  onAdoptAiFeedback,
-  canAdoptAiFeedback = false,
-  renderCanvas, viewTools
-}: Readonly<ReviewAnnotationWorkspaceProps>) {
+/** 常驻图标只写图上标记；分数、评语和图像布局均不由批注工具改变。 */
+export function ReviewAnnotationWorkspace({ reviewTaskId, disabled = false, drawingAvailable = true, renderCanvas, viewTools }: Readonly<ReviewAnnotationWorkspaceProps>) {
   const workspace = useReviewAnnotations(reviewTaskId);
-  const editingVisible = !renderCanvas || editing;
-  const imageRef = useRef<HTMLImageElement>(null);
-  const [tool, setTool] = useState<DrawTool>("select");
-  const [panel, setPanel] = useState<"image" | "feedback">("image");
-  const [dragStart, setDragStart] = useState<ClientPoint>();
-  const [draft, setDraft] = useState<AnnotationDraft>();
-  const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const [tool, setTool] = useState<MarkTool>("select");
+  const [selectedId, setSelectedId] = useState<string>();
   const [saving, setSaving] = useState(false);
-  const saveBusy = useRef(false);
-  const editDraft: typeof setDraft = value => { if (!saveBusy.current) setDraft(value); };
-  const [templateFailure, setTemplateFailure] = useState<{ shortcut: string; error: string; target: "image" | "feedback" }>();
-  const [applyingTemplate, setApplyingTemplate] = useState(false);
-  const templateTask = useRef(reviewTaskId);
-  templateTask.current = reviewTaskId;
-  const feedbackRef = useRef({ value: studentFeedback, disabled, onChange: onStudentFeedbackChange });
-  feedbackRef.current = { value: studentFeedback, disabled, onChange: onStudentFeedbackChange };
-  const feedbackScopeActive = useRef(true);
-  // 工作台按任务 key 重建本组件；卸载后旧模板回执不能再调用父层 setter 写入下一题。
-  useEffect(() => { feedbackScopeActive.current = true; return () => { feedbackScopeActive.current = false; }; }, []);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 切阅卷任务必须清掉上一份答卷的未提交标注和模板失败状态。
-  useEffect(() => { setDraft(undefined); setPanel("image"); setTemplateFailure(undefined); setApplyingTemplate(false); }, [reviewTaskId]);
-  useEffect(() => { onAnnotationCountChange?.(workspace.annotations.length); }, [onAnnotationCountChange, workspace.annotations.length]);
+  const drawingStart = useRef<ClientPoint | null>(null);
+  const actionLock = useRef(false);
+  const scope = useRef({ taskId: reviewTaskId, active: true });
+  scope.current.taskId = reviewTaskId;
+  useEffect(() => { scope.current.active = true; return () => { scope.current.active = false; }; }, []);
+  // 切题只重置工具和选择；旧写入回执不得选中新答卷上的标记。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 任务身份变化时需清空上一份的工具选择。
+  useEffect(() => { setTool("select"); setSelectedId(undefined); drawingStart.current = null; }, [reviewTaskId]);
+  const selected = workspace.annotations.find(annotation => annotation.id === selectedId);
+  const unavailable = disabled || !drawingAvailable || saving || workspace.loading;
+  const changeTool = (next: MarkTool) => { drawingStart.current = null; setTool(next); setSelectedId(undefined); };
+  const isCurrent = (taskId: string) => scope.current.active && scope.current.taskId === taskId;
 
-  const trailingShortcut = useMemo(() => trailingTemplateShortcut(draft?.content ?? ""), [draft?.content]);
-
-  const templateSuggestions = useMemo(() => {
-    if (!trailingShortcut) return [];
-    return workspace.templates
-      .filter((template) => template.shortcut.startsWith(trailingShortcut))
-      .slice(0, 5);
-  }, [trailingShortcut, workspace.templates]);
-  const feedbackShortcut = trailingTemplateShortcut(studentFeedback ?? "");
-  const feedbackSuggestions = feedbackShortcut ? workspace.templates.filter(template => template.shortcut.startsWith(feedbackShortcut)).slice(0, 5) : [];
-
-  // 以图片当前显示矩形换算归一化坐标；保存的是图片位置而不是屏幕像素，重新缩放后仍指向同一处。
-  const canonicalEventPoint = (event: ReactPointerEvent) => {
-    const image = imageRef.current;
-    if (!image) return undefined;
-    const bounds = image.getBoundingClientRect();
-    return clientPointToCanonical({ x: event.clientX, y: event.clientY }, bounds);
-  };
-
-  const startDrawingAt = (point: ClientPoint) => {
-    if (!editingVisible || !drawingAvailable || panel !== "image" || disabled || saveBusy.current || tool === "select" || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
-    // 默认整图与切分视图共用同一坐标边界，拖出图像时仍以原图边缘作为起止点。
-    const normalizedPoint = canonicalPoint(point);
-    if (tool === "note") {
-      setDraft({ type: "note", geometry: normalizedPoint, content: "", visibility: "private" });
-      setTool("select");
-      return;
-    }
-    setDragStart({ x: normalizedPoint.x, y: normalizedPoint.y });
-  };
-
-  const finishDrawingAt = (end?: ClientPoint) => {
-    if (!editingVisible || !drawingAvailable || panel !== "image" || disabled || saveBusy.current || tool !== "rectangle" || !dragStart) return;
-    setDragStart(undefined);
-    setTool("select");
-    if (!end || !Number.isFinite(end.x) || !Number.isFinite(end.y)) return;
-    const geometry = canonicalRectangle(dragStart, end);
-    if (!hasDrawableArea(geometry)) return;
-    setDraft({ type: "rectangle", geometry, content: "", visibility: "private" });
-  };
-
-  const startDrawing = (event: ReactPointerEvent<HTMLElement>) => {
-    if (disabled || saveBusy.current || tool === "select") return;
-    const point = canonicalEventPoint(event);
-    if (!point) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    startDrawingAt(point);
-  };
-
-  const finishDrawing = (event: ReactPointerEvent<HTMLElement>) => {
-    finishDrawingAt(canonicalEventPoint(event));
-  };
-
-  const selectAnnotation = (annotation: ReviewAnnotation) => { setPanel("image"); editDraft(draftFromAnnotation(annotation)); };
-
-  const createKeyboardDraft = (type: "note" | "rectangle") => {
-    if (disabled || saveBusy.current || saving) return;
-    setTool("select");
-    setDragStart(undefined);
-    setDraft({ type, geometry: type === "note" ? canonicalPoint({ x: 0.5, y: 0.5 }) : canonicalRectangle({ x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }), content: "", visibility: "private" });
-  };
-
-  const updateGeometry = (field: "x" | "y" | "width" | "height", percentage: number | null) => {
-    if (percentage === null || !Number.isFinite(percentage) || disabled || saving || saveBusy.current) return;
-    setDraft((current) => {
-      if (!current) return current;
-      const next = { ...current.geometry, [field]: percentage / 100 };
-      // 键盘输入沿用画布的原图归一化坐标；矩形保持至少 0.3% 边长并限制在图像内部。
-      const geometry = current.type === "note"
-        ? canonicalPoint(next)
-        : canonicalRectangle(
-            { x: Math.min(0.997, Math.max(0, next.x)), y: Math.min(0.997, Math.max(0, next.y)) },
-            { x: Math.min(0.997, Math.max(0, next.x)) + Math.max(0.003, next.width), y: Math.min(0.997, Math.max(0, next.y)) + Math.max(0.003, next.height) }
-          );
-      return { ...current, geometry };
-    });
-  };
-
-  const saveDraft = async () => {
-    if (disabled || saveBusy.current || applyingTemplate || !draft?.content.trim()) return;
-    // 保存冻结这份草稿；所有输入/切换入口共用同步锁，旧回执不能静默丢弃后续输入。
-    saveBusy.current = true;
-    const originalTask = reviewTaskId;
-    const input: CreateReviewAnnotationRequest = {
-      type: draft.type,
-      geometry: draft.geometry,
-      content: draft.content.trim(),
-      visibility: draft.visibility,
-      payload: draft.rubricCriterionId ? { rubric_criterion_id: draft.rubricCriterionId } : {}
-    };
+  const saveMark = async (type: "note" | "rectangle", geometry: CanonicalImageGeometry, content: string) => {
+    if (unavailable || actionLock.current) return;
+    const taskId = reviewTaskId;
+    actionLock.current = true;
     setSaving(true);
     try {
-      await workspace.saveAnnotation(input, draft.current);
-      if (templateTask.current === originalTask) setDraft(undefined);
-    } catch (saveError) {
-      if (templateTask.current === originalTask && saveError instanceof AnnotationRevisionConflict && saveError.latest) {
-        setDraft(draftFromAnnotation(saveError.latest));
-      }
+      // 图标批注本身不改分；沿用个人可见边界，不把标记默认为已发布给学生。
+      const annotation = await workspace.saveAnnotation({ type, geometry, content, visibility: "private", payload: {} });
+      if (isCurrent(taskId)) setSelectedId(annotation.id);
+    } catch {
+      // 共享 hook 展示真实写入错误，不能用本地点位冒充已经保存的批注。
     } finally {
-      saveBusy.current = false;
-      if (templateTask.current === originalTask) setSaving(false);
+      actionLock.current = false;
+      if (isCurrent(taskId)) setSaving(false);
     }
   };
-
-  const insertTemplate = async (shortcut: string) => {
-    if (!draft || applyingTemplate || saveBusy.current) return;
-    const originalDraft = draft;
-    const originalTask = reviewTaskId;
-    setApplyingTemplate(true);
-    setTemplateFailure(undefined);
+  const removeSelected = async () => {
+    if (disabled || saving || actionLock.current || !selected) return;
+    const taskId = reviewTaskId;
+    actionLock.current = true;
+    setSaving(true);
     try {
-      const template = await workspace.applyTemplate(shortcut);
-      if (templateTask.current !== originalTask) return;
-      // 返回期间改选批注或编辑内容，就保留当前输入，不能把旧请求结果插进另一份草稿。
-      setDraft((current) => current === originalDraft ? {
-        ...current,
-        content: replaceTrailingTemplateShortcut(current.content, template.content)
-      } : current);
-    } catch (cause) {
-      if (templateTask.current === originalTask) setTemplateFailure({ shortcut, target: "image", error: getUserErrorMessage(cause, "常用评语插入失败，输入已保留") });
+      await workspace.removeAnnotation(selected);
+      if (isCurrent(taskId)) setSelectedId(undefined);
+    } catch {
+      // 删除失败保留选中项，教师可以重试，不能先把服务端仍存在的标记藏掉。
     } finally {
-      if (templateTask.current === originalTask) setApplyingTemplate(false);
+      actionLock.current = false;
+      if (isCurrent(taskId)) setSaving(false);
     }
   };
-
-  const insertFeedbackTemplate = async (shortcut: string) => {
-    if (disabled || !onStudentFeedbackChange || applyingTemplate) return;
-    const originalFeedback = studentFeedback ?? "";
-    const originalTask = reviewTaskId;
-    setApplyingTemplate(true);
-    setTemplateFailure(undefined);
-    try {
-      const template = await workspace.applyTemplate(shortcut);
-      // 本题评语沿用评分草稿；模板回执只能替换原输入，切题或继续输入后不能覆盖新内容。
-      if (feedbackScopeActive.current && templateTask.current === originalTask && feedbackRef.current.value === originalFeedback && !feedbackRef.current.disabled) {
-        feedbackRef.current.onChange?.(replaceTrailingTemplateShortcut(originalFeedback, template.content));
-      }
-    } catch (cause) {
-      if (templateTask.current === originalTask) setTemplateFailure({ shortcut, target: "feedback", error: getUserErrorMessage(cause, "常用评语插入失败，输入已保留") });
-    } finally {
-      if (templateTask.current === originalTask) setApplyingTemplate(false);
-    }
+  const start = (point: ClientPoint) => {
+    if (unavailable || actionLock.current || tool === "select" || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+    const normalized = canonicalPoint(point);
+    if (tool === "rectangle") { drawingStart.current = normalized; return; }
+    void saveMark("note", normalized, tool === "correct" ? "✓" : "×");
   };
+  const finish = (point: ClientPoint) => {
+    const from = drawingStart.current;
+    drawingStart.current = null;
+    if (unavailable || actionLock.current || tool !== "rectangle" || !from || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+    const geometry = canonicalRectangle(from, point);
+    if (hasDrawableArea(geometry)) void saveMark("rectangle", geometry, "框选");
+  };
+  const icon = (key: MarkTool, label: string, graphic: ReactNode) => <Tooltip key={key} title={!drawingAvailable && key !== "select" ? "请切换到单题答题区域" : label} placement="right">
+    <Button type={tool === key ? "primary" : "text"} icon={graphic} aria-label={label} aria-pressed={tool === key}
+      disabled={key === "select" ? saving : unavailable} onClick={() => changeTool(key)} />
+  </Tooltip>;
 
-  if (workspace.loading) {
-    return <div className="review-annotation-loading"><Spin /><span>加载批注与个人评语…</span></div>;
-  }
-
-  const toolbar = (
-    <header className="review-annotation-toolbar">
-        <Space wrap>
-          {!disabled ? <><Segmented<DrawTool>
-            value={tool}
-            disabled={disabled || saving}
-            onChange={setTool}
-            options={[
-              { value: "select", label: <span className="review-tool-label"><MousePointer2 size={15} />选择</span> },
-              { value: "note", label: <span className="review-tool-label"><MessageSquareText size={15} />点批注</span> },
-              { value: "rectangle", label: <span className="review-tool-label"><Square size={15} />框选</span> }
-            ]}
-          />
-          {!renderCanvas ? <><Button disabled={disabled || saving} onClick={() => createKeyboardDraft("note")}>新增点批注</Button>
-          <Button disabled={saving} onClick={() => createKeyboardDraft("rectangle")}>新增矩形批注</Button></> : null}</> : null}
-          {!renderCanvas && workspace.annotations.length ? <Tag>{workspace.annotations.length} 条批注</Tag> : null}
-          {workspace.saveState !== "idle" ? <span className={`review-save-state review-save-state--${workspace.saveState}`}>{statusLabel(workspace.saveState)}</span> : null}
-        </Space>
-    </header>
-  );
-
-  const annotationEditor = <AnnotationEditor draft={draft} setDraft={editDraft} annotationCount={workspace.annotations.length} readOnly={disabled} disabled={disabled || saving} saving={saving} rubricCriteria={rubricCriteria} trailingShortcut={trailingShortcut} templates={workspace.templates} templateSuggestions={templateSuggestions} updateGeometry={updateGeometry} insertTemplate={insertTemplate} saveDraft={saveDraft} removeAnnotation={workspace.removeAnnotation} showCoordinates={!renderCanvas} onOpenTemplates={() => setTemplateManagerOpen(true)} />;
-  const feedbackEditor = <div className="review-annotation-feedback">
-    <div className="review-annotation-input-heading"><strong>本题评语</strong>{!disabled ? <Button size="small" type="text" icon={<Settings2 size={14} />} onClick={() => setTemplateManagerOpen(true)}>常用评语</Button> : null}</div>
-    <p className="review-annotation-help">可选，随评分保存，成绩发布后学生可见；不会改变得分。</p>
-    {disabled ? <p>{studentFeedback?.trim() || "本题暂无评语"}</p> : <Input.TextArea
-      aria-label="本题评语"
-      rows={6}
-      maxLength={4000}
-      showCount
-      value={studentFeedback ?? ""}
-      disabled={!onStudentFeedbackChange}
-      placeholder="输入本题评语，或用 /快捷码 插入常用评语"
-      onChange={event => onStudentFeedbackChange?.(event.target.value)}
-      onKeyDown={event => {
-        if (event.key !== "Enter" || !feedbackShortcut || !workspace.templates.some(template => template.shortcut === feedbackShortcut)) return;
-        event.preventDefault();
-        void insertFeedbackTemplate(feedbackShortcut);
-      }}
-    />}
-    {!disabled && feedbackSuggestions.length ? <div className="review-template-suggestions" aria-label="匹配的本题常用评语">{feedbackSuggestions.map(template => <Button key={template.id} size="small" loading={applyingTemplate} onClick={() => void insertFeedbackTemplate(template.shortcut)}>/{template.shortcut} · {template.title}</Button>)}</div> : null}
-    {onAdoptAiFeedback ? <Button size="small" disabled={disabled || !canAdoptAiFeedback} onClick={onAdoptAiFeedback}>采用 AI 评语</Button> : null}
-    {historicalComments || historicalPrivateNote ? <details className="review-annotation-history"><summary>历史评语与备注</summary>{historicalComments ? <p>教师评语：{historicalComments}</p> : null}{historicalPrivateNote ? <p>内部备注：{historicalPrivateNote}</p> : null}</details> : null}
-  </div>;
-
-  return (
-    <section className={`review-annotation-workspace${renderCanvas ? ` review-annotation-workspace--inline${editing ? " review-annotation-workspace--editing" : ""}` : ""}`} aria-label="答题卡批注">
-      {!renderCanvas ? toolbar : null}
-
-      {editingVisible && workspace.error ? <Alert type={workspace.saveState === "conflict" ? "warning" : "error"} showIcon message={workspace.error} /> : null}
-      {editingVisible && templateFailure ? <Alert type="error" showIcon message={templateFailure.error} action={<Button loading={applyingTemplate} disabled={disabled || saving || (templateFailure.target === "image" && !draft)} onClick={() => void (templateFailure.target === "feedback" ? insertFeedbackTemplate(templateFailure.shortcut) : insertTemplate(templateFailure.shortcut))}>重试插入评语</Button>} /> : null}
-
-      <div className="review-annotation-layout">
-        {renderCanvas && editing ? <aside className="review-annotation-tools" aria-label="批注与本题评语">
-          {studentFeedback !== undefined ? <div className="review-annotation-tabs" role="tablist" aria-label="批注类型"><Button role="tab" aria-selected={panel === "image"} type={panel === "image" ? "primary" : "default"} onClick={() => setPanel("image")}>图上批注</Button><Button role="tab" aria-selected={panel === "feedback"} type={panel === "feedback" ? "primary" : "default"} onClick={() => { setPanel("feedback"); setTool("select"); setDragStart(undefined); }}>本题评语</Button></div> : <strong>图上批注</strong>}
-          {panel === "feedback" ? feedbackEditor : drawingAvailable ? <>{toolbar}{annotationEditor}</> : <p className="review-annotation-help">图上批注需要单题答题区域图片。本题评语仍可填写。</p>}
-          {viewTools ? <div className="review-annotation-view-tools">{viewTools}</div> : null}
-        </aside> : null}
-        <div key="canvas" className={renderCanvas ? "review-annotation-custom-canvas" : "review-annotation-canvas-scroll"}>
-          {renderCanvas ? renderCanvas({
-            tool: disabled || !editing || !drawingAvailable || panel !== "image" ? "select" : tool,
-            // 批注坐标属于单题原图，切到整区或原始页面时不能套用到另一张图上。
-            annotations: drawingAvailable ? workspace.annotations : [],
-            selectedId: drawingAvailable ? draft?.current?.id : undefined,
-            disabled: disabled || saving || !editing || !drawingAvailable,
-            onPointerDown: startDrawingAt,
-            onPointerUp: finishDrawingAt,
-            onSelect: selectAnnotation
-          }) : <section
-            className={`review-annotation-canvas review-annotation-canvas--${disabled ? "select" : tool}`}
-            onPointerDown={startDrawing}
-            onPointerUp={finishDrawing}
-            aria-label={canvasLabel(disabled ? "select" : tool)}
-          >
-            <img ref={imageRef} src={imageUrl} alt={imageAlt} draggable={false} />
-            <div className="review-annotation-overlay">
-              {workspace.annotations.map((annotation) => {
-                const point = annotation.geometry.width === 0 && annotation.geometry.height === 0;
-                return (
-                  <button
-                    type="button"
-                    key={annotation.id}
-                    className={`${point ? "review-annotation-mark review-annotation-mark--point" : "review-annotation-mark"}${draft?.current?.id === annotation.id ? " is-selected" : ""}`}
-                    style={geometryStyle(annotation.geometry)}
-                    title={annotation.content}
-                    onPointerDown={(event) => event.stopPropagation()}
-                    disabled={saving}
-                    onClick={() => selectAnnotation(annotation)}
-                    aria-label={`${disabled ? "查看" : "编辑"}批注：${annotation.content}`}
-                  />
-                );
-              })}
-            </div>
-          </section>}
-        </div>
-
-        {editingVisible && !renderCanvas ? <aside className="review-annotation-inspector">
-          {annotationEditor}
-        </aside> : null}
-      </div>
-
-      {!disabled ? <CommentTemplateManager
-        open={templateManagerOpen && editingVisible}
-        templates={workspace.templates}
-        onClose={() => setTemplateManagerOpen(false)}
-        onCreate={workspace.createTemplate}
-        onUpdate={workspace.updateTemplate}
-        onDelete={workspace.removeTemplate}
-      /> : null}
-    </section>
-  );
+  return <section className="review-annotation-workspace review-annotation-workspace--inline" aria-label="答题卡批注">
+    {workspace.error ? <Alert type={workspace.saveState === "conflict" ? "warning" : "error"} showIcon message={workspace.error} /> : null}
+    <div className="review-annotation-layout">
+      <aside className="review-annotation-rail" role="toolbar" aria-label="批注工具" aria-orientation="vertical">
+        {icon("select", "选择批注", <MousePointer2 size={18} />)}
+        {icon("correct", "打勾", <Check size={18} />)}
+        {icon("incorrect", "打叉", <X size={18} />)}
+        {icon("rectangle", "框选批注", <Square size={18} />)}
+        <Tooltip title="删除选中批注" placement="right"><Button type="text" icon={<Trash2 size={18} />} aria-label="删除选中批注" disabled={disabled || saving || !drawingAvailable || !selected} onClick={() => void removeSelected()} /></Tooltip>
+        {viewTools ? <div className="review-annotation-view-tools">{viewTools}</div> : null}
+      </aside>
+      <div className="review-annotation-custom-canvas">{renderCanvas({
+        tool: !drawingAvailable || disabled ? "select" : tool === "correct" || tool === "incorrect" ? "note" : tool,
+        // 单题坐标不能直接套到整区图或原始页面；切换视图时隐藏这组标记。
+        annotations: drawingAvailable ? workspace.annotations : [], selectedId: drawingAvailable ? selectedId : undefined,
+        disabled: unavailable, onPointerDown: start, onPointerUp: finish,
+        onSelect: annotation => { if (saving) return; drawingStart.current = null; setTool("select"); setSelectedId(annotation.id); }
+      })}</div>
+    </div>
+  </section>;
 }

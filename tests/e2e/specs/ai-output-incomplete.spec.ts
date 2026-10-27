@@ -7,9 +7,15 @@ test("当前 AI 失败隐藏历史建议，教师草稿和人工提交仍可使�
   await page.setViewportSize({ width: 1440, height: 1000 });
   const state = createGradingWorkbenchMockState(1);
   const task = state.tasks[0];
-  state.fastConfirmTaskIds.add(task.id);
+  state.currentAiSuggestionTaskIds.add(task.id);
   // 先标记以核对草稿和失败提示；取消标记后再验证人工录分自动提交。
   Object.assign(state.bookmarks.get(task.id)!, { id: `bookmark-${task.id}`, marked: true, revision: 1 });
+  // 存量文字仅作为已保存记录加载；删除评语入口后，评分更新仍须保留原值。
+  state.drafts.set(task.id, {
+    id: `draft-${task.id}`, review_task_id: task.id, reviewer_id: "user-grader", score: 2,
+    rubric_selections: [], comments: "教师保留的评语", student_feedback: "教师保留的学生反馈", private_note: "教师保留的内部备注",
+    viewer_state: {}, revision: 1, updated_at: "2026-08-13T08:00:00Z"
+  });
   let currentFailure = false;
   await installGradingWorkbenchMocks(page, state);
   await page.route(`**/api/v1/review-tasks/${task.id}/context`, async route => {
@@ -23,31 +29,27 @@ test("当前 AI 失败隐藏历史建议，教师草稿和人工提交仍可使�
   await expect(score).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "采纳 AI 建议分" })).toBeEnabled();
   await score.fill("4");
-  await page.getByText("评语与备注（可选）", { exact: true }).click();
-  await page.locator("#grading-student-feedback-input").fill("教师保留的学生反馈");
-  await page.locator("#grading-private-note-input").fill("教师保留的内部备注");
-  await expect.poll(() => state.drafts.get(task.id)?.private_note, { timeout: 8_000 }).toBe("教师保留的内部备注");
+  await expect.poll(() => state.drafts.get(task.id)?.score, { timeout: 8_000 }).toBe(4);
+  expect(state.drafts.get(task.id)).toMatchObject({ comments: "教师保留的评语", student_feedback: "教师保留的学生反馈", private_note: "教师保留的内部备注" });
   expect(state.submissions).toHaveLength(0);
 
   currentFailure = true;
+  // 已保存草稿仍未正式交分；刷新须明确确认离开，不能绕过评分未提交的保护。
   await page.getByRole("button", { name: "刷新", exact: true }).click();
+  const refreshConfirmation = page.getByRole("dialog", { name: "评分尚未提交，继续离开？", exact: true });
+  await expect(refreshConfirmation).toBeVisible();
+  await refreshConfirmation.getByRole("button", { name: "继续离开", exact: true }).click();
+  await expect(refreshConfirmation).toHaveCount(0);
   await expect(page.getByText("AI 建议未完成，请人工评分。", { exact: true })).toBeVisible();
   await expect(score).toHaveValue("4.0");
-  await expect(page.locator("#grading-student-feedback-input")).toHaveValue("教师保留的学生反馈");
-  await expect(page.locator("#grading-private-note-input")).toHaveValue("教师保留的内部备注");
+  expect(state.drafts.get(task.id)).toMatchObject({ comments: "教师保留的评语", student_feedback: "教师保留的学生反馈", private_note: "教师保留的内部备注" });
   await expect(page.getByRole("button", { name: "采纳 AI 建议分" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "审读 AI 反馈" })).toHaveCount(0);
   await expect(page.getByText("AI 学生反馈草稿", { exact: true })).toHaveCount(0);
   await page.screenshot({ path: "output/playwright/ai-output-incomplete-teacher.png", fullPage: true });
 
-  await page.getByRole("button", { name: "AI 建议分", exact: true }).click();
-  const drawer = page.getByRole("dialog", { name: "批量确认 AI 建议分" });
-  await expect(drawer.getByText("本次检查的任务中，暂无可批量确认的 AI 建议分")).toBeVisible();
-  await expect(drawer.getByRole("button", { name: /提交已核对/ })).toHaveCount(0);
-  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "已标记", exact: true }).click();
   await expect.poll(() => state.submissions, { timeout: 10_000 }).toEqual([task.id]);
-  expect(state.grades.get(task.id)).toMatchObject({ score: 4, student_feedback: "教师保留的学生反馈", private_note: "教师保留的内部备注" });
+  expect(state.grades.get(task.id)).toMatchObject({ score: 4, comments: "教师保留的评语", student_feedback: "教师保留的学生反馈", private_note: "教师保留的内部备注" });
   await expect(page.locator(".answer-panel")).toContainText(task.anonymous_code);
 });
 

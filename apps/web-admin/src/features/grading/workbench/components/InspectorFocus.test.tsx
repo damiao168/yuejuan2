@@ -97,10 +97,21 @@ describe("single-question inspector focus", () => {
     for (const obsolete of ["提交并下一份", "提交并提名标准卷", "连续阅卷", "Ctrl / ⌘ + Enter"]) expect(editable.textContent).not.toContain(obsolete);
   });
 
+  it("评分记录不再展示评语，保留草稿中的历史字段", () => {
+    const editor = { ...evidenceProps("calculation"), setDraft: vi.fn(), rubricPoints: [], canReturn: false,
+      onAdoptAiScore: vi.fn(), onMarkDispute: vi.fn(async () => undefined) } as ScoreEditorProps;
+    editor.draft = { ...editor.draft, score: 4, comments: "历史教师评语", privateNote: "历史内部备注", studentFeedback: "历史学生反馈" };
+    const host = parse(<ScoreEditor {...editor} />);
+    expect(host.textContent).toContain("评分草稿：4 / 5");
+    for (const text of ["历史教师评语", "历史内部备注", "历史学生反馈", "评语与备注"]) expect(host.textContent).not.toContain(text);
+    expect(editor.setDraft).not.toHaveBeenCalled();
+    expect(editor.draft.comments).toBe("历史教师评语");
+  });
+
   it.each([0, 5])("评分栏首行显示真实 AI 建议 %s 分，并保留采纳禁用条件", (score) => {
     const editor = { ...evidenceProps("calculation"), setDraft: vi.fn(), rubricPoints: [], canEditDraft: true, canReturn: false,
       maxScore: 17, selectedGrade: { suggested_score: score, student_feedback: "检查推导" }, canAdoptAiScore: false,
-      onAdoptAiScore: vi.fn(), onAdoptAiFeedback: vi.fn(), onShowAiRecord: vi.fn(), onMarkDispute: vi.fn(async () => undefined) } as unknown as ScoreEditorProps;
+      onAdoptAiScore: vi.fn(), onShowAiRecord: vi.fn(), onMarkDispute: vi.fn(async () => undefined) } as unknown as ScoreEditorProps;
     const host = parse(<ScoreEditor {...editor} />);
     expect(host.querySelector(".score-ai-summary")?.textContent).toBe(`AI 建议 ${score} / 17 分采纳评分依据`);
     expect(host.querySelector('[aria-label="采纳 AI 建议分"]')?.hasAttribute("disabled")).toBe(true);
@@ -111,16 +122,15 @@ describe("single-question inspector focus", () => {
   });
 
   it.each([0, 5])("采纳 %s 分直接执行，不弹第二次确认且不带入评语", (score) => {
-    const onAdoptAiScore = vi.fn(), onAdoptAiFeedback = vi.fn();
+    const onAdoptAiScore = vi.fn();
     const confirm = vi.spyOn(Modal, "confirm");
     const editor = { ...evidenceProps("calculation"), setDraft: vi.fn(), rubricPoints: [], canEditDraft: true, canReturn: false,
       selectedGrade: { suggested_score: score, student_feedback: "AI 评语" }, canAdoptAiScore: true,
-      onAdoptAiScore, onAdoptAiFeedback, onMarkDispute: vi.fn(async () => undefined) } as unknown as ScoreEditorProps;
+      onAdoptAiScore, onMarkDispute: vi.fn(async () => undefined) } as unknown as ScoreEditorProps;
     const view = render(<ScoreEditor {...editor} />);
     try {
       fireEvent.click(view.getByRole("button", { name: "采纳 AI 建议分" }));
       expect(onAdoptAiScore).toHaveBeenCalledOnce();
-      expect(onAdoptAiFeedback).not.toHaveBeenCalled();
       expect(confirm).not.toHaveBeenCalled();
       expect(view.queryByText("评语与备注（可选）")).toBeNull();
     } finally { cleanup(); confirm.mockRestore(); }
@@ -131,7 +141,7 @@ describe("single-question inspector focus", () => {
     const confirm = vi.spyOn(Modal, "confirm");
     const editor = { ...evidenceProps("calculation"), setDraft: vi.fn(), rubricPoints: [], canEditDraft, canReturn: false,
       selectedGrade: { suggested_score: 5 }, canAdoptAiScore: false,
-      onAdoptAiScore: vi.fn(), onAdoptAiFeedback: vi.fn(), onShowAiRecord, onMarkDispute: vi.fn(async () => undefined) } as unknown as ScoreEditorProps;
+      onAdoptAiScore: vi.fn(), onShowAiRecord, onMarkDispute: vi.fn(async () => undefined) } as unknown as ScoreEditorProps;
     const view = render(<ScoreEditor {...editor} />);
     try {
       fireEvent.click(view.getByRole("button", { name: "评分依据" }));

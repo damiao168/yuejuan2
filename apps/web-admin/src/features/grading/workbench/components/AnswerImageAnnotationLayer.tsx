@@ -51,7 +51,11 @@ export function AnswerImageAnnotationLayer({ controls, imageSize, scale }: Reado
         onClick={event => { event.stopPropagation(); controls.onSelect(annotation); }}
         onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.stopPropagation(); controls.onSelect(annotation); } }}>
         <title>{annotation.content}</title>
-        {point ? <circle cx={geometry.x * imageSize.width} cy={geometry.y * imageSize.height} r={radius} />
+        {point ? ["✓", "×"].includes(annotation.content) ? <>
+          {/* 字形不作为命中边界；透明原图框随缩放保持约 28px 点击面积。 */}
+          <rect className="answer-annotation-hit-target" x={geometry.x * imageSize.width - radius * 2.4} y={geometry.y * imageSize.height - radius * 2.4} width={radius * 4.8} height={radius * 4.8} />
+          <text className="answer-annotation-symbol" x={geometry.x * imageSize.width} y={geometry.y * imageSize.height} fontSize={28 / Math.max(.001, scale)}>{annotation.content}</text>
+        </> : <circle cx={geometry.x * imageSize.width} cy={geometry.y * imageSize.height} r={radius} />
           : <rect x={geometry.x * imageSize.width} y={geometry.y * imageSize.height} width={geometry.width * imageSize.width} height={geometry.height * imageSize.height} />}
       </g>;
     })}

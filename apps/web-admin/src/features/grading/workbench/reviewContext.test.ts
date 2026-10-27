@@ -6,8 +6,7 @@ import {
   isChoiceReview,
   questionFromContext,
   requiresExplicitSecondOpinion,
-  secondOpinionMetadata,
-  subjectToolDescriptor
+  secondOpinionMetadata
 } from "./reviewContext";
 
 function fixture(overrides: Partial<ReviewTaskContext> = {}): ReviewTaskContext {
@@ -48,35 +47,12 @@ describe("review task context presentation", () => {
     ]);
   });
 
-  it("loads subject-specific tools from server hints", () => {
-    expect(subjectToolDescriptor(fixture())).toMatchObject({
-      group: "math_science",
-      capabilities: ["公式放大", "步骤评分", "单位校验"]
-    });
-  });
-
-  it("selects the four acceptance subject-tool variants from frozen server hints", () => {
-    const descriptorFor = (subjectCode: string, allowedEvidenceTypes: string[] = []) => {
-      const context = fixture();
-      context.question_snapshot.subject_code = subjectCode as ReviewTaskContext["question_snapshot"]["subject_code"];
-      context.subject_tool_hints.subject_code = subjectCode as ReviewTaskContext["subject_tool_hints"]["subject_code"];
-      context.subject_tool_hints.allowed_evidence_types = allowedEvidenceTypes as ReviewTaskContext["subject_tool_hints"]["allowed_evidence_types"];
-      return subjectToolDescriptor(context);
-    };
-
-    expect(descriptorFor("chinese")).toMatchObject({ group: "writing", capabilities: ["连续阅读", "段落定位", "分项评分"] });
-    expect(descriptorFor("mathematics", ["math_step", "unit_value"])).toMatchObject({ group: "math_science", capabilities: ["公式放大", "步骤评分", "单位校验"] });
-    expect(descriptorFor("physics", ["math_step", "unit_value"])).toMatchObject({ group: "math_science", capabilities: ["公式放大", "步骤评分", "单位校验"] });
-    expect(descriptorFor("history")).toMatchObject({ group: "humanities", capabilities: ["材料高亮", "概念证据", "关系证据"] });
-  });
-
   it("uses choice-question tools before subject hints and explains the actual confirmation gate", () => {
     const context = fixture();
     context.question.question_type = "single_choice";
     context.ai_candidates = [{ id: "old", source: "omr", decision: "ambiguous", is_current: false, evidence: {} },
       { id: "now", source: "omr", decision: "selected", is_current: true, evidence: { auto_confirm_eligible: false, auto_confirm_reason: "manual_only_profile" } }] as ReviewTaskContext["ai_candidates"];
     expect(isChoiceReview(context)).toBe(true);
-    expect(subjectToolDescriptor(context).capabilities).not.toContain("步骤评分");
     expect(choiceReviewReason(context)).toContain("只提供参考结果");
     expect(choiceReviewReason(context)).not.toContain("歧义");
     Object.assign(context.task, { reason_code: "omr_set_quality_insufficient" });

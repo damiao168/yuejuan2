@@ -16,22 +16,21 @@ interface WorkbenchManagementProps {
   managing: boolean;
   context: WorkbenchContext | null;
   scoring: ReturnType<typeof useExamScoring>;
-  queue: Pick<ReturnType<typeof useGradingQueue>, "myProgress" | "tasks" | "reviewerProgress" | "taskAggregate" | "loadingTasks" | "taskError" | "gradersError" | "loadTasks" | "loadGraders">;
+  queue: Pick<ReturnType<typeof useGradingQueue>, "myProgress" | "reviewerProgress" | "taskAggregate" | "loadingTasks" | "taskError" | "gradersError" | "loadTasks" | "loadGraders">;
   onOpenGoldPapers: () => void;
   onOpenCalibration: (questionId: string) => void;
   onOpenAssignments: () => void;
   onViewChange: (view: GradingManagementView) => void;
   onOpenResults: (filter?: ScoringReviewFilter) => void;
-  fastConfirmTriggerTarget: HTMLDivElement | null;
 }
 
 // 概览、评分结果、设置与进度复用原评分 controller；这里只组合展示，不新建请求或状态生命周期。
 export function WorkbenchManagement({
   canManageTasks, managementView, initialExamId, canGrade, canWork, currentUserId, managing,
   context: ctx, scoring: examScoring, queue, onOpenGoldPapers, onOpenCalibration, onOpenAssignments,
-  onViewChange, onOpenResults: openResults, fastConfirmTriggerTarget: aiSuggestionEntry
+  onViewChange, onOpenResults: openResults
 }: Readonly<WorkbenchManagementProps>) {
-  const { myProgress, tasks, reviewerProgress, taskAggregate, loadingTasks, taskError, gradersError, loadTasks, loadGraders } = queue;
+  const { myProgress, reviewerProgress, taskAggregate, loadingTasks, taskError, gradersError, loadTasks, loadGraders } = queue;
   return <>
       {canManageTasks ? <GradingManagementNav view={managementView} hasExamOverview={Boolean(initialExamId) && canGrade} canViewResults={Boolean(initialExamId) && canGrade}
         canOpenResults={Boolean(examScoring.summary?.run)} resultsOpen={examScoring.detailOpen} resultsLoading={examScoring.actioning === "scoring-detail"}
@@ -44,12 +43,10 @@ export function WorkbenchManagement({
         initialExamId={initialExamId}
         canGrade={canGrade}
         canWork={canWork}
+        currentUserId={currentUserId}
         canManageTasks={canManageTasks}
         currentQuestionId={ctx?.task.question_id ?? ""}
         scoring={examScoring}
-        tasks={tasks}
-        currentUserId={currentUserId}
-        onTasksChanged={loadTasks}
         onOpenGoldPapers={onOpenGoldPapers}
         onOpenCalibration={onOpenCalibration}
         onOpenAssignments={managing ? onOpenAssignments : undefined}
@@ -57,8 +54,6 @@ export function WorkbenchManagement({
         showResults={managing && managementView === "results"}
         showSettings={managing && managementView === "settings"}
         showOverview={managing && managementView === "overview"}
-        showFastConfirmEntry={!managing || managementView === "overview"}
-        fastConfirmTriggerTarget={managing ? undefined : aiSuggestionEntry}
       />
       {managing && managementView === "progress" ? <ReviewerProgressView reviewers={reviewerProgress}
         progressComplete={Boolean(taskAggregate) && !loadingTasks && !taskError} loading={loadingTasks} error={taskError} gradersError={gradersError}

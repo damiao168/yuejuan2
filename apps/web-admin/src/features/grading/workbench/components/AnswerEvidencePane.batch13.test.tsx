@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
 import type { ReviewAnnotationWorkspaceProps } from "../../../../components/features/review-annotation";
 import { AnswerEvidencePane, type AnswerEvidencePaneProps } from "./AnswerEvidencePane";
 
-vi.mock("../../../../components/features/review-annotation", () => ({ ReviewAnnotationWorkspace: ({ renderCanvas, editing }: ReviewAnnotationWorkspaceProps) => <>
-  {renderCanvas?.({ tool: "select", annotations: [], disabled: !editing, onPointerDown: () => undefined, onPointerUp: () => undefined, onSelect: () => undefined })}
-  <input aria-label="批注测试输入" hidden={!editing} />
+vi.mock("../../../../components/features/review-annotation", () => ({ ReviewAnnotationWorkspace: ({ renderCanvas, drawingAvailable }: ReviewAnnotationWorkspaceProps) => <>
+  <aside role="toolbar" aria-label="批注工具" data-drawing-available={String(drawingAvailable)} />
+  {renderCanvas({ tool: "select", annotations: [], disabled: !drawingAvailable, onPointerDown: () => undefined, onPointerUp: () => undefined, onSelect: () => undefined })}
 </> }));
 vi.mock("./GradingMathMarkdown", () => ({ GradingMathMarkdown: ({ children, className }: { children: string; className?: string }) => <div className={className} data-grading-math="true">{children}</div> }));
 
@@ -40,32 +40,27 @@ function ocrResult(id: string, text: string, bbox: number[]): WorkbenchContext["
 }
 
 describe("AnswerEvidencePane batch13 rendering", () => {
-  it("批注直接复用分段图，收起后重新开启仍保留输入且不创建弹窗", () => {
+  it("批注工具常驻且不再出现展开按钮、评语和重复原图", () => {
     const onChangeViewerMode = vi.fn();
     vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
     render(<AnswerEvidencePane {...baseProps} context={{ ...context, segmentImageUrl: "/answer.png" }} onChangeViewerMode={onChangeViewerMode} />);
     try {
       const originalImage = document.querySelector(".image-stage img");
       expect(screen.queryByRole("dialog")).toBeNull();
-      fireEvent.click(screen.getByRole("button", { name: "批注" }));
-      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.getByRole("toolbar", { name: "批注工具" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /^批注/ })).toBeNull();
+      expect(screen.queryByRole("textbox")).toBeNull();
       expect(document.querySelector(".image-stage img")).toBe(originalImage);
-      const input = screen.getByRole<HTMLInputElement>("textbox", { name: "批注测试输入" });
-      fireEvent.change(input, { target: { value: "尚未保存的批注" } });
-      fireEvent.click(screen.getByRole("button", { name: "批注" }));
-      expect(screen.queryByRole("textbox", { name: "批注测试输入" })).toBeNull();
-      fireEvent.click(screen.getByRole("button", { name: "批注" }));
-      expect(screen.getByRole<HTMLInputElement>("textbox", { name: "批注测试输入" }).value).toBe("尚未保存的批注");
       expect(onChangeViewerMode).not.toHaveBeenCalled();
     } finally { cleanup(); vi.unstubAllGlobals(); }
   });
-  it("整区打开批注保持原视图，已有本题评语在单一入口显示数量", () => {
+  it("整区查看不改变图像模式，并禁用单题图上标记", () => {
     const onChangeViewerMode = vi.fn();
     vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
-    render(<AnswerEvidencePane {...baseProps} viewerMode="group" context={{ ...context, gradingGroupImageUrl: "/shared", segmentImageUrl: "/answer.png" }} studentFeedback="检查单位" onChangeViewerMode={onChangeViewerMode} />);
+    render(<AnswerEvidencePane {...baseProps} viewerMode="group" context={{ ...context, gradingGroupImageUrl: "/shared", segmentImageUrl: "/answer.png" }} onChangeViewerMode={onChangeViewerMode} />);
     try {
       const originalImage = document.querySelector(".image-stage img");
-      fireEvent.click(screen.getByRole("button", { name: "批注 1" }));
+      expect(screen.getByRole("toolbar", { name: "批注工具" }).getAttribute("data-drawing-available")).toBe("false");
       expect(onChangeViewerMode).not.toHaveBeenCalled();
       expect(document.querySelector(".image-stage img")).toBe(originalImage);
       expect(screen.getByText("正在查看整区，当前录入第 1 题得分。")).toBeTruthy();

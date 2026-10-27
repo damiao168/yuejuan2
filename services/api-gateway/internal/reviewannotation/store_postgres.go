@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type PostgresStore struct{ db *sql.DB }
@@ -241,127 +239,11 @@ RETURNING id::text
 	return err
 }
 
-func (s *PostgresStore) CreateCommentTemplate(ctx context.Context, tenantID, actorID string, input CreateCommentTemplateInput) (CommentTemplate, error) {
-	input.Title, input.Content, input.Shortcut = normalizeTemplate(input.Title, input.Content, input.Shortcut)
-	if tenantID == "" || actorID == "" || validateTemplate(input.Title, input.Content, input.Shortcut) != nil {
-		return CommentTemplate{}, ErrInvalidInput
-	}
-	item, err := scanCommentTemplate(s.db.QueryRowContext(ctx, `
-INSERT INTO review_comment_template (
-  tenant_id, owner_id, title, content, shortcut, created_by, updated_by
-)
-VALUES ($1::uuid, $2::uuid, $3, $4, $5, $2::uuid, $2::uuid)
-RETURNING `+commentTemplateColumns()+`
-`, tenantID, actorID, input.Title, input.Content, input.Shortcut))
-	if isUniqueViolation(err) {
-		return CommentTemplate{}, ErrShortcutConflict
-	}
-	return item, err
-}
-
-func (s *PostgresStore) ListCommentTemplates(ctx context.Context, tenantID, ownerID string) ([]CommentTemplate, error) {
-	rows, err := s.db.QueryContext(ctx, `
-SELECT `+commentTemplateColumns()+`
-FROM review_comment_template
-WHERE tenant_id = $1::uuid AND owner_id = $2::uuid AND deleted_at IS NULL
-ORDER BY usage_count DESC, updated_at DESC, id
-`, tenantID, ownerID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []CommentTemplate{}
-	for rows.Next() {
-		item, err := scanCommentTemplate(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, item)
-	}
-	return out, rows.Err()
-}
-
-func (s *PostgresStore) GetCommentTemplate(ctx context.Context, tenantID, ownerID, id string) (CommentTemplate, error) {
-	return scanCommentTemplate(s.db.QueryRowContext(ctx, `
-SELECT `+commentTemplateColumns()+`
-FROM review_comment_template
-WHERE tenant_id = $1::uuid AND owner_id = $2::uuid AND id::text = $3 AND deleted_at IS NULL
-`, tenantID, ownerID, id))
-}
-
-func (s *PostgresStore) UpdateCommentTemplate(ctx context.Context, tenantID, ownerID, id string, input UpdateCommentTemplateInput) (CommentTemplate, error) {
-	input.Title, input.Content, input.Shortcut = normalizeTemplate(input.Title, input.Content, input.Shortcut)
-	if tenantID == "" || ownerID == "" || id == "" || input.ExpectedRevision <= 0 || validateTemplate(input.Title, input.Content, input.Shortcut) != nil {
-		return CommentTemplate{}, ErrInvalidInput
-	}
-	item, err := scanCommentTemplate(s.db.QueryRowContext(ctx, `
-UPDATE review_comment_template
-SET title = $4, content = $5, shortcut = $6, updated_by = $2::uuid,
-    revision = revision + 1, updated_at = now()
-WHERE tenant_id = $1::uuid AND owner_id = $2::uuid AND id::text = $3
-  AND revision = $7 AND deleted_at IS NULL
-RETURNING `+commentTemplateColumns()+`
-`, tenantID, ownerID, id, input.Title, input.Content, input.Shortcut, input.ExpectedRevision))
-	if isUniqueViolation(err) {
-		return CommentTemplate{}, ErrShortcutConflict
-	}
-	if !errors.Is(err, ErrNotFound) {
-		return item, err
-	}
-	return CommentTemplate{}, s.templateMutationError(ctx, tenantID, ownerID, id)
-}
-
-func (s *PostgresStore) DeleteCommentTemplate(ctx context.Context, tenantID, ownerID, id string, expectedRevision int64) error {
-	if tenantID == "" || ownerID == "" || id == "" || expectedRevision <= 0 {
-		return ErrInvalidInput
-	}
-	var deletedID string
-	err := s.db.QueryRowContext(ctx, `
-UPDATE review_comment_template
-SET deleted_at = now(), updated_at = now(), updated_by = $2::uuid, revision = revision + 1
-WHERE tenant_id = $1::uuid AND owner_id = $2::uuid AND id::text = $3
-  AND revision = $4 AND deleted_at IS NULL
-RETURNING id::text
-`, tenantID, ownerID, id, expectedRevision).Scan(&deletedID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return s.templateMutationError(ctx, tenantID, ownerID, id)
-	}
-	return err
-}
-
-// 数据库直接递增使用次数并返回新版本，快捷键不存在时不会创建或修改其他模板。
-func (s *PostgresStore) UseCommentTemplate(ctx context.Context, tenantID, ownerID, shortcut string) (CommentTemplate, error) {
-	_, _, shortcut = normalizeTemplate("", "", shortcut)
-	if shortcut == "" {
-		return CommentTemplate{}, ErrInvalidInput
-	}
-	return scanCommentTemplate(s.db.QueryRowContext(ctx, `
-UPDATE review_comment_template
-SET usage_count = usage_count + 1, revision = revision + 1, updated_at = now(), updated_by = $2::uuid
-WHERE tenant_id = $1::uuid AND owner_id = $2::uuid AND shortcut = $3 AND deleted_at IS NULL
-RETURNING `+commentTemplateColumns()+`
-`, tenantID, ownerID, shortcut))
-}
-
 func (s *PostgresStore) annotationMutationError(ctx context.Context, tenantID, id string) error {
 	var exists bool
 	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS (
   SELECT 1 FROM review_annotation WHERE tenant_id = $1::uuid AND id::text = $2 AND deleted_at IS NULL
 )`, tenantID, id).Scan(&exists); err != nil {
-		return err
-	}
-	if exists {
-		return ErrRevisionConflict
-	}
-	return ErrNotFound
-}
-
-func (s *PostgresStore) templateMutationError(ctx context.Context, tenantID, ownerID, id string) error {
-	var exists bool
-	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS (
-  SELECT 1 FROM review_comment_template
-  WHERE tenant_id = $1::uuid AND owner_id = $2::uuid AND id::text = $3 AND deleted_at IS NULL
-)`, tenantID, ownerID, id).Scan(&exists); err != nil {
 		return err
 	}
 	if exists {
@@ -395,35 +277,9 @@ func scanAnnotation(row scanner) (Annotation, error) {
 	return item, nil
 }
 
-func scanCommentTemplate(row scanner) (CommentTemplate, error) {
-	var item CommentTemplate
-	err := row.Scan(
-		&item.ID, &item.TenantID, &item.OwnerID, &item.Title, &item.Content,
-		&item.Shortcut, &item.UsageCount, &item.Revision, &item.CreatedAt, &item.UpdatedAt,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return CommentTemplate{}, ErrNotFound
-	}
-	if err != nil {
-		return CommentTemplate{}, err
-	}
-	item.CreatedAt, item.UpdatedAt = item.CreatedAt.UTC(), item.UpdatedAt.UTC()
-	return item, nil
-}
-
 func annotationColumns() string {
 	return `id::text, tenant_id::text, review_task_id::text, answer_segment_id::text,
 submission_page_id::text, annotation_type, coordinate_space, x::float8, y::float8,
 width::float8, height::float8, payload, content, visibility, revision,
 created_by::text, updated_by::text, created_at, updated_at`
-}
-
-func commentTemplateColumns() string {
-	return `id::text, tenant_id::text, owner_id::text, title, content, shortcut,
-usage_count, revision, created_at, updated_at`
-}
-
-func isUniqueViolation(err error) bool {
-	var pgError *pgconn.PgError
-	return errors.As(err, &pgError) && pgError.Code == "23505"
 }

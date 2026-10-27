@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentProps, type ReactNode, type RefCallback } from "react";
+import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
 import { Alert, Drawer } from "antd";
 import type { AiGrade } from "../../../../api/review";
 import { getSafeUserText } from "../../../../api/client";
@@ -45,10 +45,9 @@ interface WorkbenchTaskContentProps {
   evidence: Omit<ComponentProps<typeof EvidenceInspector>, "context">;
   editor: Omit<ComponentProps<typeof ScoreEditor>, "context" | "onShowAiRecord">;
   regionEditor?: ReactNode;
-  aiSuggestionEntryRef?: RefCallback<HTMLDivElement>;
 }
 
-export function WorkbenchTaskContent({ context, loading, error, hasTasks, canManageTasks, onRetry, selectedGrade, subjectCode, canAdoptAiScore, answer, evidence, editor, regionEditor, aiSuggestionEntryRef }: Readonly<WorkbenchTaskContentProps>) {
+export function WorkbenchTaskContent({ context, loading, error, hasTasks, canManageTasks, onRetry, selectedGrade, subjectCode, canAdoptAiScore, answer, evidence, editor, regionEditor }: Readonly<WorkbenchTaskContentProps>) {
   const [recordOpenFor, setRecordOpenFor] = useState<string | null>(null);
   const recordScope = context ? `${context.task.id}:${context.task.answer_segment_id}:${context.task.question_id}` : "";
   const canShowRecord = Boolean(context && !isChoiceReview(context.reviewContext) && !requiresExplicitSecondOpinion(context.reviewContext));
@@ -58,21 +57,15 @@ export function WorkbenchTaskContent({ context, loading, error, hasTasks, canMan
   useEffect(() => { setRecordOpenFor(null); }, [recordScope, loading, error, canShowRecord]);
   if (loading) return <main className="grading-main-empty"><LoadingState label="正在加载答卷" /></main>;
   if (error) return <main className="grading-main-empty"><ErrorState message={error} onRetry={onRetry} /></main>;
-  if (!context) return <main className="grading-main-empty"><EmptyState title="请选择一份答卷" description={emptyQueueDescription(hasTasks, canManageTasks)} />{aiSuggestionEntryRef ? <div className="grading-ai-entry" ref={aiSuggestionEntryRef} /> : null}</main>;
+  if (!context) return <main className="grading-main-empty"><EmptyState title="请选择一份答卷" description={emptyQueueDescription(hasTasks, canManageTasks)} /></main>;
   return (
     <main className="grading-main">
       {context.warnings.length > 0 ? <Alert type="warning" showIcon message="AI 辅助不可用" description={context.warnings.map((warning) => getSafeUserText(warning, "智能辅助暂时不可用")).join("；")} /> : null}
       {canManageTasks && !isChoiceReview(context.reviewContext) ? <WorkbenchReasonBanner context={context} selectedGrade={selectedGrade} subjectCode={subjectCode} canAdoptAiScore={canAdoptAiScore} /> : null}
       <section className="grading-panels">
-        <AnswerEvidencePane {...answer} context={context}
-          studentFeedback={editor.draft.studentFeedback}
-          onStudentFeedbackChange={value => { if (editor.canEditDraft) editor.setDraft(current => ({ ...current, studentFeedback: value })); }}
-          historicalComments={editor.draft.comments} historicalPrivateNote={editor.draft.privateNote}
-          onAdoptAiFeedback={!requiresExplicitSecondOpinion(context.reviewContext) && selectedGrade?.student_feedback?.trim() ? editor.onAdoptAiFeedback : undefined}
-          canAdoptAiFeedback={editor.canAdoptAiScore} />
+        <AnswerEvidencePane {...answer} context={context} />
         <aside className="grading-inspector">
           {editor.canEditDraft && regionEditor ? regionEditor : <ScoreEditor {...editor} context={context} onShowAiRecord={canShowRecord ? () => setRecordOpenFor(recordScope) : undefined} />}
-          {aiSuggestionEntryRef ? <div className="grading-ai-entry" ref={aiSuggestionEntryRef} /> : null}
           <EvidenceInspector {...evidence} context={context} />
         </aside>
       </section>

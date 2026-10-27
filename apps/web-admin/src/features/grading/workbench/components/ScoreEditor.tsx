@@ -20,7 +20,6 @@ export interface ScoreEditorProps {
   canReturn: boolean;
   actioning: string | null;
   onAdoptAiScore: () => void;
-  onAdoptAiFeedback?: () => void;
   onShowAiRecord?: () => void;
   canAdoptAiScore?: boolean;
   onMarkDispute: () => Promise<void>;
@@ -48,11 +47,6 @@ export function ScoreEditor({
   if (!canEditDraft) return <section className="score-panel" aria-label="本题评分记录">
     <div className="panel-head"><div><h2>评分记录</h2><p>满分 {maxScore || "—"}</p></div><Space size={8}>{!requiresSecondOpinion ? aiRecordButton : null}<StatusTag tone="neutral">只读</StatusTag></Space></div>
     <p>{draft.score === null ? "当前没有可展示的评分记录。" : `${["submitted", "completed"].includes(context.task.status) ? "已提交得分" : "评分草稿"}：${draft.score} / ${maxScore}`}</p>
-    {draft.comments || draft.studentFeedback || draft.privateNote ? <details className="grading-more-fields"><summary>评语与备注</summary><div className="grading-more-fields-body">
-      {draft.comments ? <p>教师评语：{draft.comments}</p> : null}
-      {draft.studentFeedback ? <p>学生反馈：{draft.studentFeedback}</p> : null}
-      {draft.privateNote ? <p>内部备注：{draft.privateNote}</p> : null}
-    </div></details> : null}
   </section>;
   return (
     <section className="score-panel" aria-label="题目评分">
@@ -76,7 +70,7 @@ export function ScoreEditor({
         onChange={(value) => setDraft((current) => ({ ...current, ...value }))}
       />
 
-      <details className="grading-shortcut-help"><summary>键盘帮助</summary><Checkbox data-grading-shortcuts-toggle="true" checked={singleKeyShortcutsEnabled} onChange={(event) => setSingleKeyShortcutsEnabled(event.target.checked)}>启用单字符快捷键</Checkbox><p>{!singleKeyShortcutsEnabled ? "单字符快捷键已关闭。" : actioning ? "当前操作处理中，录分快捷键暂不可用。" : "当前单题可编辑，快捷键可用。"}输入框内正常输入，不触发单字符操作。</p><p>录分：G 聚焦并选中最终分，可输入 0、多位数或小数；1–9 直接打分（不超过满分）。A 采纳建议分，不采用反馈。</p><p>操作：F 标记/取消标记 · R 退回重评（需确认） · Z 撤销尚未正式提交的评分修改 · +/- 缩放。</p><p>填分后自动提交；标记的试卷只保存草稿，取消标记后恢复自动提交。关闭快捷键后仍可使用页面按钮。</p></details>
+      <details className="grading-shortcut-help"><summary>键盘帮助</summary><Checkbox data-grading-shortcuts-toggle="true" checked={singleKeyShortcutsEnabled} onChange={(event) => setSingleKeyShortcutsEnabled(event.target.checked)}>启用单字符快捷键</Checkbox><p>{!singleKeyShortcutsEnabled ? "单字符快捷键已关闭。" : actioning ? "当前操作处理中，录分快捷键暂不可用。" : "当前单题可编辑，快捷键可用。"}输入框内正常输入，不触发单字符操作。</p><p>录分：G 聚焦并选中最终分，可输入 0、多位数或小数；1–9 直接打分（不超过满分）。A 采纳建议分。</p><p>操作：F 标记/取消标记 · R 退回重评（需确认） · Z 撤销尚未正式提交的评分修改 · +/- 缩放。</p><p>填分后自动提交；标记的试卷只保存草稿，取消标记后恢复自动提交。关闭快捷键后仍可使用页面按钮。</p></details>
 
       <Space wrap className="grading-submit-bar">
         {canReturn ? (

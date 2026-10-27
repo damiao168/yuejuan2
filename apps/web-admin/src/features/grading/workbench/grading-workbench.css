@@ -70,12 +70,10 @@
 .grading-settings > p,
 .grading-preparation-details > p { margin: 14px 0; font-size: 13px; }
 .grading-question-details:not([hidden]) { margin-top: 14px; }
-.grading-overview .fast-confirm-trigger { align-self: flex-start; margin: 12px 0; }
 .grading-overview > .ant-alert { margin-top: 12px; }
 .grading-overview .ant-alert { padding: 10px 14px; }
 .grading-overview .grading-ai-progress { margin: 0; }
 .grading-settings > .ant-space { padding-bottom: 8px; }
-.fast-confirm-help summary:focus-visible { outline: 2px solid var(--primary, #1677ff); outline-offset: 3px; }
 @media (max-width: 1000px) {
   .grading-run-strip { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   .grading-run-state { flex-direction: row; align-items: center; }
@@ -554,14 +552,12 @@
 }
 
 .answer-panel,
-.subject-tool-panel,
 .evidence-panel,
 .score-panel {
   min-width: 0;
   padding: 12px;
 }
 
-.subject-tool-panel,
 .evidence-panel,
 .score-panel {
   display: flex;
@@ -569,24 +565,13 @@
   gap: 10px;
 }
 
-.subject-tool-panel,
 .evidence-panel {
   border-bottom: 1px solid var(--border);
-}
-
-.subject-tool-facts .ant-descriptions-item {
-  padding-bottom: 2px;
 }
 
 .annotation-entry-placeholder {
   color: var(--text-muted);
   font-size: var(--eg-font-caption);
-}
-
-.structured-evidence-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
 }
 
 .math-evidence-inspector {
@@ -945,13 +930,11 @@
   letter-spacing: 0;
 }
 
-.ai-evidence-details,
-.grading-more-fields {
+.ai-evidence-details {
   border-top: 1px solid var(--border);
 }
 
-.ai-evidence-details summary,
-.grading-more-fields summary {
+.ai-evidence-details summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1069,19 +1052,6 @@
 
 .draft-save-status.saved {
   color: var(--success-text);
-}
-
-.grading-more-fields {
-  flex: 0 0 auto;
-}
-
-.grading-more-fields-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 210px;
-  padding: 2px 0 8px;
-  overflow: auto;
 }
 
 .grading-submit-note {
@@ -1570,57 +1540,6 @@
 .grading-ai-progress { margin: 14px 0; padding: 14px 18px 7px; border: 1px solid #d9e7f4; border-radius: 10px; background: #f8fbff; }
 .grading-ai-progress > div:first-child { margin-bottom: 8px; color: #244467; }
 @media (max-width: 720px) { .grading-plan-list > div { grid-template-columns: 1fr auto; } .grading-plan-list > div small { grid-column: 1 / -1; } }
-.fast-confirm-list {
-  display: grid;
-  gap: 10px;
-  margin: 16px 0;
-}
-
-.grading-ai-entry { padding: 0 12px 12px; }
-.fast-confirm-trigger { justify-self: start; }
-
-.fast-confirm-summary {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  margin-top: 16px;
-  color: var(--text-secondary, #667085);
-}
-
-.fast-confirm-summary strong { color: var(--text-primary, #101828); }
-.fast-confirm-evidence { display: grid; gap: 6px; }
-.fast-confirm-evidence ul { margin: 4px 0 0; padding-left: 20px; }
-.fast-confirm-evidence li { overflow-wrap: anywhere; }
-.fast-confirm-steps { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 8px 0 16px; padding-left: 20px; color: var(--text-secondary, #667085); }
-.fast-confirm-help { margin-bottom: 18px; color: var(--text-secondary, #667085); font-size: 13px; line-height: 1.7; }
-.fast-confirm-help summary { cursor: pointer; }
-.fast-confirm-help p { margin: 10px 0 0; }
-.fast-confirm-evidence .ant-checkbox-wrapper { margin-top: 10px; font-weight: 600; }
-
-.fast-confirm-item {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border-color, #e9e9e9);
-}
-
-.fast-confirm-item-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-}
-
-.fast-confirm-item-row strong { min-width: 180px; }
-.fast-confirm-item span { color: var(--text-secondary, #667085); }
-
-.fast-confirm-preview {
-  margin: 14px 0 18px;
-  padding: 16px;
-  background: var(--surface-subtle, #f8fafc);
-  border-radius: 8px;
-}
-
-.fast-confirm-preview img { display: block; margin: 0 auto 12px; }
 
 /* 教师桌面以左侧答题材料为主体，右侧集中录分；小屏仍按先材料后评分排列。 */
 .grading-teacher-simple .grading-workspace,

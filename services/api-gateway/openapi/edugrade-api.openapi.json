@@ -5824,212 +5824,6 @@
         }
       }
     },
-    "/api/v1/review/comment-templates": {
-      "get": {
-        "operationId": "listReviewCommentTemplates",
-        "responses": {
-          "200": {
-            "description": "Authenticated reviewer's personal comment templates",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReviewCommentTemplateListResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      },
-      "post": {
-        "operationId": "createReviewCommentTemplate",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateReviewCommentTemplateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Comment template created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReviewCommentTemplateResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid title, content, or shortcut",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Shortcut is already in use",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/review/comment-templates/{templateId}": {
-      "get": {
-        "operationId": "getReviewCommentTemplate",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/TemplateId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Personal comment template",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReviewCommentTemplateResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Template not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "operationId": "updateReviewCommentTemplate",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/TemplateId"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateReviewCommentTemplateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Comment template updated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReviewCommentTemplateResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Template revision or shortcut conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "operationId": "deleteReviewCommentTemplate",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/TemplateId"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteRevisionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Comment template deleted"
-          },
-          "409": {
-            "description": "Template revision conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/review/comment-templates/{shortcut}/use": {
-      "post": {
-        "operationId": "useReviewCommentTemplate",
-        "description": "Resolves a personal shortcut and atomically increments its usage count.",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Shortcut"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Authoritative template content for insertion",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReviewCommentTemplateResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Shortcut not found for the authenticated reviewer",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/exams/{examId}/questions/{questionId}/gold-papers": {
       "post": {
         "operationId": "nominateGoldPaper",
@@ -33525,146 +33319,6 @@
           }
         }
       },
-      "ReviewCommentTemplate": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "tenant_id",
-          "owner_id",
-          "title",
-          "content",
-          "shortcut",
-          "usage_count",
-          "revision",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "tenant_id": {
-            "type": "string"
-          },
-          "owner_id": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string",
-            "maxLength": 120
-          },
-          "content": {
-            "type": "string",
-            "maxLength": 4000
-          },
-          "shortcut": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 32
-          },
-          "usage_count": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "revision": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "CreateReviewCommentTemplateRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "title",
-          "content",
-          "shortcut"
-        ],
-        "properties": {
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "content": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 4000
-          },
-          "shortcut": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 32
-          }
-        }
-      },
-      "UpdateReviewCommentTemplateRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "title",
-          "content",
-          "shortcut",
-          "expected_revision"
-        ],
-        "properties": {
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "content": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 4000
-          },
-          "shortcut": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 32
-          },
-          "expected_revision": {
-            "type": "integer",
-            "minimum": 1
-          }
-        }
-      },
-      "ReviewCommentTemplateResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "comment_template"
-        ],
-        "properties": {
-          "comment_template": {
-            "$ref": "#/components/schemas/ReviewCommentTemplate"
-          }
-        }
-      },
-      "ReviewCommentTemplateListResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "comment_templates"
-        ],
-        "properties": {
-          "comment_templates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ReviewCommentTemplate"
-            }
-          }
-        }
-      },
       "AppealPage": {
         "allOf": [
           {
@@ -45851,7 +45505,7 @@
           "output_token_limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 9223372036854775807
+            "maximum": 9223372036854776000
           }
         },
         "allOf": [
@@ -46115,27 +45769,27 @@
           "input_tokens": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9223372036854775807
+            "maximum": 9223372036854776000
           },
           "cached_input_tokens": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9223372036854775807
+            "maximum": 9223372036854776000
           },
           "output_tokens": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9223372036854775807
+            "maximum": 9223372036854776000
           },
           "reasoning_tokens": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9223372036854775807
+            "maximum": 9223372036854776000
           },
           "total_tokens": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9223372036854775807
+            "maximum": 9223372036854776000
           }
         }
       },
