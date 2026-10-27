@@ -45505,7 +45505,7 @@
           "output_token_limit": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 9223372036854776000
+            "maximum": 9223372036854775807
           }
         },
         "allOf": [
@@ -45769,27 +45769,27 @@
           "input_tokens": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9223372036854776000
+            "maximum": 9223372036854775807
           },
           "cached_input_tokens": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9223372036854776000
+            "maximum": 9223372036854775807
           },
           "output_tokens": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9223372036854776000
+            "maximum": 9223372036854775807
           },
           "reasoning_tokens": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9223372036854776000
+            "maximum": 9223372036854775807
           },
           "total_tokens": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9223372036854776000
+            "maximum": 9223372036854775807
           }
         }
       },
