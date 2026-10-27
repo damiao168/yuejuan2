@@ -63,7 +63,12 @@ export function RegionScoreEditor({ context, currentUserId, canGrade, draft, set
     // 同区提交一题只改变该行版本，不重载其它未保存评分；会话、成员或答卷变化才重新加载。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, tasksKey]);
-  useEffect(() => { onStateChange(rows.some(row => row.dirty), rows.some(row => row.busy)); }, [rows, onStateChange]);
+  useEffect(() => {
+    // 草稿保存成功仍未完成交分；整区内任一题已有分数而没有提交回执，都须保留退出提示。
+    const pendingSubmission = rows.some(row => ["assigned", "in_progress", "returned"].includes(row.context.task.status)
+      && (row.context.task.id === context.task.id ? draft.score : row.score) !== null);
+    onStateChange(pendingSubmission, rows.some(row => row.busy));
+  }, [rows, onStateChange, context.task.id, draft.score]);
   const update = (id: string, patch: Partial<Member>) => setRows(values => values.map(row => row.context.task.id === id ? { ...row, ...patch } : row));
   const action = async (id: string) => {
     const version = generation.current;

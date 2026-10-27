@@ -74,7 +74,7 @@ describe("grading review submission lifecycle", () => {
 
   afterEach(async () => { await act(async () => { root.unmount(); }); });
 
-  async function mount({ nextTask = task("B"), hasMoreTasks = false, subjectCode = "chinese", suggestedText = false }: { nextTask?: ReviewTask | null; hasMoreTasks?: boolean; subjectCode?: string; suggestedText?: boolean } = {}) {
+  async function mount({ nextTask = task("B"), hasMoreTasks = false, subjectCode = "chinese", suggestedText = false, imageGrade, staleImageBinding = false }: { nextTask?: ReviewTask | null; hasMoreTasks?: boolean; subjectCode?: string; suggestedText?: boolean; imageGrade?: AiGrade; staleImageBinding?: boolean } = {}) {
     function Harness() {
       const [selectedTaskId, setSelectedTaskId] = useState("A");
       const [currentUserId, setUser] = useState("teacher");
@@ -112,7 +112,19 @@ describe("grading review submission lifecycle", () => {
       const loadContext = useCallback((id: string) => {
         mocks.contextLoads(id);
         contextRequestRef.current += 1;
-        setCtx(id ? context(id) : null);
+        const loaded = id ? context(id) : null;
+        if (loaded && imageGrade) {
+          Object.assign(loaded.task, { answer_segment_id: "segment-A", question_id: "question-A" });
+          Object.assign(loaded.reviewContext, {
+            question: { id: "question-A", score: 10 }, frozen_rubric: { version: "rubric-v1" },
+            question_snapshot: { id: "snapshot-A", risk_tier: "R2", scoring_policy_snapshot: { mode: "AI_ASSIST" } },
+            ai_second_opinion: { available: true, score_prefill_allowed: true, metadata: { ...imageGrade, input_binding: {
+              input_mode: "image", input_protocol: "grading-image-v3", input_version_id: staleImageBinding ? "new-input" : "image-input",
+              subjective_run_id: "run-A", crop_sha256: "a".repeat(64), answer_segment_id: "segment-A", question_id: "question-A", assessment_snapshot_id: "snapshot-A"
+            } } }
+          });
+        }
+        setCtx(loaded);
         setDraft({ ...createInitialDraft(null), score: 6, comments: `${id} feedback` });
         setHydrated(true);
         setSaveStatus("saved");
@@ -123,7 +135,7 @@ describe("grading review submission lifecycle", () => {
         queryScope, isCurrentScope,
         ctx, setCtx, draft, setDraft, canSubmit: true, maxScore: 10, rubricPoints: [],
         canReturn: true, canEditDraft: true, canAdoptAiScore: true, canViewOriginalImage: allowOriginalImage,
-        selectedGrade: { suggested_score: 9, answer_segment_id: "segment-A", math_artifact_id: "artifact-A", math_artifact_version: 2, math_correction_revision: 0,
+        selectedGrade: imageGrade ?? { suggested_score: 9, answer_segment_id: "segment-A", math_artifact_id: "artifact-A", math_artifact_version: 2, math_correction_revision: 0,
           math_scoring_version: "math-rubric-score-v1", rubric_version: "rubric-v1", status: "succeeded", delivery_mode: "teacher_suggestion", needs_human_review: true, max_score: 10, mock: false,
           ...(suggestedText ? { student_feedback: "AI 学生反馈", teacher_note: "AI 内部备注" } : {}) } as AiGrade,
         subjectCode, mathActionLock, liveDraft, math: { refresh: mocks.mathRefresh, dirty: false }, setMathRequesting,
@@ -161,8 +173,33 @@ describe("grading review submission lifecycle", () => {
     await act(async () => { actions.adoptAiFeedback(); });
     expect(current.draft.score).toBe(9);
     expect(current.draft.studentFeedback).toBe("AI 学生反馈");
-    expect(current.draft.privateNote).toBe("AI 内部备注");
+    expect(current.draft.privateNote).toBe("");
     expect(current.draft.comments).toBe("A feedback");
+  });
+
+  it.each([0, 9])("当前图像数学建议 %s 分直接采纳，不再要求旧版数学工件", async score => {
+    const imageGrade = { id: "image-grade", suggested_score: score, max_score: 10, answer_segment_id: "segment-A", question_id: "question-A",
+      answer_version: "image-input", rubric_version: "rubric-v1", status: "succeeded", delivery_mode: "teacher_suggestion", needs_human_review: true, mock: false,
+      raw_output: { schema_version: "grading-image-v3", input_version_id: "image-input", assessment_snapshot_id: "snapshot-A",
+        observation: { input_version_id: "image-input", crop_sha256: "a".repeat(64), members: [{ question_id: "question-A" }] } } } as unknown as AiGrade;
+    await mount({ subjectCode: "mathematics", imageGrade });
+    await act(async () => { await actions.adoptAiScore(); });
+    expect(current.draft.score).toBe(score);
+    expect(mocks.mathRefresh).not.toHaveBeenCalled();
+    expect(mocks.confirm).not.toHaveBeenCalled();
+    expect(current.draft.comments).toBe("A feedback");
+  });
+
+  it("图像建议输入版本已变化时仍不可采纳", async () => {
+    const imageGrade = { id: "image-grade", suggested_score: 9, max_score: 10, answer_segment_id: "segment-A", question_id: "question-A",
+      answer_version: "image-input", rubric_version: "rubric-v1", status: "succeeded", delivery_mode: "teacher_suggestion", needs_human_review: true, mock: false,
+      raw_output: { schema_version: "grading-image-v3", input_version_id: "image-input", assessment_snapshot_id: "snapshot-A",
+        observation: { input_version_id: "image-input", crop_sha256: "a".repeat(64), members: [{ question_id: "question-A" }] } } } as unknown as AiGrade;
+    await mount({ subjectCode: "mathematics", imageGrade, staleImageBinding: true });
+    await act(async () => { await actions.adoptAiScore(); });
+    expect(current.draft.score).toBe(6);
+    expect(mocks.rememberCurrent).not.toHaveBeenCalled();
+    expect(mocks.mathRefresh).not.toHaveBeenCalled();
   });
 
   for (const destination of ["C", "B"]) {

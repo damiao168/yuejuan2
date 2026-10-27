@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => ({
   notify: { info: vi.fn(), warning: vi.fn(), error: vi.fn(), success: vi.fn() },
   loadTasks: vi.fn(async () => undefined), loadGraders: vi.fn(async () => undefined), resetQueue: vi.fn(),
   resetShortcuts: vi.fn(), prepareViewer: vi.fn(), restoreViewer: vi.fn(), invalidateViewer: vi.fn(),
-  noop: vi.fn(), asyncNoop: vi.fn(async () => undefined),
+  noop: vi.fn(), guard: vi.fn(), confirm: vi.fn(), asyncNoop: vi.fn(async () => undefined),
   header: null as Record<string, unknown> | null, editor: null as Record<string, unknown> | null,
   region: null as Record<string, unknown> | null,
   evidence: null as Record<string, unknown> | null, review: null as Record<string, unknown> | null,
@@ -30,12 +30,12 @@ const mocks = vi.hoisted(() => ({
   offset: { x: 0, y: 0 }, viewportRef: { current: null }
 }));
 
-vi.mock("antd", () => ({ App: { useApp: () => ({ message: mocks.notify }) }, Alert: () => null, Button: () => null, Space: () => null, Drawer: () => null }));
+vi.mock("antd", () => ({ App: { useApp: () => ({ message: mocks.notify, modal: { confirm: mocks.confirm } }) }, Alert: () => null, Button: () => null, Space: () => null, Drawer: () => null }));
 vi.mock("./components/ReviewBookmarks", () => ({ ReviewBookmarkControls: () => null, ReviewBookmarksDrawer: () => null }));
 vi.mock("./hooks/usePersonalReviewBookmarks", () => ({ usePersonalReviewBookmarks: () => ({ state: { isSuccess: true, data: { marked: mocks.bookmarkMarked } }, busy: false, error: "", uncertainTask: "" }) }));
 vi.mock("../../../api/review", () => ({ renewReviewTask: mocks.renew, saveReviewDraft: mocks.save, verifyEvidence: mocks.verify }));
 vi.mock("./gradingTaskContext", () => ({ loadTaskContext: mocks.loadContext }));
-vi.mock("../../../router/useUnsavedChangesGuard", () => ({ useUnsavedChangesGuard: mocks.noop }));
+vi.mock("../../../router/useUnsavedChangesGuard", () => ({ useUnsavedChangesGuard: mocks.guard }));
 vi.mock("./hooks/useGradingQueue", async () => {
   const React = await vi.importActual<typeof import("react")>("react");
   return { useGradingQueue: function Queue() {
@@ -119,6 +119,7 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     vi.spyOn(queryClient, "removeQueries").mockImplementation(mocks.removeQueries);
     vi.spyOn(queryClient, "invalidateQueries").mockImplementation(mocks.invalidateQueries);
     mocks.prefetchedTaskRef.current.clear(); mocks.prefetchedPreviewRef.current.clear();
+    mocks.offset = { x: 0, y: 0 };
     mocks.header = null; mocks.editor = null; mocks.region = null; mocks.review = null; mocks.evidence = null;
     mocks.loadContext.mockImplementation(async (_client: unknown, _scope: unknown, id: string) => context(id));
     mocks.save.mockResolvedValue({ draft: { revision: 1 } });
@@ -158,9 +159,11 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     expect(header().scoreLabel).toBeUndefined();
     await act(async () => region().onStateChange(true, false));
     expect(header().draftSaveStatus).toBe("pending");
-    expect(header().draftStatusText).toBe("本区有未保存评分");
+    expect(header().draftStatusText).toBeUndefined();
+    expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: true }));
     await act(async () => region().onStateChange(false, false));
     expect(header().draftSaveStatus).toBe("saved");
+    expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: false }));
     await act(async () => region().setDraft(value => ({ ...value, score: 2 })));
     await act(async () => { vi.advanceTimersByTime(1500); });
     expect(mocks.save).not.toHaveBeenCalled();
@@ -262,6 +265,40 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     expect(mocks.save).toHaveBeenCalledWith("A", expect.objectContaining({ score: 0, expected_revision: 0, rubric_selections: [{ point_id: "criterion", score: 2 }], comments: "教师评语" }));
     expect(header().draftSaveStatus).toBe("saved");
     expect(loadReviewDraftFallback("teacher", "A")).toBeNull();
+    expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: true }));
+  });
+
+  it.each([false, true])("只在有未交分时确认内部切换，0分与标记状态均不遗漏 marked=%s", async marked => {
+    mocks.bookmarkMarked = marked;
+    await render();
+    expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: false, busy: false }));
+    await act(async () => header().onNext());
+    expect(mocks.confirm).not.toHaveBeenCalled();
+    await edit(0);
+    await act(async () => { vi.advanceTimersByTime(1200); });
+    expect(header().draftSaveStatus).toBe("saved");
+    await act(async () => header().onNext());
+    expect(mocks.confirm).toHaveBeenLastCalledWith(expect.objectContaining({ title: "评分尚未提交，继续离开？" }));
+    expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: true }));
+    // 草稿同步成功不代表正式交分；收到提交状态之后才解除退出保护。
+    await act(async () => (mocks.review!.setCtx as (update: (value: WorkbenchContext) => WorkbenchContext) => void)(value => ({ ...value, task: { ...value.task, status: "submitted" } })));
+    expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: false, busy: false }));
+    mocks.confirm.mockClear();
+    await act(async () => header().onNext());
+    expect(mocks.confirm).not.toHaveBeenCalled();
+  });
+
+  it("离线未评分时改变图像位置仍可离开，后台恢复保存照常保留", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    await render();
+    mocks.offset = { x: 20, y: 10 };
+    await render();
+    await act(async () => { vi.advanceTimersByTime(1200); });
+    expect(header().draftSaveStatus).toBe("offline");
+    expect(loadReviewDraftFallback("teacher", "A")).not.toBeNull();
+    expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: false, busy: false }));
+    await act(async () => header().onNext());
+    expect(mocks.confirm).not.toHaveBeenCalled();
   });
 
   it("flushes before the timer on a same-user task switch and shields B from A's late save", async () => {

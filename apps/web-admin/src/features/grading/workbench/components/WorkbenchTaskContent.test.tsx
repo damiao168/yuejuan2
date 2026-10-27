@@ -7,6 +7,8 @@ import type { ScoreDraft, WorkbenchContext } from "../gradingWorkbench.types";
 import { WorkbenchAiRecord } from "./EvidenceInspector";
 import { WorkbenchTaskContent } from "./WorkbenchTaskContent";
 
+const answerPane = vi.hoisted(() => vi.fn());
+
 vi.mock("antd", () => {
   const container = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const List = Object.assign(({ dataSource, renderItem }: { dataSource: unknown[]; renderItem: (item: unknown) => ReactNode }) => <div>{dataSource.map((item, index) => <div key={index}>{renderItem(item)}</div>)}</div>, { Item: container });
@@ -21,7 +23,7 @@ vi.mock("antd", () => {
 });
 vi.mock("../../../../api/review", () => ({ listAiGrades: vi.fn() }));
 vi.mock("../../../../components/StatusTag", () => ({ StatusTag: ({ tone, children }: { tone: string; children: ReactNode }) => <span data-tone={tone}>{children}</span> }));
-vi.mock("./AnswerEvidencePane", () => ({ AnswerEvidencePane: () => <section>学生作答</section> }));
+vi.mock("./AnswerEvidencePane", () => ({ AnswerEvidencePane: (props: unknown) => { answerPane(props); return <section>学生作答</section>; } }));
 vi.mock("./ScoreEditor", () => ({ ScoreEditor: ({ onShowAiRecord }: { onShowAiRecord?: () => void }) => <section>{onShowAiRecord ? <button onClick={onShowAiRecord}>评分依据</button> : null}</section> }));
 vi.mock("../ReviewContextInspector", () => ({ ReviewContextInspector: () => <div>复核上下文</div> }));
 vi.mock("../MathEvidenceInspector", () => ({ MathEvidenceInspector: () => null }));
@@ -63,6 +65,20 @@ function props(taskId = "task-1", selectedGrade: AiGrade | undefined = imageGrad
 }
 
 describe("顶部查看 AI 评分记录", () => {
+  it("本题评语只写 studentFeedback，保留得分和历史教师评语及内部备注", () => {
+    const initial = props();
+    const value = { ...initial, editor: { ...initial.editor, canEditDraft: true, draft: { ...initial.editor.draft, score: 7, comments: "历史教师评语", privateNote: "历史内部备注", studentFeedback: "原学生反馈" } } };
+    render(<WorkbenchTaskContent {...value} />);
+    const pane = answerPane.mock.lastCall![0];
+    expect(pane.studentFeedback).toBe("原学生反馈");
+    expect(pane.historicalComments).toBe("历史教师评语");
+    expect(pane.historicalPrivateNote).toBe("历史内部备注");
+    pane.onStudentFeedbackChange("新本题评语");
+    const update = vi.mocked(value.editor.setDraft).mock.calls[0][0] as (draft: ScoreDraft) => ScoreDraft;
+    expect(update(value.editor.draft)).toEqual({ ...value.editor.draft, studentFeedback: "新本题评语" });
+    expect(value.editor.onAdoptAiScore).not.toHaveBeenCalled();
+  });
+
   it("只读或建议不可采纳时仍能打开完整记录，保留公式且不请求评分或修改草稿", () => {
     const value = props();
     const { container } = render(<WorkbenchTaskContent {...value} />);

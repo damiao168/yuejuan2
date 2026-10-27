@@ -3,12 +3,12 @@ import { useRouter } from "@tanstack/react-router";
 import { App } from "antd";
 import { subscribeBeforeUnload } from "@edugrade/sdk";
 
-/** 未保存内容没有跨页恢复能力；站内导航先确认，刷新和关闭交给浏览器提示。 */
-export function useUnsavedChangesGuard({ dirty, busy = false, description }: { dirty: boolean; busy?: boolean; description: string }) {
+/** 调用方判断仍需处理的内容；站内导航先确认，刷新和关闭交给浏览器提示。 */
+export function useUnsavedChangesGuard({ dirty, busy = false, description, title = "放弃未保存的内容并离开？", okText = "放弃并离开", cancelText = "继续编辑" }: { dirty: boolean; busy?: boolean; description: string; title?: string; okText?: string; cancelText?: string }) {
   const router = useRouter({ warn: false });
   const { modal, message } = App.useApp();
-  const stateRef = useRef({ dirty, busy, description });
-  stateRef.current = { dirty, busy, description };
+  const stateRef = useRef({ dirty, busy, description, title, okText, cancelText });
+  stateRef.current = { dirty, busy, description, title, okText, cancelText };
 
   useEffect(() => {
     if (!router?.history) return;
@@ -24,11 +24,11 @@ export function useUnsavedChangesGuard({ dirty, busy = false, description }: { d
         if (!stateRef.current.dirty) return false;
         return new Promise<boolean>((resolve) => {
           modal.confirm({
-            title: "放弃未保存的内容并离开？",
+            title: stateRef.current.title,
             content: stateRef.current.description,
-            okText: "放弃并离开",
+            okText: stateRef.current.okText,
             okButtonProps: { danger: true },
-            cancelText: "继续编辑",
+            cancelText: stateRef.current.cancelText,
             onOk: () => resolve(false),
             onCancel: () => resolve(true),
           });

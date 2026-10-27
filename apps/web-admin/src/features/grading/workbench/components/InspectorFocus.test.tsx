@@ -105,9 +105,25 @@ describe("single-question inspector focus", () => {
     expect(host.querySelector(".score-ai-summary")?.textContent).toBe(`AI 建议 ${score} / 17 分采纳评分依据`);
     expect(host.querySelector('[aria-label="采纳 AI 建议分"]')?.hasAttribute("disabled")).toBe(true);
     expect(host.querySelector(".score-ai-basis")?.hasAttribute("disabled")).toBe(false);
-    expect(host.querySelector(".grading-more-fields .grading-ai-feedback-adoption")?.hasAttribute("disabled")).toBe(true);
+    expect(host.querySelector(".grading-more-fields")).toBeNull();
     expect(host.querySelector("h2")).toBeNull();
     expect(host.textContent).not.toContain("审读 AI 反馈");
+  });
+
+  it.each([0, 5])("采纳 %s 分直接执行，不弹第二次确认且不带入评语", (score) => {
+    const onAdoptAiScore = vi.fn(), onAdoptAiFeedback = vi.fn();
+    const confirm = vi.spyOn(Modal, "confirm");
+    const editor = { ...evidenceProps("calculation"), setDraft: vi.fn(), rubricPoints: [], canEditDraft: true, canReturn: false,
+      selectedGrade: { suggested_score: score, student_feedback: "AI 评语" }, canAdoptAiScore: true,
+      onAdoptAiScore, onAdoptAiFeedback, onMarkDispute: vi.fn(async () => undefined) } as unknown as ScoreEditorProps;
+    const view = render(<ScoreEditor {...editor} />);
+    try {
+      fireEvent.click(view.getByRole("button", { name: "采纳 AI 建议分" }));
+      expect(onAdoptAiScore).toHaveBeenCalledOnce();
+      expect(onAdoptAiFeedback).not.toHaveBeenCalled();
+      expect(confirm).not.toHaveBeenCalled();
+      expect(view.queryByText("评语与备注（可选）")).toBeNull();
+    } finally { cleanup(); confirm.mockRestore(); }
   });
 
   it.each([true, false])("完整 AI 记录没有反馈文字时仍可查看，可编辑状态为 %s", (canEditDraft) => {

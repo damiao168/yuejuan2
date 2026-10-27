@@ -22,7 +22,7 @@
 .answer-reading-tile svg { display: block; overflow: hidden; background: #fff; outline: 1px solid var(--border, #dce3ec); }
 .answer-reading-highlight { fill: rgb(22 119 255 / 12%); stroke: var(--primary, #1677ff); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
 .answer-reading-assistive { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-/* 批注时用同一右栏显示评语编辑器，结束后恢复评分，避免两套侧栏同时挤压分段图。 */
+/* 展开左侧批注时暂收评分栏，将原侧栏空间交给编辑区，避免两侧同时挤压分段图。 */
 .grading-teacher-simple .grading-panels:has(.answer-panel--annotating) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "answer"; }
 .grading-teacher-simple .grading-panels:has(.answer-panel--annotating) > .grading-inspector { display: none; }
 .answer-image-annotation-overlay { position: absolute; inset: 0; width: 100%; height: 100%; }

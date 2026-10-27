@@ -40,23 +40,36 @@ function ocrResult(id: string, text: string, bbox: number[]): WorkbenchContext["
 }
 
 describe("AnswerEvidencePane batch13 rendering", () => {
-  it("批注直接复用分段图，结束批注后重新开启仍保留输入且不创建弹窗", () => {
+  it("批注直接复用分段图，收起后重新开启仍保留输入且不创建弹窗", () => {
     const onChangeViewerMode = vi.fn();
     vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
     render(<AnswerEvidencePane {...baseProps} context={{ ...context, segmentImageUrl: "/answer.png" }} onChangeViewerMode={onChangeViewerMode} />);
     try {
       const originalImage = document.querySelector(".image-stage img");
       expect(screen.queryByRole("dialog")).toBeNull();
-      fireEvent.click(screen.getByRole("button", { name: "批注与评语" }));
+      fireEvent.click(screen.getByRole("button", { name: "批注" }));
       expect(screen.queryByRole("dialog")).toBeNull();
       expect(document.querySelector(".image-stage img")).toBe(originalImage);
       const input = screen.getByRole<HTMLInputElement>("textbox", { name: "批注测试输入" });
       fireEvent.change(input, { target: { value: "尚未保存的批注" } });
-      fireEvent.click(screen.getByRole("button", { name: "结束批注" }));
+      fireEvent.click(screen.getByRole("button", { name: "批注" }));
       expect(screen.queryByRole("textbox", { name: "批注测试输入" })).toBeNull();
-      fireEvent.click(screen.getByRole("button", { name: "批注与评语" }));
+      fireEvent.click(screen.getByRole("button", { name: "批注" }));
       expect(screen.getByRole<HTMLInputElement>("textbox", { name: "批注测试输入" }).value).toBe("尚未保存的批注");
       expect(onChangeViewerMode).not.toHaveBeenCalled();
+    } finally { cleanup(); vi.unstubAllGlobals(); }
+  });
+  it("整区打开批注保持原视图，已有本题评语在单一入口显示数量", () => {
+    const onChangeViewerMode = vi.fn();
+    vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+    render(<AnswerEvidencePane {...baseProps} viewerMode="group" context={{ ...context, gradingGroupImageUrl: "/shared", segmentImageUrl: "/answer.png" }} studentFeedback="检查单位" onChangeViewerMode={onChangeViewerMode} />);
+    try {
+      const originalImage = document.querySelector(".image-stage img");
+      fireEvent.click(screen.getByRole("button", { name: "批注 1" }));
+      expect(onChangeViewerMode).not.toHaveBeenCalled();
+      expect(document.querySelector(".image-stage img")).toBe(originalImage);
+      expect(screen.getByText("正在查看整区，当前录入第 1 题得分。")).toBeTruthy();
+      expect(screen.queryByRole("dialog")).toBeNull();
     } finally { cleanup(); vi.unstubAllGlobals(); }
   });
   it("共区模板显示整区/单题切换并明确当前录入题号", () => {

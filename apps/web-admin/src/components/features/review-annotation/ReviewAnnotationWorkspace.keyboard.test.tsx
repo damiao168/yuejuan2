@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import { act, type ReactNode } from "react";
+import { act, useState, type ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReviewAnnotation } from "@edugrade/sdk";
-import { ReviewAnnotationWorkspace } from "./ReviewAnnotationWorkspace";
+import { ReviewAnnotationWorkspace, type ReviewAnnotationCanvasControls } from "./ReviewAnnotationWorkspace";
 
 const mocks = vi.hoisted(() => ({
   annotations: [] as ReviewAnnotation[], save: vi.fn(), remove: vi.fn(), reload: vi.fn(),
@@ -34,6 +34,72 @@ describe("批注键盘新增与归一化坐标", () => {
   beforeEach(() => { vi.clearAllMocks(); mocks.annotations = []; mocks.save.mockResolvedValue({}); });
   afterEach(cleanup);
   const props = { reviewTaskId: "task", imageUrl: "/answer.png" };
+
+  it("内嵌批注左栏共用原画布，本题评语复用草稿且不出现位置数值或独立刷新", async () => {
+    const onCount = vi.fn();
+    const adopted = vi.fn();
+    function FeedbackWorkspace() {
+      const [feedback, setFeedback] = useState("先核对 /step");
+      return <ReviewAnnotationWorkspace {...props} studentFeedback={feedback} onStudentFeedbackChange={setFeedback}
+        onAnnotationCountChange={onCount} historicalComments="历史教师评语" historicalPrivateNote="内部旧记录" onAdoptAiFeedback={adopted} canAdoptAiFeedback
+        renderCanvas={controls => <button onClick={() => controls.onPointerDown({ x: 0.2, y: 0.3 })}>原切分图</button>} />;
+    }
+    mocks.apply.mockResolvedValue({ content: "步骤完整" });
+    render(<FeedbackWorkspace />);
+    const canvas = screen.getByRole("button", { name: "原切分图" });
+    fireEvent.change(screen.getByRole("combobox", { name: "批注工具" }), { target: { value: "note" } });
+    fireEvent.click(canvas);
+    expect(screen.getByRole("textbox", { name: "批注内容" })).toBeTruthy();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+    expect(screen.queryByRole("button", { name: "刷新批注" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "新增点批注" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "本题评语" }));
+    expect(screen.getByRole("textbox", { name: "本题评语" })).toBeTruthy();
+    expect(screen.getByText("教师评语：历史教师评语")).toBeTruthy();
+    expect(screen.getByText("内部备注：内部旧记录")).toBeTruthy();
+    fireEvent.click(screen.getByText("/step · 步骤"));
+    await vi.waitFor(() => expect((screen.getByRole("textbox", { name: "本题评语" }) as HTMLTextAreaElement).value).toBe("先核对 步骤完整"));
+    fireEvent.click(screen.getByRole("button", { name: "采用 AI 评语" }));
+    expect(adopted).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "原切分图" })).toBe(canvas);
+    expect(onCount).toHaveBeenCalledWith(0);
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+
+  it("本题评语模板等待期间继续输入，返回结果不能覆盖新内容", async () => {
+    let resolveTemplate!: (template: { content: string }) => void;
+    mocks.apply.mockImplementationOnce(() => new Promise(resolve => { resolveTemplate = resolve; }));
+    const onChange = vi.fn();
+    const view = render(<ReviewAnnotationWorkspace {...props} studentFeedback="原评语 /step" onStudentFeedbackChange={onChange} renderCanvas={() => <div>原图</div>} />);
+    fireEvent.click(screen.getByRole("button", { name: "本题评语" }));
+    fireEvent.click(screen.getByText("/step · 步骤"));
+    view.rerender(<ReviewAnnotationWorkspace {...props} studentFeedback="已继续修改" onStudentFeedbackChange={onChange} renderCanvas={() => <div>原图</div>} />);
+    await act(async () => { resolveTemplate({ content: "步骤完整" }); });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("离开单题图片时只隐藏图上标记，不把单题坐标套在整区或原图", () => {
+    mocks.annotations = [{ id: "annotation", type: "note", content: "单题批注", visibility: "private", revision: 1, payload: {}, geometry: { coordinate_space: "canonical_image_normalized", x: 0.2, y: 0.3, width: 0, height: 0 } } as ReviewAnnotation];
+    const canvas = vi.fn((_controls: ReviewAnnotationCanvasControls) => <div>整区图</div>);
+    render(<ReviewAnnotationWorkspace {...props} drawingAvailable={false} studentFeedback="" renderCanvas={canvas} />);
+    expect(canvas.mock.lastCall?.[0]).toEqual(expect.objectContaining({ tool: "select", annotations: [], disabled: true }));
+    fireEvent.click(screen.getByRole("button", { name: "本题评语" }));
+    expect(screen.getByRole("textbox", { name: "本题评语" })).toBeTruthy();
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+
+  it.each(["unmount", "readonly"])("旧模板回执在组件卸载或失去编辑权限后不能修改评分草稿：%s", async (change) => {
+    let resolveTemplate!: (template: { content: string }) => void;
+    mocks.apply.mockImplementationOnce(() => new Promise(resolve => { resolveTemplate = resolve; }));
+    const onChange = vi.fn();
+    const view = render(<ReviewAnnotationWorkspace {...props} studentFeedback="原评语 /step" onStudentFeedbackChange={onChange} renderCanvas={() => <div>原图</div>} />);
+    fireEvent.click(screen.getByRole("button", { name: "本题评语" }));
+    fireEvent.click(screen.getByText("/step · 步骤"));
+    if (change === "unmount") view.unmount();
+    else view.rerender(<ReviewAnnotationWorkspace {...props} disabled studentFeedback="原评语 /step" onStudentFeedbackChange={onChange} renderCanvas={() => <div>原图</div>} />);
+    await act(async () => { resolveTemplate({ content: "步骤完整" }); });
+    expect(onChange).not.toHaveBeenCalled();
+  });
 
   it("常用评语插入失败时保留输入并允许明确重试", async () => {
     mocks.apply.mockRejectedValueOnce(new Error("评语暂不可读")).mockResolvedValueOnce({ content: "步骤完整" });

@@ -41,8 +41,6 @@ describe("WorkbenchHeader status rendering", () => {
 
   it.each([
     ["conflict", "草稿已被其他会话更新"],
-    ["offline", "当前离线，未同步内容仅在本页暂存"],
-    ["error", "草稿尚未保存到服务端"],
     ["readonly", "管理员只读检查"]
   ] as const)("shows only the notice for the %s draft state", (draftSaveStatus, message) => {
     const html = renderToStaticMarkup(<WorkbenchHeader {...baseProps} draftSaveStatus={draftSaveStatus} />);
@@ -50,10 +48,11 @@ describe("WorkbenchHeader status rendering", () => {
     expect(html.match(/class="ant-alert-message"/g)).toHaveLength(1);
   });
 
-  it("does not show routine save text or a failure notice for a saved draft", () => {
-    const html = renderToStaticMarkup(<WorkbenchHeader {...baseProps} />);
+  it.each(["idle", "pending", "saving", "saved", "offline", "error"] as const)("keeps %s background draft recovery out of the grading UI", draftSaveStatus => {
+    const html = renderToStaticMarkup(<WorkbenchHeader {...baseProps} draftSaveStatus={draftSaveStatus} />);
     expect(html).not.toContain("ant-alert-message");
     expect(html).not.toContain("draft-save-status");
+    expect(html).not.toContain("暂存");
   });
 
   it("keeps daily grading actions without routine save text, special queues or release controls", () => {

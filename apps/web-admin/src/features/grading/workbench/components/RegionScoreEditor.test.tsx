@@ -89,9 +89,11 @@ describe("整区共图独立录分", () => {
     expect(row(14).querySelector("output")?.textContent).toBe("4");
     expect(row(14).querySelector('[role="alert"]')).not.toBeNull();
     expect(api.submitted).toHaveBeenCalledTimes(2);
+    expect(api.state).toHaveBeenLastCalledWith(true, false);
     api.submit.mockImplementation(async (id: string) => ({ task: { ...context(Number(id.slice(1))).task, status: "submitted", revision: 100 } }));
     await click(14, "重试本题提交");
     expect(api.submitted).toHaveBeenCalledTimes(3);
+    expect(api.state).toHaveBeenLastCalledWith(false, false);
   });
 
   it("提交当前12题只更新本行，保留13和14的分数与未保存状态", async () => {
@@ -112,12 +114,13 @@ describe("整区共图独立录分", () => {
     await mount(); await click(12, "2分"); await settle();
     await click(12, "4分"); await settle();
     expect(api.save.mock.calls.map(([id, body]) => [id, body.score, body.expected_revision])).toEqual([["t12", 2, 0], ["t12", 4, 1]]);
-    expect(api.state).toHaveBeenLastCalledWith(false, false);
+    expect(api.state).toHaveBeenLastCalledWith(true, false);
   });
 
   it("未填分不自动提交，直接最终分无需隐藏评分点或额外原因", async () => {
     await mount(); await settle();
     expect(api.submit).not.toHaveBeenCalled();
+    expect(api.state).toHaveBeenLastCalledWith(false, false);
     await click(13, "总分调整为4"); await settle();
     expect(api.submit).toHaveBeenCalledWith("t13", expect.objectContaining({ score: 4, auto_submit: true, rubric_selections: [] }));
   });
@@ -145,6 +148,18 @@ describe("整区共图独立录分", () => {
     await mount();
     expect(host.textContent).toContain("本区题目加载失败");
     expect(host.querySelector('section[aria-label="第 13 题评分"]')).toBeNull();
+    expect(api.submit).not.toHaveBeenCalled();
+  });
+
+  it("恢复本区另一题已保存的0分仍属于待交分，查看不触发自动提交", async () => {
+    api.context.mockImplementation(async (id: string) => {
+      const value = context(Number(id.slice(1)));
+      if (id === "t13") value.draft = { id: "draft-t13", review_task_id: id, reviewer_id: "teacher", score: 0,
+        comments: "", private_note: "", student_feedback: "", rubric_selections: [], viewer_state: {}, revision: 1, updated_at: "" };
+      return { context: value };
+    });
+    await mount(); await settle();
+    expect(api.state).toHaveBeenLastCalledWith(true, false);
     expect(api.submit).not.toHaveBeenCalled();
   });
   it("同一事件重复点击只发一份请求，会话变化后不续发提交", async () => {

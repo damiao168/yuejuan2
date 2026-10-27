@@ -64,7 +64,12 @@ export function WorkbenchTaskContent({ context, loading, error, hasTasks, canMan
       {context.warnings.length > 0 ? <Alert type="warning" showIcon message="AI 辅助不可用" description={context.warnings.map((warning) => getSafeUserText(warning, "智能辅助暂时不可用")).join("；")} /> : null}
       {canManageTasks && !isChoiceReview(context.reviewContext) ? <WorkbenchReasonBanner context={context} selectedGrade={selectedGrade} subjectCode={subjectCode} canAdoptAiScore={canAdoptAiScore} /> : null}
       <section className="grading-panels">
-        <AnswerEvidencePane {...answer} context={context} />
+        <AnswerEvidencePane {...answer} context={context}
+          studentFeedback={editor.draft.studentFeedback}
+          onStudentFeedbackChange={value => { if (editor.canEditDraft) editor.setDraft(current => ({ ...current, studentFeedback: value })); }}
+          historicalComments={editor.draft.comments} historicalPrivateNote={editor.draft.privateNote}
+          onAdoptAiFeedback={!requiresExplicitSecondOpinion(context.reviewContext) && selectedGrade?.student_feedback?.trim() ? editor.onAdoptAiFeedback : undefined}
+          canAdoptAiFeedback={editor.canAdoptAiScore} />
         <aside className="grading-inspector">
           {editor.canEditDraft && regionEditor ? regionEditor : <ScoreEditor {...editor} context={context} onShowAiRecord={canShowRecord ? () => setRecordOpenFor(recordScope) : undefined} />}
           {aiSuggestionEntryRef ? <div className="grading-ai-entry" ref={aiSuggestionEntryRef} /> : null}

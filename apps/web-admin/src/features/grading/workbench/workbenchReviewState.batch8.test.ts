@@ -35,11 +35,25 @@ describe("batch8 review derived state (new helpers only)", () => {
 
   it("treats zero as submit-ready but not a missing score", () => {
     const input = options();
-    expect(reviewDraftState(input).canSubmit).toBe(false);
+    expect(reviewDraftState(input)).toMatchObject({ canSubmit: false, pendingGradeSubmission: false });
     input.snapshot.draft.score = 0;
-    expect(reviewDraftState(input)).toMatchObject({ canEditDraft: true, canSubmit: true, unsyncedDraft: true });
+    expect(reviewDraftState(input)).toMatchObject({ canEditDraft: true, canSubmit: true, unsyncedDraft: true, pendingGradeSubmission: true });
     input.lastSavedSnapshot = JSON.stringify(input.snapshot);
-    expect(reviewDraftState(input).unsyncedDraft).toBe(false);
+    expect(reviewDraftState(input)).toMatchObject({ unsyncedDraft: false, pendingGradeSubmission: true });
+  });
+
+  it("does not treat image viewing changes as an unsubmitted grade", () => {
+    const input = options();
+    input.lastSavedSnapshot = JSON.stringify(input.snapshot);
+    input.snapshot.viewer = { mode: "original", scale: 2, rotation: 90, offset: { x: 20, y: 10 }, fit: false };
+    expect(reviewDraftState(input)).toMatchObject({ unsyncedDraft: true, pendingGradeSubmission: false });
+  });
+
+  it.each(["submitted", "completed", "needs_arbitration"] as const)("does not warn for a score after the task reaches %s", status => {
+    const input = options();
+    input.snapshot.draft.score = 0;
+    input.ctx.task.status = status;
+    expect(reviewDraftState(input).pendingGradeSubmission).toBe(false);
   });
 
   it.each(["pending", "submitted", "needs_arbitration", "completed"])("does not edit a %s task", (status) => {
@@ -56,7 +70,7 @@ describe("batch8 review derived state (new helpers only)", () => {
   it("keeps ownership, conflict resolution and autosave conflict gates distinct", () => {
     const input = options(); input.snapshot.draft.score = 2;
     input.ctx.task.assigned_to = "other";
-    expect(reviewDraftState(input)).toMatchObject({ ownsSelectedTask: false, canEditDraft: false, canSubmit: false, unsyncedDraft: false });
+    expect(reviewDraftState(input)).toMatchObject({ ownsSelectedTask: false, canEditDraft: false, canSubmit: false, unsyncedDraft: false, pendingGradeSubmission: false });
     input.ctx.task.assigned_to = "teacher";
     expect(reviewDraftState({ ...input, resolvingConflict: true }).canEditDraft).toBe(false);
     expect(reviewDraftState({ ...input, hasConflict: true }).canEditDraft).toBe(false);

@@ -7,13 +7,13 @@ import type { DraftSaveStatus, ReviewerProgress } from "../gradingWorkbench.type
 import type { FrozenReferenceTab } from "./FrozenQuestionReference";
 
 const draftStatusLabel: Record<DraftSaveStatus, string> = {
-  idle: "尚未修改",
-  pending: "有未保存修改",
-  saving: "正在保存到服务端",
+  idle: "",
+  pending: "",
+  saving: "",
   saved: "",
-  offline: "仅本页暂存，待同步",
+  offline: "",
   conflict: "草稿冲突",
-  error: "保存失败，仅本页暂存",
+  error: "",
   readonly: "只读"
 };
 
@@ -46,13 +46,11 @@ export interface WorkbenchHeaderProps {
   scoreLabel?: string;
 }
 
-// 告警只呈现当前草稿状态；冲突时仍保留合并和放弃本页修改的恢复入口。
+// 草稿同步在后台进行；只读边界和冲突恢复入口仍须直接可见，正式交分错误由提交动作呈现。
 function DraftStatusNotice({ draftSaveStatus, onResolveConflict, onReloadConflict, readonlyLabel }: Readonly<Pick<WorkbenchHeaderProps, "draftSaveStatus" | "onResolveConflict" | "onReloadConflict" | "readonlyLabel">>) {
   return (
     <>
       {draftSaveStatus === "conflict" && <Alert type="error" showIcon message="草稿已被其他会话更新" description="为防止覆盖其他会话的修改，自动保存已暂停。可逐项选择本页或服务端内容，再按服务端新版本重新保存。" action={<Space wrap><Button type="primary" onClick={() => void onResolveConflict()}>逐项合并</Button><Button onClick={() => void onReloadConflict()}>放弃本页修改</Button></Space>} />}
-      {draftSaveStatus === "offline" && <Alert type="warning" showIcon message="当前离线，未同步内容仅在本页暂存" description="关闭或刷新页面可能丢失未同步内容；恢复网络后会尝试保存到服务端。" />}
-      {draftSaveStatus === "error" && <Alert type="warning" showIcon message="草稿尚未保存到服务端" description="未同步内容仅在本页短暂保留，关闭或刷新可能丢失；检查网络后再确认保存状态。" />}
       {draftSaveStatus === "readonly" && readonlyLabel !== "已提交·只读" && <Alert type="info" showIcon message={readonlyLabel || "管理员只读检查"} description="当前材料只读；评分草稿与最终提交只能在本人可编辑的任务中完成。" />}
     </>
   );
@@ -101,7 +99,7 @@ export function WorkbenchHeader({
   const showReviewerActions = !canManageTasks || queueScope === "mine";
   const toolbarTarget = useContext(GradingToolbarContext);
   const { incompleteProgress, totalLabel, progressSummary } = progressLabels({ canManageTasks, hasContext, myProgress, remainingCount, progressComplete });
-  // 正常保存不占据顶栏；分区评分提示及未保存、异常状态仍按原规则显示。
+  // 日常录分不展示后台草稿同步状态；只读和冲突继续解释当前可用操作。
   const draftLabel = draftStatusText ?? (draftSaveStatus === "readonly" ? readonlyLabel || draftStatusLabel[draftSaveStatus] : draftStatusLabel[draftSaveStatus]);
   const toolbar = <section className="grading-topbar">
         <div className="grading-work-title">

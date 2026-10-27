@@ -101,6 +101,9 @@ export function reviewDraftState(options: Readonly<ReviewDraftStateOptions>) {
     && !options.hasConflict && Boolean(ctx && ["assigned", "in_progress", "returned"].includes(ctx.task.status));
   const unsyncedDraft = Boolean(options.hydrated && ownsSelectedTask && ctx?.task.status !== "submitted"
     && JSON.stringify(snapshot) !== options.lastSavedSnapshot);
+  // 草稿同步只负责恢复，不能代替正式交分；已填写的 0 分也须等提交回执，查看图像不算评分。
+  const pendingGradeSubmission = Boolean(options.canWork && options.hasSession && ownsSelectedTask
+    && ctx && ["assigned", "in_progress", "returned"].includes(ctx.task.status) && snapshot.draft.score !== null);
   const canSubmit = canEditDraft && options.saveStatus !== "conflict" && !options.actioning && snapshot.draft.score !== null;
-  return { ownsSelectedTask, canEditDraft, unsyncedDraft, canSubmit };
+  return { ownsSelectedTask, canEditDraft, unsyncedDraft, pendingGradeSubmission, canSubmit };
 }

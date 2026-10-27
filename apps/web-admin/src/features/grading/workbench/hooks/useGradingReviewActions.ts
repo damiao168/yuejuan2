@@ -14,6 +14,7 @@ import { isReviewTaskContextScopeCurrent, reviewTaskContextKeys } from "../../..
 import type { ScoreDraft } from "../gradingWorkbench.types";
 import { mathSuggestionState } from "../mathWorkbenchEvidence";
 import { aiPointAdoption } from "../aiAdoption";
+import { imageSuggestionState, isImageWorkbenchGrade } from "../workbenchReviewState";
 
 export function useGradingReviewActions({
   queryScope,
@@ -158,7 +159,7 @@ export function useGradingReviewActions({
     if (!isCurrentSession() || !ctx) {
       return;
     }
-    const reason = draft.disputeReason.trim() || "教师标记争议，需要重新评阅";
+    const reason = draft.disputeReason.trim() || "教师退回，需要重新评阅";
     await runAction(
       "return",
       async () => {
@@ -167,7 +168,7 @@ export function useGradingReviewActions({
         if (!isCurrentSession()) return;
         await refreshCurrent();
       },
-      "已标记争议并退回重评"
+      "已退回，等待重新安排教师"
     );
   };
 
@@ -175,18 +176,17 @@ export function useGradingReviewActions({
   const applyAiScore = (grade: AiGrade) => {
     scoreShortcuts.rememberCurrent();
     const selections = aiPointAdoption(grade, rubricPoints, ctx?.question?.rubric?.version);
-    // 只采纳分数；学生反馈与内部备注必须由教师从独立入口审读后采用。
+    // 采纳分数不顺带替换评语；教师可在左侧本题评语中单独采用模型文字。
     setDraft((current) => {
       let adoption: Partial<Pick<ScoreDraft, "rubricSelections" | "reason">> = {};
       if (selections) {
         adoption = { rubricSelections: selections, reason: "" };
       } else if (rubricPoints.length) {
-        adoption = { reason: `教师采用 AI 总分建议 ${grade.suggested_score} 分；未自动匹配冻结评分点，需人工核对。` };
+        adoption = { reason: `教师采用 AI 总分建议 ${grade.suggested_score} 分；未自动匹配冻结评分点。` };
       }
       return { ...current, score: grade.suggested_score, ...adoption };
     });
-    notify.info(selections ? `已填入建议分 ${grade.suggested_score} 分及 ${rubricPoints.length} 个同版评分点；反馈未改变。`
-      : `仅填入建议分 ${grade.suggested_score} 分；评分点和反馈未改变，请核对评分依据。`);
+    notify.info(`已采纳 AI 建议 ${grade.suggested_score} 分`);
   };
 
   const adoptAiScore = async () => {
@@ -202,6 +202,11 @@ export function useGradingReviewActions({
     if (!isAdoptionCurrent(selectedGrade)) return;
     if (!canEditDraft || !canAdoptAiScore) {
       notify.warning("当前建议未通过版本核对，请按原图人工判定或刷新证据。");
+      return;
+    }
+    // 图像协议已经绑定当前裁图、题目与冻结细则；不能再要求它提供旧数学流水线的工件。
+    if (isImageWorkbenchGrade(selectedGrade)) {
+      if (imageSuggestionState(selectedGrade, liveAdoption.current.ctx).current) applyAiScore(selectedGrade);
       return;
     }
     if (subjectCode !== "mathematics") {
@@ -236,12 +241,11 @@ export function useGradingReviewActions({
   const adoptAiFeedback = () => {
     if (!isCurrentSession() || activeTask.current !== ctx?.task.id || !selectedGrade || !canEditDraft || !canAdoptAiScore) return;
     if (!isAdoptionCurrent(selectedGrade)) return;
-    // 该入口由展示全文的确认框调用，不把模型文字随分数一起默默提交。
+    // 统一评语入口只填写学生反馈，旧教师备注保持原来的可见性和内容。
     setDraft((current) => ({ ...current,
-      studentFeedback: selectedGrade.student_feedback ?? current.studentFeedback,
-      privateNote: selectedGrade.teacher_note ?? current.privateNote
+      studentFeedback: selectedGrade.student_feedback ?? current.studentFeedback
     }));
-    notify.info("AI 反馈已作为可编辑草稿填入，请在提交前审读学生可见文字。");
+    notify.info("已采用 AI 评语，可继续编辑");
   };
 
   const confirmReturnTask = (asException: boolean) => {

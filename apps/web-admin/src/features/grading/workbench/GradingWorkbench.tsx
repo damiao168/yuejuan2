@@ -164,12 +164,17 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const rubricPoints = ctx?.question?.rubric?.points ?? [];
   const scoreShortcuts = useGradingScoreShortcuts({ draft, setDraft: setEditingDraft, rubricPoints: [], onInfo: (text) => message.info(text) });
   const resetScoreShortcuts = scoreShortcuts.reset;
-  const { ownsSelectedTask, canEditDraft, unsyncedDraft, canSubmit } = reviewDraftState({
+  const { ownsSelectedTask, canEditDraft, unsyncedDraft, pendingGradeSubmission, canSubmit } = reviewDraftState({
     ctx, currentUserId, canWork, hasSession, resolvingConflict, hasConflict: Boolean(draftConflict),
     hydrated: draftHydrated, saveStatus: draftSaveStatus, actioning,
     snapshot: createDraftSnapshot(draft, viewerMode, scale, rotation, offset, autoFit), lastSavedSnapshot: lastSavedDraft.current
   });
-  useUnsavedChangesGuard({ dirty: (regionEditing ? regionDirty : unsyncedDraft) || math.dirty, busy: Boolean(actioning) || bookmarks.busy || regionBusy, description: "当前评分或证据校正尚未保存，离开后只能恢复已成功保存的版本。" });
+  const hasPendingGradeSubmission = regionEditing ? regionDirty : pendingGradeSubmission;
+  const leaveDescription = hasPendingGradeSubmission ? "当前已填写的评分尚未提交，离开不会完成交分。" : "当前证据校正尚未保存，离开后只能恢复已成功保存的版本。";
+  useUnsavedChangesGuard({ dirty: hasPendingGradeSubmission || math.dirty,
+    busy: (hasPendingGradeSubmission || math.dirty) && (Boolean(actioning) || regionBusy),
+    title: hasPendingGradeSubmission ? "评分尚未提交，继续离开？" : undefined,
+    okText: "继续离开", cancelText: "继续阅卷", description: leaveDescription });
   const canUndoScoreChange = scoreShortcuts.canUndo;
   const examScoring = useExamScoring({ initialExamId, currentUserId, currentTenantId, canGrade, onTasksChanged: loadTasks });
   // 启动评分后仍进入同一结果视图；明细读取返回不能重新弹出已经离开的管理页。
@@ -312,22 +317,11 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
 
   const changeQueueScope = (change: () => void) => {
     if (actioning || regionBusy) { message.info("正在保存、提交或分配，请等待结果后切换。"); return; }
-    if (regionEditing && regionDirty) {
-      const taskId = selectedTaskId;
-      modal.confirm({ title: "本区还有未保存的评分，继续切换？", content: "已经保存或提交的各题结果会保留，尚未保存的评分将丢失。", okText: "放弃未保存内容并切换", cancelText: "继续评分", onOk: () => { if (isCurrentScope() && activeTask.current === taskId) change(); } });
-      return;
-    }
     if (bookmarks.busy) { message.info("正在保存标记，请稍后切换。"); return; }
-    if (scoreEdit?.taskId === selectedTaskId && draft.score !== null && ctx?.task.status !== "submitted" && !regionEditing && !bookmarks.state.data?.marked) {
-      message.info("本题分数尚未提交，请等待自动提交；稍后处理可先标记试卷。"); return;
-    }
-    if (!regionEditing && unsyncedDraft && !math.dirty) {
-      modal.confirm({ title: "评分草稿尚未同步，继续切换？", content: "未同步内容保留本机兜底；重新进入时仍需核对服务端保存状态。", okText: "继续切换", cancelText: "等待保存", onOk: () => { if (isCurrentScope()) change(); } });
-      return;
-    }
-    if (!math.dirty) { change(); return; }
+    if (!hasPendingGradeSubmission && !math.dirty) { change(); return; }
     const taskId = selectedTaskId;
-    modal.confirm({ title: "放弃未保存的证据校正并切换？", content: "当前证据校正尚未保存。评分草稿以服务端或本机兜底保存状态为准。", okText: "放弃并切换", cancelText: "继续校正", onOk: () => { if (isCurrentScope() && activeTask.current === taskId) change(); } });
+    modal.confirm({ title: hasPendingGradeSubmission ? "评分尚未提交，继续离开？" : "放弃未保存的证据校正并切换？", content: leaveDescription,
+      okText: "继续离开", cancelText: "继续阅卷", onOk: () => { if (isCurrentScope() && activeTask.current === taskId) change(); } });
   };
 
   const openResults = (filter?: ScoringReviewFilter) => changeQueueScope(() => {
@@ -363,7 +357,6 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         remainingCount={remainingCount}
         progressComplete={Boolean(taskAggregate) && !loadingTasks && !taskError}
         draftSaveStatus={regionEditing ? regionBusy ? "saving" : regionDirty ? "pending" : "saved" : draftSaveStatus}
-        draftStatusText={regionEditing ? regionBusy ? "正在保存评分" : regionDirty ? "本区有未保存评分" : "评分按题保存" : undefined}
         loading={loadingTasks || contextLoading}
         actioning={actioning}
         onRefresh={async () => changeQueueScope(() => { void refreshCurrent(); })}
