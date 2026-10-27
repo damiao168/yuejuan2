@@ -16,14 +16,6 @@ type coverageHTTPProbe struct {
 	Status int    `json:"status"`
 	Body   string `json:"body"`
 }
-type coverageHTTPProbeBundle struct {
-	Scope               string            `json:"scope"`
-	Complete            coverageHTTPProbe `json:"complete_coverage"`
-	Incomplete          coverageHTTPProbe `json:"incomplete_control"`
-	CompleteGapsToken   string            `json:"complete_gaps_json_token"`
-	IncompleteGapsToken string            `json:"incomplete_gaps_json_token"`
-	DatabaseConnected   bool              `json:"business_database_connected"`
-}
 
 // 此探针只用生产 MemoryStore/handler/路由序列化完整与不完整的合成 Gold 覆盖，不连数据库。
 func TestCoverageHTTPEmptyCollectionsAreArrays(t *testing.T) {

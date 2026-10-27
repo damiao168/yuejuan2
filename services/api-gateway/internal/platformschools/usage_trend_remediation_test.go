@@ -14,7 +14,7 @@ import (
 type adversarialUsageConnector struct{ failAfter bool }
 
 func (c adversarialUsageConnector) Connect(context.Context) (driver.Conn, error) {
-	return adversarialUsageConnection{failAfter: c.failAfter}, nil
+	return adversarialUsageConnection(c), nil
 }
 func (adversarialUsageConnector) Driver() driver.Driver { return adversarialUsageDriver{} }
 

@@ -29,10 +29,9 @@ fn chunk_race_child() {
     );
     fs::write(
         root.join(format!("result-{child}")),
-        if result.is_ok() {
-            "ok".into()
-        } else {
-            format!("error: {}", result.unwrap_err())
+        match result {
+            Ok(_) => "ok".into(),
+            Err(error) => format!("error: {error}"),
         },
     )
     .unwrap();

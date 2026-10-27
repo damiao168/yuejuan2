@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
-	"strings"
-	"unicode"
 
 	"github.com/phpdave11/gofpdf"
 	qrcode "github.com/skip2/go-qrcode"
@@ -157,30 +155,4 @@ func mapPrintRegion(region PrintPackageRegion, x, y, width, height float64) (flo
 		return 0, 0, 0, 0, false
 	}
 	return x + region.X*width, y + region.Y*height, region.Width * width, region.Height * height, true
-}
-
-func shortRef(value string) string {
-	value = safeASCII(value)
-	if len(value) <= 18 {
-		return value
-	}
-	return value[:8] + "..." + value[len(value)-6:]
-}
-
-func shortHash(value string) string {
-	value = safeASCII(value)
-	if len(value) <= 22 {
-		return value
-	}
-	return value[:22]
-}
-
-func safeASCII(value string) string {
-	var out strings.Builder
-	for _, r := range strings.TrimSpace(value) {
-		if r >= 32 && r <= unicode.MaxASCII && r != '(' && r != ')' && r != '\\' {
-			out.WriteRune(r)
-		}
-	}
-	return out.String()
 }
