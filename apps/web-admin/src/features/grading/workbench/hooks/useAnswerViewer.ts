@@ -159,9 +159,12 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
     window.requestAnimationFrame(() => fit(size));
   }, [fit]);
 
+  const previewTaskId = context?.task.id ?? "";
+  const imagePath = !context || mode === "ocr" ? "" : mode === "group" ? context.gradingGroupImageUrl ?? ""
+    : mode === "segment" ? context.segmentImageUrl : canViewOriginalImage ? context.originalImageUrl ?? "" : "";
   const loadPreview = useCallback(async () => {
     const requestId = ++requestRef.current;
-    if (!context || mode === "ocr" || (mode === "original" && (!canViewOriginalImage || !context.originalImageUrl)) || (mode === "segment" && !context.segmentImageUrl) || (mode === "group" && !context.gradingGroupImageUrl)) {
+    if (!previewTaskId || !imagePath) {
       setPreview(null);
       setPreviewLoading(false);
       setImageSize(null);
@@ -175,10 +178,9 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
     setImageSize(null);
     setAutoFit(true);
     try {
-      const imagePath = mode === "group" ? context.gradingGroupImageUrl! : mode === "segment" ? context.segmentImageUrl : context.originalImageUrl!;
       // 标注内容已有修订时必须重取图片；按任务预取的旧图不含这个修订。
-      const cachedPreview = mode === "segment" && !contentRevision ? prefetchedPreviewRef.current.get(context.task.id) : undefined;
-      if (mode === "segment") prefetchedPreviewRef.current.delete(context.task.id);
+      const cachedPreview = mode === "segment" && !contentRevision ? prefetchedPreviewRef.current.get(previewTaskId) : undefined;
+      if (mode === "segment") prefetchedPreviewRef.current.delete(previewTaskId);
       const file = (cachedPreview ? await cachedPreview : null) ?? await downloadReviewWorkspaceImage(imagePath);
       if (requestId !== requestRef.current) return;
       setPreview((current) => {
@@ -190,11 +192,12 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
     } finally {
       if (requestId === requestRef.current) setPreviewLoading(false);
     }
-  }, [canViewOriginalImage, contentRevision, context, message, mode, prefetchedPreviewRef]);
+  }, [contentRevision, previewTaskId, imagePath, message, mode, prefetchedPreviewRef]);
 
   useEffect(() => {
-    if (context && mode !== "ocr") void loadPreview();
-  }, [context, loadPreview, mode]);
+    // 提交只改变任务状态，不改变图片来源；不能因此清空已显示答卷并重复下载。
+    void loadPreview();
+  }, [loadPreview]);
 
   useEffect(() => {
     const viewport = viewportRef.current;

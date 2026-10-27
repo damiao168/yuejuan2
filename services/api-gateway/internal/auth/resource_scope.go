@@ -30,6 +30,12 @@ type ResourceBoundaryResolver interface {
 	ResolveResourceBoundary(ctx context.Context, scope AccessScope, resourceType, resourceID string) (ResourceBoundary, error)
 }
 
+// SubmittedReviewTaskReader 核验本人已提交的评分事实，只供任务只读路由使用。
+// 历史任务不加入活动分派或 submission 作用域，避免回看权限扩散为写入或其他答卷访问权。
+type SubmittedReviewTaskReader interface {
+	CanReadSubmittedReviewTask(context.Context, string, string, string) (bool, error)
+}
+
 func AllowsResourceBoundary(scope AccessScope, boundary ResourceBoundary) bool {
 	if strings.TrimSpace(boundary.TenantID) == "" || boundary.TenantID != scope.TenantID {
 		return false
@@ -197,7 +203,16 @@ func checkRequestResourceBoundaries(resolver ResourceBoundaryResolver, w http.Re
 			httpx.Error(w, r, http.StatusInternalServerError, "resource_scope_lookup_failed", "failed to resolve resource data scope")
 			return false
 		}
-		if !AllowsResourceBoundary(scope, boundary) {
+		allowed := AllowsResourceBoundary(scope, boundary)
+		if !allowed {
+			var historyErr error
+			allowed, historyErr = allowsSubmittedReviewTaskRead(resolver, r, scope, boundary)
+			if historyErr != nil {
+				httpx.Error(w, r, http.StatusInternalServerError, "resource_scope_lookup_failed", "failed to resolve resource data scope")
+				return false
+			}
+		}
+		if !allowed {
 			httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "resource is outside the current data access scope")
 			return false
 		}
@@ -207,6 +222,18 @@ func checkRequestResourceBoundaries(resolver ResourceBoundaryResolver, w http.Re
 		}
 	}
 	return true
+}
+
+func allowsSubmittedReviewTaskRead(resolver ResourceBoundaryResolver, r *http.Request, scope AccessScope, boundary ResourceBoundary) (bool, error) {
+	if (r.Method != http.MethodGet && r.Method != http.MethodHead) || boundary.ResourceType != "review_task" ||
+		boundary.TenantID != scope.TenantID || scope.ActorID == "" || boundary.AssignedTo != scope.ActorID {
+		return false, nil
+	}
+	reader, supported := resolver.(SubmittedReviewTaskReader)
+	if !supported {
+		return false, nil
+	}
+	return reader.CanReadSubmittedReviewTask(r.Context(), scope.TenantID, boundary.ResourceID, scope.ActorID)
 }
 
 type requestBoundaryTarget struct{ resourceType, resourceID string }
