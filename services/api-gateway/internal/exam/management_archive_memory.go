@@ -13,6 +13,34 @@ func (s *MemoryStore) memoryExamArchivedLocked(item Exam) bool {
 		(item.SessionID != "" && (s.archiveState["session:"+item.SessionID].ArchivedAt != nil || s.managementSessions[item.SessionID].Status == "archived"))
 }
 
+// ManagementArchiveWorkSource 提供考试仓库外的内存任务事实；调用时已经持有考试锁，来源不得回调考试仓库。
+type ManagementArchiveWorkSource interface {
+	HasActiveManagementExamWork(tenantID, examID string) bool
+}
+
+func (s *MemoryStore) RegisterManagementArchiveWorkSource(source ManagementArchiveWorkSource) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.archiveWorkSources = append(s.archiveWorkSources, source)
+}
+
+// WithManagementExamState 将内存任务写入与整场归档串行。固定考试锁→任务锁，不能在任务锁内调用本方法。
+func (s *MemoryStore) WithManagementExamState(_ context.Context, tenantID, examID string, action func(archived bool) error) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	item, ok := s.items[examID]
+	if !ok || item.TenantID != tenantID {
+		return ErrNotFound
+	}
+	return action(s.memoryExamArchivedLocked(item))
+}
+
+func (s *MemoryStore) ManagementExamArchived(ctx context.Context, tenantID, examID string) (bool, error) {
+	var archived bool
+	err := s.WithManagementExamState(ctx, tenantID, examID, func(value bool) error { archived = value; return nil })
+	return archived, err
+}
+
 func (s *MemoryStore) CheckManagementArchive(_ context.Context, scope auth.AccessScope, kind, id string) (ManagementArchiveCheck, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -30,6 +58,12 @@ func (s *MemoryStore) checkManagementArchiveLocked(item ManagementExam) Manageme
 	}
 	// 内存仓库没有任务、答卷和申诉事实，只模拟未开展的准备阶段；不能凭 published 状态放行生产条件。
 	for _, child := range item.Exams {
+		for _, source := range s.archiveWorkSources {
+			if source.HasActiveManagementExamWork(child.TenantID, child.ID) {
+				check.Blockers = append(check.Blockers, archiveSubjectBlocker(child, "unfinished_work", "仍有未结束的量规建议任务"))
+				break
+			}
+		}
 		if child.Status != "draft" && child.Status != "configured" && child.Status != "ready" {
 			check.Blockers = append(check.Blockers, archiveSubjectBlocker(child, "archive_facts_unavailable", "内存仓库无法核实已开展考试的任务、正式发布及申诉情况"))
 		}

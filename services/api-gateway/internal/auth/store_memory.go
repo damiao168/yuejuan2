@@ -368,11 +368,22 @@ func (s *MemoryStore) ResolveAccessScope(_ context.Context, user User) (AccessSc
 	if err != nil {
 		return AccessScope{}, err
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if scope.schoolWide {
+		// 与数据库解析器一致，只把账户绑定的学校加入管理范围；分派与班级导航不会升级为学校管理权。
+		for _, stored := range s.users {
+			if stored.TenantID == user.TenantID && stored.ID == user.ID && stored.Status != "deleted" && stored.SchoolID != "" {
+				scope.schoolManagementIDs = append(scope.schoolManagementIDs, stored.SchoolID)
+				scope.SchoolIDs = append(scope.SchoolIDs, stored.SchoolID)
+			}
+		}
+	}
 	// 合成单元测试夹具可显式请求租户范围的内存边界；生产作用域不会取得这一测试专用扩展。
 	if scopeDeclaresSynthetic(user.DataScope) {
 		scope.syntheticUnbounded = true
 	}
-	return scope, nil
+	return scope.normalized(), nil
 }
 
 func (s *MemoryStore) CreateSession(_ context.Context, input CreateSessionInput) (DeviceSession, error) {
@@ -663,6 +674,11 @@ func (s *MemoryStore) RevokeSession(_ context.Context, tenantID string, userID s
 func (s *MemoryStore) RevokeAllSessions(_ context.Context, tenantID string, userID string, _ string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.revokeAllSessionsLocked(tenantID, userID), nil
+}
+
+// 调用方持有账户变更写锁；会话与受信设备必须一起撤销。
+func (s *MemoryStore) revokeAllSessionsLocked(tenantID, userID string) int {
 	revoked := 0
 	for tokenHash, record := range s.sessions {
 		if record.TenantID == tenantID && record.UserID == userID {
@@ -675,7 +691,7 @@ func (s *MemoryStore) RevokeAllSessions(_ context.Context, tenantID string, user
 			delete(s.devices, tokenHash)
 		}
 	}
-	return revoked, nil
+	return revoked
 }
 
 func (s *MemoryStore) UpdatePasswordAndRevokeSessions(_ context.Context, tenantID, userID, expectedPasswordHash, newPasswordHash string) (bool, int, error) {
@@ -786,7 +802,7 @@ func (s *MemoryStore) ListAudits(_ context.Context, tenantID string, filter Audi
 	if filter.CursorID != "" {
 		out = auditsAfterCursor(out, filter)
 	}
-	if limit := normalizedAuditLimit(filter.Limit); len(out) > limit {
+	if limit := auditQueryLimit(filter); len(out) > limit {
 		out = out[:limit]
 	}
 	return out, nil

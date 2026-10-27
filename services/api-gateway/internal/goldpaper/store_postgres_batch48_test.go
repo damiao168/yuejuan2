@@ -84,6 +84,7 @@ func TestBatch48GoldVersionKeepsSourceSnapshotAndSQLArgumentOrder(t *testing.T) 
 	want := []driver.Value{
 		"tenant", "gold", int64(4), "frozen-snapshot", 8.5, float64(10), []byte(`{"criterion":"reasoning"}`),
 		"nomination explanation", []byte(`{"reasoning":4}`), []byte(`["omission"]`), []byte(`["human-grade","ai-grade"]`), "nominator",
+		"", "", "", "", "",
 	}
 	if err != nil || got != "persisted-version" || !reflect.DeepEqual(state.args, want) {
 		t.Fatalf("version persistence changed: id=%q args=%#v err=%v", got, state.args, err)

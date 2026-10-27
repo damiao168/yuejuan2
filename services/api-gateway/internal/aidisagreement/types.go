@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 var (
@@ -139,6 +141,7 @@ type RouteInput struct {
 }
 
 type Filter struct {
+	Access     auth.ExamCollectionAccess
 	ExamID     string
 	QuestionID string
 	Status     Status

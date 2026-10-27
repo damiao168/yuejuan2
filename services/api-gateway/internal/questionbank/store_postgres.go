@@ -371,7 +371,11 @@ func (s *PostgresStore) insertVersion(ctx context.Context, tx *sql.Tx, scope aut
 	// 整包哈希及答案、Rubric 子版本由数据库触发器维护，定义见迁移 000141。
 	raw, _ := json.Marshal(in.content)
 	scoreRaw, _ := json.Marshal(in.scoring)
-	return scanVersion(tx.QueryRowContext(ctx, `INSERT INTO question_bank_item_version(tenant_id,item_id,version_no,schema_version,source_version_id,author_id,content,content_hash,scoring) VALUES($1::uuid,$2::uuid,$3,$4,$5::uuid,$6::uuid,$7::jsonb,$8,$9::jsonb) RETURNING `+versionCols, scope.TenantID, in.itemID, in.no, in.schemaVersion, in.source, scope.ActorID, raw, contentHash(in.content), scoreRaw))
+	v, err := scanVersion(tx.QueryRowContext(ctx, `INSERT INTO question_bank_item_version(tenant_id,item_id,version_no,schema_version,source_version_id,author_id,content,content_hash,scoring) VALUES($1::uuid,$2::uuid,$3,$4,$5::uuid,$6::uuid,$7::jsonb,$8,$9::jsonb) RETURNING `+versionCols, scope.TenantID, in.itemID, in.no, in.schemaVersion, in.source, scope.ActorID, raw, contentHash(in.content), scoreRaw))
+	if err == nil && in.source != nil {
+		err = s.copyReferenceGrant(ctx, tx, scope, *in.source, v.ID, in.scoring.ReferenceMaterials)
+	}
+	return v, err
 }
 func (s *PostgresStore) CreateVersion(ctx context.Context, scope auth.AccessScope, itemID string, in CreateVersionInput) (Version, error) {
 	if !validID(in.SourceVersionID) {

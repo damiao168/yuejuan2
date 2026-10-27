@@ -1,13 +1,16 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"edugrade-enterprise/services/api-gateway/internal/assessment"
@@ -21,6 +24,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/processing"
 	"edugrade-enterprise/services/api-gateway/internal/seedquality"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
+	"github.com/google/uuid"
 )
 
 type repairFailPut struct {
@@ -37,9 +41,9 @@ func (s *repairFailPut) Put(ctx context.Context, bucket, key string, body io.Rea
 }
 
 func TestReviewRepairsRecoveryWithPostgresTestDatabase(t *testing.T) {
-	db, router, adminToken, f, answers, _ := repairFixture(t)
+	db, router, adminToken, f, answers, objects := repairFixture(t)
 	ctx := context.Background()
-	fixture := reviewRepairRecoveryFixture{DB: db, Router: router, AdminToken: adminToken, Acceptance: f, Answers: answers}
+	fixture := reviewRepairRecoveryFixture{DB: db, Router: router, AdminToken: adminToken, Acceptance: f, Answers: answers, Objects: objects}
 	t.Run("seed follows normal authenticated claim context submit path", func(t *testing.T) {
 		e2eAssertHiddenSeedAuthenticatedWorkflow(t, ctx, fixture)
 	})
@@ -57,6 +61,7 @@ type reviewRepairRecoveryFixture struct {
 	AdminToken string
 	Acceptance story056AcceptanceFixture
 	Answers    []repairAnswer
+	Objects    *files.MemoryObjectStorage
 }
 
 // 种子题仍走正常登录、领取、上下文和提交路径；不能泄漏到普通任务表。
@@ -66,6 +71,13 @@ func e2eAssertHiddenSeedAuthenticatedWorkflow(t *testing.T, ctx context.Context,
 	graderID := e2eLookupUserID(t, db, "demo", "grader")
 	graderToken := e2eLoginWithTenant(t, router, "demo", "grader", "ChangeMe123!")
 	q := f.QuestionIDs["single_choice"]
+	cropBytes := e2eMaterializeSeedReferenceImage(t, ctx, fixture, q)
+	// 阅卷者的考试范围来自真实任务分派；先分派普通任务，再进行资格校准，不能把只有角色而无任务的账号当成已获考试授权。
+	var segmentID string
+	if err := db.QueryRowContext(ctx, `SELECT id::text FROM answer_segment WHERE tenant_id=$1 AND submission_id=$2 AND question_id=$3`, f.TenantID, answers[0].submission, q).Scan(&segmentID); err != nil {
+		t.Fatal(err)
+	}
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/review-tasks", adminToken, story056JSON(t, map[string]any{"answer_segment_id": segmentID, "source": "manual_sample", "assigned_to": graderID}), http.StatusCreated)
 	goldStore := goldpaper.NewPostgresStore(db)
 	gold, err := goldStore.Nominate(ctx, f.TenantID, f.ExamID, q, f.AdminID, goldpaper.NominateInput{SubmissionID: answers[0].submission, ReferenceScore: 0, Explanation: "verified reference", SourceGradeIDs: []string{answers[0].grade}})
 	if err != nil {
@@ -84,6 +96,7 @@ func e2eAssertHiddenSeedAuthenticatedWorkflow(t *testing.T, ctx context.Context,
 	if err != nil {
 		t.Fatal(err)
 	}
+	e2eAssertSeedReferenceImageResponse(t, router, session.Samples[0].AnswerImageURL, graderToken, http.StatusOK, cropBytes)
 	_, _, qualification, err := calib.SubmitAttempt(ctx, f.TenantID, session.ID, calibration.SubmitAttemptInput{GoldPaperID: gold.ID, SubmittedScore: 0})
 	if err != nil || qualification == nil {
 		t.Fatalf("qualification: %+v %v", qualification, err)
@@ -102,8 +115,70 @@ func e2eAssertHiddenSeedAuthenticatedWorkflow(t *testing.T, ctx context.Context,
 	}
 	e2eGetJSON(t, router, "/api/v1/review-tasks/"+id+"/context", graderToken, http.StatusOK)
 	e2eGetJSON(t, router, "/api/v1/review-tasks/"+id+"/context", adminToken, http.StatusForbidden)
+	e2eAssertSeedReferenceImageResponse(t, router, "/api/v1/review-tasks/"+id+"/segment-image", graderToken, http.StatusOK, cropBytes)
+	e2eAssertSeedReferenceImageResponse(t, router, "/api/v1/review-tasks/"+id+"/segment-image", adminToken, http.StatusForbidden, nil)
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/review-tasks/"+id+"/submit", graderToken, `{"score":0,"expected_revision":1,"rubric_selections":[]}`, http.StatusCreated)
 
+}
+
+// 通用修复夹具只预置评分；Gold 提名另须完成的配准、单题裁图及真实对象字节，不能用裸 segment 绕过冻结身份校验。
+func e2eMaterializeSeedReferenceImage(t *testing.T, ctx context.Context, fixture reviewRepairRecoveryFixture, questionID string) []byte {
+	t.Helper()
+	db, f, answer := fixture.DB, fixture.Acceptance, fixture.Answers[0]
+	fileStore := files.NewPostgresStore(db)
+	source, err := fileStore.Get(ctx, f.TenantID, f.PaperFileAssetID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batchID, fileID, pageID, registrationID string
+	if err := db.QueryRowContext(ctx, `INSERT INTO capture_batch(tenant_id,exam_id,name,source_type,status,operator_id)
+VALUES($1,$2,'Synthetic Seed reference image','scanner_upload','processing',$3) RETURNING id::text`, f.TenantID, f.ExamID, f.AdminID).Scan(&batchID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `INSERT INTO capture_file(tenant_id,capture_batch_id,file_asset_id,original_name,content_type,sha256,byte_size,page_count,status,idempotency_key,uploaded_by)
+VALUES($1,$2,$3,$4,$5,$6,$7,1,'completed',$8,$9) RETURNING id::text`, f.TenantID, batchID, source.ID, source.OriginalName, source.ContentType, source.HashSHA256, source.SizeBytes, uuid.NewString(), f.AdminID).Scan(&fileID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `INSERT INTO capture_page(tenant_id,capture_batch_id,capture_file_id,source_index,submission_id,submission_page_id,assigned_page_no,sequence_no,decoded_file_asset_id,status)
+VALUES($1,$2,$3,1,$4,$5,1,1,$6,'ready') RETURNING id::text`, f.TenantID, batchID, fileID, answer.submission, answer.page, source.ID).Scan(&pageID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `INSERT INTO page_registration_run(tenant_id,capture_page_id,submission_page_id,source_file_asset_id,source_sha256,template_id,template_content_hash,page_no,processing_status,match_status,confidence,method,profile_version,completed_at)
+VALUES($1,$2,$3,$4,$5,$6,$7,1,'completed','matched',1,'feature_homography','seed-reference-fixture-v1',now()) RETURNING id::text`, f.TenantID, pageID, answer.page, source.ID, source.HashSHA256, f.TemplateID, f.TemplateContentHash).Scan(&registrationID); err != nil {
+		t.Fatal(err)
+	}
+	cropBytes, err := base64.StdEncoding.DecodeString(story061ActiveCropPNGBase64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hash := fmt.Sprintf("%x", sha256.Sum256(cropBytes))
+	crop, err := fileStore.Create(ctx, files.CreateAssetInput{TenantID: f.TenantID, SchoolID: f.SchoolID, ExamID: f.ExamID, SubmissionID: answer.submission,
+		OwnerType: "answer_segment_crop", OwnerID: registrationID, OriginalName: "seed-reference.png", ContentType: "image/png", SizeBytes: int64(len(cropBytes)), HashSHA256: hash,
+		StorageBucket: "synthetic-seed-reference", StorageKey: registrationID + ".png", Visibility: "private", UploadedBy: f.AdminID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.Objects.Put(ctx, crop.StorageBucket, crop.StorageKey, bytes.NewReader(cropBytes), crop.SizeBytes, crop.ContentType); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE answer_segment SET template_id=$4,template_content_hash=$5,registration_run_id=$6,
+ normalized_bbox='{"x":0,"y":0,"width":1,"height":1,"answer_scope":"question"}',pixel_bbox='{"x":0,"y":0,"width":64,"height":64}',
+ crop_file_asset_id=$7,crop_sha256=$8,processing_status='completed',confidence=1
+ WHERE tenant_id=$1 AND submission_id=$2 AND question_id=$3`, f.TenantID, answer.submission, questionID, f.TemplateID, f.TemplateContentHash, registrationID, crop.ID, hash); err != nil {
+		t.Fatal(err)
+	}
+	return cropBytes
+}
+
+func e2eAssertSeedReferenceImageResponse(t *testing.T, router http.Handler, path, token string, wantStatus int, wantBytes []byte) {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodGet, path, nil)
+	request.Header.Set("Authorization", "Bearer "+token)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != wantStatus || wantStatus == http.StatusOK && (!bytes.Equal(response.Body.Bytes(), wantBytes) || response.Header().Get("Content-Type") != "image/png") {
+		t.Fatalf("authenticated frozen image %s: status=%d expected=%d bytes=%d expected=%d body=%q", path, response.Code, wantStatus, response.Body.Len(), len(wantBytes), response.Body.String())
+	}
 }
 
 type repairUploadRecovery struct {

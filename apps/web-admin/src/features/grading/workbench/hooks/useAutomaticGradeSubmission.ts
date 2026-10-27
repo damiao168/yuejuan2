@@ -33,7 +33,7 @@ export function useAutomaticGradeSubmission({ taskId, edit, ready, marked, submi
     if (!ready || marked || !edit || edit.taskId !== taskId) return;
     const key = `${taskId}:${edit.sequence}`;
     if (attempted.current === key) return;
-    // 先等草稿同步，再留出短暂的连续输入和标记时间，避免把输入 15 的中间值 1 提交。
+    // 调用方核对本任务的交分条件后，留出连续输入和标记时间，避免把 15 的中间值 1 提交。
     const timer = window.setTimeout(() => {
       const current = latest.current;
       if (!current.ready || current.marked || current.taskId !== taskId || current.edit !== edit) return;

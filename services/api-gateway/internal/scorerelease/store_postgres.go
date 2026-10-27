@@ -257,6 +257,14 @@ func (s *PostgresStore) Gate(ctx context.Context, tenantID, examID string) (Gate
 }
 
 func (s *PostgresStore) Publish(ctx context.Context, tenantID, id, actorID string) (Release, error) {
+	return s.publish(ctx, tenantID, id, actorID, nil)
+}
+
+func (s *PostgresStore) PublishGuarded(ctx context.Context, tenantID, id, actorID string, guard PublishGuard) (Release, error) {
+	return s.publish(ctx, tenantID, id, actorID, guard)
+}
+
+func (s *PostgresStore) publish(ctx context.Context, tenantID, id, actorID string, guard PublishGuard) (Release, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Release{}, err
@@ -296,6 +304,17 @@ func (s *PostgresStore) Publish(ctx context.Context, tenantID, id, actorID strin
 	gate, err := s.gateTx(ctx, tx, tenantID, release.ExamID, release.ID, dashboardIssues)
 	if err != nil {
 		return Release{}, err
+	}
+	if guard != nil {
+		if err := guard(ctx, tx, release, gate); err != nil {
+			if errors.Is(err, ErrGateBlocked) {
+				// 门禁拒绝时仍保留该临界区中读取的阻断证据，尚未写入任何公开成绩。
+				if commitErr := tx.Commit(); commitErr != nil {
+					return Release{}, commitErr
+				}
+			}
+			return Release{}, err
+		}
 	}
 	if !gate.Passed {
 		return Release{}, ErrGateBlocked

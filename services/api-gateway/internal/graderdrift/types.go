@@ -105,13 +105,19 @@ type WindowFilter struct {
 }
 
 type IncidentFilter struct {
-	Access     auth.ExamCollectionAccess
-	ExamID     string
-	QuestionID string
-	GraderID   string
-	Status     IncidentStatus
-	Limit      int
+	Access          auth.ExamCollectionAccess
+	ExamID          string
+	QuestionID      string
+	GraderID        string
+	Status          IncidentStatus
+	Limit           int
+	Cursor          string
+	BeforeCreatedAt time.Time
+	BeforeID        string
+	IncludeNext     bool
 }
+
+type IncidentCounts struct{ OpenCritical, OpenWarnings int }
 
 type Store interface {
 	UpsertWindow(context.Context, string, QualityWindow) (QualityWindow, error)

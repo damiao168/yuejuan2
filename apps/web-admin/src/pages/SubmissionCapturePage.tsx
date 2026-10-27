@@ -109,6 +109,11 @@ export function SubmissionCapturePage({
   const captureRequestRef = useRef(new LatestRequestGate());
   const previewRequestRef = useRef(new LatestRequestGate());
   const commandGateRef = useRef(new ExclusiveCommandGate());
+  const captureScope = JSON.stringify([selectedExamId, canReadStudentNames]);
+  const captureScopeRef = useRef(captureScope);
+  captureScopeRef.current = captureScope;
+  const selectedExamRef = useRef(selectedExamId);
+  selectedExamRef.current = selectedExamId;
 
   const selectedExam = useMemo(() => exams.find((exam) => exam.id === selectedExamId), [exams, selectedExamId]);
   const studentById = useMemo(() => new Map(students.map((student) => [student.id, student])), [students]);
@@ -132,6 +137,9 @@ export function SubmissionCapturePage({
 
   const loadCaptureData = useCallback(
     async (examId: string) => {
+      // 上传命令可以在旧考试继续完成，但它的刷新不能接管已切换考试的列表。
+      if (examId !== selectedExamRef.current) return;
+      const scope = captureScopeRef.current;
       const requestId = captureRequestRef.current.begin();
       // 首读新考试或刷新时终止旧结果集的分页状态；旧分页回执仍由请求代次淘汰。
       setLoadingMore(false);
@@ -147,19 +155,19 @@ export function SubmissionCapturePage({
       setStudentLookupError(null);
       try {
         const result = await loadCapturePage(examId, canReadStudentNames);
-        if (!captureRequestRef.current.isCurrent(requestId)) return;
+        if (!captureRequestRef.current.isCurrent(requestId) || captureScopeRef.current !== scope) return;
         setStudents(result.students);
         setStudentLookupError(result.studentLookupError ? formatError(result.studentLookupError) : null);
         setRows(result.rows);
         setNextSubmissionCursor(result.nextCursor);
         setHasMoreSubmissions(result.hasMore);
       } catch (currentError) {
-        if (!captureRequestRef.current.isCurrent(requestId)) return;
+        if (!captureRequestRef.current.isCurrent(requestId) || captureScopeRef.current !== scope) return;
         setCaptureError(formatError(currentError));
         setNextSubmissionCursor("");
         setHasMoreSubmissions(false);
       } finally {
-        if (captureRequestRef.current.isCurrent(requestId)) setCaptureLoading(false);
+        if (captureRequestRef.current.isCurrent(requestId) && captureScopeRef.current === scope) setCaptureLoading(false);
       }
     },
     [canReadStudentNames]

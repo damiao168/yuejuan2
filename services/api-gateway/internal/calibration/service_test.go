@@ -183,7 +183,8 @@ func testService(t *testing.T, goldCount int) (*Service, *goldpaper.MemoryStore,
 		submission, grade := "submission-"+string(rune('a'+index)), "grade-"+string(rune('0'+index))
 		gold.SetSource("tenant-a", goldpaper.Source{ExamID: "exam-1", QuestionID: "question-1", SubmissionID: submission,
 			SnapshotID: "snapshot-1", SubjectCode: "biology", ArchetypeCode: "short_constructed", RiskTier: "R3", MaxScore: 5,
-			RubricSnapshot: map[string]any{"criteria": []any{"concept", "evidence"}}, AvailableGradeIDs: []string{grade}})
+			RubricSnapshot: map[string]any{"criteria": []any{"concept", "evidence"}}, AvailableGradeIDs: []string{grade},
+			ImageBinding: goldpaper.ImageBinding{SegmentID: "segment-" + submission, AssetID: "asset-" + submission, SHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", OwnerType: "answer_segment_crop", OwnerID: "run-" + submission}})
 		score, evidence := float64(2+index), "partial"
 		if index > 0 {
 			evidence = "full"

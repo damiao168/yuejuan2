@@ -234,6 +234,21 @@ describe("grading review submission lifecycle", () => {
     expect(current.ctx?.task.status).toBe("submitted");
   });
 
+  it("只返回任务回执的交分也能完成本地状态，且不会提名不存在的学生成绩", async () => {
+    await mount();
+    const pending = actions.submitGrade(true, true);
+    await act(async () => {
+      finishSubmit({ task: { id: "A", status: "submitted", revision: 4 } });
+      await pending;
+    });
+    expect(current.ctx?.task.status).toBe("submitted");
+    expect(current.ctx?.reviewContext.expected_revision).toBe(4);
+    expect(current.draft.score).toBe(6);
+    expect(current.saveStatus).toBe("saved");
+    expect(mocks.nominate).not.toHaveBeenCalled();
+    expect(mocks.refreshAggregate).toHaveBeenCalledOnce();
+  });
+
   it("does not queue a later page or suppress selection after the user leaves A", async () => {
     await mount({ nextTask: null, hasMoreTasks: true });
     const pending = submitGrade();

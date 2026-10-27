@@ -15,6 +15,7 @@ import (
 
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
+	"github.com/google/uuid"
 )
 
 const (
@@ -499,9 +500,11 @@ func (h *Handler) CreateManagedChatCompletion(w http.ResponseWriter, r *http.Req
 	if chatter == nil {
 		chatter = NewHTTPManagedAPIChatter(0)
 	}
+	// 每次实际生成都有服务端唯一计量ID；客户端追踪ID只作关联，不承担幂等身份。
+	generationID := uuid.NewString()
 	completion, err := chatter.Chat(r.Context(), *connection, messages)
 	if err != nil {
-		h.recordUsage(r.Context(), ModelUsageEvent{TenantID: mustUser(r).TenantID, RequestID: logger.RequestID(r.Context()), Feature: "school_ai_chat", ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName, Status: "failed", Metadata: map[string]any{"message_count": len(messages)}})
+		h.recordUsage(r.Context(), ModelUsageEvent{TenantID: mustUser(r).TenantID, RequestID: generationID, Feature: "school_ai_chat", ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName, Status: "failed", Metadata: map[string]any{"trace_request_id": logger.RequestID(r.Context()), "message_count": len(messages)}})
 		var providerErr ManagedChatProviderError
 		if errors.As(err, &providerErr) && providerErr.StatusCode == http.StatusTooManyRequests {
 			httpx.Error(w, r, http.StatusTooManyRequests, "ai_chat_rate_limited", "模型服务繁忙，请稍后重试")
@@ -510,7 +513,7 @@ func (h *Handler) CreateManagedChatCompletion(w http.ResponseWriter, r *http.Req
 		httpx.Error(w, r, http.StatusBadGateway, "ai_chat_provider_failed", "模型暂时无法回答，请稍后重试")
 		return
 	}
-	h.recordUsage(r.Context(), ModelUsageEvent{TenantID: mustUser(r).TenantID, RequestID: logger.RequestID(r.Context()), Feature: "school_ai_chat", ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName, InputTokens: completion.Usage.InputTokens, OutputTokens: completion.Usage.OutputTokens, CachedInputTokens: completion.Usage.CachedInputTokens, ReasoningTokens: completion.Usage.ReasoningTokens, TotalTokens: completion.Usage.TotalTokens, Status: "succeeded", Metadata: map[string]any{"message_count": len(messages), "finish_reason": completion.FinishReason}})
+	h.recordUsage(r.Context(), ModelUsageEvent{TenantID: mustUser(r).TenantID, RequestID: generationID, Feature: "school_ai_chat", ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName, InputTokens: completion.Usage.InputTokens, OutputTokens: completion.Usage.OutputTokens, CachedInputTokens: completion.Usage.CachedInputTokens, ReasoningTokens: completion.Usage.ReasoningTokens, TotalTokens: completion.Usage.TotalTokens, Status: "succeeded", Metadata: map[string]any{"trace_request_id": logger.RequestID(r.Context()), "message_count": len(messages), "finish_reason": completion.FinishReason}})
 	h.auditAction(r, "model.managed_chat_completed", "managed_model_api_config", connection.Config.ID, "school administrator used the managed model chat",
 		map[string]any{"provider_key": connection.Config.ProviderKey, "model_name": connection.Config.ModelName, "message_count": len(messages), "total_tokens": completion.Usage.TotalTokens, "finish_reason": completion.FinishReason})
 	httpx.JSON(w, http.StatusOK, map[string]any{"completion": completion})
@@ -569,6 +572,7 @@ func (h *Handler) StreamManagedChatCompletion(w http.ResponseWriter, r *http.Req
 	if chatter == nil {
 		chatter = NewHTTPManagedAPIChatter(0)
 	}
+	generationID := uuid.NewString()
 	flusher := http.NewResponseController(w)
 	w.Header().Set(managedChatContentTypeHeader, "text/event-stream; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-transform")
@@ -579,7 +583,7 @@ func (h *Handler) StreamManagedChatCompletion(w http.ResponseWriter, r *http.Req
 	}
 	emit := func(event ManagedChatEvent) error {
 		if event.Type == "done" && event.Completion != nil {
-			h.recordUsage(r.Context(), ModelUsageEvent{TenantID: mustUser(r).TenantID, RequestID: logger.RequestID(r.Context()), Feature: "school_ai_chat", ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName, InputTokens: event.Completion.Usage.InputTokens, OutputTokens: event.Completion.Usage.OutputTokens, CachedInputTokens: event.Completion.Usage.CachedInputTokens, ReasoningTokens: event.Completion.Usage.ReasoningTokens, TotalTokens: event.Completion.Usage.TotalTokens, Status: "succeeded", Metadata: map[string]any{"message_count": len(messages), "finish_reason": event.Completion.FinishReason, "stream": true}})
+			h.recordUsage(r.Context(), ModelUsageEvent{TenantID: mustUser(r).TenantID, RequestID: generationID, Feature: "school_ai_chat", ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName, InputTokens: event.Completion.Usage.InputTokens, OutputTokens: event.Completion.Usage.OutputTokens, CachedInputTokens: event.Completion.Usage.CachedInputTokens, ReasoningTokens: event.Completion.Usage.ReasoningTokens, TotalTokens: event.Completion.Usage.TotalTokens, Status: "succeeded", Metadata: map[string]any{"trace_request_id": logger.RequestID(r.Context()), "message_count": len(messages), "finish_reason": event.Completion.FinishReason, "stream": true}})
 			h.auditAction(r, "model.managed_chat_completed", "managed_model_api_config", connection.Config.ID, "school administrator used the managed model chat",
 				map[string]any{"provider_key": connection.Config.ProviderKey, "model_name": connection.Config.ModelName, "message_count": len(messages), "total_tokens": event.Completion.Usage.TotalTokens, "finish_reason": event.Completion.FinishReason})
 		}
@@ -605,7 +609,7 @@ func (h *Handler) StreamManagedChatCompletion(w http.ResponseWriter, r *http.Req
 		}
 	}
 	if err != nil && r.Context().Err() == nil {
-		h.recordUsage(r.Context(), ModelUsageEvent{TenantID: mustUser(r).TenantID, RequestID: logger.RequestID(r.Context()), Feature: "school_ai_chat", ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName, Status: "failed", Metadata: map[string]any{"message_count": len(messages), "stream": true}})
+		h.recordUsage(r.Context(), ModelUsageEvent{TenantID: mustUser(r).TenantID, RequestID: generationID, Feature: "school_ai_chat", ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName, Status: "failed", Metadata: map[string]any{"trace_request_id": logger.RequestID(r.Context()), "message_count": len(messages), "stream": true}})
 		_ = emit(ManagedChatEvent{Type: "error"})
 	}
 }

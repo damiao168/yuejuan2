@@ -262,7 +262,7 @@ describe("Student Portal released-score boundaries", () => {
       if (call.url.pathname.endsWith("/annotations")) {
         return jsonResponse({ annotations: [{
           id: "annotation-paper-1", answer_segment_id: "segment-1", submission_page_id: "page-1",
-          type: "rectangle", geometry: { kind: "rectangle", x: .1, y: .15, width: .35, height: .2 },
+          type: "rectangle", geometry: { kind: "rectangle", coordinate_space: "canonical_image_normalized", x: .1, y: .15, width: .35, height: .2 },
           content: "步骤批注", created_at: "2026-08-30T00:00:00Z", updated_at: "2026-08-30T00:00:00Z"
         }] });
       }

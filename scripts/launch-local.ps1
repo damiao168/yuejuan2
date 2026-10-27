@@ -94,7 +94,7 @@ function Initialize-DeploymentEnv([string]$Path) {
     Set-EnvValue $Path "EDUGRADE_SUBJECTIVE_WORKER_PASSWORD" (New-HexSecret)
 }
 
-function Assert-GeneratedEnv([string]$Path) {
+function Read-DeploymentSettings([string]$Path) {
     $values = @{}
     foreach ($line in Get-Content -LiteralPath $Path -Encoding UTF8) {
         $trimmed = $line.Trim()
@@ -104,6 +104,11 @@ function Assert-GeneratedEnv([string]$Path) {
         $parts = $trimmed.Split("=", 2)
         $values[$parts[0].Trim()] = $parts[1].Trim().Trim('"').Trim("'")
     }
+    return $values
+}
+
+function Assert-GeneratedEnv([string]$Path) {
+    $values = Read-DeploymentSettings $Path
 
     $secretKeys = @(
         "EDUGRADE_POSTGRES_PASSWORD",
@@ -329,6 +334,14 @@ if ($LASTEXITCODE -ne 0) {
     throw "EduGrade initialization failed."
 }
 
+# 初始化及本地模型配置可能更新 .env；认证冒烟和启动地址使用同一份最终部署设置。
+$deploymentSettings = Read-DeploymentSettings $envFile
+$apiPort = if ([string]::IsNullOrWhiteSpace($deploymentSettings["EDUGRADE_API_PORT"])) { "8080" } else { $deploymentSettings["EDUGRADE_API_PORT"] }
+$publicPort = if ([string]::IsNullOrWhiteSpace($deploymentSettings["EDUGRADE_NGINX_HTTP_PORT"])) { "8088" } else { $deploymentSettings["EDUGRADE_NGINX_HTTP_PORT"] }
+$sessionCookieName = if ([string]::IsNullOrWhiteSpace($deploymentSettings["EDUGRADE_SESSION_COOKIE_NAME"])) { "edugrade_session" } else { $deploymentSettings["EDUGRADE_SESSION_COOKIE_NAME"] }
+$apiUrl = "http://127.0.0.1:$apiPort"
+$publicUrl = "http://127.0.0.1:$publicPort"
+
 if ($firstInstall -and -not $SkipBootstrap) {
     Write-Step "Creating the first platform administrator"
     $bootstrapPassword = Read-BootstrapPassword
@@ -351,7 +364,7 @@ if ($firstInstall -and -not $SkipBootstrap) {
         $env:EDUGRADE_SMOKE_TENANT_CODE = "platform"
         $env:EDUGRADE_SMOKE_USERNAME = "platform_admin"
         $env:EDUGRADE_SMOKE_PASSWORD = $bootstrapPassword
-        & $smokeScript
+        & $smokeScript -ApiUrl $apiUrl -PublicUrl $publicUrl -SessionCookieName $sessionCookieName
         if ($LASTEXITCODE -ne 0) {
             throw "Authenticated smoke testing failed."
         }
@@ -370,9 +383,9 @@ if (-not (Test-Path -LiteralPath $installMarker -PathType Leaf)) {
 
 Write-Host ""
 Write-Host "EduGrade is ready." -ForegroundColor Green
-Write-Host "Web: http://127.0.0.1:8088"
+Write-Host "Web: $publicUrl"
 Write-Host "Tenant: platform"
 Write-Host "Username: platform_admin"
 if (-not $NoBrowser) {
-    Start-Process "http://127.0.0.1:8088"
+    Start-Process $publicUrl
 }

@@ -57,6 +57,7 @@ func TestPaperImportOpenAPIContract(t *testing.T) {
 	assertRequired(t, object(t, schemas, "PaperImportRubricCandidatePoint"), []string{"id", "description"})
 	assertRequired(t, object(t, schemas, "PaperImportRubricCandidate"), []string{"candidate_id", "points", "source_refs", "confidence"})
 	assertPropertyRef(t, object(t, schemas, "PaperImportRubricCandidatePoint"), "evidence_requirements", "#/components/schemas/PaperImportRubricEvidenceRequirement")
+	assertPropertyRef(t, object(t, schemas, "PaperImportRubricPoint"), "evidence_requirements", "#/components/schemas/PaperImportRubricEvidenceRequirement")
 	assertProperty(t, object(t, schemas, "PaperImportDraftQuestion"), "rubric_candidate_id")
 	assertRequired(t, object(t, schemas, "ReviewPaperImportRequest"), []string{"expected_generation", "expected_updated_at", "questions"})
 	assertRequired(t, object(t, schemas, "FillPaperImportContentRequest"), []string{"expected_generation"})

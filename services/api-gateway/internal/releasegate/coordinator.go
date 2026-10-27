@@ -2,6 +2,7 @@ package releasegate
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -16,7 +17,7 @@ type ScoreReleasePublisher interface {
 
 // PublicationCoordinator 是既有 A18 端点的 A20 组装点。
 // 宿主必须先在同一租户作用域内解析 releaseID -> examID，再调用此协调器，而非直接调用 Store.Publish。
-// A18 的 Postgres 发布事务仍重新计算自身来源门禁，因此并发成绩变化只能导致拒绝，不能凭过时证据发布。
+// 最终证据与发布共用考试锁内的临界区；PostgreSQL 实现还共用发布事务，不能以两次独立调用替代。
 type PublicationCoordinator struct {
 	gates    *Service
 	releases ScoreReleasePublisher
@@ -30,6 +31,24 @@ func (c *PublicationCoordinator) Publish(ctx context.Context, tenantID, examID, 
 	if c == nil || c.gates == nil || c.releases == nil || !validIDs(tenantID, examID, releaseID, actorID) {
 		return scorerelease.Release{}, Evidence{}, ErrInvalidInput
 	}
+	if publisher, ok := c.releases.(interface {
+		PublishGuarded(context.Context, string, string, string, scorerelease.PublishGuard) (scorerelease.Release, error)
+	}); ok {
+		var evidence Evidence
+		release, err := publisher.PublishGuarded(ctx, tenantID, releaseID, actorID, func(ctx context.Context, tx *sql.Tx, release scorerelease.Release, base scorerelease.Gate) error {
+			if release.TenantID != tenantID || release.ExamID != examID || release.ID != releaseID {
+				return ErrInvalidInput
+			}
+			var err error
+			evidence, err = c.gates.finalPublishCheck(ctx, tx, release, actorID, base)
+			return err
+		})
+		if err != nil && !errors.Is(err, scorerelease.ErrGateBlocked) {
+			// 事务写入失败会回滚证据，不能返回一个看似已经保存的证据标识。
+			evidence = Evidence{}
+		}
+		return release, evidence, err
+	}
 	evidence, err := c.gates.RecheckForPublish(ctx, tenantID, examID, releaseID, actorID)
 	if err != nil {
 		if errors.Is(err, ErrGateBlocked) {
@@ -38,9 +57,6 @@ func (c *PublicationCoordinator) Publish(ctx context.Context, tenantID, examID, 
 		}
 		return scorerelease.Release{}, evidence, err
 	}
-	release, err := c.releases.Publish(ctx, tenantID, releaseID, actorID)
-	if err != nil {
-		return scorerelease.Release{}, evidence, err
-	}
-	return release, evidence, nil
+	// 旧适配器仍可返回当前阻断原因，但缺少原子发布能力时不能使用通过证据继续公开。
+	return scorerelease.Release{}, evidence, ErrAtomicPublicationUnavailable
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import tempfile
 from collections import OrderedDict
 from collections.abc import Callable, Iterable
@@ -144,7 +145,7 @@ class RecognitionRouter:
             result = self.formula_engine.recognize_formula(image_bytes)
         except Exception:  # noqa: BLE001 - 可选模型运行时可能抛出不同类型的错误。
             return RoutedRecognitionResult(kind=kind, requires_human_review=True, reason_code="formula_engine_failed")
-        unsafe = result.status != "recognized" or not result.canonical_latex or result.confidence <= 0
+        unsafe = result.status != "recognized" or not result.canonical_latex or not math.isfinite(result.confidence) or result.confidence <= 0
         return RoutedRecognitionResult(
             kind=kind,
             formula=result,

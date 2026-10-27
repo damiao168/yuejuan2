@@ -396,4 +396,20 @@ describe("答题卡采集页面重构边界", () => {
     expect(host.querySelector('[data-drawer="文字识别详情"]')?.textContent).toContain("暂无识别结果");
     expect(host.querySelector(".ocr-result-list")).toBeNull();
   });
+  it("A上传等待期间切到B，A成功刷新不能覆盖当前B列表",async()=>{
+    mocks.exams.mockResolvedValue({exams:[exam("exam-a"),exam("exam-b")]});
+    mocks.capture.mockImplementation(async(id:string)=>{ const value=row(`${id}-row`); value.submission.exam_id=id; return capture([value]); });
+    const pending=deferred<{file:{id:string}}>(); mocks.upload.mockReturnValueOnce(pending.promise);
+    await renderPage(); await upload();
+    const picker=host.querySelector<HTMLSelectElement>("select.exam-picker")!;
+    await act(async()=>{picker.value="exam-b";picker.dispatchEvent(new Event("change",{bubbles:true}));});
+    expect(picker.value).toBe("exam-b"); expect(host.querySelector('[data-row-id="exam-b-row"]')).not.toBeNull();
+    await act(async()=>pending.resolve({file:{id:"uploaded-file"}}));
+    expect(mocks.create).toHaveBeenCalledWith("exam-a",expect.anything());
+    expect(mocks.capture).toHaveBeenLastCalledWith("exam-b",true);
+    expect(picker.value).toBe("exam-b");
+    expect(host.querySelector('[data-row-id="exam-a-row"]')).toBeNull();
+    expect(host.querySelector('[data-row-id="exam-b-row"]')).not.toBeNull();
+  });
+
 });

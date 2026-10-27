@@ -22,6 +22,7 @@ type MemoryStore struct {
 	managementFacts    map[string]managementSubjectFacts
 	archiveState       map[string]ManagementArchiveMetadata
 	archiveCommands    map[string]managementArchiveCommandRecord
+	archiveWorkSources []ManagementArchiveWorkSource
 }
 
 func NewMemoryStore() *MemoryStore {

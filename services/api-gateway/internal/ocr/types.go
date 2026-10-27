@@ -16,27 +16,28 @@ var (
 )
 
 type Task struct {
-	ID                  string     `json:"id"`
-	TenantID            string     `json:"tenant_id"`
-	SubmissionID        string     `json:"submission_id"`
-	Status              string     `json:"status"`
-	Engine              string     `json:"engine"`
-	EngineVersion       string     `json:"engine_version"`
-	ModelVersion        string     `json:"model_version,omitempty"`
-	ConfigHash          string     `json:"config_hash,omitempty"`
-	InputHash           string     `json:"input_hash,omitempty"`
-	DurationMS          int        `json:"duration_ms,omitempty"`
-	WorkerID            string     `json:"worker_id,omitempty"`
-	AttemptCount        int        `json:"attempt_count"`
-	MinConfidence       float64    `json:"min_confidence"`
-	ResultCount         int        `json:"result_count"`
-	RequiresHumanReview bool       `json:"requires_human_review"`
-	ErrorMessage        string     `json:"error_message,omitempty"`
-	RequestedBy         string     `json:"requested_by"`
-	StartedAt           *time.Time `json:"started_at,omitempty"`
-	CompletedAt         *time.Time `json:"completed_at,omitempty"`
-	CreatedAt           time.Time  `json:"created_at"`
-	Results             []Result   `json:"results,omitempty"`
+	ID                    string     `json:"id"`
+	TenantID              string     `json:"tenant_id"`
+	SubmissionID          string     `json:"submission_id"`
+	Status                string     `json:"status"`
+	Engine                string     `json:"engine"`
+	EngineVersion         string     `json:"engine_version"`
+	ModelVersion          string     `json:"model_version,omitempty"`
+	ConfigHash            string     `json:"config_hash,omitempty"`
+	InputHash             string     `json:"input_hash,omitempty"`
+	DurationMS            int        `json:"duration_ms,omitempty"`
+	WorkerID              string     `json:"worker_id,omitempty"`
+	AttemptCount          int        `json:"attempt_count"`
+	MinConfidence         float64    `json:"min_confidence"`
+	ResultCount           int        `json:"result_count"`
+	RequiresHumanReview   bool       `json:"requires_human_review"`
+	ErrorMessage          string     `json:"error_message,omitempty"`
+	RequestedBy           string     `json:"requested_by"`
+	StartedAt             *time.Time `json:"started_at,omitempty"`
+	CompletedAt           *time.Time `json:"completed_at,omitempty"`
+	CreatedAt             time.Time  `json:"created_at"`
+	Results               []Result   `json:"results,omitempty"`
+	CompletionPayloadHash string     `json:"-"`
 }
 
 type Result struct {

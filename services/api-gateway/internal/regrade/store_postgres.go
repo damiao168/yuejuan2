@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 type PostgresStore struct{ db *sql.DB }
@@ -199,8 +201,14 @@ func (s *PostgresStore) Get(ctx context.Context, tenantID, jobID string) (Summar
 	}
 	return Summary{Job: job, Items: items, Events: events}, nil
 }
-func (s *PostgresStore) List(ctx context.Context, tenantID, examID, questionID string) ([]Job, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT `+jobColumns+` FROM regrade_job WHERE tenant_id=$1::uuid AND ($2='' OR exam_id::text=$2) AND ($3='' OR question_id::text=$3) ORDER BY created_at DESC,id DESC`, tenantID, examID, questionID)
+func (s *PostgresStore) List(ctx context.Context, tenantID, examID, questionID string, accesses ...auth.ExamCollectionAccess) ([]Job, error) {
+	accessArgs, err := jobCollectionAccess(accesses).SQLArgs(tenantID)
+	if err != nil {
+		return nil, err
+	}
+	// 客户端题目/考试条件只能缩小服务端范围，集合不借助单项路由守卫授权。
+	args := append([]any{tenantID, examID, questionID}, accessArgs...)
+	rows, err := s.db.QueryContext(ctx, `SELECT `+jobColumns+` FROM regrade_job WHERE tenant_id=$1::uuid AND ($2='' OR exam_id::text=$2) AND ($3='' OR question_id::text=$3) AND `+auth.ExamCollectionPredicate("regrade_job.exam_id", 4)+` ORDER BY created_at DESC,id DESC`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -278,9 +286,37 @@ func (s *PostgresStore) Pause(ctx context.Context, tenantID, jobID, actorID stri
 	return job, nil
 }
 func (s *PostgresStore) Resume(ctx context.Context, tenantID, jobID, actorID string) (Job, error) {
-	return s.jobTransition(ctx, tenantID, jobID, actorID, jobTransitionRule{expected: StatusPaused, target: StatusRunning, eventType: "resumed"}, func(ctx context.Context, tx *sql.Tx) (Job, error) {
-		return scanJob(tx.QueryRowContext(ctx, `UPDATE regrade_job SET status='running',updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING `+jobReturning, tenantID, jobID))
-	})
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Job{}, err
+	}
+	defer tx.Rollback()
+	job, err := jobForUpdate(ctx, tx, tenantID, jobID)
+	if err != nil {
+		return Job{}, err
+	}
+	if job.Status == StatusRunning || job.Status == StatusDiffReview {
+		return job, nil
+	}
+	if job.Status != StatusPaused {
+		return Job{}, ErrStateConflict
+	}
+	// 条目写入也持有父作业锁；在锁内从候选/复核事实恢复阶段，不能把已录完候选的作业退回运行阶段。
+	job, err = scanJob(tx.QueryRowContext(ctx, `UPDATE regrade_job SET status=CASE WHEN EXISTS(
+SELECT 1 FROM regrade_item WHERE tenant_id=$1::uuid AND job_id=$2::uuid
+AND (candidate_score IS NOT NULL OR status IN ('candidate_ready','awaiting_review','resolved','exception'))
+) THEN 'diff_review' ELSE 'running' END,updated_at=now()
+WHERE tenant_id=$1::uuid AND id=$2::uuid RETURNING `+jobReturning, tenantID, jobID))
+	if err != nil {
+		return Job{}, err
+	}
+	if err = addEventTx(ctx, tx, tenantID, Event{JobID: jobID, Type: "resumed", ActorID: actorID, Payload: map[string]any{}}); err != nil {
+		return Job{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return Job{}, err
+	}
+	return job, nil
 }
 
 // 同一转换的允许状态、目标状态和事件类型一起声明，避免调整状态时漏改审计事件。
@@ -427,9 +463,10 @@ func (s *PostgresStore) Review(ctx context.Context, tenantID, itemID, actorID st
 	if item.Revision != input.ExpectedRevision {
 		return Item{}, ErrRevisionConflict
 	}
-	if item.Status != ItemAwaitingReview {
-		return Item{}, ErrStateConflict
+	if err := reviewableItem(item, input); err != nil {
+		return Item{}, err
 	}
+	payload := reviewEventPayload(item, input)
 	var query string
 	args := []any{tenantID, itemID, actorID, input.ReviewedGradeID, input.Note}
 	switch input.Decision {
@@ -458,7 +495,7 @@ func (s *PostgresStore) Review(ctx context.Context, tenantID, itemID, actorID st
 	if err != nil {
 		return Item{}, err
 	}
-	if err = addEventTx(ctx, tx, tenantID, Event{JobID: job.ID, ItemID: item.ID, Type: "item_reviewed", ActorID: actorID, Payload: map[string]any{"decision": input.Decision}}); err != nil {
+	if err = addEventTx(ctx, tx, tenantID, Event{JobID: job.ID, ItemID: item.ID, Type: "item_reviewed", ActorID: actorID, Payload: payload}); err != nil {
 		return Item{}, err
 	}
 	if err = tx.Commit(); err != nil {

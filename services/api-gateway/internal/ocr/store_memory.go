@@ -167,6 +167,10 @@ func (s *MemoryStore) completeTaskLocked(_ context.Context, tenantID string, id 
 	if len(input.Results) == 0 {
 		return Task{}, ErrInvalidInput
 	}
+	fingerprint, err := completionFingerprint(input, false)
+	if err != nil {
+		return Task{}, err
+	}
 	results := make([]Result, 0, len(input.Results))
 	requiresReview := false
 	for _, item := range input.Results {
@@ -207,6 +211,7 @@ func (s *MemoryStore) completeTaskLocked(_ context.Context, tenantID string, id 
 	task.RequiresHumanReview = requiresReview
 	task.CompletedAt = &now
 	task.Results = results
+	task.CompletionPayloadHash = fingerprint
 	s.tasks[id] = task
 	s.results[id] = results
 	return cloneOCRTask(task), nil

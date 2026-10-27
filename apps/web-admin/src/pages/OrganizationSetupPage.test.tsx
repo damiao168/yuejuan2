@@ -51,6 +51,23 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("学校初始化展示", () => {
+  it.each([
+    { existingSchool: "school-a", csv: "S001,乙校学生,B", valid: 1 },
+    { existingSchool: "school-b", csv: "S001,乙校学生,B", valid: 0 },
+    { existingSchool: "", csv: "S001,甲校学生,A\nS001,乙校学生,B", valid: 2 },
+    { existingSchool: "", csv: "S001,甲校学生,A\ns001,甲校重复,A", valid: 1 }
+  ])("学生导入按学校及学号去重 $existingSchool/$valid", async ({ existingSchool, csv, valid }) => {
+    mocks.classes.mockResolvedValue({ classes: [{ id: "class-a", school_id: "school-a", code: "A" }, { id: "class-b", school_id: "school-b", code: "B" }] });
+    mocks.students.mockResolvedValue({ students: existingSchool ? [{ school_id: existingSchool, student_no: "S001" }] : [] });
+    render(<OrganizationSetupPage onNavigate={vi.fn()} />);
+    await screen.findByRole("heading", { name: existingSchool ? "创建第一场考试" : "导入学生" });
+    if (existingSchool) fireEvent.click(screen.getByRole("button", { name: "学生" }));
+    const file = new File([], "students.csv", { type: "text/csv" });
+    Object.defineProperty(file, "text", { value: () => Promise.resolve(`student_no,name,class_code\n${csv}`) });
+    fireEvent.change(screen.getByLabelText("学生 CSV"), { target: { files: [file] } });
+    const button = await screen.findByRole("button", { name: `导入 ${valid} 行` });
+    expect(button.hasAttribute("disabled")).toBe(valid === 0);
+  });
   it("教师邀请不发送初始密码，刷新失败仍保留一次性激活链接与待激活事实",async()=>{
     mocks.users.mockResolvedValue({users:[]});
     mocks.roles.mockResolvedValue({roles:[{code:"teacher",name:"教师"}]});

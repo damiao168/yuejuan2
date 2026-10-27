@@ -153,6 +153,8 @@ class _AnchorSegmentBuilder:
     segment_section: str | None = None
     segment_section_entry: tuple | None = None
     in_solution: bool = False
+    started_after_solution: bool = False
+    ambiguous_numbering: bool = False
     section_seen: bool = False
 
     def add(self, entry):
@@ -168,11 +170,10 @@ class _AnchorSegmentBuilder:
         match = _QUESTION_NUMBER.match(text)
         if match:
             number = int(match.group(1))
-            # 已有题目时，只有更大的题号才开启下一题，避免把解题过程中的回退编号当作新题。
-            if not self.current or (
-                number > self.current_number
-                and not (self.in_solution and number <= self.current_number)
-            ):
+            # 解析步骤和正式题号重复时无法仅凭递增编号分界，整份资料回退模型，不能输出混入步骤的题干。
+            if self.current and number <= self.current_number and (self.in_solution or number == self.current_number):
+                self.ambiguous_numbering = True
+            if not self.current or number > self.current_number:
                 self._start_question(entry, number)
                 return
         if self.current:
@@ -181,6 +182,11 @@ class _AnchorSegmentBuilder:
 
     def _append_current(self):
         if self.current:
+            if self.started_after_solution and not any(
+                _ANSWER_MARKER.match(_block_text(entry[1])) or _SOLUTION_MARKER.match(_block_text(entry[1]))
+                for entry in self.current
+            ):
+                self.ambiguous_numbering = True
             self.segments.append((self.current_number, self.segment_section, self.segment_section_entry, self.current))
 
     def _start_section(self, entry, text):
@@ -195,6 +201,7 @@ class _AnchorSegmentBuilder:
 
     def _start_question(self, entry, number):
         self._append_current()
+        self.started_after_solution = self.in_solution
         self.current = [entry]
         self.current_number = number
         self.segment_section = self.current_section
@@ -204,7 +211,7 @@ class _AnchorSegmentBuilder:
     def finish(self):
         self._append_current()
         numbers = [segment[0] for segment in self.segments]
-        if len(numbers) != len(set(numbers)) or numbers != sorted(numbers):
+        if self.ambiguous_numbering or len(numbers) != len(set(numbers)) or numbers != sorted(numbers):
             return [], self.section_seen
         return self.segments, self.section_seen
 
@@ -272,10 +279,10 @@ def _anchored_answer(document, normalized, entries, suffix, answer_index, bounda
     if answer_index is None:
         return None
     marker = _ANSWER_MARKER.match(_block_text(entries[answer_index][1]))
-    value = marker.group(1).strip() if marker else ""
     answer_entries = _entries_until_next_marker(entries, answer_index, boundaries)
-    if not value:
-        value = " ".join(_block_text(entry[1]) for entry in answer_entries[1:4]).strip()
+    first_line = marker.group(1).strip() if marker else ""
+    # 答案可能跨多行小问；保留完整范围及换行，不能用固定行数静默裁掉后半段。
+    value = "\n".join(line for line in [first_line, *(_block_text(entry[1]) for entry in answer_entries[1:])] if line).strip()
     if not value:
         return None
     return {

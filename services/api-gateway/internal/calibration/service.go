@@ -68,6 +68,7 @@ func (s *Service) CreateSession(ctx context.Context, tenantID, examID, questionI
 		SnapshotID: references[0].SnapshotID, ArchetypeCode: policy.ArchetypeCode, RiskTier: references[0].RiskTier,
 		GoldSetHash: goldHash, Status: SessionInProgress,
 		Samples: publicSamples(references), StartedAt: now}
+	setSessionImageURLs(&session)
 	return s.store.CreateSession(ctx, tenantID, session, policy, references)
 }
 
@@ -76,7 +77,15 @@ func (s *Service) GetSession(ctx context.Context, tenantID, sessionID string) (S
 	if err != nil {
 		return Session{}, err
 	}
+	// 旧会话也只返回受会话清单约束的图片入口，不能继续分发历史保存的动态 segment URL。
+	setSessionImageURLs(&session)
 	return s.withSessionMaterials(ctx, tenantID, session, references)
+}
+
+func setSessionImageURLs(session *Session) {
+	for i := range session.Samples {
+		session.Samples[i].AnswerImageURL = "/api/v1/calibration-sessions/" + session.ID + "/samples/" + session.Samples[i].GoldPaperID + "/image"
+	}
 }
 
 func (s *Service) withSessionMaterials(ctx context.Context, tenantID string, session Session, references []goldReference) (Session, error) {

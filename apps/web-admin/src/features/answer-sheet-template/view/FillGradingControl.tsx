@@ -3,12 +3,12 @@ import { Button, InputNumber, Select } from "antd";
 import type { AnalysisBox } from "../../../api/answerSheetTemplateAnalysis";
 import type { LayoutRegion } from "../../../api/configuration";
 import { validObjectiveBox } from "../editor/objectiveGridGeometry";
-import type { TemplatePageViewProps } from "./templateViewTypes";
+import type { TemplateFillGradingView } from "./templateViewTypes";
 import { ObjectiveGridCanvas } from "./ObjectiveGridCanvas";
 
 const coordinateLabels = { x: "左", y: "上", width: "宽", height: "高" };
 
-export function FillGradingControl({ view, selectedCandidate }: TemplatePageViewProps & { selectedCandidate?: LayoutRegion }) {
+export function FillGradingControl({ view, selectedCandidate }: Readonly<{ view: TemplateFillGradingView; selectedCandidate?: LayoutRegion }>) {
   const group = view.editor.fillGradingGroup;
   const [editing, setEditing] = useState(false);
   const [members, setMembers] = useState(group?.questionIds ?? []);

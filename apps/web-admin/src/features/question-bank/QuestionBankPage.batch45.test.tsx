@@ -11,7 +11,7 @@ import { QuestionBankPage } from "./QuestionBankPage";
 type Confirmation = { content: ReactNode; onOk: () => Promise<void> };
 const mocks = vi.hoisted(() => ({
   submitReview: vi.fn(), approve: vi.fn(), returnToDraft: vi.fn(), publish: vi.fn(), updateACL: vi.fn(),
-  confirm: vi.fn(), success: vi.fn(), error: vi.fn(), warning: vi.fn(),
+  confirm: vi.fn(), success: vi.fn(), error: vi.fn(), warning: vi.fn(), createVersion: vi.fn(),
   workspace: null as QuestionBankWorkspaceProps | null,
   dialogs: null as ComponentProps<typeof QuestionBankDialogs> | null,
 }));
@@ -39,6 +39,7 @@ vi.mock("../../api/questionBank", () => ({ questionBankApi: {
   submitQuestionBankReview: mocks.submitReview, approveQuestionBankVersion: mocks.approve,
   returnQuestionBankVersionToDraft: mocks.returnToDraft, publishQuestionBankVersion: mocks.publish,
   updateQuestionBankACL: mocks.updateACL,
+  createQuestionBankVersion: mocks.createVersion,
 } }));
 vi.mock("../../router/useUnsavedChangesGuard", () => ({ useUnsavedChangesGuard: () => undefined }));
 vi.mock("./QuestionBankWorkspace", () => ({ QuestionBankWorkspace: (props: QuestionBankWorkspaceProps) => {
@@ -80,6 +81,7 @@ describe("题库第45批入口行为", () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     for (const method of [mocks.submitReview, mocks.approve, mocks.returnToDraft, mocks.publish]) method.mockResolvedValue({ version });
     mocks.updateACL.mockResolvedValue({ acl });
+    mocks.createVersion.mockResolvedValue({ version: { ...version, id: "derived-version" } });
     host = document.createElement("div"); confirmationHost = document.createElement("div");
     document.body.append(host, confirmationHost); root = createRoot(host); confirmationRoot = createRoot(confirmationHost);
     client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -112,6 +114,22 @@ describe("题库第45批入口行为", () => {
       headers: { "Idempotency-Key": expect.any(String) },
     }));
     expect(mocks.success).toHaveBeenLastCalledWith(expectedMessage);
+  });
+
+  it.each(["content", "scoring"] as const)("deriving requires explicit discard of an unsaved %s draft", async (kind) => {
+    await open(); await click("选择题目"); await waitFor(() => Boolean(mocks.workspace?.editorVersion));
+    await act(async () => {
+      if (kind === "content") mocks.workspace!.setContentDirty(true);
+      else mocks.workspace!.setScoringDirty(true);
+    });
+    await act(async () => mocks.workspace!.derive());
+    expect(mocks.createVersion).not.toHaveBeenCalled();
+    expect(mocks.workspace![kind === "content" ? "contentDirty" : "scoringDirty"]).toBe(true);
+    const confirmation = mocks.confirm.mock.calls[0][0] as Confirmation;
+    expect(confirmation.content).toContain("已保存");
+    await act(async () => confirmation.onOk());
+    await waitFor(() => mocks.createVersion.mock.calls.length > 0);
+    expect(mocks.createVersion).toHaveBeenCalledWith(expect.objectContaining({ body: { source_version_id: version.id } }));
   });
 
   it("重复授权摘要保留全部行，重复显示不生成编号，不确定失败后复用原请求身份", async () => {

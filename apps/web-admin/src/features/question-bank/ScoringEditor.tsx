@@ -22,6 +22,7 @@ import { getUserErrorMessage } from "../../api/client";
 import { uploadFile } from "../../api/files";
 import { createScoringExample, StructuredAnswerEditor, StructuredListEditor } from "../../components/StructuredTeacherFields";
 import { newRubricPointId, rubricPointIdentityError } from "../paper-rubric/rubricPointIdentity";
+import { QuestionBankReferenceImages } from "./QuestionBankReferenceImages";
 
 const initial: QuestionBankScoring = {
 	answer: null,
@@ -375,6 +376,7 @@ export function ScoringEditor({
 					</Form.Item>
 				</>
 			) : null}
+			<QuestionBankReferenceImages materials={version.scoring.reference_materials} versionId={version.id} />
 			<h3>附件</h3>
 			<ul>
 				{assets.map((a) => (

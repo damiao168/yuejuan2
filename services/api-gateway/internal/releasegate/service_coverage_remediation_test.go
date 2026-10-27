@@ -68,6 +68,19 @@ type remediationPublisher struct {
 	beforePublish func()
 }
 
+type remediationGuardedPublisher struct{ *remediationPublisher }
+
+func (p remediationGuardedPublisher) PublishGuarded(ctx context.Context, tenantID, releaseID, actorID string, guard scorerelease.PublishGuard) (scorerelease.Release, error) {
+	if err := guard(ctx, nil, scorerelease.Release{ID: releaseID, TenantID: tenantID, ExamID: "exam"}, scorerelease.Gate{Version: "A18", Passed: true}); err != nil {
+		return scorerelease.Release{}, err
+	}
+	result, err := p.Publish(ctx, tenantID, releaseID, actorID)
+	if err != nil {
+		return scorerelease.Release{}, err
+	}
+	return result, nil
+}
+
 func (p *remediationPublisher) Publish(_ context.Context, tenantID, releaseID, actorID string) (scorerelease.Release, error) {
 	p.scopes = append(p.scopes, [3]string{tenantID, releaseID, actorID})
 	if p.beforePublish != nil {
@@ -229,13 +242,13 @@ func assertReleaseGatePersistedPublicationResult(t *testing.T, test releaseGateP
 	store := &remediationServiceStore{MemoryStore: NewMemoryStore()}
 	service := NewService(store, &remediationBaseGate{gate: scorerelease.Gate{Version: "A18", Passed: true}})
 	publisher := &remediationPublisher{result: scorerelease.Release{ID: "release", Status: "published"}, err: test.err}
-	// 成绩事务可能在门禁求值通过后失败；已保存的门禁事实仍需能供失败排查读取。
+	// 原子发布在最终门禁写入之后才变更公开状态；事务失败时不能把已回滚的证据标识返回为成功事实。
 	publisher.beforePublish = func() {
 		if store.latestEvidence.ID == "" || store.latestEvidence.Phase != EvidencePublish || !store.latestEvidence.Evaluation.Passed {
 			t.Fatalf("publisher ran before its passing evidence was persisted: %#v", store.latestEvidence)
 		}
 	}
-	release, evidence, err := NewPublicationCoordinator(service, publisher).Publish(ctx, "tenant", "exam", "release", "principal")
+	release, evidence, err := NewPublicationCoordinator(service, remediationGuardedPublisher{publisher}).Publish(ctx, "tenant", "exam", "release", "principal")
 	if !errors.Is(err, test.err) || !reflect.DeepEqual(publisher.scopes, [][3]string{{"tenant", "release", "principal"}}) {
 		t.Fatalf("publication did not forward scope or original error: scopes=%#v err=%v", publisher.scopes, err)
 	}
@@ -244,6 +257,12 @@ func assertReleaseGatePersistedPublicationResult(t *testing.T, test releaseGateP
 	}
 	if test.err != nil && !reflect.DeepEqual(release, scorerelease.Release{}) {
 		t.Fatalf("failed publication exposed an incomplete release: %#v", release)
+	}
+	if test.err != nil {
+		if !reflect.DeepEqual(evidence, Evidence{}) {
+			t.Fatalf("failed transaction returned uncommitted evidence: %#v", evidence)
+		}
+		return
 	}
 	saved, readErr := service.GetEvidence(ctx, "tenant", evidence.ID)
 	if readErr != nil || !reflect.DeepEqual(saved, evidence) || !evidence.Evaluation.Passed || store.appendCalls != 1 {

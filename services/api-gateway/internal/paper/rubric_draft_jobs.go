@@ -79,6 +79,14 @@ type RubricDraftJobs struct {
 	timeout   time.Duration
 }
 
+type rubricDraftExamBoundary interface {
+	WithManagementExamState(context.Context, string, string, func(bool) error) error
+}
+
+type rubricDraftArchiveReader interface {
+	ManagementExamArchived(context.Context, string, string) (bool, error)
+}
+
 func NewRubricDraftJobs(store Store, exams QuestionRubricExamReader, service *DocumentImportService, timeout time.Duration) *RubricDraftJobs {
 	repository, ok := store.(rubricDraftJobStore)
 	if !ok || service == nil || exams == nil {
@@ -86,6 +94,14 @@ func NewRubricDraftJobs(store Store, exams QuestionRubricExamReader, service *Do
 	}
 	if timeout <= 0 {
 		timeout = 10 * time.Minute
+	}
+	if memory, ok := repository.(*MemoryStore); ok {
+		if archive, ok := exams.(*exam.MemoryStore); ok {
+			memory.mu.Lock()
+			memory.rubricDraftExamBoundary = archive
+			memory.mu.Unlock()
+			archive.RegisterManagementArchiveWorkSource(memory)
+		}
 	}
 	return &RubricDraftJobs{store: repository, questions: store, exams: exams, service: service, timeout: timeout}
 }
@@ -121,6 +137,15 @@ func (s *RubricDraftJobs) validate(ctx context.Context, scope auth.AccessScope, 
 	}
 	if item.Status != "draft" && item.Status != "configured" {
 		return ErrExamFrozen
+	}
+	if archive, ok := s.exams.(rubricDraftArchiveReader); ok {
+		archived, err := archive.ManagementExamArchived(ctx, scope.TenantID, examID)
+		if err != nil {
+			return err
+		}
+		if archived {
+			return ErrExamFrozen
+		}
 	}
 	subject, ok := assessment.NormalizeSubjectCode(item.Subject)
 	if !ok || subject != assessment.SubjectMathematics {
@@ -206,7 +231,9 @@ func (s *RubricDraftJobs) Result(ctx context.Context, tenantID, actorID, examID,
 			record.Job.Status, record.Job.Result, record.Job.Error = "stale", nil, "题目、答案、细则或模型已变更，请重新生成"
 		}
 	}
-	return record.Job, nil
+	// 期间可能完成整场归档；最终读取在仓储的考试锁内决定是否仍可采用结果。
+	latest, err := s.store.getRubricDraftJob(ctx, tenantID, actorID, examID, id)
+	return latest.Job, err
 }
 
 // Run 的生命周期属于进程，浏览器断开和换题不会取消任务。

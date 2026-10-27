@@ -19,7 +19,8 @@ const mocks = vi.hoisted(() => ({
   onCreated: undefined as Parameters<typeof useAnswerSheetSourceUpload>[0]["onCreated"] | undefined,
   deleteSource: vi.fn(),
   libraryResolve: vi.fn(), libraryList: vi.fn(),
-  preview: {} as ReturnType<typeof useTemplatePreview>
+  preview: {} as ReturnType<typeof useTemplatePreview>,
+  libraryCanCollect: undefined as boolean | undefined
 }));
 vi.mock("antd", () => ({
   App: { useApp: () => ({ message: mocks.message, modal: { confirm: mocks.confirm } }) },
@@ -40,7 +41,7 @@ vi.mock("../../api/answerSheetTemplateLibrary", () => ({
   listAnswerSheetTemplateLibrary: mocks.libraryList, resolveAnswerSheetTemplate: mocks.libraryResolve,
   instantiateAnswerSheetTemplate: vi.fn(), publishAnswerSheetTemplate: vi.fn()
 }));
-vi.mock("./library/TemplateLibraryPanel", () => ({ TemplateLibraryPanel: () => null }));
+vi.mock("./library/TemplateLibraryPanel", () => ({ TemplateLibraryPanel: ({ canCollect }: { canCollect: boolean }) => { mocks.libraryCanCollect = canCollect; return null; } }));
 vi.mock("../../components/PageState", () => ({ EmptyState: () => null, LoadingState: () => null, ErrorState: () => null }));
 vi.mock("../../router/useUnsavedChangesGuard", () => ({ useUnsavedChangesGuard: () => undefined }));
 vi.mock("./editor/useTemplateEditor", () => ({ useTemplateEditor: (input: Parameters<typeof useTemplateEditor>[0]) => {
@@ -76,6 +77,7 @@ describe("answer-sheet upload batch entry", () => {
     mocks.view = undefined;
     mocks.editorInput = undefined;
     mocks.onCreated = undefined;
+    mocks.libraryCanCollect = undefined;
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.papers.mockImplementation((_examId: string, purpose?: string) => Promise.resolve({ papers: purpose ? [answerSource] : [] }));
     mocks.questions.mockResolvedValue({ questions: [answerQuestion] });
@@ -111,6 +113,15 @@ describe("answer-sheet upload batch entry", () => {
     expect(mocks.uploadBatch).toHaveBeenCalledOnce();
     expect(mocks.uploadBatch).toHaveBeenCalledWith(files);
     expect(mocks.confirm).not.toHaveBeenCalled();
+  });
+
+  it.each(["draft", "locked"] as const)("allows school-library collection of a valid group-only %s template", async status => {
+    const layout = { pages: [{ ...answerTemplate.layout.pages[0], question_regions: [], grading_groups: [{ group_id: "fill", question_ids: [answerQuestion.id], bbox: { x: .1, y: .2, width: .3, height: .4 } }] }] };
+    mocks.templates.mockResolvedValue({ templates: [{ ...answerTemplate, status, layout }] });
+    mocks.editor.layout = layout;
+    mocks.questions.mockResolvedValue({ questions: [{ ...answerQuestion, question_type: "fill_blank" }] });
+    await render();
+    expect(mocks.libraryCanCollect).toBe(true);
   });
 
   it("asks once before replacing an unsaved region draft and keeps the whole batch until confirmed", async () => {

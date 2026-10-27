@@ -2,11 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	App,
-	Button,
 	Empty,
 	Form,
-	Modal,
-	Space,
 } from "antd";
 import type {
 	CreateQuestionBankItemRequest,
@@ -28,7 +25,7 @@ import { defaults, contentFrom, matchingVersionForItem, metadataSchemaReadState,
 import { QuestionBankHeader } from "./QuestionBankHeader";
 import { QuestionBankWorkspace } from "./QuestionBankWorkspace";
 import { QuestionBankDialogs } from "./QuestionBankDialogs";
-import { QuestionBankConflictComparison } from "./QuestionBankConflictComparison";
+import { QuestionBankConflictDialog } from "./QuestionBankConflictDialog";
 import { emptySearch, isEditableACLRole, type ACLFormValues, type MetadataSchemaFormValues, type SearchFilters } from "./questionBankTypes";
 import { listQuestionBankMembers, bankRoleLabels, questionBankMemberAmbiguous, questionBankMemberLabel } from "./questionBankMembers";
 import { hashQueryParam } from "../../router/query";
@@ -250,11 +247,11 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 		setSchemaFormBankId(bankId);
 	}, [bankId, currentSchema.data, currentSchema.isSuccess, schemaForm, schemaOpen]);
 	// 未保存的题目编辑只在当前表单里；切换范围前要由用户决定是否丢弃。
-	function confirmDiscard(action: () => void) {
+	function confirmDiscard(action: () => void, content = "当前题目内容或评分标准尚未保存，切换后无法恢复。") {
 		if (!contentDirty && !scoringDirty) return action();
 		modal.confirm({
 			title: "放弃未保存的修改？",
-			content: "当前题目内容或评分标准尚未保存，切换后无法恢复。",
+			content,
 			okText: "放弃并切换",
 			okButtonProps: { danger: true },
 			cancelText: "继续编辑",
@@ -497,7 +494,15 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 			setSaving(false);
 		}
 	}
-	async function derive() {
+	function derive() {
+		if (!selected || saving) return;
+		const sourceVersionId = selected.id;
+		// 派生复制服务端已保存版本；内容和评分两个草稿都必须先经明确丢弃确认。
+		confirmDiscard(() => {
+			if (loadedVersion.current === sourceVersionId) void deriveSavedVersion();
+		}, "新版本会复制当前已保存的内容和评分标准；未保存的题目或评分修改不会进入新版本，放弃后无法恢复。");
+	}
+	async function deriveSavedVersion() {
 		if (!item || !selected) return;
 		setSaving(true);
 		try {
@@ -676,16 +681,8 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 					members={members}
 				/>
 			)}
-			<Modal title="比较本地修改与最新版本" open={Boolean(latestPreview)} width={900} onCancel={() => setLatestPreview(null)} footer={<Space wrap>
-				<Button onClick={downloadLocalDraft}>下载本地修改备份</Button><Button onClick={() => setLatestPreview(null)}>保留本地修改</Button>
-				<Button danger type="primary" onClick={() => {
-					if (!contentDirty && !scoringDirty) { acceptLatest(); return; }
-					modal.confirm({ title: "采用最新版本并放弃本地修改？", content: "题目内容和评分标准的未保存修改都会被替换。请先下载备份，或返回保留本地修改。", okText: "放弃本地修改并采用", okButtonProps: { danger: true }, cancelText: "保留本地修改", onOk: acceptLatest });
-				}}>采用最新版本</Button>
-			</Space>}>
-				<p>查看最新版本不会覆盖本地修改。采用前请核对差异，下载的备份包含当前题目内容、答案、评分编辑和附件信息。</p>
-				{latestPreview && <QuestionBankConflictComparison original={editorVersion} latest={latestPreview} localContent={editor.getFieldsValue(true)} scoringDraft={scoringDraft.current} />}
-			</Modal>
+			<QuestionBankConflictDialog original={editorVersion} latest={latestPreview} localContent={editor.getFieldsValue(true)} scoringDraft={scoringDraft.current}
+				dirty={contentDirty || scoringDirty} onClose={() => setLatestPreview(null)} onDownload={downloadLocalDraft} onAccept={acceptLatest} />
 			<QuestionBankDialogs
 				bankId={bankId} dialog={dialog} setDialog={setDialog} saving={saving} schoolOptions={schoolOptions} schools={schools} createBank={(values) => void createBank(values)}
 				aclOpen={aclOpen} setAclOpen={setAclOpen} aclForm={aclForm} saveACL={(values) => void saveACL(values)} acl={acl}

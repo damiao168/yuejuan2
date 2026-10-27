@@ -26,6 +26,10 @@ func (s *MemoryStore) UpdateScoring(ctx context.Context, scope auth.AccessScope,
 		if v.Revision != in.ExpectedRevision {
 			return v, ErrConflict
 		}
+		scoring, err = preserveImportedReferences(v.Scoring, scoring)
+		if err != nil {
+			return v, err
+		}
 		// 文件绑定与实例化需要 PostgreSQL 事务依赖图。
 		if len(scoring.Assets) > 0 {
 			return v, ErrUnavailable

@@ -313,10 +313,12 @@ func (r *Reconciler) inspectMissingAsset(ctx context.Context, asset FileAsset, o
 func (r *Reconciler) inspectVerifiedAsset(ctx context.Context, asset FileAsset, options ReconciliationOptions, add func(string, map[string]any, bool) error) error {
 	var err error
 	switch asset.Lifecycle {
-	case LifecyclePendingUpload, LifecycleUploadFailed:
+	case LifecyclePendingUpload, LifecycleUploadFailed, LifecycleOrphanRecovered:
 		repaired := false
 		if options.Repair {
-			repaired, err = r.setLifecycle(ctx, asset, LifecycleOrphanRecovered, "")
+			// 对象已完成大小和全量哈希核验，直接恢复可读状态；也修复旧巡检留下的中间状态。
+			// 版本 CAS 仍保护期间发生的删除、隔离或正常上传激活。
+			repaired, err = r.setLifecycle(ctx, asset, LifecycleActive, "")
 			if err != nil {
 				return err
 			}

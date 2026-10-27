@@ -73,6 +73,9 @@ func newCaptureProcessingModule(cfg config.Config, stores CaptureProcessingStore
 	if processingService == nil {
 		processingService = processing.NewService(stores.Processing, stores.WorkerRuntime)
 	}
+	if retryStore, ok := stores.Capture.(capture.RegistrationRetryStore); ok {
+		processingService.WithRegistrationRetryStore(retryStore)
+	}
 	imageQualityHandler := imagequality.NewHandler(stores.ImageQuality, dependencies.Submissions, dependencies.Files, dependencies.Auth, stores.WorkerRuntime).WithCaptureStore(stores.Capture)
 	if transactional {
 		coordinator, ok := stores.ImageQuality.(imagequality.TransactionalStore)

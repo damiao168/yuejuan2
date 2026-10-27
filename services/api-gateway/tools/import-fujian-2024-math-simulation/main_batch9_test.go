@@ -636,7 +636,7 @@ func (fixture *batch9ImportHTTP) response(request *http.Request) (int, string) {
 	case strings.HasSuffix(path, "/run-quality-check"):
 		return 202, `{}`
 	case request.Method == http.MethodGet && path == "/api/v1/submissions/submission":
-		return 200, `{"submission":{"quality_status":"passed"}}`
+		return 200, `{"submission":{"quality_status":"passed","revision":7}}`
 	case strings.HasSuffix(path, "/status"):
 		return 200, `{}`
 	case strings.HasSuffix(path, "/segment-answers"):
@@ -730,7 +730,7 @@ func assertBatch9CandidateBindings(t *testing.T, events []batch9HTTPEvent) {
 			}
 		}
 		if strings.HasSuffix(event.Path, "/status") {
-			if !reflect.DeepEqual(event.Body, map[string]any{"status": "ready_for_ocr", "expected_revision": float64(1)}) {
+			if !reflect.DeepEqual(event.Body, map[string]any{"status": "ready_for_ocr", "expected_revision": float64(7)}) {
 				t.Fatalf("ready transition = %#v", event.Body)
 			}
 		}

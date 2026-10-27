@@ -142,6 +142,38 @@ describe("appeal detail selection", () => {
     host.remove();
   });
 
+  it("读取下一页历史申诉并保留当前详情，刷新后重新从首屏读取", async () => {
+    mocks.listAppeals.mockImplementation(({ cursor }: { cursor?: string }) => Promise.resolve(cursor
+      ? { appeals: [appeal("B")], has_more: false, next_cursor: "" }
+      : { appeals: [appeal("A")], has_more: true, next_cursor: "page-2" }));
+    mocks.getAppeal.mockImplementation((id: string) => Promise.resolve({ appeal: appeal(id) }));
+    await act(async () => { root.render(<AppealCenterPage mode="teacher" canRead canManage={false} canWork canReadIdentities={false} canReadExams={false} currentUser={{ id: "teacher" } as SessionUser} />); });
+    const find = (label: string) => [...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === label)!;
+    await act(async () => find("加载更多申诉").click());
+    expect(mocks.listAppeals).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: "page-2", limit: 100 }));
+    expect(host.querySelector(".appeal-task-item.active")?.textContent).toContain("考试 A");
+    expect(host.textContent).toContain("考试 B");
+    expect(find("加载更多申诉")).toBeUndefined();
+    await act(async () => find("刷新").click());
+    expect(mocks.listAppeals.mock.calls[mocks.listAppeals.mock.calls.length - 1][0]).not.toHaveProperty("cursor");
+    expect(host.querySelectorAll(".appeal-task-item")).toHaveLength(1);
+  });
+
+  it("换筛选后丢弃旧分页回执并恢复分页忙碌状态", async () => {
+    let finishPage!: (value: unknown) => void;
+    mocks.listAppeals.mockImplementation(({ cursor, status }: { cursor?: string; status?: string }) => cursor
+      ? new Promise(resolve => { finishPage = resolve; })
+      : Promise.resolve({ appeals: [appeal(status ? "new" : "A")], has_more: !status, next_cursor: status ? "" : "next" }));
+    mocks.getAppeal.mockImplementation((id: string) => Promise.resolve({ appeal: appeal(id) }));
+    await act(async () => { root.render(<AppealCenterPage mode="teacher" canRead canManage={false} canWork canReadIdentities={false} canReadExams={false} currentUser={{ id: "teacher" } as SessionUser} />); });
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "加载更多申诉")!.click());
+    await act(async () => { const select = host.querySelectorAll<HTMLSelectElement>("select")[1]; select.value = "submitted"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+    await act(async () => finishPage({ appeals: [appeal("old-page")], has_more: false, next_cursor: "" }));
+    expect(host.textContent).toContain("考试 new");
+    expect(host.textContent).not.toContain("old-page");
+    expect(host.querySelector(".appeal-task-item.active")?.textContent).toContain("考试 new");
+  });
+
   it("keeps B selected and submits B when A's detail arrives late", async () => {
     await act(async () => {
       root.render(<AppealCenterPage mode="teacher" canRead canManage={false} canWork

@@ -14,6 +14,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/binaryresourcehttp"
 	"edugrade-enterprise/services/api-gateway/internal/files"
+	"edugrade-enterprise/services/api-gateway/internal/goldpaper"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/pagination"
@@ -54,6 +55,7 @@ type Handler struct {
 	store              Store
 	audit              auth.Store
 	segmentImage       segment.CropImageReader
+	goldImages         goldpaper.VersionImageReader
 	fileDownload       files.DownloadReader
 	qualificationGate  GraderQualificationGate
 	seedHook           seedquality.ReviewHook
@@ -75,6 +77,11 @@ func (h *Handler) WithQualificationGate(gate GraderQualificationGate) *Handler {
 // 钩子只返回合成标识，绝不暴露 Gold 来源。
 func (h *Handler) WithSeedHook(hook seedquality.ReviewHook) *Handler {
 	h.seedHook = hook
+	return h
+}
+
+func (h *Handler) WithGoldImageReader(reader goldpaper.VersionImageReader) *Handler {
+	h.goldImages = reader
 	return h
 }
 
@@ -586,15 +593,17 @@ func (h *Handler) GetWorkspaceSegmentImage(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		if handled {
-			if h.segmentImage == nil {
+			if h.goldImages == nil {
 				httpx.Error(w, r, http.StatusInternalServerError, "review_image_unavailable", reviewImageUnavailable)
 				return
 			}
-			resource, err := h.segmentImage.ReadCropImage(r.Context(), user.TenantID, seedImage.AnswerSegmentID)
+			resource, err := h.goldImages.ReadVersionImage(r.Context(), user.TenantID, seedImage.GoldPaperID, seedImage.GoldVersion)
 			if err != nil {
 				segment.WriteImageError(w, r, err)
 				return
 			}
+			// 受限读取返回的文件名不能向阅卷者提示 Gold 来源。
+			resource.Disposition = `inline; filename="answer.png"`
 			binaryresourcehttp.Serve(w, r, resource, h.audit)
 			return
 		}

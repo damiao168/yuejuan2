@@ -2,11 +2,14 @@ package goldpaper
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"math"
 	"sort"
 	"strings"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 var (
@@ -16,6 +19,7 @@ var (
 	ErrAlreadyApproved    = errors.New("gold paper version already approved")
 	ErrApprovedImmutable  = errors.New("approved gold paper version is immutable")
 	ErrSourceGradeMissing = errors.New("gold paper source grade is missing")
+	ErrImageUnavailable   = errors.New("gold paper frozen image is unavailable")
 )
 
 type Status string
@@ -38,6 +42,22 @@ type Source struct {
 	RubricSnapshot    map[string]any
 	AvailableGradeIDs []string
 	AnswerSegmentID   string
+	ImageBinding      ImageBinding
+}
+
+// ImageBinding 来自提名事务核验的切片和资产；读取时不再追随当前切片，也不接受请求指定资产。
+type ImageBinding struct {
+	SegmentID string
+	AssetID   string
+	SHA256    string
+	OwnerType string
+	OwnerID   string
+}
+
+func (b ImageBinding) Valid() bool {
+	_, err := hex.DecodeString(b.SHA256)
+	return err == nil && b.SHA256 == strings.ToLower(b.SHA256) && b.SegmentID != "" && b.AssetID != "" && len(b.SHA256) == 64 && b.OwnerID != "" &&
+		(b.OwnerType == "answer_segment_crop" || b.OwnerType == "page_registration_correction_preview")
 }
 
 type Version struct {
@@ -55,6 +75,9 @@ type Version struct {
 	ApprovedBy             string         `json:"approved_by,omitempty"`
 	ApprovedAt             *time.Time     `json:"approved_at,omitempty"`
 	CreatedAt              time.Time      `json:"created_at"`
+	AnswerImageURL         string         `json:"answer_image_url,omitempty"`
+	ImageInvalidatedAt     *time.Time     `json:"image_invalidated_at,omitempty"`
+	ImageBinding           ImageBinding   `json:"-"`
 }
 
 // GoldPaper 不暴露 student_id、candidate_no、学生姓名、复核者私有备注或原始 AI 提示词。
@@ -100,6 +123,7 @@ type RetireInput struct {
 }
 
 type ListFilter struct {
+	Access     auth.ExamCollectionAccess
 	ExamID     string
 	QuestionID string
 	Status     Status

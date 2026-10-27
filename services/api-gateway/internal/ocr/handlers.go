@@ -276,27 +276,6 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"task": out})
 }
 
-func sameCompletion(task Task, input CompleteTaskInput) bool {
-	if task.ModelVersion != input.ModelVersion || task.ConfigHash != input.ConfigHash || task.InputHash != input.InputHash ||
-		task.DurationMS != input.DurationMS || task.WorkerID != input.WorkerID || len(task.Results) != len(input.Results) {
-		return false
-	}
-	for index, current := range task.Results {
-		candidate := input.Results[index]
-		if current.SubmissionPageID != candidate.SubmissionPageID || current.Text != candidate.Text ||
-			current.Confidence != candidate.Confidence || current.SourceImageFileID != candidate.SourceImageFileID ||
-			current.PreprocessProfile != input.PreprocessProfile || len(current.BBox) != len(candidate.BBox) {
-			return false
-		}
-		for bboxIndex := range current.BBox {
-			if current.BBox[bboxIndex] != candidate.BBox[bboxIndex] {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 func (h *Handler) FailTask(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
 	var input FailTaskInput

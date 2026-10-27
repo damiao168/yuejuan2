@@ -200,6 +200,7 @@ const managementArchiveSubjectFactsSQL = `SELECT
    WHERE c.tenant_id=$1 AND c.exam_id=$2::uuid AND r.status='published' AND r.published_at IS NOT NULL),
  EXISTS(SELECT 1 FROM scoring_run WHERE tenant_id=$1 AND exam_id=$2::uuid AND deleted_at IS NULL AND status NOT IN ('completed','cancelled'))
  OR EXISTS(SELECT 1 FROM paper_import_job WHERE tenant_id=$1 AND exam_id=$2::uuid AND status='processing')
+ OR EXISTS(SELECT 1 FROM question_rubric_draft_job WHERE tenant_id=$1 AND exam_id=$2::uuid AND status IN ('queued','running','cancelling'))
  OR EXISTS(SELECT 1 FROM ocr_task t JOIN submission s ON s.tenant_id=t.tenant_id AND s.id=t.submission_id
    WHERE t.tenant_id=$1 AND s.exam_id=$2::uuid AND t.deleted_at IS NULL AND t.status NOT IN ('completed','canceled'))
  OR EXISTS(SELECT 1 FROM review_task WHERE tenant_id=$1 AND exam_id=$2::uuid AND deleted_at IS NULL AND status NOT IN ('submitted','completed','cancelled'))
@@ -211,6 +212,18 @@ const managementArchiveSubjectFactsSQL = `SELECT
  OR EXISTS(SELECT 1 FROM score_release WHERE tenant_id=$1 AND exam_id=$2::uuid AND status='draft')
  OR EXISTS(SELECT 1 FROM operational_exception WHERE tenant_id=$1 AND exam_id=$2::uuid AND status IN ('open','assigned'))
  OR EXISTS(SELECT 1 FROM capture_batch WHERE tenant_id=$1 AND exam_id=$2::uuid AND deleted_at IS NULL AND status NOT IN ('completed','cancelled'))`
+
+func (s *PostgresStore) ManagementExamArchived(ctx context.Context, tenantID, examID string) (bool, error) {
+	var archived bool
+	err := s.db.QueryRowContext(ctx, `SELECT e.archived_at IS NOT NULL OR e.status='archived'
+  OR COALESCE(parent.archived_at IS NOT NULL OR parent.status='archived',false)
+FROM exam e LEFT JOIN exam_session parent ON parent.tenant_id=e.tenant_id AND parent.id=e.exam_session_id
+WHERE e.tenant_id=$1::uuid AND e.id=$2::uuid AND e.deleted_at IS NULL`, tenantID, examID).Scan(&archived)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, ErrNotFound
+	}
+	return archived, err
+}
 
 func validateManagementArchiveInput(input ManagementArchiveInput) error {
 	if input.ExpectedRevision <= 0 || len(input.CommandID) < 8 || len(input.CommandID) > 128 || strings.TrimSpace(input.CommandID) != input.CommandID || len(input.Reason) > 2000 {

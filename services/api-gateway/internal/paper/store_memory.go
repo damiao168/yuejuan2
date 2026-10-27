@@ -16,23 +16,24 @@ const (
 // MemoryStore 以进程内锁维护状态，不提供数据库事务回滚或跨进程任务租约。
 // 用它验证业务分支时，不能据此推断 PostgreSQL 的并发提交和持久化恢复行为。
 type MemoryStore struct {
-	mu               sync.RWMutex
-	next             int
-	examTotals       map[string]float64
-	papers           map[string]Paper
-	questions        map[string]Question
-	rubrics          map[string][]Rubric
-	templates        map[string]AnswerSheetTemplate
-	bindings         map[string]ExamTemplateBinding
-	bindingRevisions map[string]int
-	readiness        map[string]ReadinessResult
-	imports          map[string]PaperImportJob
-	examState        map[string]memoryExamState
-	rubricDraftJobs  map[string]rubricDraftJobRecord
-	templateLibrary  map[string]AnswerSheetTemplateLibraryVersion
-	librarySources   map[string]templateLibrarySource
-	libraryInstances map[string]string
-	libraryExams     QuestionRubricExamReader
+	mu                      sync.RWMutex
+	next                    int
+	examTotals              map[string]float64
+	papers                  map[string]Paper
+	questions               map[string]Question
+	rubrics                 map[string][]Rubric
+	templates               map[string]AnswerSheetTemplate
+	bindings                map[string]ExamTemplateBinding
+	bindingRevisions        map[string]int
+	readiness               map[string]ReadinessResult
+	imports                 map[string]PaperImportJob
+	examState               map[string]memoryExamState
+	rubricDraftJobs         map[string]rubricDraftJobRecord
+	templateLibrary         map[string]AnswerSheetTemplateLibraryVersion
+	librarySources          map[string]templateLibrarySource
+	libraryInstances        map[string]string
+	libraryExams            QuestionRubricExamReader
+	rubricDraftExamBoundary rubricDraftExamBoundary
 }
 
 type memoryExamState struct {

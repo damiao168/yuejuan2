@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/goldpaper"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 )
@@ -19,10 +20,16 @@ const (
 type Handler struct {
 	service *Service
 	audit   auth.AuditRecorder
+	images  goldpaper.VersionImageReader
 }
 
 func NewHandler(service *Service, audit auth.AuditRecorder) *Handler {
 	return &Handler{service: service, audit: audit}
+}
+
+func (h *Handler) WithImageReader(reader goldpaper.VersionImageReader) *Handler {
+	h.images = reader
+	return h
 }
 
 // RegisterRoutes 将权限定义留给组装入口：策略管理属于管理操作，会话和作答操作属于阅卷者工作，资格读取供管理员和领取门禁共同使用。
@@ -31,6 +38,8 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage, 
 	mux.Handle("PUT /api/v1/exams/{examId}/questions/{questionId}/calibration-policy", requireManage(h.PutPolicy))
 	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/calibration-sessions", requireGrade(h.CreateSession))
 	mux.Handle("GET /api/v1/calibration-sessions/{id}", requireGrade(h.GetSession))
+	mux.Handle("GET /api/v1/calibration-sessions/{id}/samples/{goldId}/image", requireGrade(h.GetSampleImage))
+	mux.Handle("HEAD /api/v1/calibration-sessions/{id}/samples/{goldId}/image", requireGrade(h.GetSampleImage))
 	mux.Handle("POST /api/v1/calibration-sessions/{id}/attempts", requireGrade(h.SubmitAttempt))
 	mux.Handle("GET /api/v1/exams/{examId}/questions/{questionId}/grader-qualification", requireRead(h.GetQualification))
 }

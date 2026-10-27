@@ -547,6 +547,7 @@ func (s *MemoryStore) qualityLocked(examID string, requirePendingPublish bool) Q
 	issues := s.taskAndFinalQualityIssuesLocked(examID)
 	issues = appendRosterQualityIssues(issues, s.rosterReportLocked(examID))
 	if requirePendingPublish {
+		issues = s.publishCompletenessLocked(examID, issues)
 		issues = s.appendUnconfirmedQualityIssuesLocked(issues, examID)
 	}
 	return QualityReport{Passed: len(issues) == 0, Issues: issues}

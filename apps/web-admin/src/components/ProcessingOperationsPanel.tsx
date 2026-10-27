@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, App, Button, Descriptions, Input, Modal, Select, Space, type TableColumnsType } from "antd";
 import { RefreshCw } from "lucide-react";
 import { ApiClientError, getUserErrorMessage } from "../api/client";
 import {
   assignProcessingException,
   getProcessingSummary,
+  getProcessingExceptionContext,
   listProcessingExceptions,
   resolveProcessingException,
   retryProcessingException,
@@ -101,6 +102,16 @@ export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Rea
   const [severity, setSeverity] = useState<ProcessingExceptionSeverity | undefined>();
   const [status, setStatus] = useState<ProcessingExceptionStatus | undefined>("open");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [focusError, setFocusError] = useState("");
+  const [focusedException, setFocusedException] = useState<ProcessingException>();
+  const listRequest = useRef(0);
+  const listScope = JSON.stringify([examId, severity, status]);
+  const currentScope = useRef(listScope);
+  currentScope.current = listScope;
+  const pagingBusy = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [actioning, setActioning] = useState<string | null>(null);
   const [assigning, setAssigning] = useState<ProcessingException | null>(null);
@@ -124,24 +135,31 @@ export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Rea
     return () => { active = false; };
   }, [examId, assigning, canManage, actorAttempt]);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
+  const load = useCallback(async (signal?: AbortSignal, cursor?: string) => {
+    if (currentScope.current !== listScope || (cursor && pagingBusy.current)) return;
+    const request = ++listRequest.current;
+    const isCurrent = () => request === listRequest.current && currentScope.current === listScope && !signal?.aborted;
+    pagingBusy.current = Boolean(cursor);
+    setLoadingMore(Boolean(cursor));
+    if (!cursor) { setLoading(true); setHasMore(false); setNextCursor(""); }
     setError(null);
     // 汇总和异常列表允许各自降级，单侧失败时保留另一侧并明确提示加载不完整。
     const [summaryResult, exceptionResult] = await Promise.allSettled([
       getProcessingSummary(examId, signal),
-      listProcessingExceptions({ examId, severity, status, limit: 25 }, signal)
+      listProcessingExceptions({ examId, severity, status, limit: 25, ...(cursor ? { cursor } : {}) }, signal)
     ]);
-    if (signal?.aborted) return;
+    if (!isCurrent()) return;
     if (summaryResult.status === "fulfilled") {
       setSummary(summaryResult.value.summary);
     } else {
       setSummary(null);
     }
     if (exceptionResult.status === "fulfilled") {
-      setExceptions(exceptionResult.value.exceptions);
+      setExceptions(current => cursor ? Array.from(new Map([...current, ...exceptionResult.value.exceptions].map(item => [item.id, item])).values()) : exceptionResult.value.exceptions);
+      setNextCursor(exceptionResult.value.next_cursor ?? "");
+      setHasMore(Boolean(exceptionResult.value.has_more && exceptionResult.value.next_cursor));
     } else {
-      setExceptions([]);
+      if (!cursor) setExceptions([]);
     }
     if (summaryResult.status === "rejected" && exceptionResult.status === "rejected") {
       setError(formatError(summaryResult.reason));
@@ -149,7 +167,24 @@ export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Rea
       setError("部分处理状态暂时无法加载，可稍后刷新。");
     }
     setLoading(false);
-  }, [examId, severity, status]);
+    setLoadingMore(false);
+    pagingBusy.current = false;
+  }, [examId, severity, status, listScope]);
+
+  useEffect(() => {
+    setFocusedException(undefined);
+    if (!focusedExceptionID) { setFocusError(""); return; }
+    const controller = new AbortController();
+    setFocusError("");
+    // 深链目标不一定在首屏；按受权限保护的 ID 读取后还要核对当前考试归属。
+    void getProcessingExceptionContext(focusedExceptionID, controller.signal).then(response => {
+      if (controller.signal.aborted) return;
+      if (response.exception_context.exception.exam_id !== examId) { setFocusError("该异常不属于当前考试，请核对入口。"); return; }
+      setFocusedException(response.exception_context.exception);
+      setViewing(response.exception_context.exception);
+    }).catch(() => { if (!controller.signal.aborted) setFocusError("未能读取指定异常，请在列表中查找或重试。"); });
+    return () => controller.abort();
+  }, [focusedExceptionID, examId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -319,10 +354,10 @@ export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Rea
       {focusedExceptionID ? (
         <Alert
           style={{ marginTop: 16 }}
-          type="info"
+          type={focusError ? "warning" : "info"}
           showIcon
-          message="已从考试工作区定位到处理异常"
-          description="请在下方异常列表中处理该页面；处理完成后，工作区的阻断提示会在刷新后同步更新。"
+          message={focusError || (focusedException ? "已定位指定处理异常" : "正在读取指定处理异常")}
+          description="指定异常单独读取，可能不符合当前列表筛选；处理完成后请刷新工作区。"
         />
       ) : null}
 
@@ -383,7 +418,7 @@ export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Rea
         className="dense-data-table"
         rowKey="id"
         columns={exceptionColumns}
-        dataSource={exceptions}
+        dataSource={focusedException?.exam_id === examId && !exceptions.some(item => item.id === focusedException.id) ? [focusedException, ...exceptions] : exceptions}
         loading={loading}
         pagination={false}
         size="small"
@@ -391,6 +426,7 @@ export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Rea
         rowClassName={(exception) => exception.id === focusedExceptionID ? "capture-focused-processing-exception" : ""}
         locale={{ emptyText: <EmptyState title="暂无处理异常" description="当前筛选条件下没有需要处理的页面。" /> }}
       />
+      {hasMore ? <Button loading={loadingMore} disabled={loading || Boolean(actioning)} onClick={() => void load(undefined, nextCursor)}>加载更多异常</Button> : null}
 
       <Modal
         title="指派处理人"
@@ -406,8 +442,8 @@ export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Rea
         {!actorLoading && !actorError && actors.length === 0 ? <Alert type="info" message="当前没有可分派的处理人员，请在学校人员管理中配置处理权限后重试。" /> : null}
         <Select style={{ width: "100%" }} showSearch optionFilterProp="label" loading={actorLoading} value={assigneeID || undefined} onChange={setAssigneeID} placeholder="选择处理人员" options={actors.map(actor => ({ value: actor.id, label: `${actor.display_name || actor.username}（${actor.username}）` }))} />
       </Modal>
-      <Modal title="异常页面材料" open={Boolean(viewing)} onCancel={() => setViewing(null)} footer={null} width={800} destroyOnHidden>
-        {viewing ? <ProcessingExceptionEvidence key={`${examId}:${viewing.id}`} id={viewing.id} examId={examId} onNavigate={onNavigate} /> : null}
+      <Modal title="异常页面材料" open={viewing?.exam_id === examId} onCancel={() => setViewing(null)} footer={null} width={800} destroyOnHidden>
+        {viewing?.exam_id === examId ? <ProcessingExceptionEvidence key={`${examId}:${viewing.id}`} id={viewing.id} examId={examId} onNavigate={onNavigate} /> : null}
       </Modal>
       <Modal
         title="确认解决异常"

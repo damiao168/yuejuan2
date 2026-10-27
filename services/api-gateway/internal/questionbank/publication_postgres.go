@@ -56,6 +56,10 @@ func (s *PostgresStore) UpdateScoring(ctx context.Context, scope auth.AccessScop
 		if v.Revision != in.ExpectedRevision {
 			return v, ErrConflict
 		}
+		scoring, err = preserveImportedReferences(v.Scoring, scoring)
+		if err != nil {
+			return v, err
+		}
 		scoring, err = s.resolveScoringTemplate(ctx, tx, scope, i, scoring)
 		if err != nil {
 			return v, err
@@ -114,6 +118,12 @@ func (s *PostgresStore) Transition(ctx context.Context, scope auth.AccessScope, 
 			return v, err
 		}
 		if decision == "submit-review" || decision == "publish" {
+			if err := validateReferenceGrant(ctx, tx, scope.TenantID, v.ID, v.Scoring.ReferenceMaterials); err != nil {
+				return v, err
+			}
+			if err := paper.LockReferenceMaterialImportTx(ctx, tx, scope.TenantID, v.Scoring.ReferenceMaterials); err != nil {
+				return v, ErrSourceUnavailable
+			}
 			schema, schemaErr := s.metadataSchema(ctx, tx, scope, i.BankID, v.SchemaVersion, action)
 			if schemaErr != nil {
 				return v, schemaErr
@@ -362,7 +372,10 @@ func materializeQuestions(ctx context.Context, tx *sql.Tx, scope auth.AccessScop
 		if err := checkMaterializeAssets(ctx, tx, scope, v.Scoring.Assets); err != nil {
 			return err
 		}
-		q, err := paper.MaterializeBankQuestionTx(ctx, tx, scope.TenantID, out.ExamID, scope.ActorID, paper.BankQuestionFacts{ItemID: v.ItemID, VersionID: v.ID, BundleHash: v.BundleHash, Content: v.Content, QuestionNo: x.QuestionNo, SortOrder: x.SortOrder, QuestionType: v.QuestionType, Score: v.DefaultScore, Stem: v.Stem, KnowledgePoints: v.KnowledgePoints, Archetype: v.AssessmentArchetype, Answer: v.Scoring.Answer, Solution: v.Scoring.Solution, Rubric: v.Scoring.Rubric, Assets: v.Scoring.Assets, TemplateVersionID: v.Scoring.TemplateVersionID})
+		if err := validateReferenceGrant(ctx, tx, scope.TenantID, v.ID, v.Scoring.ReferenceMaterials); err != nil {
+			return err
+		}
+		q, err := paper.MaterializeBankQuestionTx(ctx, tx, scope.TenantID, out.ExamID, scope.ActorID, paper.BankQuestionFacts{ItemID: v.ItemID, VersionID: v.ID, BundleHash: v.BundleHash, Content: v.Content, QuestionNo: x.QuestionNo, SortOrder: x.SortOrder, QuestionType: v.QuestionType, Score: v.DefaultScore, Stem: v.Stem, KnowledgePoints: v.KnowledgePoints, Options: v.Options, Archetype: v.AssessmentArchetype, Answer: v.Scoring.Answer, Solution: v.Scoring.Solution, Rubric: v.Scoring.Rubric, Assets: v.Scoring.Assets, TemplateVersionID: v.Scoring.TemplateVersionID, ReferenceMaterials: v.Scoring.ReferenceMaterials})
 		if err != nil {
 			return err
 		}

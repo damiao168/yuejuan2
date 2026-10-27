@@ -116,6 +116,32 @@ func validateOpenAPIValue(document map[string]any, schema map[string]any, value 
 	if value == nil && schema["nullable"] == true {
 		return nil
 	}
+	// 3.1 的可空值通过 anyOf 或 type 数组声明；不能落入未知类型分支而跳过真正的值校验。
+	if alternatives, ok := schema["anyOf"].([]any); ok {
+		matched := false
+		for _, alternative := range alternatives {
+			if validateOpenAPIValue(document, alternative.(map[string]any), value, location) == nil {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return fmt.Errorf("%s does not match anyOf", location)
+		}
+	}
+	if types, ok := schema["type"].([]any); ok {
+		for _, schemaType := range types {
+			branch := make(map[string]any, len(schema))
+			for key, constraint := range schema {
+				branch[key] = constraint
+			}
+			branch["type"] = schemaType
+			if validateOpenAPIValue(document, branch, value, location) == nil {
+				return nil
+			}
+		}
+		return fmt.Errorf("%s does not match type union", location)
+	}
 	if values, ok := schema["enum"].([]any); ok {
 		matched := false
 		for _, candidate := range values {
@@ -187,6 +213,10 @@ func validateOpenAPIArray(document map[string]any, schema map[string]any, value 
 
 func validateOpenAPIPrimitive(schema map[string]any, value any, location string) error {
 	switch schema["type"] {
+	case "null":
+		if value != nil {
+			return fmt.Errorf("%s must be null, got %T", location, value)
+		}
 	case "string":
 		if _, ok := value.(string); !ok {
 			return fmt.Errorf("%s must be string, got %T", location, value)

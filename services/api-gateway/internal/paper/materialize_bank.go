@@ -13,12 +13,14 @@ type BankQuestionFacts struct {
 	SortOrder                                                                int
 	Score                                                                    float64
 	KnowledgePoints                                                          []string
+	Options                                                                  []string
 	Content                                                                  any
 	Assets                                                                   any
 	TemplateVersionID                                                        *string
 	Answer                                                                   *AnswerKeyInput
 	Solution                                                                 *SolutionInput
 	Rubric                                                                   *RubricInput
+	ReferenceMaterials                                                       *ReferenceMaterialImport
 }
 
 func MaterializeBankQuestionTx(ctx context.Context, tx *sql.Tx, tenant, exam, actor string, f BankQuestionFacts) (Question, error) {
@@ -26,18 +28,29 @@ func MaterializeBankQuestionTx(ctx context.Context, tx *sql.Tx, tenant, exam, ac
 		return Question{}, err
 	}
 	kp, _ := json.Marshal(f.KnowledgePoints)
-	frozen, _ := json.Marshal(map[string]any{"schema_version": 2, "content": f.Content, "assets": f.Assets, "template_version_id": f.TemplateVersionID})
+	// 正式题目读取与准备度冻结直接读取 options 列，不能只把选项藏在 bank_content 内。
+	options, _ := json.Marshal(append([]string{}, f.Options...))
+	frozenFacts := map[string]any{"schema_version": 2, "content": f.Content, "assets": f.Assets, "template_version_id": f.TemplateVersionID}
+	if f.ReferenceMaterials != nil {
+		frozenFacts["reference_materials"] = f.ReferenceMaterials
+	}
+	frozen, _ := json.Marshal(frozenFacts)
 	var q Question
-	err := scanQuestion(tx.QueryRowContext(ctx, `INSERT INTO question(tenant_id,exam_id,question_no,question_type,score,stem,knowledge_points,answer_area,sort_order,status,assessment_archetype,source_type,source_bank_item_id,source_bank_item_version_id,source_content_hash,bank_content) VALUES($1,$2,$3,$4,$5,$6,$7,NULL,$8,'active',$9,'question_bank',$10,$11,$12,$13) RETURNING id::text,tenant_id::text,exam_id::text,COALESCE(exam_paper_id::text,''),question_no,question_type,score::float8,COALESCE(stem,''),knowledge_points,answer_area,sort_order,status`, tenant, exam, f.QuestionNo, f.QuestionType, f.Score, f.Stem, kp, f.SortOrder, f.Archetype, f.ItemID, f.VersionID, f.BundleHash, frozen), &q)
+	err := scanQuestion(tx.QueryRowContext(ctx, `INSERT INTO question(tenant_id,exam_id,question_no,question_type,score,stem,knowledge_points,answer_area,sort_order,status,assessment_archetype,source_type,source_bank_item_id,source_bank_item_version_id,source_content_hash,bank_content,options) VALUES($1,$2,$3,$4,$5,$6,$7,NULL,$8,'active',$9,'question_bank',$10,$11,$12,$13,$14) RETURNING id::text,tenant_id::text,exam_id::text,COALESCE(exam_paper_id::text,''),question_no,question_type,score::float8,COALESCE(stem,''),knowledge_points,answer_area,sort_order,status`, tenant, exam, f.QuestionNo, f.QuestionType, f.Score, f.Stem, kp, f.SortOrder, f.Archetype, f.ItemID, f.VersionID, f.BundleHash, frozen, options), &q)
 	if err != nil {
 		return q, err
 	}
 	q.AssessmentArchetype = f.Archetype
+	q.Options = append([]string{}, f.Options...)
 	q.SourceType = "question_bank"
 	q.SourceBankItemID = f.ItemID
 	q.SourceBankItemVersionID = f.VersionID
 	q.SourceContentHash = f.BundleHash
 	_ = json.Unmarshal(frozen, &q.BankContent)
+	q.ReferenceMaterials, err = MaterializeBankReferenceTx(ctx, tx, tenant, exam, q.ID, actor, f.VersionID, f.ReferenceMaterials)
+	if err != nil {
+		return q, err
+	}
 	store := PostgresStore{}
 	if f.Answer != nil {
 		a, err := store.insertAnswerKey(ctx, tx, tenant, q.ID, actor, "v1", *f.Answer)

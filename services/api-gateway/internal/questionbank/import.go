@@ -12,37 +12,10 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
-type frozenImportSnapshot struct {
-	Version           int                    `json:"version"`
-	ConfigurationHash string                 `json:"configuration_hash"`
-	Questions         []frozenImportQuestion `json:"questions"`
-}
-
-type frozenImportQuestion struct {
-	ID                      string                `json:"id"`
-	AssessmentSnapshotID    string                `json:"assessment_snapshot_id"`
-	AssessmentSnapshotHash  string                `json:"assessment_snapshot_hash"`
-	QuestionNo              string                `json:"question_no"`
-	QuestionType            string                `json:"question_type"`
-	AssessmentArchetype     string                `json:"assessment_archetype"`
-	Score                   float64               `json:"score"`
-	Stem                    string                `json:"stem"`
-	KnowledgePoints         []string              `json:"knowledge_points"`
-	SourceType              string                `json:"source_type,omitempty"`
-	SourceBankItemID        string                `json:"source_bank_item_id,omitempty"`
-	SourceBankItemVersionID string                `json:"source_bank_item_version_id,omitempty"`
-	SourceContentHash       string                `json:"source_content_hash,omitempty"`
-	BankContent             map[string]any        `json:"bank_content,omitempty"`
-	Answer                  *paper.AnswerKeyInput `json:"answer,omitempty"`
-	Solution                *frozenImportSolution `json:"solution,omitempty"`
-	Rubric                  *paper.RubricInput    `json:"rubric,omitempty"`
-}
-
-type frozenImportSolution struct {
-	RawText            string               `json:"raw_text"`
-	Steps              []paper.SolutionStep `json:"steps"`
-	VerificationStatus string               `json:"verification_status"`
-}
+// 摘要核验使用生产者的完整字段和顺序，不能在这里维护会丢失选项或参考资料的镜像结构。
+type frozenImportSnapshot = paper.ReadinessImportSnapshot
+type frozenImportQuestion = paper.ReadinessImportQuestionSnapshot
+type frozenImportSolution = paper.ReadinessSolutionSnapshot
 
 type importAssessmentSnapshot struct {
 	ID             string
@@ -135,7 +108,11 @@ func buildImportedFacts(question frozenImportQuestion, assessment importAssessme
 			*entry.target = entry.value
 		}
 	}
-	options := append([]string{}, bankContent.Options...)
+	options := append([]string{}, question.Options...)
+	if question.Options == nil {
+		// 早期快照未提升正式 options 列，仍保留其已冻结的题库嵌套选项。
+		options = append([]string{}, bankContent.Options...)
+	}
 	if mapping.Options != nil {
 		options = append([]string{}, mapping.Options...)
 	}
@@ -152,7 +129,13 @@ func buildImportedFacts(question frozenImportQuestion, assessment importAssessme
 	if err != nil {
 		return Content{}, Scoring{}, err
 	}
-	scoring := Scoring{Answer: question.Answer, Rubric: question.Rubric, Assets: assets, UsePolicy: "exam_allowed"}
+	scoring := Scoring{Assets: assets, UsePolicy: "exam_allowed"}
+	if question.Answer != nil {
+		scoring.Answer = &paper.AnswerKeyInput{StandardAnswer: question.Answer.StandardAnswer, EquivalentAnswers: question.Answer.EquivalentAnswers, Tolerance: question.Answer.Tolerance}
+	}
+	if question.Rubric != nil {
+		scoring.Rubric = &paper.RubricInput{MaxScore: question.Rubric.MaxScore, Points: question.Rubric.Points, Deductions: question.Rubric.Deductions, Examples: question.Rubric.Examples}
+	}
 	if question.Solution != nil {
 		scoring.Solution = &paper.SolutionInput{RawText: question.Solution.RawText, Steps: append([]paper.SolutionStep{}, question.Solution.Steps...), SourceRefs: []paper.PaperImportSourceRef{}}
 	}
@@ -187,7 +170,11 @@ func scoringMatchesAssessment(question frozenImportQuestion, assessment importAs
 	if err != nil {
 		return false
 	}
-	readiness, err := normalizeScoring(Scoring{Rubric: question.Rubric, Assets: []Asset{}, UsePolicy: "exam_allowed"})
+	var rubric *paper.RubricInput
+	if question.Rubric != nil {
+		rubric = &paper.RubricInput{MaxScore: question.Rubric.MaxScore, Points: question.Rubric.Points, Deductions: question.Rubric.Deductions, Examples: question.Rubric.Examples}
+	}
+	readiness, err := normalizeScoring(Scoring{Rubric: rubric, Assets: []Asset{}, UsePolicy: "exam_allowed"})
 	if err != nil {
 		return false
 	}

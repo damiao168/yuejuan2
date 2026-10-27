@@ -97,6 +97,7 @@ export function ModelApprovalWorkspace({
   const selectedRun = eligibleRuns.find((run) => run.id === selectedRunID);
 
   const openCreate = () => {
+    if (saving) return;
     form.resetFields();
     form.setFieldsValue({
       manual_review_percent: 100,
@@ -106,6 +107,7 @@ export function ModelApprovalWorkspace({
   };
 
   const submitCreate = async () => {
+    if (saving) return;
     const values = await form.validateFields();
     setSaving(true);
     try {
@@ -230,7 +232,7 @@ export function ModelApprovalWorkspace({
           <p>只有完整授权冻结集证据可以批准；模型、Prompt、Rubric 或适用范围任一变化都会失配。</p>
         </div>
         {canManage ? (
-          <Button type="primary" icon={<Plus size={15} />} disabled={eligibleRuns.length === 0} onClick={openCreate}>
+          <Button type="primary" icon={<Plus size={15} />} disabled={saving || eligibleRuns.length === 0} onClick={openCreate}>
             新建批准
           </Button>
         ) : null}
@@ -258,7 +260,11 @@ export function ModelApprovalWorkspace({
         title="新建题型级模型批准"
         width={600}
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        // 保存回执属于当前草稿；等待期间不能关闭并新建另一份，再被旧回执关闭。
+        onClose={() => { if (!saving) setDrawerOpen(false); }}
+        closable={!saving}
+        maskClosable={!saving}
+        keyboard={!saving}
         extra={<Button type="primary" loading={saving} onClick={() => void submitCreate()}>确认批准</Button>}
       >
         <Alert
@@ -268,7 +274,7 @@ export function ModelApprovalWorkspace({
           description="不能在这里修改学科、年级、题型或版本；若范围不正确，应重新生成授权冻结集评测。"
         />
         {/* 与仍挂载的候选抽屉区分字段 id，批准标签必须关联当前可见的评测模型输入。 */}
-        <Form name="model-approval-create" form={form} layout="vertical" className="model-evaluation-form">
+        <Form name="model-approval-create" form={form} disabled={saving} layout="vertical" className="model-evaluation-form">
           <Form.Item name="evaluation_run_id" label="授权冻结集评测" rules={[{ required: true }]}>
             <Select
               onChange={() => form.setFieldValue("model_config_id", undefined)}
@@ -280,7 +286,8 @@ export function ModelApprovalWorkspace({
           </Form.Item>
           <Form.Item name="model_config_id" label="评测模型" rules={[{ required: true }]}>
             <Select
-              disabled={!selectedRun}
+              // 显式 disabled 会覆盖 Form 的禁用状态，选定评测后也必须冻结保存中的草稿。
+              disabled={saving || !selectedRun}
               options={(selectedRun?.candidates ?? []).filter((candidate) => candidate.model_config_id).map((candidate) => ({
                 value: candidate.model_config_id!,
                 label: `${candidate.model_name} · ${candidate.model_version} · 教师接受率 ${(candidate.metrics.teacher_acceptance_rate * 100).toFixed(1)}%`

@@ -79,6 +79,10 @@ func (s *Service) Gate(ctx context.Context, tenantID, examID string) (Gate, erro
 }
 
 func (s *Service) Publish(ctx context.Context, tenantID, id, actorID string) (Release, error) {
+	return s.publish(ctx, tenantID, id, actorID, nil)
+}
+
+func (s *Service) publish(ctx context.Context, tenantID, id, actorID string, guard PublishGuard) (Release, error) {
 	if !validIDs(tenantID, id, actorID) {
 		return Release{}, ErrInvalidInput
 	}
@@ -101,6 +105,13 @@ func (s *Service) Publish(ctx context.Context, tenantID, id, actorID string) (Re
 		if err := s.highScorePaper.Prepare(ctx, tenantID, id, actorID); err != nil {
 			return Release{}, err
 		}
+	}
+	if guard != nil {
+		publisher, ok := s.store.(guardedPublisher)
+		if !ok {
+			return Release{}, ErrInvalidInput
+		}
+		return publisher.PublishGuarded(ctx, tenantID, id, actorID, guard)
 	}
 	return s.store.Publish(ctx, tenantID, id, actorID)
 }

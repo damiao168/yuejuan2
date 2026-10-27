@@ -133,7 +133,13 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	jobs, err := h.service.List(r.Context(), user.TenantID, strings.TrimSpace(r.URL.Query().Get("exam_id")), strings.TrimSpace(r.URL.Query().Get("question_id")))
+	scope, hasScope := auth.AccessScopeFromContext(r.Context())
+	if !hasScope || scope.TenantID != user.TenantID || scope.ActorID != user.ID {
+		httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "authenticated collection scope is required")
+		return
+	}
+	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
+	jobs, err := h.service.List(r.Context(), user.TenantID, strings.TrimSpace(r.URL.Query().Get("exam_id")), strings.TrimSpace(r.URL.Query().Get("question_id")), auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver})
 	if err != nil {
 		writeError(w, r, err)
 		return

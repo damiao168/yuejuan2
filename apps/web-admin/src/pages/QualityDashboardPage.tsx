@@ -80,6 +80,11 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
   const [incidentsOpen, setIncidentsOpen] = useState(false);
   const [incidents, setIncidents] = useState<GradingQualityIncident[]>([]);
   const [incidentsLoading, setIncidentsLoading] = useState(false);
+  const [incidentsCursor, setIncidentsCursor] = useState("");
+  const incidentRequest = useRef(0);
+  const backmarkOpenRequest = useRef(0);
+  const incidentExam = useRef(examId);
+  incidentExam.current = examId;
   const [materialAction, setMaterialAction] = useState<{ type: "gold" | "calibration" | "groups"; questionId: string }>();
   const [backmarkForm] = Form.useForm<{
     question_id: string; source_incident_id: string; reassigned_to: string; disposition: BackmarkPolicy["disposition"]; arbitration_delta: number;
@@ -209,12 +214,30 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
     }
   };
 
+  const allOpenIncidents = async () => {
+    const values: GradingQualityIncident[] = [];
+    let cursor: string | undefined;
+    const seen = new Set<string>();
+    // 回标来源需要完整开放事件；不能把展示首屏当作该题全部可用证据。
+    do {
+      const response = await listGradingQualityIncidents(examId, cursor ? { cursor } : {});
+      if (incidentExam.current !== examId) throw new Error("考试已切换");
+      values.push(...response.incidents);
+      cursor = response.has_more ? response.next_cursor : undefined;
+      if (response.has_more && (!cursor || seen.has(cursor))) throw new Error("质量事件分页未能继续，请刷新重试");
+      if (cursor) seen.add(cursor);
+    } while (cursor);
+    return { incidents: Array.from(new Map(values.map(item => [item.id, item])).values()) };
+  };
   const openBackmark = (initial?: Partial<ReturnType<typeof backmarkForm.getFieldsValue>>) => {
+    const request = ++backmarkOpenRequest.current;
+    const isCurrent = () => request === backmarkOpenRequest.current && incidentExam.current === examId;
     invalidateBackmarkPreview();
     setBackmarkOpen(true);
     setBackmarkLoading(true);
-    void Promise.all([listBackmarkBatches(examId), listReviewActors(examId), listGradingQualityIncidents(examId)])
+    void Promise.all([listBackmarkBatches(examId), listReviewActors(examId), allOpenIncidents()])
       .then(([response, users, events]) => {
+        if (!isCurrent()) return;
         setIncidents(events.incidents);
         setBackmarkBatches(response.backmark_batches);
         setBackmarkBatchesNextCursor(response.has_more ? response.next_cursor : "");
@@ -223,8 +246,8 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
         setBackmarkQuestionId(questionId);
         backmarkForm.setFieldsValue({ question_id: questionId, disposition: "arbitrate", arbitration_delta: 1, ...initial });
       })
-      .catch((reason) => message.error(errorMessage(reason)))
-      .finally(() => setBackmarkLoading(false));
+      .catch((reason) => { if (isCurrent()) message.error(errorMessage(reason)); })
+      .finally(() => { if (isCurrent()) setBackmarkLoading(false); });
   };
   const loadMoreBackmarkBatches = async () => {
     if (!backmarkBatchesNextCursor) return;
@@ -287,21 +310,26 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
     backmarkPreviewRevision.current += 1;
     setBackmarkPreview(undefined);
   }
-  const loadIncidents = async () => {
+  const loadIncidents = async (cursor?: string) => {
+    const request = ++incidentRequest.current;
+    const isCurrent = () => request === incidentRequest.current && incidentExam.current === examId;
     setIncidentsLoading(true);
+    if (!cursor) setIncidentsCursor("");
     try {
       // 教师姓名只从已有考试管理目录读取，目录失败不隐藏已读取的质量事件。
       const [events, reviewers] = await Promise.allSettled([
-        listGradingQualityIncidents(examId), canManage ? listReviewActors(examId) : Promise.resolve([])
+        listGradingQualityIncidents(examId, cursor ? { cursor } : {}), canManage ? listReviewActors(examId) : Promise.resolve([])
       ]);
       if (events.status === "rejected") throw events.reason;
-      setIncidents(events.value.incidents);
+      if (!isCurrent()) return;
+      setIncidents(current => cursor ? Array.from(new Map([...current, ...events.value.incidents].map(item => [item.id, item])).values()) : events.value.incidents);
+      setIncidentsCursor(events.value.has_more ? events.value.next_cursor ?? "" : "");
       setBackmarkReviewers(reviewers.status === "fulfilled" ? reviewers.value : []);
       if (reviewers.status === "rejected") message.warning("质量事件已读取，教师姓名暂不可读；可刷新重试。");
     } catch (reason) {
-      message.error(errorMessage(reason));
+      if (isCurrent()) message.error(errorMessage(reason));
     } finally {
-      setIncidentsLoading(false);
+      if (isCurrent()) setIncidentsLoading(false);
     }
   };
   const openIncidents = () => {
@@ -523,6 +551,7 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
           { title: "样本", dataIndex: "metric_snapshot", render: (value: Record<string, unknown>) => typeof value.sample_count === "number" ? `${value.sample_count} 份` : "-" },
           { title: "操作", key: "actions", render: (_, incident: GradingQualityIncident) => <Space><Button type="link" size="small" onClick={() => startBackmarkFromIncident(incident)}>创建回标</Button><Button type="link" size="small" onClick={() => void resolveIncident(incident.id)}>关闭</Button></Space> }
         ]} locale={{ emptyText: "当前没有开放的质量事件" }} />
+        {incidentsCursor ? <Button loading={incidentsLoading} onClick={() => void loadIncidents(incidentsCursor)}>加载更多质量事件</Button> : null}
       </Drawer>
     </section>
   );

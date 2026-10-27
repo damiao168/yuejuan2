@@ -68,6 +68,7 @@ func TestSummarizeTemplateOMRCalibrationRequiresStrataAndOnlyBlocksEligibleError
 		MinimumSamples:           100,
 		MinimumSamplesPerOption:  10,
 		MinimumSamplesPerStratum: 10,
+		MinimumConfidence:        .98,
 		Status:                   "draft",
 	}
 	strata := []string{"selected_high", "selected_low", "blank", "ambiguous"}
@@ -84,11 +85,19 @@ func TestSummarizeTemplateOMRCalibrationRequiresStrataAndOnlyBlocksEligibleError
 			matches = true
 		}
 		cases[index] = OMRCalibrationCase{
-			ID:              string(rune(index + 1)),
-			QuestionID:      session.QuestionIDs[index%2],
-			SampleStratum:   strata[index%4],
-			ExpectedOptions: expected,
-			Matches:         &matches,
+			ID:                 string(rune(index + 1)),
+			QuestionID:         session.QuestionIDs[index%2],
+			SampleStratum:      strata[index%4],
+			ExpectedOptions:    expected,
+			Matches:            &matches,
+			QuestionType:       "single_choice",
+			ObservedDecision:   "selected",
+			ObservedOptions:    []string{label},
+			ObservedConfidence: .99,
+			ObservedResultGate: map[string]any{"needs_human_review": false, "thresholds": nil},
+		}
+		if strata[index%4] != "selected_high" {
+			cases[index].ObservedConfidence = .8
 		}
 	}
 	summary := summarizeOMRCalibration(session, cases)
@@ -124,6 +133,7 @@ func TestSummarizeOMRCalibrationKeepsPendingCoverageAndBlockerOrder(t *testing.T
 		MinimumSamples:           4,
 		MinimumSamplesPerOption:  2,
 		MinimumSamplesPerStratum: 1,
+		MinimumConfidence:        .98,
 		Status:                   "approved",
 	}
 	mismatch := false
@@ -132,6 +142,16 @@ func TestSummarizeOMRCalibrationKeepsPendingCoverageAndBlockerOrder(t *testing.T
 		{QuestionID: "q1", SampleStratum: "selected_high", ExpectedOptions: []string{"B"}},
 		{QuestionID: "q1", SampleStratum: "selected_low", Matches: &mismatch},
 		{QuestionID: "q1", SampleStratum: "selected_high", ExpectedOptions: []string{"A"}, Matches: &mismatch},
+	}
+	for index := range cases {
+		cases[index].QuestionType = "single_choice"
+		cases[index].ObservedDecision = "selected"
+		cases[index].ObservedOptions = []string{"A"}
+		cases[index].ObservedConfidence = .99
+		cases[index].ObservedResultGate = map[string]any{"needs_human_review": false, "thresholds": nil}
+		if cases[index].SampleStratum == "selected_low" {
+			cases[index].ObservedConfidence = .8
+		}
 	}
 	summary := summarizeOMRCalibration(session, cases)
 	if summary.TotalCount != 3 || summary.PendingCount != 2 || summary.LabeledCount != 1 || summary.EligibleCount != 2 || summary.EligibleMismatchCount != 1 || summary.MismatchCount != 1 {

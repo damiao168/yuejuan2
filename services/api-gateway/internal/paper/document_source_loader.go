@@ -15,6 +15,7 @@ import (
 )
 
 const maxDocumentTextBytes = 700_000
+const maxDocumentSourceBytes = 32 << 20
 
 var errDocumentOCRRequired = errors.New("document OCR required")
 
@@ -38,16 +39,23 @@ func (l storedDocumentSourceLoader) Load(ctx context.Context, tenantID, id strin
 		return "", err
 	}
 	defer body.Close()
-	data, err := io.ReadAll(io.LimitReader(body, 32<<20))
+	data, err := io.ReadAll(io.LimitReader(body, maxDocumentSourceBytes+1))
 	if err != nil {
 		return "", err
+	}
+	if len(data) > maxDocumentSourceBytes {
+		return "", errors.New("资料文件超过解析大小上限，请拆分后重新导入")
 	}
 	var text string
 	switch {
 	case strings.Contains(asset.ContentType, "wordprocessingml") || strings.HasSuffix(strings.ToLower(asset.OriginalName), ".docx"):
 		text, err = extractDOCXText(data)
 	case asset.ContentType == "application/pdf" || strings.HasSuffix(strings.ToLower(asset.OriginalName), ".pdf"):
-		text, err = extractPDFText(data)
+		if !bytes.HasPrefix(data, []byte("%PDF-")) {
+			return "", errors.New("PDF 文件损坏")
+		}
+		// 少量 Tj 文本不能证明整页已提取；PDF 统一交给现有页面解码/视觉路径处理。
+		return "", errDocumentOCRRequired
 	case isPlainTextDocument(asset):
 		if !utf8.Valid(data) {
 			err = errors.New("文本资料必须使用 UTF-8 编码")
@@ -71,7 +79,7 @@ func (l storedDocumentSourceLoader) Load(ctx context.Context, tenantID, id strin
 		return "", errors.New("文件没有可提取文字")
 	}
 	if len(text) > maxDocumentTextBytes {
-		text = text[:maxDocumentTextBytes]
+		return "", errors.New("资料正文超过解析大小上限，请拆分后重新导入")
 	}
 	return text, nil
 }
@@ -104,10 +112,13 @@ func extractDOCXText(data []byte) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		raw, err := io.ReadAll(io.LimitReader(rc, maxDocumentTextBytes*2))
+		raw, err := io.ReadAll(io.LimitReader(rc, maxDocumentTextBytes*2+1))
 		rc.Close()
 		if err != nil {
 			return "", err
+		}
+		if len(raw) > maxDocumentTextBytes*2 {
+			return "", errors.New("DOCX 正文超过解析大小上限，请拆分后重新导入")
 		}
 		s := string(raw)
 		s = regexp.MustCompile(`</w:p>`).ReplaceAllString(s, "\n")
@@ -116,22 +127,4 @@ func extractDOCXText(data []byte) (string, error) {
 		return html.UnescapeString(s), nil
 	}
 	return "", errors.New("DOCX 正文缺失")
-}
-
-func extractPDFText(data []byte) (string, error) {
-	if !bytes.HasPrefix(data, []byte("%PDF-")) {
-		return "", errors.New("PDF 文件损坏")
-	}
-	// 编码或扫描的 PDF 保守地转入 OCR 处理。
-	re := regexp.MustCompile(`\(([^()]*)\)\s*Tj`)
-	matches := re.FindAllSubmatch(data, -1)
-	var b strings.Builder
-	for _, match := range matches {
-		value := strings.ReplaceAll(string(match[1]), `\(`, "(")
-		value = strings.ReplaceAll(value, `\)`, ")")
-		value = strings.ReplaceAll(value, `\\`, `\`)
-		b.WriteString(value)
-		b.WriteByte('\n')
-	}
-	return b.String(), nil
 }

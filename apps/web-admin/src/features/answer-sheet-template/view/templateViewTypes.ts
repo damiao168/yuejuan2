@@ -40,3 +40,47 @@ export type TemplatePageViewState = Readonly<{
 }>;
 
 export type TemplatePageViewProps = Readonly<{ view: TemplatePageViewState }>;
+
+// 组合入口保留完整 view；叶子面板只声明实际读取的状态/动作，不能借类型取得其他领域的写入能力。
+type EditorFields<K extends keyof TemplatePageViewState["editor"]> = Readonly<{ editor: Pick<TemplatePageViewState["editor"], K> }>;
+type PreviewFields<K extends keyof TemplatePageViewState["previewController"]> = Readonly<{ previewController: Pick<TemplatePageViewState["previewController"], K> }>;
+
+export type TemplateSourceStatusView = Pick<TemplatePageViewState, "sourceUpload" | "sourceManagement" | "uploadProps" | "confirmDiscardTemplate">;
+
+export type TemplateConfirmationView = Pick<TemplatePageViewState, "selectedTemplate" | "questions" | "canManage" | "canEditSources">
+  & Readonly<{
+    sourceUpload: Pick<TemplatePageViewState["sourceUpload"], "uploading">;
+    printing: Pick<TemplatePageViewState["printing"], "printBusy">;
+    binding: Pick<TemplatePageViewState["binding"], "examBinding" | "bindingBusy">;
+  }>
+  & EditorFields<"saving" | "suggestingRegions" | "readonly" | "objectiveGroups" | "reviewMessage" | "coveredQuestions">;
+
+export type TemplateSourceToolbarView = TemplateSourceStatusView
+  & Pick<TemplatePageViewState, "papers" | "selectedPaperId" | "selectedTemplate" | "setSelectedPaperId" | "setSelectedTemplateId" | "canManage" | "canEditSources" | "sourceRecognitionBlocked" | "setSettingsOpen">
+  & EditorFields<"saving" | "suggestingRegions" | "setLayout" | "readonly" | "createDraft" | "cloneTemplate" | "suggestQuestionRegions" | "saveDraft" | "suggestionProgress" | "suggestionError" | "suggestionTone" | "suggestionModel" | "unassignedRegions" | "objectiveGroups" | "canUndo" | "undo" | "canRedo" | "redo" | "revision" | "layout" | "resetFillGradingGroups" | "discardSuggestedRegion" | "discardObjectiveGroup">
+  & PreviewFields<"preview">
+  & Readonly<{ binding: Pick<TemplatePageViewState["binding"], "bindingBusy">; printing: Pick<TemplatePageViewState["printing"], "printBusy"> }>;
+
+export type TemplateQuestionPaneView = Pick<TemplatePageViewState, "questions">
+  & EditorFields<"selectedQuestionId" | "setSelectedQuestionId" | "coveredQuestions" | "readonly" | "createRegionWithoutDragging" | "layout" | "setSelectedRegionId">
+  & PreviewFields<"setPageNo">;
+
+export type TemplateIdentityView = EditorFields<"layout" | "selectedRegionKind" | "selectedRegion" | "readonly" | "currentPage" | "createIdentityRegion" | "setSelectedRegionId" | "removeRegion" | "updateRegion">
+  & PreviewFields<"setPageNo">;
+export type TemplateFillGradingView = EditorFields<"fillGradingGroup" | "readonly" | "setFillGradingMode" | "setFillGradingRegion">
+  & PreviewFields<"preview">;
+
+export type TemplateCanvasView = Pick<TemplatePageViewState, "questions" | "selectedPaperId" | "selectedTemplate">
+  & TemplateIdentityView & TemplateFillGradingView
+  & PreviewFields<"preview" | "pageNo" | "setPageNo">
+  & EditorFields<"coveredQuestions" | "layout" | "zoom" | "setZoom" | "canvasRef" | "readonly" | "currentPage" | "selectedQuestionId" | "selectedRegionId" | "draftRect" | "onCanvasPointerDown" | "onCanvasPointerMove" | "onCanvasPointerUp" | "beginRegionInteraction" | "unassignedRegions" | "objectiveGroups" | "cancelInteraction" | "selectedRegionKind" | "objectiveGrid" | "confirmPageRegions" | "fillGradingGroup" | "discardObjectiveGroup" | "assignSuggestedRegion" | "assignSuggestedIdentity" | "discardSuggestedRegion" | "setSelectedRegionId" | "setSelectedQuestionId">;
+
+export type TemplateRegionEditorView = EditorFields<"selectedRegion" | "selectedQuestion" | "readonly" | "updateRegion" | "selectedRegionKind" | "addOptionRegion" | "updateOption" | "removeOptionRegion">;
+export type TemplateBindingView = TemplateConfirmationView & EditorFields<"confirmActivate">
+  & Readonly<{ binding: Pick<TemplatePageViewState["binding"], "examBinding" | "bindingBusy" | "releaseExamBinding" | "bindTemplateForExam"> }>;
+export type TemplateOMRView = Pick<TemplatePageViewState, "selectedTemplate" | "questions" | "canCalibrate" | "calibration">
+  & EditorFields<"layout" | "readonly" | "setOMRProfile">;
+export type TemplatePrintingView = Pick<TemplatePageViewState, "selectedTemplate" | "canManage" | "printing">;
+export type TemplateSettingsView = TemplateBindingView & TemplateRegionEditorView & TemplateOMRView & TemplatePrintingView
+  & Pick<TemplatePageViewState, "settingsOpen" | "setSettingsOpen">
+  & EditorFields<"name" | "setName" | "selectedRegionId" | "removeRegion" | "layout" | "coveredQuestions" | "confirmRegion">;

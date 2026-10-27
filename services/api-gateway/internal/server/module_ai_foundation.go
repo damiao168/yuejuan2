@@ -3,6 +3,7 @@ package server
 import (
 	"edugrade-enterprise/services/api-gateway/internal/aidisagreement"
 	"edugrade-enterprise/services/api-gateway/internal/aieligibility"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/gradingevaluation"
 	"edugrade-enterprise/services/api-gateway/internal/modelcalibration"
 )
@@ -27,7 +28,7 @@ type AIFoundation struct {
 }
 
 // 评估先于校准创建，校准服务因此能读取同一份评估证据；Eligibility 是可选能力，缺失时路由不会注册对应接口。
-func NewAIFoundation(stores AIFoundationStores) *AIFoundation {
+func NewAIFoundation(stores AIFoundationStores, resolvers ...auth.ResourceBoundaryResolver) *AIFoundation {
 	gradingEvaluationService := gradingevaluation.NewService(stores.GradingEvaluation)
 	modelCalibrationService := modelcalibration.NewService(stores.ModelCalibration, modelcalibration.NewEvaluationReader(gradingEvaluationService))
 	disagreementService := aidisagreement.NewService(stores.Disagreement)
@@ -38,6 +39,9 @@ func NewAIFoundation(stores AIFoundationStores) *AIFoundation {
 		GradingEvaluationHandler: gradingevaluation.NewHandler(gradingEvaluationService),
 		ModelCalibrationHandler:  modelcalibration.NewHandler(modelCalibrationService),
 		DisagreementHandler:      aidisagreement.NewHandler(disagreementService),
+	}
+	if len(resolvers) > 0 {
+		module.DisagreementHandler.WithScopeResolver(resolvers[0])
 	}
 	if stores.Eligibility != nil {
 		module.EligibilityService = aieligibility.NewService(stores.Eligibility)

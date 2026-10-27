@@ -16,7 +16,7 @@ func TestRequestResourceBoundaryRejectsKnownCrossSchoolIDs(t *testing.T) {
 	store.AddResourceBoundary("exam", "exam-b", ResourceBoundary{TenantID: "tenant-1", SchoolID: "school-b", ExamID: "exam-b"})
 	mux := http.NewServeMux()
 	mux.Handle("GET /exams/{id}", RequireRequestResourceBoundary(store)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })))
-	scope := AccessScope{TenantID: "tenant-1", ActorID: "admin-a", SchoolIDs: []string{"school-a"}, schoolWide: true}
+	scope := AccessScope{TenantID: "tenant-1", ActorID: "admin-a", SchoolIDs: []string{"school-a"}, schoolWide: true, schoolManagementIDs: []string{"school-a"}}
 
 	for path, want := range map[string]int{"/exams/exam-a": http.StatusOK, "/exams/exam-b": http.StatusForbidden} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -72,7 +72,7 @@ func TestClassScopedTeacherCannotReadSameSchoolDifferentClassResource(t *testing
 }
 
 func TestSchoolWideManagerCanReadTaskOwnedByTheirSchool(t *testing.T) {
-	scope := AccessScope{TenantID: "tenant-1", ActorID: "admin-1", SchoolIDs: []string{"school-1"}, schoolWide: true}
+	scope := AccessScope{TenantID: "tenant-1", ActorID: "admin-1", SchoolIDs: []string{"school-1"}, schoolWide: true, schoolManagementIDs: []string{"school-1"}}
 	boundary := ResourceBoundary{ResourceType: "review_task", ResourceID: "task-1", TenantID: "tenant-1", SchoolID: "school-1", AssignedTo: "grader-1"}
 	if !AllowsResourceBoundary(scope, boundary) {
 		t.Fatal("trusted school-wide manager should manage tasks in their school")
@@ -167,7 +167,7 @@ func TestSchoolScopeRejectsKnownForeignDirectIDsAcrossCoreResources(t *testing.T
 			w.WriteHeader(http.StatusOK)
 		})))
 	}
-	scope := AccessScope{TenantID: "tenant-1", ActorID: "admin-a", SchoolIDs: []string{"school-a"}, schoolWide: true}
+	scope := AccessScope{TenantID: "tenant-1", ActorID: "admin-a", SchoolIDs: []string{"school-a"}, schoolWide: true, schoolManagementIDs: []string{"school-a"}}
 	for _, resource := range resources {
 		for suffix, want := range map[string]int{"resource-a": http.StatusOK, "resource-b": http.StatusForbidden} {
 			path := "/" + resource.segment + "/" + suffix

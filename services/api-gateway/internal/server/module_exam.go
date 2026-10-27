@@ -104,7 +104,7 @@ func NewExamPreparationModule(cfg config.Config, stores ExamPreparationStores, d
 		SegmentImages:       segment.NewImageService(stores.Segments, stores.Submissions, stores.Files, dependencies.ObjectStore),
 		FileDownloads:       files.NewDownloadService(stores.Files, dependencies.ObjectStore),
 		AssessmentHandler:   assessment.NewHandler(stores.Assessments, dependencies.AuthStore),
-		QuestionBankHandler: questionbank.NewHandler(stores.QuestionBank),
+		QuestionBankHandler: questionbank.NewHandler(stores.QuestionBank).WithReferenceMaterials(paper.NewReferenceMaterialsService(dependencies.DB, stores.Files, dependencies.ObjectStore, cfg.Files.Bucket)),
 		WorkspaceHandler:    workspace.NewHandlerWithService(workspaceService),
 		WorkspaceService:    workspaceService,
 		DashboardHandler: dashboard.NewHandler(dashboard.Dependencies{

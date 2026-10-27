@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { questionAnswerText, questionAnswerValue } from "./useQuestionEditor";
+import { questionAnswerText, questionAnswerValue, questionEquivalentAnswers } from "./useQuestionEditor";
 
 describe("question answer editing", () => {
+  it("preserves structured equivalents and rejects flattening through a text-only editor", () => {
+    const original = [{ value: 2, unit: "cm" }, ["A", "C"], false, 0];
+    expect(questionEquivalentAnswers(original.map(questionAnswerText), original)).toBe(original);
+    expect(() => questionEquivalentAnswers(original.map(String), original)).toThrow("结构化等价答案");
+    expect(questionEquivalentAnswers(["甲", "乙"], ["旧答案"])).toEqual(["甲", "乙"]);
+  });
   it("preserves structured answers when changing unrelated question fields", () => {
     for (const answer of [["A", "C"], { blanks: ["x=1", "y=2"] }, 42]) {
       expect(questionAnswerValue(questionAnswerText(answer), answer)).toEqual(answer);

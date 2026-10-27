@@ -7,6 +7,8 @@ import (
 	"errors"
 	"strings"
 
+	"edugrade-enterprise/services/api-gateway/internal/auth"
+
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -126,11 +128,12 @@ func (s *PostgresStore) Approve(ctx context.Context, tenantID, goldID, actorID s
 		return GoldPaper{}, ErrConflict
 	}
 	var approvedAt sql.NullTime
+	var imageReady bool
 	if err := tx.QueryRowContext(ctx, `
-SELECT approved_at FROM grading_gold_paper_version
+SELECT approved_at,(frozen_crop_file_asset_id IS NOT NULL AND image_invalidated_at IS NULL) FROM grading_gold_paper_version
 WHERE tenant_id=$1::uuid AND gold_paper_id=$2::uuid AND version=$3
 FOR UPDATE
-`, tenantID, goldID, versionNumber).Scan(&approvedAt); err != nil {
+`, tenantID, goldID, versionNumber).Scan(&approvedAt, &imageReady); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return GoldPaper{}, ErrNotFound
 		}
@@ -138,6 +141,9 @@ FOR UPDATE
 	}
 	if approvedAt.Valid {
 		return GoldPaper{}, ErrAlreadyApproved
+	}
+	if !imageReady {
+		return GoldPaper{}, ErrImageUnavailable
 	}
 	if _, err := tx.ExecContext(ctx, `
 UPDATE grading_gold_paper_version
@@ -195,7 +201,12 @@ func (s *PostgresStore) List(ctx context.Context, tenantID string, filter ListFi
 	if filter.Status != "" && filter.Status != StatusPendingApproval && filter.Status != StatusActive && filter.Status != StatusRetired {
 		return nil, ErrInvalidInput
 	}
-	return s.query(ctx, tenantID, ` AND ($2='' OR gp.exam_id::text=$2) AND ($3='' OR gp.question_id::text=$3) AND ($4='' OR gp.status=$4)`, filter.ExamID, filter.QuestionID, string(filter.Status))
+	accessArgs, err := filter.Access.SQLArgs(tenantID)
+	if err != nil {
+		return nil, err
+	}
+	args := append([]any{filter.ExamID, filter.QuestionID, string(filter.Status)}, accessArgs...)
+	return s.query(ctx, tenantID, ` AND ($2='' OR gp.exam_id::text=$2) AND ($3='' OR gp.question_id::text=$3) AND ($4='' OR gp.status=$4) AND `+auth.ExamCollectionPredicate("gp.exam_id", 5), args...)
 }
 
 func (s *PostgresStore) ListActiveApproved(ctx context.Context, tenantID, examID, questionID string) ([]GoldPaper, error) {
@@ -233,25 +244,39 @@ type sqlQueryer interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }
 
+// 提名事务共享锁住切片、配准和资产，来源更换需等待冻结身份落盘；版本读取随后只使用这一固定身份。
 func loadSource(ctx context.Context, db sqlQueryer, tenantID, examID, questionID, submissionID string) (Source, error) {
 	var source Source
 	var rubricJSON []byte
 	err := db.QueryRowContext(ctx, `
 SELECT sub.exam_id::text,q.id::text,sub.id::text,seg.id::text,eqs.id::text,
        COALESCE(eqs.profile_snapshot_json->>'subject_code',''),eqs.archetype_code,eqs.risk_tier,
-       q.score::float8,eqs.rubric_snapshot_json
+       q.score::float8,eqs.rubric_snapshot_json,
+       asset.id::text,asset.hash_sha256,asset.owner_type,asset.owner_id::text
 FROM submission sub
 JOIN answer_segment seg ON seg.tenant_id=sub.tenant_id AND seg.submission_id=sub.id AND seg.question_id=$3::uuid AND seg.deleted_at IS NULL
 JOIN question q ON q.tenant_id=sub.tenant_id AND q.exam_id=sub.exam_id AND q.id=seg.question_id AND q.deleted_at IS NULL
+JOIN page_registration_run run ON run.tenant_id=seg.tenant_id AND run.id=seg.registration_run_id AND run.deleted_at IS NULL AND run.processing_status='completed'
+JOIN file_asset asset ON asset.tenant_id=seg.tenant_id AND asset.id=seg.crop_file_asset_id
+ AND asset.exam_id=sub.exam_id AND asset.hash_sha256=seg.crop_sha256
+ AND asset.deleted_at IS NULL AND asset.lifecycle_status='active' AND asset.content_type LIKE 'image/%' AND asset.size_bytes BETWEEN 1 AND 67108864
+ AND ((asset.owner_type='answer_segment_crop' AND asset.owner_id=seg.registration_run_id)
+ OR (asset.owner_type='page_registration_correction_preview' AND EXISTS (
+   SELECT 1 FROM page_registration_correction correction
+   WHERE correction.tenant_id=seg.tenant_id AND correction.id=asset.owner_id
+     AND correction.applied_registration_run_id=seg.registration_run_id AND correction.status='applied' AND correction.deleted_at IS NULL)))
 JOIN LATERAL (
   SELECT * FROM exam_question_snapshot s
   WHERE s.tenant_id=q.tenant_id AND s.exam_id=q.exam_id AND s.question_id=q.id
   ORDER BY s.snapshot_version DESC LIMIT 1
 ) eqs ON true
 WHERE sub.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND sub.id=$4::uuid AND sub.deleted_at IS NULL
+ AND seg.processing_status='completed' AND (NOT COALESCE(seg.normalized_bbox ? 'answer_scope',false) OR seg.normalized_bbox->>'answer_scope'='question')
+FOR SHARE OF seg,asset,run
 `, tenantID, examID, questionID, submissionID).Scan(
 		&source.ExamID, &source.QuestionID, &source.SubmissionID, &source.AnswerSegmentID, &source.SnapshotID,
 		&source.SubjectCode, &source.ArchetypeCode, &source.RiskTier, &source.MaxScore, &rubricJSON,
+		&source.ImageBinding.AssetID, &source.ImageBinding.SHA256, &source.ImageBinding.OwnerType, &source.ImageBinding.OwnerID,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Source{}, ErrNotFound
@@ -259,6 +284,7 @@ WHERE sub.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND sub.id=$4::uuid AND su
 	if err != nil {
 		return Source{}, err
 	}
+	source.ImageBinding.SegmentID = source.AnswerSegmentID
 	if err := json.Unmarshal(rubricJSON, &source.RubricSnapshot); err != nil {
 		return Source{}, err
 	}
@@ -290,6 +316,7 @@ func versionForInsert(source Source, actorID string, number int, input CreateVer
 		RubricSnapshot: source.RubricSnapshot, ReferenceScore: input.ReferenceScore,
 		Explanation: input.Explanation, TraitScores: input.TraitScores,
 		ErrorTags: input.ErrorTags, SourceGradeIDs: input.SourceGradeIDs, NominatedBy: actorID,
+		ImageBinding: source.ImageBinding,
 	}
 }
 
@@ -315,32 +342,32 @@ func insertVersion(ctx context.Context, tx *sql.Tx, tenantID, goldID string, ver
 	err = tx.QueryRowContext(ctx, `
 INSERT INTO grading_gold_paper_version (
  tenant_id,gold_paper_id,version,exam_question_snapshot_id,reference_score,max_score,
- rubric_snapshot_json,explanation,trait_scores_json,error_tags_json,source_grade_ids_json,nominated_by
-) VALUES ($1::uuid,$2::uuid,$3,$4::uuid,$5,$6,$7::jsonb,$8,$9::jsonb,$10::jsonb,$11::jsonb,$12::uuid)
+ rubric_snapshot_json,explanation,trait_scores_json,error_tags_json,source_grade_ids_json,nominated_by,
+ frozen_answer_segment_id,frozen_crop_file_asset_id,frozen_crop_sha256,frozen_crop_owner_type,frozen_crop_owner_id
+) VALUES ($1::uuid,$2::uuid,$3,$4::uuid,$5,$6,$7::jsonb,$8,$9::jsonb,$10::jsonb,$11::jsonb,$12::uuid,
+ NULLIF($13,'')::uuid,NULLIF($14,'')::uuid,NULLIF($15,''),NULLIF($16,''),NULLIF($17,'')::uuid)
 RETURNING id::text
-`, tenantID, goldID, version.Version, version.ExamQuestionSnapshotID, version.ReferenceScore, version.MaxScore, rubric, version.Explanation, traits, tags, grades, version.NominatedBy).Scan(&id)
+`, tenantID, goldID, version.Version, version.ExamQuestionSnapshotID, version.ReferenceScore, version.MaxScore, rubric, version.Explanation, traits, tags, grades, version.NominatedBy,
+		version.ImageBinding.SegmentID, version.ImageBinding.AssetID, version.ImageBinding.SHA256, version.ImageBinding.OwnerType, version.ImageBinding.OwnerID).Scan(&id)
 	return id, err
 }
 
-func (s *PostgresStore) query(ctx context.Context, tenantID, condition string, arg2, arg3, arg4 string) ([]GoldPaper, error) {
+func (s *PostgresStore) query(ctx context.Context, tenantID, condition string, filterArgs ...any) ([]GoldPaper, error) {
 	query := `
 SELECT gp.id::text,gp.exam_id::text,gp.question_id::text,gp.submission_id::text,
        COALESCE(gp.active_version,0),gp.status,gp.nominated_by::text,gp.retired_at,gp.retirement_reason,gp.created_at,gp.updated_at,
        COALESCE(eqs.profile_snapshot_json->>'subject_code',''),eqs.archetype_code,eqs.risk_tier,
-       '/api/v1/answer-segments/' || seg.id::text || '/image',
        v.id::text,v.version,v.exam_question_snapshot_id::text,v.reference_score::float8,v.max_score::float8,
        v.rubric_snapshot_json,v.explanation,v.trait_scores_json,v.error_tags_json,v.source_grade_ids_json,
-       v.nominated_by::text,v.approved_by::text,v.approved_at,v.created_at
+       v.nominated_by::text,v.approved_by::text,v.approved_at,v.created_at,
+       COALESCE(v.frozen_answer_segment_id::text,''),COALESCE(v.frozen_crop_file_asset_id::text,''),COALESCE(v.frozen_crop_sha256,''),
+       COALESCE(v.frozen_crop_owner_type,''),COALESCE(v.frozen_crop_owner_id::text,''),v.image_invalidated_at
 FROM grading_gold_paper gp
 JOIN grading_gold_paper_version v ON v.tenant_id=gp.tenant_id AND v.gold_paper_id=gp.id
 JOIN exam_question_snapshot eqs ON eqs.tenant_id=v.tenant_id AND eqs.id=v.exam_question_snapshot_id
-JOIN answer_segment seg ON seg.tenant_id=gp.tenant_id AND seg.submission_id=gp.submission_id AND seg.question_id=gp.question_id AND seg.deleted_at IS NULL
 WHERE gp.tenant_id=$1::uuid` + condition + `
 ORDER BY gp.created_at,gp.id,v.version`
-	args := []any{tenantID}
-	for _, value := range []string{arg2, arg3, arg4} {
-		args = append(args, value)
-	}
+	args := append([]any{tenantID}, filterArgs...)
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -350,12 +377,13 @@ ORDER BY gp.created_at,gp.id,v.version`
 	for rows.Next() {
 		var item GoldPaper
 		var version Version
-		var retiredAt, approvedAt sql.NullTime
+		var retiredAt, approvedAt, imageInvalidatedAt sql.NullTime
 		var approvedBy sql.NullString
 		var rubricJSON, traitsJSON, tagsJSON, gradesJSON []byte
 		if err := rows.Scan(&item.ID, &item.ExamID, &item.QuestionID, &item.SubmissionID, &item.ActiveVersion, &item.Status, &item.NominatedBy, &retiredAt, &item.RetirementReason, &item.CreatedAt, &item.UpdatedAt,
-			&item.SubjectCode, &item.ArchetypeCode, &item.RiskTier, &item.AnswerImageURL, &version.ID, &version.Version, &version.ExamQuestionSnapshotID, &version.ReferenceScore, &version.MaxScore,
-			&rubricJSON, &version.Explanation, &traitsJSON, &tagsJSON, &gradesJSON, &version.NominatedBy, &approvedBy, &approvedAt, &version.CreatedAt); err != nil {
+			&item.SubjectCode, &item.ArchetypeCode, &item.RiskTier, &version.ID, &version.Version, &version.ExamQuestionSnapshotID, &version.ReferenceScore, &version.MaxScore,
+			&rubricJSON, &version.Explanation, &traitsJSON, &tagsJSON, &gradesJSON, &version.NominatedBy, &approvedBy, &approvedAt, &version.CreatedAt,
+			&version.ImageBinding.SegmentID, &version.ImageBinding.AssetID, &version.ImageBinding.SHA256, &version.ImageBinding.OwnerType, &version.ImageBinding.OwnerID, &imageInvalidatedAt); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(rubricJSON, &version.RubricSnapshot); err != nil {
@@ -379,6 +407,13 @@ ORDER BY gp.created_at,gp.id,v.version`
 			version.ApprovedAt = &value
 			version.ApprovedBy = approvedBy.String
 		}
+		if imageInvalidatedAt.Valid {
+			value := imageInvalidatedAt.Time.UTC()
+			version.ImageInvalidatedAt = &value
+		}
+		if version.ImageBinding.Valid() && version.ImageInvalidatedAt == nil {
+			version.AnswerImageURL = VersionImageURL(item.ID, version.Version)
+		}
 		item.CreatedAt, item.UpdatedAt, version.CreatedAt = item.CreatedAt.UTC(), item.UpdatedAt.UTC(), version.CreatedAt.UTC()
 		index, ok := indexes[item.ID]
 		if !ok {
@@ -388,6 +423,9 @@ ORDER BY gp.created_at,gp.id,v.version`
 			items = append(items, item)
 		}
 		items[index].Versions = append(items[index].Versions, version)
+		if version.Version == item.ActiveVersion || item.ActiveVersion == 0 && version.AnswerImageURL != "" {
+			items[index].AnswerImageURL = version.AnswerImageURL
+		}
 	}
 	return items, rows.Err()
 }

@@ -463,10 +463,11 @@ SELECT
   COALESCE((SELECT array_agg(DISTINCT g.id::text) FROM grade g JOIN scoped_school ss ON ss.id=g.school_id::text WHERE g.tenant_id=$1::uuid AND g.deleted_at IS NULL), '{}'),
   COALESCE((SELECT array_agg(DISTINCT c.id::text) FROM school_class c JOIN scoped_school ss ON ss.id=c.school_id::text WHERE c.tenant_id=$1::uuid AND c.deleted_at IS NULL), '{}'),
   COALESCE((SELECT array_agg(DISTINCT e.id::text) FROM exam e JOIN scoped_school ss ON ss.id=e.school_id::text WHERE e.tenant_id=$1::uuid AND e.deleted_at IS NULL), '{}')
-`, user.TenantID, user.ID, strings.Join(scope.SchoolIDs, ",")).Scan(pqArray(&schoolIDs), pqArray(&gradeIDs), pqArray(&classIDs), pqArray(&examIDs))
+`, user.TenantID, user.ID, strings.Join(scope.schoolManagementIDs, ",")).Scan(pqArray(&schoolIDs), pqArray(&gradeIDs), pqArray(&classIDs), pqArray(&examIDs))
 		if err != nil {
 			return AccessScope{}, err
 		}
+		scope.schoolManagementIDs = append(scope.schoolManagementIDs, schoolIDs...)
 		scope.SchoolIDs = append(scope.SchoolIDs, schoolIDs...)
 		scope.GradeIDs = append(scope.GradeIDs, gradeIDs...)
 		scope.ClassIDs = append(scope.ClassIDs, classIDs...)
@@ -591,6 +592,18 @@ func (s *PostgresStore) RevokeAllSessions(ctx context.Context, tenantID string, 
 		return 0, err
 	}
 	defer tx.Rollback()
+	revoked, err := revokeAllSessionsTx(ctx, tx, tenantID, userID, reason)
+	if err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return revoked, nil
+}
+
+// 调用方决定是否需要账户管理校验；撤销会话与受信设备使用同一事务，失败全部回滚。
+func revokeAllSessionsTx(ctx context.Context, tx *sql.Tx, tenantID, userID, reason string) (int, error) {
 	result, err := tx.ExecContext(ctx, `
 UPDATE auth_session
 SET revoked_at = now(), revoke_reason = NULLIF($3, ''), updated_at = now()
@@ -610,9 +623,6 @@ UPDATE auth_trusted_device
 SET revoked_at=now(), updated_at=now()
 WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND revoked_at IS NULL
 `, tenantID, userID); err != nil {
-		return 0, err
-	}
-	if err := tx.Commit(); err != nil {
 		return 0, err
 	}
 	return int(affected), nil
@@ -843,7 +853,7 @@ WHERE tenant_id = $1
   AND ($11 = '' OR created_at < $10 OR (created_at = $10 AND id::text < $11))
 ORDER BY created_at DESC, id::text DESC
 LIMIT $12
-`, tenantID, stringsTrim(filter.Action), stringsTrim(filter.ActorID), stringsTrim(filter.TargetType), stringsTrim(filter.TargetID), stringsTrim(filter.ExamID), stringsTrim(filter.IPAddress), nullableTime(filter.CreatedFrom), nullableTime(filter.CreatedTo), nullableTime(filter.CursorCreatedAt), stringsTrim(filter.CursorID), normalizedAuditLimit(filter.Limit))
+`, tenantID, stringsTrim(filter.Action), stringsTrim(filter.ActorID), stringsTrim(filter.TargetType), stringsTrim(filter.TargetID), stringsTrim(filter.ExamID), stringsTrim(filter.IPAddress), nullableTime(filter.CreatedFrom), nullableTime(filter.CreatedTo), nullableTime(filter.CursorCreatedAt), stringsTrim(filter.CursorID), auditQueryLimit(filter))
 	if err != nil {
 		return nil, err
 	}

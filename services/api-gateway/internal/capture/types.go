@@ -222,20 +222,29 @@ type IssuedStudentBarcodes struct {
 }
 
 type PrintPackageRegion struct {
-	QuestionID string  `json:"question_id,omitempty"`
-	Label      string  `json:"label,omitempty"`
-	X          float64 `json:"x"`
-	Y          float64 `json:"y"`
-	Width      float64 `json:"width"`
-	Height     float64 `json:"height"`
+	ID                    string               `json:"id,omitempty"`
+	QuestionID            string               `json:"question_id,omitempty"`
+	Label                 string               `json:"label,omitempty"`
+	X                     float64              `json:"x"`
+	Y                     float64              `json:"y"`
+	Width                 float64              `json:"width"`
+	Height                float64              `json:"height"`
+	OptionRegions         []PrintPackageRegion `json:"option_regions,omitempty"`
+	OptionCoordinateSpace string               `json:"option_coordinate_space,omitempty"`
 }
 
 type PrintPackagePage struct {
-	PageNo          int                  `json:"page_no"`
-	TemplateWidth   int                  `json:"template_width"`
-	TemplateHeight  int                  `json:"template_height"`
-	BarcodeValue    string               `json:"-"`
-	QuestionRegions []PrintPackageRegion `json:"question_regions"`
+	PageNo            int                  `json:"page_no"`
+	TemplateWidth     int                  `json:"template_width"`
+	TemplateHeight    int                  `json:"template_height"`
+	BarcodeValue      string               `json:"-"`
+	QuestionRegions   []PrintPackageRegion `json:"question_regions"`
+	RegistrationMarks []PrintPackageRegion `json:"registration_marks,omitempty"`
+	IdentityRegions   []PrintPackageRegion `json:"identity_regions,omitempty"`
+	GradingGroups     []PrintPackageRegion `json:"grading_groups,omitempty"`
+	// 当前模板只声明像素宽高；未来接入可信物理尺寸时可显式传入，不能从像素冒充源文件DPI。
+	PhysicalWidthMM  float64 `json:"-"`
+	PhysicalHeightMM float64 `json:"-"`
 }
 
 type PrintPackageSheet struct {
@@ -650,6 +659,11 @@ type TransactionalTemplateMatchStore interface {
 // FileResultCommandStore 将解码页面和当前租约回执放在同一提交边界；失败不能留下采集页面。
 type FileResultCommandStore interface {
 	SubmitFileResultCommand(context.Context, string, string, FileResultInput, workerruntime.Store, map[string]any) (File, error)
+}
+
+// FileFailureCommandStore 将失败租约和采集领域投影置于同一提交边界。
+type FileFailureCommandStore interface {
+	SubmitFileFailureCommand(context.Context, string, string, FileFailureInput, workerruntime.Store) (File, string, error)
 }
 
 // RegistrationResultCommandStore 把配准或修正预览与当前任务回执一起提交；成功回放只接受同一产物。

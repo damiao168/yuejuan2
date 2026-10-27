@@ -39,6 +39,9 @@ func (s *MemoryStore) Nominate(_ context.Context, tenantID, examID, questionID, 
 	if !ok {
 		return GoldPaper{}, ErrNotFound
 	}
+	if !source.ImageBinding.Valid() {
+		return GoldPaper{}, ErrImageUnavailable
+	}
 	if err := validateInput(versionInput, source.MaxScore); err != nil {
 		return GoldPaper{}, err
 	}
@@ -53,11 +56,12 @@ func (s *MemoryStore) Nominate(_ context.Context, tenantID, examID, questionID, 
 	now := time.Now().UTC()
 	item := GoldPaper{
 		ID: s.id("gold"), ExamID: examID, QuestionID: questionID, SubmissionID: input.SubmissionID,
-		AnswerImageURL: "/api/v1/answer-segments/" + source.AnswerSegmentID + "/image",
-		Status:         StatusPendingApproval, SubjectCode: source.SubjectCode, ArchetypeCode: source.ArchetypeCode,
+		Status: StatusPendingApproval, SubjectCode: source.SubjectCode, ArchetypeCode: source.ArchetypeCode,
 		RiskTier: source.RiskTier, NominatedBy: actorID, CreatedAt: now, UpdatedAt: now,
 	}
 	item.Versions = []Version{s.newVersion(source, actorID, 1, versionInput, now)}
+	item.Versions[0].AnswerImageURL = VersionImageURL(item.ID, 1)
+	item.AnswerImageURL = item.Versions[0].AnswerImageURL
 	s.items[itemKey(tenantID, item.ID)] = item
 	return cloneGold(item), nil
 }
@@ -78,13 +82,16 @@ func (s *MemoryStore) CreateVersion(_ context.Context, tenantID, goldID, actorID
 		return GoldPaper{}, ErrConflict
 	}
 	for _, version := range item.Versions {
-		if version.ApprovedAt == nil {
+		if version.ApprovedAt == nil && version.ImageInvalidatedAt == nil {
 			return GoldPaper{}, ErrConflict
 		}
 	}
 	source, ok := s.sources[sourceKey(tenantID, item.ExamID, item.QuestionID, item.SubmissionID)]
 	if !ok {
 		return GoldPaper{}, ErrNotFound
+	}
+	if !source.ImageBinding.Valid() {
+		return GoldPaper{}, ErrImageUnavailable
 	}
 	if err := validateInput(input, source.MaxScore); err != nil {
 		return GoldPaper{}, err
@@ -94,8 +101,10 @@ func (s *MemoryStore) CreateVersion(_ context.Context, tenantID, goldID, actorID
 	}
 	now := time.Now().UTC()
 	item.Versions = append(item.Versions, s.newVersion(source, actorID, len(item.Versions)+1, input, now))
+	item.Versions[len(item.Versions)-1].AnswerImageURL = VersionImageURL(item.ID, len(item.Versions))
 	if item.ActiveVersion == 0 {
 		item.Status = StatusPendingApproval
+		item.AnswerImageURL = item.Versions[len(item.Versions)-1].AnswerImageURL
 	}
 	item.UpdatedAt = now
 	s.items[key] = item
@@ -130,9 +139,13 @@ func (s *MemoryStore) Approve(_ context.Context, tenantID, goldID, actorID strin
 	if item.Versions[index].ApprovedAt != nil {
 		return GoldPaper{}, ErrAlreadyApproved
 	}
+	if item.Versions[index].ImageInvalidatedAt != nil || !item.Versions[index].ImageBinding.Valid() {
+		return GoldPaper{}, ErrImageUnavailable
+	}
 	now := time.Now().UTC()
 	item.Versions[index].ApprovedBy, item.Versions[index].ApprovedAt = actorID, &now
 	item.ActiveVersion, item.Status, item.UpdatedAt = versionNumber, StatusActive, now
+	item.AnswerImageURL = item.Versions[index].AnswerImageURL
 	s.items[key] = item
 	return cloneGold(item), nil
 }
@@ -168,12 +181,22 @@ func (s *MemoryStore) Get(_ context.Context, tenantID, id string) (GoldPaper, er
 	return cloneGold(item), nil
 }
 
-func (s *MemoryStore) List(_ context.Context, tenantID string, filter ListFilter) ([]GoldPaper, error) {
+func (s *MemoryStore) List(ctx context.Context, tenantID string, filter ListFilter) ([]GoldPaper, error) {
+	if err := filter.Access.Validate(tenantID); err != nil {
+		return nil, err
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := []GoldPaper{}
 	for key, item := range s.items {
 		if keyTenant(key) != tenantID || filter.ExamID != "" && item.ExamID != filter.ExamID || filter.QuestionID != "" && item.QuestionID != filter.QuestionID || filter.Status != "" && item.Status != filter.Status {
+			continue
+		}
+		allowed, err := filter.Access.Allows(ctx, tenantID, "gold_paper", item.ID, item.ExamID)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
 			continue
 		}
 		out = append(out, cloneGold(item))
@@ -210,7 +233,7 @@ func (s *MemoryStore) newVersion(source Source, actorID string, version int, inp
 	return Version{ID: s.id("gold-version"), Version: version, ExamQuestionSnapshotID: source.SnapshotID,
 		ReferenceScore: input.ReferenceScore, MaxScore: source.MaxScore, RubricSnapshot: cloneMap(source.RubricSnapshot),
 		Explanation: input.Explanation, TraitScores: cloneMap(input.TraitScores), ErrorTags: append([]string(nil), input.ErrorTags...),
-		SourceGradeIDs: append([]string(nil), input.SourceGradeIDs...), NominatedBy: actorID, CreatedAt: now}
+		SourceGradeIDs: append([]string(nil), input.SourceGradeIDs...), NominatedBy: actorID, CreatedAt: now, ImageBinding: source.ImageBinding}
 }
 
 func (s *MemoryStore) id(prefix string) string {

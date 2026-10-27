@@ -448,25 +448,25 @@ RETURNING id::text, tenant_id::text, submission_id::text, file_asset_id::text, p
 }
 
 func (s *PostgresStore) RunQualityCheck(ctx context.Context, tenantID string, submissionID string, _ string) (QualityResult, error) {
-	item, err := s.getSubmission(ctx, tenantID, submissionID)
-	if err != nil {
-		return QualityResult{}, err
-	}
-	if item.Status == "ready_for_ocr" || item.Status == "rejected" {
-		return QualityResult{}, ErrSubmissionLocked
-	}
-	pages, err := s.ListPages(ctx, tenantID, submissionID)
-	if err != nil {
-		return QualityResult{}, err
-	}
-	issues := qualityIssues(item, pages)
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return QualityResult{}, err
 	}
 	defer tx.Rollback()
+	// 与换页、加页及质量回调共用父锁；等锁后才读取页面，不能把旧图的通过状态写回新图。
+	if _, err = lockWritableSubmissionTx(ctx, tx, tenantID, submissionID); err != nil {
+		return QualityResult{}, err
+	}
 	// 采集完整性只是第一道门禁。只有每页都通过图像质量检查或获得有效覆盖批准后，聚合结果才可通过。
 	if err = aggregateQualityTx(ctx, tx, tenantID, submissionID); err != nil {
+		return QualityResult{}, err
+	}
+	var issuesJSON []byte
+	if err = tx.QueryRowContext(ctx, `SELECT quality_issues FROM submission WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL`, tenantID, submissionID).Scan(&issuesJSON); err != nil {
+		return QualityResult{}, err
+	}
+	issues := []QualityIssue{}
+	if err = json.Unmarshal(issuesJSON, &issues); err != nil {
 		return QualityResult{}, err
 	}
 	if err = tx.Commit(); err != nil {

@@ -696,6 +696,14 @@ func (s *MemoryStore) InvalidateEvaluationRun(
 	run.InvalidatedAt = &now
 	run.Candidates = s.evaluationCandidatesLocked(tenantID, runID)
 	s.evaluations[runID] = run
+	// 作废证据和撤销依赖批准共用写锁；历史批准仍可查，但不能继续充当运行资格。
+	for id, approval := range s.modelApprovals {
+		if approval.TenantID == tenantID && approval.EvaluationRunID == runID && approval.RevokedAt == nil {
+			approval.RevokedAt = &now
+			approval.Revision++
+			s.modelApprovals[id] = approval
+		}
+	}
 	return run, nil
 }
 

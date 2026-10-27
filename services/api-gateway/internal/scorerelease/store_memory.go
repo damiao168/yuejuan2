@@ -10,6 +10,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/examlock"
 )
 
 // MemoryStore 是单元和 handler 测试使用的确定性发布边界。
@@ -190,7 +192,17 @@ func (s *MemoryStore) Gate(_ context.Context, tenantID, examID string) (Gate, er
 	return s.gateLocked(tenantID, examID, ""), nil
 }
 
-func (s *MemoryStore) Publish(_ context.Context, tenantID, id, actorID string) (Release, error) {
+func (s *MemoryStore) Publish(ctx context.Context, tenantID, id, actorID string) (Release, error) {
+	return s.PublishGuarded(ctx, tenantID, id, actorID, nil)
+}
+
+func (s *MemoryStore) PublishGuarded(ctx context.Context, tenantID, id, actorID string, guard PublishGuard) (Release, error) {
+	detail, err := s.Get(ctx, tenantID, id)
+	if err != nil {
+		return Release{}, err
+	}
+	unlock := examlock.Memory(tenantID, detail.Release.ExamID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	release, ok := s.releases[id]
@@ -205,6 +217,11 @@ func (s *MemoryStore) Publish(_ context.Context, tenantID, id, actorID string) (
 	}
 	// 发布时重新检查门禁；来自重评计划的草稿还要确认基础版本仍是当前发布版本。
 	gate := s.gateLocked(tenantID, release.ExamID, id)
+	if guard != nil {
+		if err := guard(ctx, nil, release, gate); err != nil {
+			return Release{}, err
+		}
+	}
 	if !gate.Passed {
 		return Release{}, ErrGateBlocked
 	}

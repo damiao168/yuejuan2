@@ -5,8 +5,8 @@ const generatedApi = new EduGradeApi(apiClient);
 
 export type { GradingQualityIncident } from "@edugrade/sdk";
 
-export function listGradingQualityIncidents(examId: string) {
-  return generatedApi.listGradingQualityIncidents({ query: { exam_id: examId, status: "open", limit: 100 } });
+export function listGradingQualityIncidents(examId: string, filter: { cursor?: string; question_id?: string } = {}) {
+  return generatedApi.listGradingQualityIncidents({ query: { exam_id: examId, status: "open", limit: 100, ...filter } });
 }
 
 export function resolveGradingQualityIncident(id: string) {

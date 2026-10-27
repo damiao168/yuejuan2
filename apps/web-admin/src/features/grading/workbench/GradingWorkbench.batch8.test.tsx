@@ -16,6 +16,7 @@ import { createReviewTaskContextScope, reviewTaskContextKeys } from "../../../qu
 
 const mocks = vi.hoisted(() => ({
   loadContext: vi.fn(), save: vi.fn(), renew: vi.fn(), verify: vi.fn(), removeQueries: vi.fn(), invalidateQueries: vi.fn(),
+  submitGrade: vi.fn(async () => undefined), bookmarkMarked: false,
   notify: { info: vi.fn(), warning: vi.fn(), error: vi.fn(), success: vi.fn() },
   loadTasks: vi.fn(async () => undefined), loadGraders: vi.fn(async () => undefined), resetQueue: vi.fn(),
   resetShortcuts: vi.fn(), prepareViewer: vi.fn(), restoreViewer: vi.fn(), invalidateViewer: vi.fn(),
@@ -31,7 +32,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("antd", () => ({ App: { useApp: () => ({ message: mocks.notify }) }, Alert: () => null, Button: () => null, Space: () => null, Drawer: () => null }));
 vi.mock("./components/ReviewBookmarks", () => ({ ReviewBookmarkControls: () => null, ReviewBookmarksDrawer: () => null }));
-vi.mock("./hooks/usePersonalReviewBookmarks", () => ({ usePersonalReviewBookmarks: () => ({ state: {}, busy: false, error: "", uncertainTask: "" }) }));
+vi.mock("./hooks/usePersonalReviewBookmarks", () => ({ usePersonalReviewBookmarks: () => ({ state: { isSuccess: true, data: { marked: mocks.bookmarkMarked } }, busy: false, error: "", uncertainTask: "" }) }));
 vi.mock("../../../api/review", () => ({ renewReviewTask: mocks.renew, saveReviewDraft: mocks.save, verifyEvidence: mocks.verify }));
 vi.mock("./gradingTaskContext", () => ({ loadTaskContext: mocks.loadContext }));
 vi.mock("../../../router/useUnsavedChangesGuard", () => ({ useUnsavedChangesGuard: mocks.noop }));
@@ -67,7 +68,7 @@ vi.mock("./hooks/useGradingScoreShortcuts", () => ({ useGradingScoreShortcuts: (
 vi.mock("./hooks/useGradingQueueActions", () => ({ useGradingQueueActions: () => ({ assignSelectedTasks: mocks.asyncNoop, claimTask: mocks.asyncNoop, goNext: mocks.asyncNoop, releaseCurrentTask: mocks.asyncNoop }) }));
 vi.mock("./hooks/useGradingReviewActions", () => ({ useGradingReviewActions: (options: Record<string, unknown>) => {
   mocks.review = options;
-  return { submitGrade: mocks.asyncNoop, markDispute: mocks.asyncNoop, adoptAiScore: mocks.asyncNoop, openDraftConflict: mocks.asyncNoop, applyDraftConflict: mocks.noop, confirmReturnTask: mocks.noop };
+  return { submitGrade: mocks.submitGrade, markDispute: mocks.asyncNoop, adoptAiScore: mocks.asyncNoop, openDraftConflict: mocks.asyncNoop, applyDraftConflict: mocks.noop, confirmReturnTask: mocks.noop };
 } }));
 vi.mock("./hooks/useGradingMathActions", () => ({ useGradingMathActions: () => ({ refreshMath: mocks.asyncNoop, selectMathEvidenceStep: mocks.noop, requestMathSuggestion: mocks.asyncNoop }) }));
 vi.mock("./hooks/useGradingKeyboard", () => ({ useGradingKeyboard: mocks.noop }));
@@ -108,6 +109,7 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.bookmarkMarked = false;
     vi.useFakeTimers();
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
@@ -226,6 +228,25 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     await act(async () => { vi.advanceTimersByTime(1200); });
     expect(mocks.save).not.toHaveBeenCalled();
     expect(loadReviewDraftFallback("teacher", "A")).toBeNull();
+  });
+
+  it.each([
+    ["teacher", false, true, 1],
+    ["teacher", true, true, 0],
+    ["other", false, true, 0],
+    ["teacher", false, false, 0]
+  ] as const)("任务无普通草稿时按任务契约交分，仍保护归属、标记和在线状态 %s/%s/%s", async (owner, marked, online, expected) => {
+    mocks.loadContext.mockResolvedValue(context("A", owner, false));
+    mocks.bookmarkMarked = marked;
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(online);
+    await render();
+    expect(header().draftSaveStatus).toBe("readonly");
+    await edit(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    expect(mocks.save).not.toHaveBeenCalled();
+    expect(mocks.renew).not.toHaveBeenCalled();
+    expect(mocks.submitGrade).toHaveBeenCalledTimes(expected);
+    if (expected) expect(mocks.submitGrade).toHaveBeenCalledWith(false, true);
   });
 
   it("debounces edits for 1200ms and persists an explicit zero rather than null", async () => {

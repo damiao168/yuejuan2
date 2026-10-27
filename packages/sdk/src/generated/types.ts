@@ -462,7 +462,7 @@ export type ExamQuestionAssessmentSnapshotResponse = { "assessment_snapshot": Ex
 
 export type GoldPaperStatus = "pending_approval" | "active" | "retired";
 
-export type GoldPaperVersion = { "id": string; "version": number; "exam_question_snapshot_id": string; "reference_score": number; "max_score": number; "rubric_snapshot": Record<string, unknown>; "explanation": string; "trait_scores": Record<string, unknown>; "error_tags": Array<string>; "source_grade_ids": Array<string>; "nominated_by": string; "approved_by"?: string; "approved_at"?: string; "created_at": string; };
+export type GoldPaperVersion = { "id": string; "version": number; "exam_question_snapshot_id": string; "reference_score": number; "max_score": number; "rubric_snapshot": Record<string, unknown>; "explanation": string; "trait_scores": Record<string, unknown>; "error_tags": Array<string>; "source_grade_ids": Array<string>; "nominated_by": string; "approved_by"?: string; "approved_at"?: string; "created_at": string; "answer_image_url"?: string; "image_invalidated_at"?: string; };
 
 export type GoldPaper = { "id": string; "exam_id": string; "question_id": string; "submission_id": string; "answer_image_url"?: string; "active_version"?: number; "status": GoldPaperStatus; "subject_code": string; "archetype_code": string; "risk_tier": string; "nominated_by": string; "retired_at"?: string; "retirement_reason"?: string; "created_at": string; "updated_at": string; "versions": Array<GoldPaperVersion>; };
 
@@ -888,7 +888,7 @@ export type GradingQualityIncident = { "id": string; "exam_id": string; "questio
 
 export type RecomputeGraderDriftResponse = { "windows": Array<GraderQualityWindow>; "created_incidents": Array<GradingQualityIncident>; };
 
-export type GradingQualityIncidentListResponse = { "incidents": Array<GradingQualityIncident>; };
+export type GradingQualityIncidentListResponse = { "incidents": Array<GradingQualityIncident>; "next_cursor"?: string; "has_more"?: boolean; };
 
 export type GradingQualityIncidentResponse = { "incident": GradingQualityIncident; };
 
@@ -1024,7 +1024,7 @@ export type PaperImportIssue = { "code": string; "severity": "info" | "warning" 
 
 export type PaperImportAnswerKeyInput = { "standard_answer": unknown; "equivalent_answers": Array<unknown>; "tolerance": unknown; };
 
-export type PaperImportRubricPoint = { "id": string; "description": string; "score": number; "required": boolean; };
+export type PaperImportRubricPoint = { "id": string; "description": string; "score": number; "required": boolean; "evidence_requirements"?: Array<PaperImportRubricEvidenceRequirement>; };
 
 export type PaperImportRubricInput = { "status": string; "max_score": number; "points": Array<PaperImportRubricPoint>; "deductions": Array<unknown>; "examples": Array<unknown>; };
 
@@ -1032,9 +1032,9 @@ export type PaperImportSolutionInput = { "raw_text": string; "steps": Array<Pape
 
 export type MathRubricDraftRequest = { "candidate_id": string; "expected_generation": number; "expected_updated_at": string; };
 
-export type MathRubricDraftPoint = { "id": string; "description": string; "suggested_score": unknown; "evidence_step_ids": Array<string>; "source_refs": Array<PaperImportSourceRef>; "review_note": string; };
+export type MathRubricDraftPoint = { "id": string; "description": string; "suggested_score": number | null; "evidence_step_ids": Array<string>; "source_refs": Array<PaperImportSourceRef>; "review_note": string; };
 
-export type MathRubricDraftSuggestion = { "candidate_id": string; "question_no_normalized": string; "max_score": unknown; "points": Array<MathRubricDraftPoint>; "origin": "ai_suggestion_from_solution"; "status": "review_required"; "provenance": Record<string, unknown>; "issues": Array<string>; };
+export type MathRubricDraftSuggestion = { "candidate_id": string; "question_no_normalized": string; "max_score": number | null; "points": Array<MathRubricDraftPoint>; "origin": "ai_suggestion_from_solution"; "status": "review_required"; "provenance": Record<string, unknown>; "issues": Array<string>; };
 
 export type MathRubricDraftResponse = { "suggested_rubric_candidates": Array<MathRubricDraftSuggestion>; };
 
@@ -1226,7 +1226,7 @@ export type QuestionBankVersionPage = { "versions": Array<QuestionBankVersion>; 
 
 export type QuestionBankAsset = { "file_asset_id": string; "sha256": string; "name": string; "content_type": string; };
 
-export type QuestionBankScoring = { "answer": AnswerKeyInput | null; "solution": QuestionBankSolution | null; "rubric": RubricInput | null; "template_version_id": string | null; "assets": Array<QuestionBankAsset>; "use_policy": "practice_only" | "exam_allowed"; };
+export type QuestionBankScoring = { "answer": AnswerKeyInput | null; "solution": QuestionBankSolution | null; "rubric": RubricInput | null; "template_version_id": string | null; "assets": Array<QuestionBankAsset>; "use_policy": "practice_only" | "exam_allowed"; "reference_materials"?: QuestionBankReferenceMaterials; };
 
 export type AnswerKeyInput = { "standard_answer": unknown; "equivalent_answers": Array<unknown>; "tolerance": { "absolute"?: number; "relative"?: number; }; };
 
@@ -1627,6 +1627,10 @@ export type CaptureCollectionResponse = { "summary": CaptureCollectionSummary; }
 export type CompleteCaptureCollectionRequest = { "revision": number; "idempotency_key": string; "reason"?: string; };
 
 export type ExcludeCaptureFileRequest = { "reason": string; "replacement_file_id"?: string; };
+
+export type QuestionBankReferenceMaterials = { "source_exam_id": string; "source_question_id": string; "manifest_id": string; "mode": "reference_images"; "revision": number; "content_hash": string; "image_count": number; "items": Array<QuestionBankReferenceMaterialItem>; };
+
+export type QuestionBankReferenceMaterialItem = { "id": string; "crop_ref": string; "role": "question_diagram" | "reference_solution"; "ordinal": number; "required": true; "sha256": string; "width": number; "height": number; "size_bytes": number; "pixel_bbox": ReferencePixelBox; "source": ReferenceMaterialSource; };
 
 export interface components {
   schemas: {
@@ -2444,5 +2448,7 @@ export interface components {
     "CaptureCollectionResponse": CaptureCollectionResponse;
     "CompleteCaptureCollectionRequest": CompleteCaptureCollectionRequest;
     "ExcludeCaptureFileRequest": ExcludeCaptureFileRequest;
+    "QuestionBankReferenceMaterials": QuestionBankReferenceMaterials;
+    "QuestionBankReferenceMaterialItem": QuestionBankReferenceMaterialItem;
   };
 }

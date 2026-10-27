@@ -1,29 +1,51 @@
 from __future__ import annotations
 
-import hashlib
-import math
+# Runner 持有任务身份、心跳与唯一终态；裁片、推理和结果投影分别在独立阶段中执行。
 import time
 from typing import Any
 
-from .formula_validation import (
-    FormulaAction,
-    FormulaValidationResult,
-    FormulaValidator,
-    validate_latex_structure,
-)
+from .formula_validation import FormulaValidationResult, FormulaValidator
 from .math_layout import (
     FORMULA_DETECTOR_ACCEPT_SCORE,
     FORMULA_EDGE_INK_THRESHOLD,
     PaddleFormulaLayoutDetector,
     _adaptive_crop_formula,
 )
-from .math_layout import (
-    open_image as _open_image,
+from .math_layout import open_image as _open_image
+from .paper_formula_crops import FormulaCropStage
+from .paper_formula_inference import (
+    FormulaInferenceStage,
+    _bucketed_batches,
+    _recognize_many,
 )
-from .recognition_router import PaddleFormulaNetEngine, canonicalize_latex
+
+# 保留旧模块的纯 helper 入口，现有消费者无需因职责拆分改变导入路径。
+from .paper_formula_projection import (
+    FORMULA_VALIDATION_VERSION,
+    _candidate,
+    _needs_fallback,
+    _progress,
+    _select_formula,
+    _select_formula_candidate,
+    _select_validated,
+    _valid_formula,
+    formula_region,
+)
+from .recognition_router import PaddleFormulaNetEngine
 from .runner import WorkerConfig, _LeaseHeartbeat
 
-FORMULA_VALIDATION_VERSION = "latex-structure-render-v2"
+__all__ = [
+    "FORMULA_VALIDATION_VERSION",
+    "PaperFormulaRunner",
+    "_bucketed_batches",
+    "_candidate",
+    "_needs_fallback",
+    "_recognize_many",
+    "_select_formula",
+    "_select_formula_candidate",
+    "_select_validated",
+    "_valid_formula",
+]
 
 
 class PaperFormulaRunner:
@@ -145,7 +167,6 @@ class PaperFormulaRunner:
                 },
             )
 
-
     def _detect_formula_crops(
         self,
         pages: list[dict[str, Any]],
@@ -155,82 +176,11 @@ class PaperFormulaRunner:
         edge_threshold: float,
         page_total: int,
     ) -> list[dict[str, Any]]:
-        crops: list[dict[str, Any]] = []
-        if not self.detector.initialized:
-            heartbeat.set_progress(
-                _progress(
-                    "formula_detection",
-                    "model_loading",
-                    0,
-                    page_total,
-                    "page",
-                    self.detector.model_version,
-                    "正在从本地模型缓存加载公式区域检测模型",
-                    cold_start=True,
-                    **self.runtime_plan,
-                ),
-                flush=True,
-            )
-            self.detector.initialize()
-        heartbeat.set_progress(
-            _progress(
-                "formula_detection",
-                "detecting",
-                0,
-                page_total,
-                "page",
-                self.detector.model_version,
-                "公式区域检测模型已就绪，正在检测页面",
-                cold_start=False,
-                **self.runtime_plan,
-            ),
-            flush=True,
+        stage = FormulaCropStage(self.api, self.detector, self.padding, self.max_padding_height_ratio, self.runtime_plan)
+        return stage.detect_formula_crops(
+            pages, policy, heartbeat, max_padding, edge_threshold, page_total,
+            open_image=_open_image, adaptive_crop=_adaptive_crop_formula,
         )
-        for page_index, page in enumerate(pages, 1):
-            heartbeat.raise_if_failed()
-            image_bytes = self.api.download(str(page["download_url"]))
-            image = _open_image(image_bytes)
-            min_score = float(policy.get("min_detector_score", 0.45))
-            padding = int(policy.get("roi_padding_pixels", self.padding))
-            for index, (bbox, detector_score) in enumerate(self.detector.detect(image_bytes, min_score), 1):
-                crop, padded_bbox, edge_ink, recrop_count, crop_complete = _adaptive_crop_formula(
-                    image,
-                    bbox,
-                    padding,
-                    max_padding=max(max_padding, padding),
-                    max_padding_height_ratio=self.max_padding_height_ratio,
-                    edge_threshold=edge_threshold,
-                )
-                crops.append(
-                    {
-                        "page": page,
-                        "index": index,
-                        "crop": crop,
-                        "bbox": padded_bbox,
-                        "detector_score": detector_score,
-                        "edge_ink": edge_ink,
-                        "recrop_count": recrop_count,
-                        "crop_complete": crop_complete,
-                        "aspect_ratio": padded_bbox[2] / max(padded_bbox[3], 1.0),
-                    }
-                )
-            image.close()
-            heartbeat.set_progress(
-                _progress(
-                    "formula_detection",
-                    "detecting",
-                    page_index,
-                    page_total,
-                    "page",
-                    self.detector.model_version,
-                    f"已检测 {page_index}/{page_total} 页，发现 {len(crops)} 个公式区域",
-                    page_no=page_index,
-                    page_total=page_total,
-                    **self.runtime_plan,
-                ),
-                flush=True,
-            )
-        return crops
 
     def _recognize_primary_crops(
         self,
@@ -241,108 +191,11 @@ class PaperFormulaRunner:
         render_threshold: float,
         roi_total: int,
     ) -> tuple[list[int], dict[int, Any], dict[int, FormulaValidationResult], list[int]]:
-        eligible = [
-            index
-            for index, item in enumerate(crops)
-            if float(item["detector_score"]) >= detector_accept_score and bool(item["crop_complete"])
-        ]
-        skipped = roi_total - len(eligible)
-        heartbeat.set_progress(
-            _progress(
-                "formula_recognition",
-                "primary_batch",
-                skipped,
-                roi_total,
-                "formula_region",
-                self.primary.model_version,
-                f"{len(eligible)} 个有效 ROI 进入 plus-M 批量识别，{skipped} 个检测/裁剪异常保留 OCR 并复核",
-                batch_size=formula_batch_size,
-                **self.runtime_plan,
-            ),
-            flush=True,
+        stage = FormulaInferenceStage(self.primary, self.fallback, self.validator, self.runtime_plan)
+        return stage.recognize_primary_crops(
+            crops, heartbeat, formula_batch_size, detector_accept_score, render_threshold, roi_total,
+            recognize_many=_recognize_many,
         )
-
-        primary_results: dict[int, Any] = {}
-        primary_batches = _bucketed_batches(crops, eligible, formula_batch_size)
-        completed = skipped
-        if eligible and not self.primary.initialized:
-            heartbeat.set_progress(
-                _progress(
-                    "formula_recognition",
-                    "model_loading",
-                    completed,
-                    roi_total,
-                    "formula_region",
-                    self.primary.model_version,
-                    "正在从本地模型缓存加载 plus-M；完成后开始批量识别",
-                    cold_start=True,
-                    batch_size=formula_batch_size,
-                    batch_total=len(primary_batches),
-                    **self.runtime_plan,
-                ),
-                flush=True,
-            )
-            self.primary.initialize()
-        for batch_number, batch_indices in enumerate(primary_batches, 1):
-            heartbeat.raise_if_failed()
-            heartbeat.set_progress(
-                _progress(
-                    "formula_recognition",
-                    "primary_batch",
-                    completed,
-                    roi_total,
-                    "formula_region",
-                    self.primary.model_version,
-                    f"plus-M 批次 {batch_number}/{len(primary_batches)}，本批 {len(batch_indices)} 个 ROI",
-                    batch_no=batch_number,
-                    batch_total=len(primary_batches),
-                    batch_size=formula_batch_size,
-                    cold_start=False,
-                    **self.runtime_plan,
-                ),
-                flush=True,
-            )
-            batch_results = _recognize_many(
-                self.primary, [crops[index]["crop"] for index in batch_indices], formula_batch_size,
-            )
-            for index, result in zip(batch_indices, batch_results, strict=True):
-                primary_results[index] = result
-            completed += len(batch_indices)
-            heartbeat.set_progress(
-                _progress(
-                    "formula_recognition",
-                    "primary_batch",
-                    completed,
-                    roi_total,
-                    "formula_region",
-                    self.primary.model_version,
-                    f"plus-M 已完成 {completed - skipped}/{len(eligible)} 个有效 ROI",
-                    batch_no=batch_number,
-                    batch_total=len(primary_batches),
-                    batch_size=formula_batch_size,
-                    cold_start=False,
-                    **self.runtime_plan,
-                ),
-                flush=True,
-            )
-
-        primary_validations: dict[int, FormulaValidationResult] = {}
-        fallback_indices: list[int] = []
-        for index in eligible:
-            item, result = crops[index], primary_results[index]
-            validation = self.validator.validate(
-                result.canonical_latex,
-                item["crop"],
-                detector_score=float(item["detector_score"]),
-                crop_complete=bool(item["crop_complete"]),
-                detector_accept_score=detector_accept_score,
-                render_similarity_threshold=render_threshold,
-            )
-            primary_validations[index] = validation
-            # 大模型仅重试结构或回渲染失败；低检测分、裁剪缺失及校验器不可用转人工。
-            if validation.action is FormulaAction.RETRY_L:
-                fallback_indices.append(index)
-        return eligible, primary_results, primary_validations, fallback_indices
 
     def _recognize_fallback_crops(
         self,
@@ -353,80 +206,11 @@ class PaperFormulaRunner:
         detector_accept_score: float,
         render_threshold: float,
     ) -> tuple[dict[int, Any], dict[int, FormulaValidationResult]]:
-        fallback_results: dict[int, Any] = {}
-        fallback_validations: dict[int, FormulaValidationResult] = {}
-        fallback_batches = _bucketed_batches(crops, fallback_indices, formula_batch_size)
-        fallback_completed = 0
-        if fallback_indices and not self.fallback.initialized:
-            heartbeat.set_progress(
-                _progress(
-                    "formula_recognition",
-                    "model_loading",
-                    0,
-                    len(fallback_indices),
-                    "formula_region",
-                    self.fallback.model_version,
-                    "正在从本地模型缓存加载 plus-L，仅处理已确认的疑难 ROI",
-                    cold_start=True,
-                    batch_size=formula_batch_size,
-                    batch_total=len(fallback_batches),
-                    **self.runtime_plan,
-                ),
-                flush=True,
-            )
-            self.fallback.initialize()
-        for batch_number, batch_indices in enumerate(fallback_batches, 1):
-            heartbeat.raise_if_failed()
-            heartbeat.set_progress(
-                _progress(
-                    "formula_recognition",
-                    "fallback_batch",
-                    fallback_completed,
-                    len(fallback_indices),
-                    "formula_region",
-                    self.fallback.model_version,
-                    f"仅 {len(fallback_indices)} 个结构/渲染异常 ROI 进入 plus-L；批次 {batch_number}/{len(fallback_batches)}",
-                    batch_no=batch_number,
-                    batch_total=len(fallback_batches),
-                    batch_size=formula_batch_size,
-                    cold_start=False,
-                    **self.runtime_plan,
-                ),
-                flush=True,
-            )
-            batch_results = _recognize_many(
-                self.fallback, [crops[index]["crop"] for index in batch_indices], formula_batch_size,
-            )
-            for index, result in zip(batch_indices, batch_results, strict=True):
-                fallback_results[index] = result
-                item = crops[index]
-                fallback_validations[index] = self.validator.validate(
-                    result.canonical_latex,
-                    item["crop"],
-                    detector_score=float(item["detector_score"]),
-                    crop_complete=bool(item["crop_complete"]),
-                    detector_accept_score=detector_accept_score,
-                    render_similarity_threshold=render_threshold,
-                )
-            fallback_completed += len(batch_indices)
-            heartbeat.set_progress(
-                _progress(
-                    "formula_recognition",
-                    "fallback_batch",
-                    fallback_completed,
-                    len(fallback_indices),
-                    "formula_region",
-                    self.fallback.model_version,
-                    f"plus-L 已完成 {fallback_completed}/{len(fallback_indices)} 个异常 ROI",
-                    batch_no=batch_number,
-                    batch_total=len(fallback_batches),
-                    batch_size=formula_batch_size,
-                    cold_start=False,
-                    **self.runtime_plan,
-                ),
-                flush=True,
-            )
-        return fallback_results, fallback_validations
+        stage = FormulaInferenceStage(self.primary, self.fallback, self.validator, self.runtime_plan)
+        return stage.recognize_fallback_crops(
+            crops, fallback_indices, heartbeat, formula_batch_size, detector_accept_score, render_threshold,
+            recognize_many=_recognize_many,
+        )
 
     def _formula_region(
         self,
@@ -438,208 +222,7 @@ class PaperFormulaRunner:
         fallback_validations: dict[int, FormulaValidationResult],
         detector_accept_score: float,
     ) -> dict[str, Any]:
-        detector_score = float(item["detector_score"])
-        primary = primary_results.get(item_index)
-        fallback = fallback_results.get(item_index)
-        primary_validation = primary_validations.get(item_index)
-        fallback_validation = fallback_validations.get(item_index)
-        candidates = []
-        if primary is not None and primary_validation is not None:
-            candidates.append(_candidate(primary, primary_validation))
-        if fallback is not None and fallback_validation is not None:
-            candidates.append(_candidate(fallback, fallback_validation))
-
-        if primary is None:
-            selected = None
-            status = "review_required"
-            reasons = []
-            if detector_score < detector_accept_score:
-                reasons.append("low_detector_confidence")
-            if not item["crop_complete"]:
-                reasons.append("roi_incomplete_after_recrop")
-        else:
-            selected, status, reasons = _select_validated(
-                primary,
-                primary_validation,
-                fallback,
-                fallback_validation,
-            )
-        if int(item["recrop_count"]) > 0:
-            reasons.append("roi_recropped")
-
-        page = item["page"]
-        index = int(item["index"])
-        source_id, page_no = str(page["source_id"]), int(page["page_no"])
-        return {
-            "source_id": source_id,
-            "document_index": int(page["document_index"]),
-            "page_no": page_no,
-            "region_id": f"formula:{source_id}:{page_no}:{index}",
-            "bbox": item["bbox"],
-            "detector_model": self.detector.model_version,
-            "detector_confidence": detector_score,
-            "crop_sha256": hashlib.sha256(item["crop"]).hexdigest(),
-            "edge_ink_ratio": float(item["edge_ink"]),
-            "crop_complete": bool(item["crop_complete"]),
-            "recrop_count": int(item["recrop_count"]),
-            "validation_version": FORMULA_VALIDATION_VERSION,
-            "candidates": candidates,
-            "selected_latex": selected.canonical_latex if selected else "",
-            "selected_model": selected.engine_version if selected else "",
-            "status": status,
-            "reason_codes": list(dict.fromkeys(reasons)),
-        }
-
-
-def _progress(
-    stage: str,
-    phase: str,
-    completed: int,
-    total: int,
-    unit: str,
-    model: str,
-    message: str,
-    **extra: Any,
-) -> dict[str, Any]:
-    return {
-        "stage": stage,
-        "phase": phase,
-        "completed": completed,
-        "total": total,
-        "unit": unit,
-        "model": model,
-        "message": message,
-        **extra,
-    }
-
-
-def _candidate(result: Any, validation: FormulaValidationResult | None = None) -> dict[str, Any]:
-    if validation is None:
-        syntax_valid, structure_valid, reasons = validate_latex_structure(result.canonical_latex)
-        validation = FormulaValidationResult(
-            syntax_valid,
-            structure_valid,
-            None,
-            True,
-            None,
-            FormulaAction.ACCEPT if structure_valid else FormulaAction.RETRY_L,
-            reasons,
+        return formula_region(
+            self.detector.model_version, item_index, item, primary_results, primary_validations,
+            fallback_results, fallback_validations, detector_accept_score,
         )
-    return {
-        "model_version": result.engine_version,
-        "raw_latex": result.raw_latex,
-        "canonical_latex": result.canonical_latex,
-        "confidence": result.confidence,
-        "valid": validation.valid,
-        "syntax_valid": validation.syntax_valid,
-        "structure_valid": validation.structure_valid,
-        "render_valid": validation.render_valid,
-        "render_similarity": validation.render_similarity,
-        "validation_action": validation.action.value,
-        "reason_codes": list(validation.reason_codes),
-    }
-
-
-def _needs_fallback(primary: Any, detector_score: float, edge_ink: float) -> bool:
-    # 检测分数低属于分类问题，边缘有墨迹属于裁剪
-    # 问题。更大的识别模型无法修复这两类问题。
-    return (
-        detector_score >= FORMULA_DETECTOR_ACCEPT_SCORE
-        and edge_ink <= FORMULA_EDGE_INK_THRESHOLD
-        and not _valid_formula(primary.canonical_latex)
-    )
-
-
-def _valid_formula(value: str) -> bool:
-    _, structure_valid, _ = validate_latex_structure(canonicalize_latex(value))
-    return structure_valid
-
-
-def _select_formula(
-    primary: Any,
-    fallback: Any,
-    detector_score: float,
-    edge_ink: float,
-) -> tuple[Any | None, str, list[str]]:
-    reasons: list[str] = []
-    if detector_score < FORMULA_DETECTOR_ACCEPT_SCORE:
-        reasons.append("low_detector_confidence")
-    if edge_ink > FORMULA_EDGE_INK_THRESHOLD:
-        reasons.append("roi_edge_ink")
-    p_valid = _valid_formula(primary.canonical_latex)
-    if not p_valid:
-        reasons.append("primary_invalid_latex")
-    chosen = _select_formula_candidate(primary, fallback, p_valid, reasons)
-    safe = (
-        chosen is not None
-        and detector_score >= FORMULA_DETECTOR_ACCEPT_SCORE
-        and edge_ink <= FORMULA_EDGE_INK_THRESHOLD
-        and "model_disagreement" not in reasons
-    )
-    return chosen, "accepted" if safe else "review_required", reasons
-
-
-def _select_formula_candidate(primary: Any, fallback: Any, p_valid: bool, reasons: list[str]) -> Any | None:
-    if fallback is None:
-        return primary if p_valid else None
-    f_valid = _valid_formula(fallback.canonical_latex)
-    if not f_valid:
-        reasons.append("fallback_invalid_latex")
-    if p_valid and f_valid and canonicalize_latex(primary.canonical_latex) != canonicalize_latex(fallback.canonical_latex):
-        reasons.append("model_disagreement")
-    if p_valid:
-        return primary
-    return fallback if f_valid else None
-
-
-def _select_validated(
-    primary: Any,
-    primary_validation: FormulaValidationResult | None,
-    fallback: Any,
-    fallback_validation: FormulaValidationResult | None,
-) -> tuple[Any | None, str, list[str]]:
-    if primary_validation is None:
-        return None, "review_required", ["primary_validation_missing"]
-    reasons = list(primary_validation.reason_codes)
-    if primary_validation.valid:
-        return primary, "accepted", reasons
-    if fallback is not None and fallback_validation is not None:
-        if fallback_validation.valid:
-            reasons.extend(("fallback_used", *fallback_validation.reason_codes))
-            return fallback, "accepted", list(dict.fromkeys(reasons))
-        reasons.extend(fallback_validation.reason_codes)
-        reasons.append("fallback_validation_failed")
-    else:
-        reasons.append("fallback_unavailable")
-    # 保留结构可用的候选供复核，但没有通过完整校验时仍保持 review_required。
-    selected = None
-    if fallback is not None and fallback_validation is not None and fallback_validation.structure_valid:
-        selected = fallback
-    elif primary_validation.structure_valid:
-        selected = primary
-    return selected, "review_required", list(dict.fromkeys(reasons))
-
-
-def _recognize_many(engine: Any, crops: list[bytes], batch_size: int) -> list[Any]:
-    recognize_many = getattr(engine, "recognize_formulas", None)
-    if callable(recognize_many):
-        results = list(recognize_many(crops, batch_size=batch_size))
-    else:
-        results = [engine.recognize_formula(crop) for crop in crops]
-    if len(results) != len(crops):
-        raise RuntimeError(f"{engine.model_version} returned {len(results)} results for {len(crops)} crops")
-    return results
-
-
-def _bucketed_batches(crops: list[dict[str, Any]], indices: list[int], batch_size: int) -> list[list[int]]:
-    buckets: dict[int, list[int]] = {}
-    for index in indices:
-        ratio = max(0.01, float(crops[index].get("aspect_ratio", 1.0)))
-        bucket = max(-3, min(5, math.floor(math.log2(ratio))))
-        buckets.setdefault(bucket, []).append(index)
-    batches: list[list[int]] = []
-    for bucket in sorted(buckets):
-        items = buckets[bucket]
-        for offset in range(0, len(items), batch_size):
-            batches.append(items[offset : offset + batch_size])
-    return batches

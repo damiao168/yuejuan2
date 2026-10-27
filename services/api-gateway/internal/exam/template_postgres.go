@@ -34,12 +34,21 @@ ORDER BY is_recommended DESC, source DESC, version DESC, name
 		if err := rows.Scan(&item.ID, &item.TenantID, &item.SchoolID, &item.Code, &item.Name, &item.Description, &item.EducationStage, &item.ExamType, &item.Region, &item.Curriculum, &item.Version, &item.Source, &item.Recommended); err != nil {
 			return nil, err
 		}
-		if err := s.loadTemplateSubjects(ctx, &item); err != nil {
-			return nil, err
-		}
 		out = append(out, item)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	// 先释放模板游标占用的连接，再读后代；单连接池也必须能完成列表。
+	for index := range out {
+		if err := s.loadTemplateSubjects(ctx, &out[index]); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
 func (s *PostgresStore) GetExamTemplate(ctx context.Context, scope auth.AccessScope, id string) (ExamTemplate, error) {
@@ -66,6 +75,17 @@ ORDER BY sort_order,id
 		if err := rows.Scan(&subject.ID, &subject.Subject, &subject.TotalScore, &subject.DurationMinutes, &subject.CandidateRule, &subject.SortOrder); err != nil {
 			return err
 		}
+		template.Subjects = append(template.Subjects, subject)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	// 科目游标也须先归还连接，避免第二层嵌套查询再次等待自身。
+	for index := range template.Subjects {
+		subject := &template.Subjects[index]
 		sectionRows, err := s.db.QueryContext(ctx, `
 SELECT id::text,title,question_type,question_count,score_per_question::float8,sort_order
 FROM exam_template_section
@@ -88,9 +108,8 @@ ORDER BY sort_order,id
 			return err
 		}
 		sectionRows.Close()
-		template.Subjects = append(template.Subjects, subject)
 	}
-	return rows.Err()
+	return nil
 }
 
 func requireExamTemplate(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, templateID string) (int, error) {

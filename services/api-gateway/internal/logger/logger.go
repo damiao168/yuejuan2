@@ -59,6 +59,17 @@ func (l *Logger) write(ctx context.Context, level string, message string, fields
 	if !l.enabled(level) {
 		return
 	}
+	if err := l.writeRecord(ctx, level, message, fields); err != nil {
+		slog.Error("write log failed", "error", err)
+	}
+}
+
+// WriteEvent 输出业务事件，不受诊断日志级别过滤；返回 writer 的实际接收结果，不承诺外部持久化。
+func (l *Logger) WriteEvent(ctx context.Context, message string, fields map[string]any) error {
+	return l.writeRecord(ctx, "info", message, fields)
+}
+
+func (l *Logger) writeRecord(ctx context.Context, level string, message string, fields map[string]any) error {
 	payload := map[string]any{
 		"ts":      time.Now().UTC().Format(time.RFC3339Nano),
 		"level":   level,
@@ -75,10 +86,14 @@ func (l *Logger) write(ctx context.Context, level string, message string, fields
 	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {
-		slog.Error("encode log failed", "error", err)
-		return
+		return err
 	}
-	_, _ = l.out.Write(append(encoded, '\n'))
+	data := append(encoded, '\n')
+	written, err := l.out.Write(data)
+	if err == nil && written != len(data) {
+		return io.ErrShortWrite
+	}
+	return err
 }
 
 // enabled 将配置级别作为最低输出级别；未知配置按 info 处理，避免配置拼写错误时静默丢失错误日志。

@@ -361,6 +361,9 @@ func (s *PostgresStore) Confirm(ctx context.Context, tenantID, groupID, actorID 
 	if !group.CanConfirm {
 		return Group{}, nil, ErrSamplingIncomplete
 	}
+	if err := s.validateConfirmationSources(ctx, tx, tenantID, group); err != nil {
+		return Group{}, nil, err
+	}
 	now, rollback := time.Now().UTC(), uuid.NewString()
 	created := make([]Candidate, 0, group.MemberCount)
 	for _, member := range group.Members {
@@ -524,7 +527,11 @@ type queryer interface {
 }
 
 func (s *PostgresStore) sourceAnswers(ctx context.Context, tenantID, examID, questionID string) ([]SourceAnswer, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	return s.sourceAnswersWith(ctx, s.db, tenantID, examID, questionID)
+}
+
+func (s *PostgresStore) sourceAnswersWith(ctx context.Context, db queryer, tenantID, examID, questionID string) ([]SourceAnswer, error) {
+	rows, err := db.QueryContext(ctx, `
 SELECT submission.id::text,segment.id::text,snapshot.id::text,snapshot.archetype_code,
        answer.answer_text,answer.source,answer.confidence
 FROM answer_segment segment

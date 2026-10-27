@@ -17,6 +17,8 @@ export function useCaptureBatchList(examId: string) {
   const loadBatches = useCallback(async () => {
     const requestId = ++batchesRequestRef.current;
     setLoading(true);
+    // 刷新接管整个列表；旧分页回执已失效，它的 finally 也不能再负责解除忙碌。
+    setLoadingMoreBatches(false);
     setError(undefined);
     try {
       const result = await listCaptureBatches(examId, { limit: 30 });
@@ -38,7 +40,7 @@ export function useCaptureBatchList(examId: string) {
   }, [examId]);
 
   const loadMoreBatches = useCallback(async () => {
-    if (!hasMoreBatches || !nextBatchCursor || loadingMoreBatches) return;
+    if (loading || !hasMoreBatches || !nextBatchCursor || loadingMoreBatches) return;
     const requestId = ++batchesRequestRef.current;
     setLoadingMoreBatches(true);
     try {
@@ -56,7 +58,7 @@ export function useCaptureBatchList(examId: string) {
     } finally {
       if (requestId === batchesRequestRef.current) setLoadingMoreBatches(false);
     }
-  }, [examId, hasMoreBatches, loadingMoreBatches, message, nextBatchCursor]);
+  }, [examId, hasMoreBatches, loading, loadingMoreBatches, message, nextBatchCursor]);
 
   return { batches, setBatches, selectedId, setSelectedId, loading, loadingMoreBatches,
     nextBatchCursor, hasMoreBatches, error, loadBatches, loadMoreBatches };

@@ -351,7 +351,7 @@ func conformalBins(items []CalibrationEvidence) []Bin {
 			continue
 		}
 		min := float64(bucket) / 10
-		max := min + .1
+		max := float64(bucket+1) / 10
 		if bucket == 9 {
 			max = 1
 		}
@@ -433,8 +433,14 @@ func mapConfidence(bins []Bin, raw float64) float64 {
 	if len(bins) == 0 {
 		return 0
 	}
-	for _, bin := range bins {
-		if raw+epsilon >= bin.MinRawConfidence && raw-epsilon <= bin.MaxRawConfidence {
+	for index, bin := range bins {
+		upper := bin.MaxRawConfidence
+		shared := index+1 < len(bins) && math.Abs(bins[index+1].MinRawConfidence-upper) <= epsilon
+		if shared {
+			upper = bins[index+1].MinRawConfidence
+		}
+		// 相邻分箱共用端点时归入右箱；不能用epsilon把边界附近的值推到训练时未所属的箱。
+		if raw >= bin.MinRawConfidence && (raw < upper || (!shared && raw == upper)) {
 			return bin.CalibratedConfidence
 		}
 	}

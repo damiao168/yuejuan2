@@ -123,7 +123,7 @@ export function useGradingReviewActions({
 
         // 正式提交只更新原答卷，不再推进队列；上一份、下一份由教师明确选择。
         const stillActive = activeTask.current === submittedTaskId;
-        if (nominateAsGold && stillActive) {
+        if (nominateAsGold && stillActive && result.human_grade) {
           setGoldPaperCandidate({
             examId: ctx.task.exam_id,
             questionId: ctx.task.question_id,
@@ -141,7 +141,7 @@ export function useGradingReviewActions({
         if (stillActive) {
           contextRequestRef.current += 1;
           setCtx(current => current?.task.id === submittedTaskId ? { ...current, task: submittedTask, reviewContext: { ...current.reviewContext, task: submittedTask, expected_revision: submittedTask.revision } } : current);
-          setDraft(current => ({ ...current, score: result.human_grade.score ?? score }));
+          setDraft(current => ({ ...current, score: result.human_grade?.score ?? score }));
           setDraftHydrated(false);
           setDraftSaveStatus("saved");
           lastSavedDraft.current = "";

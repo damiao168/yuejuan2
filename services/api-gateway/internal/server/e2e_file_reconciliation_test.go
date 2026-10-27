@@ -71,8 +71,11 @@ WHERE t.code='demo' AND u.username='tenant_admin' LIMIT 1`).Scan(&tenantID, &use
 		t.Fatalf("missing object state not repaired: %#v err=%v", storedMissing, err)
 	}
 	storedRecoverable, err := store.GetScoped(ctx, scope, recoverable.ID)
-	if err != nil || storedRecoverable.Lifecycle != files.LifecycleOrphanRecovered {
+	if err != nil || storedRecoverable.Lifecycle != files.LifecycleActive {
 		t.Fatalf("pending object state not recovered: %#v err=%v", storedRecoverable, err)
+	}
+	if _, err := store.Get(ctx, tenantID, recoverable.ID); err != nil {
+		t.Fatalf("recovered object is not readable: %v", err)
 	}
 	if _, err := objects.Stat(ctx, "reconcile-test", orphanKey); err != nil {
 		t.Fatalf("repair mode must never delete an orphan object: %v", err)

@@ -30,7 +30,7 @@ const question: Question = {
   id: "question", tenant_id: "tenant", exam_id: exam.id, question_no: "1", question_type: "numeric", score: 5,
   options: [], knowledge_points: [], answer_area: { page: 1, source: "template" }, sort_order: 1, status: "draft",
   answer_key: { id: "answer", question_id: "question", answer_version: "v1", standard_answer: standardAnswer,
-    equivalent_answers: [], tolerance: oldTolerance },
+    equivalent_answers: [{ value: 2, unit: "cm" }, ["A", "C"]], tolerance: oldTolerance },
 };
 
 describe("题目编辑容差提交", () => {
@@ -57,7 +57,7 @@ describe("题目编辑容差提交", () => {
     const values: QuestionFormValues = {
       question_no: "1", question_type: type, score: 5, stem: "题目", knowledge_points: [],
       answer_area_page: 1, answer_area_x: 0, answer_area_y: 0, answer_area_w: 10, answer_area_h: 10,
-      sort_order: 1, standard_answer: questionAnswerText(standardAnswer), equivalent_answers: [],
+      sort_order: 1, standard_answer: questionAnswerText(standardAnswer), equivalent_answers: question.answer_key!.equivalent_answers.map(questionAnswerText),
       tolerance_absolute: absolute, tolerance_relative: relative,
     };
     mocks.form.validateFields.mockResolvedValue(values);
@@ -76,6 +76,7 @@ describe("题目编辑容差提交", () => {
     expect(id).toBe(question.id);
     expect(payload.answer_key.tolerance).toEqual(expected);
     expect(payload.answer_key.standard_answer).toBe(standardAnswer);
+    expect(payload.answer_key.equivalent_answers).toBe(question.answer_key!.equivalent_answers);
     expect(payload.answer_area).toEqual({ page: 1, source: "template", x: 0, y: 0, w: 10, h: 10 });
     expect(oldTolerance).toEqual({ absolute: 0.1, relative: 0.02, unit: "cm" });
     expect(loadConfig).toHaveBeenCalledExactlyOnceWith(exam.id);

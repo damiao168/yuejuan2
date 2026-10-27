@@ -280,9 +280,21 @@ func (h *Handler) AdminRevokeUserSessions(w http.ResponseWriter, r *http.Request
 		return
 	}
 	targetUserID := strings.TrimSpace(r.PathValue("id"))
-	revoked, err := h.store.RevokeAllSessions(r.Context(), actor.TenantID, targetUserID, "administrator_revoked_all")
+	scope, ok := AccessScopeFromContext(r.Context())
+	if !ok {
+		httpx.Error(w, r, http.StatusForbidden, "access_scope_missing", "no valid data access scope is assigned")
+		return
+	}
+	revoked, err := h.store.RevokeManagedUserSessions(r.Context(), actor, scope, targetUserID, "administrator_revoked_all")
 	if err != nil {
-		httpx.Error(w, r, http.StatusInternalServerError, "session_revoke_failed", "failed to revoke sessions")
+		switch {
+		case errors.Is(err, ErrManagedUserNotFound):
+			httpx.Error(w, r, http.StatusNotFound, "managed_user_not_found", "managed user not found")
+		case errors.Is(err, ErrForbidden), errors.Is(err, ErrUserStatusForbidden), errors.Is(err, ErrOrganizationScope):
+			httpx.Error(w, r, http.StatusForbidden, "session_revoke_forbidden", "current identity cannot revoke this user's sessions")
+		default:
+			httpx.Error(w, r, http.StatusInternalServerError, "session_revoke_failed", "failed to revoke sessions")
+		}
 		return
 	}
 	RecordAudit(r.Context(), h.store, AuditEvent{

@@ -55,6 +55,21 @@ type readinessImportSnapshot struct {
 	Questions         []readinessImportQuestionSnapshot `json:"questions"`
 }
 
+// ReadinessImportSnapshot 与题库共用冻结契约；字段顺序也属于既有摘要表示，不能由消费者重定义删减。
+type ReadinessImportSnapshot = readinessImportSnapshot
+
+// ReadinessImportQuestionSnapshot 保留选项、父子题号与参考绑定，供跨模块完整校验冻结内容。
+type ReadinessImportQuestionSnapshot = readinessImportQuestionSnapshot
+
+// ReadinessAnswerSnapshot 表示冻结答案事实，区别于可编辑的答案写入命令。
+type ReadinessAnswerSnapshot = readinessAnswerSnapshot
+
+// ReadinessSolutionSnapshot 保留解析正文、步骤及冻结时核验状态。
+type ReadinessSolutionSnapshot = readinessSolutionSnapshot
+
+// ReadinessRubricSnapshot 包含冻结状态；消费端不得在摘要校验前丢弃该字段。
+type ReadinessRubricSnapshot = readinessRubricSnapshot
+
 type readinessImportQuestionSnapshot struct {
 	ReferenceMaterials      *ReferenceMaterialBinding  `json:"reference_materials,omitempty"`
 	ParentQuestionNo        string                     `json:"parent_question_no,omitempty"`

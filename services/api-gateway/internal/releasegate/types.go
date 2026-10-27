@@ -12,11 +12,12 @@ import (
 )
 
 var (
-	ErrNotFound          = errors.New("release gate resource not found")
-	ErrInvalidInput      = errors.New("invalid release gate input")
-	ErrForbiddenWaiver   = errors.New("release gate waiver is not allowed")
-	ErrGateBlocked       = errors.New("release gate is blocked")
-	ErrEvidenceImmutable = errors.New("release gate evidence is immutable")
+	ErrNotFound                     = errors.New("release gate resource not found")
+	ErrInvalidInput                 = errors.New("invalid release gate input")
+	ErrForbiddenWaiver              = errors.New("release gate waiver is not allowed")
+	ErrGateBlocked                  = errors.New("release gate is blocked")
+	ErrEvidenceImmutable            = errors.New("release gate evidence is immutable")
+	ErrAtomicPublicationUnavailable = errors.New("atomic publication gate is unavailable")
 )
 
 const (

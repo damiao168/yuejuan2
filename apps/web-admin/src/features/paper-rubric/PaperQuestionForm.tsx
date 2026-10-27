@@ -5,6 +5,7 @@ import { StructuredAnswerEditor } from "../../components/StructuredTeacherFields
 import { questionTypeOptions } from "../../constants/examCatalog";
 import { hasStandardAnswer } from "./paperQuestionPresentation";
 import type { PaperRubricViewContext } from "./paperRubricViewTypes";
+import { hasStructuredEquivalentAnswers } from "./hooks/useQuestionEditor";
 
 type ViewProps = Readonly<{ context: PaperRubricViewContext }>;
 
@@ -12,6 +13,7 @@ export function PaperQuestionForm({ context }: ViewProps) {
   const { questionWorkflow, access, selectedQuestion } = context;
   const watchedType = context.state.watchedQuestionType;
   const answerOptions = Form.useWatch("options", questionWorkflow.form) ?? selectedQuestion?.options ?? [];
+  const structuredEquivalents = hasStructuredEquivalentAnswers(selectedQuestion?.answer_key?.equivalent_answers);
   return <>
     <Form.Item label="题干" name="stem"><Input.TextArea autoSize={{ minRows: 3, maxRows: 9 }} placeholder="上传资料识别后自动填充，或在此录入题干" /></Form.Item>
     {(watchedType === "single_choice" || watchedType === "multiple_choice") && <Form.List name="options">{renderQuestionOptions}</Form.List>}
@@ -23,7 +25,7 @@ export function PaperQuestionForm({ context }: ViewProps) {
       description="逐空答案、等价写法及分值应在评分配置中核对。数学区间的括号不可随意忽略。" />}
     <PaperReferenceSolution context={context} />
     <details className="paper-advanced-settings"><summary>高级答案设置</summary>
-      <Form.Item label="等价答案（选填）" name="equivalent_answers"><Select mode="tags" placeholder="添加允许的其他正确写法，回车确认" /></Form.Item>
+      <Form.Item label="等价答案（选填）" name="equivalent_answers" help={structuredEquivalents ? "此题含结构化等价答案，当前入口只读；保存其他题目设置会保留原值。" : undefined}><Select mode="tags" disabled={access.questionDisabled || structuredEquivalents} placeholder="添加允许的其他正确写法，回车确认" /></Form.Item>
       {access.showTolerance && <Form.Item label="答案误差范围（选填）"><div className="form-grid">
         <Form.Item label="允许绝对误差" name="tolerance_absolute"><InputNumber min={0} className="full-width-control" /></Form.Item>
         <Form.Item label="允许相对误差（%）" name="tolerance_relative"><InputNumber min={0} className="full-width-control" /></Form.Item>

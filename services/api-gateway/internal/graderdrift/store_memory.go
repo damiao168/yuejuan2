@@ -116,11 +116,37 @@ func (s *MemoryStore) ListIncidents(ctx context.Context, tenantID string, filter
 			filter.Status != "" && item.Status != filter.Status {
 			continue
 		}
+		if !filter.BeforeCreatedAt.IsZero() && (item.CreatedAt.After(filter.BeforeCreatedAt) || item.CreatedAt.Equal(filter.BeforeCreatedAt) && item.ID >= filter.BeforeID) {
+			continue
+		}
 		result = append(result, cloneIncident(item))
 	}
-	sort.Slice(result, func(i, j int) bool { return result[i].CreatedAt.After(result[j].CreatedAt) })
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].CreatedAt.Equal(result[j].CreatedAt) {
+			return result[i].ID > result[j].ID
+		}
+		return result[i].CreatedAt.After(result[j].CreatedAt)
+	})
 	if filter.Limit > 0 && len(result) > filter.Limit {
 		result = result[:filter.Limit]
+	}
+	return result, nil
+}
+
+func (s *MemoryStore) CountOpenIncidents(_ context.Context, tenantID, examID, questionID string) (IncidentCounts, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var result IncidentCounts
+	for _, entry := range s.incidents {
+		item := entry.value
+		if entry.tenantID != tenantID || item.ExamID != examID || questionID != "" && item.QuestionID != questionID || item.Status != IncidentOpen {
+			continue
+		}
+		if item.Severity == SeverityCritical {
+			result.OpenCritical++
+		} else {
+			result.OpenWarnings++
+		}
 	}
 	return result, nil
 }

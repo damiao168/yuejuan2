@@ -12,11 +12,12 @@ export function AnswerReview({ question, annotations, imageURL, onImageUnavailab
   const [activeAnnotation, setActiveAnnotation] = useState<string | null>(annotations[0]?.id ?? null);
   const [imageAvailable, setImageAvailable] = useState(true);
   const rate = Math.round((question.score_rate ?? (question.max_score > 0 ? question.score / question.max_score : 0)) * 100);
-  // 批注坐标是相对图片的比例，转成百分比后随原图一同缩放，不能直接当像素使用。
+  // 批注相对原图归一化；定位层只包住图片，外层留白和最小高度不能进入坐标换算。
   return <div className="answer-review">
     <section className="answer-canvas" aria-label="我的原始答卷">
       <div className="answer-canvas-header"><strong>我的原始答卷</strong><span>{annotations.length ? `${annotations.length} 条教师批注` : "原卷"}</span></div>
       {imageAvailable ? <div className="answer-image-stage">
+        <div className="answer-image-anchor">
         <img src={imageURL} alt={`第 ${question.question_no} 题答题区域`} onError={() => { setImageAvailable(false); onImageUnavailable?.(); }} />
         {annotations.map((annotation) => <button
           type="button"
@@ -26,6 +27,7 @@ export function AnswerReview({ question, annotations, imageURL, onImageUnavailab
           style={{ left: `${annotation.geometry.x * 100}%`, top: `${annotation.geometry.y * 100}%`, width: `${annotation.geometry.width * 100}%`, height: `${annotation.geometry.height * 100}%` }}
           onClick={() => setActiveAnnotation(annotation.id)}
         />)}
+        </div>
       </div> : <div className="answer-unavailable"><strong>原卷图暂时不可用</strong><p>你仍然可以查看本题得分与公开反馈。</p></div>}
     </section>
     <aside className="answer-inspector">

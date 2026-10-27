@@ -895,15 +895,28 @@ CREATE TABLE IF NOT EXISTS edugrade_e2e_applied_migration (
 		if err != nil {
 			t.Fatalf("read migration %s: %v", file, err)
 		}
-		for _, statement := range e2eSplitSQLStatements(string(raw)) {
-			if _, err := db.ExecContext(ctx, statement); err != nil {
-				t.Fatalf("apply migration %s failed on statement %q: %v", filepath.Base(file), statement, err)
-			}
-		}
-		if _, err := db.ExecContext(ctx, `INSERT INTO edugrade_e2e_applied_migration (name) VALUES ($1)`, name); err != nil {
-			t.Fatalf("record E2E migration %s: %v", name, err)
+		// 正式部署使用 psql -1：一份迁移及其台账必须同事务，表锁和失败回滚才有相同语义。
+		if err := e2eApplyMigrationFile(ctx, db, name, string(raw)); err != nil {
+			t.Fatalf("apply migration %s: %v", name, err)
 		}
 	}
+}
+
+func e2eApplyMigrationFile(ctx context.Context, db *sql.DB, name, source string) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, statement := range e2eSplitSQLStatements(source) {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("statement %q: %w", statement, err)
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO edugrade_e2e_applied_migration (name) VALUES ($1)`, name); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func e2eSplitSQLStatements(sqlText string) []string {

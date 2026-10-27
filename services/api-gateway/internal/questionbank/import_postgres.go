@@ -12,6 +12,7 @@ import (
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
 var importCommandPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
@@ -74,12 +75,12 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid AND ($3 OR exam_id::text=ANY($4::text[]
 	if err != nil {
 		return prepared, pgError(err)
 	}
-	if !schemaVersion.Valid || schemaVersion.Int16 != 1 || !sourceHash.Valid || len(raw) == 0 {
+	if !schemaVersion.Valid || (schemaVersion.Int16 != 1 && schemaVersion.Int16 != 2) || !sourceHash.Valid || len(raw) == 0 {
 		return prepared, ErrSourceUnavailable
 	}
 	var frozen frozenImportSnapshot
 	// 题目、评分快照和哈希必须来自同一份冻结记录，不能用考试当前配置替换缺失的历史依据。
-	if err = json.Unmarshal(raw, &frozen); err != nil || frozen.Version != 1 || frozen.ConfigurationHash != configurationHash || hashJSON(frozen) != sourceHash.String {
+	if err = json.Unmarshal(raw, &frozen); err != nil || frozen.Version != int(schemaVersion.Int16) || frozen.ConfigurationHash != configurationHash || hashJSON(frozen) != sourceHash.String {
 		return prepared, ErrSourceUnavailable
 	}
 	question, ok := frozenQuestion(frozen, selection.QuestionID)
@@ -102,6 +103,12 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid AND ($3 OR exam_id::text=ANY($4::text[]
 	content, scoring, err := buildImportedFacts(question, assessment, selection.Mapping)
 	if err != nil {
 		return prepared, ErrSourceUnavailable
+	}
+	if question.ReferenceMaterials != nil && question.ReferenceMaterials.Mode == "reference_images" {
+		scoring.ReferenceMaterials, err = paper.LoadReferenceMaterialImport(ctx, q, scope.TenantID, examID, question.ID, question.ReferenceMaterials)
+		if err != nil {
+			return prepared, ErrSourceUnavailable
+		}
 	}
 	schema, err := s.metadataSchema(ctx, q, scope, bank.ID, bank.MetadataSchemaVersion, "create")
 	if err != nil {
@@ -301,6 +308,9 @@ RETURNING id::text,created_at
 		return ImportResult{}, err
 	}
 	provenance.CreatedAt = createdAt.Time
+	if err = s.grantImportedReferences(ctx, tx, scope, in.TargetBankID, version.ID, provenanceID, prepared.Scoring.ReferenceMaterials); err != nil {
+		return ImportResult{}, err
+	}
 	version.ImportProvenance = &provenance
 	return ImportResult{
 		Item: item, Version: version, DuplicateHints: hints, Issues: prepared.Issues,
@@ -322,6 +332,9 @@ func (s *PostgresStore) prepareConfirmedImport(ctx context.Context, tx *sql.Tx, 
 		return preparedImport{}, err
 	}
 	if !prepared.ScoringConsistent {
+		return preparedImport{}, ErrSourceUnavailable
+	}
+	if err = paper.LockReferenceMaterialImportTx(ctx, tx, scope.TenantID, prepared.Scoring.ReferenceMaterials); err != nil {
 		return preparedImport{}, ErrSourceUnavailable
 	}
 	// 评分来源不一致时拒绝导入；其余映射问题随草稿保存，交给后续编辑和发布检查处理。

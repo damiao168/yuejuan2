@@ -9,9 +9,9 @@ import (
 func TestImportMapsFrozenFactsAndKeepsMissingMetadataInDraft(t *testing.T) {
 	q := frozenImportQuestion{ID: "source", QuestionNo: "OLD-3", QuestionType: "short_answer", AssessmentArchetype: "short_constructed", Score: 2,
 		Stem: "Frozen stem", KnowledgePoints: []string{"legacy-label"},
-		Answer:   &paper.AnswerKeyInput{StandardAnswer: "Frozen answer"},
+		Answer:   &paper.ReadinessAnswerSnapshot{StandardAnswer: "Frozen answer"},
 		Solution: &frozenImportSolution{RawText: "Frozen solution", Steps: []paper.SolutionStep{}, VerificationStatus: "human_confirmed"},
-		Rubric:   &paper.RubricInput{MaxScore: 2, Points: []paper.RubricPoint{{ID: "p1", Description: "Frozen point", Score: 2, Required: true}}},
+		Rubric:   &paper.ReadinessRubricSnapshot{MaxScore: 2, Points: []paper.RubricPoint{{ID: "p1", Description: "Frozen point", Score: 2, Required: true}}},
 	}
 	a := importAssessmentSnapshot{SubjectCode: "physics", EducationStage: "senior", ArchetypeCode: "short_constructed", Rubric: map[string]any{
 		"max_score": 2, "points": []any{map[string]any{"id": "p1", "description": "Frozen point", "score": 2, "required": true}},
@@ -44,7 +44,7 @@ func TestImportPreservesFrozenBankOptionsAndAttachmentDigests(t *testing.T) {
 	assetID := "00000000-0000-0000-0000-000000000123"
 	q := frozenImportQuestion{
 		ID: "source", QuestionNo: "OLD-4", QuestionType: "single_choice", AssessmentArchetype: "selected_response",
-		Score: 1, Stem: "Frozen objective", Answer: &paper.AnswerKeyInput{StandardAnswer: "B"},
+		Score: 1, Stem: "Frozen objective", Answer: &paper.ReadinessAnswerSnapshot{StandardAnswer: "B"},
 		BankContent: map[string]any{
 			"content": map[string]any{
 				"options":  []string{"One", "Two", "Three"},

@@ -132,6 +132,7 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 	}
 
 	calibrationService := calibration.NewService(stores.Calibration, stores.GoldPaper)
+	goldImages := goldpaper.NewImageService(stores.GoldPaper, dependencies.Files, dependencies.Objects)
 	if dependencies.DB != nil {
 		calibrationService.WithQuestionSource(taskmaterials.PostgresReader{DB: dependencies.DB})
 	}
@@ -158,6 +159,7 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 	reviewHandler := review.NewHandler(
 		stores.Review, dependencies.Auth, dependencies.SegmentImage, dependencies.FileDownload,
 	).WithQualificationGate(calibrationService).
+		WithGoldImageReader(goldImages).
 		WithReferenceMaterials(paper.NewReferenceMaterialsService(dependencies.DB, dependencies.Files, dependencies.Objects, cfg.Files.Bucket)).
 		WithSeedHook(seedQualityService).
 		WithSeedObservationRefresher(graderDriftService).
@@ -177,8 +179,8 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 		ReviewHandler:           reviewHandler,
 		ReviewAnnotationHandler: reviewannotation.NewHandler(stores.ReviewAnnotation, dependencies.Auth),
 		ReviewBookmarkHandler:   newPersonalReviewBookmarkHandler(cfg, stores, dependencies),
-		GoldPaperHandler:        goldpaper.NewHandler(stores.GoldPaper, dependencies.Auth),
-		CalibrationHandler:      calibration.NewHandler(calibrationService, dependencies.Auth),
+		GoldPaperHandler:        goldpaper.NewHandler(stores.GoldPaper, dependencies.Auth).WithImageReader(goldImages),
+		CalibrationHandler:      calibration.NewHandler(calibrationService, dependencies.Auth).WithImageReader(goldImages),
 		AnswerGroupHandler:      answergroup.NewHandlerWithReferences(stores.AnswerGroup, dependencies.Auth, stores.GoldPaper).WithSegmentImage(dependencies.SegmentImage),
 		BackmarkHandler:         backmarkHandler,
 		RegradeHandler:          regradeHandler,

@@ -642,19 +642,19 @@ func (h *Handler) FailFile(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusConflict, "capture_task_mismatch", "worker task does not belong to this capture file")
 		return
 	}
-	updatedTask, err := h.runtime.Fail(r.Context(), user.TenantID, input.TaskID, workerruntime.FailInput{LeaseToken: input.LeaseToken, Retryable: input.Retryable, ErrorCode: input.ErrorCode, ErrorDetail: input.ErrorDetail, DurationMS: input.DurationMS})
-	if err != nil {
-		writeRuntimeError(w, r, err)
+	coordinator, ok := h.store.(FileFailureCommandStore)
+	if !ok {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "capture_command_unavailable", "atomic capture failure is unavailable")
 		return
 	}
-	retryable := updatedTask.Status == workerruntime.StatusQueued
-	out, err := h.store.ApplyFileFailure(r.Context(), user.TenantID, fileID, input.ErrorCode, retryable)
+	// 失败租约和采集投影一起落定；领域写入失败时保留原租约供同一回调重试。
+	out, taskStatus, err := coordinator.SubmitFileFailureCommand(r.Context(), user.TenantID, fileID, input, h.runtime)
 	if err != nil {
-		writeError(w, r, err)
+		writeCaptureCompletionError(w, r, err)
 		return
 	}
 	h.auditAction(r, "capture_file.processing_failed", "capture_file", out.ID, input.ErrorCode)
-	httpx.JSON(w, http.StatusOK, map[string]any{"file": out, "task_status": updatedTask.Status})
+	httpx.JSON(w, http.StatusOK, map[string]any{"file": out, "task_status": taskStatus})
 }
 
 func (h *Handler) CancelBatch(w http.ResponseWriter, r *http.Request) { h.setStatus(w, r, "cancelled") }
@@ -719,11 +719,16 @@ func (h *Handler) RetryRegistration(w http.ResponseWriter, r *http.Request) {
 		writeRuntimeError(w, r, err)
 		return
 	}
-	if _, err = h.runtime.Requeue(r.Context(), user.TenantID, task.ID); err != nil {
+	coordinator, ok := h.store.(RegistrationRetryStore)
+	if !ok {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "capture_command_unavailable", "atomic registration retry is unavailable")
+		return
+	}
+	if _, err = coordinator.RetryRegistrationTask(r.Context(), user.TenantID, run.ID, task.ID, h.runtime); err != nil {
 		writeRuntimeError(w, r, err)
 		return
 	}
-	out, err := h.store.PrepareRegistrationRetry(r.Context(), user.TenantID, run.ID)
+	out, err := h.store.GetRegistrationRun(r.Context(), user.TenantID, run.ID)
 	if err != nil {
 		writeError(w, r, err)
 		return

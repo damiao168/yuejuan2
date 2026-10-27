@@ -18,8 +18,9 @@ const (
 )
 
 type Handler struct {
-	store Store
-	audit auth.AuditRecorder
+	store  Store
+	audit  auth.AuditRecorder
+	images VersionImageReader
 }
 
 func NewHandler(store Store, audit auth.AuditRecorder) *Handler {
@@ -32,6 +33,8 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage f
 	mux.Handle("GET /api/v1/exams/{examId}/questions/{questionId}/gold-coverage", requireRead(h.GetCoverage))
 	mux.Handle("GET /api/v1/gold-papers", requireRead(h.List))
 	mux.Handle("GET /api/v1/gold-papers/{id}", requireRead(h.Get))
+	mux.Handle("GET /api/v1/gold-papers/{id}/versions/{version}/image", requireRead(h.GetVersionImage))
+	mux.Handle("HEAD /api/v1/gold-papers/{id}/versions/{version}/image", requireRead(h.GetVersionImage))
 	mux.Handle("POST /api/v1/gold-papers/{id}/versions", requireManage(h.CreateVersion))
 	mux.Handle("POST /api/v1/gold-papers/{id}/versions/{version}/approve", requireManage(h.Approve))
 	mux.Handle("POST /api/v1/gold-papers/{id}/retire", requireManage(h.Retire))
@@ -135,6 +138,13 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter := ListFilter{ExamID: strings.TrimSpace(r.URL.Query().Get("exam_id")), QuestionID: strings.TrimSpace(r.URL.Query().Get("question_id")), Status: Status(strings.TrimSpace(r.URL.Query().Get("status")))}
+	scope, hasScope := auth.AccessScopeFromContext(r.Context())
+	if !hasScope || scope.TenantID != user.TenantID || scope.ActorID != user.ID {
+		httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "authenticated collection scope is required")
+		return
+	}
+	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
+	filter.Access = auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver}
 	items, err := h.store.List(r.Context(), user.TenantID, filter)
 	if err != nil {
 		writeError(w, r, err)
@@ -179,6 +189,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_gold_paper_input", "Gold Paper input is invalid")
 	case errors.Is(err, ErrSourceGradeMissing):
 		httpx.Error(w, r, http.StatusUnprocessableEntity, "gold_source_grade_missing", "source grades must belong to the nominated answer")
+	case errors.Is(err, ErrImageUnavailable):
+		httpx.Error(w, r, http.StatusConflict, "gold_image_unavailable", "Gold image identity is unavailable; nominate and approve a new version")
 	case errors.Is(err, ErrConflict), errors.Is(err, ErrAlreadyApproved), errors.Is(err, ErrApprovedImmutable):
 		httpx.Error(w, r, http.StatusConflict, "gold_paper_conflict", "Gold Paper state conflicts with this operation")
 	default:

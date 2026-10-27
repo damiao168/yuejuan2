@@ -74,7 +74,16 @@ func TestRoutineReceiptReplayChecksCurrentPermissions(t *testing.T) {
 }
 
 func TestCriticalReceiptReplayChecksRecentAuthAndPermissions(t *testing.T) {
-	store := &recentAuthTestStore{MemoryStore: testAuthStoreWithPermissions(t, []string{"session:revoke"}), platformRole: true}
+	store := &recentAuthTestStore{MemoryStore: testAuthStoreWithPermissions(t, []string{"session:revoke"})}
+	// 收据重放只隔离认证时效和权限变化；首次请求仍需有真实可管理的合成目标。
+	actor, err := store.FindUserByLogin(t.Context(), "demo", "teacher")
+	if err != nil {
+		t.Fatal(err)
+	}
+	actor.Roles = []string{"tenant_admin"}
+	actor.DataScope = map[string]any{"scope": "tenant"}
+	store.AddUser(actor)
+	store.AddUser(auth.UserWithPassword{User: auth.User{ID: "user-2", TenantID: "tenant-1", TenantCode: "demo", Username: "managed-teacher", Status: "active", Roles: []string{"teacher"}}, SchoolID: "school-1"})
 	router := NewRouter(testConfig(), logger.New(io.Discard, "error"), nil, store, org.NewMemoryStore(), exam.NewMemoryStore(), paper.NewMemoryStore())
 	token := serverLogin(t, router)
 	request := func() *httptest.ResponseRecorder {

@@ -84,16 +84,25 @@ func (h *Handler) ListIncidents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
+	limit := parseLimit(r.URL.Query().Get("limit"))
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
 	items, err := h.service.ListIncidents(r.Context(), user.TenantID, IncidentFilter{
 		Access: auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver},
 		ExamID: strings.TrimSpace(r.URL.Query().Get("exam_id")), QuestionID: strings.TrimSpace(r.URL.Query().Get("question_id")),
-		GraderID: strings.TrimSpace(r.URL.Query().Get("grader_id")), Status: status, Limit: parseLimit(r.URL.Query().Get("limit")),
+		GraderID: strings.TrimSpace(r.URL.Query().Get("grader_id")), Status: status, Limit: limit, Cursor: strings.TrimSpace(r.URL.Query().Get("cursor")), IncludeNext: true,
 	})
 	if err != nil {
 		writeHandlerError(w, r, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"incidents": items})
+	hasMore, next := len(items) > limit, ""
+	if hasMore {
+		items = items[:limit]
+		next = encodeIncidentCursor(items[len(items)-1])
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"incidents": items, "has_more": hasMore, "next_cursor": next})
 }
 
 func (h *Handler) ResolveIncident(w http.ResponseWriter, r *http.Request) {

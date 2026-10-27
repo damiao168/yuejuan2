@@ -284,15 +284,17 @@ type AuditRecord struct {
 }
 
 type AuditFilter struct {
-	Action          string
-	ActorID         string
-	TargetType      string
-	TargetID        string
-	ExamID          string
-	IPAddress       string
-	CreatedFrom     time.Time
-	CreatedTo       time.Time
-	Limit           int
+	Action      string
+	ActorID     string
+	TargetType  string
+	TargetID    string
+	ExamID      string
+	IPAddress   string
+	CreatedFrom time.Time
+	CreatedTo   time.Time
+	Limit       int
+	// IncludeNext 仅由集合处理器设置，为游标分页多取一条；导出仍遵循普通最大条数。
+	IncludeNext     bool
 	CursorCreatedAt time.Time
 	CursorID        string
 	// ScopeMode 从已认证主体派生。在审计记录包含可信资源投影前，非租户级作用域拒绝放行。
@@ -332,6 +334,7 @@ type AuditRepository interface {
 }
 
 type UserAdministrationRepository interface {
+	RevokeManagedUserSessions(ctx context.Context, actor User, actorScope AccessScope, userID string, reason string) (int, error)
 	ListManagedUsers(ctx context.Context, tenantID string, filter ManagedUserFilter) ([]ManagedUser, error)
 	ListAssignableRoles(ctx context.Context, actor User) ([]AssignableRole, error)
 	CreateManagedUser(ctx context.Context, actor User, actorScope AccessScope, input CreateManagedUserInput, passwordHash string) (ManagedUser, error)

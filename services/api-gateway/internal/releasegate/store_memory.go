@@ -6,6 +6,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/examlock"
 )
 
 // MemoryStore 对应证据和决定只追加的行为，用于确定性服务与 handler 测试；生产写入使用 Postgres。
@@ -26,6 +28,8 @@ func NewMemoryStore() *MemoryStore {
 func (s *MemoryStore) SetNow(now func() time.Time) { s.mu.Lock(); defer s.mu.Unlock(); s.now = now }
 
 func (s *MemoryStore) CreatePolicy(_ context.Context, tenantID, examID, actorID string, input CreatePolicyInput) (Policy, error) {
+	unlock := examlock.Memory(tenantID, examID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key := scopeKey(tenantID, examID)

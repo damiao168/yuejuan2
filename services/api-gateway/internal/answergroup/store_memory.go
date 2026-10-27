@@ -238,6 +238,9 @@ func (s *MemoryStore) Confirm(_ context.Context, tenantID, groupID, actorID stri
 	if !group.CanConfirm {
 		return Group{}, nil, ErrSamplingIncomplete
 	}
+	if !s.groupSourcesCurrent(group, s.sources[questionKey(tenantID, group.ExamID, group.QuestionID)]) {
+		return Group{}, nil, ErrRevisionConflict
+	}
 	now := time.Now().UTC()
 	rollback := s.id("rollback")
 	created := make([]Candidate, 0, group.MemberCount)

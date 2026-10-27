@@ -2,6 +2,7 @@ import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { getResult, listQuestionAnnotations, studentPaperPageImageURL, type StudentQuestion, type StudentQuestionAnnotation, type StudentResult } from "../../api";
 import { friendlyError, sessionExpired, studentReleaseChanged } from "../../errors";
 import { useStudentSession } from "../../studentSession";
+import { annotationOnPaper } from "./annotationGeometry";
 
 type PaperPage = NonNullable<StudentResult["paper_pages"]>[number];
 type ScoreMark = Pick<StudentQuestion, "question_id" | "question_no" | "score" | "max_score" | "answer_geometry">;
@@ -99,12 +100,20 @@ function PaperPageEvidence({ examID, releaseID, page, highScore, pageQuestions, 
       // 一道题确认发布变化，就停止整页展示；普通批注失败保留同版图片并给出明确重试。
       const failures = responses.filter((response) => response.status === "rejected");
       if (failures.some((response) => studentReleaseChanged(response.reason))) { onReleaseChanged(); return; }
-      setAnnotations(responses.flatMap((response) => response.status === "fulfilled" ? response.value.annotations : []));
+      let unmapped = false;
+      const pageAnnotations = responses.flatMap((response, index) => response.status === "fulfilled" ? response.value.annotations.flatMap(annotation => {
+        const mapped = annotationOnPaper(annotation, pageQuestions[index]);
+        if (!mapped) { unmapped = true; return []; }
+        return [mapped];
+      }) : []);
+      setAnnotations(pageAnnotations);
+      let notice = unmapped ? "部分教师批注缺少可靠的整页位置，未叠加显示；请在题目文字反馈中查看批注说明。" : "";
       if (failures.length) {
         const loginFailure = failures.find((response) => sessionExpired(response.reason));
         setAnnotationNeedsLogin(Boolean(loginFailure));
-        setAnnotationError(loginFailure ? friendlyError(loginFailure.reason) : "本页部分教师批注暂时无法加载，请重试批注。");
+        notice = [notice, loginFailure ? friendlyError(loginFailure.reason) : "本页部分教师批注暂时无法加载，请重试批注。"].filter(Boolean).join(" ");
       }
+      setAnnotationError(notice);
     }).finally(() => { if (active && lifecycleRef.current.active && generation === lifecycleRef.current.generation) setAnnotationLoading(false); });
     return () => { active = false; };
   }, [annotationAttempt, examID, highScore, onReleaseChanged, pageQuestions, releaseID]);

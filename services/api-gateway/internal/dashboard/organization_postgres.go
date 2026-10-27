@@ -103,7 +103,16 @@ func (s *PostgresOrganizationSummaryStore) countUsersWithRole(ctx context.Contex
 	}
 
 	classScope := scopedColumns{classSchoolScopeColumn, classGradeScopeColumn, "c.id"}
-	if len(scope.GradeIDs) > 0 || len(scope.ClassIDs) > 0 {
+	if scope.IsPlatform || scope.TenantWide {
+		// 租户级统计不受导航投影出的学校/班级列表收窄。
+	} else if scope.IsSchoolWide() {
+		// 学校管理员的年级/班级列表只是展开结果；教师归属按管理学校统计，未绑定班级也计入。
+		schools := scope.ManagedSchoolIDs()
+		if len(schools) == 0 {
+			return 0, auth.ErrAccessScopeInvalid
+		}
+		base += " AND " + inClause("u.school_id", schools, &args)
+	} else if len(scope.GradeIDs) > 0 || len(scope.ClassIDs) > 0 {
 		inner, scopedArgs := appendScope(`SELECT 1 FROM teacher_class tc JOIN school_class c ON c.tenant_id=tc.tenant_id AND c.id=tc.class_id WHERE tc.tenant_id=u.tenant_id AND tc.teacher_id=u.id AND tc.deleted_at IS NULL AND c.deleted_at IS NULL`, scope, classScope, args)
 		args = scopedArgs
 		base += " AND EXISTS (" + inner + ")"

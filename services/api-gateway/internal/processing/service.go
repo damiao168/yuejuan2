@@ -9,8 +9,19 @@ import (
 )
 
 type Service struct {
-	store   Store
-	runtime workerruntime.Store
+	store             Store
+	runtime           workerruntime.Store
+	registrationRetry interface {
+		RetryRegistrationTask(context.Context, string, string, string, workerruntime.Store) (workerruntime.Task, error)
+	}
+}
+
+// WithRegistrationRetryStore 接入权威配准来源，工作台重试不能只重新排运行时任务。
+func (s *Service) WithRegistrationRetryStore(store interface {
+	RetryRegistrationTask(context.Context, string, string, string, workerruntime.Store) (workerruntime.Task, error)
+}) *Service {
+	s.registrationRetry = store
+	return s
 }
 
 func NewService(store Store, runtime workerruntime.Store) *Service {
@@ -65,6 +76,13 @@ func (s *Service) Retry(ctx context.Context, tenantID, exceptionID string) (work
 	task, err := s.runtime.GetBySource(ctx, tenantID, target.SourceType, target.SourceID)
 	if err != nil {
 		return workerruntime.Task{}, err
+	}
+	if target.SourceType == "page_registration_run" {
+		if s.registrationRetry == nil {
+			return workerruntime.Task{}, ErrRetryForbidden
+		}
+		// 旧版本可能只恢复了运行时；即使任务已入队，也由权威来源在同一锁边界补齐领域状态。
+		return s.registrationRetry.RetryRegistrationTask(ctx, tenantID, target.SourceID, task.ID, s.runtime)
 	}
 	if task.Status == workerruntime.StatusQueued || task.Status == workerruntime.StatusLeased || task.Status == workerruntime.StatusRunning {
 		return task, nil

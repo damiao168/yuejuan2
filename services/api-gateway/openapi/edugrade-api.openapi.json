@@ -2151,8 +2151,8 @@
               }
             }
           },
-          "500": {
-            "description": "服务端未能完成操作",
+          "429": {
+            "description": "任务容量不足",
             "content": {
               "application/json": {
                 "schema": {
@@ -2161,8 +2161,8 @@
               }
             }
           },
-          "429": {
-            "description": "任务容量不足",
+          "500": {
+            "description": "服务端未能完成操作",
             "content": {
               "application/json": {
                 "schema": {
@@ -3447,8 +3447,8 @@
               }
             }
           },
-          "503": {
-            "description": "AI grading is disabled or unavailable",
+          "502": {
+            "description": "AI output did not complete or pass validation; no advisory grade was created",
             "content": {
               "application/json": {
                 "schema": {
@@ -3457,8 +3457,8 @@
               }
             }
           },
-          "502": {
-            "description": "AI output did not complete or pass validation; no advisory grade was created",
+          "503": {
+            "description": "AI grading is disabled or unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -12387,6 +12387,9 @@
           },
           {
             "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
           }
         ],
         "responses": {
@@ -24721,6 +24724,520 @@
           }
         }
       }
+    },
+    "/api/v1/question-bank/versions/{versionId}/reference-materials/{itemId}/image": {
+      "get": {
+        "tags": [
+          "QuestionBank"
+        ],
+        "operationId": "getQuestionBankReferenceMaterialImage",
+        "description": "Requires question_bank:read, target bank ACL and an immutable grant for this exact version. Returns only an item from its frozen manifest and rechecks the complete source authorization chain.",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified frozen reference crop",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing, forbidden, withdrawn or unavailable frozen reference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, forbidden, withdrawn or unavailable frozen reference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing, forbidden, withdrawn or unavailable frozen reference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing, forbidden, withdrawn or unavailable frozen reference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Missing, forbidden, withdrawn or unavailable frozen reference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Missing, forbidden, withdrawn or unavailable frozen reference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gold-papers/{id}/versions/{version}/image": {
+      "get": {
+        "tags": [
+          "GoldPapers"
+        ],
+        "operationId": "getGoldPaperVersionImage",
+        "description": "Requires review:manage and the Gold resource boundary. Reads only the exact version frozen asset; current segment corrections never substitute another asset.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified frozen answer image",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "GoldPapers"
+        ],
+        "operationId": "headGoldPaperVersionImage",
+        "description": "Requires review:manage and the Gold resource boundary. Reads only the exact version frozen asset; current segment corrections never substitute another asset.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified frozen answer image"
+          },
+          "400": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration-sessions/{id}/samples/{goldId}/image": {
+      "get": {
+        "tags": [
+          "Calibration"
+        ],
+        "operationId": "getCalibrationSampleImage",
+        "description": "Requires review:work, the session resource boundary, and its grader ownership or review:manage. Gold sample and version must exist in the session frozen manifest. Invalidated sessions cannot read images.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "goldId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified frozen answer image",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "Calibration"
+        ],
+        "operationId": "headCalibrationSampleImage",
+        "description": "Requires review:work, the session resource boundary, and its grader ownership or review:manage. Gold sample and version must exist in the session frozen manifest. Invalidated sessions cannot read images.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "goldId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified frozen answer image"
+          },
+          "400": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Rejected, missing, unavailable or unverifiable frozen image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -32659,9 +33176,15 @@
             "$ref": "#/components/schemas/ReviewTaskClaim"
           },
           "draft": {
-            "$ref": "#/components/schemas/ReviewDraft",
-            "nullable": true,
-            "description": "The assigned reviewer's current draft, or null on first open and for queue managers."
+            "description": "The assigned reviewer's current draft, or null on first open and for queue managers.",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewDraft"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "human_grade": {
             "$ref": "#/components/schemas/ReviewCommandHumanGrade",
@@ -33786,6 +34309,15 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "answer_image_url": {
+            "type": "string",
+            "description": "Frozen answer image for this exact nomination version; source corrections do not replace its bytes."
+          },
+          "image_invalidated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Historical unapproved nomination lacks provable frozen image identity. Create and approve a new version."
           }
         }
       },
@@ -35972,14 +36504,18 @@
             "type": "integer"
           },
           "completed_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "invalidated_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "invalidation_reason": {
             "type": "string"
@@ -36268,8 +36804,10 @@
             "type": "number"
           },
           "qwk": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "qwk_available": {
             "type": "boolean"
@@ -36704,8 +37242,10 @@
             "type": "integer"
           },
           "middle_score_brier_score": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           }
         }
       },
@@ -36798,22 +37338,28 @@
             "format": "date-time"
           },
           "completed_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "approved_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "approved_by": {
             "type": "string"
           },
           "invalidated_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "invalidated_by": {
             "type": "string"
@@ -36931,8 +37477,10 @@
             "type": "number"
           },
           "target_risk": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           }
         }
       },
@@ -36963,15 +37511,19 @@
             "type": "number"
           },
           "calibrated_confidence": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "calibration_id": {
             "type": "string"
           },
           "target_risk": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "abstain_reason": {
             "type": "string"
@@ -37202,9 +37754,11 @@
             "type": "string"
           },
           "reviewed_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "notes": {
             "type": "string"
@@ -37398,14 +37952,18 @@
             "type": "boolean"
           },
           "opens_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "closes_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "allowed_reason_codes": {
             "type": "array",
@@ -37653,9 +38211,11 @@
             "type": "string"
           },
           "published_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -38365,9 +38925,11 @@
             "type": "boolean"
           },
           "closes_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "allowed_reason_codes": {
             "type": "array",
@@ -38421,12 +38983,16 @@
         "required": [],
         "properties": {
           "min": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "max": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           }
         }
       },
@@ -38593,17 +39159,21 @@
             "type": "string"
           },
           "approved_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "finalized_by": {
             "type": "string"
           },
           "finalized_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "created_at": {
             "type": "string",
@@ -38653,8 +39223,10 @@
             "type": "string"
           },
           "candidate_score": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "candidate_rubric_selections": {
             "type": "array",
@@ -38669,12 +39241,16 @@
             "type": "string"
           },
           "reviewed_score": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "delta": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "status": {
             "type": "string"
@@ -39082,8 +39658,10 @@
             "type": "string"
           },
           "severity_delta": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "idempotency_key": {
             "type": "string"
@@ -39156,8 +39734,10 @@
             "type": "string"
           },
           "reviewed_score": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "reviewed_grade_id": {
             "type": "string"
@@ -39465,9 +40045,11 @@
             "type": "string"
           },
           "decided_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "decision_reason": {
             "type": "string"
@@ -39718,9 +40300,11 @@
             "type": "string"
           },
           "decided_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "created_at": {
             "type": "string",
@@ -40066,9 +40650,11 @@
             "type": "string"
           },
           "published_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -40223,9 +40809,11 @@
             "format": "date-time"
           },
           "completed_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -40303,14 +40891,18 @@
         "additionalProperties": false,
         "properties": {
           "from": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "to": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -40498,9 +41090,11 @@
             "format": "date-time"
           },
           "resolved_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -40538,6 +41132,12 @@
             "items": {
               "$ref": "#/components/schemas/GradingQualityIncident"
             }
+          },
+          "next_cursor": {
+            "type": "string"
+          },
+          "has_more": {
+            "type": "boolean"
           }
         }
       },
@@ -40558,14 +41158,18 @@
         "additionalProperties": false,
         "properties": {
           "min": {
-            "type": "number",
-            "minimum": 0,
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
           },
           "max": {
-            "type": "number",
-            "minimum": 0,
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
           }
         }
       },
@@ -41444,9 +42048,11 @@
             "format": "date-time"
           },
           "resolved_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "resolution": {
             "type": "string"
@@ -41581,14 +42187,18 @@
             "format": "date-time"
           },
           "heartbeat_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "completed_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "duration_ms": {
             "type": "integer"
@@ -41679,14 +42289,18 @@
             "type": "integer"
           },
           "not_before": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "lease_expires_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "leased_by": {
             "type": "string"
@@ -41698,19 +42312,25 @@
             "type": "string"
           },
           "started_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "completed_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "cancelled_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
           "duration_ms": {
             "type": "integer"
@@ -42591,12 +43211,16 @@
             "type": "string"
           },
           "score": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "required": {
-            "type": "boolean",
-            "nullable": true
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "evidence_requirements": {
             "type": "array",
@@ -42629,8 +43253,10 @@
             "type": "string"
           },
           "max_score": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "points": {
             "type": "array",
@@ -42758,6 +43384,12 @@
           },
           "required": {
             "type": "boolean"
+          },
+          "evidence_requirements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaperImportRubricEvidenceRequirement"
+            }
           }
         }
       },
@@ -44174,22 +44806,26 @@
             "type": "string"
           },
           "observed_options": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "type": "string"
-            },
-            "nullable": true
+            }
           },
           "observed_confidence": {
             "type": "number"
           },
           "measurements": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "type": "object",
               "additionalProperties": true
-            },
-            "nullable": true
+            }
           },
           "expected_options": {
             "type": "array",
@@ -45127,8 +45763,14 @@
             }
           },
           "execution_diagnostics": {
-            "$ref": "#/components/schemas/ExecutionDiagnostics",
-            "nullable": true
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionDiagnostics"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "retryable": {
             "type": "boolean"
@@ -45857,16 +46499,34 @@
             "type": "string"
           },
           "double_mark_session": {
-            "$ref": "#/components/schemas/ReviewCommandDoubleMarkSession",
-            "nullable": true
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewCommandDoubleMarkSession"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "final_grade": {
-            "$ref": "#/components/schemas/ReviewCommandFinalGrade",
-            "nullable": true
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewCommandFinalGrade"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "arbitration_task": {
-            "$ref": "#/components/schemas/ReviewCommandArbitrationTask",
-            "nullable": true
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewCommandArbitrationTask"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -45923,8 +46583,10 @@
             "type": "string"
           },
           "due_at": {
-            "type": "string",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "revision": {
             "type": "integer"
@@ -45983,11 +46645,13 @@
             "type": "number"
           },
           "rubric_selections": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/components/schemas/ReviewCommandRubricSelection"
-            },
-            "nullable": true
+            }
           },
           "comments": {
             "type": "string"
@@ -46088,8 +46752,10 @@
             "type": "string"
           },
           "score_difference": {
-            "type": "number",
-            "nullable": true
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "final_grade_id": {
             "type": "string"
@@ -46347,11 +47013,13 @@
             "type": "number"
           },
           "rubric_selections": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/components/schemas/ReviewCommandRubricSelection"
-            },
-            "nullable": true
+            }
           },
           "comments": {
             "type": "string"
@@ -46502,15 +47170,19 @@
             "type": "string"
           },
           "confirmed_at": {
-            "type": "string",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "published_by": {
             "type": "string"
           },
           "published_at": {
-            "type": "string",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "revision": {
             "type": "integer"
@@ -46636,11 +47308,13 @@
             "type": "string"
           },
           "submission_grades": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/components/schemas/ScoreCommandSubmissionGrade"
-            },
-            "nullable": true
+            }
           },
           "quality": {
             "$ref": "#/components/schemas/ScoreCommandQualityReport"
@@ -46663,11 +47337,13 @@
             "type": "boolean"
           },
           "issues": {
-            "type": "array",
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/components/schemas/ScoreCommandQualityIssue"
-            },
-            "nullable": true
+            }
           }
         },
         "required": [
@@ -47732,6 +48408,11 @@
               "practice_only",
               "exam_allowed"
             ]
+          },
+          "reference_materials": {
+            "$ref": "#/components/schemas/QuestionBankReferenceMaterials",
+            "readOnly": true,
+            "description": "Preserved by scoring edits. Only an accepted historical import or explicit same-item version creation can bind these frozen images."
           }
         },
         "required": [
@@ -50572,15 +51253,19 @@
             "type": "boolean"
           },
           "checks": {
-            "type": "array",
-            "nullable": true,
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/components/schemas/ExamConfigurationReadinessCheck"
             }
           },
           "advisories": {
-            "type": "array",
-            "nullable": true,
+            "type": [
+              "array",
+              "null"
+            ],
             "items": {
               "$ref": "#/components/schemas/ExamConfigurationReadinessAdvisory"
             }
@@ -53599,9 +54284,11 @@
         "additionalProperties": false,
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           },
           "task_id": {
             "type": "string",
@@ -53745,9 +54432,11 @@
         "additionalProperties": false,
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           },
           "task_id": {
             "type": "string",
@@ -55231,6 +55920,128 @@
             "format": "uuid"
           }
         }
+      },
+      "QuestionBankReferenceMaterials": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Read-only frozen reference identity and ordered images. An accepted import grants only its exact bank version; source withdrawal or asset isolation still blocks reads and materialization.",
+        "properties": {
+          "source_exam_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source_question_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "manifest_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "reference_images"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "image_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/QuestionBankReferenceMaterialItem"
+            }
+          }
+        },
+        "required": [
+          "source_exam_id",
+          "source_question_id",
+          "manifest_id",
+          "mode",
+          "revision",
+          "content_hash",
+          "image_count",
+          "items"
+        ]
+      },
+      "QuestionBankReferenceMaterialItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "crop_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "question_diagram",
+              "reference_solution"
+            ]
+          },
+          "ordinal": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "required": {
+            "const": true,
+            "type": "boolean"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1048576
+          },
+          "pixel_bbox": {
+            "$ref": "#/components/schemas/ReferencePixelBox"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ReferenceMaterialSource"
+          }
+        },
+        "required": [
+          "id",
+          "crop_ref",
+          "role",
+          "ordinal",
+          "required",
+          "sha256",
+          "width",
+          "height",
+          "size_bytes",
+          "pixel_bbox",
+          "source"
+        ]
       }
     }
   }

@@ -57,7 +57,7 @@ func TestPostgresAutomaticTemplateBindingSharesRevisionCursor(t *testing.T) {
 	for _, ddl := range []string{
 		`CREATE TABLE exam (tenant_id uuid,id uuid,UNIQUE(tenant_id,id))`,
 		`CREATE TABLE app_user (tenant_id uuid,id uuid,UNIQUE(tenant_id,id))`,
-		`CREATE TABLE answer_sheet_template (tenant_id uuid,id uuid,exam_id uuid,content_hash text,status text,deleted_at timestamptz,UNIQUE(tenant_id,id))`,
+		`CREATE TABLE answer_sheet_template (tenant_id uuid,id uuid,exam_id uuid,content_hash text,status text,deleted_at timestamptz,layout jsonb DEFAULT '{"pages":[]}',UNIQUE(tenant_id,id))`,
 	} {
 		if _, err = db.ExecContext(ctx, ddl); err != nil {
 			t.Fatal(err)
@@ -83,10 +83,10 @@ func TestPostgresAutomaticTemplateBindingSharesRevisionCursor(t *testing.T) {
 	if _, err = db.ExecContext(ctx, `INSERT INTO app_user VALUES ($1::uuid,$2::uuid)`, tenant, actor); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.ExecContext(ctx, `INSERT INTO answer_sheet_template VALUES ($1::uuid,$2::uuid,$3::uuid,'sha256:auto','locked',NULL)`, tenant, templateID, exam); err != nil {
+	if _, err = db.ExecContext(ctx, `INSERT INTO answer_sheet_template(tenant_id,id,exam_id,content_hash,status,deleted_at) VALUES ($1::uuid,$2::uuid,$3::uuid,'sha256:auto','locked',NULL)`, tenant, templateID, exam); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.ExecContext(ctx, `INSERT INTO answer_sheet_template VALUES ($1::uuid,$2::uuid,$3::uuid,'sha256:other','locked',NULL)`, tenant, competingTemplateID, exam); err != nil {
+	if _, err = db.ExecContext(ctx, `INSERT INTO answer_sheet_template(tenant_id,id,exam_id,content_hash,status,deleted_at) VALUES ($1::uuid,$2::uuid,$3::uuid,'sha256:other','locked',NULL)`, tenant, competingTemplateID, exam); err != nil {
 		t.Fatal(err)
 	}
 	autoBind := func() {

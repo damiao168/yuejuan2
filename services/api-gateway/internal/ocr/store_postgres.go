@@ -252,6 +252,9 @@ func completeSourceTaskInTx(ctx context.Context, tx *sql.Tx, tenantID string, id
 		return Task{}, err
 	}
 	if task.Status == "completed" {
+		if err := tx.QueryRowContext(ctx, `SELECT COALESCE(completion_payload_hash,'') FROM ocr_task WHERE tenant_id=$1 AND id::text=$2`, tenantID, id).Scan(&task.CompletionPayloadHash); err != nil {
+			return Task{}, err
+		}
 		task.Results, err = resultsFrom(ctx, tx, tenantID, id)
 		if err != nil {
 			return Task{}, err
@@ -263,6 +266,10 @@ func completeSourceTaskInTx(ctx context.Context, tx *sql.Tx, tenantID string, id
 	}
 	if !CanComplete(task.Status) {
 		return Task{}, ErrInvalidTransition
+	}
+	fingerprint, err := completionFingerprint(input, false)
+	if err != nil {
+		return Task{}, err
 	}
 	requiresReview := false
 	resultCount := 0
@@ -301,6 +308,7 @@ SET status = 'completed',
   input_hash = NULLIF($7, ''),
   duration_ms = $8,
   worker_id = NULLIF($9, ''),
+  completion_payload_hash = $10,
   attempt_count = attempt_count + 1,
   completed_at = now(),
   updated_at = now()
@@ -310,7 +318,7 @@ RETURNING id::text, tenant_id::text, submission_id::text, status, engine, engine
   COALESCE(duration_ms, 0), COALESCE(worker_id, ''), attempt_count,
   min_confidence::float8, result_count, requires_human_review, COALESCE(error_message, ''),
   requested_by::text, started_at, completed_at, created_at
-`, tenantID, id, resultCount, requiresReview, input.ModelVersion, input.ConfigHash, input.InputHash, input.DurationMS, input.WorkerID)
+`, tenantID, id, resultCount, requiresReview, input.ModelVersion, input.ConfigHash, input.InputHash, input.DurationMS, input.WorkerID, fingerprint)
 	var out Task
 	if err := scanTask(row, &out); err != nil {
 		return Task{}, err

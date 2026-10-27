@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"strings"
 
@@ -55,6 +56,10 @@ func (b regradeBlocker) BlockingRegradeCount(ctx context.Context, tenantID, exam
 		}
 	}
 	return count, nil
+}
+
+func (b regradeBlocker) BlockingRegradeCountTx(ctx context.Context, tx *sql.Tx, tenantID, examID string) (int, error) {
+	return regrade.BlockingReleaseCountTx(ctx, tx, tenantID, examID)
 }
 
 // 生产启动先完成基础设施和事务存储图，再创建路由；任一装配失败都会关闭已打开资源，避免半初始化服务继续运行。

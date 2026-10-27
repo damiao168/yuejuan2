@@ -615,7 +615,7 @@ export interface operations {
   "submitBackmarkItem": { args: { path: { "itemId": string; }; body: SubmitBackmarkItemRequest; signal?: AbortSignal; }; response: SubmitBackmarkItemResponse; };
   "listGraderQualityWindows": { args: { path: { "examId": string; "questionId": string; }; query?: { "grader_id"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: GraderQualityWindowListResponse; };
   "recomputeGraderDrift": { args: { path: { "examId": string; "questionId": string; }; body?: RecomputeGraderDriftRequest; signal?: AbortSignal; }; response: RecomputeGraderDriftResponse; };
-  "listGradingQualityIncidents": { args: { query?: { "exam_id"?: string; "question_id"?: string; "grader_id"?: string; "status"?: "open" | "acknowledged" | "resolved"; "limit"?: number; }; signal?: AbortSignal; }; response: GradingQualityIncidentListResponse; };
+  "listGradingQualityIncidents": { args: { query?: { "exam_id"?: string; "question_id"?: string; "grader_id"?: string; "status"?: "open" | "acknowledged" | "resolved"; "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: GradingQualityIncidentListResponse; };
   "resolveGradingQualityIncident": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: GradingQualityIncidentResponse; };
   "getMathUnderstanding": { args: { path: { "segmentId": string; }; signal?: AbortSignal; }; response: MathUnderstandingResponse; };
   "listMathUnderstandingCorrections": { args: { path: { "artifactId": string; }; signal?: AbortSignal; }; response: MathCorrectionListResponse; };
@@ -752,6 +752,9 @@ export interface operations {
   "getCaptureCollectionSummary": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: CaptureCollectionResponse; };
   "completeCaptureCollection": { args: { path: { "examId": string; }; body: CompleteCaptureCollectionRequest; signal?: AbortSignal; }; response: CaptureCollectionResponse; };
   "excludeCaptureFile": { args: { path: { "id": string; }; body: ExcludeCaptureFileRequest; signal?: AbortSignal; }; response: CaptureBatchResponse; };
+  "getQuestionBankReferenceMaterialImage": { args: { path: { "versionId": string; "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getGoldPaperVersionImage": { args: { path: { "id": string; "version": number; }; signal?: AbortSignal; }; response: unknown; };
+  "getCalibrationSampleImage": { args: { path: { "id": string; "goldId": string; }; signal?: AbortSignal; }; response: unknown; };
 }
 
 export class EduGradeApi {
@@ -2555,5 +2558,20 @@ export class EduGradeApi {
   excludeCaptureFile(args: operations["excludeCaptureFile"]["args"]): Promise<operations["excludeCaptureFile"]["response"]> {
     const requestPath = fillPath("/api/v1/capture-files/{id}/exclude", args.path);
     return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getQuestionBankReferenceMaterialImage(args: operations["getQuestionBankReferenceMaterialImage"]["args"]): Promise<operations["getQuestionBankReferenceMaterialImage"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-bank/versions/{versionId}/reference-materials/{itemId}/image", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getGoldPaperVersionImage(args: operations["getGoldPaperVersionImage"]["args"]): Promise<operations["getGoldPaperVersionImage"]["response"]> {
+    const requestPath = fillPath("/api/v1/gold-papers/{id}/versions/{version}/image", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getCalibrationSampleImage(args: operations["getCalibrationSampleImage"]["args"]): Promise<operations["getCalibrationSampleImage"]["response"]> {
+    const requestPath = fillPath("/api/v1/calibration-sessions/{id}/samples/{goldId}/image", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
   }
 }

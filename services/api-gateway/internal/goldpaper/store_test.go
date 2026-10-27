@@ -133,5 +133,5 @@ func TestRoutesRequireManageAndDTOIsDeidentified(t *testing.T) {
 }
 
 func seedSource(store *MemoryStore, tenant, exam, question, submission, grade string, maxScore float64) {
-	store.SetSource(tenant, Source{ExamID: exam, QuestionID: question, SubmissionID: submission, SnapshotID: "snapshot-1", SubjectCode: "general", ArchetypeCode: "short_constructed", RiskTier: "R3", MaxScore: maxScore, RubricSnapshot: map[string]any{"criteria": []any{}}, AvailableGradeIDs: []string{grade}})
+	store.SetSource(tenant, Source{ExamID: exam, QuestionID: question, SubmissionID: submission, SnapshotID: "snapshot-1", SubjectCode: "general", ArchetypeCode: "short_constructed", RiskTier: "R3", MaxScore: maxScore, RubricSnapshot: map[string]any{"criteria": []any{}}, AvailableGradeIDs: []string{grade}, ImageBinding: ImageBinding{SegmentID: "segment-" + submission, AssetID: "asset-" + submission, SHA256: strings.Repeat("a", 64), OwnerType: "answer_segment_crop", OwnerID: "run-" + submission}})
 }

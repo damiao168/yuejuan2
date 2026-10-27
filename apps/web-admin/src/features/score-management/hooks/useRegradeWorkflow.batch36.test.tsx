@@ -162,4 +162,34 @@ describe("regrade review batch36 decision boundaries", () => {
     expect(mocks.review).toHaveBeenCalledWith(item.id, { decision: "accept", expected_revision: 7 });
     expect(setActioning.mock.calls).toEqual([["regrade-load-review"], [null]]);
   });
+
+  it.each(["accept", "reject"] as const)("异常重新复核必须核对当前修订并填写说明：%s", async (decision) => {
+    await mount();
+    const exception = { ...item, status: "exception", revision: 8 };
+    await act(async () => { current.decideRegradeItem(exception, decision); });
+    expect(mocks.review).not.toHaveBeenCalled();
+    await act(async () => { current.markEvidenceReviewed(exception.id, exception.revision); });
+    await act(async () => { current.decideRegradeItem(exception, decision); });
+    expect(mocks.error).toHaveBeenLastCalledWith("请填写异常处理说明，再接受或驳回候选");
+    expect(mocks.review).not.toHaveBeenCalled();
+    await act(async () => { current.setRegradeReviewNotes({ [item.id]: "  已重新核对原图  " }); current.setRegradeReviewScores({ [item.id]: 5 }); });
+    await act(async () => { current.decideRegradeItem(exception, decision); await runAction.mock.results[0].value; });
+    expect(mocks.review).toHaveBeenCalledWith(item.id, { decision, note: "已重新核对原图", expected_revision: 8 });
+  });
+
+  it("异常处理失败保留编辑器、当前说明与候选以便重试", async () => {
+    await mount();
+    const exception = { ...item, status: "exception", revision: 8 };
+    const exceptionSummary = { ...summary, items: [exception] };
+    mocks.get.mockResolvedValue({ regrade: exceptionSummary });
+    await act(async () => { await current.openRegradeReview(summary.job); });
+    await act(async () => { current.markEvidenceReviewed(item.id, 8); current.setRegradeReviewNotes({ [item.id]: "保留这份处理说明" }); });
+    mocks.review.mockRejectedValueOnce(new Error("temporary failure"));
+    runAction.mockImplementation(async (_key, action) => { try { await action(); } catch {} });
+    await act(async () => { current.decideRegradeItem(exception, "reject"); await runAction.mock.results[0].value; });
+    expect(current.regradeReviewOpen).toBe(true);
+    expect(current.regradeReviewNotes[item.id]).toBe("保留这份处理说明");
+    expect(current.regradeReview).toBe(exceptionSummary);
+    expect(mocks.get).toHaveBeenCalledTimes(1);
+  });
 });

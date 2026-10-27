@@ -74,6 +74,19 @@ export function questionAnswerValue(text: string, original: unknown, questionTyp
   return text;
 }
 
+export function hasStructuredEquivalentAnswers(values: unknown[] = []): boolean {
+  return values.some(value => typeof value !== "string");
+}
+
+export function questionEquivalentAnswers(values: string[] = [], original: unknown[] = []): unknown[] {
+  if (!hasStructuredEquivalentAnswers(original)) return values;
+  // 标签编辑器只支持字符串；结构化等价答案在此只读，保存其他字段时必须保留原值。
+  if (values.length !== original.length || values.some((value, index) => value !== questionAnswerText(original[index]))) {
+    throw new Error("此题含结构化等价答案，请先核对原始答案结构，不能转成文字保存。");
+  }
+  return original;
+}
+
 function questionTolerance(values: QuestionFormValues, rawTolerance: unknown): Record<string, unknown> {
   const tolerance: Record<string, unknown> = rawTolerance && typeof rawTolerance === "object" && !Array.isArray(rawTolerance)
     ? { ...rawTolerance as Record<string, unknown> }
@@ -146,7 +159,7 @@ export function useQuestionEditor({
         answer_area_h: Number(answerArea.h ?? 0),
         sort_order: selectedQuestion.sort_order,
         standard_answer: questionAnswerText(selectedQuestion.answer_key?.standard_answer),
-        equivalent_answers: (selectedQuestion.answer_key?.equivalent_answers ?? []).map(String),
+        equivalent_answers: (selectedQuestion.answer_key?.equivalent_answers ?? []).map(questionAnswerText),
         tolerance_absolute: tolerance.absolute === undefined || tolerance.absolute === null ? undefined : Number(tolerance.absolute),
         tolerance_relative: tolerance.relative === undefined || tolerance.relative === null
           ? undefined
@@ -205,7 +218,7 @@ export function useQuestionEditor({
       sort_order: values.sort_order ?? selectedQuestion?.sort_order ?? questionCount + 1,
       answer_key: {
         standard_answer: standardAnswer,
-        equivalent_answers: values.equivalent_answers ?? [],
+        equivalent_answers: questionEquivalentAnswers(values.equivalent_answers, editorMode === "edit" ? selectedQuestion?.answer_key?.equivalent_answers : undefined),
         tolerance
       }
     };

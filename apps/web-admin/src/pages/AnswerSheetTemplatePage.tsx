@@ -20,6 +20,7 @@ import { useUnsavedChangesGuard } from "../router/useUnsavedChangesGuard";
 import { useTemplateLibrary } from "../features/answer-sheet-template/library/useTemplateLibrary";
 import { TemplateLibraryPanel } from "../features/answer-sheet-template/library/TemplateLibraryPanel";
 import { createTemplatePageAnalyzer } from "../features/answer-sheet-template/editor/analyzeTemplatePage";
+import { templateCoveredQuestions } from "../features/answer-sheet-template/editor/templateCoverage";
 
 function formatError(error: unknown) {
   if (error instanceof ApiClientError) {
@@ -236,6 +237,7 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
   // 换考试的首帧仍可能持有旧模板；读取所属考试前不显示旧的完成标识或编辑入口。
   if (loading || (!error && loadedExamId !== examId)) return <LoadingState label="正在加载答题卡模板" />;
   if (error) return <ErrorState message={error} onRetry={() => void loadData()} />;
+  const libraryCoverage = templateCoveredQuestions(layout);
   const libraryPanel = <TemplateLibraryPanel key={`${scopeKey}:${examId}:${selectedPaperId}:${selectedTemplateId}:${canManage}:${canEditSources}`}
     library={library} canManage={canManage} canEditSources={canEditSources} hasTemplate={Boolean(selectedTemplate)}
     reviewKey={JSON.stringify([selectedTemplate?.revision, name, layout])}
@@ -243,7 +245,7 @@ export function AnswerSheetTemplatePage({ examId, canManage, canCalibrate = fals
     canCollect={Boolean(selectedTemplate && ["draft", "locked"].includes(selectedTemplate.status)
       && (selectedTemplate.status === "locked" || canEditSources) && questions.length
       && selectedPaper?.id === selectedTemplate.exam_paper_id && preview.sourceId === selectedPaper.id && !preview.loading && !preview.error
-      && questions.every(question => layout.pages.some(page => page.question_regions.some(region => region.question_id === question.id)))
+      && questions.every(question => libraryCoverage.has(question.id))
       && !hasUnassignedCandidates)} confirmDiscard={confirmDiscardTemplate} />;
   if (!papers.length) return <div className="page-stack">{libraryPanel}<EmptyAnswerSheetSources view={view} /></div>;
 

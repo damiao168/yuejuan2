@@ -4,8 +4,8 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 589,
-    "openapi": 346,
+    "registered": 594,
+    "openapi": 351,
     "registered_gaps": 243
   },
   "routes": [
@@ -949,6 +949,20 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/calibration-sessions/{id}/samples/{goldId}/image",
+      "source": "services/api-gateway/internal/calibration/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "getCalibrationSampleImage"
+    },
+    {
+      "method": "HEAD",
+      "path": "/api/v1/calibration-sessions/{id}/samples/{goldId}/image",
+      "source": "services/api-gateway/internal/calibration/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "headCalibrationSampleImage"
     },
     {
       "method": "GET",
@@ -2386,6 +2400,20 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gold-papers/{id}/versions/{version}/image",
+      "source": "services/api-gateway/internal/goldpaper/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "getGoldPaperVersionImage"
+    },
+    {
+      "method": "HEAD",
+      "path": "/api/v1/gold-papers/{id}/versions/{version}/image",
+      "source": "services/api-gateway/internal/goldpaper/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "headGoldPaperVersionImage"
     },
     {
       "method": "GET",
@@ -4162,6 +4190,13 @@
       "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "publishQuestionBankVersion"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/question-bank/versions/{versionId}/reference-materials/{itemId}/image",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
+      "coverage": "openapi",
+      "operation_id": "getQuestionBankReferenceMaterialImage"
     },
     {
       "method": "POST",

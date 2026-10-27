@@ -150,6 +150,16 @@ func (s *Service) ListIncidents(ctx context.Context, tenantID string, filter Inc
 	if filter.Limit <= 0 || filter.Limit > 500 {
 		filter.Limit = 100
 	}
+	if filter.Cursor != "" {
+		cursor, err := decodeIncidentCursor(filter.Cursor)
+		if err != nil {
+			return nil, err
+		}
+		filter.BeforeCreatedAt, filter.BeforeID = cursor.CreatedAt, cursor.ID
+	}
+	if filter.IncludeNext {
+		filter.Limit++
+	}
 	return s.store.ListIncidents(ctx, tenantID, filter)
 }
 

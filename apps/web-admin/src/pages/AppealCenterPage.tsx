@@ -86,6 +86,10 @@ export function AppealCenterPage({
   const [reason, setReason] = useState("");
   const [draftTouched, setDraftTouched] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const pagingBusy = useRef(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [actioning, setActioning] = useState("");
   useEffect(() => { onEditorStateChange?.({ dirty: draftTouched, busy: Boolean(actioning) }); }, [draftTouched, actioning, onEditorStateChange]);
@@ -103,8 +107,9 @@ export function AppealCenterPage({
   const listScopeRef = useRef(listScope);
   listScopeRef.current = listScope;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (cursor?: string) => {
     if (listScopeRef.current !== listScope) return;
+    if (cursor && pagingBusy.current) return;
     const requestId = ++listRequestRef.current;
     // 列表及随附身份资料属于同一筛选范围；详情的ID守卫不能阻止旧列表重新选择旧任务。
     const isCurrent = () => requestId === listRequestRef.current && listScopeRef.current === listScope;
@@ -112,7 +117,10 @@ export function AppealCenterPage({
       setLoading(false);
       return;
     }
-    setLoading(true);
+    // 首屏刷新接管分页状态；旧页的回执不能锁住或追加到新筛选范围。
+    pagingBusy.current = Boolean(cursor);
+    setLoadingMore(Boolean(cursor));
+    if (!cursor) { setLoading(true); setHasMore(false); setNextCursor(""); }
     setError("");
     try {
       const requestedExamId = examFilter === "all" ? undefined : examFilter;
@@ -120,6 +128,7 @@ export function AppealCenterPage({
         exam_id: requestedExamId,
         status: statusFilter === "all" ? undefined : statusFilter,
         limit: 100,
+        ...(cursor ? { cursor } : {}),
       });
       if (!isCurrent()) return;
       const studentIds = Array.from(new Set(response.appeals.map((item) => item.student_id).filter(Boolean)));
@@ -139,14 +148,16 @@ export function AppealCenterPage({
       const nextSelectedId = response.appeals.some((item) => item.id === selectedIdRef.current)
         ? selectedIdRef.current
         : (response.appeals[0]?.id ?? "");
-      selectedIdRef.current = nextSelectedId;
-      setAppeals(response.appeals);
-      setSelectedId(nextSelectedId);
-      setIdentities({
-        students: Object.fromEntries(studentResult.students.map((item) => [item.id, item])),
+      if (!cursor) selectedIdRef.current = nextSelectedId;
+      setAppeals(current => cursor ? Array.from(new Map([...current, ...response.appeals].map(item => [item.id, item])).values()) : response.appeals);
+      if (!cursor) setSelectedId(nextSelectedId);
+      setHasMore(Boolean(response.has_more && response.next_cursor));
+      setNextCursor(response.next_cursor ?? "");
+      setIdentities(current => ({
+        students: { ...(cursor ? current.students : {}), ...Object.fromEntries(studentResult.students.map((item) => [item.id, item])) },
         classes: Object.fromEntries(classResult.classes.map((item) => [item.id, item])),
         exams: Object.fromEntries(examResult.exams.map((item) => [item.id, item])),
-      });
+      }));
       setStatistics(statsResult.statistics as AppealStatistics | null);
       setWorkers(
         workerResult.users.filter(
@@ -157,11 +168,13 @@ export function AppealCenterPage({
     } catch (error_) {
       if (!isCurrent()) return;
       setError(formatError(error_));
-      setAppeals([]);
-      selectedIdRef.current = "";
-      setSelectedId("");
+      if (!cursor) {
+        setAppeals([]);
+        selectedIdRef.current = "";
+        setSelectedId("");
+      }
     } finally {
-      if (isCurrent()) setLoading(false);
+      if (isCurrent()) { setLoading(false); setLoadingMore(false); pagingBusy.current = false; }
     }
   }, [canManage, canRead, canReadExams, canReadIdentities, examFilter, statusFilter, listScope]);
   useEffect(() => {
@@ -489,7 +502,7 @@ export function AppealCenterPage({
               allowClear
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
-              placeholder={mode === "teacher" ? "搜索考试、题号或原因" : "搜索学生、考试、题号或原因"}
+              placeholder={mode === "teacher" ? "搜索已加载的考试、题号或原因" : "搜索已加载的学生、考试、题号或原因"}
             />
           </div>
           <AppealTaskList
@@ -501,6 +514,7 @@ export function AppealCenterPage({
             students={identities.students}
             onSelect={selectAppeal}
           />
+          {hasMore ? <Button loading={loadingMore} disabled={loading || Boolean(actioning)} onClick={() => void load(nextCursor)}>加载更多申诉</Button> : null}
         </section>
         <AppealCasePanel loading={detailLoading} hasSelection={selected !== null}>
         {selected ? (

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"edugrade-enterprise/services/api-gateway/internal/exam"
 	"github.com/google/uuid"
 )
 
@@ -53,7 +54,45 @@ func cloneRubricDraftRecord(record rubricDraftJobRecord) rubricDraftJobRecord {
 	return result
 }
 
-func (s *MemoryStore) createRubricDraftJob(_ context.Context, record rubricDraftJobRecord, regenerate bool) (RubricDraftJob, error) {
+func (s *MemoryStore) withRubricDraftExamState(ctx context.Context, tenantID, examID string, action func(bool) error) error {
+	s.mu.RLock()
+	boundary := s.rubricDraftExamBoundary
+	s.mu.RUnlock()
+	if boundary == nil {
+		return action(false)
+	}
+	err := boundary.WithManagementExamState(ctx, tenantID, examID, action)
+	if err == exam.ErrNotFound {
+		return ErrNotFound
+	}
+	return err
+}
+
+func (s *MemoryStore) HasActiveManagementExamWork(tenantID, examID string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, record := range s.rubricDraftJobs {
+		if record.TenantID == tenantID && record.Job.ExamID == examID && rubricDraftActive(record.Job.Status) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *MemoryStore) createRubricDraftJob(ctx context.Context, record rubricDraftJobRecord, regenerate bool) (RubricDraftJob, error) {
+	var job RubricDraftJob
+	err := s.withRubricDraftExamState(ctx, record.TenantID, record.Job.ExamID, func(archived bool) error {
+		if archived {
+			return ErrExamFrozen
+		}
+		var err error
+		job, err = s.createRubricDraftJobMemory(record, regenerate)
+		return err
+	})
+	return job, err
+}
+
+func (s *MemoryStore) createRubricDraftJobMemory(record rubricDraftJobRecord, regenerate bool) (RubricDraftJob, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var records []rubricDraftJobRecord
@@ -103,14 +142,23 @@ func (s *MemoryStore) listRubricDraftJobs(_ context.Context, tenantID, actorID, 
 	return items, nil
 }
 
-func (s *MemoryStore) getRubricDraftJob(_ context.Context, tenantID, actorID, examID, id string) (rubricDraftJobRecord, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	record, ok := s.rubricDraftJobs[id]
-	if !ok || record.TenantID != tenantID || record.ActorID != actorID || record.Job.ExamID != examID {
-		return rubricDraftJobRecord{}, ErrNotFound
-	}
-	return cloneRubricDraftRecord(record), nil
+func (s *MemoryStore) getRubricDraftJob(ctx context.Context, tenantID, actorID, examID, id string) (rubricDraftJobRecord, error) {
+	var out rubricDraftJobRecord
+	err := s.withRubricDraftExamState(ctx, tenantID, examID, func(archived bool) error {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		record, ok := s.rubricDraftJobs[id]
+		if !ok || record.TenantID != tenantID || record.ActorID != actorID || record.Job.ExamID != examID {
+			return ErrNotFound
+		}
+		out = cloneRubricDraftRecord(record)
+		if archived {
+			// 归档后的读取保留历史任务，不返回可采用的新建议，也不为读操作改写归档内容。
+			out.Job.Status, out.Job.Result, out.Job.Error = "stale", nil, "考试已归档，不能采用该建议"
+		}
+		return nil
+	})
+	return out, err
 }
 
 func (s *MemoryStore) cancelRubricDraftJob(_ context.Context, tenantID, actorID, examID, id string) (RubricDraftJob, error) {
@@ -182,7 +230,16 @@ func (s *MemoryStore) claimRubricDraftJob(_ context.Context, lease time.Duration
 	return &copy, nil
 }
 
-func (s *MemoryStore) finishRubricDraftJob(_ context.Context, record rubricDraftJobRecord, status string, result *MathRubricDraftResponse, message string, retryAt time.Time) error {
+func (s *MemoryStore) finishRubricDraftJob(ctx context.Context, record rubricDraftJobRecord, status string, result *MathRubricDraftResponse, message string, retryAt time.Time) error {
+	return s.withRubricDraftExamState(ctx, record.TenantID, record.Job.ExamID, func(archived bool) error {
+		if archived {
+			status, result, message = "stale", nil, "考试已归档，旧任务结果已丢弃"
+		}
+		return s.finishRubricDraftJobMemory(record, status, result, message, retryAt)
+	})
+}
+
+func (s *MemoryStore) finishRubricDraftJobMemory(record rubricDraftJobRecord, status string, result *MathRubricDraftResponse, message string, retryAt time.Time) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	current, ok := s.rubricDraftJobs[record.Job.ID]

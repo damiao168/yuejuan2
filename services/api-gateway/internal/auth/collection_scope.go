@@ -53,7 +53,7 @@ func (a ExamCollectionAccess) SQLArgs(tenantID string) ([]any, error) {
 	wide := AllowsResourceBoundary(s, ResourceBoundary{TenantID: tenantID})
 	schools := []string{}
 	if s.IsSchoolWide() {
-		schools = append(schools, s.SchoolIDs...)
+		schools = s.ManagedSchoolIDs()
 	}
 	return []any{wide, schools, append([]string{}, s.ClassIDs...), append([]string{}, s.ExamIDs...)}, nil
 }

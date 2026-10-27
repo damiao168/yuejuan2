@@ -784,6 +784,10 @@ func (s *MemoryStore) finalizeUploadGroupLocked(file File) {
 func (s *MemoryStore) ApplyFileFailure(_ context.Context, tenantID, fileID, errorCode string, retryable bool) (File, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.applyFileFailureLocked(tenantID, fileID, errorCode, retryable)
+}
+
+func (s *MemoryStore) applyFileFailureLocked(tenantID, fileID, errorCode string, retryable bool) (File, error) {
 	x, ok := s.files[fileID]
 	if !ok || x.TenantID != tenantID {
 		return File{}, ErrNotFound

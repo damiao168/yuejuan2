@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Button, Select } from "antd";
 import { Plus, Trash2 } from "lucide-react";
 import { IDENTITY_REGION_LABELS, normalizeIdentityRegionLabel } from "../editor/identityRegionFields";
-import type { TemplatePageViewProps } from "./templateViewTypes";
+import type { TemplateIdentityView } from "./templateViewTypes";
 
-export function IdentityRegionPanel({ view }: TemplatePageViewProps) {
+export function IdentityRegionPanel({ view }: Readonly<{ view: TemplateIdentityView }>) {
   const { editor, previewController } = view;
   const [newLabel, setNewLabel] = useState("学号");
   const regions = editor.layout.pages.flatMap(page => page.identity_regions.map(region => ({ pageNo: page.page_no, region })));

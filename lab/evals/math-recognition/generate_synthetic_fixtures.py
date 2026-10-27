@@ -81,8 +81,8 @@ def abs_(value: Any) -> dict[str, Any]:
     return {"kind": "absolute", "children": [value]}
 
 
-def trig(name: str, argument: Any) -> dict[str, Any]:
-    return {"kind": "trig", "name": name, "unit": "deg", "children": [argument]}
+def trig(name: str, argument: Any, *, unit: str = "deg") -> dict[str, Any]:
+    return {"kind": "trig", "name": name, "unit": unit, "children": [argument]}
 
 
 def vec(base: Any) -> dict[str, Any]:
@@ -301,7 +301,8 @@ CATEGORIES: dict[str, list[dict[str, Any]]] = {
     ],
     "limit": [
         {
-            "formulas": [("formula-1", r"\lim_{x\to 0}\frac{\sin x}{x}=1", lim_(sym("x"), num("0"), frac(trig("sin", sym("x")), sym("x")), num("1")))],
+            # sin(x)/x → 1 以弧度为前提；角度 AST 的极限是 π/180。
+            "formulas": [("formula-1", r"\lim_{x\to 0}\frac{\sin x}{x}=1", lim_(sym("x"), num("0"), frac(trig("sin", sym("x"), unit="rad"), sym("x")), num("1")))],
             "symbols": ["lim", "x", "0", "sin", "1", "="],
             "steps": [("step-1", "lim(x→0) sinx/x"), ("step-2", "=1")],
             "rubric": [("evaluate_limit", "supported")],
@@ -588,6 +589,7 @@ def normalized_spec(spec: dict[str, Any]) -> dict[str, Any]:
             for a, b in itertools.pairwise(ids)
         ]
     return {
+        "synthetic": True,
         "formulas": [
             {"id": fid, "latex": latex, "ast": ast} for fid, latex, ast in spec["formulas"]
         ],
@@ -758,7 +760,7 @@ def dumps_line(payload: Any) -> str:
     return json.dumps(payload, ensure_ascii=False) + "\n"
 
 
-def write_manifest(path: Path, samples: dict[str, dict[str, Any]]) -> None:
+def write_manifest(path: Path, samples: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     kept: list[str] = []
     for line in lines:
@@ -771,6 +773,7 @@ def write_manifest(path: Path, samples: dict[str, dict[str, Any]]) -> None:
         kept.append(
             dumps_line(
                 {
+                    "synthetic": True,
                     "sample_id": sample_id,
                     "subject_code": SUBJECT_CODE,
                     "original": f"{ORIGINAL_PREFIX}/{sample_id}.png",
@@ -779,6 +782,7 @@ def write_manifest(path: Path, samples: dict[str, dict[str, Any]]) -> None:
             ).rstrip("\n")
         )
     path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+    return [json.loads(line) for line in kept]
 
 
 # 清理目标目录内所有未列入 keep 的同后缀文件；调用方只能传入专用夹具目录。
@@ -793,13 +797,20 @@ def prune_stale(directory: Path, keep: set[str], suffix: str) -> None:
 def generate(fixtures_root: Path) -> dict[str, int]:
     samples = build_all()
     manifest_path = fixtures_root / "manifest.jsonl"
-    write_manifest(manifest_path, samples)
+    entries = write_manifest(manifest_path, samples)
     ground_truth_dir = fixtures_root / "ground-truth"
     predictions_dir = fixtures_root / "predictions" / PREDICTION_SET
     ground_truth_dir.mkdir(parents=True, exist_ok=True)
     predictions_dir.mkdir(parents=True, exist_ok=True)
-    prune_stale(ground_truth_dir, set(samples) | {ORIGINAL_ENTRY_ID}, ".json")
-    prune_stale(predictions_dir, set(samples) | {ORIGINAL_ENTRY_ID}, ".json")
+    # 扩展样本也会留在最终清单中；清理必须保留它实际引用的真值文件和同 ID 预测。
+    truth_ids = {
+        reference.stem
+        for entry in entries
+        if (reference := (fixtures_root / entry["ground_truth"]).resolve()).parent
+        == ground_truth_dir.resolve()
+    }
+    prune_stale(ground_truth_dir, truth_ids, ".json")
+    prune_stale(predictions_dir, {entry["sample_id"] for entry in entries}, ".json")
     for sample_id, bundle in samples.items():
         (ground_truth_dir / f"{sample_id}.json").write_text(
             dumps_line(bundle["ground_truth"]), encoding="utf-8"

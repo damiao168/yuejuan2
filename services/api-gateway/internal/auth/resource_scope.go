@@ -43,13 +43,14 @@ func AllowsResourceBoundary(scope AccessScope, boundary ResourceBoundary) bool {
 	if allowsExplicitResourceBoundary(scope, boundary) {
 		return true
 	}
-	if requiresAssignedBoundary(boundary.ResourceType) && !scope.schoolWide {
+	if requiresAssignedBoundary(boundary.ResourceType) && !scope.managesSchool(boundary.SchoolID) {
 		return false
 	}
 	if boundary.StudentID != "" && scope.StudentID != "" && boundary.StudentID == scope.StudentID {
 		return true
 	}
-	if scope.AssignedOnly && !scope.schoolWide && isSubmissionDescendant(boundary.ResourceType) {
+	// 外校任务允许读取考试材料，但同场其他答卷仍须具体分派；兼任本校管理员不能放宽外校范围。
+	if scope.AssignedOnly && !scope.managesSchool(boundary.SchoolID) && isSubmissionDescendant(boundary.ResourceType) {
 		return false
 	}
 	return allowsOrganizationBoundary(scope, boundary)
@@ -76,12 +77,12 @@ func allowsAssignedTaskBoundary(scope AccessScope, boundary ResourceBoundary) (a
 		if scope.AllowsReviewTask(boundary.ResourceID) {
 			return boundary.AssignedTo == scope.ActorID, true
 		}
-		return false, !scope.schoolWide
+		return false, !scope.managesSchool(boundary.SchoolID)
 	case "arbitration_task":
 		if scope.AllowsArbitrationTask(boundary.ResourceID) {
 			return boundary.AssignedTo == scope.ActorID, true
 		}
-		return false, !scope.schoolWide
+		return false, !scope.managesSchool(boundary.SchoolID)
 	default:
 		return false, false
 	}
@@ -120,10 +121,10 @@ func allowsOrganizationBoundary(scope AccessScope, boundary ResourceBoundary) bo
 		return true
 	}
 	// 班级角色继承的学校、年级 ID 仅供组织导航，不能据此读取其他班级的对象。
-	if boundary.SchoolID != "" && scope.AllowsSchool(boundary.SchoolID) && (scope.schoolWide || boundary.ResourceType == "" || boundary.ResourceType == "school") {
+	if boundary.SchoolID != "" && scope.AllowsSchool(boundary.SchoolID) && (scope.managesSchool(boundary.SchoolID) || boundary.ResourceType == "" || boundary.ResourceType == "school") {
 		return true
 	}
-	if boundary.GradeID != "" && scope.AllowsGrade(boundary.GradeID) && (scope.schoolWide || boundary.ResourceType == "" || boundary.ResourceType == "grade") {
+	if boundary.GradeID != "" && scope.AllowsGrade(boundary.GradeID) && (scope.managesSchool(boundary.SchoolID) || boundary.ResourceType == "" || boundary.ResourceType == "grade") {
 		return true
 	}
 	for _, classID := range boundary.ClassIDs {

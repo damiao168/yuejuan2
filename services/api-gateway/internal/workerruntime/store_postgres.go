@@ -540,6 +540,14 @@ WHERE tenant_id = $1 AND task_id = $2::uuid AND attempt_no = $3 AND completed_at
 	return task, nil
 }
 
+// LockTaskForRetryInTx 供来源恢复协调器先检查已在队列中的任务，不另开事务或重复排队。
+func LockTaskForRetryInTx(ctx context.Context, tx *sql.Tx, tenantID, taskID string) (Task, error) {
+	if tx == nil {
+		return Task{}, ErrInvalidInput
+	}
+	return getTaskForUpdate(ctx, tx, tenantID, taskID)
+}
+
 func (s *PostgresStore) Cancel(ctx context.Context, tenantID string, taskID string) (Task, error) {
 	return s.setTerminalStatus(ctx, tenantID, taskID, StatusCancelled)
 }

@@ -721,6 +721,11 @@ WHERE sub.tenant_id = $1 AND sub.exam_id = $2::uuid AND sub.deleted_at IS NULL
 				issues = append(issues, QualityIssue{Code: check.code, Message: check.message, Blocking: true, Count: count})
 			}
 		}
+		completeIssues, err := s.publishCompletenessTx(ctx, tx, tenantID, examID, issues)
+		if err != nil {
+			return QualityReport{}, err
+		}
+		issues = completeIssues
 		total, err := s.countSubmissionGradesTx(ctx, tx, tenantID, examID)
 		if err != nil {
 			return QualityReport{}, err

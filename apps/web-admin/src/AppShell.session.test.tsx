@@ -9,7 +9,7 @@ import { executeBusinessCommand, getBusinessCommandSession } from "./api/busines
 import { AppShell } from "./AppShell";
 import type { RouteRenderingContext } from "./router/pageRendering";
 
-type LoginProps = { onLogin: (values: LoginFormValues) => Promise<void>; onWechatLogin: (response: LoginResponse) => void; loading: boolean; error?: string };
+type LoginProps = { onLogin: (values: LoginFormValues) => Promise<void>; onWechatAuthenticate: (authenticate: () => Promise<LoginResponse | undefined>) => Promise<void>; loading: boolean; error?: string };
 type LayoutProps = { user: SessionUser; onLogout: () => void; onLockSession: () => Promise<void>; onReauthenticate: (password: string) => Promise<void>; children: ReactNode };
 const state = vi.hoisted(() => ({
   me: vi.fn(), login: vi.fn(), logout: vi.fn(), lock: vi.fn(), reauthenticate: vi.fn(),
@@ -98,6 +98,49 @@ describe("AppShell session boundaries", () => {
     await act(async () => { B.resolve(response("B")); await second; });
     expect(host.textContent).toBe("B");
     expect(getBusinessCommandSession().scope).toBe("school:B");
+    expect(state.push).toHaveBeenCalledExactlyOnceWith("/admin/dashboard");
+  });
+
+  it.each(["password-first", "wechat-first"] as const)("serializes password and actual WeChat authentication requests: %s", async (order) => {
+    await act(async () => root.render(<AppShell />));
+    const password = deferred<LoginResponse>();
+    const wechat = deferred<LoginResponse>();
+    let cookieOwner = "";
+    state.login.mockImplementation(async () => {
+      const result = await password.promise;
+      cookieOwner = result.user.id;
+      return result;
+    });
+    const authenticate = vi.fn(async () => {
+      const result = await wechat.promise;
+      cookieOwner = result.user.id;
+      return result;
+    });
+    let first!: Promise<void>;
+    let last!: Promise<void>;
+    // 替身按响应落定更新 Cookie 所有者；保护的是请求顺序，不把它视为真实浏览器网络集成。
+    if (order === "password-first") {
+      await act(async () => { first = state.loginProps!.onLogin(form("password")); });
+      await act(async () => { last = state.loginProps!.onWechatAuthenticate(authenticate); });
+      expect(authenticate).not.toHaveBeenCalled();
+      await act(async () => { password.resolve(response("password")); await first; });
+    } else {
+      await act(async () => { first = state.loginProps!.onWechatAuthenticate(authenticate); });
+      await act(async () => { last = state.loginProps!.onLogin(form("password")); });
+      expect(state.login).not.toHaveBeenCalled();
+      await act(async () => { wechat.resolve(response("wechat")); await first; });
+    }
+    expect(host.textContent).toContain("Login");
+    expect(getBusinessCommandSession().scope).toBe("");
+    await act(async () => {
+      if (order === "password-first") wechat.resolve(response("wechat"));
+      else password.resolve(response("password"));
+      await last;
+    });
+    const expectedOwner = order === "password-first" ? "wechat" : "password";
+    expect(cookieOwner).toBe(expectedOwner);
+    expect(host.textContent).toBe(expectedOwner);
+    expect(getBusinessCommandSession().scope).toBe(`school:${expectedOwner}`);
     expect(state.push).toHaveBeenCalledExactlyOnceWith("/admin/dashboard");
   });
 

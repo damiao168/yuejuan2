@@ -57,7 +57,10 @@ func (s *MemoryStore) Get(_ context.Context, tenantID, id string) (Disagreement,
 	return Disagreement{}, ErrNotFound
 }
 
-func (s *MemoryStore) List(_ context.Context, tenantID string, filter Filter) ([]Disagreement, error) {
+func (s *MemoryStore) List(ctx context.Context, tenantID string, filter Filter) ([]Disagreement, error) {
+	if err := filter.Access.Validate(tenantID); err != nil {
+		return nil, err
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	items := make([]Disagreement, 0)
@@ -65,6 +68,13 @@ func (s *MemoryStore) List(_ context.Context, tenantID string, filter Filter) ([
 		if item.TenantID != tenantID || (filter.ExamID != "" && item.ExamID != filter.ExamID) ||
 			(filter.QuestionID != "" && item.QuestionID != filter.QuestionID) ||
 			(filter.Status != "" && item.Status != filter.Status) || (filter.Severity != "" && item.Severity != filter.Severity) {
+			continue
+		}
+		allowed, err := allowsCollectionDisagreement(ctx, tenantID, filter.Access, item)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
 			continue
 		}
 		items = append(items, clone(item))

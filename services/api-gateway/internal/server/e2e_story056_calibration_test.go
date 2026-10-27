@@ -14,6 +14,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
+	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
 // 此测试验证生产权限来自独立证据，且在实际应用 worker 结果之前仍可撤销。
@@ -150,6 +151,9 @@ func e2eApproveStory056Calibration(t *testing.T, db *sql.DB, router http.Handler
 	labeledSummary := labeledCalibration["session"].(map[string]any)["summary"].(map[string]any)
 	if ready, _ := labeledSummary["ready_to_approve"].(bool); !ready {
 		t.Fatalf("complete stratified blind labels must be approvable: %#v", labeledSummary)
+	}
+	if e2eFloat(t, labeledSummary, "eligible_count") == 0 || e2eFloat(t, labeledSummary, "eligible_match_count") != e2eFloat(t, labeledSummary, "eligible_count") || e2eFloat(t, labeledSummary, "eligible_mismatch_count") != 0 {
+		t.Fatalf("approval must contain matching automatically accepted evidence: %#v", labeledSummary)
 	}
 
 	approved := e2ePostJSON(t, router, http.MethodPost, "/api/v1/omr-calibrations/"+calibrationID+"/approve", approverToken, story056JSON(t, map[string]any{
@@ -385,7 +389,7 @@ UPDATE omr_run o
 SET status='completed',
   decision=CASE c.stratum_index WHEN 2 THEN 'blank' WHEN 3 THEN 'ambiguous' ELSE 'selected' END,
   selected_options=CASE WHEN c.stratum_index IN (0,1) THEN jsonb_build_array(c.option_label) ELSE '[]'::jsonb END,
-  confidence=CASE c.stratum_index WHEN 0 THEN 0.99 WHEN 1 THEN 0.80 WHEN 2 THEN 0.95 ELSE 0.50 END,
+  confidence=CASE c.stratum_index WHEN 0 THEN 0.99 WHEN 1 THEN 0.80 WHEN 2 THEN 0.99 ELSE 0.50 END,
   measurements=jsonb_build_array(jsonb_build_object('option',c.option_label,'foreground_delta',0.9)),
   result_version='story056-calibration-seed-v1',duration_ms=1,completed_at=now(),updated_at=now()
 FROM classified c
@@ -396,18 +400,7 @@ WHERE o.id=c.id`, tenantID, runID)
 	if count, _ := result.RowsAffected(); count != 120 {
 		t.Fatalf("expected 120 stratified calibration OMR facts, got %d", count)
 	}
-	result, err = db.Exec(`
-UPDATE agent_worker_task task
-SET status='succeeded',result_schema_version='story056-calibration-seed-v1',result_payload_hash='sha256:story056-calibration-seed',duration_ms=1,completed_at=now(),updated_at=now()
-FROM omr_run o
-WHERE task.tenant_id=o.tenant_id AND task.id=o.runtime_task_id
-  AND o.tenant_id=$1::uuid AND o.scoring_run_id=$2::uuid AND o.deleted_at IS NULL`, tenantID, runID)
-	if err != nil {
-		t.Fatalf("retire seeded calibration worker tasks: %v", err)
-	}
-	if count, _ := result.RowsAffected(); count != 120 {
-		t.Fatalf("expected 120 retired calibration worker tasks, got %d", count)
-	}
+	e2eSeedStory056CalibrationWorkerResults(t, db, tenantID, runID)
 	if _, err = db.Exec(`UPDATE scoring_run SET status='completed',queued_count=0,review_count=0,failed_count=0,auto_confirmed_count=0,completed_at=now(),updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, runID); err != nil {
 		t.Fatalf("complete seeded calibration scoring run: %v", err)
 	}
@@ -477,7 +470,7 @@ SELECT $1::uuid,$3::uuid,c.id,c.crop_file_asset_id,c.crop_sha256,
   $2::uuid,$4,$5,$6,$7::uuid,$8,$9,false,$10,'completed',
   CASE c.stratum_index WHEN 2 THEN 'blank' WHEN 3 THEN 'ambiguous' ELSE 'selected' END,
   CASE WHEN c.stratum_index IN (0,1) THEN jsonb_build_array(c.option_label) ELSE '[]'::jsonb END,
-  CASE c.stratum_index WHEN 0 THEN 0.99 WHEN 1 THEN 0.80 WHEN 2 THEN 0.95 ELSE 0.50 END,
+  CASE c.stratum_index WHEN 0 THEN 0.99 WHEN 1 THEN 0.80 WHEN 2 THEN 0.99 ELSE 0.50 END,
   jsonb_build_array(jsonb_build_object('option',c.option_label,'foreground_delta',0.9)),
   'story056-mutable-calibration-v1',1,now()
 FROM classified c`, fixture.TenantID, fixture.TemplateID, runID, templateHash,
@@ -488,6 +481,77 @@ FROM classified c`, fixture.TenantID, fixture.TemplateID, runID, templateHash,
 	}
 	if count, _ := result.RowsAffected(); count != 120 {
 		t.Fatalf("expected 120 mutable calibration OMR facts, got %d", count)
+	}
+	e2eSeedStory056CalibrationWorkerResults(t, db, fixture.TenantID, runID)
+}
+
+// 校准冻结精确已完成 Worker 的复核标志和集合质量，不能仅把 omr_run 标成 completed。
+// 这里构造完整合成结果和规范摘要；配置阶段夹具补齐任务绑定，仍不伪装为实际算法验收。
+func e2eSeedStory056CalibrationWorkerResults(t *testing.T, db *sql.DB, tenantID, runID string) {
+	t.Helper()
+	if _, err := db.Exec(`WITH inserted AS (
+ INSERT INTO agent_worker_task(tenant_id,task_type,queue_name,source_type,source_id,payload_schema_version,idempotency_key,dedupe_key,created_by)
+ SELECT o.tenant_id,'omr_extract','page-processing','omr_run',o.id,'omr-task-v2','synthetic-calibration:'||o.id::text,'synthetic-calibration:'||o.id::text,run.started_by
+ FROM omr_run o JOIN scoring_run run ON run.tenant_id=o.tenant_id AND run.id=o.scoring_run_id
+ WHERE o.tenant_id=$1::uuid AND o.scoring_run_id=$2::uuid AND o.runtime_task_id IS NULL AND o.deleted_at IS NULL
+ RETURNING tenant_id,id,source_id
+) UPDATE omr_run o SET runtime_task_id=task.id FROM inserted task WHERE o.tenant_id=task.tenant_id AND o.id=task.source_id`, tenantID, runID); err != nil {
+		t.Fatalf("bind synthetic calibration workers: %v", err)
+	}
+	result, err := db.Exec(`UPDATE agent_worker_task task SET status='succeeded',result_schema_version='omr-result-v1',duration_ms=1,completed_at=now(),updated_at=now(),
+ result=jsonb_build_object(
+  'omr_run_id',o.id::text,'result_version',o.result_version,'decision',o.decision,'selected',o.selected_options,
+  'confidence',o.confidence,'needs_human_review',(o.decision='ambiguous' OR o.confidence<$3),
+  'measurements',o.measurements,'profile_version',o.profile_version,'profile_hash',o.profile_hash,'reference_sha256',o.reference_sha256,
+  'overlay_file_asset_id',COALESCE(o.overlay_file_asset_id::text,''),'overlay_sha256','',
+  'thresholds',jsonb_build_object('quality',jsonb_build_object(
+   'version','omr-set-quality-v1','question_type',CASE WHEN q.question_type='multiple_choice' THEN 'multiple_choice' ELSE 'single_choice' END,
+   'classification',CASE o.decision WHEN 'blank' THEN 'blank' WHEN 'selected' THEN 'clear' ELSE 'uncertain_mark' END,
+   'set_confidence',o.confidence,'option_count',CASE q.question_type WHEN 'true_false' THEN 2 ELSE 4 END,
+   'selected_count',jsonb_array_length(o.selected_options),
+   'risk_flags',CASE WHEN o.decision='ambiguous' THEN '["uncertain_mark"]'::jsonb ELSE '[]'::jsonb END)))
+ FROM omr_run o JOIN answer_segment seg ON seg.tenant_id=o.tenant_id AND seg.id=o.answer_segment_id
+ JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id
+ WHERE task.tenant_id=o.tenant_id AND task.id=o.runtime_task_id AND task.source_type='omr_run' AND task.source_id=o.id
+ AND o.tenant_id=$1::uuid AND o.scoring_run_id=$2::uuid AND o.deleted_at IS NULL`, tenantID, runID, paper.OMRCalibrationMinimumConfidence)
+	if err != nil {
+		t.Fatalf("persist synthetic calibration Worker results: %v", err)
+	}
+	if count, _ := result.RowsAffected(); count != 120 {
+		t.Fatalf("expected 120 exact-version Worker results, got %d", count)
+	}
+	rows, err := db.Query(`SELECT task.id::text,task.result FROM agent_worker_task task JOIN omr_run o ON o.tenant_id=task.tenant_id AND o.runtime_task_id=task.id WHERE o.tenant_id=$1::uuid AND o.scoring_run_id=$2::uuid AND o.deleted_at IS NULL`, tenantID, runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hashes := map[string]string{}
+	for rows.Next() {
+		var id string
+		var raw []byte
+		if err = rows.Scan(&id, &raw); err != nil {
+			rows.Close()
+			t.Fatal(err)
+		}
+		var payload map[string]any
+		if err = json.Unmarshal(raw, &payload); err != nil {
+			rows.Close()
+			t.Fatal(err)
+		}
+		hashes[id], err = workerruntime.ResultPayloadHash("omr-result-v1", payload)
+		if err != nil {
+			rows.Close()
+			t.Fatal(err)
+		}
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for id, hash := range hashes {
+		if _, err = db.Exec(`UPDATE agent_worker_task SET result_payload_hash=$3 WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, id, hash); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

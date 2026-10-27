@@ -65,6 +65,7 @@ export function CommentTemplateManager({
       setError("名称、快捷码和评语内容均不能为空");
       return;
     }
+    // 等待回执期间冻结编辑与关闭；成功清理的只能是这次实际提交的内容。
     setSaving(true);
     setError(undefined);
     try {
@@ -93,18 +94,20 @@ export function CommentTemplateManager({
   };
 
   return (
-    <Drawer title="个人常用评语" width={480} open={open} onClose={onClose} destroyOnHidden>
+    <Drawer title="个人常用评语" width={480} open={open} onClose={() => { if (!saving) onClose(); }} closable={!saving} maskClosable={!saving} keyboard={!saving} destroyOnHidden>
       <div className="review-template-form">
         {error ? <Alert type="error" showIcon message={error} /> : null}
         {failedDelete ? <Button loading={saving} onClick={() => void remove(templates.find(item => item.id === failedDelete.id) ?? failedDelete)}>重试删除“{failedDelete.title}”</Button> : null}
         {conflicted && editing ? <Alert type="warning" message="评语已有新版本，当前输入已保留。请核对列表中的新内容后继续。" action={<Button onClick={() => { const latest = templates.find(item => item.id === editing.id); if (latest) { setEditing(latest); setConflicted(false); setError(undefined); } }}>以新版为基础继续编辑</Button>} /> : null}
         <Input
+          disabled={saving}
           aria-label="评语名称"
           placeholder="名称，例如：步骤完整"
           value={draft.title}
           onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
         />
         <Input
+          disabled={saving}
           aria-label="评语快捷码"
           prefix="/"
           placeholder="例如 step-ok"
@@ -112,6 +115,7 @@ export function CommentTemplateManager({
           onChange={(event) => setDraft((current) => ({ ...current, shortcut: event.target.value.toLowerCase() }))}
         />
         <Input.TextArea
+          disabled={saving}
           aria-label="评语内容"
           rows={3}
           placeholder="插入后仍可按本份答卷编辑"
@@ -122,7 +126,7 @@ export function CommentTemplateManager({
           <Button type="primary" disabled={conflicted} icon={editing ? <Pencil size={15} /> : <Plus size={15} />} loading={saving} onClick={() => void save()}>
             {editing ? "保存修改" : "新增评语"}
           </Button>
-          {editing ? <Button onClick={reset}>取消编辑</Button> : null}
+          {editing ? <Button disabled={saving} onClick={reset}>取消编辑</Button> : null}
         </Space>
       </div>
 

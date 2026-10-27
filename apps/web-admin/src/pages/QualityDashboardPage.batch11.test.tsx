@@ -290,6 +290,23 @@ describe("质量看板展示职责回归", () => {
     expect(mocks.forms[0].getFieldsValue().source_incident_id).toBeUndefined(); expect(host.querySelector('[data-field="source_incident_id"]')?.textContent).toContain("3份样本");
   });
 
+  it("质量事件继续读取后页，回标来源也包含后页题目的开放事件", async () => {
+    const value = dashboard();
+    value.questions.push({ ...value.questions[0], question: { ...value.questions[0].question, id: "q2", question_no: "Q2" } });
+    mocks.dashboard.mockResolvedValue({ dashboard: value });
+    mocks.incidents.mockImplementation((_exam: string, filter?: { cursor?: string }) => Promise.resolve(filter?.cursor
+      ? { incidents: [{ id: "old-critical", question_id: "q2", grader_id: "grader", severity: "critical", type: "severe_seed_failure", metric_snapshot: {}, created_at: now }], has_more: false, next_cursor: "" }
+      : { incidents: [{ id: "first-warning", question_id: "q1", grader_id: "grader", severity: "warning", type: "grader_bias_high", metric_snapshot: {}, created_at: now }], has_more: true, next_cursor: "older" }));
+    await render(); await click("质量事件");
+    await click("加载更多质量事件");
+    expect(mocks.incidents).toHaveBeenLastCalledWith("exam", { cursor: "older" });
+    expect(host.querySelector('[data-row="old-critical"]')).not.toBeNull();
+    const event = host.querySelector('[data-row="old-critical"]')!;
+    await click("创建回标", event);
+    expect(host.querySelector<HTMLSelectElement>('[data-field="source_incident_id"] select')?.value).toBe("old-critical");
+    expect(host.querySelector('[data-field="source_incident_id"]')?.textContent).toContain("Q2");
+  });
+
   it("质量事件和来源选项展示真实题号、中文原因、教师账号及时间", async () => {
     mocks.incidents.mockResolvedValue({ incidents: [{ id: "event-readable", question_id: "q1", grader_id: "grader", severity: "warning", type: "grader_bias_high", metric_snapshot: { sample_count: 12 }, created_at: now }] });
     await render(); await click("质量事件");

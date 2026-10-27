@@ -73,7 +73,7 @@ ORDER BY created_at, id
 	return out, rows.Err()
 }
 
-// 建立任务和把运行标为 running 必须同一事务提交，避免只写了一半导致流程状态失真。
+// 建立任务和重新汇总父运行必须同一事务提交，保留尚未处理的失败或人工复核状态。
 func (s *PostgresStore) CreateTask(ctx context.Context, tenantID string, runID string, actorID string, input CreateTaskInput) (Task, error) {
 	input = NormalizeTaskInput(input)
 	if err := ValidateTaskInput(input); err != nil {
@@ -101,11 +101,7 @@ RETURNING id::text, tenant_id::text, orchestration_run_id::text, agent_type, sta
 	if err := scanTask(row, &out); err != nil {
 		return Task{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `
-UPDATE orchestration_run
-SET status = 'running', updated_at = now()
-WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
-`, tenantID, runID); err != nil {
+	if err := refreshRunStatusTx(ctx, tx, tenantID, runID); err != nil {
 		return Task{}, err
 	}
 	if err := tx.Commit(); err != nil {

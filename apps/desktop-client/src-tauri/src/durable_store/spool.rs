@@ -157,6 +157,17 @@ pub fn write_spool_local_asset_chunk(
     let key = master_key(&root)?;
     let conn = open_connection_at(&root)?;
     initialize_schema(&conn)?;
+    write_spool_local_asset_chunk_at(&root, &key, &conn, local_asset_id, offset, bytes)
+}
+
+fn write_spool_local_asset_chunk_at(
+    root: &Path,
+    key: &[u8; 32],
+    conn: &Connection,
+    local_asset_id: String,
+    offset: i64,
+    bytes: Vec<u8>,
+) -> Result<i64, String> {
     let (expected_size, received_size, local_path): (i64, i64, String) = conn
         .query_row(
             "SELECT i.expected_size,i.received_size,a.local_path
@@ -175,14 +186,12 @@ pub fn write_spool_local_asset_chunk(
         ));
     }
     let directory = PathBuf::from(local_path);
-    ensure_controlled_path(&root, &directory)?;
-    let path = directory.join(format!("{offset:012}.chunk"));
-    // 该偏移尚未被数据库确认；同名文件可能是上次落盘后、提交前崩溃留下的孤立分块。
-    if path.exists() {
-        fs::remove_file(&path).map_err(|error| error.to_string())?;
-    }
+    ensure_controlled_path(root, &directory)?;
+    // 两个进程可能读到相同旧偏移。每次尝试独占文件名，数据库只确认胜出路径；
+    // 失败只能删除本次文件，不能覆盖或清理另一进程已经确认的原件分块。
+    let path = directory.join(format!("{offset:012}-{}.chunk", Uuid::new_v4()));
     let plaintext_sha256 = sha256_hex(&bytes);
-    let (encrypted, nonce) = encrypt_bytes(&key, &bytes)?;
+    let (encrypted, nonce) = encrypt_bytes(key, &bytes)?;
     write_new_private_file(&path, &encrypted)?;
     let transaction = conn.unchecked_transaction().map_err(sql_error)?;
     let result = (|| -> Result<(), String> {
@@ -210,6 +219,10 @@ pub fn write_spool_local_asset_chunk(
     }
     result.map(|()| end)
 }
+
+#[cfg(test)]
+#[path = "spool_concurrency_tests.rs"]
+mod tests;
 
 pub fn complete_spool_local_asset(
     app: AppHandle,

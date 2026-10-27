@@ -59,9 +59,17 @@ export function schemaToType(schema, inheritedProperties = {}) {
     result = JSON.stringify(schema.const);
   } else if (Array.isArray(schema.enum)) {
     result = schema.enum.map((value) => JSON.stringify(value)).join(" | ") || "never";
+  } else if (Array.isArray(schema.type)) {
+    // OpenAPI 3.1 用 type 联合声明可空值；各类型分支共用字段约束，组合只在外层相交一次。
+    const branches = [...new Set(schema.type)].map((type) => {
+      const branch = { ...schema, type };
+      for (const key of ["oneOf", "anyOf", "allOf", "nullable"]) delete branch[key];
+      return schemaToType(branch, inheritedProperties);
+    });
+    result = [...new Set(branches)].join(" | ") || "never";
   } else if (schema.type === "array") {
     result = `Array<${schemaToType(schema.items)}>`;
-  } else if (schema.type === "object" || schema.properties || Object.hasOwn(schema, "additionalProperties") || schema.required) {
+  } else if (schema.type === "object" || !schema.type && (schema.properties || Object.hasOwn(schema, "additionalProperties") || schema.required)) {
     result = objectSchemaToType(schema, inheritedProperties);
   } else {
     result = primitiveSchemaToType(schema);

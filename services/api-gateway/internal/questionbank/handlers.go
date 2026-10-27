@@ -11,9 +11,13 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
-type Handler struct{ store Store }
+type Handler struct {
+	store              Store
+	referenceMaterials *paper.ReferenceMaterialsService
+}
 
 func NewHandler(store Store) *Handler { return &Handler{store: store} }
 func scopeFor(w http.ResponseWriter, r *http.Request) (auth.AccessScope, bool) {

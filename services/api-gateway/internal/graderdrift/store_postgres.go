@@ -113,11 +113,17 @@ func (s *PostgresStore) ListIncidents(ctx context.Context, tenantID string, filt
 		return nil, err
 	}
 	args := append([]any{tenantID, filter.ExamID, filter.QuestionID, filter.GraderID, filter.Status, filter.Limit}, scopeArgs...)
+	var before any
+	if !filter.BeforeCreatedAt.IsZero() {
+		before = filter.BeforeCreatedAt
+	}
+	args = append(args, before, filter.BeforeID)
 	rows, err := s.db.QueryContext(ctx, `SELECT `+incidentColumns+`
 FROM grading_quality_incident WHERE tenant_id=$1::uuid
  AND ($2='' OR exam_id::text=$2) AND ($3='' OR question_id::text=$3) AND ($4='' OR grader_id::text=$4)
  AND ($5='' OR status=$5)
  AND `+auth.ExamCollectionPredicate("grading_quality_incident.exam_id", 7)+`
+ AND ($11::timestamptz IS NULL OR (created_at,id) < ($11::timestamptz,NULLIF($12,'')::uuid))
 ORDER BY created_at DESC,id DESC LIMIT $6`, args...)
 	if err != nil {
 		return nil, err
@@ -132,6 +138,13 @@ ORDER BY created_at DESC,id DESC LIMIT $6`, args...)
 		result = append(result, item)
 	}
 	return result, rows.Err()
+}
+
+func (s *PostgresStore) CountOpenIncidents(ctx context.Context, tenantID, examID, questionID string) (IncidentCounts, error) {
+	var result IncidentCounts
+	err := s.db.QueryRowContext(ctx, `SELECT count(*) FILTER (WHERE severity='critical'),count(*) FILTER (WHERE severity<>'critical')
+FROM grading_quality_incident WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND ($3='' OR question_id::text=$3) AND status='open'`, tenantID, examID, questionID).Scan(&result.OpenCritical, &result.OpenWarnings)
+	return result, err
 }
 
 func (s *PostgresStore) ResolveIncident(ctx context.Context, tenantID, incidentID string, now time.Time) (Incident, error) {

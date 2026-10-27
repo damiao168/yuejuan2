@@ -7,7 +7,9 @@ import (
 
 // 调用方先筛选启用的样卷；这里只统计其当前已批准版本，任一覆盖缺口未满足就不能标记为 Ready。
 func buildCoverage(examID, questionID, subjectCode, archetypeCode, riskTier string, maxScore float64, items []GoldPaper) Coverage {
-	result := Coverage{ExamID: examID, QuestionID: questionID, SubjectCode: subjectCode, ArchetypeCode: archetypeCode, RiskTier: riskTier}
+	// 空集合仍按数组返回；覆盖已达标时 gaps=[]，调用方无需把 null 误当协议成功值。
+	result := Coverage{ExamID: examID, QuestionID: questionID, SubjectCode: subjectCode, ArchetypeCode: archetypeCode, RiskTier: riskTier,
+		Gaps: []string{}, TraitPatterns: []string{}, ErrorTags: []string{}}
 	bands := map[string]int{"zero": 0, "middle": 0, "full": 0}
 	traitSet, tagSet := map[string]struct{}{}, map[string]struct{}{}
 	for _, item := range items {

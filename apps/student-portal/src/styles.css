@@ -101,8 +101,10 @@ button:focus-visible { outline: 3px solid rgba(22, 119, 255, .3); outline-offset
 .appeal-region-selector { display: grid; gap: 8px; padding: 12px; border: 1px solid #dbe5f3; border-radius: var(--eg-radius-sm); background: #fff; }
 .appeal-region-selector h4 { margin: 0; color: #344054; font-size: var(--eg-font-body); }
 .appeal-region-selector p { margin: 3px 0 0; color: var(--eg-color-muted); font-size: var(--eg-font-caption); line-height: 1.55; }
-.appeal-region-image-wrap { position: relative; overflow: hidden; min-height: 96px; border: 1px solid var(--eg-color-border); border-radius: 6px; background: #f8fafc; }
-.appeal-region-image-wrap img { display: block; width: 100%; max-height: 360px; object-fit: contain; }
+.appeal-region-image-wrap { position: relative; display: grid; place-items: center; overflow: hidden; min-height: 96px; border: 1px solid var(--eg-color-border); border-radius: 6px; background: #f8fafc; }
+/* 定位层跟随图片实际尺寸；高度限制产生的外层留白不属于规范图像坐标。 */
+.appeal-region-image { position: relative; max-width: 100%; line-height: 0; }
+.appeal-region-image img { display: block; width: auto; height: auto; max-width: 100%; max-height: 360px; }
 .appeal-region-canvas { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
 .appeal-region-box { position: absolute; box-sizing: border-box; border: 2px solid #d92d20; background: rgb(217 45 32 / 10%); pointer-events: none; }
 .appeal-region-loading { display: grid; min-height: 96px; place-items: center; color: var(--eg-color-muted); font-size: var(--eg-font-body); }
@@ -219,8 +221,9 @@ button:focus-visible { outline: 3px solid rgba(22, 119, 255, .3); outline-offset
 .answer-canvas-header { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #d7deea; color: #344054; background: #f8fafc; font-size: var(--eg-font-body); }
 .answer-canvas-header > span { color: var(--eg-color-muted); font-size: var(--eg-font-caption); }
 .answer-image-stage { position: relative; display: grid; min-height: 470px; place-items: center; padding: 24px; }
+.answer-image-anchor { position: relative; max-width: 100%; line-height: 0; }
 .answer-image-stage img { display: block; max-width: 100%; max-height: 720px; object-fit: contain; box-shadow: 0 8px 24px rgb(16 24 40 / 12%); }
-.annotation-overlay { position: absolute; z-index: 2; min-width: 8px; min-height: 8px; padding: 0; border: 2px solid #e34b4b; border-radius: 3px; background: rgb(227 75 75 / 9%); transition: box-shadow .18s ease, background-color .18s ease; }
+.annotation-overlay { position: absolute; z-index: 2; min-width: 0; min-height: 0; padding: 0; border: 2px solid #e34b4b; border-radius: 3px; background: rgb(227 75 75 / 9%); transition: box-shadow .18s ease, background-color .18s ease; }
 .annotation-overlay.active { background: rgb(227 75 75 / 17%); box-shadow: 0 0 0 3px rgb(227 75 75 / 18%); }
 .answer-unavailable { min-height: 470px; display: grid; align-content: center; justify-items: center; color: #475467; }
 .answer-unavailable p { margin: 6px 0 0; color: var(--eg-color-muted); font-size: var(--eg-font-body); }

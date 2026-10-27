@@ -16,6 +16,7 @@ func registerQuestionBankRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("GET /api/v1/question-bank/items/{itemId}/versions", ctx.guards.requireQuestionBank("read", ctx.modules.Exam.QuestionBankHandler.ListVersions))
 	mux.Handle("POST /api/v1/question-bank/items/{itemId}/versions", ctx.guards.requireQuestionBank("edit", ctx.modules.Exam.QuestionBankHandler.CreateVersion))
 	mux.Handle("GET /api/v1/question-bank/versions/{versionId}", ctx.guards.requireQuestionBank("read", ctx.modules.Exam.QuestionBankHandler.GetVersion))
+	mux.Handle("GET /api/v1/question-bank/versions/{versionId}/reference-materials/{itemId}/image", ctx.guards.requireQuestionBank("read", ctx.modules.Exam.QuestionBankHandler.GetReferenceMaterialImage))
 	mux.Handle("PATCH /api/v1/question-bank/versions/{versionId}", ctx.guards.requireQuestionBank("edit", ctx.modules.Exam.QuestionBankHandler.UpdateVersion))
 	mux.Handle("PUT /api/v1/question-bank/versions/{versionId}/scoring", ctx.guards.requireQuestionBank("edit", ctx.modules.Exam.QuestionBankHandler.UpdateScoring))
 	mux.Handle("GET /api/v1/question-bank/versions/{versionId}/reviews", ctx.guards.requireQuestionBank("read", ctx.modules.Exam.QuestionBankHandler.ListReviews))

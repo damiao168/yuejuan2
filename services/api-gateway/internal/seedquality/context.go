@@ -7,12 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/assessment"
+	"edugrade-enterprise/services/api-gateway/internal/goldpaper"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"github.com/google/uuid"
 )
@@ -98,11 +97,11 @@ type GraderTaskContext struct {
 	SubjectToolHints GraderSubjectToolHints          `json:"subject_tool_hints"`
 }
 
-// GraderImageSource 仅供服务器使用。普通分段图像 handler 可使用 SourceURL 代理既有的已认证答案分段图像响应；
-// 绝不能将此值序列化给阅卷人员。
+// GraderImageSource 只供服务器按已授权任务读取固定 Gold 版本，不能序列化来源给阅卷人员。
 type GraderImageSource struct {
-	SourceURL       string `json:"-"`
-	AnswerSegmentID string `json:"-"`
+	SourceURL   string `json:"-"`
+	GoldPaperID string `json:"-"`
+	GoldVersion int    `json:"-"`
 }
 
 func (s *Service) GetGraderTaskContext(ctx context.Context, tenantID, taskID, graderID string) (GraderTaskContext, bool, error) {
@@ -165,11 +164,11 @@ func (s *Service) GetGraderImageSource(ctx context.Context, tenantID, taskID, gr
 	if task.SourceImageURL == "" {
 		return GraderImageSource{}, true, ErrContextUnavailable
 	}
-	segmentID := answerSegmentID(task.SourceImageURL)
-	if segmentID == "" {
+	goldID, version, valid := goldpaper.ParseVersionImageURL(task.SourceImageURL)
+	if !valid || goldID != task.GoldPaperID || version != task.GoldVersion {
 		return GraderImageSource{}, true, ErrContextUnavailable
 	}
-	return GraderImageSource{SourceURL: task.SourceImageURL, AnswerSegmentID: segmentID}, true, nil
+	return GraderImageSource{SourceURL: task.SourceImageURL, GoldPaperID: goldID, GoldVersion: version}, true, nil
 }
 
 func frozenRubric(snapshot assessment.ExamQuestionSnapshot, task Task) (paper.Rubric, error) {
@@ -226,16 +225,4 @@ func opaqueID(taskID, scope string) string {
 	digest := sha256.Sum256([]byte(scope + "\x00" + taskID))
 	value, _ := uuid.FromBytes(digest[:16])
 	return value.String()
-}
-
-func answerSegmentID(sourceURL string) string {
-	parsed, err := url.Parse(sourceURL)
-	if err != nil {
-		return ""
-	}
-	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
-	if len(parts) < 2 || parts[len(parts)-1] != "image" {
-		return ""
-	}
-	return strings.TrimSpace(parts[len(parts)-2])
 }

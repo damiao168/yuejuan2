@@ -127,7 +127,7 @@ func TestBatch48RegradeTransitionsKeepRulesAndAtomicEvent(t *testing.T) {
 		{"start", StatusApproved, StatusRunning, "started", "status='running'", []driver.Value{"tenant", "job"}, func(s *PostgresStore, ctx context.Context) (Job, error) {
 			return s.Start(ctx, "tenant", "job", "actor")
 		}},
-		{"resume", StatusPaused, StatusRunning, "resumed", "status='running'", []driver.Value{"tenant", "job"}, func(s *PostgresStore, ctx context.Context) (Job, error) {
+		{"resume", StatusPaused, StatusRunning, "resumed", "candidate_score IS NOT NULL", []driver.Value{"tenant", "job"}, func(s *PostgresStore, ctx context.Context) (Job, error) {
 			return s.Resume(ctx, "tenant", "job", "actor")
 		}},
 	} {

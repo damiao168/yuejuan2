@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
-	"strconv"
 	"strings"
 	"unicode"
 
@@ -15,8 +14,6 @@ import (
 )
 
 const (
-	printPageWidthMM  = 210.0
-	printPageHeightMM = 297.0
 	// 同步 HTTP 渲染有明确规模上限；更大的签发任务必须拆成打印批次，或移至异步产物任务。
 	maxPrintPackagePages = 10000
 )
@@ -74,59 +71,48 @@ func renderStudentPrintPage(pdf *gofpdf.Fpdf, pkg StudentPrintPackage, sheet Pri
 	if err != nil {
 		return fmt.Errorf("encode controlled QR: %w", err)
 	}
-	pdf.AddPage()
+	widthMM, heightMM, err := printPageSizeMM(page)
+	if err != nil {
+		return err
+	}
+	qr, err := printQRRegion(page, widthMM, heightMM)
+	if err != nil {
+		return err
+	}
+	pdf.AddPageFormat("P", gofpdf.SizeType{Wd: widthMM, Ht: heightMM})
 	pdf.SetDrawColor(20, 20, 20)
 	pdf.SetFillColor(20, 20, 20)
-	drawRegistrationMark(pdf, 7, 7)
-	drawRegistrationMark(pdf, printPageWidthMM-11, 7)
-	drawRegistrationMark(pdf, 7, printPageHeightMM-11)
-	drawRegistrationMark(pdf, printPageWidthMM-11, printPageHeightMM-11)
-
-	pdf.SetFont("Helvetica", "B", 15)
-	pdf.SetTextColor(18, 18, 18)
-	pdf.Text(14, 18, "EduGrade Controlled Answer Sheet")
-	pdf.SetFont("Helvetica", "", 8.5)
-	pdf.Text(14, 25, "Exam ref: "+shortRef(pkg.ExamID))
-	pdf.Text(14, 30, "Template ref: "+shortRef(pkg.TemplateID))
-	pdf.Text(14, 35, "Roster position: "+strconv.Itoa(sheet.Ordinal))
-	pdf.Text(14, 40, "Student ref: "+shortRef(sheet.StudentID))
-	pdf.Text(14, 45, "Sheet serial: "+sheet.SheetSerial)
-	pdf.Text(14, 50, fmt.Sprintf("Page %d of %d", page.PageNo, len(sheet.Pages)))
-
-	drawQRCode(pdf, code.Bitmap(), 164, 13, 32)
-	pdf.SetFont("Helvetica", "", 5.5)
-	pdf.Text(164, 48, "Do not cover, crop, or alter this code")
-
-	pdf.SetLineWidth(0.3)
-	pdf.Line(12, 54, 198, 54)
-	pdf.SetFont("Helvetica", "", 6.5)
-	pdf.SetTextColor(85, 85, 85)
-	pdf.Text(14, 291, "Controlled copy - "+shortHash(pkg.TemplateContentHash)+" - key "+safeASCII(pkg.KeyID))
-
-	contentX, contentY, contentW, contentH := 12.0, 60.0, 186.0, 222.0
-	pdf.SetDrawColor(35, 35, 35)
-	if len(page.QuestionRegions) == 0 {
-		drawRuledAnswerArea(pdf, contentX, contentY, contentW, contentH)
-		return nil
-	}
-	for index, region := range page.QuestionRegions {
-		x, y, width, height, ok := mapPrintRegion(region, contentX, contentY, contentW, contentH)
+	// 定位标记、身份区和题区共用原模板整页坐标；不再生成模板未声明的固定四角或内框。
+	for _, mark := range page.RegistrationMarks {
+		x, y, w, h, ok := mapPrintRegion(mark, 0, 0, widthMM, heightMM)
 		if !ok {
-			continue
+			return ErrInvalidInput
 		}
-		pdf.SetLineWidth(0.25)
-		pdf.Rect(x, y, width, height, "D")
-		label := safeASCII(region.Label)
-		if label == "" {
-			label = "Q" + strconv.Itoa(index+1)
-		}
-		pdf.SetTextColor(30, 30, 30)
-		pdf.SetFont("Helvetica", "B", 8)
-		pdf.SetFillColor(255, 255, 255)
-		labelWidth := math.Min(math.Max(width-2, 4), 18)
-		pdf.Rect(x+1, y-1.5, labelWidth, 4, "F")
-		pdf.Text(x+2, y+1.5, label)
+		pdf.Rect(x, y, w, h, "F")
 	}
+	regions := append(append([]PrintPackageRegion{}, page.GradingGroups...), page.QuestionRegions...)
+	for _, identity := range page.IdentityRegions {
+		if !namedQRRegion(identity) {
+			regions = append(regions, identity)
+		}
+	}
+	for _, region := range regions {
+		x, y, w, h, ok := mapPrintRegion(region, 0, 0, widthMM, heightMM)
+		if !ok {
+			return ErrInvalidInput
+		}
+		pdf.SetLineWidth(.25)
+		pdf.Rect(x, y, w, h, "D")
+		for _, option := range printQuestionOptions(region) {
+			ox, oy, ow, oh, ok := mapPrintRegion(option, 0, 0, widthMM, heightMM)
+			if !ok {
+				return ErrInvalidInput
+			}
+			pdf.Rect(ox, oy, ow, oh, "D")
+		}
+	}
+	x, y, w, _, _ := mapPrintRegion(qr, 0, 0, widthMM, heightMM)
+	drawQRCode(pdf, code.Bitmap(), x, y, w)
 	return nil
 }
 
@@ -158,19 +144,7 @@ func drawQRCode(pdf *gofpdf.Fpdf, bitmap [][]bool, x, y, size float64) {
 	}
 }
 
-func drawRegistrationMark(pdf *gofpdf.Fpdf, x, y float64) {
-	pdf.Rect(x, y, 4, 4, "F")
-}
-
-func drawRuledAnswerArea(pdf *gofpdf.Fpdf, x, y, width, height float64) {
-	pdf.Rect(x, y, width, height, "D")
-	pdf.SetDrawColor(205, 205, 205)
-	for lineY := y + 12; lineY < y+height; lineY += 12 {
-		pdf.Line(x+3, lineY, x+width-3, lineY)
-	}
-}
-
-// 题区坐标是 0 到 1 的相对比例，映射目标为页内答题区域的毫米尺寸。
+// 所有模板区域都是整页归一化比例，调用者必须传入同一整页的毫米尺寸。
 func mapPrintRegion(region PrintPackageRegion, x, y, width, height float64) (float64, float64, float64, float64, bool) {
 	values := []float64{region.X, region.Y, region.Width, region.Height}
 	for _, value := range values {

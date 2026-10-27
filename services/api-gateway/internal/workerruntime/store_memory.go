@@ -427,6 +427,15 @@ func (s *MemoryStore) Cancel(_ context.Context, tenantID string, taskID string) 
 func (s *MemoryStore) Requeue(_ context.Context, tenantID string, taskID string) (Task, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.requeueLocked(tenantID, taskID)
+}
+
+// Requeue 在来源协调器持有两侧事务锁时恢复任务，失败由 RunAtomic 回滚。
+func (tx *MemoryTx) Requeue(_ context.Context, tenantID, taskID string) (Task, error) {
+	return tx.store.requeueLocked(tenantID, taskID)
+}
+
+func (s *MemoryStore) requeueLocked(tenantID, taskID string) (Task, error) {
 	task, ok := s.tasks[taskID]
 	if !ok || task.TenantID != tenantID {
 		return Task{}, ErrNotFound

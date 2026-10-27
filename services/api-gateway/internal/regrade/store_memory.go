@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/examlock"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
@@ -117,6 +119,8 @@ func (s *MemoryStore) Preview(ctx context.Context, tenantID, examID, questionID,
 }
 func (s *MemoryStore) Create(ctx context.Context, tenantID, examID, questionID, actorID string, input CreateInput, sources []SourceItem) (Job, []Item, error) {
 	_ = ctx
+	unlock := examlock.Memory(tenantID, examID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key := tenantID + ":" + examID + ":" + input.IdempotencyKey
@@ -153,12 +157,23 @@ func (s *MemoryStore) Get(_ context.Context, tenantID, jobID string) (Summary, e
 	defer s.mu.Unlock()
 	return s.summaryLocked(tenantID, jobID)
 }
-func (s *MemoryStore) List(_ context.Context, tenantID, examID, questionID string) ([]Job, error) {
+func (s *MemoryStore) List(ctx context.Context, tenantID, examID, questionID string, accesses ...auth.ExamCollectionAccess) ([]Job, error) {
+	access := jobCollectionAccess(accesses)
+	if err := access.Validate(tenantID); err != nil {
+		return nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	jobs := []Job{}
 	for _, job := range s.jobs {
 		if job.TenantID == tenantID && (examID == "" || job.ExamID == examID) && (questionID == "" || job.QuestionID == questionID) {
+			allowed, err := access.Allows(ctx, tenantID, "regrade_job", job.ID, job.ExamID)
+			if err != nil {
+				return nil, err
+			}
+			if !allowed {
+				continue
+			}
 			jobs = append(jobs, cloneJob(job))
 		}
 	}
@@ -228,7 +243,7 @@ func (s *MemoryStore) GetReviewContext(_ context.Context, tenantID, itemID strin
 		return ReviewContext{}, err
 	}
 	item, job := s.items[jobID][index], s.jobs[jobID]
-	if item.Status != ItemAwaitingReview || (job.Status != StatusRunning && job.Status != StatusDiffReview) {
+	if (item.Status != ItemAwaitingReview && item.Status != ItemException) || (job.Status != StatusRunning && job.Status != StatusDiffReview) {
 		return ReviewContext{}, ErrStateConflict
 	}
 	value, err := s.materialContextLocked(item)
@@ -329,10 +344,20 @@ func (s *MemoryStore) Resume(_ context.Context, tenantID, jobID, actorID string)
 	if err != nil {
 		return Job{}, err
 	}
+	if job.Status == StatusRunning || job.Status == StatusDiffReview {
+		return cloneJob(job), nil
+	}
 	if job.Status != StatusPaused {
 		return Job{}, ErrStateConflict
 	}
 	job.Status, job.UpdatedAt = StatusRunning, s.now().UTC()
+	// 暂停不丢弃候选和复核事实；出现过候选的作业恢复到复核阶段，全部已解决时仍可收尾。
+	for _, item := range s.items[jobID] {
+		if item.CandidateScore != nil || item.Status == ItemCandidateReady || item.Status == ItemAwaitingReview || item.Status == ItemResolved || item.Status == ItemException {
+			job.Status = StatusDiffReview
+			break
+		}
+	}
 	s.jobs[jobID] = job
 	s.addEventLocked(jobID, "", "resumed", actorID, map[string]any{})
 	return cloneJob(job), nil
@@ -417,12 +442,13 @@ func (s *MemoryStore) Review(_ context.Context, tenantID, itemID, actorID string
 	if job.Status != StatusRunning && job.Status != StatusDiffReview {
 		return Item{}, ErrStateConflict
 	}
-	if item.Status != ItemAwaitingReview || item.Revision != input.ExpectedRevision {
-		if item.Revision != input.ExpectedRevision {
-			return Item{}, ErrRevisionConflict
-		}
-		return Item{}, ErrStateConflict
+	if item.Revision != input.ExpectedRevision {
+		return Item{}, ErrRevisionConflict
 	}
+	if err := reviewableItem(item, input); err != nil {
+		return Item{}, err
+	}
+	payload := reviewEventPayload(item, input)
 	if input.Decision == ReviewAccept {
 		score := item.CandidateScore
 		if input.ReviewedScore != nil {
@@ -443,7 +469,7 @@ func (s *MemoryStore) Review(_ context.Context, tenantID, itemID, actorID string
 	}
 	item.ReviewedBy, item.ReviewNote, item.Revision, item.UpdatedAt = actorID, input.Note, item.Revision+1, s.now().UTC()
 	s.items[jobID][index] = item
-	s.addEventLocked(jobID, item.ID, "item_reviewed", actorID, map[string]any{"decision": input.Decision})
+	s.addEventLocked(jobID, item.ID, "item_reviewed", actorID, payload)
 	return cloneItem(item), nil
 }
 func (s *MemoryStore) Finalize(_ context.Context, tenantID, jobID, actorID string) (Job, error) {

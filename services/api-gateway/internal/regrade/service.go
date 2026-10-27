@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"unicode/utf8"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 type Service struct {
@@ -81,11 +83,11 @@ func (s *Service) Get(ctx context.Context, tenantID, jobID string) (Summary, err
 	return summarize(summary), nil
 }
 
-func (s *Service) List(ctx context.Context, tenantID, examID, questionID string) ([]Job, error) {
+func (s *Service) List(ctx context.Context, tenantID, examID, questionID string, access ...auth.ExamCollectionAccess) ([]Job, error) {
 	if strings.TrimSpace(tenantID) == "" {
 		return nil, ErrInvalidInput
 	}
-	return s.store.List(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(examID), strings.TrimSpace(questionID))
+	return s.store.List(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(examID), strings.TrimSpace(questionID), access...)
 }
 
 func (s *Service) ListAssigned(ctx context.Context, tenantID, reviewerID string) ([]WorkItem, error) {
@@ -237,6 +239,28 @@ func validReview(value ReviewInput) bool {
 		return value.ReviewedScore == nil
 	}
 	return false
+}
+
+func reviewableItem(item Item, input ReviewInput) error {
+	if item.Status == ItemAwaitingReview {
+		return nil
+	}
+	if item.Status != ItemException || (input.Decision != ReviewAccept && input.Decision != ReviewReject) {
+		return ErrStateConflict
+	}
+	// 异常不会自动跳过；负责人重新复核当前修订并说明如何处理后，才能接受或驳回候选。
+	if strings.TrimSpace(input.Note) == "" {
+		return ErrInvalidInput
+	}
+	return nil
+}
+
+func reviewEventPayload(item Item, input ReviewInput) map[string]any {
+	payload := map[string]any{"decision": input.Decision, "note": input.Note}
+	if item.Status == ItemException {
+		payload["previous_status"], payload["previous_review_note"] = item.Status, item.ReviewNote
+	}
+	return payload
 }
 func validRubricSelections(values []RubricSelection) bool {
 	for _, value := range values {

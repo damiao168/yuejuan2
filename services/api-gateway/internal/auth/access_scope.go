@@ -32,8 +32,9 @@ type AccessScope struct {
 	ReviewTaskIDs      []string
 	ArbitrationTaskIDs []string
 	StudentID          string
-	// schoolWide 记录可信的学校级角色，并与 SchoolIDs 分开；班级级角色也会扩展到所属学校用于读取筛选，但不能因此取得学校级任务管理权。
-	schoolWide bool
+	// 学校管理范围单独保留；班级或分派扩展出的学校、考试 ID 只供导航，不能扩大管理权限。
+	schoolWide          bool
+	schoolManagementIDs []string
 	// syntheticUnbounded 仅供显式声明的内存测试夹具使用。
 	syntheticUnbounded bool
 }
@@ -94,6 +95,15 @@ func (s AccessScope) HasDataAccess() bool {
 // IsSchoolWide 判断作用域是否来自可信的学校级角色。它不暴露底层字段，避免调用方从请求数据伪造全校作用域。
 func (s AccessScope) IsSchoolWide() bool { return s.schoolWide }
 
+// ManagedSchoolIDs 返回学校级角色实际管理的学校，不包含班级关系的导航投影。
+func (s AccessScope) ManagedSchoolIDs() []string {
+	return append([]string{}, s.schoolManagementIDs...)
+}
+
+func (s AccessScope) managesSchool(schoolID string) bool {
+	return s.schoolWide && schoolID != "" && containsID(s.schoolManagementIDs, schoolID)
+}
+
 // QueryMode 返回仓储进行集合筛选时使用的粗粒度模式。集合端点除直接资源边界中间件外，还必须应用此模式，否则受限身份仍可能从列表取得其他学校的记录。
 func (s AccessScope) QueryMode() string {
 	if s.IsPlatform {
@@ -115,6 +125,7 @@ func (s AccessScope) QueryMode() string {
 }
 
 func (s AccessScope) normalized() AccessScope {
+	s.schoolManagementIDs = uniqueSortedIDs(s.schoolManagementIDs)
 	s.SchoolIDs = uniqueSortedIDs(s.SchoolIDs)
 	s.GradeIDs = uniqueSortedIDs(s.GradeIDs)
 	s.ClassIDs = uniqueSortedIDs(s.ClassIDs)
@@ -216,7 +227,12 @@ func mergeDeclaredScope(out *AccessScope, raw map[string]any) error {
 		out.TenantWide = true
 	case "school":
 		out.schoolWide = true
-		// PostgreSQL 解析器添加可信的 app_user/teacher_class 学校关系；显式 ID 仍用于迁移和内存测试。
+		var err error
+		out.schoolManagementIDs, err = appendScopeIDs(out.schoolManagementIDs, raw, "school_id", "school_ids")
+		if err != nil {
+			return err
+		}
+		// PostgreSQL 解析器另加 app_user 的可信学校关系，班级扩展不能进入这份管理清单。
 	case "grade", "class", "exam":
 	case "assigned", "exam_task":
 		out.AssignedOnly = true

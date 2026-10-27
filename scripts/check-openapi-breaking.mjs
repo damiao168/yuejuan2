@@ -25,7 +25,8 @@ function compareSchemaProperties(before, after, location, failures) {
 }
 
 function compareSchemaMetadata(before, after, location, failures) {
-  if (before.type && JSON.stringify(before.type) !== JSON.stringify(after.type)) failures.push(`changed type for ${location}`);
+  // 已存在字段原来没有类型/枚举限制时，首次增加限制也会排除旧合法值；新增可选字段由属性遍历单独允许。
+  if (JSON.stringify(before.type) !== JSON.stringify(after.type)) failures.push(`changed type for ${location}`);
   if (before.$ref && before.$ref !== after.$ref) failures.push(`changed ref for ${location}`);
   // 组合和开放属性变更保守阻断，语义兼容的调整也须明确评审，不能丢约束后让门禁通过。
   for (const key of ["format", "nullable", "const", "additionalProperties", "oneOf", "anyOf", "allOf"]) {
@@ -34,6 +35,24 @@ function compareSchemaMetadata(before, after, location, failures) {
   for (const value of Array.isArray(before.enum) ? before.enum : []) {
     if (!after.enum?.some((candidate) => JSON.stringify(candidate) === JSON.stringify(value))) failures.push(`removed enum value ${JSON.stringify(value)} from ${location}`);
   }
+  if (!Array.isArray(before.enum) && Array.isArray(after.enum)) failures.push(`added enum constraint for ${location}`);
+}
+
+function comparableNullableSchema(schema) {
+  // 历史基线仍保留旧 nullable 表示；只正规化可明确等价的单类型或纯引用，不能借此接受实际收窄。
+  if (schema.nullable !== true) return schema;
+  if (typeof schema.type === "string") {
+    const result = { ...schema, type: [schema.type, "null"] };
+    delete result.nullable;
+    return result;
+  }
+  if (schema.$ref && !schema.type && !schema.anyOf && !schema.oneOf && !schema.allOf) {
+    const result = { ...schema, anyOf: [{ $ref: schema.$ref }, { type: "null" }] };
+    delete result.$ref;
+    delete result.nullable;
+    return result;
+  }
+  return schema;
 }
 
 function compareSchema(before, after, location, failures) {
@@ -49,6 +68,8 @@ function compareSchema(before, after, location, failures) {
     failures.push(`removed schema shape ${location}`);
     return;
   }
+  before = comparableNullableSchema(before);
+  after = comparableNullableSchema(after);
   compareSchemaMetadata(before, after, location, failures);
   compareRequiredFields(before, after, location, failures);
   compareSchemaProperties(before, after, location, failures);

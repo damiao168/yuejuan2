@@ -446,12 +446,13 @@ type BatchImportResult struct {
 
 // 评分事实归属于条目版本。选择模板时复制事实，引用只记录来源，考试评分不会再沿引用读取。
 type Scoring struct {
-	Answer            *paper.AnswerKeyInput `json:"answer"`
-	Solution          *paper.SolutionInput  `json:"solution"`
-	Rubric            *paper.RubricInput    `json:"rubric"`
-	TemplateVersionID *string               `json:"template_version_id"`
-	Assets            []Asset               `json:"assets"`
-	UsePolicy         string                `json:"use_policy"`
+	ReferenceMaterials *paper.ReferenceMaterialImport `json:"reference_materials,omitempty"`
+	Answer             *paper.AnswerKeyInput          `json:"answer"`
+	Solution           *paper.SolutionInput           `json:"solution"`
+	Rubric             *paper.RubricInput             `json:"rubric"`
+	TemplateVersionID  *string                        `json:"template_version_id"`
+	Assets             []Asset                        `json:"assets"`
+	UsePolicy          string                         `json:"use_policy"`
 }
 type Asset struct {
 	FileAssetID string `json:"file_asset_id"`

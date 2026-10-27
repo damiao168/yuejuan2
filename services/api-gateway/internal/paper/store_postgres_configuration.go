@@ -329,11 +329,11 @@ WITH copied_session AS (
 INSERT INTO omr_calibration_case (
   tenant_id,calibration_session_id,omr_run_id,answer_segment_id,question_id,question_no,
   question_type,option_labels,sample_stratum,crop_sha256,observed_decision,observed_options,
-  observed_confidence,measurements,expected_options,matches,labeled_by,labeled_at,created_at
+  observed_confidence,measurements,expected_options,matches,labeled_by,labeled_at,created_at,observed_result_gate
 )
 SELECT c.tenant_id,copy.id,c.omr_run_id,c.answer_segment_id,c.question_id,c.question_no,
   c.question_type,c.option_labels,c.sample_stratum,c.crop_sha256,c.observed_decision,c.observed_options,
-  c.observed_confidence,c.measurements,c.expected_options,c.matches,c.labeled_by,c.labeled_at,c.created_at
+  c.observed_confidence,c.measurements,c.expected_options,c.matches,c.labeled_by,c.labeled_at,c.created_at,c.observed_result_gate
 FROM copied_session copy
 JOIN omr_calibration_case c
   ON c.tenant_id=$1::uuid AND c.calibration_session_id=copy.inherited_from_session_id

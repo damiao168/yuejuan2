@@ -87,8 +87,8 @@ func (s *MemoryStore) CreateTask(_ context.Context, tenantID string, runID strin
 		CreatedAt:          time.Now().UTC(),
 	}
 	s.tasks[task.ID] = task
-	run.Status = "running"
-	s.runs[runID] = run
+	// 新任务不能掩盖尚未处理的失败或人工复核，仍按全部任务的优先级汇总。
+	s.refreshRunStatusLocked(tenantID, runID)
 	return task, nil
 }
 

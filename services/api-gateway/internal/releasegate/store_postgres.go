@@ -11,6 +11,11 @@ import (
 
 type PostgresStore struct{ db *sql.DB }
 
+type publicationQueries interface {
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
 func (s *PostgresStore) CreatePolicy(ctx context.Context, tenantID, examID, actorID string, input CreatePolicyInput) (Policy, error) {
@@ -19,6 +24,10 @@ func (s *PostgresStore) CreatePolicy(ctx context.Context, tenantID, examID, acto
 		return Policy{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	// 与重评创建和最终发布使用同一考试锁；新策略不能在发布最终求值后插入。
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, tenantID, examID); err != nil {
+		return Policy{}, err
+	}
 	// 同一考试串行切换策略，旧版停用与新版创建必须一起提交，避免出现没有生效策略的空档。
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, tenantID+":"+examID+":release-gate-policy"); err != nil {
 		return Policy{}, err
@@ -48,7 +57,15 @@ RETURNING id::text, tenant_id::text, exam_id::text, version, status, policy, cre
 }
 
 func (s *PostgresStore) ActivePolicy(ctx context.Context, tenantID, examID string) (Policy, error) {
-	policy, err := scanPolicy(s.db.QueryRowContext(ctx, `
+	return activePolicy(ctx, s.db, tenantID, examID)
+}
+
+func (s *PostgresStore) ActivePolicyTx(ctx context.Context, tx *sql.Tx, tenantID, examID string) (Policy, error) {
+	return activePolicy(ctx, tx, tenantID, examID)
+}
+
+func activePolicy(ctx context.Context, query publicationQueries, tenantID, examID string) (Policy, error) {
+	policy, err := scanPolicy(query.QueryRowContext(ctx, `
 SELECT id::text, tenant_id::text, exam_id::text, version, status, policy, created_by::text, created_at
 FROM release_gate_policy WHERE tenant_id = $1 AND exam_id = $2::uuid AND status = 'active'
 `, tenantID, examID))
@@ -70,13 +87,21 @@ FROM release_gate_evidence WHERE tenant_id = $1 AND id = $2::uuid
 }
 
 func (s *PostgresStore) AppendEvidence(ctx context.Context, evidence Evidence) (Evidence, error) {
+	return appendEvidence(ctx, s.db, evidence)
+}
+
+func (s *PostgresStore) AppendEvidenceTx(ctx context.Context, tx *sql.Tx, evidence Evidence) (Evidence, error) {
+	return appendEvidence(ctx, tx, evidence)
+}
+
+func appendEvidence(ctx context.Context, query publicationQueries, evidence Evidence) (Evidence, error) {
 	payload, err := json.Marshal(evidence.Evaluation)
 	if err != nil {
 		return Evidence{}, err
 	}
 	policyID := nullUUID(evidence.Evaluation.Policy.ID)
 	releaseID := nullUUID(evidence.ReleaseID)
-	result, err := scanEvidence(s.db.QueryRowContext(ctx, `
+	result, err := scanEvidence(query.QueryRowContext(ctx, `
 INSERT INTO release_gate_evidence (tenant_id, exam_id, release_id, policy_id, phase, evaluation, evidence_hash, created_by, created_at)
 VALUES ($1, $2::uuid, NULLIF($3, '')::uuid, NULLIF($4, '')::uuid, $5, $6::jsonb, $7, $8::uuid, $9)
 RETURNING id::text, tenant_id::text, exam_id::text, COALESCE(release_id::text, ''), phase, evaluation, evidence_hash, created_by::text, created_at
@@ -143,7 +168,15 @@ VALUES ($1, $2::uuid, $3, $4, $5::uuid)
 }
 
 func (s *PostgresStore) ApprovedWaivers(ctx context.Context, tenantID, examID, policyID string) ([]Waiver, error) {
-	rows, err := s.db.QueryContext(ctx, waiverSelect+`
+	return approvedWaivers(ctx, s.db, tenantID, examID, policyID)
+}
+
+func (s *PostgresStore) ApprovedWaiversTx(ctx context.Context, tx *sql.Tx, tenantID, examID, policyID string) ([]Waiver, error) {
+	return approvedWaivers(ctx, tx, tenantID, examID, policyID)
+}
+
+func approvedWaivers(ctx context.Context, query publicationQueries, tenantID, examID, policyID string) ([]Waiver, error) {
+	rows, err := query.QueryContext(ctx, waiverSelect+`
  WHERE request.tenant_id = $1 AND request.exam_id = $2::uuid
    AND request.policy_id IS NOT DISTINCT FROM NULLIF($3, '')::uuid
    AND decision.status = 'approved'

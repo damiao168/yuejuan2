@@ -41,7 +41,7 @@ func (s *recordingUsageStore) recorded() []ModelUsageEvent {
 	return append([]ModelUsageEvent(nil), s.events...)
 }
 
-func TestManagedChatRecordsProviderUsageOncePerRequest(t *testing.T) {
+func TestManagedChatRecordsProviderUsageForEachActualGeneration(t *testing.T) {
 	store := newRecordingUsageStore()
 	verified := successfulManagedProbe()
 	verified.ProbeMode, verified.GeneratedRequest = "capability", true
@@ -68,8 +68,8 @@ func TestManagedChatRecordsProviderUsageOncePerRequest(t *testing.T) {
 	}
 
 	events := store.recorded()
-	if len(events) != 1 {
-		t.Fatalf("idempotent chat request produced %d usage events: %#v", len(events), events)
+	if len(events) != 2 {
+		t.Fatalf("two actual chat generations produced %d usage events: %#v", len(events), events)
 	}
 	event := events[0]
 	if event.Feature != "school_ai_chat" || event.ProviderKey != "deepseek" || event.ModelName != "deepseek-chat" ||

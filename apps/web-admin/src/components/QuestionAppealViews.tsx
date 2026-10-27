@@ -107,7 +107,7 @@ export function QuestionAppealEvidence({ context, answerImageURL, points }: Read
   return <>
     <section className="question-appeal-facts"><div><span>学生说明</span><strong>{context.appeal.reason}</strong></div><div><span>原评分来源</span><strong>{context.source_type || "已冻结评分事实"}</strong></div><div><span>发布版本</span><strong>V{context.appeal.source_release_version}</strong></div></section>
     {context.appeal.selected_region ? <Alert type="info" showIcon message="学生已圈选争议区域" description="红框只用于定位答题位置，不会修改原始答题图或成绩。" /> : null}
-    {context.answer_image_ready && answerImageURL ? <section><h3><Eye size={16} /> 答题图</h3><div className="question-appeal-image"><img src={answerImageURL} alt={`${context.appeal.question_no} 答题区域`} />{context.appeal.selected_region ? <RegionOverlay region={context.appeal.selected_region} /> : null}</div></section> : <Alert type="warning" showIcon message="答题图暂不可用" description="申诉与发布版本依据仍可查看；请从阅卷证据链确认图像状态。" />}
+    {context.answer_image_ready && answerImageURL ? <section><h3><Eye size={16} /> 答题图</h3><div className="question-appeal-image"><div className="question-appeal-image-anchor"><img src={answerImageURL} alt={`${context.appeal.question_no} 答题区域`} />{context.appeal.selected_region ? <RegionOverlay region={context.appeal.selected_region} /> : null}</div></div></section> : <Alert type="warning" showIcon message="答题图暂不可用" description="申诉与发布版本依据仍可查看；请从阅卷证据链确认图像状态。" />}
     <FrozenRubric points={points} />
     <ReleaseHistory versions={context.release_history} />
   </>;

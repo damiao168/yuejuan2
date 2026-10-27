@@ -67,6 +67,7 @@ export function useRegradeWorkflow({
   const [regradeReview, setRegradeReview] = useState<RegradeSummary | null>(null);
   const [regradeReviewOpen, setRegradeReviewOpen] = useState(false);
   const [regradeReviewScores, setRegradeReviewScores] = useState<Record<string, number | null>>({});
+  const [regradeReviewNotes, setRegradeReviewNotes] = useState<Record<string, string>>({});
   const [reviewedEvidence, setReviewedEvidence] = useState<Record<string, number>>({});
   const [previewingRegrade, setPreviewingRegrade] = useState(false);
 
@@ -191,6 +192,7 @@ export function useRegradeWorkflow({
       const response = await getRegradeJob(job.id);
       setRegradeReview(response.regrade);
       setReviewedEvidence({});
+      setRegradeReviewNotes({});
       setRegradeReviewScores(Object.fromEntries(response.regrade.items.map((item) => [item.id, item.candidate_score ?? null])));
       setRegradeReviewOpen(true);
     } catch (error) {
@@ -202,6 +204,10 @@ export function useRegradeWorkflow({
 
   const decideRegradeItem = (item: RegradeSummary["items"][number], decision: "accept" | "reject" | "exception") => {
     if (reviewedEvidence[item.id] !== item.revision) { message.error("请先核对本条候选的答卷与冻结标准"); return; }
+    const note = regradeReviewNotes[item.id]?.trim() ?? "";
+    if (item.status === "exception" && (!note || decision === "exception")) {
+      message.error("请填写异常处理说明，再接受或驳回候选"); return;
+    }
     const score = regradeReviewScores[item.id];
     if (decision === "accept" && (score === null || score === undefined)) {
       message.error("接受候选前请填写最终得分");
@@ -212,6 +218,7 @@ export function useRegradeWorkflow({
       async () => {
         await reviewRegradeItem(item.id, {
           decision,
+          ...(note ? { note } : {}),
           ...(decision === "accept" && score !== item.candidate_score ? { reviewed_score: score } : {}),
           expected_revision: item.revision
         });
@@ -247,6 +254,8 @@ export function useRegradeWorkflow({
     regradeReviewOpen,
     closeRegradeReview: () => setRegradeReviewOpen(false),
     regradeReviewScores,
+    regradeReviewNotes,
+    setRegradeReviewNotes,
     reviewedEvidence,
     markEvidenceReviewed: (id: string, revision: number) => setReviewedEvidence(current => ({ ...current, [id]: revision })),
     setRegradeReviewScores,

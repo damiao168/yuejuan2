@@ -4,20 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+
+	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
-type printPackageLayout struct {
-	Pages []struct {
-		PageNo          int                  `json:"page_no"`
-		Width           int                  `json:"width"`
-		Height          int                  `json:"height"`
-		QuestionRegions []PrintPackageRegion `json:"question_regions"`
-	} `json:"pages"`
-}
-
 type printPackagePageLayout struct {
-	width, height int
-	regions       []PrintPackageRegion
+	width, height           int
+	regions                 []PrintPackageRegion
+	marks, identity, groups []PrintPackageRegion
 }
 
 func (s *PostgresStore) GetStudentPrintPackage(ctx context.Context, tenantID, printBatchID string) (StudentPrintPackage, error) {
@@ -88,6 +82,7 @@ ORDER BY sh.ordinal,p.page_no
 		out.Sheets[last].Pages = append(out.Sheets[last].Pages, PrintPackagePage{
 			PageNo: pageNo, TemplateWidth: layoutPage.width, TemplateHeight: layoutPage.height,
 			BarcodeValue: barcodeValue, QuestionRegions: layoutPage.regions,
+			RegistrationMarks: layoutPage.marks, IdentityRegions: layoutPage.identity, GradingGroups: layoutPage.groups,
 		})
 	}
 	if err = rows.Err(); err != nil {
@@ -104,7 +99,7 @@ func printPackagePages(layoutRaw []byte, sheetCount, pageCount int) (map[int]pri
 	if sheetCount <= 0 || pageCount <= 0 || sheetCount > maxPrintPackagePages/pageCount {
 		return nil, ErrInvalidTransition
 	}
-	var layout printPackageLayout
+	var layout paper.TemplateLayout
 	if err := json.Unmarshal(layoutRaw, &layout); err != nil || len(layout.Pages) == 0 || len(layout.Pages) != pageCount {
 		return nil, ErrInvalidTransition
 	}
@@ -113,9 +108,29 @@ func printPackagePages(layoutRaw []byte, sheetCount, pageCount int) (map[int]pri
 		if page.PageNo <= 0 || page.Width <= 0 || page.Height <= 0 {
 			return nil, ErrInvalidTransition
 		}
-		pagesByNumber[page.PageNo] = printPackagePageLayout{page.Width, page.Height, page.QuestionRegions}
+		resolvedGroups, err := paper.ResolveTemplateGradingGroups(page)
+		if err != nil {
+			return nil, ErrInvalidTransition
+		}
+		groups := make([]PrintPackageRegion, 0, len(resolvedGroups))
+		for _, group := range resolvedGroups {
+			groups = append(groups, PrintPackageRegion{ID: group.GroupID, X: group.BBox.X, Y: group.BBox.Y, Width: group.BBox.Width, Height: group.BBox.Height})
+		}
+		pagesByNumber[page.PageNo] = printPackagePageLayout{width: page.Width, height: page.Height, regions: printRegions(page.QuestionRegions), marks: printRegions(page.RegistrationMarks), identity: printRegions(page.IdentityRegions), groups: groups}
 	}
 	return pagesByNumber, nil
+}
+
+func printRegions(regions []paper.LayoutRegion) []PrintPackageRegion {
+	out := make([]PrintPackageRegion, 0, len(regions))
+	for _, region := range regions {
+		item := PrintPackageRegion{ID: region.ID, QuestionID: region.QuestionID, Label: region.Label, X: region.X, Y: region.Y, Width: region.Width, Height: region.Height, OptionCoordinateSpace: region.OptionCoordinateSpace}
+		for _, option := range region.OptionRegions {
+			item.OptionRegions = append(item.OptionRegions, PrintPackageRegion{ID: option.ID, Label: option.Label, X: option.X, Y: option.Y, Width: option.Width, Height: option.Height})
+		}
+		out = append(out, item)
+	}
+	return out
 }
 
 func validatePrintPackageSheetCounts(sheets []PrintPackageSheet, sheetCount, pageCount int) error {

@@ -14,6 +14,7 @@ import { useObjectiveGrid } from "./useObjectiveGrid";
 import { containsObjectiveBox } from "./objectiveGridGeometry";
 import { App } from "antd";
 import { useFillGradingGroups } from "./useFillGradingGroups";
+import { templateCoveredQuestions } from "./templateCoverage";
 
 export function useTemplateEditor({
   examId, canManage, selectedPaper, selectedTemplate, questions, setTemplates,
@@ -44,9 +45,7 @@ export function useTemplateEditor({
   }, []);
   const templateReadonly = !canManage || selectedTemplate?.status === "locked"
     || Boolean(selectedPaper && (preview.sourceId !== selectedPaper.id || preview.error));
-  const coveredQuestions = useMemo(() => new Set(layout.pages.flatMap((page) =>
-    [...page.question_regions.flatMap((region) => region.question_id ? [region.question_id] : []),
-      ...(page.grading_groups ?? []).flatMap(group => group.question_ids)])), [layout]);
+  const coveredQuestions = useMemo(() => templateCoveredQuestions(layout), [layout]);
   // 身份框也占据页面几何范围；独立整区的成员参与覆盖统计，但不能冒充逐题几何框。
   const coveredRegions = useMemo(() => new Map(layout.pages.map(page => [page.page_no, [...page.question_regions, ...page.identity_regions]])), [layout]);
   const lifecycle = useTemplateLifecycle({

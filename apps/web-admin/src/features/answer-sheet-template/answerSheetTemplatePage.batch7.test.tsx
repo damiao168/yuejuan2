@@ -740,8 +740,10 @@ describe("answer sheet page behavior before and after extraction", () => {
 
 	it.each([
 		[true, "selected_high", "一致"],
-		[false, "selected_high", "高置信错误，阻断审批"],
-		[false, "selected_low", "不一致，但该分支仍保持人工复核"]
+		[false, "selected_high", "识别不一致；自动确认候选的错例将阻断审批"],
+		[false, "selected_low", "识别不一致；自动确认候选的错例将阻断审批"],
+		[false, "blank", "识别不一致；自动确认候选的错例将阻断审批"],
+		[false, "ambiguous", "识别不一致；自动确认候选的错例将阻断审批"]
 	])(
 		"preserves labeled sample result precedence",
 		async (matches, stratum, expected) => {
@@ -757,6 +759,18 @@ describe("answer sheet page behavior before and after extraction", () => {
 			).toContain(expected as string);
 		}
 	);
+
+	it("explains missing frozen calibration quality without promising automatic acceptance", async () => {
+		calibration();
+		mocks.calibration.detail!.session.summary.blockers = [
+			"calibration_result_gate_missing"
+		];
+		mocks.calibration.detail!.session.summary.ready_to_approve = false;
+		await render();
+		expect(host.textContent).toContain(
+			"样本缺少完整的识别质量记录，请重新建立校准"
+		);
+	});
 
 	it.each([
 		[undefined, "弃用校准草稿", "弃用草稿"],

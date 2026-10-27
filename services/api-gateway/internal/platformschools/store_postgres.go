@@ -147,6 +147,10 @@ GROUP BY usage_date ORDER BY usage_date`, tenantID, usageRange.Start, usageRange
 		}
 		result.Trend = append(result.Trend, item)
 	}
+	if err = trendRows.Err(); err != nil {
+		trendRows.Close()
+		return UsageResult{}, err
+	}
 	if err = trendRows.Close(); err != nil {
 		return UsageResult{}, err
 	}

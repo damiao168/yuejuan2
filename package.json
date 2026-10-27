@@ -33,7 +33,7 @@
     "test:go-coverage": "node --test scripts/ci/go-coverage.test.mjs",
     "check:schema-version": "node scripts/check-schema-version.mjs",
     "test:schema-version": "node --test scripts/ci/schema-version.test.mjs",
-    "test:contract-gates": "node --test scripts/ci/contract-gates.test.mjs",
+    "test:contract-gates": "node --test scripts/ci/contract-gates.test.mjs scripts/ci/openapi-remediation.test.mjs",
     "sync:schema-version": "node scripts/sync-schema-version.mjs",
     "ci:workflow-lint": "node scripts/ci/lint-workflows.mjs",
     "ci:web:fast": "npm run lint && npm run typecheck && npm run build",

@@ -21,7 +21,7 @@ import type {
 	OMRCalibrationStatus
 } from "../../../api/configuration";
 import type { Question } from "../../../api/papers";
-import type { TemplatePageViewProps } from "./templateViewTypes";
+import type { TemplateOMRView } from "./templateViewTypes";
 
 function calibrationStatusLabel(status: OMRCalibrationStatus) {
 	return {
@@ -54,7 +54,9 @@ function calibrationBlockerLabel(code: string) {
 			calibration_labels_pending: "仍有样本尚未人工标注",
 			calibration_mismatch_detected: "人工标注与识别结果出现不一致",
 			eligible_calibration_mismatch_detected:
-				"高置信候选存在识别错误，不能开放自动确认",
+				"自动确认候选存在识别错误，不能开放自动确认",
+			calibration_result_gate_missing:
+				"样本缺少完整的识别质量记录，请重新建立校准",
 			option_coverage_incomplete: "各选项的人工样本覆盖不足 10 份",
 			question_coverage_incomplete: "模板内仍有选择题未被样本覆盖",
 			stratum_coverage_incomplete: "高置信、低置信、空白或模糊样本覆盖不足",
@@ -115,7 +117,7 @@ function calibrationSessionTitle(
 	return `整套模板 · ${session.question_ids.length} 道题${inheritance}`;
 }
 
-function OMRReferenceNotice({ view }: TemplatePageViewProps) {
+function OMRReferenceNotice({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const { layout } = view.editor;
 	if (layout.omr_profile?.reference)
 		return (
@@ -139,7 +141,7 @@ function OMRReferenceNotice({ view }: TemplatePageViewProps) {
 	return null;
 }
 
-export function OMRProfilePanel({ view }: TemplatePageViewProps) {
+export function OMRProfilePanel({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const { selectedTemplate } = view;
 	const { layout, readonly, setOMRProfile } = view.editor;
 	const { calibrations } = view.calibration;
@@ -176,7 +178,7 @@ export function OMRProfilePanel({ view }: TemplatePageViewProps) {
 	);
 }
 
-function CalibrationSessions({ view }: TemplatePageViewProps) {
+function CalibrationSessions({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const { questions } = view;
 	const {
 		loading: calibrationLoading,
@@ -218,7 +220,7 @@ function CalibrationSessions({ view }: TemplatePageViewProps) {
 							<strong>{calibrationSessionTitle(item, questions)}</strong>
 							<span>
 								{item.summary.labeled_count}/{item.summary.total_count} 已标注 ·
-								高置信错误 {item.summary.eligible_mismatch_count}
+								自动确认候选错误 {item.summary.eligible_mismatch_count}
 							</span>
 						</div>
 						<StatusTag tone={calibrationStatusTone(item.status)}>
@@ -231,7 +233,7 @@ function CalibrationSessions({ view }: TemplatePageViewProps) {
 	);
 }
 
-export function CalibrationPanel({ view }: TemplatePageViewProps) {
+export function CalibrationPanel({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const { selectedTemplate, canCalibrate } = view;
 	const {
 		calibrations,
@@ -306,7 +308,7 @@ export function CalibrationPanel({ view }: TemplatePageViewProps) {
 	);
 }
 
-function CalibrationSummary({ view }: TemplatePageViewProps) {
+function CalibrationSummary({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const { detail: calibrationDetail } = view.calibration;
 	if (!calibrationDetail) return null;
 	const calibrationProgress = Math.round(
@@ -332,14 +334,14 @@ function CalibrationSummary({ view }: TemplatePageViewProps) {
 					</strong>
 				</div>
 				<div>
-					<span>高置信正确</span>
+					<span>自动确认候选正确</span>
 					<strong>
 						{calibrationDetail.session.summary.eligible_match_count}/
 						{calibrationDetail.session.summary.eligible_count}
 					</strong>
 				</div>
 				<div>
-					<span>高置信错误</span>
+					<span>自动确认候选错误</span>
 					<strong>
 						{calibrationDetail.session.summary.eligible_mismatch_count}
 					</strong>
@@ -409,7 +411,7 @@ function CalibrationSummary({ view }: TemplatePageViewProps) {
 	);
 }
 
-function CalibrationImage({ view }: TemplatePageViewProps) {
+function CalibrationImage({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const {
 		imageLoading: calibrationImageLoading,
 		imageUrl: calibrationImageUrl,
@@ -441,11 +443,11 @@ function CalibrationImage({ view }: TemplatePageViewProps) {
 
 function calibrationMismatchDescription(sample: OMRCalibrationCase) {
 	if (sample.matches) return "一致";
-	if (sample.sample_stratum === "selected_high") return "高置信错误，阻断审批";
-	return "不一致，但该分支仍保持人工复核";
+	// 抽样分层不等于自动确认资格；空白和清晰多选也可能进入自动分支，是否阻断由服务端冻结证据判断。
+	return "识别不一致；自动确认候选的错例将阻断审批";
 }
 
-function CalibrationLabelActions({ view }: TemplatePageViewProps) {
+function CalibrationLabelActions({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const {
 		detail: calibrationDetail,
 		selectedCase: selectedCalibrationCase,
@@ -512,7 +514,7 @@ function CalibrationLabelActions({ view }: TemplatePageViewProps) {
 	);
 }
 
-function CalibrationLabelResult({ view }: TemplatePageViewProps) {
+function CalibrationLabelResult({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const { selectedCase: sample } = view.calibration;
 	if (!sample) return null;
 	if (sample.matches !== undefined) {
@@ -548,7 +550,7 @@ function CalibrationLabelResult({ view }: TemplatePageViewProps) {
 	);
 }
 
-function CalibrationCaseView({ view }: TemplatePageViewProps) {
+function CalibrationCaseView({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const {
 		detail: calibrationDetail,
 		selectedCase: selectedCalibrationCase,
@@ -613,7 +615,7 @@ function CalibrationCaseView({ view }: TemplatePageViewProps) {
 	);
 }
 
-function CalibrationSessionActions({ view }: TemplatePageViewProps) {
+function CalibrationSessionActions({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const {
 		detail: calibrationDetail,
 		busy: calibrationBusy,
@@ -666,7 +668,7 @@ function CalibrationSessionActions({ view }: TemplatePageViewProps) {
 	);
 }
 
-function CalibrationEvidence({ view }: TemplatePageViewProps) {
+function CalibrationEvidence({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const { detail: calibrationDetail } = view.calibration;
 	if (!calibrationDetail) return null;
 	return (
@@ -703,7 +705,7 @@ function CalibrationEvidence({ view }: TemplatePageViewProps) {
 	);
 }
 
-function CalibrationDetailView({ view }: TemplatePageViewProps) {
+function CalibrationDetailView({ view }: Readonly<{ view: TemplateOMRView }>) {
 	if (!view.calibration.detail) return <Spin />;
 	return (
 		<div className="calibration-drawer">
@@ -715,7 +717,7 @@ function CalibrationDetailView({ view }: TemplatePageViewProps) {
 	);
 }
 
-export function CalibrationDrawer({ view }: TemplatePageViewProps) {
+export function CalibrationDrawer({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const {
 		drawerOpen: calibrationDrawerOpen,
 		setDrawerOpen: setCalibrationDrawerOpen
@@ -734,7 +736,7 @@ export function CalibrationDrawer({ view }: TemplatePageViewProps) {
 }
 
 function calibrationActionNotice(
-	action: TemplatePageViewProps["view"]["calibration"]["action"]
+	action: TemplateOMRView["calibration"]["action"]
 ) {
 	switch (action) {
 		case "approve":
@@ -759,7 +761,7 @@ function calibrationActionNotice(
 	}
 }
 
-export function CalibrationActionModal({ view }: TemplatePageViewProps) {
+export function CalibrationActionModal({ view }: Readonly<{ view: TemplateOMRView }>) {
 	const {
 		action: calibrationAction,
 		busy: calibrationBusy,

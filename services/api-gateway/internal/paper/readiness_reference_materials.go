@@ -15,7 +15,7 @@ func referenceMaterialsAvailable(ctx context.Context, q postgresQueryer, tenant,
 		return true, nil
 	}
 	var available bool
-	err := q.QueryRowContext(ctx, `SELECT m.use_state='active' AND m.content_hash=$5 AND m.revision=$6 AND m.mode=$7
+	err := q.QueryRowContext(ctx, `SELECT reference_authorization_active(m.tenant_id,m.id) AND m.content_hash=$5 AND m.revision=$6 AND m.mode=$7
  AND (SELECT count(*) FROM question_reference_manifest_item i WHERE i.tenant_id=m.tenant_id AND i.manifest_id=m.id)=$8
  AND NOT EXISTS(SELECT 1 FROM question_reference_manifest_item i JOIN file_asset f ON f.tenant_id=i.tenant_id AND f.id IN(i.source_file_asset_id,i.page_file_asset_id,i.derived_file_asset_id)
  WHERE i.tenant_id=m.tenant_id AND i.manifest_id=m.id AND (f.lifecycle_status<>'active' OR f.deleted_at IS NOT NULL
@@ -67,11 +67,25 @@ func lockReadinessReferenceMaterials(ctx context.Context, tx *sql.Tx, tenant, ex
 		return nil
 	}
 	sort.Strings(ids)
-	for _, id := range ids {
-		var actual string
-		if err := tx.QueryRowContext(ctx, `SELECT id::text FROM question_reference_manifest WHERE tenant_id=$1 AND exam_id=$2 AND id=$3 FOR SHARE`, tenant, exam, id).Scan(&actual); err != nil {
+	// 题库转移的清单仍依赖原授权；一次排序锁住所有祖先，避免仅锁目标而遗漏并发撤回。
+	manifestRows, err := tx.QueryContext(ctx, `WITH RECURSIVE chain AS (
+ SELECT id,origin_manifest_id FROM question_reference_manifest WHERE tenant_id=$1 AND exam_id=$2 AND id::text=ANY(string_to_array($3,','))
+ UNION SELECT m.id,m.origin_manifest_id FROM question_reference_manifest m JOIN chain c ON c.origin_manifest_id=m.id WHERE m.tenant_id=$1
+) SELECT m.id::text FROM question_reference_manifest m JOIN chain c ON c.id=m.id WHERE m.tenant_id=$1 ORDER BY m.id FOR SHARE OF m`, tenant, exam, strings.Join(ids, ","))
+	if err != nil {
+		return err
+	}
+	for manifestRows.Next() {
+		var id string
+		if err = manifestRows.Scan(&id); err != nil {
+			manifestRows.Close()
 			return err
 		}
+	}
+	err = manifestRows.Err()
+	manifestRows.Close()
+	if err != nil {
+		return err
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT id::text FROM file_asset WHERE tenant_id=$1 AND id IN(SELECT unnest(ARRAY[i.source_file_asset_id,i.page_file_asset_id,i.derived_file_asset_id]) FROM question_reference_manifest_item i WHERE i.tenant_id=$1 AND i.manifest_id::text=ANY(string_to_array($2,','))) ORDER BY id FOR SHARE`, tenant, strings.Join(ids, ","))
 	if err != nil {

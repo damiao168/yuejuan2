@@ -187,7 +187,9 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
   };
 
   const importRows = useMemo<ImportRow[]>(() => {
-    const existing = new Set(data?.students.map((student) => student.student_no.toLowerCase()) ?? []);
+    // 学号只在学校内唯一；先解析班级归属，再用同一学校+学号判断已有与本批重复。
+    const studentKey = (schoolId: string, studentNo: string) => JSON.stringify([schoolId, studentNo.toLowerCase()]);
+    const existing = new Set(data?.students.map((student) => studentKey(student.school_id, student.student_no)) ?? []);
     const seen = new Set<string>();
     // CSV只有班级代码；同码跨学校/年级时不能按列表顺序猜归属，须先消除歧义再导入。
     const classesByCode = new Map<string, SchoolClass[]>();
@@ -199,16 +201,16 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
       const studentNo = (record[mapping.studentNo] ?? "").trim();
       const name = (record[mapping.name] ?? "").trim();
       const classCode = (record[mapping.classCode] ?? "").trim();
-      const normalizedNo = studentNo.toLowerCase();
       const candidates = classesByCode.get(classCode.toLowerCase()) ?? [];
       const targetClass = candidates.length === 1 ? candidates[0] : undefined;
+      const normalizedNo = targetClass ? studentKey(targetClass.school_id, studentNo) : undefined;
       let rowError = "";
       if (!studentNo || !name || !classCode) rowError = "学号、姓名和班级代码不能为空";
-      else if (existing.has(normalizedNo)) rowError = "学号已存在";
-      else if (seen.has(normalizedNo)) rowError = "文件内学号重复";
       else if (candidates.length > 1) rowError = "班级代码对应多个班级，请先使用唯一班级代码再导入";
       else if (!targetClass) rowError = "班级代码不存在";
-      seen.add(normalizedNo);
+      else if (normalizedNo && existing.has(normalizedNo)) rowError = "学号已存在";
+      else if (normalizedNo && seen.has(normalizedNo)) rowError = "文件内学号重复";
+      if (normalizedNo) seen.add(normalizedNo);
       return {
         key: index,
         sourceRow: index + 2,

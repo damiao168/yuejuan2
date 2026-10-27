@@ -162,7 +162,8 @@ func newRubricDraftPostgresFixture(t *testing.T) (*PostgresStore, *PostgresStore
 	t.Cleanup(func() { _ = setup.Close() })
 	for _, ddl := range []string{
 		`CREATE TABLE tenant (id uuid PRIMARY KEY)`,
-		`CREATE TABLE exam (id uuid PRIMARY KEY)`,
+		`CREATE TABLE exam_session (id uuid PRIMARY KEY,tenant_id uuid,status text NOT NULL DEFAULT 'draft',archived_at timestamptz)`,
+		`CREATE TABLE exam (id uuid PRIMARY KEY,tenant_id uuid,exam_session_id uuid,status text NOT NULL DEFAULT 'draft',archived_at timestamptz,deleted_at timestamptz)`,
 		`CREATE TABLE question (id uuid PRIMARY KEY)`,
 		`CREATE FUNCTION edugrade_tenant_matches(candidate uuid) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT current_setting('edugrade.tenant_id',true) IN ('maintenance',candidate::text) $$`,
 	} {
@@ -209,7 +210,11 @@ func newRubricDraftPostgresFixture(t *testing.T) (*PostgresStore, *PostgresStore
 	prepare := func(record rubricDraftJobRecord) {
 		t.Helper()
 		for _, item := range []struct{ table, id string }{{"tenant", record.TenantID}, {"exam", record.Job.ExamID}, {"question", record.Job.QuestionID}} {
-			if _, err := setup.ExecContext(t.Context(), `INSERT INTO `+item.table+`(id) VALUES($1) ON CONFLICT DO NOTHING`, item.id); err != nil {
+			statement, args := `INSERT INTO `+item.table+`(id) VALUES($1) ON CONFLICT DO NOTHING`, []any{item.id}
+			if item.table == "exam" {
+				statement, args = `INSERT INTO exam(id,tenant_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, []any{item.id, record.TenantID}
+			}
+			if _, err := setup.ExecContext(t.Context(), statement, args...); err != nil {
 				t.Fatal(err)
 			}
 		}

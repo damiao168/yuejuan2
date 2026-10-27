@@ -132,7 +132,8 @@ export interface FinalGrade {
 
 export interface SubmitHumanGradeResult {
   task: ReviewTask;
-  human_grade: HumanGrade;
+  // 任务级交分也可能只返回任务回执；不能假设每次提交都会生成学生成绩。
+  human_grade?: HumanGrade;
   final_grade?: FinalGrade;
   double_mark_session?: unknown;
   arbitration_task?: unknown;

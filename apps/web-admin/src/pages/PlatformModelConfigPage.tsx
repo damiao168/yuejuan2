@@ -95,7 +95,10 @@ export function PlatformModelConfigPage() {
   const { queue, operations } = useModelOperations();
   const applications = useModelApplications(selectedTenantID, queue);
   const [applicationTarget, setApplicationTarget] = useState<{ config: ManagedModelAPIConfig; type: "grading" | "document" | "answer_sheet" } | null>(null);
-  const [applicationDirty, setApplicationDirty] = useState(false);
+  const [applicationFormDirty, setApplicationDirty] = useState(false);
+  const [applicationBindingsDirty, setApplicationBindingsDirty] = useState(false);
+  // 独立用途保存只能清自己的编辑状态；可选角色绑定仍须单独保存或明确放弃。
+  const applicationDirty = applicationFormDirty || applicationBindingsDirty;
   const [applicationSaving, setApplicationSaving] = useState(false);
   const applicationSavingRef = useRef(false);
   const handleApplicationSaving = useCallback((busy: boolean) => { applicationSavingRef.current = busy; setApplicationSaving(busy); }, []);
@@ -104,13 +107,13 @@ export function PlatformModelConfigPage() {
     if (applicationSavingRef.current || queue.isBusy(selectedTenantID, "__document__") || queue.isBusy(selectedTenantID, "__answer_sheet__")) return;
     const close = () => {
       if (applicationSavingRef.current || queue.isBusy(selectedTenantID, "__document__") || queue.isBusy(selectedTenantID, "__answer_sheet__")) return;
-      setApplicationTarget(null); setApplicationDirty(false);
+      setApplicationTarget(null); setApplicationDirty(false); setApplicationBindingsDirty(false);
     };
     if (applicationDirty) modal.confirm({ title: "放弃未保存的用途设置？", content: "已保存的角色绑定和解析设置会保留。", okText: "放弃并关闭", cancelText: "继续编辑", onOk: close });
     else close();
   };
   const openApplication = useCallback((config: ManagedModelAPIConfig, type: "grading" | "document" | "answer_sheet") => {
-    setApplicationDirty(false); setApplicationTarget({ config, type });
+    setApplicationDirty(false); setApplicationBindingsDirty(false); setApplicationTarget({ config, type });
   }, []);
   const mountedRef = useRef(true);
   const selectedTenantRef = useRef(selectedTenantID);
@@ -629,7 +632,7 @@ export function PlatformModelConfigPage() {
         width={applicationTarget?.type === "grading" ? 1120 : 560} open={Boolean(applicationTarget)} destroyOnHidden
         closable={!applicationSaving && !applications.saving} maskClosable={!applicationSaving && !applications.saving} keyboard={!applicationSaving && !applications.saving} onClose={closeApplication}>
         {applicationTarget?.type === "grading" ? <><ImageGradingModelForm tenantID={selectedTenantID} config={configs.find(config => config.id === applicationTarget.config.id) ?? applicationTarget.config} selection={applications.data?.grading_selection} loading={applications.loading} busy={applications.saving} error={applications.error} onRefresh={() => void refreshApplications()} onDirtyChange={setApplicationDirty} onSave={mode => { void applications.saveGrading(mode, applicationTarget.config.id).then(saved => { if (saved) { setApplicationDirty(false); message.success(mode === "model" ? "自动阅卷 API 模型已设置，请检测图片能力" : "已取消自动阅卷用途"); void refreshApplications(); } }); }} /><details><summary>多模型评审角色（可选）</summary><PanelModelBindingsSection key={`${selectedTenantID}:${applicationTarget.config.id}`} tenantID={selectedTenantID} configs={configs} loadingConfigs={configLoading}
-          suggestedModelID={applicationTarget.config.id} savedUses={applications.data?.grading_uses?.filter(use => use.model_config_id === applicationTarget.config.id)} onSaved={() => void refreshApplications()} onDirtyChange={setApplicationDirty} onSavingChange={handleApplicationSaving} /></details></> : null}
+          suggestedModelID={applicationTarget.config.id} savedUses={applications.data?.grading_uses?.filter(use => use.model_config_id === applicationTarget.config.id)} onSaved={() => void refreshApplications()} onDirtyChange={setApplicationBindingsDirty} onSavingChange={handleApplicationSaving} /></details></> : null}
         {applicationTarget?.type === "document" ? <DocumentModelForm key={`${selectedTenantID}:${applicationTarget.config.id}`} config={configs.find(config => config.id === applicationTarget.config.id) ?? applicationTarget.config}
           selection={applications.data?.document_selection} loading={applications.loading} busy={applications.saving} error={applications.error} onRefresh={() => void refreshApplications()} onDirtyChange={setApplicationDirty}
           onSave={mode => { void applications.save(mode, applicationTarget.config.id).then(saved => { if (saved) { setApplicationTarget(null); setApplicationDirty(false); message.success(mode === "follow_chat" ? "试卷解析已设为跟随默认配置" : "试卷解析模型已独立设置"); } }); }} /> : null}

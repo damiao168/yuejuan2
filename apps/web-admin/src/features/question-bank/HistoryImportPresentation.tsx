@@ -6,6 +6,7 @@ import { questionTypeOptions } from "../../constants/examCatalog";
 import { MathMarkdown } from "../../components/MathMarkdown";
 import { importErrorMessage, type ImportDraft } from "./historyImportCommands";
 import { referenceText } from "../grading/workbench/components/FrozenQuestionReference";
+import { QuestionBankReferenceImages } from "./QuestionBankReferenceImages";
 
 function duplicateLabel(kind: string) {
   switch (kind) {
@@ -43,6 +44,7 @@ function HistoryImportPreview({ draft, patchDraft }: Readonly<{ draft: ImportDra
         <h4>参考答案</h4><MathMarkdown>{referenceText(draft.preview.scoring.answer) || "原卷未提供参考答案"}</MathMarkdown>
         <h4>参考解答</h4><MathMarkdown>{referenceText(draft.preview.scoring.solution) || "原卷未提供参考解答"}</MathMarkdown>
         <h4>评分标准</h4><MathMarkdown>{referenceText(draft.preview.scoring.rubric) || "原卷未提供评分标准"}</MathMarkdown>
+        <QuestionBankReferenceImages materials={draft.preview.scoring.reference_materials} />
         <p>附件：{draft.preview.scoring.assets.map((asset)=>asset.name).join("、") || "无"}</p><p>来源确认时的原始内容保持不变。保存到题库后由审核教师核对。</p></details>
     </div>
   </List.Item>;

@@ -26,7 +26,7 @@ const mocks = vi.hoisted(() => ({
   list: vi.fn(), probe: vi.fn(), update: vi.fn(), remove: vi.fn(), schools: vi.fn(), discover: vi.fn(), create: vi.fn(), bindings: vi.fn(),
   success: vi.fn(), warning: vi.fn(), error: vi.fn(), info: vi.fn(), confirm: vi.fn(), invalidate: vi.fn(),
   saveDraft: vi.fn(), clearDraft: vi.fn(), restoreDraft: vi.fn(), watch: vi.fn(),
-  applications: vi.fn(), saveDocument: vi.fn(), saveAnswerSheet: vi.fn(),
+  applications: vi.fn(), saveDocument: vi.fn(), saveAnswerSheet: vi.fn(), saveGrading: vi.fn(),
   detailInfo: vi.fn(), detailWarning: vi.fn(), detailError: vi.fn(),
   form: { setFieldsValue: vi.fn(), resetFields: vi.fn(), validateFields: vi.fn(), getFieldValue: vi.fn(), getFieldsValue: vi.fn() }
 }));
@@ -42,7 +42,7 @@ vi.mock("../api/modelApiConfig", async (importOriginal) => ({
   updateManagedModelAPIConfig: mocks.update, deleteManagedModelAPIConfig: mocks.remove,
   listAvailableManagedModels: mocks.discover, autoCreateManagedModelAPIConfig: mocks.create,
   getModelApplications: mocks.applications, saveDocumentModelSelection: mocks.saveDocument,
-  saveAnswerSheetModelSelection: mocks.saveAnswerSheet
+  saveAnswerSheetModelSelection: mocks.saveAnswerSheet, saveGradingModelSelection: mocks.saveGrading
 }));
 vi.mock("../features/platform-model-config/lib/modelConfig", async (importOriginal) => ({
   ...await importOriginal<typeof import("../features/platform-model-config/lib/modelConfig")>(),
@@ -82,7 +82,7 @@ vi.mock("antd", async () => {
     }) => <select id={id} value={value ?? ""} disabled={disabled} onChange={(event) => onChange?.(event.target.value)}>
       {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
     </select>,
-    Drawer: ({ open, children, extra }: { open: boolean; children?: ReactNode; extra?: ReactNode }) => open ? <aside>{extra}{children}</aside> : null,
+    Drawer: ({ open, children, extra, onClose }: { open: boolean; children?: ReactNode; extra?: ReactNode; onClose?: () => void }) => open ? <aside><button onClick={onClose}>关闭用途</button>{extra}{children}</aside> : null,
     Alert: ({ message, description, action }: { message?: ReactNode; description?: ReactNode; action?: ReactNode }) => <section data-alert>{message}{description}{action}</section>, AutoComplete: () => null, Input: Object.assign(() => null, { Password: () => null }),
     Segmented: ({ options, onChange }: { options: { value: string; label: ReactNode }[]; onChange: (value: string) => void }) => <div>{options.map((option) => <button key={option.value} onClick={() => onChange(option.value)}>{option.label}</button>)}</div>, Space: passthrough, Tooltip: passthrough, Tag: passthrough, Empty: () => null,
     Form: Object.assign(passthrough, { useForm: () => [mocks.form], useWatch: mocks.watch,
@@ -262,6 +262,20 @@ describe("学校模型库操作", () => {
     expect(conversationChoice("DeepSeek").checked).toBe(true);
     expect(mocks.update).not.toHaveBeenCalled();
     expect(mocks.bindings).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])("独立阅卷用途保存成功=%s 不能清除角色绑定草稿保护", async (success) => {
+    mocks.applications.mockResolvedValue({ document_selection: { revision: "absent", mode: "follow_chat" }, answer_sheet_selection: { revision: "absent", mode: "unconfigured" }, grading_selection: { revision: "grading-r1", mode: "unconfigured" }, grading_model_ids: [] });
+    if (success) mocks.saveGrading.mockResolvedValue({ selection: { revision: "grading-r2", mode: "model", model_config_id: "OpenAI" } });
+    else mocks.saveGrading.mockRejectedValue(new Error("synthetic failure"));
+    await render();
+    await act(async () => button("阅卷配置", row("OpenAI")).click());
+    const binding = mocks.bindings.mock.calls[mocks.bindings.mock.calls.length - 1]?.[0] as { onDirtyChange: (dirty: boolean) => void };
+    await act(async () => binding.onDirtyChange(true));
+    await act(async () => button("使用此模型自动阅卷").click());
+    expect(mocks.saveGrading).toHaveBeenCalledOnce();
+    await act(async () => button("关闭用途").click());
+    expect(mocks.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: "放弃未保存的用途设置？" }));
   });
 
   it("管理员直接分配已启用且有密钥的自定义模型，无需先做合成图片或结构化检测", async () => {

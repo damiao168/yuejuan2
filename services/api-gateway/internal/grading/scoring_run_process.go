@@ -55,8 +55,11 @@ func (s *PostgresStore) processRuleCandidate(ctx context.Context, tenantID, runI
 	if errors.Is(err, ErrStaleScoringRule) {
 		// 旧运行缺少可证明的冻结内容时保留历史，不能临时采用当前规则补分。
 		err = s.createRuleReviewTask(ctx, tenantID, segmentID, runID, actorID, reviewSourceRuleReview, "frozen_scoring_rule_unavailable")
+		if errors.Is(err, ErrInvalidTransition) {
+			return true, nil
+		}
 		if err == nil {
-			_, err = s.db.ExecContext(ctx, `UPDATE scoring_run_item SET stage='done',processing_status='succeeded',decision_status='review_needed',reason_code='frozen_scoring_rule_unavailable',next_action='teacher_review',revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND answer_segment_id=$3::uuid`, tenantID, runID, segmentID)
+			return s.projectRuleCandidate(ctx, tenantID, runID, segmentID, "review_needed", "frozen_scoring_rule_unavailable", "teacher_review")
 		}
 		return false, err
 	}
@@ -88,11 +91,10 @@ func (s *PostgresStore) processRuleCandidate(ctx context.Context, tenantID, runI
 			if inactive {
 				return true, nil
 			}
-			_, err = s.db.ExecContext(ctx, `UPDATE scoring_run_item SET stage='done',processing_status='succeeded',decision_status='review_needed',reason_code='manual_work_in_progress',next_action='teacher_review',revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND answer_segment_id=$3::uuid`, tenantID, runID, segmentID)
-			return false, err
+			return s.projectRuleCandidate(ctx, tenantID, runID, segmentID, "review_needed", "manual_work_in_progress", "teacher_review")
 		}
 		if err == nil {
-			_, err = s.db.ExecContext(ctx, `UPDATE scoring_run_item SET stage='done',processing_status='succeeded',decision_status='auto_confirmed',reason_code='',next_action='none',revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND answer_segment_id=$3::uuid`, tenantID, runID, segmentID)
+			return s.projectRuleCandidate(ctx, tenantID, runID, segmentID, "auto_confirmed", "", "none")
 		}
 		return false, err
 	}
@@ -101,9 +103,30 @@ func (s *PostgresStore) processRuleCandidate(ctx context.Context, tenantID, runI
 		return true, nil
 	}
 	if err == nil {
-		_, err = s.db.ExecContext(ctx, `UPDATE scoring_run_item SET stage='done',processing_status='succeeded',decision_status='review_needed',reason_code=$4,next_action='teacher_review',revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND answer_segment_id=$3::uuid`, tenantID, runID, segmentID, reason)
+		return s.projectRuleCandidate(ctx, tenantID, runID, segmentID, "review_needed", reason, "teacher_review")
 	}
 	return false, err
+}
+
+// 业务事务提交后取消可能已先完成；投影也按父运行→条目的顺序加锁，不能覆盖取消事实。
+func (s *PostgresStore) projectRuleCandidate(ctx context.Context, tenantID, runID, segmentID, decision, reason, nextAction string) (bool, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	var status string
+	if err = tx.QueryRowContext(ctx, `SELECT status FROM scoring_run WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, runID).Scan(&status); err != nil {
+		return false, err
+	}
+	if status == "cancelling" || status == "cancelled" {
+		return true, nil
+	}
+	_, err = tx.ExecContext(ctx, `UPDATE scoring_run_item SET stage='done',processing_status='succeeded',decision_status=$4,reason_code=$5,next_action=$6,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND answer_segment_id=$3::uuid AND processing_status NOT IN ('cancelled','superseded')`, tenantID, runID, segmentID, decision, reason, nextAction)
+	if err != nil {
+		return false, err
+	}
+	return false, tx.Commit()
 }
 
 // 规则比较读取本轮候选和冻结配置。新观察没有兼容正文时也可评分，清晰空白由 presence 表达。

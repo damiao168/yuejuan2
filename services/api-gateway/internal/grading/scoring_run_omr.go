@@ -94,12 +94,21 @@ func (s *PostgresStore) ApplyOMRResult(ctx context.Context, tenantID, id, actorI
 	if currentStatus != "completed" && (input.ProfileVersion != expectedProfileVersion || input.ProfileHash != expectedProfileHash || input.ReferenceSHA256 != expectedReferenceSHA256) {
 		return OMRRun{}, nil, ErrInvalidInput
 	}
-	// 任务排队后校准可能被撤销；回调仍保存识别事实，但失去自动确认资格后必须转人工。
-	if currentStatus != "completed" && expectedCalibrationID != "" && (calibrationStatus != "approved" || calibrationEvidenceHash != expectedCalibrationEvidenceHash) {
-		autoConfirmEligible = false
-		autoConfirmReason = paper.OMRAutoConfirmReasonCalibrationRevoked
-		if _, err = tx.ExecContext(ctx, `UPDATE omr_run SET auto_confirm_eligible=false,auto_confirm_reason=$3,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, id, autoConfirmReason); err != nil {
-			return OMRRun{}, nil, err
+	// 任务排队后校准可能被撤销，或历史批准漏计了现在会自动接受的空白/多选错例；识别事实保留，但必须转人工。
+	if currentStatus != "completed" && expectedCalibrationID != "" {
+		calibrationValid := calibrationStatus == "approved" && calibrationEvidenceHash == expectedCalibrationEvidenceHash
+		if calibrationValid {
+			calibrationValid, err = omrCalibrationEvidenceAllowsAutoConfirmTx(ctx, tx, tenantID, expectedCalibrationID)
+			if err != nil {
+				return OMRRun{}, nil, err
+			}
+		}
+		if !calibrationValid {
+			autoConfirmEligible = false
+			autoConfirmReason = paper.OMRAutoConfirmReasonCalibrationRevoked
+			if _, err = tx.ExecContext(ctx, `UPDATE omr_run SET auto_confirm_eligible=false,auto_confirm_reason=$3,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, id, autoConfirmReason); err != nil {
+				return OMRRun{}, nil, err
+			}
 		}
 	}
 	task, err := completeOMRRuntimeTaskTx(ctx, tx, tenantID, id, input)

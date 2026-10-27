@@ -134,9 +134,11 @@ export async function inspectScannerSample(file: File, profile: ScannerProfile):
   }
   try {
     const paper = paperDimensionsMm(profile.paperSize);
-    // 纸张尺寸是毫米，25.4 用于换算英寸；两轴取较低 DPI，避免单向缩放掩盖分辨率不足。
-    const dpiX = (bitmap.width * 25.4) / paper.width;
-    const dpiY = (bitmap.height * 25.4) / paper.height;
+    // 纸张以竖向毫米尺寸定义；横向原件交换纸张两轴，不依赖是否启用自动旋转。
+    // 对齐方向后仍取较低 DPI，避免另一轴的高分辨率掩盖单向缩小。
+    const landscape = bitmap.width > bitmap.height;
+    const dpiX = (bitmap.width * 25.4) / (landscape ? paper.height : paper.width);
+    const dpiY = (bitmap.height * 25.4) / (landscape ? paper.width : paper.height);
     const measuredDpi = Math.min(dpiX, dpiY);
     const expectedDpi = profile.dpi;
     const dpiDelta = Math.abs(measuredDpi - expectedDpi) / expectedDpi;

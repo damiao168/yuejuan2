@@ -18,6 +18,15 @@ export function usePaperImportMaterials({ canManage, selectedExam, papers, paper
   const [updatingImportSources, setUpdatingImportSources] = useState(false);
   const [stoppingImport, setStoppingImport] = useState(false);
   const [retryingParse, setRetryingParse] = useState(false);
+  const materialScopeRef = useRef({ examId: selectedExam?.id });
+  if (materialScopeRef.current.examId !== selectedExam?.id) materialScopeRef.current = { examId: selectedExam?.id };
+  const materialScope = materialScopeRef.current;
+  const isCurrent = () => materialScopeRef.current === materialScope;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: materialScope 改变代表换考试，需清除上一范围的等待状态，即使 effect 不读取它的字段。
+  useEffect(() => {
+    // 业务写入可以在原考试完成；新考试的等待状态由新范围接管，旧回执不能替它解除忙碌。
+    setParsing(false); setUpdatingImportSources(false); setStoppingImport(false); setRetryingParse(false);
+  }, [materialScope, setParsing]);
 
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
@@ -32,6 +41,7 @@ export function usePaperImportMaterials({ canManage, selectedExam, papers, paper
   }, [canManage, selectedExam]);
 
   const handleMaterialFiles = async (files: File[], roleHint: PaperImportRole = "auto") => {
+    if (!isCurrent()) return false;
     if (!selectedExam || !files.length) { message.error("请先选择考试，再添加考试资料"); return false; }
     if (reviewDirty) { message.warning("请先保存人工核对，再添加资料，避免重新识别覆盖未保存修改"); return false; }
     if (paperImports.some((item) => item.status === "processing")) { message.warning("当前资料仍在识别，请完成后再继续添加"); return false; }
@@ -60,7 +70,7 @@ export function usePaperImportMaterials({ canManage, selectedExam, papers, paper
       });
       const duplicateCount = uploaded.length - newAssets.length;
       if (activeImport && newAssets.length === 0) {
-        message.info("这份资料已在当前识别任务中，无需重复添加");
+        if (isCurrent()) message.info("这份资料已在当前识别任务中，无需重复添加");
         return true;
       }
       const startIndex = activeImport?.sources.length ?? 0;
@@ -77,6 +87,7 @@ export function usePaperImportMaterials({ canManage, selectedExam, papers, paper
             subject: selectedExam.subject,
             sources
           }, commandId);
+      if (!isCurrent()) return true;
       if (result.import.status === "failed") {
         message.error(getPaperImportUserMessage(result.import.issues[0], "考试资料识别失败，请检查资料后重试"));
       } else if (duplicateCount > 0) {
@@ -88,10 +99,10 @@ export function usePaperImportMaterials({ canManage, selectedExam, papers, paper
       return true;
     } catch (error) {
       await loadConfig(selectedExam.id, { silent: true }).catch(() => undefined);
-      message.error(formatError(error));
+      if (isCurrent()) message.error(formatError(error));
       return false;
     } finally {
-      setParsing(false);
+      if (isCurrent()) setParsing(false);
     }
   };
   materialUploadRef.current = (files) => { void handleMaterialFiles(files); };
@@ -120,6 +131,7 @@ export function usePaperImportMaterials({ canManage, selectedExam, papers, paper
   };
 
   const replaceImportSources = async (job: PaperImportJob, sources: PaperImportJob["sources"]) => {
+    if (!isCurrent()) return;
     if (!["processing", "review_required", "failed", "cancelled"].includes(job.status)) return;
     if (reviewDirty) { message.warning("请先保存人工核对，再调整资料，避免重新识别覆盖未保存修改"); return; }
     setUpdatingImportSources(true);
@@ -129,12 +141,13 @@ export function usePaperImportMaterials({ canManage, selectedExam, papers, paper
         document_index: documentIndex,
         role_hint: source.role_hint
       })), crypto.randomUUID());
+      if (!isCurrent()) return;
       message.success(sources.length ? "资料顺序或类型已更新，系统正在重新匹配" : "已删除全部考试资料，请重新上传正确的资料");
       if (selectedExam) await loadConfig(selectedExam.id, { silent: true });
     } catch (error) {
-      message.error(formatError(error));
+      if (isCurrent()) message.error(formatError(error));
     } finally {
-      setUpdatingImportSources(false);
+      if (isCurrent()) setUpdatingImportSources(false);
     }
   };
 
@@ -147,32 +160,36 @@ export function usePaperImportMaterials({ canManage, selectedExam, papers, paper
       cancelText: "继续识别",
       okButtonProps: { danger: true },
       onOk: async () => {
+        if (!isCurrent()) return;
         setStoppingImport(true);
         try {
           await cancelPaperImport(job.id, job.generation, crypto.randomUUID());
+          if (!isCurrent()) return;
           message.success("已停止识别，上传资料仍然保留");
           if (selectedExam) await loadConfig(selectedExam.id, { silent: true });
         } catch (error) {
-          message.error(formatError(error));
+          if (isCurrent()) message.error(formatError(error));
         } finally {
-          setStoppingImport(false);
+          if (isCurrent()) setStoppingImport(false);
         }
       }
     });
   };
 
   const retryImportParse = async (job: PaperImportJob) => {
+    if (!isCurrent()) return;
     const retryable = (job.status === "failed" && job.error_code === "ai_parse_failed") || job.status === "cancelled";
     if (!retryable || retryingParse) return;
     setRetryingParse(true);
     try {
       await retryPaperImportParse(job.id, job.generation);
+      if (!isCurrent()) return;
       message.success("已复用本次新增资料，正在重新解析题目结构");
       if (selectedExam) await loadConfig(selectedExam.id, { silent: true });
     } catch (error) {
-      message.error(formatError(error));
+      if (isCurrent()) message.error(formatError(error));
     } finally {
-      setRetryingParse(false);
+      if (isCurrent()) setRetryingParse(false);
     }
   };
 

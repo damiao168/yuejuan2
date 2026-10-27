@@ -35,7 +35,8 @@ func (h *Handler) ListAudits(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_pagination", "cursor is invalid")
 		return
 	}
-	filter.Limit = limit + 1
+	filter.Limit = limit
+	filter.IncludeNext = true
 	filter.CursorCreatedAt = cursor.CreatedAt
 	filter.CursorID = cursor.ID
 	if scope, ok := AccessScopeFromContext(r.Context()); ok {

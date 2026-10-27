@@ -23,7 +23,7 @@ func (s *PostgresStore) loadGraderContext(ctx context.Context, tenantID, itemID,
 	assignment := ` AND item.assigned_to=$3::uuid AND item.claimed_by=$3::uuid AND item.status='claimed'`
 	args := []any{tenantID, itemID, graderID}
 	if manage {
-		assignment = ` AND item.status='awaiting_review'`
+		assignment = ` AND item.status IN ('awaiting_review','exception')`
 		args = args[:2]
 	}
 	row := s.db.QueryRowContext(ctx, `
@@ -101,7 +101,7 @@ WHERE item.tenant_id=$1::uuid AND item.id=$2::uuid
 }
 
 func (s *PostgresStore) GetReviewContext(ctx context.Context, tenantID, itemID string) (ReviewContext, error) {
-	item, err := scanItem(s.db.QueryRowContext(ctx, `SELECT `+itemColumns+` FROM regrade_item WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='awaiting_review'`, tenantID, itemID))
+	item, err := scanItem(s.db.QueryRowContext(ctx, `SELECT `+itemColumns+` FROM regrade_item WHERE tenant_id=$1::uuid AND id=$2::uuid AND status IN ('awaiting_review','exception')`, tenantID, itemID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return ReviewContext{}, ErrNotFound
 	}
@@ -124,7 +124,7 @@ func (s *PostgresStore) GetReviewSegmentID(ctx context.Context, tenantID, itemID
 	err := s.db.QueryRowContext(ctx, `SELECT seg.id::text FROM regrade_item item
 JOIN regrade_job job ON job.tenant_id=item.tenant_id AND job.id=item.job_id
 JOIN answer_segment seg ON seg.tenant_id=item.tenant_id AND seg.submission_id=item.submission_id AND seg.question_id=job.question_id AND seg.deleted_at IS NULL
-WHERE item.tenant_id=$1::uuid AND item.id=$2::uuid AND item.status='awaiting_review' AND job.status IN ('running','diff_review')`, tenantID, itemID).Scan(&segmentID)
+WHERE item.tenant_id=$1::uuid AND item.id=$2::uuid AND item.status IN ('awaiting_review','exception') AND job.status IN ('running','diff_review')`, tenantID, itemID).Scan(&segmentID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", ErrNotFound
 	}

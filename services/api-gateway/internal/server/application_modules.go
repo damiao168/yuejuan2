@@ -73,7 +73,8 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 	if err != nil {
 		return ApplicationModules{}, err
 	}
-	aiFoundation := NewAIFoundation(stores.AIFoundation)
+	boundaryResolver, _ := identity.AuthStore.(auth.ResourceBoundaryResolver)
+	aiFoundation := NewAIFoundation(stores.AIFoundation, boundaryResolver)
 	gradingQuality := NewGradingQualityModule(dependencies.Config, stores.Grading, GradingQualityDependencies{
 		ImageModelResolver:     newImageGradingModelResolver(stores.AIGovernance.ModelGovernance),
 		ImageModelByIDResolver: newImageGradingModelByIDResolver(stores.AIGovernance.ModelGovernance),

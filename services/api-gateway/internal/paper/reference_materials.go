@@ -452,6 +452,28 @@ func (s *ReferenceMaterialsService) CropImage(ctx context.Context, scope auth.Ac
 		return nil, err
 	}
 	if !belongs {
+		// 从题库复制的裁图仍属于原考试，必须通过目标题目的准确授权清单读取。
+		m, err := s.Get(ctx, scope.TenantID, exam, question)
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, ErrNotFound) {
+			// 题目不存在或不属于当前考试时沿用跨题拒绝边界，不能把清单回退查询变成数据库错误。
+			return nil, files.ErrForbidden
+		}
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range m.Items {
+			if item.CropRef == id {
+				_, images, err := s.Resolve(ctx, scope.TenantID, exam, question, referenceMaterialBinding(m))
+				if err != nil {
+					return nil, err
+				}
+				for _, image := range images {
+					if image.Item.CropRef == id {
+						return image.Data, nil
+					}
+				}
+			}
+		}
 		return nil, files.ErrForbidden
 	}
 	a, e := s.assets.Get(ctx, scope.TenantID, id)
@@ -551,6 +573,7 @@ func (s *ReferenceMaterialsService) Save(ctx context.Context, scope auth.AccessS
 	roles := map[string]int{}
 	parts := []string{"material-manifest-v1", input.Mode}
 	grants := []map[string]any{}
+	inheritedParent := ""
 	// 同一事务按资产身份加共享锁；保存只接受 active 的本题派生图及匹配的来源摘要。
 	for i, entry := range input.Items {
 		if seen[entry.CropRef] || entry.Ordinal != i+1 || (entry.Role != "question_diagram" && entry.Role != "reference_solution") {
@@ -564,9 +587,6 @@ func (s *ReferenceMaterialsService) Save(ctx context.Context, scope auth.AccessS
 		var raw []byte
 		var derived string
 		e = tx.QueryRowContext(ctx, `SELECT reference_crop_json,id::text FROM file_asset WHERE tenant_id=$1 AND id::text=$2 AND exam_id=$3 AND reference_crop_json->>'question_id'=$4 AND owner_type='question_reference_crop' AND lifecycle_status='active' AND deleted_at IS NULL FOR SHARE`, scope.TenantID, entry.CropRef, exam, question).Scan(&raw, &derived)
-		if e != nil {
-			return m, e
-		}
 		var metadata struct {
 			Item       ReferenceMaterialItem `json:"item"`
 			SourceID   string                `json:"source_id"`
@@ -574,8 +594,29 @@ func (s *ReferenceMaterialsService) Save(ctx context.Context, scope auth.AccessS
 			SourceHash string                `json:"source_hash"`
 			QuestionID string                `json:"question_id"`
 		}
-		if e = json.Unmarshal(raw, &metadata); e != nil {
+		inherited := false
+		if errors.Is(e, sql.ErrNoRows) && previous.ID != "" {
+			// 已获目标考试授权的继承裁图可重排或保留；不重新要求操作者拥有原始文件权限。
+			for _, old := range previous.Items {
+				if old.CropRef == entry.CropRef {
+					binding := &ReferenceMaterialImport{SourceExamID: exam, SourceQuestionID: question, ReferenceMaterialBinding: *referenceMaterialBinding(previous), Items: previous.Items}
+					if err := LockReferenceMaterialImportTx(ctx, tx, scope.TenantID, binding); err != nil {
+						return m, err
+					}
+					metadata.Item, metadata.SourceID, metadata.PageID, metadata.SourceHash = old, old.Source.SourceAssetID, old.Source.PageAssetID, old.Source.SourceHash
+					derived = old.FileAssetID
+					inherited, inheritedParent, e = true, previous.ID, nil
+					break
+				}
+			}
+		}
+		if e != nil {
 			return m, e
+		}
+		if !inherited {
+			if e = json.Unmarshal(raw, &metadata); e != nil {
+				return m, e
+			}
 		}
 		item := metadata.Item
 		item.FileAssetID = derived
@@ -586,17 +627,21 @@ func (s *ReferenceMaterialsService) Save(ctx context.Context, scope auth.AccessS
 		item.Source.SourceAssetID = metadata.SourceID
 		item.Source.PageAssetID = metadata.PageID
 		item.Source.SourceHash = metadata.SourceHash
-		if e = referenceSourceCurrentTx(ctx, tx, scope.TenantID, exam, item.Source); e != nil {
-			return m, e
-		}
-		if reader, ok := s.assets.(interface {
-			GetScopedTx(context.Context, *sql.Tx, auth.AccessScope, string) (files.FileAsset, error)
-		}); ok {
-			if _, e = reader.GetScopedTx(ctx, tx, scope, metadata.SourceID); e != nil {
+		if !inherited {
+			if e = referenceSourceCurrentTx(ctx, tx, scope.TenantID, exam, item.Source); e != nil {
 				return m, e
 			}
-		} else {
-			return m, ErrInvalidInput
+		}
+		if !inherited {
+			if reader, ok := s.assets.(interface {
+				GetScopedTx(context.Context, *sql.Tx, auth.AccessScope, string) (files.FileAsset, error)
+			}); ok {
+				if _, e = reader.GetScopedTx(ctx, tx, scope, metadata.SourceID); e != nil {
+					return m, e
+				}
+			} else {
+				return m, ErrInvalidInput
+			}
 		}
 		for _, ref := range []struct{ id, hash string }{{metadata.SourceID, metadata.SourceHash}, {metadata.PageID, item.Source.SHA256}} {
 			var actual string
@@ -614,8 +659,12 @@ func (s *ReferenceMaterialsService) Save(ctx context.Context, scope auth.AccessS
 	}
 	m.ContentHash = referenceHash(parts...)
 	inputJSON, _ := json.Marshal(input)
-	grantJSON, _ := json.Marshal(map[string]any{"schema_version": 1, "exam_id": exam, "sources": grants})
-	inserted, e := tx.ExecContext(ctx, `INSERT INTO question_reference_manifest(id,tenant_id,exam_id,question_id,revision,previous_manifest_id,mode,content_hash,command_id,request_hash,created_by,created_at,exam_use_grant_json) SELECT $1,$2,$3,q.id,$5,NULLIF($6,'')::uuid,$7,$8,$9,$10,$11,$12,$13 FROM question q WHERE q.tenant_id=$2 AND q.exam_id=$3 AND q.id=$4 AND q.deleted_at IS NULL`, m.ID, scope.TenantID, exam, question, m.Revision, previous.ID, m.Mode, m.ContentHash, input.CommandID, referenceHash(string(inputJSON)), scope.ActorID, m.CreatedAt, grantJSON)
+	grantFacts := map[string]any{"schema_version": 1, "exam_id": exam, "sources": grants}
+	if inheritedParent != "" {
+		grantFacts["parent_manifest_id"] = inheritedParent
+	}
+	grantJSON, _ := json.Marshal(grantFacts)
+	inserted, e := tx.ExecContext(ctx, `INSERT INTO question_reference_manifest(id,tenant_id,exam_id,question_id,revision,previous_manifest_id,mode,content_hash,command_id,request_hash,created_by,created_at,exam_use_grant_json,origin_manifest_id) SELECT $1,$2,$3,q.id,$5,NULLIF($6,'')::uuid,$7,$8,$9,$10,$11,$12,$13,NULLIF($14,'')::uuid FROM question q WHERE q.tenant_id=$2 AND q.exam_id=$3 AND q.id=$4 AND q.deleted_at IS NULL`, m.ID, scope.TenantID, exam, question, m.Revision, previous.ID, m.Mode, m.ContentHash, input.CommandID, referenceHash(string(inputJSON)), scope.ActorID, m.CreatedAt, grantJSON, inheritedParent)
 	if e != nil {
 		return m, e
 	}
@@ -809,6 +858,13 @@ func (s *ReferenceMaterialsService) Resolve(ctx context.Context, tenant, exam, q
 	if m.UseState != "active" || m.ContentHash != binding.ContentHash || m.Revision != binding.Revision || m.Mode != binding.Mode || len(m.Items) != binding.ImageCount {
 		return m, nil, ErrConflict
 	}
+	var authorizationActive bool
+	if err = s.db.QueryRowContext(ctx, `SELECT reference_authorization_active($1,$2)`, tenant, m.ID).Scan(&authorizationActive); err != nil {
+		return m, nil, err
+	}
+	if !authorizationActive {
+		return m, nil, ErrConflict
+	}
 	out := make([]ResolvedReferenceImage, 0, len(m.Items))
 	for _, item := range m.Items {
 		for _, ref := range []struct{ id, hash string }{{item.Source.SourceAssetID, item.Source.SourceHash}, {item.Source.PageAssetID, item.Source.SHA256}, {item.FileAssetID, item.SHA256}} {
@@ -835,6 +891,12 @@ func (s *ReferenceMaterialsService) Resolve(ctx context.Context, tenant, exam, q
 		return m, nil, err
 	}
 	if latest.AuthorizationRevision != m.AuthorizationRevision || latest.UseState != "active" {
+		return m, nil, ErrConflict
+	}
+	if err = s.db.QueryRowContext(ctx, `SELECT reference_authorization_active($1,$2)`, tenant, m.ID).Scan(&authorizationActive); err != nil {
+		return m, nil, err
+	}
+	if !authorizationActive {
 		return m, nil, ErrConflict
 	}
 	return m, out, nil

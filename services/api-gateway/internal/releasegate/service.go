@@ -3,6 +3,7 @@ package releasegate
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"sort"
@@ -45,8 +46,9 @@ func (s *Service) Preview(ctx context.Context, tenantID, examID, releaseID, acto
 	return s.evaluateAndAppend(ctx, tenantID, examID, strings.TrimSpace(releaseID), actorID, EvidencePreview)
 }
 
-// RecheckForPublish 是发布协调器唯一应调用的门禁 API。
-// 它不复用 Preview 结果，始终追加新证据。
+// RecheckForPublish 独立重算门禁并追加新证据，不复用 Preview 结果。
+// 旧发布适配器用它诊断阻断原因；通过结果不能代替原子发布。
+// 正式协调器通过 PublishGuarded 在发布临界区调用 finalPublishCheck；PostgreSQL 还共用发布事务。
 func (s *Service) RecheckForPublish(ctx context.Context, tenantID, examID, releaseID, actorID string) (Evidence, error) {
 	if !validIDs(tenantID, examID, releaseID, actorID) {
 		return Evidence{}, ErrInvalidInput
@@ -108,8 +110,8 @@ func (s *Service) GetEvidence(ctx context.Context, tenantID, evidenceID string) 
 	return s.store.GetEvidence(ctx, tenantID, evidenceID)
 }
 
-// Inspect 读取完整发布条件，但不追加预检或发布证据。
-// 结果只用于说明当前状态；正式发布仍必须调用 RecheckForPublish 重新求值。
+// Inspect 读取完整发布条件用于诊断，不追加预检或发布证据。
+// 返回结果不能作为发布依据；正式协调器仍须通过 PublishGuarded 执行最终检查。
 func (s *Service) Inspect(ctx context.Context, tenantID, examID string) (Evaluation, error) {
 	if !validIDs(tenantID, examID) {
 		return Evaluation{}, ErrInvalidInput
@@ -133,8 +135,30 @@ func (s *Service) loadEvaluation(ctx context.Context, tenantID, examID string) (
 	if err != nil {
 		return Evaluation{}, err
 	}
+	return s.evaluateBase(ctx, nil, tenantID, examID, base)
+}
+
+func (s *Service) evaluateBase(ctx context.Context, tx *sql.Tx, tenantID, examID string, base scorerelease.Gate) (Evaluation, error) {
+	store := s.store
+	if tx != nil {
+		transactional, ok := store.(transactionalGateStore)
+		if !ok {
+			return Evaluation{}, ErrAtomicPublicationUnavailable
+		}
+		store = transactionGateStore{Store: store, transactionalGateStore: transactional, tx: tx}
+	}
 	if s.regrades != nil {
-		count, err := s.regrades.BlockingRegradeCount(ctx, tenantID, examID)
+		var count int
+		var err error
+		if tx != nil {
+			reader, ok := s.regrades.(transactionalRegradeReader)
+			if !ok {
+				return Evaluation{}, ErrAtomicPublicationUnavailable
+			}
+			count, err = reader.BlockingRegradeCountTx(ctx, tx, tenantID, examID)
+		} else {
+			count, err = s.regrades.BlockingRegradeCount(ctx, tenantID, examID)
+		}
 		if err != nil {
 			return Evaluation{}, err
 		}
@@ -147,14 +171,14 @@ func (s *Service) loadEvaluation(ctx context.Context, tenantID, examID string) (
 			base.Passed = false
 		}
 	}
-	policy, err := s.store.ActivePolicy(ctx, tenantID, examID)
+	policy, err := store.ActivePolicy(ctx, tenantID, examID)
 	if err != nil && err != ErrNotFound {
 		return Evaluation{}, err
 	}
 	if err == ErrNotFound {
 		policy = defaultPolicy(tenantID, examID)
 	}
-	waivers, err := s.store.ApprovedWaivers(ctx, tenantID, examID, policy.ID)
+	waivers, err := store.ApprovedWaivers(ctx, tenantID, examID, policy.ID)
 	if err != nil {
 		return Evaluation{}, err
 	}

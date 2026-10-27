@@ -240,12 +240,18 @@ func (s *Service) applyReviewCounts(ctx context.Context, item exam.Exam, result 
 		result.Warnings = append(result.Warnings, unavailableNotice("review_tasks_unavailable", "阅卷任务统计暂不可用"))
 		return -1
 	}
+	total := 0
 	for _, task := range tasks {
+		// 取消任务只保留历史，不再进入待办或进度分母；新运行不能被旧取消记录拖住。
+		if task.Status == "cancelled" {
+			continue
+		}
+		total++
 		if task.Status != "submitted" && task.Status != "completed" {
 			result.Counts.PendingReviewCount++
 		}
 	}
-	return len(tasks)
+	return total
 }
 
 func (s *Service) applyArbitrationCounts(ctx context.Context, item exam.Exam, result *Projection) int {

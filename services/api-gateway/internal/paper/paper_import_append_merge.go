@@ -36,21 +36,18 @@ func mergeQuestionCandidates(previous, fresh []QuestionCandidate) []QuestionCand
 }
 
 func mergeAnswerCandidates(previous, fresh []AnswerCandidate) []AnswerCandidate {
-	out := append([]AnswerCandidate{}, previous...)
-	positions := map[string]int{}
-	for index, candidate := range out {
-		positions[appendCandidateKey(firstNonEmpty(candidate.QuestionNoNormalized, candidate.QuestionNoHint), candidate.CandidateID)] = index
-	}
+	// 本批新资料可以替换历史答案，但新资料彼此不能覆盖；reconcile 需要完整来源来判定冲突。
+	replaced := map[string]bool{}
 	for _, candidate := range fresh {
-		key := appendCandidateKey(firstNonEmpty(candidate.QuestionNoNormalized, candidate.QuestionNoHint), candidate.CandidateID)
-		if index, ok := positions[key]; ok {
-			out[index] = candidate
-		} else {
-			positions[key] = len(out)
+		replaced[appendCandidateKey(firstNonEmpty(candidate.QuestionNoNormalized, candidate.QuestionNoHint), candidate.CandidateID)] = true
+	}
+	out := make([]AnswerCandidate, 0, len(previous)+len(fresh))
+	for _, candidate := range previous {
+		if !replaced[appendCandidateKey(firstNonEmpty(candidate.QuestionNoNormalized, candidate.QuestionNoHint), candidate.CandidateID)] {
 			out = append(out, candidate)
 		}
 	}
-	return out
+	return append(out, fresh...)
 }
 
 func mergeSolutionCandidates(previous, fresh []SolutionCandidate) []SolutionCandidate {

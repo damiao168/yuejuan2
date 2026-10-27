@@ -188,7 +188,7 @@ func TestSeedContextUsesNormalWorkbenchShapeWithoutGoldDisclosure(t *testing.T) 
 		}
 	}
 	image, handled, err := service.GetGraderImageSource(context.Background(), "tenant-a", task.ID, "grader-a")
-	if err != nil || !handled || image.SourceURL != "/api/v1/answer-segments/hidden/image" || image.AnswerSegmentID != "hidden" {
+	if err != nil || !handled || image.SourceURL != goldpaper.VersionImageURL(task.GoldPaperID, task.GoldVersion) || image.GoldPaperID != task.GoldPaperID || image.GoldVersion != task.GoldVersion {
 		t.Fatalf("image hook=%+v handled=%v err=%v", image, handled, err)
 	}
 	imageJSON, _ := json.Marshal(image)
@@ -215,7 +215,7 @@ func TestSeedContextUsesNormalWorkbenchShapeWithoutGoldDisclosure(t *testing.T) 
 func activeGold(id string, version int, archetype string, criteria map[string]any) goldpaper.GoldPaper {
 	now := time.Now().UTC()
 	return goldpaper.GoldPaper{ID: id, ExamID: "exam-a", QuestionID: "question-a", SubmissionID: "hidden-submission",
-		AnswerImageURL: "/api/v1/answer-segments/hidden/image", ActiveVersion: version, Status: goldpaper.StatusActive,
+		AnswerImageURL: goldpaper.VersionImageURL(id, version), ActiveVersion: version, Status: goldpaper.StatusActive,
 		ArchetypeCode: archetype, Versions: []goldpaper.Version{{Version: version, ExamQuestionSnapshotID: "snapshot-a",
 			ReferenceScore: 4, MaxScore: 5, TraitScores: criteria, ApprovedAt: &now}}}
 }

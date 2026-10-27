@@ -151,11 +151,16 @@ export function AppShell() {
     router.history.push(nextPath);
   }, [router, session]);
 
-  const finishWechatLogin = useCallback((response: LoginResponse) => {
-    // 登录页面关闭或密码登录开始后，旧二维码的迟到回调不能重新发布身份。
-    if (!session.isCurrent(sessionGeneration)) return;
-    finishLogin(response, session.begin());
-  }, [finishLogin, session, sessionGeneration]);
+  const authenticateWechat = useCallback(async (authenticate: () => Promise<LoginResponse | undefined>) => {
+    const generation = session.begin();
+    setLoginLoading(false);
+    // 轮询本身可能写 Cookie，必须等此前认证响应落定后才发送；只串行完成回调无法保护 Cookie。
+    const response = await session.enqueueAuthentication(() => {
+      session.assertCurrent(generation);
+      return authenticate();
+    });
+    if (response) finishLogin(response, generation);
+  }, [finishLogin, session]);
 
   const login = async (values: LoginFormValues) => {
     const generation = session.begin();
@@ -246,7 +251,7 @@ export function AppShell() {
         <AntApp>
           <LoginPage
             onLogin={login}
-            onWechatLogin={finishWechatLogin}
+            onWechatAuthenticate={authenticateWechat}
             loading={loginLoading}
             error={loginError}
           />

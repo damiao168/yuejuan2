@@ -21,16 +21,40 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage f
 	mux.Handle("POST /api/v1/ai-human-disagreements/{id}/route", requireManage(h.Route))
 }
 
-type Handler struct{ service *Service }
+type Handler struct {
+	service  *Service
+	resolver auth.ResourceBoundaryResolver
+}
 
 func NewHandler(service *Service) *Handler { return &Handler{service: service} }
+
+// WithScopeResolver 为内存集合提供与单项路由相同的来源边界；PostgreSQL 在列表 SQL 中过滤。
+func (h *Handler) WithScopeResolver(resolver auth.ResourceBoundaryResolver) *Handler {
+	h.resolver = resolver
+	return h
+}
+
+func (h *Handler) collectionFilter(w http.ResponseWriter, r *http.Request, user auth.User) (Filter, bool) {
+	scope, ok := auth.AccessScopeFromContext(r.Context())
+	if !ok || scope.TenantID != user.TenantID || scope.ActorID != user.ID {
+		httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "authenticated collection scope is required")
+		return Filter{}, false
+	}
+	filter := parseFilter(r)
+	filter.Access = auth.ExamCollectionAccess{Scope: &scope, Resolver: h.resolver}
+	return filter, true
+}
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	user, ok := disagreementUser(w, r)
 	if !ok {
 		return
 	}
-	items, err := h.service.List(r.Context(), user.TenantID, parseFilter(r))
+	filter, ok := h.collectionFilter(w, r, user)
+	if !ok {
+		return
+	}
+	items, err := h.service.List(r.Context(), user.TenantID, filter)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -90,7 +114,11 @@ func (h *Handler) Dataset(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	entries, err := h.service.Dataset(r.Context(), user.TenantID, parseFilter(r))
+	filter, ok := h.collectionFilter(w, r, user)
+	if !ok {
+		return
+	}
+	entries, err := h.service.Dataset(r.Context(), user.TenantID, filter)
 	if err != nil {
 		writeError(w, r, err)
 		return

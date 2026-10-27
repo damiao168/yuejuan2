@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 from typing import Any
 from urllib import error, request
@@ -354,8 +355,10 @@ def _append_formula_artifact(
 
 def _confidence(value: object) -> float:
     try:
-        return max(0.0, min(1.0, float(value)))
-    except (TypeError, ValueError):
+        score = float(value)
+        # NaN/Inf 不是识别把握度；不能经 min/max 夹取后变成可自动接受的满置信度。
+        return max(0.0, min(1.0, score)) if math.isfinite(score) else 0.0
+    except (TypeError, ValueError, OverflowError):
         return 0.0
 
 

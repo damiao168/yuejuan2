@@ -31,6 +31,9 @@ export function usePaperConfigData({ initialExamId = "", fixedExamId }: { initia
   const [configError, setConfigError] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const configRequestRef = useRef(0);
+  const selectedScopeRef = useRef({ examId: selectedExamId });
+  if (selectedScopeRef.current.examId !== selectedExamId) selectedScopeRef.current = { examId: selectedExamId };
+  const selectedScope = selectedScopeRef.current;
   const [importConnectionError, setImportConnectionError] = useState<string>();
   const [importRetryKey, setImportRetryKey] = useState(0);
   const onImportConnectionError = useCallback((error?: unknown) => setImportConnectionError(error ? getUserErrorMessage(error, "暂时无法获取最新处理状态") : undefined), []);
@@ -56,8 +59,10 @@ export function usePaperConfigData({ initialExamId = "", fixedExamId }: { initia
   }, [fixedExamId, initialExamId]);
 
   const loadConfig = useCallback(async (examId: string, options: { silent?: boolean; propagateError?: boolean } = {}) => {
-    // 手动刷新和轮询共用代次，较早完成的旧考试请求不能覆盖最新选择。
+    // 旧上传/重试回调也可能晚于换考试才发起刷新；先核对所选范围，不能让它抢占新范围的请求代次。
+    if (selectedScope !== selectedScopeRef.current || examId !== selectedScope.examId) return;
     const requestId = ++configRequestRef.current;
+    const current = () => selectedScope === selectedScopeRef.current && requestId === configRequestRef.current;
     if (!examId) {
       setPapers([]);
       setPaperImports([]);
@@ -75,7 +80,7 @@ export function usePaperConfigData({ initialExamId = "", fixedExamId }: { initia
         listQuestions(examId),
         listPaperImports(examId)
       ]);
-      if (requestId !== configRequestRef.current) return;
+      if (!current()) return;
       setPapers(paperResult.papers);
       setPaperImports(importResult.imports);
       setQuestions(questionResult.questions);
@@ -88,13 +93,13 @@ export function usePaperConfigData({ initialExamId = "", fixedExamId }: { initia
           : questionResult.questions[0].id;
       });
     } catch (currentError) {
-      if (requestId === configRequestRef.current && !options.silent) setConfigError(formatError(currentError));
+      if (current() && !options.silent) setConfigError(formatError(currentError));
       // 整题保存需要区分写入回执与刷新结果；普通读取和轮询仍由各自状态提示错误。
       if (options.propagateError) throw currentError;
     } finally {
-      if (requestId === configRequestRef.current) setConfigLoading(false);
+      if (current()) setConfigLoading(false);
     }
-  }, []);
+  }, [selectedScope]);
 
   useEffect(() => { void loadExams(); }, [loadExams]);
   useEffect(() => { if (fixedExamId || initialExamId) setSelectedExamId(fixedExamId || initialExamId); }, [fixedExamId, initialExamId]);

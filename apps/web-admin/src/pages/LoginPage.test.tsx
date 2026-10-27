@@ -1,24 +1,43 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginPage } from "./LoginPage";
+import { getCurrentUser, pollWechatLogin, startWechatLogin, type AuthUser, type LoginResponse, type WechatLoginChallengeResponse } from "../api/auth";
 
 vi.mock("../api/auth", () => ({ getCurrentUser: vi.fn(), pollWechatLogin: vi.fn(), startWechatLogin: vi.fn() }));
 
 beforeEach(() => {
+  vi.resetAllMocks();
   vi.stubGlobal("matchMedia", () => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} }));
   window.history.replaceState({}, "", "/");
 });
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
+
+const authenticate = async (action: () => Promise<LoginResponse | undefined>) => { await action(); };
+const challenge: WechatLoginChallengeResponse = { challenge_id: "synthetic-challenge", poll_token: "synthetic-token", qr_code_data_url: "data:image/png;base64,c3ludGhldGlj", expires_at: "2099-01-01" };
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+async function generateWechat() {
+  fireEvent.click(screen.getByRole("tab", { name: "微信扫码" }));
+  fireEvent.change(screen.getByLabelText("学校代码"), { target: { value: "demo" } });
+  fireEvent.click(screen.getByRole("button", { name: "生成微信登录二维码" }));
+  await waitFor(() => expect(startWechatLogin).toHaveBeenCalledOnce());
+}
 
 describe("login identity fields", () => {
   it("submits a username through the compatible identifier protocol", async () => {
     const login = vi.fn();
-    render(<LoginPage onLogin={login} onWechatLogin={vi.fn()} />);
+    render(<LoginPage onLogin={login} onWechatAuthenticate={authenticate} />);
     fireEvent.change(screen.getByLabelText("学校代码"), { target: { value: "demo" } });
     fireEvent.change(screen.getByLabelText("用户名"), { target: { value: "demo_school_admin" } });
     fireEvent.change(screen.getByLabelText("密码"), { target: { value: "existing-password" } });
@@ -32,7 +51,7 @@ describe("login identity fields", () => {
 
   it("asks for a username and retains WeChat without advertising an unconfigured SMS service", async () => {
     const login = vi.fn();
-    render(<LoginPage onLogin={login} onWechatLogin={vi.fn()} />);
+    render(<LoginPage onLogin={login} onWechatAuthenticate={authenticate} />);
     fireEvent.click(screen.getByRole("button", { name: "登录" }));
     expect(await screen.findByText("请输入用户名")).toBeTruthy();
     expect(login).not.toHaveBeenCalled();
@@ -40,5 +59,64 @@ describe("login identity fields", () => {
     expect(screen.queryByRole("tab", { name: /手机|短信/ })).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "微信扫码" }));
     expect(screen.getByRole("button", { name: "生成微信登录二维码" })).toBeTruthy();
+  });
+
+  it("freezes device policy while creating a challenge, then uses that policy for the displayed QR", async () => {
+    const pending = deferred<WechatLoginChallengeResponse>();
+    vi.mocked(startWechatLogin).mockReturnValue(pending.promise);
+    render(<LoginPage onLogin={vi.fn()} onWechatAuthenticate={authenticate} />);
+    fireEvent.click(screen.getByRole("tab", { name: "微信扫码" }));
+    fireEvent.change(screen.getByLabelText("学校代码"), { target: { value: "demo" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "这是我的常用电脑，30 天内减少验证" }));
+    fireEvent.click(screen.getByRole("button", { name: "生成微信登录二维码" }));
+    await waitFor(() => expect(startWechatLogin).toHaveBeenCalledWith(expect.objectContaining({ remember_device: true, public_device: false })));
+    expect((screen.getByRole("checkbox", { name: "这是学校公共电脑" }) as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole("checkbox", { name: "这是我的常用电脑，30 天内减少验证" }) as HTMLInputElement).disabled).toBe(true);
+    await act(async () => { pending.resolve(challenge); });
+    expect(screen.getByRole("img", { name: "微信授权登录二维码" })).toBeTruthy();
+    expect(screen.queryByText(/公共电脑会话最长/)).toBeNull();
+  });
+
+  it("drops a challenge created for a login method the user has left", async () => {
+    const pending = deferred<WechatLoginChallengeResponse>();
+    vi.mocked(startWechatLogin).mockReturnValue(pending.promise);
+    render(<LoginPage onLogin={vi.fn()} onWechatAuthenticate={authenticate} />);
+    await generateWechat();
+    fireEvent.click(screen.getByRole("tab", { name: "用户名密码" }));
+    await act(async () => { pending.resolve(challenge); });
+    fireEvent.click(screen.getByRole("tab", { name: "微信扫码" }));
+    expect(screen.queryByRole("img", { name: "微信授权登录二维码" })).toBeNull();
+    expect(screen.getByRole("button", { name: "生成微信登录二维码" })).toBeTruthy();
+  });
+
+  it("queues the actual poll and keeps its authentication response awaited after switching method", async () => {
+    vi.mocked(startWechatLogin).mockResolvedValue(challenge);
+    const pending = deferred<Awaited<ReturnType<typeof pollWechatLogin>>>();
+    vi.mocked(pollWechatLogin).mockReturnValue(pending.promise);
+    const done = vi.fn();
+    const queue = vi.fn(async (action: () => Promise<LoginResponse | undefined>) => { done(await action()); });
+    render(<LoginPage onLogin={vi.fn()} onWechatAuthenticate={queue} />);
+    await generateWechat();
+    await screen.findByRole("img", { name: "微信授权登录二维码" });
+    await waitFor(() => expect(queue).toHaveBeenCalledOnce(), { timeout: 2500 });
+    expect(pollWechatLogin).toHaveBeenCalledWith({ challenge_id: challenge.challenge_id, poll_token: challenge.poll_token });
+    fireEvent.click(screen.getByRole("tab", { name: "用户名密码" }));
+    expect(done).not.toHaveBeenCalled();
+    await act(async () => { pending.resolve({ status: "authenticated", user: { id: "old-wechat" } as AuthUser, expires_at: challenge.expires_at }); });
+    expect(done).toHaveBeenCalledWith(undefined);
+    expect(screen.getByRole("tab", { name: "用户名密码" }).getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("recovers a consumed challenge inside the same queued authentication action", async () => {
+    vi.mocked(startWechatLogin).mockResolvedValue(challenge);
+    vi.mocked(pollWechatLogin).mockResolvedValue({ status: "consumed", expires_at: challenge.expires_at });
+    vi.mocked(getCurrentUser).mockResolvedValue({ user: { id: "recovered" } as AuthUser });
+    const done = vi.fn();
+    const queue = vi.fn(async (action: () => Promise<LoginResponse | undefined>) => { done(await action()); });
+    render(<LoginPage onLogin={vi.fn()} onWechatAuthenticate={queue} />);
+    await generateWechat();
+    await screen.findByRole("img", { name: "微信授权登录二维码" });
+    await waitFor(() => expect(done).toHaveBeenCalledWith({ user: { id: "recovered" }, expires_at: challenge.expires_at }), { timeout: 2500 });
+    expect(queue).toHaveBeenCalledOnce();
   });
 });

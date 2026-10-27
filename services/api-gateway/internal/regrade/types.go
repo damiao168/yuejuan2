@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
 
@@ -294,7 +295,7 @@ type Store interface {
 	Preview(context.Context, string, string, string, string, Selector) (Preview, error)
 	Create(context.Context, string, string, string, string, CreateInput, []SourceItem) (Job, []Item, error)
 	Get(context.Context, string, string) (Summary, error)
-	List(context.Context, string, string, string) ([]Job, error)
+	List(context.Context, string, string, string, ...auth.ExamCollectionAccess) ([]Job, error)
 	ListAssigned(context.Context, string, string) ([]Item, error)
 	Approve(context.Context, string, string, string) (Job, error)
 	Start(context.Context, string, string, string) (Job, error)

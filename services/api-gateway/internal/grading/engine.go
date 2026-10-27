@@ -386,7 +386,8 @@ func canonicalFillMath(value string) string {
 func numericAnswer(answer SegmentAnswer) (float64, string, bool) {
 	if value, ok := answer.AnswerPayload["value"]; ok {
 		number, ok := floatValue(value)
-		return number, stringValue(answer.AnswerPayload["unit"]), ok
+		// JSON 字符串仍可能表示 NaN/Inf；结构化输入与纯文本使用相同的有限数边界。
+		return number, stringValue(answer.AnswerPayload["unit"]), ok && finiteNumeric(number)
 	}
 	return numericFromString(answer.AnswerText)
 }
@@ -394,7 +395,7 @@ func numericAnswer(answer SegmentAnswer) (float64, string, bool) {
 func numericValue(value any) (float64, string, bool) {
 	if payload, ok := value.(map[string]any); ok {
 		number, ok := floatValue(payload["value"])
-		return number, stringValue(payload["unit"]), ok
+		return number, stringValue(payload["unit"]), ok && finiteNumeric(number)
 	}
 	return numericFromString(stringValue(value))
 }

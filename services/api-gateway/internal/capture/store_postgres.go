@@ -873,10 +873,6 @@ WHERE tenant_id=$1 AND submission_page_id=$2::uuid AND deleted_at IS NULL RETURN
 }
 
 func (s *PostgresStore) ApplyFileFailure(ctx context.Context, tenantID, fileID, errorCode string, retryable bool) (File, error) {
-	status := "failed"
-	if retryable {
-		status = "queued"
-	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return File{}, err
@@ -885,8 +881,20 @@ func (s *PostgresStore) ApplyFileFailure(ctx context.Context, tenantID, fileID, 
 	if err = lockFileBatchTx(ctx, tx, tenantID, fileID); err != nil {
 		return File{}, err
 	}
+	out, err := s.applyFileFailureInTx(ctx, tx, tenantID, fileID, errorCode, retryable)
+	if err != nil {
+		return File{}, err
+	}
+	return out, tx.Commit()
+}
+
+func (s *PostgresStore) applyFileFailureInTx(ctx context.Context, tx *sql.Tx, tenantID, fileID, errorCode string, retryable bool) (File, error) {
+	status := "failed"
+	if retryable {
+		status = "queued"
+	}
 	var batchID string
-	if err = tx.QueryRowContext(ctx, `SELECT capture_batch_id::text FROM capture_file WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, fileID).Scan(&batchID); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT capture_batch_id::text FROM capture_file WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, fileID).Scan(&batchID); err != nil {
 		return File{}, mapNotFound(err)
 	}
 	out, err := scanFile(tx.QueryRowContext(ctx, `UPDATE capture_file SET status=$3,error_code=$4,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL RETURNING `+fileColumns, tenantID, fileID, status, strings.TrimSpace(errorCode)))
@@ -896,7 +904,7 @@ func (s *PostgresStore) ApplyFileFailure(ctx context.Context, tenantID, fileID, 
 	if err = aggregateBatchTx(ctx, tx, tenantID, batchID); err != nil {
 		return File{}, err
 	}
-	return out, tx.Commit()
+	return out, nil
 }
 
 // Revision 防止旧界面覆盖新修改；旋转会改变坐标系，因此同时使配准和切片失效并要求重算。

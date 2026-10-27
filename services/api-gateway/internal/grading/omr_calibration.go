@@ -70,13 +70,15 @@ type OMRCalibrationCase struct {
 	ObservedOptions    []string         `json:"observed_options"`
 	ObservedConfidence float64          `json:"observed_confidence"`
 	Measurements       []map[string]any `json:"measurements"`
-	ExpectedOptions    []string         `json:"expected_options,omitempty"`
-	Matches            *bool            `json:"matches,omitempty"`
-	LabeledBy          string           `json:"labeled_by,omitempty"`
-	LabeledAt          *time.Time       `json:"labeled_at,omitempty"`
-	CreatedAt          time.Time        `json:"created_at"`
-	OverlayFileAssetID string           `json:"overlay_file_asset_id,omitempty"`
-	SegmentImageURL    string           `json:"segment_image_url,omitempty"`
+	// 校准需要重放实际自动确认门禁；此快照仅供服务端使用，不能泄露给盲标注界面。
+	ObservedResultGate map[string]any `json:"-"`
+	ExpectedOptions    []string       `json:"expected_options,omitempty"`
+	Matches            *bool          `json:"matches,omitempty"`
+	LabeledBy          string         `json:"labeled_by,omitempty"`
+	LabeledAt          *time.Time     `json:"labeled_at,omitempty"`
+	CreatedAt          time.Time      `json:"created_at"`
+	OverlayFileAssetID string         `json:"overlay_file_asset_id,omitempty"`
+	SegmentImageURL    string         `json:"segment_image_url,omitempty"`
 }
 
 type OMRCalibrationSummary struct {
@@ -514,9 +516,15 @@ func (s *PostgresStore) populateOMRCalibrationCasesTx(ctx context.Context, tx *s
 WITH latest_by_segment AS (
   SELECT DISTINCT ON (o.answer_segment_id)
     o.id::text,o.answer_segment_id::text,seg.question_id::text,seg.question_no,
-    o.crop_sha256,o.decision,o.selected_options,o.confidence,o.measurements
+    o.crop_sha256,o.decision,o.selected_options,o.confidence,o.measurements,
+    CASE WHEN task.status='succeeded' AND task.result->>'omr_run_id'=o.id::text
+      AND task.result->>'result_version'=o.result_version
+      THEN jsonb_build_object('needs_human_review',task.result->'needs_human_review','thresholds',task.result->'thresholds')
+      ELSE '{}'::jsonb END AS observed_result_gate
   FROM omr_run o
   JOIN answer_segment seg ON seg.tenant_id=o.tenant_id AND seg.id=o.answer_segment_id AND seg.deleted_at IS NULL
+  LEFT JOIN agent_worker_task task ON task.tenant_id=o.tenant_id AND task.id=o.runtime_task_id
+    AND task.source_type='omr_run' AND task.source_id=o.id
   WHERE o.tenant_id=$1::uuid AND o.template_id=$2::uuid AND o.template_content_hash=$3
     AND seg.question_id::text IN (SELECT jsonb_array_elements_text($4::jsonb))
     AND o.profile_version=$5 AND o.profile_hash=$6
@@ -554,7 +562,7 @@ WITH latest_by_segment AS (
   FROM classified
 )
 SELECT id,answer_segment_id,question_id,question_no,crop_sha256,decision,
-  selected_options,confidence,measurements,sample_stratum
+  selected_options,confidence,measurements,sample_stratum,observed_result_gate
 FROM ranked
 ORDER BY
   CASE
@@ -572,7 +580,7 @@ LIMIT $13`, tenantID, session.TemplateID, session.TemplateContentHash, questionI
 	type candidate struct {
 		runID, segmentID, questionID, questionNo string
 		cropSHA256, decision, sampleStratum      string
-		selected, measurements                   []byte
+		selected, measurements, resultGate       []byte
 		confidence                               float64
 	}
 	questionByID := make(map[string]calibrationQuestion, len(questions))
@@ -583,7 +591,7 @@ LIMIT $13`, tenantID, session.TemplateID, session.TemplateContentHash, questionI
 	for rows.Next() {
 		var item candidate
 		if err := rows.Scan(&item.runID, &item.segmentID, &item.questionID, &item.questionNo, &item.cropSHA256,
-			&item.decision, &item.selected, &item.confidence, &item.measurements, &item.sampleStratum); err != nil {
+			&item.decision, &item.selected, &item.confidence, &item.measurements, &item.sampleStratum, &item.resultGate); err != nil {
 			_ = rows.Close()
 			return err
 		}
@@ -609,12 +617,12 @@ LIMIT $13`, tenantID, session.TemplateID, session.TemplateContentHash, questionI
 INSERT INTO omr_calibration_case (
   tenant_id,calibration_session_id,omr_run_id,answer_segment_id,question_id,question_no,
   question_type,option_labels,sample_stratum,crop_sha256,observed_decision,
-  observed_options,observed_confidence,measurements
+  observed_options,observed_confidence,measurements,observed_result_gate
 )
-VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6,$7,$8::jsonb,$9,$10,$11,$12::jsonb,$13,$14::jsonb)`,
+VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6,$7,$8::jsonb,$9,$10,$11,$12::jsonb,$13,$14::jsonb,$15::jsonb)`,
 			tenantID, session.ID, item.runID, item.segmentID, item.questionID, item.questionNo,
 			question.Type, optionLabelsRaw, item.sampleStratum, item.cropSHA256, item.decision,
-			item.selected, item.confidence, item.measurements); err != nil {
+			item.selected, item.confidence, item.measurements, item.resultGate); err != nil {
 			return err
 		}
 	}
@@ -665,7 +673,7 @@ SELECT c.id::text,c.calibration_session_id::text,c.omr_run_id::text,c.answer_seg
   c.question_id::text,c.question_no,c.question_type,c.option_labels,c.sample_stratum,
   c.observed_decision,c.observed_options,c.observed_confidence,c.measurements,
   COALESCE(c.expected_options,'null'::jsonb),c.matches,COALESCE(c.labeled_by::text,''),c.labeled_at,c.created_at,
-  COALESCE(o.overlay_file_asset_id::text,'')
+  COALESCE(o.overlay_file_asset_id::text,''),c.observed_result_gate
 FROM omr_calibration_case c
 LEFT JOIN omr_run o ON o.tenant_id=c.tenant_id AND o.id=c.omr_run_id
 WHERE c.tenant_id=$1::uuid AND c.calibration_session_id=$2::uuid
@@ -677,13 +685,13 @@ ORDER BY c.created_at,c.id`, tenantID, calibrationID)
 	out := []OMRCalibrationCase{}
 	for rows.Next() {
 		var item OMRCalibrationCase
-		var optionLabelsRaw, observedRaw, measurementsRaw, expectedRaw []byte
+		var optionLabelsRaw, observedRaw, measurementsRaw, expectedRaw, resultGateRaw []byte
 		var matches sql.NullBool
 		var labeledAt sql.NullTime
 		if err := rows.Scan(&item.ID, &item.CalibrationID, &item.OMRRunID, &item.AnswerSegmentID, &item.CropSHA256,
 			&item.QuestionID, &item.QuestionNo, &item.QuestionType, &optionLabelsRaw, &item.SampleStratum,
 			&item.ObservedDecision, &observedRaw, &item.ObservedConfidence, &measurementsRaw,
-			&expectedRaw, &matches, &item.LabeledBy, &labeledAt, &item.CreatedAt, &item.OverlayFileAssetID); err != nil {
+			&expectedRaw, &matches, &item.LabeledBy, &labeledAt, &item.CreatedAt, &item.OverlayFileAssetID, &resultGateRaw); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(optionLabelsRaw, &item.OptionLabels); err != nil {
@@ -693,6 +701,9 @@ ORDER BY c.created_at,c.id`, tenantID, calibrationID)
 			return nil, err
 		}
 		if err := json.Unmarshal(measurementsRaw, &item.Measurements); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(resultGateRaw, &item.ObservedResultGate); err != nil {
 			return nil, err
 		}
 		if string(expectedRaw) != "null" {
@@ -771,7 +782,10 @@ func summarizeOMRCalibration(session OMRCalibrationSession, cases []OMRCalibrati
 		summary.QuestionCoverage[questionID] = 0
 	}
 	for _, item := range cases {
-		addOMRCalibrationCaseToSummary(&summary, session.ScopeType, item)
+		addOMRCalibrationCaseToSummary(&summary, session, item)
+		if _, complete := calibrationObservedResult(item); session.ScopeType == "template" && !complete && !containsCalibrationOption(summary.Blockers, "calibration_result_gate_missing") {
+			summary.Blockers = append(summary.Blockers, "calibration_result_gate_missing")
+		}
 	}
 	appendOMRCalibrationEvidenceBlockers(session, &summary)
 	appendOMRCalibrationCoverageBlockers(session, &summary)
@@ -782,12 +796,16 @@ func summarizeOMRCalibration(session OMRCalibrationSession, cases []OMRCalibrati
 	return summary
 }
 
-func addOMRCalibrationCaseToSummary(summary *OMRCalibrationSummary, scopeType string, item OMRCalibrationCase) {
+func addOMRCalibrationCaseToSummary(summary *OMRCalibrationSummary, session OMRCalibrationSession, item OMRCalibrationCase) {
 	summary.TotalCount++
 	summary.QuestionCoverage[item.QuestionID]++
 	summary.StratumCoverage[item.SampleStratum]++
-	// 模板校准只要求可能自动确认的高置信单个选项结果零错；旧题目级空分层仍属于自动确认候选。
-	eligible := item.SampleStratum == "selected_high" || (scopeType != "template" && item.SampleStratum == "")
+	// 分层只决定抽样覆盖；资格必须重放同一冻结置信度、复核标志与集合质量，空白和多选不能漏计。
+	input, complete := calibrationObservedResult(item)
+	eligible := complete && omrResultCanAutoConfirmForQuestion(input, item.QuestionType, true, session.MinimumConfidence)
+	if session.ScopeType != "template" {
+		eligible = item.SampleStratum == "selected_high" || item.SampleStratum == ""
+	}
 	if eligible {
 		summary.EligibleCount++
 	}
@@ -811,6 +829,15 @@ func addOMRCalibrationCaseToSummary(summary *OMRCalibrationSummary, scopeType st
 			summary.EligibleMismatchCount++
 		}
 	}
+}
+
+func calibrationObservedResult(item OMRCalibrationCase) (OMRResultInput, bool) {
+	review, hasReview := item.ObservedResultGate["needs_human_review"].(bool)
+	rawThresholds, hasThresholds := item.ObservedResultGate["thresholds"]
+	thresholds, validThresholds := rawThresholds.(map[string]any)
+	// 旧单选 Worker 允许 null thresholds；缺少该键则无法证明保存过完整的门禁事实。
+	return OMRResultInput{Decision: item.ObservedDecision, Selected: item.ObservedOptions, Confidence: item.ObservedConfidence,
+		NeedsHumanReview: review, Thresholds: thresholds}, hasReview && hasThresholds && (rawThresholds == nil || validThresholds)
 }
 
 func appendOMRCalibrationEvidenceBlockers(session OMRCalibrationSession, summary *OMRCalibrationSummary) {
@@ -995,7 +1022,10 @@ func omrCalibrationEvidenceHash(session OMRCalibrationSession, cases []OMRCalibr
 			MinimumSamplesPerStratum int      `json:"minimum_samples_per_stratum"`
 			MinimumConfidence        float64  `json:"minimum_confidence"`
 		} `json:"session"`
-		Cases []OMRCalibrationCase `json:"cases"`
+		Cases []struct {
+			OMRCalibrationCase
+			ObservedResultGate map[string]any `json:"observed_result_gate"`
+		} `json:"cases"`
 	}{}
 	payload.Session.TemplateID = session.TemplateID
 	payload.Session.TemplateContentHash = session.TemplateContentHash
@@ -1013,7 +1043,12 @@ func omrCalibrationEvidenceHash(session OMRCalibrationSession, cases []OMRCalibr
 	payload.Session.MinimumSamplesPerOption = session.MinimumSamplesPerOption
 	payload.Session.MinimumSamplesPerStratum = session.MinimumSamplesPerStratum
 	payload.Session.MinimumConfidence = session.MinimumConfidence
-	payload.Cases = sorted
+	for _, item := range sorted {
+		payload.Cases = append(payload.Cases, struct {
+			OMRCalibrationCase
+			ObservedResultGate map[string]any `json:"observed_result_gate"`
+		}{item, item.ObservedResultGate})
+	}
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return "", err
@@ -1043,5 +1078,27 @@ LIMIT 1`, tenantID, scope.templateID, scope.templateContentHash, questionID, sco
 	if err != nil {
 		return nil, err
 	}
+	// 历史批准的哈希不重写；按当前自动接受分支复验样本，旧规则漏过的错例不能继续授权新任务。
+	valid, err := omrCalibrationEvidenceAllowsAutoConfirmTx(ctx, tx, tenantID, out.ID)
+	if err != nil || !valid {
+		return nil, err
+	}
 	return &out, nil
+}
+
+func omrCalibrationEvidenceAllowsAutoConfirmTx(ctx context.Context, tx *sql.Tx, tenantID, id string) (bool, error) {
+	session, err := getOMRCalibrationSession(ctx, tx, tenantID, id, false)
+	if err != nil {
+		return false, err
+	}
+	if session.Status != "approved" {
+		return false, nil
+	}
+	cases, err := listOMRCalibrationCases(ctx, tx, tenantID, id)
+	if err != nil {
+		return false, err
+	}
+	// draft 仅用于计算证据资格，不更改数据库里的审批状态和原始证据哈希。
+	session.Status = "draft"
+	return summarizeOMRCalibration(session, cases).ReadyToApprove, nil
 }

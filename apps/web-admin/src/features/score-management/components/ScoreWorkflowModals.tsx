@@ -53,7 +53,7 @@ export function ScoreWorkflowModals({
   } = releaseWorkflow;
   const {
     regradeReviewOpen, closeRegradeReview, regradeReview, regradeReviewScores,
-    setRegradeReviewScores, decideRegradeItem, regradeModalOpen, regradePreview,
+    setRegradeReviewScores, regradeReviewNotes, setRegradeReviewNotes, decideRegradeItem, regradeModalOpen, regradePreview,
     regradeReasonText, regradeAssigneeID, createSelectedRegrade, closeRegradeModal,
     clearRegradePreview, regradeQuestionId, regradeQuestionOptions, setRegradeQuestionId,
     regradeReasonCode, setRegradeReasonCode, regradeStrategy, setRegradeStrategy,
@@ -100,20 +100,22 @@ export function ScoreWorkflowModals({
     >
       <Alert showIcon type="info" message="候选意见尚未改写成绩" description="逐项接受后才能完成复评。完成后仍需生成并发布新的成绩版本，原发布版本保持不变。" />
       <List
-        dataSource={regradeReview?.items.filter((item) => item.status === "awaiting_review") ?? []}
+        dataSource={regradeReview?.items.filter((item) => item.status === "awaiting_review" || item.status === "exception") ?? []}
         locale={{ emptyText: "当前没有待复核的重评候选" }}
         renderItem={(item) => {
           const selections = item.candidate_rubric_selections ?? [];
           return <List.Item actions={[
             <Button key="accept" type="primary" disabled={regradeWorkflow.reviewedEvidence[item.id] !== item.revision || Boolean(actioning)} loading={actioning === `regrade-review-${item.id}`} onClick={() => decideRegradeItem(item, "accept")}>接受</Button>,
             <Button key="reject" disabled={regradeWorkflow.reviewedEvidence[item.id] !== item.revision || Boolean(actioning)} loading={actioning === `regrade-review-${item.id}`} onClick={() => decideRegradeItem(item, "reject")}>驳回</Button>,
-            <Button key="exception" danger disabled={regradeWorkflow.reviewedEvidence[item.id] !== item.revision || Boolean(actioning)} loading={actioning === `regrade-review-${item.id}`} onClick={() => decideRegradeItem(item, "exception")}>标记异常</Button>
+            ...(item.status === "exception" ? [] : [<Button key="exception" danger disabled={regradeWorkflow.reviewedEvidence[item.id] !== item.revision || Boolean(actioning)} loading={actioning === `regrade-review-${item.id}`} onClick={() => decideRegradeItem(item, "exception")}>标记异常</Button>])
           ]}>
             <List.Item.Meta
               title={<Space><strong>重评候选</strong><span>建议得分</span><InputNumber min={0} max={item.max_score} precision={1} value={regradeReviewScores[item.id] ?? undefined} onChange={(value) => setRegradeReviewScores((current) => ({ ...current, [item.id]: value === null ? null : Number(value) }))} /><span>/ {item.max_score}</span></Space>}
               description={<div className="score-regrade-review-detail">
+                {item.status === "exception" ? <Alert type="warning" showIcon message="异常待处理" description={item.review_note || "请重新核对证据，填写处理说明后接受或驳回候选。"} /> : null}
                 {selections.length ? <span>采分点：{selections.map((selection) => `${selection.point_id} ${selection.score}分`).join("；")}</span> : <span>未记录采分点明细</span>}
                 {item.candidate_comment ? <span>评分依据：{item.candidate_comment}</span> : null}
+                <label>复核说明{item.status === "exception" ? "（处理异常必填）" : "（选填）"}<Input.TextArea rows={2} maxLength={2000} value={regradeReviewNotes[item.id] ?? ""} onChange={event => setRegradeReviewNotes(current => ({ ...current, [item.id]: event.target.value }))} /></label>
                 <RegradeCandidateEvidence key={`${item.id}:${item.revision}`} id={item.id} revision={item.revision} onReady={revision => regradeWorkflow.markEvidenceReviewed(item.id, revision)} />
               </div>}
             />

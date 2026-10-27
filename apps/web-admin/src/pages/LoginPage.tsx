@@ -38,9 +38,9 @@ function wechatStatusMessage(code?: string) {
   return "微信登录未完成，请刷新二维码或使用账号密码登录。";
 }
 
-export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Readonly<{
+export function LoginPage({ onLogin, onWechatAuthenticate, loading = false, error }: Readonly<{
   onLogin: (values: LoginFormValues) => void | Promise<void>;
-  onWechatLogin: (response: LoginResponse) => void | Promise<void>;
+  onWechatAuthenticate: (authenticate: () => Promise<LoginResponse | undefined>) => Promise<void>;
   loading?: boolean;
   error?: string;
 }>) {
@@ -52,6 +52,18 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Re
   const [wechatLoading, setWechatLoading] = useState(false);
   const [wechatError, setWechatError] = useState<string>();
   const pollGeneration = useRef(0);
+  const challengeGeneration = useRef(0);
+
+  useEffect(() => () => { challengeGeneration.current += 1; }, []);
+
+  const changeMethod = (next: LoginMethod) => {
+    if (next === method) return;
+    // 生成二维码只冻结本次策略；切换方式后，旧生成回执不能再带回已放弃的策略和二维码。
+    challengeGeneration.current += 1;
+    setChallenge(undefined);
+    setWechatLoading(false);
+    setMethod(next);
+  };
 
   useEffect(() => {
     if (method !== "wechat" || !challenge) return;
@@ -61,38 +73,42 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Re
     let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = async () => {
       try {
-        const response = await pollWechatLogin({ challenge_id: challenge.challenge_id, poll_token: challenge.poll_token }, controller.signal);
-        if (controller.signal.aborted || generation !== pollGeneration.current) return;
-        if (response.status === "authenticated" && response.user) {
-          setWechatLoading(true);
-          await onWechatLogin({ expires_at: response.expires_at, user: response.user });
-          return;
-        }
-        if (response.status === "failed") {
-          setChallenge(undefined);
-          setWechatError(wechatStatusMessage(response.error_code));
-          return;
-        }
-        if (response.status === "expired") {
-          setChallenge(undefined);
-          setWechatError("二维码已过期，请刷新后重新扫码。");
-          return;
-        }
-        // 二维码已消费仍可能已有 Cookie 会话；先读取当前身份，恢复成功的登录结果。
-        if (response.status === "consumed") {
-          try {
-            const recovered = await getCurrentUser();
-            // consumed后的身份恢复还有第二次等待；切换方式后这一回执也必须废弃。
-            if (controller.signal.aborted || generation !== pollGeneration.current) return;
-            await onWechatLogin({ expires_at: response.expires_at, user: recovered.user });
-          } catch {
-            if (controller.signal.aborted || generation !== pollGeneration.current) return;
-            setChallenge(undefined);
-            setWechatError("二维码已使用，请刷新后重新扫码。");
+        await onWechatAuthenticate(async () => {
+          if (controller.signal.aborted || generation !== pollGeneration.current) return;
+          // 发出的认证请求要完整等待响应；中止 fetch 不能撤回服务端的 Cookie 写入，反而会提前释放认证队列。
+          const response = await pollWechatLogin({ challenge_id: challenge.challenge_id, poll_token: challenge.poll_token });
+          if (controller.signal.aborted || generation !== pollGeneration.current) return;
+          if (response.status === "authenticated" && response.user) {
+            setWechatLoading(true);
+            return { expires_at: response.expires_at, user: response.user };
           }
-          return;
-        }
-        timer = setTimeout(poll, 1800);
+          if (response.status === "failed") {
+            setChallenge(undefined);
+            setWechatError(wechatStatusMessage(response.error_code));
+            return;
+          }
+          if (response.status === "expired") {
+            setChallenge(undefined);
+            setWechatError("二维码已过期，请刷新后重新扫码。");
+            return;
+          }
+          // 二维码已消费仍可能已有 Cookie 会话；先读取当前身份，恢复成功的登录结果。
+          if (response.status === "consumed") {
+            try {
+              const recovered = await getCurrentUser();
+              // consumed 后的身份恢复还有第二次等待；切换方式后这一回执也必须废弃。
+              if (controller.signal.aborted || generation !== pollGeneration.current) return;
+              return { expires_at: response.expires_at, user: recovered.user };
+            } catch {
+              if (controller.signal.aborted || generation !== pollGeneration.current) return;
+              setChallenge(undefined);
+              setWechatError("二维码已使用，请刷新后重新扫码。");
+            }
+            return;
+          }
+          timer = setTimeout(poll, 1800);
+          return undefined;
+        });
       } catch (pollError) {
         if (controller.signal.aborted || generation !== pollGeneration.current) return;
         setChallenge(undefined);
@@ -105,20 +121,22 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Re
       if (timer) clearTimeout(timer);
       pollGeneration.current += 1;
     };
-  }, [challenge, method, onWechatLogin]);
+  }, [challenge, method, onWechatAuthenticate]);
 
   const beginWechatLogin = async (values: WechatFormValues) => {
+    const generation = ++challengeGeneration.current;
     setWechatLoading(true);
     setWechatError(undefined);
     setChallenge(undefined);
     try {
       const response = await startWechatLogin(values);
+      if (generation !== challengeGeneration.current) return;
       if (!response.qr_code_data_url.startsWith("data:image/png;base64,")) throw new Error("invalid QR response");
       setChallenge(response);
     } catch (startError) {
-      setWechatError(wechatErrorMessage(startError));
+      if (generation === challengeGeneration.current) setWechatError(wechatErrorMessage(startError));
     } finally {
-      setWechatLoading(false);
+      if (generation === challengeGeneration.current) setWechatLoading(false);
     }
   };
 
@@ -130,8 +148,8 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Re
           <div><h1>EduGrade Enterprise</h1><p>智能阅卷与学情诊断平台</p></div>
         </div>
         <div className="login-method-switch" role="tablist" aria-label="登录方式">
-          <button type="button" role="tab" aria-selected={method === "password"} className={method === "password" ? "is-active" : ""} onClick={() => setMethod("password")}><LockKeyhole size={16} />用户名密码</button>
-          <button type="button" role="tab" aria-selected={method === "wechat"} className={method === "wechat" ? "is-active" : ""} onClick={() => setMethod("wechat")}><ScanLine size={16} />微信扫码</button>
+          <button type="button" role="tab" aria-selected={method === "password"} className={method === "password" ? "is-active" : ""} onClick={() => changeMethod("password")}><LockKeyhole size={16} />用户名密码</button>
+          <button type="button" role="tab" aria-selected={method === "wechat"} className={method === "wechat" ? "is-active" : ""} onClick={() => changeMethod("wechat")}><ScanLine size={16} />微信扫码</button>
         </div>
 
         {method === "password" ? (
@@ -153,7 +171,8 @@ export function LoginPage({ onLogin, onWechatLogin, loading = false, error }: Re
           </div>
         ) : (
           <div className="login-method-panel login-wechat-panel" role="tabpanel">
-            <Form form={wechatForm} layout="vertical" onFinish={beginWechatLogin} className="login-form login-wechat-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
+            {/* 挑战创建时会冻结会话策略；等待期间禁用策略输入，避免显示值和二维码策略不一致。 */}
+            <Form form={wechatForm} layout="vertical" onFinish={beginWechatLogin} disabled={wechatLoading} className="login-form login-wechat-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
               <TenantField tenantHint={tenantHint} />
               {!challenge ? <DeviceOptions form={wechatForm} /> : null}
               {wechatError ? <Alert type="warning" showIcon message="微信登录未完成" description={wechatError} /> : null}

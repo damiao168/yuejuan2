@@ -2,7 +2,7 @@ import { Alert, Button, Checkbox, Input, List, Modal, Spin, Table } from "antd";
 import { Download, Printer } from "lucide-react";
 import { StatusTag } from "../../../components/StatusTag";
 import type { StudentPrintBatchSummary, StudentPrintCandidate } from "../../../api/printing";
-import type { TemplatePageViewProps } from "./templateViewTypes";
+import type { TemplatePrintingView } from "./templateViewTypes";
 
 function printBatchTime(value: string) {
 	return new Intl.DateTimeFormat("zh-CN", {
@@ -30,7 +30,7 @@ function studentSheetStatus(candidate: StudentPrintCandidate) {
 	return "已生成，待扫描";
 }
 
-function PrintBatchHistory({ view }: TemplatePageViewProps) {
+function PrintBatchHistory({ view }: Readonly<{ view: TemplatePrintingView }>) {
 	const { printContext, printBusy, downloadPrintBatch } = view.printing;
 	if (!printContext) return null;
 	if (!printContext.batches.length)
@@ -78,7 +78,7 @@ function PrintBatchHistory({ view }: TemplatePageViewProps) {
 	);
 }
 
-export function StudentPrintPanel({ view }: TemplatePageViewProps) {
+export function StudentPrintPanel({ view }: Readonly<{ view: TemplatePrintingView }>) {
 	const { selectedTemplate, canManage } = view;
 	const {
 		printContext,
@@ -184,7 +184,7 @@ export function StudentPrintPanel({ view }: TemplatePageViewProps) {
 	);
 }
 
-export function StudentPrintModal({ view }: TemplatePageViewProps) {
+export function StudentPrintModal({ view }: Readonly<{ view: TemplatePrintingView }>) {
 	const {
 		printModalOpen,
 		printBusy,

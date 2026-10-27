@@ -12,7 +12,7 @@ type PostgresStore struct{ db *sql.DB }
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
 func (s *PostgresStore) Claim(ctx context.Context, owner string, limit int, leaseTTL time.Duration) ([]Event, error) {
-	// 领取与租约写入合并为一个 SQL，SKIP LOCKED 让并行分发器跳过其他实例占用的事件。
+	// 领取、过期末次租约的终结均由数据库锁保护；崩溃后的末次尝试不能既不可领取也不进入死信。
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
@@ -20,7 +20,18 @@ func (s *PostgresStore) Claim(ctx context.Context, owner string, limit int, leas
 		leaseTTL = 30 * time.Second
 	}
 	rows, err := s.db.QueryContext(ctx, `
-WITH candidates AS (
+WITH exhausted AS (
+  SELECT id FROM event_outbox
+  WHERE published_at IS NULL AND dead_lettered_at IS NULL
+    AND attempt_count >= max_attempts
+    AND (lock_expires_at IS NULL OR lock_expires_at < now())
+  ORDER BY occurred_at,id LIMIT $1 FOR UPDATE SKIP LOCKED
+), finalized AS (
+  UPDATE event_outbox e
+  SET dead_lettered_at=now(),locked_by=NULL,lock_expires_at=NULL,
+      last_error='outbox_attempts_exhausted_after_lease_expired'
+  FROM exhausted WHERE e.id=exhausted.id RETURNING e.id
+), candidates AS (
   SELECT id
   FROM event_outbox
   WHERE published_at IS NULL

@@ -99,8 +99,13 @@ func (s *PostgresStore) List(ctx context.Context, tenantID string, filter Filter
 	if s.db == nil {
 		return nil, ErrInvalidInput
 	}
-	query := `SELECT ` + disagreementColumns + ` FROM ai_human_disagreement WHERE tenant_id=$1::uuid`
-	args := []any{tenantID}
+	accessArgs, err := disagreementCollectionArgs(tenantID, filter.Access)
+	if err != nil {
+		return nil, err
+	}
+	// 范围必须先于排序和限量执行；考试导航权限不能代替具体答卷权限。
+	query := `SELECT ` + disagreementColumns + ` FROM ai_human_disagreement WHERE tenant_id=$1::uuid AND ` + disagreementCollectionPredicate
+	args := append([]any{tenantID}, accessArgs...)
 	appendFilter := func(column, value string) {
 		if strings.TrimSpace(value) == "" {
 			return

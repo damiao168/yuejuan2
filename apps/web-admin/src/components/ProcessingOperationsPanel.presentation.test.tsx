@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProcessingException } from "../api/processing";
 import { ProcessingOperationsPanel } from "./ProcessingOperationsPanel";
 
-const mocks = vi.hoisted(() => ({ summary: vi.fn(), list: vi.fn(), actors: vi.fn() }));
-vi.mock("../api/processing", () => ({ getProcessingSummary: mocks.summary, listProcessingExceptions: mocks.list, assignProcessingException: vi.fn(), resolveProcessingException: vi.fn(), retryProcessingException: vi.fn() }));
+const mocks = vi.hoisted(() => ({ summary: vi.fn(), list: vi.fn(), actors: vi.fn(), context: vi.fn(), focus: "" }));
+vi.mock("../api/processing", () => ({ getProcessingSummary: mocks.summary, listProcessingExceptions: mocks.list, getProcessingExceptionContext: mocks.context, assignProcessingException: vi.fn(), resolveProcessingException: vi.fn(), retryProcessingException: vi.fn() }));
+vi.mock("../router/query", () => ({ hashQueryParam: () => mocks.focus }));
 vi.mock("../api/workflowActors", () => ({ listProcessingActors: mocks.actors }));
 vi.mock("./ProcessingExceptionEvidence", () => ({ ProcessingExceptionEvidence: () => null }));
 vi.mock("./PageState", () => ({ EmptyState: () => null }));
@@ -19,10 +20,31 @@ vi.mock("antd", () => {
     Descriptions: Object.assign(passthrough, { Item: passthrough }), Input: { TextArea: () => null }, Modal: () => null, Select: () => null, Space: passthrough };
 });
 afterEach(cleanup);
-beforeEach(() => { vi.resetAllMocks(); mocks.summary.mockResolvedValue({ summary: { total_pages: 1, ready_pages: 0, pending_pages: 0, blocked_pages: 1, by_stage: [] } }); });
+beforeEach(() => { vi.resetAllMocks(); mocks.focus = ""; mocks.summary.mockResolvedValue({ summary: { total_pages: 1, ready_pages: 0, pending_pages: 0, blocked_pages: 1, by_stage: [] } }); });
 const exception: ProcessingException = { id: "exception", exam_id: "exam", page_id: "raw-page-uuid", source_type: "quality", source_id: "quality", code: "BLOCKED_LOW_IMAGE_QUALITY", severity: "P1", blocking: true, status: "assigned", assigned_to: "raw-user-uuid", details: {}, created_at: "2026-10-09", updated_at: "2026-10-09" };
 
 describe("异常列表使用受限业务摘要", () => {
+  it("游标后页可继续读取并保留首屏记录", async () => {
+    mocks.list.mockImplementation(({ cursor }: { cursor?: string }) => Promise.resolve(cursor ? { exceptions: [{ ...exception, id: "older", candidate_no: "OLD", page_no: 2 }], has_more: false, next_cursor: "" } : { exceptions: [{ ...exception, candidate_no: "FIRST", page_no: 1 }], has_more: true, next_cursor: "next" }));
+    render(<ProcessingOperationsPanel examId="exam" canManage={false} />);
+    fireEvent.click(await screen.findByRole("button", { name: "加载更多异常" }));
+    expect(await screen.findByText("考号 OLD · 第 2 页")).toBeTruthy();
+    expect(screen.getByText("考号 FIRST · 第 1 页")).toBeTruthy();
+    expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: "next" }), undefined);
+    expect(screen.queryByRole("button", { name: "加载更多异常" })).toBeNull();
+  });
+
+  it("深链目标按ID读取且不受当前首屏截断，外考试目标不展示", async () => {
+    mocks.focus = "target";
+    mocks.list.mockResolvedValue({ exceptions: [] });
+    mocks.context.mockResolvedValue({ exception_context: { exception: { ...exception, id: "target", candidate_no: "TARGET", page_no: 3 } } });
+    const view = render(<ProcessingOperationsPanel examId="exam" canManage={false} />);
+    expect(await screen.findByText("考号 TARGET · 第 3 页")).toBeTruthy();
+    expect(mocks.context).toHaveBeenCalledWith("target", expect.any(AbortSignal));
+    view.rerender(<ProcessingOperationsPanel examId="another-exam" canManage={false} />);
+    expect(await screen.findByText(/该异常不属于当前考试，请核对入口/)).toBeTruthy();
+    expect(screen.queryByText("考号 TARGET · 第 3 页")).toBeNull();
+  });
   it("只读用户直接看到同校处理人、考号与页号，不请求人员目录", async () => {
     mocks.list.mockResolvedValue({ exceptions: [{ ...exception, assigned_to_name: "张老师", assigned_to_username: "zhang", candidate_no: "00123", page_no: 2 }] });
     render(<ProcessingOperationsPanel examId="exam" canManage={false} />);

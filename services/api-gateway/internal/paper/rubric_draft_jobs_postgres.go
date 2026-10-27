@@ -39,6 +39,13 @@ func (s *PostgresStore) createRubricDraftJob(ctx context.Context, record rubricD
 		return RubricDraftJob{}, err
 	}
 	defer tx.Rollback()
+	stage, archived, err := lockRubricDraftExamTx(ctx, tx, record.TenantID, record.Job.ExamID)
+	if err != nil {
+		return RubricDraftJob{}, err
+	}
+	if archived || (stage != "draft" && stage != "configured") {
+		return RubricDraftJob{}, ErrExamFrozen
+	}
 	// 所有副本在同一事务中完成去重、排队额度检查和创建，重复点击不会重复付费。
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(674218518)`); err != nil {
 		return RubricDraftJob{}, err
@@ -105,16 +112,50 @@ func (s *PostgresStore) listRubricDraftJobs(ctx context.Context, tenantID, actor
 }
 
 func (s *PostgresStore) getRubricDraftJob(ctx context.Context, tenantID, actorID, examID, id string) (rubricDraftJobRecord, error) {
-	return scanRubricDraftJob(s.db.QueryRowContext(ctx, `SELECT `+rubricDraftJobColumns+` FROM question_rubric_draft_job WHERE tenant_id=$1 AND actor_id=$2 AND exam_id=$3 AND id=$4`, tenantID, actorID, examID, id))
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return rubricDraftJobRecord{}, err
+	}
+	defer tx.Rollback()
+	_, archived, err := lockRubricDraftExamTx(ctx, tx, tenantID, examID)
+	if err != nil {
+		return rubricDraftJobRecord{}, err
+	}
+	record, err := scanRubricDraftJob(tx.QueryRowContext(ctx, `SELECT `+rubricDraftJobColumns+` FROM question_rubric_draft_job WHERE tenant_id=$1 AND actor_id=$2 AND exam_id=$3 AND id=$4`, tenantID, actorID, examID, id))
+	if err != nil {
+		return record, err
+	}
+	if archived {
+		record.Job.Status, record.Job.Result, record.Job.Error = "stale", nil, "考试已归档，不能采用该建议"
+	}
+	return record, tx.Commit()
 }
 
 func (s *PostgresStore) cancelRubricDraftJob(ctx context.Context, tenantID, actorID, examID, id string) (RubricDraftJob, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return RubricDraftJob{}, err
+	}
+	defer tx.Rollback()
+	_, archived, err := lockRubricDraftExamTx(ctx, tx, tenantID, examID)
+	if err != nil {
+		return RubricDraftJob{}, err
+	}
+	if archived {
+		return RubricDraftJob{}, ErrExamFrozen
+	}
 	// 取消运行任务只禁止采用结果，调用结束前仍计入并发，以免连续取消绕过上限。
-	record, err := scanRubricDraftJob(s.db.QueryRowContext(ctx, `UPDATE question_rubric_draft_job SET status=CASE WHEN status='queued' THEN 'cancelled' WHEN status='running' THEN 'cancelling' ELSE status END,updated_at=now() WHERE tenant_id=$1 AND actor_id=$2 AND exam_id=$3 AND id=$4 RETURNING `+rubricDraftJobColumns, tenantID, actorID, examID, id))
-	return record.Job, err
+	record, err := scanRubricDraftJob(tx.QueryRowContext(ctx, `UPDATE question_rubric_draft_job SET status=CASE WHEN status='queued' THEN 'cancelled' WHEN status='running' THEN 'cancelling' ELSE status END,updated_at=now() WHERE tenant_id=$1 AND actor_id=$2 AND exam_id=$3 AND id=$4 RETURNING `+rubricDraftJobColumns, tenantID, actorID, examID, id))
+	if err != nil {
+		return RubricDraftJob{}, err
+	}
+	return record.Job, tx.Commit()
 }
 
 func (s *PostgresStore) claimRubricDraftJob(ctx context.Context, lease time.Duration, id string) (*rubricDraftJobRecord, error) {
+	if err := s.cleanupExpiredRubricDraftJobs(ctx); err != nil {
+		return nil, err
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -124,19 +165,40 @@ func (s *PostgresStore) claimRubricDraftJob(ctx context.Context, lease time.Dura
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(674218519)`); err != nil {
 		return nil, err
 	}
-	// 租约超时不能自动重放可能已计费的模型调用，标记失败后等待教师重试。
-	_, err = tx.ExecContext(ctx, `UPDATE question_rubric_draft_job SET status=CASE WHEN status='cancelling' THEN 'cancelled' ELSE 'failed' END,payload=jsonb_set(payload,'{Job,error}',to_jsonb('执行中断，请手动重试；上次调用可能已计费'::text)),lease_token='',lease_until=NULL,updated_at=now() WHERE status IN ('running','cancelling') AND lease_until<=now()`)
-	if err != nil {
-		return nil, err
-	}
 	var running, local int
-	if err = tx.QueryRowContext(ctx, `SELECT count(*),count(*) FILTER(WHERE local_model) FROM question_rubric_draft_job WHERE status IN ('running','cancelling')`).Scan(&running, &local); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT count(*),count(*) FILTER(WHERE j.local_model) FROM question_rubric_draft_job j
+JOIN exam e ON e.tenant_id=j.tenant_id AND e.id=j.exam_id
+LEFT JOIN exam_session parent ON parent.tenant_id=e.tenant_id AND parent.id=e.exam_session_id
+WHERE j.status IN ('running','cancelling') AND e.archived_at IS NULL AND e.status<>'archived'
+  AND COALESCE(parent.archived_at IS NULL AND parent.status<>'archived',true)`).Scan(&running, &local); err != nil {
 		return nil, err
 	}
 	if running >= RubricDraftConcurrency {
 		return nil, tx.Commit()
 	}
-	record, err := scanRubricDraftJob(tx.QueryRowContext(ctx, `SELECT `+rubricDraftJobColumns+` FROM question_rubric_draft_job WHERE status='queued' AND available_at<=now() AND (NOT local_model OR $1=0) AND ($2='' OR id::text=$2) ORDER BY created_at,id LIMIT 1 FOR UPDATE SKIP LOCKED`, local, id))
+	// 先选择候选身份，再锁考试和任务；全局领取锁让其他副本不能同时占用该候选。
+	var tenantID, examID, jobID string
+	err = tx.QueryRowContext(ctx, `SELECT j.tenant_id::text,j.exam_id::text,j.id::text FROM question_rubric_draft_job j
+JOIN exam e ON e.tenant_id=j.tenant_id AND e.id=j.exam_id
+LEFT JOIN exam_session parent ON parent.tenant_id=e.tenant_id AND parent.id=e.exam_session_id
+WHERE j.status='queued' AND j.available_at<=now() AND (NOT j.local_model OR $1=0) AND ($2='' OR j.id::text=$2)
+  AND e.archived_at IS NULL AND e.status<>'archived' AND COALESCE(parent.archived_at IS NULL AND parent.status<>'archived',true)
+ORDER BY j.created_at,j.id LIMIT 1`, local, id).Scan(&tenantID, &examID, &jobID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, tx.Commit()
+	}
+	if err != nil {
+		return nil, err
+	}
+	_, archived, err := lockRubricDraftExamTx(ctx, tx, tenantID, examID)
+	if err != nil {
+		return nil, err
+	}
+	if archived {
+		return nil, tx.Commit()
+	}
+	record, err := scanRubricDraftJob(tx.QueryRowContext(ctx, `SELECT `+rubricDraftJobColumns+` FROM question_rubric_draft_job
+WHERE tenant_id=$1 AND id=$2 AND status='queued' FOR UPDATE`, tenantID, jobID))
 	if errors.Is(err, ErrNotFound) {
 		return nil, tx.Commit()
 	}
@@ -166,6 +228,13 @@ func (s *PostgresStore) finishRubricDraftJob(ctx context.Context, record rubricD
 		return err
 	}
 	defer tx.Rollback()
+	_, archived, err := lockRubricDraftExamTx(ctx, tx, record.TenantID, record.Job.ExamID)
+	if err != nil {
+		return err
+	}
+	if archived {
+		return ErrExamFrozen
+	}
 	current, err := scanRubricDraftJob(tx.QueryRowContext(ctx, `SELECT `+rubricDraftJobColumns+` FROM question_rubric_draft_job WHERE tenant_id=$1 AND id=$2 AND lease_token=$3 AND lease_until>now() AND status IN ('running','cancelling') FOR UPDATE`, record.TenantID, record.Job.ID, record.LeaseToken))
 	if errors.Is(err, ErrNotFound) {
 		return ErrConflict
@@ -192,6 +261,21 @@ func (s *PostgresStore) finishRubricDraftJob(ctx context.Context, record rubricD
 }
 
 func (s *PostgresStore) staleRubricDraftJob(ctx context.Context, tenantID, actorID, examID, id string) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE question_rubric_draft_job SET status='stale',payload=jsonb_set(jsonb_set(payload,'{Job,result}','null'::jsonb),'{Job,error}',to_jsonb('题目、答案、细则或模型已变更，请重新生成'::text)),updated_at=now() WHERE tenant_id=$1 AND actor_id=$2 AND exam_id=$3 AND id=$4 AND status='succeeded'`, tenantID, actorID, examID, id)
-	return err
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, archived, err := lockRubricDraftExamTx(ctx, tx, tenantID, examID)
+	if err != nil {
+		return err
+	}
+	if archived {
+		return tx.Commit()
+	}
+	_, err = tx.ExecContext(ctx, `UPDATE question_rubric_draft_job SET status='stale',payload=jsonb_set(jsonb_set(payload,'{Job,result}','null'::jsonb),'{Job,error}',to_jsonb('题目、答案、细则或模型已变更，请重新生成'::text)),updated_at=now() WHERE tenant_id=$1 AND actor_id=$2 AND exam_id=$3 AND id=$4 AND status='succeeded'`, tenantID, actorID, examID, id)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
