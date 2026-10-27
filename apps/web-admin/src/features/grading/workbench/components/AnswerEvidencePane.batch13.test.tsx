@@ -57,7 +57,7 @@ describe("AnswerEvidencePane batch13 rendering", () => {
   });
 
   it.each([
-    ["image/png", "svg image", "href", "blob:answer-file"],
+    ["image/png", "img", "src", "blob:answer-file"],
     ["application/pdf", "iframe", "title", "答卷 PDF"],
     ["text/plain", "a[download]", "download", "答卷文件"]
   ])("%s 保留原生查看区域及文件预览边界", (contentType, selector, attribute, fallback) => {
@@ -78,15 +78,15 @@ describe("AnswerEvidencePane batch13 rendering", () => {
   });
 
   it("分段引用同一张原图并保留旋转和平移，PDF 继续使用 transform scale", () => {
-    const image = renderPane({ dragging: true });
+    const image = renderPane({ dragging: true, imageSize: { width: 100, height: 800 } });
     expect(image.querySelector(".answer-reading-tiles")?.getAttribute("style")).toContain("translate(7px, -3px)");
     const parts = image.querySelectorAll("svg image");
     expect(parts.length).toBeGreaterThan(0);
     for (const part of parts) {
       expect(part.getAttribute("href")).toBe(imagePreview.url);
       expect(part.getAttribute("width")).toBe("100");
-      expect(part.getAttribute("height")).toBe("80");
-      expect(part.parentElement?.getAttribute("transform")).toBe("translate(80 0) rotate(90)");
+      expect(part.getAttribute("height")).toBe("800");
+      expect(part.parentElement?.getAttribute("transform")).toBe("translate(800 0) rotate(90)");
     }
     expect(image.querySelector(".answer-viewer")?.classList.contains("dragging")).toBe(true);
     const pdf = renderPane({ preview: { url: "blob:answer-pdf", contentType: "application/pdf", filename: "answer.pdf" } });
@@ -118,9 +118,9 @@ describe("AnswerEvidencePane batch13 rendering", () => {
   });
 
   it("数学框仅覆盖当前答题区域图片，定位提示仍允许当前区域的 PDF", () => {
-    const image = renderPane({ mathSelection });
+    const image = renderPane({ mathSelection, imageSize: { width: 100, height: 800 } });
     const highlight = image.querySelector(".answer-reading-highlight")!;
-    expect([highlight.getAttribute("x"), highlight.getAttribute("y"), highlight.getAttribute("width"), highlight.getAttribute("height")]).toEqual(["10", "16", "30", "32"]);
+    expect([highlight.getAttribute("x"), highlight.getAttribute("y"), highlight.getAttribute("width"), highlight.getAttribute("height")]).toEqual(["10", "160", "30", "320"]);
     expect(highlight.getAttribute("aria-label")).toBe("步骤 S1 的答题位置");
     const status = image.querySelector<HTMLOutputElement>("output.math-image-selection")!;
     expect(status.textContent).toBe("已定位 S1 · 代入公式");

@@ -7,6 +7,8 @@ export interface ImageReadingLayoutInput {
   viewportWidth: number;
   viewportHeight: number;
   gap?: number;
+  // 每段标题占用的 CSS 高度；横向长图竖排时每一行都要扣除。
+  captionHeight?: number;
 }
 
 export interface ImageReadingTile {
@@ -22,8 +24,6 @@ export interface ImageReadingLayout {
   tiles: ImageReadingTile[];
   columns: number;
   rows: number;
-  perGroup: number;
-  groupCount: number;
   scale: number;
   overlap: number;
   gap: number;
@@ -48,6 +48,7 @@ const isPositiveFinite = (value: number) => Number.isFinite(value) && value > 0;
 export function planImageReadingLayout(input: ImageReadingLayoutInput): ImageReadingLayout {
   const { imageWidth, imageHeight, viewportWidth, viewportHeight } = input;
   const gap = input.gap !== undefined && Number.isFinite(input.gap) && input.gap >= 0 ? input.gap : DEFAULT_GAP;
+  const captionHeight = input.captionHeight !== undefined && Number.isFinite(input.captionHeight) && input.captionHeight >= 0 ? input.captionHeight : 0;
   const validImage = isPositiveFinite(imageWidth) && isPositiveFinite(imageHeight);
   const validViewport = isPositiveFinite(viewportWidth) && isPositiveFinite(viewportHeight);
   const wholeScale = validImage && validViewport
@@ -58,8 +59,6 @@ export function planImageReadingLayout(input: ImageReadingLayoutInput): ImageRea
     tiles: validImage ? [{ index: 0, x: 0, y: 0, width: imageWidth, height: imageHeight }] : [],
     columns: 1,
     rows: 1,
-    perGroup: 1,
-    groupCount: validImage ? 1 : 0,
     scale: wholeScale,
     overlap: OVERLAP,
     gap,
@@ -79,39 +78,32 @@ export function planImageReadingLayout(input: ImageReadingLayoutInput): ImageRea
   const vertical = logAspectMismatch > 0;
   const sourceLength = vertical ? imageHeight : imageWidth;
   const sourceCross = vertical ? imageWidth : imageHeight;
-  const viewportLength = vertical ? viewportHeight : viewportWidth;
+  const viewportLength = vertical ? viewportHeight - captionHeight : viewportWidth;
   const viewportCross = vertical ? viewportWidth : viewportHeight;
-  const targetCrossSize = vertical ? 640 : 300;
-  let slots = Math.max(1, Math.min(3, Math.round(viewportCross / targetCrossSize)));
+  if (viewportLength <= 0) return whole;
 
-  // 分成过多列/行可能比整图 contain 更小；逐档下调，只有正文能放大时才采用该档。
-  while (slots > 1) {
-    const candidateCross = (viewportCross - (slots - 1) * gap) / slots;
-    const logScaleGain = Math.abs(logAspectMismatch) + Math.log(candidateCross) - Math.log(viewportCross);
-    if (candidateCross > 0 && logScaleGain > 1e-9) break;
-    slots -= 1;
+  // 所有段必须同时放进一个画布。按完整覆盖反推段长，再选正文缩放最大的段数，不能先定列宽再分页。
+  // n 段各重叠 10% 时，总覆盖长度 = 单段长度 × [1 + (n - 1) × 0.9]。
+  let count = 1, scale = wholeScale;
+  for (let candidate = 2; candidate <= MAX_TILES; candidate += 1) {
+    const availableCross = viewportCross - (candidate - 1) * gap - (vertical ? 0 : candidate * captionHeight);
+    if (availableCross <= 0) break;
+    const crossScale = availableCross / candidate / sourceCross;
+    const candidateLength = sourceLength / (1 + (candidate - 1) * (1 - OVERLAP));
+    const lengthScale = viewportLength / candidateLength;
+    const candidateScale = Math.min(crossScale, lengthScale);
+    if (candidateScale > scale * (1 + 1e-9)) { count = candidate; scale = candidateScale; }
+    // 横向可用宽度随段数递减、段长限制随段数放宽；交点之后不会出现更大的缩放比例。
+    if (crossScale <= lengthScale) break;
   }
-
-  const cellCross = (viewportCross - (slots - 1) * gap) / slots;
-  const desiredLogFraction = Math.log(sourceCross) - Math.log(sourceLength)
-    + Math.log(viewportLength) - Math.log(cellCross);
-  if (desiredLogFraction >= 0) return whole;
-
-  // 极长图增大单段覆盖范围来限制计划大小，不能简单截断数组而丢掉尾部内容。
-  // 最小占比仍按每段 10% 重叠推导；只有超出 4096 段的极端输入才会缩小显示比例。
-  const minimumFraction = 1 / (1 + (MAX_TILES - 1) * (1 - OVERLAP));
-  const fraction = Math.max(minimumFraction, Math.exp(desiredLogFraction));
-  const tileLength = sourceLength * fraction;
-  const count = Math.max(2, Math.min(MAX_TILES,
-    Math.ceil((1 / fraction - 1) / (1 - OVERLAP) - 1e-10) + 1,
-  ));
+  if (count === 1) return whole;
+  const tileLength = sourceLength / (1 + (count - 1) * (1 - OVERLAP));
   const step = tileLength * (1 - OVERLAP);
   const finalStart = sourceLength - tileLength;
   const tileWidth = vertical ? imageWidth : tileLength;
   const tileHeight = vertical ? tileLength : imageHeight;
-  const scale = Math.min(cellCross / sourceCross, viewportLength / tileLength);
   const tiles = Array.from({ length: count }, (_, index): ImageReadingTile => {
-    // 末段保持完整段长并贴齐原图尾端，避免不足一段的尾片被额外留白或漏读。
+    // 最后一段贴齐原图尾端，消除浮点累积误差；段长已由完整覆盖推导，不再额外制造尾片。
     const start = index === count - 1 ? finalStart : Math.min(index * step, finalStart);
     return { index, x: vertical ? 0 : start, y: vertical ? start : 0, width: tileWidth, height: tileHeight };
   });
@@ -119,10 +111,8 @@ export function planImageReadingLayout(input: ImageReadingLayoutInput): ImageRea
   return {
     axis: vertical ? "vertical" : "horizontal",
     tiles,
-    columns: vertical ? slots : 1,
-    rows: vertical ? 1 : slots,
-    perGroup: slots,
-    groupCount: Math.ceil(count / slots),
+    columns: vertical ? count : 1,
+    rows: vertical ? 1 : count,
     scale,
     overlap: OVERLAP,
     gap,

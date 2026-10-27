@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Button, Segmented, Space, Tooltip } from "antd";
-import { ArrowLeft, ArrowRight, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { planImageReadingLayout } from "../imageReadingLayout";
 import type { AnswerEvidencePaneProps } from "./AnswerEvidencePane";
 import "./answer-image-reading.css";
@@ -24,7 +24,6 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
   const viewport = useRef<HTMLElement | null>(null);
   const [frame, setFrame] = useState({ width: 800, height: 520 });
   const [layout, setLayout] = useState<"smart" | "whole">("smart");
-  const [group, setGroup] = useState(0);
   const manualSelection = useRef("");
   const selectionKey = mathSelection ? JSON.stringify(mathSelection) : "";
   const attachViewport = useCallback((element: HTMLElement | null) => { viewport.current = element; viewportRef.current = element; }, [viewportRef]);
@@ -36,8 +35,8 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
       if (!width || !height) return;
       // 工具栏在窄窗口可能换行；文档流下按实际顶部位置留出余高，不能继续减固定工具栏高度。
       element.style.setProperty("--answer-viewer-available-height", `${Math.max(240, window.innerHeight - Math.max(0, element.getBoundingClientRect().top) - 8)}px`);
-      // 画布边距和分段标题先扣除；规划器接收的是图片真正可以使用的 CSS 像素。
-      setFrame(current => current.width === width - 16 && current.height === height - 36 ? current : { width: Math.max(1, width - 16), height: Math.max(1, height - 36) });
+      // 这里只扣画布内边距；每段标题由规划器按实际行数扣除。
+      setFrame(current => current.width === width - 16 && current.height === height - 16 ? current : { width: Math.max(1, width - 16), height: Math.max(1, height - 16) });
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -46,23 +45,17 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
     return () => { observer.disconnect(); window.removeEventListener("resize", measure); };
   }, []);
   const oriented = useMemo(() => imageSize ? rotatedImage(imageSize, rotation) : null, [imageSize, rotation]);
-  const plan = useMemo(() => {
-    const input = { imageWidth: oriented?.width ?? 0, imageHeight: oriented?.height ?? 0, viewportWidth: frame.width, viewportHeight: frame.height, gap: 8 };
-    const initial = planImageReadingLayout(input);
-    // 横长图按多行排布，每一行都有标题；先给这些标题留出空间，避免分段后又被迫上下滚动。
-    return initial.axis === "horizontal" && initial.rows > 1 ? planImageReadingLayout({ ...input, viewportHeight: Math.max(1, frame.height - (initial.rows - 1) * 20) }) : initial;
-  }, [oriented, frame]);
+  const plan = useMemo(() => planImageReadingLayout({ imageWidth: oriented?.width ?? 0, imageHeight: oriented?.height ?? 0, viewportWidth: frame.width, viewportHeight: frame.height, gap: 8, captionHeight: 20 }), [oriented, frame]);
   const segmented = layout === "smart" && plan.tiles.length > 1;
-  const lastGroup = Math.max(0, plan.groupCount - 1), activeGroup = Math.min(group, lastGroup);
-  const tiles = plan.tiles.slice(activeGroup * plan.perGroup, (activeGroup + 1) * plan.perGroup);
-  const wholeFit = oriented ? Math.min(4, Math.max(.1, Math.min((frame.width - 16) / oriented.width, (frame.height + 4) / oriented.height))) : 1;
+  const tiles = plan.tiles;
+  const wholeFit = oriented ? Math.min(4, Math.max(.1, Math.min((frame.width - 16) / oriented.width, (frame.height - 16) / oriented.height))) : 1;
   const relativeZoom = autoFit ? 1 : scale / wholeFit;
   const tileScale = plan.scale * relativeZoom;
   const displayedScale = segmented ? tileScale : scale;
 
   useEffect(() => {
     if (!mathSelection) { manualSelection.current = ""; return; }
-    // 教师明确翻组或重置后，旧步骤不能再次覆盖阅读位置；新选中的步骤仍可自动定位。
+    // 重置后旧步骤不能覆盖阅读位置；新选中的步骤在放大后仍可定位到对应分段。
     if (manualSelection.current === selectionKey) return;
     if (!mathSelection || !imageSize || !oriented || !segmented) return;
     const x = (mathSelection.bbox.x + mathSelection.bbox.width / 2) * imageSize.width;
@@ -70,12 +63,16 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
     const point = oriented.angle === 90 ? { x: imageSize.height - y, y: x } : oriented.angle === 180 ? { x: imageSize.width - x, y: imageSize.height - y }
       : oriented.angle === 270 ? { x: y, y: imageSize.width - x } : { x, y };
     const index = plan.tiles.findIndex(tile => point.x >= tile.x && point.x <= tile.x + tile.width && point.y >= tile.y && point.y <= tile.y + tile.height);
-    if (index >= 0) setGroup(Math.floor(index / plan.perGroup));
+    const tile = viewport.current?.querySelectorAll<HTMLElement>(".answer-reading-tile")[index];
+    if (tile && viewport.current) {
+      const bounds = tile.getBoundingClientRect(), visible = viewport.current.getBoundingClientRect();
+      if (bounds.left >= visible.left && bounds.right <= visible.right && bounds.top >= visible.top && bounds.bottom <= visible.bottom) return;
+      viewport.current.scrollTo?.({ left: Math.max(0, viewport.current.scrollLeft + bounds.left - visible.left - 8), top: Math.max(0, viewport.current.scrollTop + bounds.top - visible.top - 8) });
+    }
   }, [mathSelection, selectionKey, imageSize, oriented, plan, segmented]);
 
-  const changeGroup = (next: number) => { manualSelection.current = selectionKey; setGroup(Math.max(0, Math.min(lastGroup, next))); onFit(); viewport.current?.scrollTo?.({ top: 0, left: 0 }); };
-  const changeLayout = (next: "smart" | "whole") => { manualSelection.current = selectionKey; setLayout(next); setGroup(0); onFit(); };
-  const resetView = () => { manualSelection.current = selectionKey; setLayout("smart"); setGroup(0); (props.onResetView ?? onFit)(); viewport.current?.scrollTo?.({ top: 0, left: 0 }); };
+  const changeLayout = (next: "smart" | "whole") => { manualSelection.current = selectionKey; setLayout(next); onFit(); viewport.current?.scrollTo?.({ top: 0, left: 0 }); };
+  const resetView = () => { manualSelection.current = selectionKey; setLayout("smart"); (props.onResetView ?? onFit)(); viewport.current?.scrollTo?.({ top: 0, left: 0 }); };
   const imageStyle: CSSProperties | undefined = imageSize ? { width: imageSize.width * scale, height: imageSize.height * scale } : undefined;
   return <div className="answer-image-reading">
     <div className="answer-reading-toolbar">
@@ -87,11 +84,7 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
         <Button size="small" icon={<ZoomIn size={15} />} aria-label="放大答题图" onClick={() => onZoom(1)} />
         <Button size="small" icon={<RotateCcw size={15} />} onClick={resetView}>重置视图</Button>
       </Space>
-      {segmented ? <Space size={6}><span className="answer-reading-count">第 {tiles[0].index + 1}{tiles.length > 1 ? `–${tiles[tiles.length - 1].index + 1}` : ""} 段 / 共 {plan.tiles.length} 段</span>{plan.groupCount > 1 ? <>
-        <Button size="small" icon={<ArrowLeft size={14} />} disabled={activeGroup === 0} onClick={() => changeGroup(activeGroup - 1)}>上一组</Button>
-        <output aria-live="polite">{activeGroup + 1} / {plan.groupCount}</output>
-        <Button size="small" icon={<ArrowRight size={14} />} disabled={activeGroup === lastGroup} onClick={() => changeGroup(activeGroup + 1)}>下一组</Button>
-      </> : null}</Space> : null}
+      {segmented ? <span className="answer-reading-count">共 {tiles.length} 段 · 全部显示</span> : null}
     </div>
     <section ref={attachViewport} className={`answer-viewer answer-image-viewport${segmented ? " answer-viewer-tiled" : ""}${dragging ? " dragging" : ""}`} aria-label={label} aria-describedby={helpId}
       onPointerDown={props.onPointerDown} onPointerMove={props.onPointerMove} onPointerUp={props.onPointerUp} onPointerCancel={props.onPointerUp}>

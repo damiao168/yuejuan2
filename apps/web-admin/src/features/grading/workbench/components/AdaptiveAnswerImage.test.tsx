@@ -67,7 +67,7 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     const { container } = render(<AdaptiveAnswerImage {...props} />);
     expect(button("智能分段").getAttribute("aria-pressed")).toBe("true");
     expect(container.querySelector(".answer-reading-tiles")?.getAttribute("data-reading-axis")).toBe("vertical");
-    expect(tiles(container)).toHaveLength(3);
+    expect(tiles(container).length).toBeGreaterThan(1);
     expect(tiles(container)[0].querySelector("svg")?.getAttribute("viewBox")?.split(" ").slice(0, 2)).toEqual(["0", "0"]);
     expect(tiles(container)[1].textContent).toContain("与前段有重叠");
     expectOriginalImageWindows(container, props.source);
@@ -75,12 +75,10 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     expect(props.viewportRef.current).toBe(screen.getByRole("region", { name: props.label }));
   });
 
-  it("整图查看使用完整原始地址，重置回到智能阅读第一组并通知父级复位", () => {
+  it("整图查看使用完整原始地址，重置后恢复所有分段并通知父级复位", () => {
     const props = fixture();
     const { container } = render(<AdaptiveAnswerImage {...props} />);
-    const firstGroup = sourceRects(container);
-    fireEvent.click(button("下一组"));
-    expect(sourceRects(container)).not.toEqual(firstGroup);
+    const originalWindows = sourceRects(container);
     fireEvent.click(button("整图查看"));
     expect(container.querySelectorAll("svg image")).toHaveLength(0);
     expect(container.querySelector("img")?.getAttribute("src")).toBe(props.source);
@@ -88,34 +86,23 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     expect(button("整图查看").getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(button("重置视图"));
     expect(button("智能分段").getAttribute("aria-pressed")).toBe("true");
-    expect(sourceRects(container)).toEqual(firstGroup);
-    expect(button("上一组").disabled).toBe(true);
+    expect(sourceRects(container)).toEqual(originalWindows);
     expect(props.onResetView).toHaveBeenCalledOnce();
     expectOriginalImageWindows(container, props.source);
   });
 
-  it("分页只能在现有组之间移动，第一页和最后一页分别禁用越界按钮", () => {
+  it("所有分段一次呈现且首尾完整覆盖，不再保留翻组入口", () => {
     const props = fixture();
     const { container } = render(<AdaptiveAnswerImage {...props} />);
-    const firstGroup = sourceRects(container);
-    expect(button("上一组").disabled).toBe(true);
-    fireEvent.click(button("上一组"));
-    expect(props.onFit).not.toHaveBeenCalled();
-    let transitions = 0;
-    while (!button("下一组").disabled && transitions < 20) {
-      fireEvent.click(button("下一组"));
-      transitions += 1;
-    }
-    expect(transitions).toBeGreaterThan(0);
-    expect(transitions).toBeLessThan(20);
-    expect(button("下一组").disabled).toBe(true);
-    expect(button("上一组").disabled).toBe(false);
-    const lastGroup = sourceRects(container);
-    fireEvent.click(button("下一组"));
-    expect(sourceRects(container)).toEqual(lastGroup);
-    expect(props.onFit).toHaveBeenCalledTimes(transitions);
-    while (!button("上一组").disabled) fireEvent.click(button("上一组"));
-    expect(sourceRects(container)).toEqual(firstGroup);
+    expect(screen.queryByRole("button", { name: "上一组" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "下一组" })).toBeNull();
+    expect(screen.getByText(/全部显示/).textContent).toBe(`共 ${tiles(container).length} 段 · 全部显示`);
+    const windows = tiles(container).map(tile => tile.dataset.sourceRect!.split(",").map(Number));
+    expect(windows[0][1]).toBe(0);
+    const lastWindow = windows[windows.length - 1];
+    expect(lastWindow[1] + lastWindow[3]).toBeCloseTo(6000);
+    windows.slice(1).forEach((window, index) => expect(window[1]).toBeLessThan(windows[index][1] + windows[index][3]));
+    expect(container.querySelector<HTMLElement>(".answer-reading-tiles")?.style.gridTemplateColumns).toBe(`repeat(${windows.length}, max-content)`);
     expectOriginalImageWindows(container, props.source);
   });
 
@@ -127,7 +114,7 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     fireEvent.load(image);
     expect(props.onImageLoad).toHaveBeenCalledExactlyOnceWith({ width: 600, height: 6000 });
     rerender(<AdaptiveAnswerImage {...props} imageSize={{ width: 600, height: 6000 }} />);
-    expect(tiles(container)).toHaveLength(3);
+    expect(tiles(container).length).toBeGreaterThan(1);
     expectOriginalImageWindows(container, props.source);
   });
 
@@ -137,7 +124,7 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     const grid = container.querySelector<HTMLElement>(".answer-reading-tiles")!;
     expect(grid.getAttribute("data-reading-axis")).toBe("horizontal");
     expect(grid.style.gridTemplateColumns).toBe("repeat(1, max-content)");
-    expect(tiles(container)).toHaveLength(3);
+    expect(tiles(container).length).toBeGreaterThan(1);
     const windows = tiles(container).map(tile => tile.dataset.sourceRect!.split(",").map(Number));
     expect(windows[1][0]).toBeGreaterThan(windows[0][0]);
     windows.forEach(window => { expect(window[1]).toBe(0); expect(window[3]).toBe(600); });
@@ -148,11 +135,12 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     const props = fixture();
     const { container, unmount } = render(<AdaptiveAnswerImage {...props} />);
     const firstWindows = sourceRects(container);
-    expect(tiles(container)).toHaveLength(3);
+    const initialCount = tiles(container).length;
+    expect(initialCount).toBeGreaterThan(1);
     expect(observers[0].observe).toHaveBeenCalledWith(props.viewportRef.current);
     // 只改变外部可用空间并发出浏览器尺寸事件，保护分段能随窗口重排的交互边界。
     act(() => { viewportSize = { width: 724, height: 948 }; observers[0].trigger(); });
-    expect(tiles(container)).toHaveLength(1);
+    expect(tiles(container).length).toBeLessThan(initialCount);
     expect(sourceRects(container)).not.toEqual(firstWindows.slice(0, 1));
     expectOriginalImageWindows(container, props.source);
     unmount();
@@ -160,13 +148,13 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     expect(props.viewportRef.current).toBeNull();
   });
 
-  it("定位数学步骤会跳到覆盖证据中心的组，标记继续使用原图像素", () => {
+  it("数学步骤直接标记在已显示的分段内，继续使用原图像素", () => {
     const selection = Object.freeze({ segmentId: "segment-1", binding: "artifact:1", stepId: "S2", label: "计算结果", bbox: Object.freeze({ x: .2, y: .78, width: .3, height: .08 }) });
     const props = fixture();
     const { container, rerender } = render(<AdaptiveAnswerImage {...props} />);
     const firstGroup = sourceRects(container);
     rerender(<AdaptiveAnswerImage {...props} mathSelection={selection} />);
-    expect(sourceRects(container)).not.toEqual(firstGroup);
+    expect(sourceRects(container)).toEqual(firstGroup);
     const windows = tiles(container).map(tile => tile.dataset.sourceRect!.split(",").map(Number));
     expect(windows.some(([x, y, width, height]) => 210 >= x && 210 <= x + width && 4920 >= y && 4920 <= y + height)).toBe(true);
     container.querySelectorAll("rect.answer-reading-highlight").forEach(highlight => {
@@ -176,17 +164,17 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     expectOriginalImageWindows(container, props.source);
   });
 
-  it("保留已选数学步骤时，从整图重置仍回到智能第一组", () => {
+  it("保留已选数学步骤时，从整图重置仍恢复全部分段", () => {
     const props = fixture();
     const { container, rerender } = render(<AdaptiveAnswerImage {...props} />);
     const firstGroup = sourceRects(container);
     rerender(<AdaptiveAnswerImage {...props} mathSelection={{ segmentId: "segment-1", binding: "artifact:1", stepId: "S2", label: "计算结果", bbox: { x: .2, y: .78, width: .3, height: .08 } }} />);
-    expect(sourceRects(container)).not.toEqual(firstGroup);
+    expect(sourceRects(container)).toEqual(firstGroup);
     fireEvent.click(button("整图查看"));
-    // 重置是显式阅读操作；保留的旧证据选择不能再次覆盖用户指定的第一组。
+    // 重置只恢复阅读视图；已有步骤仍使用同一套原图坐标。
     fireEvent.click(button("重置视图"));
     expect(sourceRects(container)).toEqual(firstGroup);
-    expect(button("上一组").disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "上一组" })).toBeNull();
     expect(props.onResetView).toHaveBeenCalledOnce();
   });
 

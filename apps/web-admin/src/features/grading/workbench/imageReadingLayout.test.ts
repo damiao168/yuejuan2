@@ -21,17 +21,14 @@ function expectCompleteCoverage(layout: ImageReadingLayout, sourceLength: number
 }
 
 describe("planImageReadingLayout", () => {
-  it("纵长图按画布宽度横排三列，多组分页且正文比整图明显放大", () => {
+  it("纵长图一次横排所有分段，完整覆盖且整体放入画布", () => {
     const layout = planImageReadingLayout({ imageWidth: 600, imageHeight: 6000, viewportWidth: 1800, viewportHeight: 900 });
     expect(layout.axis).toBe("vertical");
-    expect(layout.columns).toBe(3);
+    expect(layout.columns).toBe(layout.tiles.length);
     expect(layout.rows).toBe(1);
-    expect(layout.perGroup).toBe(3);
-    expect(layout.groupCount).toBe(Math.ceil(layout.tiles.length / 3));
-    expect(layout.groupCount).toBeGreaterThan(1);
-    expect(layout.scale).toBeGreaterThan((900 / 6000) * 5);
-    expect(layout.displayWidth * 3 + layout.gap * 2).toBeCloseTo(1800);
-    expect(layout.displayHeight).toBeCloseTo(900);
+    expect(layout.scale).toBeGreaterThan((900 / 6000) * 3);
+    expect(layout.displayWidth * layout.columns + layout.gap * (layout.columns - 1)).toBeLessThanOrEqual(1800);
+    expect(layout.displayHeight).toBeLessThanOrEqual(900);
     expectCompleteCoverage(layout, 6000);
   });
 
@@ -40,9 +37,9 @@ describe("planImageReadingLayout", () => {
     expect(layout.axis).toBe("horizontal");
     expect(layout.columns).toBe(1);
     expect(layout.rows).toBe(3);
-    expect(layout.perGroup).toBe(3);
     expect(layout.scale).toBeGreaterThan(1200 / 7000);
-    expect(layout.displayHeight * 3 + layout.gap * 2).toBeCloseTo(900);
+    expect(layout.rows).toBe(layout.tiles.length);
+    expect(layout.displayHeight * 3 + layout.gap * 2).toBeLessThanOrEqual(900);
     expect(layout.displayWidth).toBeCloseTo(1200);
     expectCompleteCoverage(layout, 7000);
   });
@@ -58,38 +55,39 @@ describe("planImageReadingLayout", () => {
     expect(portrait.scale).toBe(0.5);
   });
 
-  it("同一原图随可用画布从三列重排为一列，并重新计算原图段边界", () => {
+  it("缩窄窗口后重算完整分段，所有列仍留在同一画布", () => {
     const image = { imageWidth: 600, imageHeight: 6000 };
     const wide = planImageReadingLayout({ ...image, viewportWidth: 1800, viewportHeight: 900 });
     const narrow = planImageReadingLayout({ ...image, viewportWidth: 700, viewportHeight: 900 });
-    expect(wide.columns).toBe(3);
-    expect(narrow.columns).toBe(1);
+    expect(wide.columns).toBeGreaterThan(narrow.columns);
+    expect(narrow.columns).toBe(narrow.tiles.length);
     expect(wide.tileHeight).not.toBe(narrow.tileHeight);
-    expect(narrow.displayWidth).toBeCloseTo(700);
+    expect(narrow.displayWidth * narrow.columns + narrow.gap * (narrow.columns - 1)).toBeCloseTo(700);
     expectCompleteCoverage(narrow, image.imageHeight);
   });
 
-  it("目标两列不会放大正文时改为一列分页", () => {
+  it("一组分段不能比整图放大时保留整图，不制造第二组", () => {
     const layout = planImageReadingLayout({ imageWidth: 1000, imageHeight: 1000, viewportWidth: 1400, viewportHeight: 700 });
-    expect(layout.axis).toBe("vertical");
+    expect(layout.axis).toBe("none");
     expect(layout.columns).toBe(1);
-    expect(layout.scale).toBeGreaterThan(0.7);
-    expectCompleteCoverage(layout, 1000);
+    expect(layout.scale).toBe(0.7);
+    expect(layout.tiles).toEqual([{ index: 0, x: 0, y: 0, width: 1000, height: 1000 }]);
   });
 
-  it("末段前移后仍保留完整段长和真实重叠，不生成很小的尾片", () => {
-    const layout = planImageReadingLayout({ imageWidth: 1000, imageHeight: 1910, viewportWidth: 1000, viewportHeight: 1000, gap: 0 });
-    expect(layout.tiles).toHaveLength(3);
-    expect(layout.tiles[1].y).toBeCloseTo(900);
-    expect(layout.tiles[2].y).toBeCloseTo(910);
-    expect(layout.tiles[2].height).toBeCloseTo(1000);
-    expectCompleteCoverage(layout, 1910);
+  it("第18题按完整覆盖反推两段长度，末尾不再额外留一段到下一组", () => {
+    const layout = planImageReadingLayout({ imageWidth: 1119, imageHeight: 2415, viewportWidth: 1520, viewportHeight: 760, captionHeight: 20, gap: 8 });
+    expect(layout.tiles).toHaveLength(2);
+    expect(layout.columns).toBe(2);
+    expect(layout.displayHeight + 20).toBeCloseTo(760);
+    expect(layout.displayWidth * 2 + 8).toBeLessThanOrEqual(1520);
+    expectCompleteCoverage(layout, 2415);
   });
 
   it("极长图限制几何计划段数，同时仍覆盖原图最末端", () => {
     const layout = planImageReadingLayout({ imageWidth: 100, imageHeight: 1e12, viewportWidth: 1800, viewportHeight: 900 });
-    expect(layout.tiles).toHaveLength(4096);
-    expect(layout.groupCount).toBe(Math.ceil(4096 / 3));
+    expect(layout.tiles.length).toBeLessThanOrEqual(4096);
+    expect(layout.columns).toBe(layout.tiles.length);
+    expect(layout.displayWidth * layout.columns + layout.gap * (layout.columns - 1)).toBeLessThanOrEqual(1800);
     expect(layout.scale).toBeGreaterThan(0);
     expect(layout.displayHeight).toBeCloseTo(900);
     expectCompleteCoverage(layout, 1e12);
@@ -99,7 +97,6 @@ describe("planImageReadingLayout", () => {
     const layout = planImageReadingLayout({ imageWidth, imageHeight: 1000, viewportWidth: 800, viewportHeight: 600 });
     expect(layout.axis).toBe("none");
     expect(layout.tiles).toEqual([]);
-    expect(layout.groupCount).toBe(0);
     expect(layout.scale).toBe(1);
     expect(layout.displayWidth).toBe(0);
   });
@@ -115,7 +112,15 @@ describe("planImageReadingLayout", () => {
   it("过大间距下调到能放入画布的列数", () => {
     const layout = planImageReadingLayout({ imageWidth: 600, imageHeight: 6000, viewportWidth: 1800, viewportHeight: 900, gap: 2000 });
     expect(layout.columns).toBe(1);
-    expect(layout.displayWidth).toBeCloseTo(1800);
-    expectCompleteCoverage(layout, 6000);
+    expect(layout.axis).toBe("none");
+    expect(layout.tiles).toEqual([{ index: 0, x: 0, y: 0, width: 600, height: 6000 }]);
+  });
+
+  it("横长图每行标题都计入高度，所有分段无需翻组", () => {
+    const layout = planImageReadingLayout({ imageWidth: 18000, imageHeight: 600, viewportWidth: 1800, viewportHeight: 900, captionHeight: 20, gap: 8 });
+    expect(layout.axis).toBe("horizontal");
+    expect(layout.rows).toBe(layout.tiles.length);
+    expect(layout.displayHeight * layout.rows + 20 * layout.rows + 8 * (layout.rows - 1)).toBeLessThanOrEqual(900);
+    expectCompleteCoverage(layout, 18000);
   });
 });
