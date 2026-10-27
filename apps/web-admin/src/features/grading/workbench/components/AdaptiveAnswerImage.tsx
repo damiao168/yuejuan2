@@ -3,10 +3,12 @@ import { Button, Segmented, Space, Tooltip } from "antd";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { planImageReadingLayout } from "../imageReadingLayout";
 import type { AnswerEvidencePaneProps } from "./AnswerEvidencePane";
+import type { ReviewAnnotationCanvasControls } from "../../../../components/features/review-annotation";
+import { AnswerImageAnnotationLayer } from "./AnswerImageAnnotationLayer";
 import "./answer-image-reading.css";
 
 type Props = Pick<AnswerEvidencePaneProps, "scale" | "autoFit" | "imageSize" | "rotation" | "offset" | "dragging" | "viewportRef" | "onZoom" | "onFit" | "onPointerDown" | "onPointerMove" | "onPointerUp" | "onImageLoad" | "mathSelection"> & {
-  source: string; label: string; helpId: string; onResetView?: () => void; controls?: ReactNode;
+  source: string; label: string; helpId: string; onResetView?: () => void; controls?: ReactNode; annotations?: ReviewAnnotationCanvasControls;
 };
 
 function rotatedImage(size: NonNullable<Props["imageSize"]>, rotation: number) {
@@ -94,11 +96,15 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
           <svg role="img" aria-label={`第 ${tile.index + 1} 段 · ${label}`} width={tile.width * tileScale} height={tile.height * tileScale} viewBox={`${tile.x} ${tile.y} ${tile.width} ${tile.height}`}>
             <g transform={oriented.transform}><image href={source} width={imageSize.width} height={imageSize.height} />
               {mathSelection ? <rect className="answer-reading-highlight" role="img" aria-label={`步骤 ${mathSelection.stepId} 的答题位置`} x={mathSelection.bbox.x * imageSize.width} y={mathSelection.bbox.y * imageSize.height} width={mathSelection.bbox.width * imageSize.width} height={mathSelection.bbox.height * imageSize.height}><title>{mathSelection.stepId}</title></rect> : null}
+              {props.annotations ? <AnswerImageAnnotationLayer controls={props.annotations} imageSize={imageSize} scale={tileScale} /> : null}
             </g>
           </svg>
         </figure>)}
       </div> : <div className="answer-viewer-stage image-stage" style={{ transform: `translate(${offset.x}px, ${offset.y}px) rotate(${rotation}deg)`, ...imageStyle }}>
         <img src={source} alt={label.replace("查看区", "")} onLoad={event => onImageLoad({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} />
+        {props.annotations && imageSize ? <svg className="answer-image-annotation-overlay" viewBox={`0 0 ${imageSize.width} ${imageSize.height}`}>
+          <AnswerImageAnnotationLayer controls={props.annotations} imageSize={imageSize} scale={scale} />
+        </svg> : null}
         {mathSelection ? <span className="math-step-highlight" role="img" aria-label={`步骤 ${mathSelection.stepId} 的答题位置`} style={{ left: `${mathSelection.bbox.x * 100}%`, top: `${mathSelection.bbox.y * 100}%`, width: `${mathSelection.bbox.width * 100}%`, height: `${mathSelection.bbox.height * 100}%` }}><span>{mathSelection.stepId}</span></span> : null}
       </div>}
     </section>

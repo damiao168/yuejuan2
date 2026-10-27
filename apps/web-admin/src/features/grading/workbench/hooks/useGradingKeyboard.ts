@@ -44,7 +44,8 @@ export function useGradingKeyboard(options: UseGradingKeyboardOptions) {
         && !event.target.disabled && !event.target.readOnly;
       const preferenceToggle = event.target instanceof HTMLInputElement && event.target.dataset.gradingShortcutsToggle === "true";
       // 答卷详情抽屉本身承载评分；只放行它内部的按键，其它弹层仍隔离后台评分操作。
-      const blocked = Array.from(document.querySelectorAll('.ant-modal-wrap:not([style*="display: none"]), .ant-drawer-open, .ant-popover:not(.ant-popover-hidden)')).some((overlay) =>
+      // 内嵌批注期间评分栏已收起，数字和快捷键不能改写背后的评分草稿。
+      const blocked = Array.from(document.querySelectorAll('.ant-modal-wrap:not([style*="display: none"]), .ant-drawer-open, .ant-popover:not(.ant-popover-hidden), .review-annotation-workspace--editing')).some((overlay) =>
         !(overlay.matches(".ant-drawer-open") && overlay.querySelector(".grading-inspection-drawer .score-panel") && event.target instanceof Node && overlay.contains(event.target)));
       // 输入法组合、弹层和控件已消费的事件仍优先，不能因分数框例外而误交评分。
       const intent = gradingShortcutIntent({

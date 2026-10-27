@@ -3,9 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
+import type { ReviewAnnotationWorkspaceProps } from "../../../../components/features/review-annotation";
 import { AnswerEvidencePane, type AnswerEvidencePaneProps } from "./AnswerEvidencePane";
 
-vi.mock("../../../../components/features/review-annotation", () => ({ ReviewAnnotationWorkspace: () => <input aria-label="批注测试输入" /> }));
+vi.mock("../../../../components/features/review-annotation", () => ({ ReviewAnnotationWorkspace: ({ renderCanvas, editing }: ReviewAnnotationWorkspaceProps) => <>
+  {renderCanvas?.({ tool: "select", annotations: [], disabled: !editing, onPointerDown: () => undefined, onPointerUp: () => undefined, onSelect: () => undefined })}
+  <input aria-label="批注测试输入" hidden={!editing} />
+</> }));
 vi.mock("./GradingMathMarkdown", () => ({ GradingMathMarkdown: ({ children, className }: { children: string; className?: string }) => <div className={className} data-grading-math="true">{children}</div> }));
 
 const context = {
@@ -36,23 +40,24 @@ function ocrResult(id: string, text: string, bbox: number[]): WorkbenchContext["
 }
 
 describe("AnswerEvidencePane batch13 rendering", () => {
-  it("批注入口打开独立弹窗，关闭后恢复主页面且重新打开保留输入", async () => {
+  it("批注直接复用分段图，结束批注后重新开启仍保留输入且不创建弹窗", () => {
     const onChangeViewerMode = vi.fn();
-    render(<AnswerEvidencePane {...baseProps} context={{ ...context, segmentImageUrl: "/answer.png" }} viewerMode="ocr" preview={null} onChangeViewerMode={onChangeViewerMode} />);
+    vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+    render(<AnswerEvidencePane {...baseProps} context={{ ...context, segmentImageUrl: "/answer.png" }} onChangeViewerMode={onChangeViewerMode} />);
     try {
+      const originalImage = document.querySelector(".image-stage img");
       expect(screen.queryByRole("dialog")).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "批注与评语" }));
-      const dialog = await screen.findByRole("dialog");
-      expect(dialog.closest(".answer-panel")).toBeNull();
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(document.querySelector(".image-stage img")).toBe(originalImage);
       const input = screen.getByRole<HTMLInputElement>("textbox", { name: "批注测试输入" });
       fireEvent.change(input, { target: { value: "尚未保存的批注" } });
-      fireEvent.click(screen.getByRole("button", { name: "关闭批注与评语" }));
-      await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      fireEvent.click(screen.getByRole("button", { name: "结束批注" }));
+      expect(screen.queryByRole("textbox", { name: "批注测试输入" })).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "批注与评语" }));
-      await screen.findByRole("dialog");
       expect(screen.getByRole<HTMLInputElement>("textbox", { name: "批注测试输入" }).value).toBe("尚未保存的批注");
       expect(onChangeViewerMode).not.toHaveBeenCalled();
-    } finally { cleanup(); }
+    } finally { cleanup(); vi.unstubAllGlobals(); }
   });
   it("共区模板显示整区/单题切换并明确当前录入题号", () => {
     const grouped = renderPane({ viewerMode: "group", context: { ...context, gradingGroupImageUrl: "/shared" }, mathSelection });

@@ -1,9 +1,9 @@
 import { useEffect, useId, useState, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
-import { Alert, Button, Modal, Segmented, Space, Tooltip } from "antd";
+import { Alert, Button, Segmented, Space, Tooltip } from "antd";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import type { RubricPoint } from "../../../../api/papers";
 import { EmptyState, LoadingState } from "../../../../components/PageState";
-import { ReviewAnnotationWorkspace } from "../../../../components/features/review-annotation";
+import { ReviewAnnotationWorkspace, type ReviewAnnotationCanvasControls } from "../../../../components/features/review-annotation";
 import { pointLabel } from "../gradingWorkbench.model";
 import type { PreviewState, ViewerMode, WorkbenchContext } from "../gradingWorkbench.types";
 import type { MathStepSelection } from "../mathWorkbenchEvidence";
@@ -68,7 +68,7 @@ export function AnswerEvidencePane({
   const viewerHelpId = useId();
   const [annotationOpen, setAnnotationOpen] = useState(false);
   const canAnnotate = context.answerScope !== "grading_group" && Boolean(context.segmentImageUrl);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 切题是弹窗生命周期的边界，必须关闭上一题的弹窗。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 切题后回到普通阅读，不能把上一题的绘制工具带入下一份。
   useEffect(() => { setAnnotationOpen(false); }, [context.task.id]);
   const controls = <Space size={6} wrap>
     <Segmented<ViewerMode> size="small" value={viewerMode} options={[
@@ -88,17 +88,23 @@ export function AnswerEvidencePane({
       </Space><p id={viewerHelpId} className="muted">聚焦“键盘平移”按钮后，放大时可用方向键平移，Shift + 方向键加速，Home 适配窗口，Esc 结束拖拽。</p>
       {context.task.anonymous_code ? <p className="muted">答卷标识：{context.task.anonymous_code}</p> : null}</div>
     </details>
-    {canAnnotate ? <Button size="small" onClick={() => setAnnotationOpen(true)}>批注与评语</Button> : null}
+    {canAnnotate ? <Button size="small" aria-pressed={annotationOpen} onClick={() => { setAnnotationOpen(value => !value); if (viewerMode !== "segment") onChangeViewerMode("segment"); }}>{annotationOpen ? "结束批注" : "批注与评语"}</Button> : null}
   </Space>;
   const viewer = () => {
     if (previewLoading) return <LoadingState label="正在读取答卷页面" />;
     if (viewerMode !== "ocr" && !preview) return <EmptyState title="暂无答卷页面" description="当前任务没有可下载的页面文件。" />;
     const isImage = Boolean(preview?.contentType.startsWith("image/"));
-    if (isImage && viewerMode !== "ocr") return <AdaptiveAnswerImage key={`${context.task.id}:${viewerMode}:${preview!.url}`} source={preview!.url}
+    if (isImage && viewerMode !== "ocr") {
+      const imageViewer = (annotations?: ReviewAnnotationCanvasControls) => <AdaptiveAnswerImage key={`${context.task.id}:${viewerMode}:${preview!.url}`} source={preview!.url}
       label={`${context.task.question_no} 答题图查看区`} helpId={viewerHelpId} imageSize={imageSize} scale={scale} autoFit={autoFit} rotation={rotation} offset={offset} dragging={dragging} viewportRef={viewportRef}
       onZoom={onZoom} onFit={onFit} onResetView={onResetView} onImageLoad={onImageLoad} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
-      controls={controls}
+      controls={<>{controls}{annotations?.toolbar}</>} annotations={annotations}
       mathSelection={viewerMode === "segment" && context.answerScope !== "grading_group" && mathSelection?.segmentId === context.task.answer_segment_id ? mathSelection : null} />;
+      // 常驻同一个分段画布与编辑器：切换批注只收放工具，避免重载原图、丢失输入或打开另一套图片。
+      return canAnnotate && viewerMode === "segment" ? <ReviewAnnotationWorkspace key={context.task.id} reviewTaskId={context.task.id} imageUrl={context.segmentImageUrl}
+        imageAlt={`${context.task.question_no} 答题区域`} disabled={!canEditDraft} editing={annotationOpen}
+        rubricCriteria={rubricPoints.map(point => ({ id: point.id, label: pointLabel(point) }))} renderCanvas={imageViewer} /> : imageViewer();
+    }
     // 图片通过实际宽高缩放，让百分比证据框同步缩放；其他预览才使用 transform 的 scale。
     const viewerTransform = isImage
       ? `translate(${offset.x}px, ${offset.y}px) rotate(${rotation}deg)`
@@ -131,20 +137,12 @@ export function AnswerEvidencePane({
   };
 
   return (
-    <section className="answer-panel">
+    <section className={`answer-panel${annotationOpen && viewerMode === "segment" ? " answer-panel--annotating" : ""}`}>
       {!preview?.contentType.startsWith("image/") || viewerMode === "ocr" || previewLoading ? <div className="answer-reading-toolbar"><Space size={6} wrap>{controls}</Space></div> : null}
       {viewerMode === "group" ? <p className="muted">正在查看整区，当前录入第 {context.task.question_no} 题得分。</p> : null}
       {context.answerScope === "grading_group" ? <p className="muted">此题使用人工确认的整区作答图，尚无单题框；各题仍分别计分。</p> : null}
       {mathSelection?.segmentId === context.task.answer_segment_id && viewerMode === "segment" ? <output className="math-image-selection" style={{ display: "block" }}>已定位 {mathSelection.stepId} · {mathSelection.label}</output> : null}
       {viewer()}
-      {/* 弹窗挂到页面顶层，避开答题图的裁切和缩放；关闭只隐藏，保留当前题尚未保存的批注输入。 */}
-      <Modal title="批注与评语" className="grading-annotation-modal" width="min(1440px, 96vw)" open={annotationOpen && canAnnotate}
-        onCancel={() => setAnnotationOpen(false)} maskClosable={false} destroyOnHidden={false}
-        styles={{ body: { height: "min(720px, calc(100dvh - 150px))", overflow: "auto" } }}
-        footer={<Button aria-label="关闭批注与评语" onClick={() => setAnnotationOpen(false)}>关闭</Button>}>
-        {canAnnotate ? <ReviewAnnotationWorkspace key={context.task.id} reviewTaskId={context.task.id} imageUrl={context.segmentImageUrl}
-          imageAlt={`${context.task.question_no} 答题区域`} disabled={!canEditDraft} rubricCriteria={rubricPoints.map(point => ({ id: point.id, label: pointLabel(point) }))} /> : null}
-      </Modal>
     </section>
   );
 }
