@@ -1,5 +1,5 @@
-import { useId, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
-import { Alert, Button, Segmented, Space, Tooltip } from "antd";
+import { useEffect, useId, useState, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
+import { Alert, Button, Modal, Segmented, Space, Tooltip } from "antd";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import type { RubricPoint } from "../../../../api/papers";
 import { EmptyState, LoadingState } from "../../../../components/PageState";
@@ -66,6 +66,10 @@ export function AnswerEvidencePane({
   mathSelection
 }: Readonly<AnswerEvidencePaneProps>) {
   const viewerHelpId = useId();
+  const [annotationOpen, setAnnotationOpen] = useState(false);
+  const canAnnotate = context.answerScope !== "grading_group" && Boolean(context.segmentImageUrl);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 切题是弹窗生命周期的边界，必须关闭上一题的弹窗。
+  useEffect(() => { setAnnotationOpen(false); }, [context.task.id]);
   const controls = <Space size={6} wrap>
     <Segmented<ViewerMode> size="small" value={viewerMode} options={[
       ...(context.gradingGroupImageUrl ? [{ label: "整区", value: "group" as const }] : []),
@@ -84,11 +88,7 @@ export function AnswerEvidencePane({
       </Space><p id={viewerHelpId} className="muted">聚焦“键盘平移”按钮后，放大时可用方向键平移，Shift + 方向键加速，Home 适配窗口，Esc 结束拖拽。</p>
       {context.task.anonymous_code ? <p className="muted">答卷标识：{context.task.anonymous_code}</p> : null}</div>
     </details>
-    {context.answerScope !== "grading_group" && context.segmentImageUrl ? <details className="answer-reading-tools answer-reading-annotation" onKeyDown={event => { if (event.key === "Escape") event.currentTarget.open = false; }}>
-      <summary>批注与评语</summary>
-      <div className="answer-reading-tool-popover"><ReviewAnnotationWorkspace key={context.task.id} reviewTaskId={context.task.id} imageUrl={context.segmentImageUrl}
-        imageAlt={`${context.task.question_no} 答题区域`} disabled={!canEditDraft} rubricCriteria={rubricPoints.map(point => ({ id: point.id, label: pointLabel(point) }))} /></div>
-    </details> : null}
+    {canAnnotate ? <Button size="small" onClick={() => setAnnotationOpen(true)}>批注与评语</Button> : null}
   </Space>;
   const viewer = () => {
     if (previewLoading) return <LoadingState label="正在读取答卷页面" />;
@@ -137,6 +137,14 @@ export function AnswerEvidencePane({
       {context.answerScope === "grading_group" ? <p className="muted">此题使用人工确认的整区作答图，尚无单题框；各题仍分别计分。</p> : null}
       {mathSelection?.segmentId === context.task.answer_segment_id && viewerMode === "segment" ? <output className="math-image-selection" style={{ display: "block" }}>已定位 {mathSelection.stepId} · {mathSelection.label}</output> : null}
       {viewer()}
+      {/* 弹窗挂到页面顶层，避开答题图的裁切和缩放；关闭只隐藏，保留当前题尚未保存的批注输入。 */}
+      <Modal title="批注与评语" className="grading-annotation-modal" width="min(1440px, 96vw)" open={annotationOpen && canAnnotate}
+        onCancel={() => setAnnotationOpen(false)} maskClosable={false} destroyOnHidden={false}
+        styles={{ body: { height: "min(720px, calc(100dvh - 150px))", overflow: "auto" } }}
+        footer={<Button aria-label="关闭批注与评语" onClick={() => setAnnotationOpen(false)}>关闭</Button>}>
+        {canAnnotate ? <ReviewAnnotationWorkspace key={context.task.id} reviewTaskId={context.task.id} imageUrl={context.segmentImageUrl}
+          imageAlt={`${context.task.question_no} 答题区域`} disabled={!canEditDraft} rubricCriteria={rubricPoints.map(point => ({ id: point.id, label: pointLabel(point) }))} /> : null}
+      </Modal>
     </section>
   );
 }

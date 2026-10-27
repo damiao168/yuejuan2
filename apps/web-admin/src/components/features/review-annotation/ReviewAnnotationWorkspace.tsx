@@ -358,32 +358,35 @@ export function ReviewAnnotationWorkspace({
       {templateFailure ? <Alert type="error" showIcon message={templateFailure.error} action={<Button loading={applyingTemplate} disabled={!draft || disabled || saving} onClick={() => void insertTemplate(templateFailure.shortcut)}>重试插入评语</Button>} /> : null}
 
       <div className="review-annotation-layout">
-        <section
-          className={`review-annotation-canvas review-annotation-canvas--${disabled ? "select" : tool}`}
-          onPointerDown={startDrawing}
-          onPointerUp={finishDrawing}
-          aria-label={canvasLabel(disabled ? "select" : tool)}
-        >
-          <img ref={imageRef} src={imageUrl} alt={imageAlt} draggable={false} />
-          <div className="review-annotation-overlay">
-            {workspace.annotations.map((annotation) => {
-              const point = annotation.geometry.width === 0 && annotation.geometry.height === 0;
-              return (
-                <button
-                  type="button"
-                  key={annotation.id}
-                  className={`${point ? "review-annotation-mark review-annotation-mark--point" : "review-annotation-mark"}${draft?.current?.id === annotation.id ? " is-selected" : ""}`}
-                  style={geometryStyle(annotation.geometry)}
-                  title={annotation.content}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  disabled={saving}
-                  onClick={() => editDraft(draftFromAnnotation(annotation))}
-                  aria-label={`${disabled ? "查看" : "编辑"}批注：${annotation.content}`}
-                />
-              );
-            })}
-          </div>
-        </section>
+        {/* 只限制外层滚动高度；画布与覆盖层保留完整图片高度，归一化坐标才能对准长图。 */}
+        <div className="review-annotation-canvas-scroll">
+          <section
+            className={`review-annotation-canvas review-annotation-canvas--${disabled ? "select" : tool}`}
+            onPointerDown={startDrawing}
+            onPointerUp={finishDrawing}
+            aria-label={canvasLabel(disabled ? "select" : tool)}
+          >
+            <img ref={imageRef} src={imageUrl} alt={imageAlt} draggable={false} />
+            <div className="review-annotation-overlay">
+              {workspace.annotations.map((annotation) => {
+                const point = annotation.geometry.width === 0 && annotation.geometry.height === 0;
+                return (
+                  <button
+                    type="button"
+                    key={annotation.id}
+                    className={`${point ? "review-annotation-mark review-annotation-mark--point" : "review-annotation-mark"}${draft?.current?.id === annotation.id ? " is-selected" : ""}`}
+                    style={geometryStyle(annotation.geometry)}
+                    title={annotation.content}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    disabled={saving}
+                    onClick={() => editDraft(draftFromAnnotation(annotation))}
+                    aria-label={`${disabled ? "查看" : "编辑"}批注：${annotation.content}`}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        </div>
 
         <aside className="review-annotation-inspector">
           <AnnotationEditor draft={draft} setDraft={editDraft} annotationCount={workspace.annotations.length} readOnly={disabled} disabled={disabled || saving} saving={saving} rubricCriteria={rubricCriteria} trailingShortcut={trailingShortcut} templates={workspace.templates} templateSuggestions={templateSuggestions} updateGeometry={updateGeometry} insertTemplate={insertTemplate} saveDraft={saveDraft} removeAnnotation={workspace.removeAnnotation} />

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
 import { AnswerEvidencePane, type AnswerEvidencePaneProps } from "./AnswerEvidencePane";
 
-vi.mock("../../../../components/features/review-annotation", () => ({ ReviewAnnotationWorkspace: () => null }));
+vi.mock("../../../../components/features/review-annotation", () => ({ ReviewAnnotationWorkspace: () => <input aria-label="批注测试输入" /> }));
 vi.mock("./GradingMathMarkdown", () => ({ GradingMathMarkdown: ({ children, className }: { children: string; className?: string }) => <div className={className} data-grading-math="true">{children}</div> }));
 
 const context = {
@@ -35,6 +36,24 @@ function ocrResult(id: string, text: string, bbox: number[]): WorkbenchContext["
 }
 
 describe("AnswerEvidencePane batch13 rendering", () => {
+  it("批注入口打开独立弹窗，关闭后恢复主页面且重新打开保留输入", async () => {
+    const onChangeViewerMode = vi.fn();
+    render(<AnswerEvidencePane {...baseProps} context={{ ...context, segmentImageUrl: "/answer.png" }} viewerMode="ocr" preview={null} onChangeViewerMode={onChangeViewerMode} />);
+    try {
+      expect(screen.queryByRole("dialog")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "批注与评语" }));
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog.closest(".answer-panel")).toBeNull();
+      const input = screen.getByRole<HTMLInputElement>("textbox", { name: "批注测试输入" });
+      fireEvent.change(input, { target: { value: "尚未保存的批注" } });
+      fireEvent.click(screen.getByRole("button", { name: "关闭批注与评语" }));
+      await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      fireEvent.click(screen.getByRole("button", { name: "批注与评语" }));
+      await screen.findByRole("dialog");
+      expect(screen.getByRole<HTMLInputElement>("textbox", { name: "批注测试输入" }).value).toBe("尚未保存的批注");
+      expect(onChangeViewerMode).not.toHaveBeenCalled();
+    } finally { cleanup(); }
+  });
   it("共区模板显示整区/单题切换并明确当前录入题号", () => {
     const grouped = renderPane({ viewerMode: "group", context: { ...context, gradingGroupImageUrl: "/shared" }, mathSelection });
     expect(grouped.textContent).toContain("整区");

@@ -23,6 +23,5 @@
 .answer-reading-tools > summary { padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface, #fff); cursor: pointer; white-space: nowrap; }
 .answer-reading-tool-popover { position: absolute; top: calc(100% + 8px); left: 0; z-index: 20; width: min(340px, 85vw); padding: 12px; background: var(--surface, #fff); border: 1px solid var(--border); box-shadow: 0 4px 20px rgb(0 0 0 / 12%); }
 .answer-reading-tool-popover > p:last-child { margin-bottom: 0; }
-/* 批注需要完整编辑画布；展开到工具栏下方，不能再挤占主答题图的布局高度。 */
-.answer-reading-annotation .answer-reading-tool-popover { position: fixed; inset: 100px 12px 12px; width: auto; overflow: auto; z-index: 30; }
+.grading-annotation-modal { top: 16px; max-width: calc(100vw - 24px); padding-bottom: 0; }
 @media (max-width: 700px) { .answer-reading-toolbar { gap: 4px; } }

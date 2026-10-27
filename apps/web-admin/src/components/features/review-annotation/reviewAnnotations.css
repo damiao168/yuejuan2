@@ -165,3 +165,62 @@
 .review-annotation-coordinate-fields legend { font-size: var(--eg-font-caption); }
 .review-annotation-coordinate-fields label { display: grid; gap: var(--eg-space-1); min-width: 0; }
 .review-annotation-coordinate-fields .ant-input-number { width: 100%; }
+
+/* 弹窗内只让图片与编辑区滚动，工具栏保留在上方；其他页面沿用原来的自然高度。 */
+.grading-annotation-modal .review-annotation-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.grading-annotation-modal .review-annotation-toolbar,
+.grading-annotation-modal .review-annotation-workspace > .ant-alert {
+  flex-shrink: 0;
+}
+
+.grading-annotation-modal .review-annotation-layout {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.grading-annotation-modal .review-annotation-canvas-scroll,
+.grading-annotation-modal .review-annotation-inspector {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* 滚动窗口不能成为覆盖层的坐标容器；画布始终随整张图片展开。 */
+.grading-annotation-modal .review-annotation-canvas {
+  overflow: visible;
+}
+
+.grading-annotation-modal .review-annotation-inspector {
+  padding-right: 4px;
+}
+
+@media (max-width: 900px) {
+  .grading-annotation-modal .review-annotation-workspace {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .grading-annotation-modal .review-annotation-layout {
+    flex: none;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+  }
+
+  .grading-annotation-modal .review-annotation-canvas-scroll {
+    max-height: min(420px, 52dvh);
+  }
+
+  .grading-annotation-modal .review-annotation-inspector {
+    overflow: visible;
+  }
+}
