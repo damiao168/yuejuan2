@@ -274,8 +274,15 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
   await page.getByText("三智能体配置", { exact: true }).click();
   await page.getByRole("button", { name: "为 A/B/C 套用当前部署版本" }).click();
   for (const [role, model] of [["主评 A", "deepseek-v4"], ["主评 B", "qwen-vl"], ["仲裁 C", "glm-4.6v"]] as const) {
-    await page.getByRole("combobox", { name: `${role}评分模型` }).press("ArrowDown");
-    await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: model }).click();
+    const modelSelect = page.getByRole("combobox", { name: `${role}评分模型`, exact: true });
+    await modelSelect.press("ArrowDown");
+    const listboxID = await modelSelect.getAttribute("aria-controls");
+    expect(listboxID).toBeTruthy();
+    // 前一角色的下拉退场动画可能仍可见，只能从当前输入关联的列表选择模型。
+    const dropdown = page.locator(".ant-select-dropdown").filter({ has: page.locator(`[id="${listboxID}"]`) });
+    await dropdown.locator(".ant-select-item-option-content", { hasText: model }).click();
+    await expect(modelSelect).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator(".platform-panel-role").filter({ has: modelSelect }).locator(".ant-select-selection-item").filter({ hasText: model })).toBeVisible();
   }
   // 主流程先核对完整的三角色草稿再统一保存；服务端仍逐角色记录原模型与修订。
   await page.getByRole("button", { name: "保存全部更改", exact: true }).click();
