@@ -44,7 +44,9 @@ test("AI 评分路线提交一次启动命令，刷新后沿用服务端进度",
   await expect(plan.locator(".grading-plan-counts")).toContainText("AI 建议");
   await expect(plan.getByText("1 · 作文题")).toBeVisible();
   await expect(plan.getByText("自动识别学生作答并生成建议分，由教师确认最终分数", { exact: true })).toBeVisible();
-  await expect(plan.getByText("单模型评分 · 非三智能体", { exact: true })).toBeVisible();
+  await plan.getByText("已确认 · 单模型评分 · 查看本次方案", { exact: true }).click();
+  await expect(plan.getByText("单模型评分", { exact: true })).toBeVisible();
+  await expect(plan.locator(".grading-ai-plan-summary")).toContainText("使用 学校评分模型");
   await plan.getByRole("button", { name: "按此路线启动" }).click();
   await expect.poll(() => commands.length).toBe(1);
   expect(commands[0].key).toMatch(/^web-[a-f0-9-]{36}$/);

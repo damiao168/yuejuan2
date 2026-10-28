@@ -21,7 +21,7 @@ async function openBackmark(page: Page) {
   await page.goto("/#/admin/exams/exam-1/quality");
   await page.getByRole("button", { name: "创建回标", exact: true }).click();
   const drawer = page.getByRole("dialog", { name: "创建回标批次", exact: true });
-  await expect(drawer.getByText("Q1 · structured_steps", { exact: true })).toBeVisible();
+  await expect(drawer.getByText("Q1 · 分步解答", { exact: true })).toBeVisible();
   return drawer;
 }
 
@@ -57,8 +57,8 @@ test("所有范围字段修改后必须重新预览，第二页阅卷员可分�
   await expect(drawer.getByText("受影响任务", { exact: true })).toHaveCount(0);
   await preview.click();
   await expect(create).toBeEnabled();
-  await drawer.getByText("Q1 · structured_steps", { exact: true }).click();
-  await page.locator(".ant-select-dropdown:visible").getByText("Q2 · structured_steps", { exact: true }).click();
+  await drawer.getByText("Q1 · 分步解答", { exact: true }).click();
+  await page.locator(".ant-select-dropdown:visible").getByText("Q2 · 分步解答", { exact: true }).click();
   await expect(create).toBeDisabled();
   await preview.click();
   await expect(create).toBeEnabled();

@@ -10,13 +10,17 @@ test("subjective batch preserves command and segments across double click and re
   });
   await page.route("**/api/v1/subjective-grading-batch-commands/*", route => route.fulfill({ json: { command_id: route.request().url().split("/").at(-1), status: "not_accepted" } }));
   await page.goto("/#/grading/subjective-batches");
+  await page.getByText("高级输入与诊断编号", { exact: true }).click();
   await page.getByPlaceholder("输入答题片段 ID，使用换行或逗号分隔（最多 1000 个）").fill("segment-original");
-  await page.getByRole("button", { name: "创建批次", exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+  await page.getByRole("button", { name: "创建并开始影子评分", exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
   await expect.poll(() => requests.length).toBe(1);
   await page.reload();
-  await page.getByPlaceholder("输入答题片段 ID，使用换行或逗号分隔（最多 1000 个）").fill("segment-changed");
+  // 原批次尚未确认时禁止替换输入，恢复只能使用首次持久化的片段与命令。
+  await page.getByText("高级输入与诊断编号", { exact: true }).click();
+  await expect(page.getByPlaceholder("输入答题片段 ID，使用换行或逗号分隔（最多 1000 个）")).toBeDisabled();
   await page.getByRole("button", { name: "继续确认原批次" }).click();
   await expect.poll(() => requests.length).toBe(2);
   expect(requests[1]).toEqual(requests[0]);
+  expect(JSON.parse(requests[0].body).segment_ids).toEqual(["segment-original"]);
   expect(JSON.parse(requests[0].body).idempotency_key).toBe(requests[0].key);
 });
