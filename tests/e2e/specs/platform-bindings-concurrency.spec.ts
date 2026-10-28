@@ -40,8 +40,8 @@ test("角色配置冲突保留所有草稿，明确刷新核对后才使用新�
     page.goto("/#/platform/model-config?tab=bindings", { waitUntil: "domcontentloaded" })
   ]);
   for (const response of [modelsResponse, bindingsResponse]) expect(response.status()).toBe(200);
-  await expect(page.getByRole("button", { name: "保存主评 A" })).toBeEnabled();
   await page.getByRole("button", { name: "高级设置", exact: true }).click();
+  await expect(page.getByRole("button", { name: "保存主评 A" })).toBeEnabled();
   await page.getByRole("textbox", { name: "主评 A自定义 Prompt 版本" }).fill("A-local-draft");
   await page.getByRole("textbox", { name: "主评 B自定义 Prompt 版本" }).fill("B-local-draft");
   // API 夹具模拟另一管理员先提交新配置；当前页面仍保留首次读取的修订。

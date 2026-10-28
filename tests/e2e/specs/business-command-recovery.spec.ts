@@ -3,6 +3,8 @@ import { installApiMocks } from "../fixtures/apiMocks";
 import { createGradingWorkbenchMockState, installGradingWorkbenchMocks } from "../fixtures/gradingWorkbenchMocks";
 
 test("stale automatic human-submit command resumes after reload without changing score or revision", async ({ page }) => {
+  // 场景包含首次加载、自动保存和刷新恢复；冷启动耗时也计入整场上限，单步断言仍沿用原超时。
+  test.setTimeout(60_000);
   await installGradingWorkbenchMocks(page, createGradingWorkbenchMockState(2));
   const requests: { key: string; body: string }[] = [];
   await page.route("**/api/v1/review-tasks/*/submit", async route => {
@@ -24,8 +26,7 @@ test("stale automatic human-submit command resumes after reload without changing
   await expect.poll(() => requests.length, { timeout: 10_000 }).toBe(1);
   expect(JSON.parse(requests[0].body)).toMatchObject({ score: 4, expected_revision: 1, auto_submit: true });
   await page.reload();
-  // 查看回执只能读取；用户核对服务端冻结内容后才显式重放原命令。
-  await page.getByRole("button", { name: "查看操作结果", exact: true }).click();
+  // 刷新后页面自动只读回执；不抢点正在自动核对的入口，用户核对冻结内容后才重放。
   await expect(page.getByText("可以继续提交此前内容。", { exact: true })).toBeVisible();
   await expect(page.getByText(/原提交内容：评分 4；/)).toBeVisible();
   expect(requests).toHaveLength(1);

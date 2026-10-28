@@ -72,6 +72,8 @@ test("学校模型与治理使用同一学校配置，旧治理地址转入模�
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "deepseek-v4" }).click();
   await page.getByRole("button", { name: "为 A/B/C 套用当前部署版本" }).click();
   await expect(page.getByRole("textbox", { name: "主评 A Prompt 版本" })).toHaveCount(0);
+  // 本场只保存主评 A；单角色保存保留在高级设置，B/C 未完成的草稿不能一起提交。
+  await page.getByRole("button", { name: "高级设置", exact: true }).click();
   await page.getByRole("button", { name: "保存主评 A" }).click();
   await expect.poll(() => bindingBody?.managed_model_api_config_id).toBe("model-a");
   expect(bindingBody?.tenant_id).toBe("school-a");
@@ -263,6 +265,8 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: "glm-4.6v" }).click();
   await page.getByRole("button", { name: "检测连接并保存" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
+  const savedModel = page.getByRole("row").filter({ has: page.getByText("glm-4.6v", { exact: true }) });
+  await savedModel.getByText("设置与诊断", { exact: true }).click();
   await page.getByRole("button", { name: "glm-4.6v：检测结构化输出", exact: true }).click();
   await expect.poll(() => probed).toBe(true);
   await expect(page.getByRole("button", { name: "glm-4.6v：查看结构化详情", exact: true })).toHaveText("通过");
@@ -272,10 +276,9 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
   for (const [role, model] of [["主评 A", "deepseek-v4"], ["主评 B", "qwen-vl"], ["仲裁 C", "glm-4.6v"]] as const) {
     await page.getByRole("combobox", { name: `${role}评分模型` }).press("ArrowDown");
     await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content", { hasText: model }).click();
-    const saveRole = page.getByRole("button", { name: new RegExp(`保存${role}$`) });
-    await saveRole.click();
-    await expect(saveRole).not.toHaveClass(/ant-btn-loading/);
   }
+  // 主流程先核对完整的三角色草稿再统一保存；服务端仍逐角色记录原模型与修订。
+  await page.getByRole("button", { name: "保存全部更改", exact: true }).click();
   await expect.poll(() => bindings.length).toBe(3);
   expect(bindings.map(item => item.managed_model_api_config_id)).toEqual(["model-a", "model-b", "model-c"]);
 

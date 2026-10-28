@@ -55,7 +55,12 @@ async function installSchoolMocks(page: Page) {
 test("平台学校总表提供运营摘要、搜索与五个详情入口", async ({ page }) => {
   await installApiMocks(page, { role: "platform_admin", initiallyAuthenticated: true });
   await installSchoolMocks(page);
-  await page.goto("/#/platform/schools");
+  // 等列表请求完成再检查内容，避免把冷启动模块装载时间算进表格断言。
+  const [schoolsResponse] = await Promise.all([
+    page.waitForResponse(response => response.request().method() === "GET" && new URL(response.url()).pathname === "/api/v1/platform/schools"),
+    page.goto("/#/platform/schools"),
+  ]);
+  expect(schoolsResponse.status()).toBe(200);
 
   await expect(page.getByRole("heading", { name: "学校管理" })).toBeVisible();
   await expect(page.getByText("共 1 所学校 · 1 使用中 · 0 已停用")).toBeVisible();
