@@ -1,0 +1,1979 @@
+{
+  "date": "2026-10-27",
+  "reviewer": "exam_preparation_audit",
+  "scope_roots": [
+    "apps/web-admin/src/features/answer-groups",
+    "apps/web-admin/src/features/answer-sheet-template",
+    "apps/web-admin/src/features/capture",
+    "apps/web-admin/src/features/exams",
+    "apps/web-admin/src/features/paper-import",
+    "apps/web-admin/src/features/paper-rubric"
+  ],
+  "extra_evidence_files": [
+    "AGENTS.md",
+    "docs/engineering/commenting-standard.md",
+    "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+    "apps/web-admin/src/pages/PaperRubricPage.tsx",
+    "apps/web-admin/src/pages/ExamManagementPage.tsx",
+    "apps/web-admin/src/router/pageRendering.tsx",
+    "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+    "packages/ui/src/workspace/WorkspaceLayout.tsx",
+    "packages/ui/src/workspace/WorkspaceStageRail.tsx",
+    "packages/ui/src/workspace/StageNav.tsx",
+    "services/api-gateway/internal/grading/store_postgres.go",
+    "services/api-gateway/internal/grading/scoring_run_rules_snapshot.go",
+    "services/api-gateway/internal/grading/scoring_run_rules_snapshot_test.go",
+    "services/api-gateway/internal/capture/handlers.go",
+    "services/api-gateway/internal/capture/store_postgres.go"
+  ],
+  "status_definition": {
+    "pending": "未读或仅读片段，未完成",
+    "reviewed": "全文已读并核对相关交互或调用；只限体验审计"
+  },
+  "summary": {
+    "findings": 32,
+    "enumerated": 310,
+    "pending": 209,
+    "reviewed": 101,
+    "business_code_changed": false,
+    "historical_findings": 33,
+    "withdrawn_findings": [
+      "EX-16"
+    ],
+    "round2_assigned_tsx_reviewed": 44
+  },
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "补齐全文核对EX-07独立保存；高级模板证据风险已折叠，不重复报告配置全展开。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-25：逐题修复入口未携带具体题号；其他汇总与去重合理。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/components/OcrWorkerAlert.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：仅异常时展示告警，自动轮询并提供重试，未把服务失联误报为文件损坏。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/components/ProcessingExceptionEvidence.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-27：排障UUID直接展示；已核对真实图像与深链归属。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/components/ProcessingOperationsPanel.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-27：P0至P3工程级别直接展示；分派、说明和解决状态边界保留。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/components/RegistrationCorrectionWorkspace.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-28：电脑端默认八个归一化坐标框；预览实际显示后才能应用、原因及撤销边界合理。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/components/TaskScoringReference.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "补审支撑文件全文已读：核对样本评分依据、抽检阻断或候选字段确认，不代表完整技术审计。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/answer-grouping.css",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-32：样本逐一打开、重复依据与统计干扰；核对实际已读和抽检约束。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/answerGroupingPresentation.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/answerGroupingPresentation.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "补审支撑文件全文已读：核对样本评分依据、抽检阻断或候选字段确认，不代表完整技术审计。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupManualHandoff.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupManualHandoff.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：拒绝样本不能冒充已新建复核，按实际任务给交接入口。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-32：每样本重复完整本题依据；保留材料哈希、真实图像与当前样本已读核验。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-groups/index.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplate.batch47.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/AnswerSheetTemplatePage.uploadBatch.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/binding/useTemplateBinding.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/binding/useTemplateBinding.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.batch7.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.request-generation.batch7.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/calibration/useOMRCalibration.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/analyzeTemplatePage.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/analyzeTemplatePage.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/answerSheetImageRegions.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/answerSheetImageRegions.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/answerSheetOCR.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/answerSheetOCR.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/answerSheetRegionMatching.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/answerSheetRegionMatching.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/answerSheetSourceManifest.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/fillGradingGroups.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/fillGradingGroups.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/identityRegionFields.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/localAnswerSheetOCRWorker.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/localAnswerSheetOCRWorker.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/mergeAnswerSheetSources.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/mergeAnswerSheetSources.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/multimodalObjectiveItems.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/multimodalObjectiveItems.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/objectiveGridGeometry.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/objectiveGridGeometry.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/objectiveGridPageImage.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/objectiveGridPageImage.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/objectiveGridReducer.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/orderAnswerSheetSourcePages.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/orderAnswerSheetSourcePages.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/regionLifecycle.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/regionLifecycle.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/saveTemplateDraft.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/saveTemplateDraft.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/templateCoverage.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/templateLayoutHistory.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/templateLayoutReducer.batch7.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/templateLayoutReducer.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/templateLayoutReducer.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/unassignedAnswerSheetRegions.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/unassignedAnswerSheetRegions.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useAnswerSheetSourceDelete.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useAnswerSheetSourceDelete.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useAnswerSheetSourceUpload.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useAnswerSheetSourceUpload.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useFillGradingGroups.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useFillGradingGroups.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useObjectiveGrid.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useObjectiveGrid.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionEditor.batch7.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionEditor.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.batch7.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.multimodal.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.scan.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateCanvasPan.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateCanvasPan.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateCanvasZoom.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateCanvasZoom.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.objectiveGroups.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.partialSave.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.scanFlow.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateEditor.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateLifecycle.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplateLifecycle.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplatePreview.batch.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplatePreview.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useTemplatePreview.ux.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：模板库默认折叠；空白来源和版式核对保护模板复用与个人信息。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/library/useTemplateLibrary.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/library/useTemplateLibrary.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/printing/useStudentPrinting.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/printing/useStudentPrinting.ux.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/testing/answerSheetFixtures.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/testing/measuredPageReplay.json",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/testing/MockTemplateSourceDropdown.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无产品发现：测试专用弹层替身，全文读完，不当作生产界面。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/ClearTemplateQuestionRegionsButton.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/ClearTemplateQuestionRegionsButton.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：仅清理本地草稿，确认含明确范围及旧窗口失效保护。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/FillGradingControl.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：精确坐标已折叠；共框与逐题保留真实区域及成员校验。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/IdentityRegionPanel.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：字段为固定身份类别，未复用学生实际姓名号码作为模板标签。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/ObjectiveGridCanvas.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/ObjectiveGridCanvas.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：局部框选、平移和缩放职责清楚，结果仅在新分析时自动聚焦一次。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/ObjectiveGridDrawer.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/ObjectiveGridDrawer.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：此为自动识别未完整关联时的修复界面；不删除数量、阅读顺序和缺格核对。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/OMRCalibrationView.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：盲标、样本覆盖和独立审批有明确依据；审计哈希已折叠。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/StudentPrintingView.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：签发、补打作废和下载恢复有明确事实边界；打印记录默认折叠。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/template-confirmation.css",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateBindingPanel.remediation.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateBindingView.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateCanvasView.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：成功自动题区无需逐一确认，仅异常区域出现核对操作；精细工具不当作正常流程必经步骤。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateQuestionPane.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateRegionSettingsView.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateSettingsView.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/templateViewRules.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/templateViewTypes.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.interaction.test.tsx",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅检查相关片段或搜索命中，不计入全文完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/batchCreateCommand.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/batchCreateCommand.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureBatchPanels.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureBatchSummary.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureCollectionPanel.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureColumns.batch38.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureColumns.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：文件故障原因按可执行恢复展示，删除、恢复与质量放行有不同边界。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/capturePresentation.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureQueries.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureQueries.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureWorkflow.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureWorkflow.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/ExamCapturePage.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/ExamCapturePage.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/imageQualityModel.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/imageQualityModel.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/ImageQualityWorkspace.batch12.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/ImageQualityWorkspace.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-26：默认算法诊断信息过密；已核对人工放行依赖当前原图实际显示。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/MatchingWorkspace.batch38.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/MatchingWorkspace.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：匹配、拆分与合并具有真实身份和页面边界，合并前展示目标。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/MatchingWorkspace.ux.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/SubmissionCaptureSummary.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/submissionColumns.batch14.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/submissionColumns.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-31：内部状态转换暴露为下一步；不声称每份正常答卷都需全手动点击。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/submissionPresentation.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureBatchDetail.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureBatchDetail.ux.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureBatchList.remediation.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureBatchList.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureCollection.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureCollection.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureMatchActions.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureMatchActions.ux.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureUpload.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureUpload.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/CreateExamComposer.batch37.test.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/createExamDraft.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/createExamDraft.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/CreateExamPage.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "补齐首轮片段：EX-01创建路径和恢复命令边界；没有新增独立发现。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/createExamValidation.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/createExamValidation.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/exam-create.css",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/examCreateCommand.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/examCreateCommand.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/presentation.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/types.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/examGroups.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/examGroups.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/managementCommand.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/managementCommand.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamArchiveDialog.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamArchiveDialog.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：归档和恢复均核对整场状态，未知提交复用原命令恢复；不取消必要确认。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamDetails.batch15.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamDetails.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamEditDrawer.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：默认班级与独立学科范围区分明确，恢复原保存载荷不擅改边界。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.batch25.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamOverviewPage.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/managementPresentation.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/managementPresentation.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/preparation/preparationModel.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/preparation/preparationModel.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/preparation/preparationSteps.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/preparation/preparationSteps.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/workspace/businessStages.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/workspace/businessStages.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/workspace/defaultExamWorkspaceRoute.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/workspace/defaultExamWorkspaceRoute.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/workspace/ExamWorkspaceLayout.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/workspace/ExamWorkspaceLayout.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/answerShape.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/materials.progress.batch27.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/materials.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/materials.ts",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅阅读本次体验结论所需的相关片段，未完成全文审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/multipleChoiceScoring.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/paperImportPresentation.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportRecognitionPreview.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-29：数组和对象答案直接JSON展示；识别快照与正式配置已明确区分。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportResults.recognition.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportResults.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/paperImportReview.model.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportReviewComparison.batch50.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportReviewComparison.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：冲突仅展示差异并保留本地修改，比较本身是必要恢复步骤。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportReviewPanel.suggestions.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportReviewPanel.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportReviewPanel.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-30双分数字段，补齐全文验证EX-12候选编辑重复路径；未知匹配和冲突不静默采用。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/paperImportScope.remediation.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportSourceList.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/paperImportWorkflow.types.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperStructurePanel.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/reviewConfirmation.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "补审支撑文件全文已读：核对样本评分依据、抽检阻断或候选字段确认，不代表完整技术审计。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/RubricReviewEditor.identity.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/RubricReviewEditor.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-30：题目分值与细则满分可分别编辑但必须相等；采分点一致性检查应保留。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperConfigData.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperConfigData.ux.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportContentFill.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportMaterials.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportPolling.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportPolling.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.batch43.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.conflict.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.materials.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.receipts.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.ts",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅检查相关片段或搜索命中，不计入全文完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/useScoringRules.batch44.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/useScoringRules.ts",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/FrozenReferenceImages.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：仅展示冻结材料；读取错误、授权撤回和历史未记录状态区分清楚。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/grouped-question-scores.css",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/groupedQuestionScores.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/groupedQuestionScores.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/hooks/useGroupedQuestionScores.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/hooks/useGroupedQuestionScores.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：批量保存前检查全组，部分成功与回读失败真实计数，不把逐题写入宣称事务。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/hooks/useQuestionEditor.batch15.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/hooks/useQuestionEditor.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/hooks/useQuestionEditor.ts",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅检查相关片段或搜索命中，不计入全文完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/hooks/useRubricEditor.identity.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/hooks/useRubricEditor.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/paper-rubric-assistant.css",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/paper-rubric-jobs.css",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/paper-rubric-step-allocator.css",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperGroupedQuestionScores.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/paperPresentation.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionConfirmation.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionConfirmation.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionDetail.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionForm.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionIndex.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionIssues.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/paperQuestionPresentation.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/paperQuestionPresentation.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricAssistant.persistence.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricAssistant.regenerate.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricAssistant.scope.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricAssistant.segmentation.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricAssistant.segments.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricAssistant.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricAssistant.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricJobs.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricJobs.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：后台建议跨换题继续、状态与取消保留，独立任务列表有明确恢复价值。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricJobSuggestion.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "补证EX-10：自动读取已完成结果已实现；未把查看已生成建议当成始终必点。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricSplitDialog.review.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricSplitDialog.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：公式安全拆分与原文完整预览是必要编辑边界。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricStepAllocator.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricStepAllocator.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "补证EX-10：分段和采用有不同草稿边界；不删除步骤连续、总分和来源变化校验。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricView.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/paperRubricViewTypes.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperScoringConfiguration.capability.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperScoringConfiguration.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/reference-materials.css",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/ReferenceMaterialEditor.test.tsx",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/ReferenceMaterialEditor.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/rubricAssistantDraft.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/rubricPointIdentity.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/rubricPointIdentity.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/rubricSegmentation.review.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/rubricSegmentation.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/rubricSegmentation.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/rubricSolutionLines.test.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/rubricSolutionLines.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/rubricSuggestion.ts",
+      "status": "pending",
+      "read_scope": "not_read",
+      "note": "已枚举，尚未审读。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AnswerSheetTemplatePage.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "撤回EX-16：已实现自动学校库匹配、自动建稿和自动识别；失败手动入口不是日常必经。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "补齐全文核对EX-20至EX-22；未新增同义发现，重试与分组恢复继续保留。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/pages/ExamManagementPage.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "补齐全文核对EX-24单科多一跳；权限和整场范围展示不作为冗余。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-25修复入口定位弱；冻结前版本核验与最终人工确认不可删除。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/pages/ExamWorkspacePage.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "无新增：读写能力由投影与权限确定，工作区没有重复挂共享stageRail。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/pages/PaperRubricPage.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "补齐全文核对EX-07保存边界，判分方式未纳入整题保存及dirty集合；未复现数据丢失。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-31内部处理状态路径、EX-33队列新记录插头；与批次导入是仍挂载的独立路径。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubmissionCaptureViews.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "EX-33：队列固定只显示前八项，未提供全部失败入口；未改变上传成功事实。",
+      "review_round": 2
+    },
+    {
+      "path": "apps/web-admin/src/router/pageRendering.tsx",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅检查相关片段或搜索命中，不计入全文完成。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/capture.css",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅阅读本次体验结论所需的相关片段，未完成全文审读。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/correction.css",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅阅读本次体验结论所需的相关片段，未完成全文审读。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/tables.css",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅阅读本次体验结论所需的相关片段，未完成全文审读。"
+    },
+    {
+      "path": "docs/engineering/commenting-standard.md",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "packages/ui/src/workspace/StageNav.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "packages/ui/src/workspace/WorkspaceLayout.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "packages/ui/src/workspace/WorkspaceStageRail.tsx",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/handlers.go",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅检查相关片段或搜索命中，不计入全文完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/capture/store_postgres.go",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅检查相关片段或搜索命中，不计入全文完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/scoring_run_rules_snapshot_test.go",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/scoring_run_rules_snapshot.go",
+      "status": "reviewed",
+      "read_scope": "full_text",
+      "note": "全文审读；仅评价本次用户体验范围，不代表完整技术或注释审计。"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/store_postgres.go",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅检查相关片段或搜索命中，不计入全文完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/document_import.go",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅阅读本次体验结论所需的相关片段，未完成全文审读。"
+    },
+    {
+      "path": "services/api-gateway/internal/paper/paper_import_postgres.go",
+      "status": "pending",
+      "read_scope": "partial_text_or_search_hits",
+      "note": "仅阅读本次体验结论所需的相关片段，未完成全文审读。"
+    }
+  ],
+  "second_round": {
+    "completed": true,
+    "assigned_tsx_count": 44,
+    "support_files_full_read": [
+      "apps/web-admin/src/features/paper-import/reviewConfirmation.ts",
+      "apps/web-admin/src/components/TaskScoringReference.tsx",
+      "apps/web-admin/src/features/answer-groups/answerGroupingPresentation.ts"
+    ],
+    "new_findings": [
+      "EX-25",
+      "EX-26",
+      "EX-27",
+      "EX-28",
+      "EX-29",
+      "EX-30",
+      "EX-31",
+      "EX-32",
+      "EX-33"
+    ],
+    "withdrawn": [
+      "EX-16"
+    ],
+    "new_business_changes": false,
+    "no_finding_files": "每个完整审读文件的note明确记录保留设计或关联既有发现，未以自动枚举代替阅读。"
+  }
+}

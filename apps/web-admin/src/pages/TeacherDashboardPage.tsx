@@ -9,6 +9,7 @@ import { StatusTag } from "../components/StatusTag";
 import type { StatusTone } from "../types";
 import { workspaceForExperience } from "../workspaces/registry";
 import { examSubjectLabel } from "../constants/examStatus";
+import { QuestionBankHandoffs } from "../features/question-bank/QuestionBankHandoffs";
 
 interface TeacherHomeData {
   reviewTasks: ReviewTask[];
@@ -77,10 +78,10 @@ function TeacherWorkSummary({ canReview, canArbitrate, warnings, activeReviewCou
   const arbitrationCount = arbitrationUnavailable ? "—" : activeArbitrationCount;
   const completedCount = reviewUnavailable ? "—" : completedReviewCount;
   return (
-    <section className="teacher-summary" aria-label="已加载的工作摘要">
-      {canReview ? <div><span>已加载待阅卷</span><strong>{reviewCount}</strong></div> : null}
-      {canArbitrate ? <div><span>已加载待仲裁</span><strong>{arbitrationCount}</strong></div> : null}
-      {canReview ? <div><span>已加载已提交</span><strong>{completedCount}</strong></div> : null}
+    <section className="teacher-summary" aria-label="工作摘要">
+      {canReview ? <div><span>待阅卷</span><strong>{reviewCount}</strong></div> : null}
+      {canArbitrate ? <div><span>待仲裁</span><strong>{arbitrationCount}</strong></div> : null}
+      {canReview ? <div><span>已提交</span><strong>{completedCount}</strong></div> : null}
     </section>
   );
 }
@@ -132,7 +133,7 @@ export function TeacherDashboardPage({ user, onNavigate }: Readonly<{ user: Sess
   const learningLinks = [
     { title: "题库", path: "/question-bank", visible: hasEveryPermission(user, ["question_bank:read"]) },
     { title: "班级成绩", path: "/reports", visible: hasEveryPermission(user, ["report:read"]) },
-    { title: "学生反馈", path: "/appeals", visible: hasEveryPermission(user, ["appeal:read"]) },
+    { title: "成绩复核", path: "/appeals", visible: hasEveryPermission(user, ["appeal:read"]) },
   ].filter((link) => link.visible);
 
   const tasks = useMemo<PersonalTask[]>(() => [
@@ -163,7 +164,8 @@ export function TeacherDashboardPage({ user, onNavigate }: Readonly<{ user: Sess
   }
   if (!data && loading) return <LoadingState label="正在加载我的工作" />;
   if (!data && error) return <ErrorState message={error} onRetry={() => void load()} />;
-  const emptyTaskState = canReview || canArbitrate ? <EmptyState title="当前没有已加载的待办" description="任务分配后会显示在这里；如果任务区加载失败，请重试。" /> : null;
+  // 降级空数组不能推导为没有待办；失败原因由上方警告和刷新动作承接。
+  const emptyTaskState = (canReview || canArbitrate) && !data?.warnings.length && !error ? <EmptyState title="当前暂无待办" description="任务分配后会显示在这里。" /> : null;
 
   return (
     <div className="page-stack teacher-dashboard">
@@ -178,9 +180,10 @@ export function TeacherDashboardPage({ user, onNavigate }: Readonly<{ user: Sess
       {data?.warnings.map((warning) => <Alert type="warning" showIcon key={warning} message={getSafeUserText(warning, "部分工作台数据暂时不可用")} />)}
 
       <TeacherWorkSummary canReview={canReview} canArbitrate={canArbitrate} warnings={data?.warnings} activeReviewCount={activeReviews.length} activeArbitrationCount={activeArbitrations.length} completedReviewCount={completedReviews} />
+      {canReview || canArbitrate ? <p className="muted">摘要仅统计当前已读取任务。完整任务请进入阅卷或仲裁列表。</p> : null}
 
       {tasks.length ? <section className="teacher-task-pane">
-        <div className="section-head"><div><h2>当前任务</h2><p>分别查看已分配的阅卷与仲裁；数量以当前已加载任务为准。</p></div></div>
+        <div className="section-head"><div><h2>当前任务</h2></div></div>
         <div className="teacher-task-list">{[...tasks.filter((task) => task.kind === "arbitration").slice(0, 4), ...tasks.filter((task) => task.kind === "review").slice(0, 4)].map((task) => (
           <button type="button" key={`${task.kind}-${task.id}`} onClick={() => onNavigate(task.path)}>
             <span className="teacher-task-icon">{task.kind === "review" ? <BookOpenCheck size={17} /> : <Gavel size={17} />}</span>
@@ -193,6 +196,7 @@ export function TeacherDashboardPage({ user, onNavigate }: Readonly<{ user: Sess
       </section> : emptyTaskState}
 
       {learningLinks.length ? <section className="teacher-learning-links"><h2>教学工作</h2><div>{learningLinks.map((link) => <Button key={link.path} onClick={() => onNavigate(link.path)}>{link.title}<ArrowRight size={15} /></Button>)}</div></section> : null}
+      <QuestionBankHandoffs key={`${user.tenant}:${user.id}`} user={user} onNavigate={onNavigate} />
     </div>
   );
 }

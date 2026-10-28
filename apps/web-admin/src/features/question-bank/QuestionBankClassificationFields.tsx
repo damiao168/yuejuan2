@@ -11,7 +11,7 @@ function ClassificationEnumOptions({ fieldName }: Readonly<{ fieldName: number }
 export function QuestionBankClassificationFields({form}:Readonly<{form:FormInstance}>) {
  const taxonomies=Form.useWatch("taxonomies",form) ?? [];
  return <>
-  <h3>题目补充字段</h3><p>填写显示名称和内容类型，系统生成内部编号。已有编号保持不变，以便历史题目继续使用。</p>
+  <h3>题目补充字段</h3><p>设置字段名称和内容类型。</p>
   <Form.List name="fields">{(fields,{add,remove})=><>{fields.map(field=><section key={field.key} className="question-bank-schema-row">
    <Form.Item name={[field.name,"key"]} hidden><Input /></Form.Item>
    <Form.Item name={[field.name,"label"]} label="字段名称" rules={[{required:true}]}><Input placeholder="例如：所属教材" /></Form.Item>
@@ -28,7 +28,7 @@ export function QuestionBankClassificationFields({form}:Readonly<{form:FormInsta
    }}</Form.Item>
    <Button danger onClick={()=>remove(field.name)}>移除此字段</Button>
   </section>)}<Button onClick={()=>add({key:newCode("field"),type:"string",label:"",required:false,max_length:120})}>添加补充字段</Button></>}</Form.List>
-  <h3>知识点与分类目录</h3><p>每行填写一个知识点或分类名称。不再使用的条目请关闭“允许新题目选择”，历史题目中的记录会保留。</p>
+  <h3>知识点与分类目录</h3><p>停用条目后，新题不能再选，历史题目记录保留。</p>
   <Form.List name="taxonomies">{(fields,{add,remove})=><>{fields.map(field=><section key={field.key}>
    <Form.Item name={[field.name,"id"]} hidden><Input /></Form.Item><Form.Item name={[field.name,"label"]} label="目录名称" rules={[{required:true}]}><Input /></Form.Item>
    <Form.List name={[field.name,"terms"]}>{(terms,ops)=><>{terms.map(term=><div key={term.key} className="question-bank-form-pair"><Form.Item name={[term.name,"id"]} hidden><Input /></Form.Item><Form.Item name={[term.name,"label"]} label="条目名称" rules={[{required:true}]}><Input placeholder="例如：函数的单调性" /></Form.Item><Form.Item name={[term.name,"active"]} label="允许新题目选择" valuePropName="checked"><Switch /></Form.Item></div>)}<Button onClick={()=>ops.add({id:newCode("term"),label:"",active:true})}>添加目录条目</Button></>}</Form.List>

@@ -1,4 +1,5 @@
 import { primitiveDisplayValue } from "../utils/displayValue";
+import { assessmentArchetypeLabel } from "../constants/assessmentLabels";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, App, Button, DatePicker, Descriptions, Drawer, Empty, Form, InputNumber, Select, Space, Switch, Table, Tag } from "antd";
 import { RefreshCw } from "lucide-react";
@@ -491,16 +492,16 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
     <section className="page-stack">
       <QualityDashboardOverview data={data} error={error} canManage={canManage} onSeed={openSeed} onIncidents={openIncidents} onBackmark={openBackmark} onRefresh={() => void load()} onRecompute={(questionId) => void refreshQuestionDrift(questionId)} onHandleFinding={handleFinding} />
       {materialAction?.type === "gold" ? <GoldPaperManagerDrawer open examId={examId} questionId={materialAction.questionId} onClose={() => { setMaterialAction(undefined); void load(); }} /> : null}
-      {materialAction?.type === "calibration" ? <CalibrationDrawer open examId={examId} questionId={materialAction.questionId} graderId={currentUserId} canManagePolicy={canManage} onClose={() => { setMaterialAction(undefined); void load(); }} /> : null}
+      {materialAction?.type === "calibration" ? <CalibrationDrawer open examId={examId} questionId={materialAction.questionId} graderId={currentUserId} canManagePolicy={canManage} questionDefaults={(() => { const question = data.questions.find(row => row.question.id === materialAction.questionId)?.question; return question ? { questionId: question.id, archetypeCode: question.archetype_code, maxScore: question.max_score } : undefined; })()} onClose={() => { setMaterialAction(undefined); void load(); }} /> : null}
       {materialAction?.type === "groups" ? <AnswerGroupingDrawer open examId={examId} initialQuestionId={materialAction.questionId} availableQuestions={data.questions.map(row => ({ id: row.question.id, question_no: row.question.question_no, question_type: row.question.archetype_code }))} canManage={canManage} canReadReview={canManage} onNavigate={onNavigate} onClose={() => { setMaterialAction(undefined); void load(); }} /> : null}
       {onNavigate ? <Button onClick={() => onNavigate(`/exams/${encodeURIComponent(examId)}/grading`)}>前往本场阅卷工作区</Button> : null}
       <Drawer title="盲测策略" width={520} open={seedOpen} onClose={() => setSeedOpen(false)} extra={canManage ? <Button type="primary" disabled={!seedReady || seedLoading} loading={seedLoading} onClick={() => void saveSeedPolicy()}>保存</Button> : null}>
         {seedReadError ? <Alert type="error" showIcon message="当前题目的盲测策略读取失败，暂不能保存" description={seedReadError} action={<Button onClick={() => void loadSeedPolicy(seedQuestionId)}>重新读取盲测策略</Button>} /> : null}
         <Form form={policyForm} layout="vertical" disabled={!canManage || seedLoading}>
           <Form.Item label="题目" required>
-            <Select value={seedQuestionId} options={data.questions.map((item) => ({ value: item.question.id, label: `${item.question.question_no} · ${item.question.archetype_code || "未配置"}` }))} onChange={(value) => void loadSeedPolicy(value)} />
+            <Select value={seedQuestionId} options={data.questions.map((item) => ({ value: item.question.id, label: `${item.question.question_no} · ${assessmentArchetypeLabel(item.question.archetype_code)}` }))} onChange={(value) => void loadSeedPolicy(value)} />
           </Form.Item>
-          <Form.Item name="rate" label="抽样比例" rules={[{ required: true, message: "请输入抽样比例" }]}><InputNumber disabled={!seedReady || !canManage || seedLoading} min={0.001} max={1} step={0.01} precision={3} style={{ width: "100%" }} /></Form.Item>
+          <Form.Item name="rate" label="抽样比例" extra="例如 10% 表示约每 10 份正常阅卷插入 1 份；实际间隔仍受下方范围约束。" getValueProps={value => ({ value: typeof value === "number" ? Number((value * 100).toFixed(3)) : value })} normalize={value => typeof value === "number" ? value / 100 : value} rules={[{ required: true, message: "请输入抽样比例" }]}><InputNumber disabled={!seedReady || !canManage || seedLoading} min={0.1} max={100} step={1} precision={1} suffix="%" style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="min_interval" label="最小间隔（正常阅卷题数）" rules={[{ required: true }]}><InputNumber disabled={!seedReady || !canManage || seedLoading} min={1} max={100000} style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="max_interval" label="最大间隔（正常阅卷题数）" rules={[{ required: true }]}><InputNumber disabled={!seedReady || !canManage || seedLoading} min={1} max={100000} style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="enabled" label="启用盲测" valuePropName="checked"><Switch disabled={!seedReady || !canManage || seedLoading} /></Form.Item>
@@ -513,7 +514,7 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
           if (["question_id", "date_range", "score_min", "score_max", "grader_id"].some((field) => field in changed)) invalidateBackmarkPreview();
           if ("question_id" in changed) backmarkForm.setFieldsValue({ source_incident_id: undefined });
         }}>
-          <Form.Item name="question_id" label="题目" rules={[{ required: true, message: "请选择题目" }]}><Select options={data.questions.map((item) => ({ value: item.question.id, label: `${item.question.question_no} · ${item.question.archetype_code || "未配置"}` }))} /></Form.Item>
+          <Form.Item name="question_id" label="题目" rules={[{ required: true, message: "请选择题目" }]}><Select options={data.questions.map((item) => ({ value: item.question.id, label: `${item.question.question_no} · ${assessmentArchetypeLabel(item.question.archetype_code)}` }))} /></Form.Item>
           <Form.Item name="date_range" label="完成阅卷时间（可选）"><DatePicker.RangePicker style={{ width: "100%" }} /></Form.Item>
           <Space.Compact block>
             <Form.Item name="score_min" label="原分下限" style={{ flex: 1 }}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>

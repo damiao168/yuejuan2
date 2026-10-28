@@ -99,6 +99,8 @@ type QuestionAppealReleaseVersion struct {
 	Status      string     `json:"status"`
 	Reason      string     `json:"reason"`
 	PublishedAt *time.Time `json:"published_at,omitempty"`
+	// 仅表示当前读取时与本申请关联的复评事实一致；结案提交仍在事务中重新核验。
+	EligibleForResolution bool `json:"eligible_for_resolution,omitempty"`
 }
 
 // PublishedQuestionAppealContext 提供单条不可变申诉的教职工工作上下文。

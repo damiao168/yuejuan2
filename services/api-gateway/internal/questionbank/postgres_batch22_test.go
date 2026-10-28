@@ -170,7 +170,7 @@ func batch22VersionRow(t *testing.T, content Content, scoring Scoring) []driver.
 		t.Fatal(err)
 	}
 	now := time.Unix(0, 0)
-	return []driver.Value{batch22VersionID, "tenant", batch22ItemID, int64(3), int64(7), int64(1), "published", nil, "actor", contentHash(content), raw, now, now, scoreRaw, "bundle"}
+	return []driver.Value{batch22VersionID, "tenant", batch22ItemID, int64(3), int64(7), int64(1), "published", nil, "actor", contentHash(content), raw, now, now, scoreRaw, "bundle", nil}
 }
 
 func TestBatch22MutationWritesAuditOutboxReceiptBeforeCommit(t *testing.T) {
@@ -200,7 +200,7 @@ func TestBatch22MaterializeReplayRejectsRevokedSourceBeforeReturningReceipt(t *t
 		{kind: "exec", fragment: "pg_advisory_xact_lock"},
 		{kind: "query", fragment: "FROM business_command_receipt", columns: 2, rows: [][]driver.Value{{hex.EncodeToString(hash[:]), receipt}}},
 		{kind: "query", fragment: "SELECT school_id::text", columns: 2, rows: [][]driver.Value{{"school", []byte("[]")}}},
-		{kind: "query", fragment: "FROM question_bank_item_version", columns: 15, args: map[int]any{1: batch22VersionID}},
+		{kind: "query", fragment: "FROM question_bank_item_version", columns: 16, args: map[int]any{1: batch22VersionID}},
 	})
 	ctx := commandreceipt.WithID(context.Background(), "batch22-replay")
 	got, err := pgMutation(ctx, store, batch22Scope(), command, func(*sql.Tx) (MaterializeResult, error) {
@@ -266,7 +266,7 @@ func TestBatch22InsertVersionPreservesSourceAndPayloadSlots(t *testing.T) {
 	raw, _ := json.Marshal(content)
 	scoreRaw, _ := json.Marshal(scoring)
 	source := batch22VersionID
-	store, script := openBatch22Store(t, []batch22Step{{kind: "query", fragment: "INSERT INTO question_bank_item_version", columns: 15,
+	store, script := openBatch22Store(t, []batch22Step{{kind: "query", fragment: "INSERT INTO question_bank_item_version", columns: 16,
 		rows: [][]driver.Value{batch22VersionRow(t, content, scoring)},
 		args: map[int]any{0: "tenant", 1: batch22ItemID, 2: 3, 3: 7, 4: &source, 5: "actor", 6: raw, 7: contentHash(content), 8: scoreRaw}}})
 	tx, err := store.db.BeginTx(context.Background(), nil)
@@ -288,7 +288,7 @@ func TestBatch22ScoringTemplateCopiesOnlyRubric(t *testing.T) {
 	shared := batch22BankStep(batch22BankID, "active")
 	shared.fragment = "FOR SHARE OF b"
 	store, script := openBatch22Store(t, []batch22Step{
-		{kind: "query", fragment: "FROM question_bank_item_version", columns: 15, rows: [][]driver.Value{batch22VersionRow(t, fixtureContent(), sourceScoring)}},
+		{kind: "query", fragment: "FROM question_bank_item_version", columns: 16, rows: [][]driver.Value{batch22VersionRow(t, fixtureContent(), sourceScoring)}},
 		itemStep, batch22BankStep(batch22BankID, "active"),
 		itemStep, batch22BankStep(batch22BankID, "active"), shared,
 	})

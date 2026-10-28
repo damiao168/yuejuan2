@@ -9,6 +9,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
+	"edugrade-enterprise/services/api-gateway/internal/opiniondraft"
 	"edugrade-enterprise/services/api-gateway/internal/pagination"
 )
 
@@ -19,12 +20,13 @@ const (
 )
 
 type Handler struct {
-	store Store
-	audit auth.AuditRecorder
+	store         Store
+	audit         auth.AuditRecorder
+	privateDrafts opiniondraft.Store
 }
 
 func NewHandler(store Store, audit auth.AuditRecorder) *Handler {
-	return &Handler{store: store, audit: audit}
+	return &Handler{store: store, audit: audit, privateDrafts: opiniondraft.NewMemoryStore()}
 }
 
 func (h *Handler) CreateAppeal(w http.ResponseWriter, r *http.Request) {
@@ -176,6 +178,7 @@ func (h *Handler) SubmitRecommendation(w http.ResponseWriter, r *http.Request) {
 	if input.RecommendedScore != nil {
 		auditReason = fmt.Sprintf("recommendation=%s score=%.2f reason=%s", input.Recommendation, *input.RecommendedScore, input.Reason)
 	}
+	commitPrivateDraft(r, h.privateDrafts, "legacy-appeal", input.ExpectedRevision)
 	h.auditAction(r, "appeal.teacher_recommendation_submitted", "appeal", item.ID, auditReason)
 	httpx.JSON(w, http.StatusOK, map[string]any{"appeal": teacherAppealView(item)})
 }
@@ -207,6 +210,7 @@ func (h *Handler) ReviewAppeal(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
+	commitPrivateDraft(r, h.privateDrafts, "legacy-appeal", input.ExpectedRevision)
 	h.auditAction(r, "appeal.reviewed", "appeal", item.ID, "review appeal")
 	if adjustment != nil {
 		h.auditAction(r, "appeal.score_adjusted", "score_adjustment", adjustment.ID, "adjust score through appeal")
@@ -229,6 +233,7 @@ func (h *Handler) CloseAppeal(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
+	commitPrivateDraft(r, h.privateDrafts, "legacy-appeal", input.ExpectedRevision)
 	h.auditAction(r, "appeal.closed", "appeal", item.ID, "close appeal")
 	httpx.JSON(w, http.StatusOK, map[string]any{"appeal": item})
 }

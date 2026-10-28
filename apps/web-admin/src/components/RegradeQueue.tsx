@@ -15,6 +15,7 @@ import { SharedScoreControl, type SharedScoreValue } from "../features/grading/S
 import { useIndependentReviewGuard } from "../features/grading/workbench/hooks/useIndependentReviewGuard";
 import { TaskScoringReference } from "./TaskScoringReference";
 import { MathMarkdown } from "./MathMarkdown";
+import { examSubjectLabel } from "../constants/examStatus";
 
 function errorMessage(error: unknown, label: string) {
   return getUserErrorMessage(error, `${label}任务暂时无法处理，请稍后重试`);
@@ -36,9 +37,9 @@ function RegradeAnswerEvidence({ context, imageUrl }: Readonly<{ context: Regrad
   return (
     <section>
       <h3>{context.question.question_no} · {context.question.question_type}</h3>
-      <TaskScoringReference question={context.question} rubric={context.frozen_rubric} />
       {imageUrl ? <img className="backmark-answer-image" src={imageUrl} alt="当前答题区域" /> : <Alert type="warning" showIcon message="答题图片暂不可预览" description={context.answer.raw_answer || context.answer.ocr_text ? "可依据下方文字内容独立评分。" : "请联系管理员检查答题图处理状态。"} />}
       {(context.answer.raw_answer || context.answer.ocr_text) ? <div className="backmark-answer-text"><strong>答题内容</strong><MathMarkdown>{context.answer.raw_answer || context.answer.ocr_text || ""}</MathMarkdown></div> : null}
+      <details><summary>题目与完整评分依据</summary><TaskScoringReference question={context.question} rubric={context.frozen_rubric} /></details>
     </section>
   );
 }
@@ -58,6 +59,9 @@ export function RegradeQueue({ canWork, label = "重评" }: Readonly<{ canWork: 
   const [score, setScore] = useState<SharedScoreValue>({ score: null, rubricSelections: {} });
   const [comment, setComment] = useState("");
   const [actioning, setActioning] = useState(false);
+  const [keyword, setKeyword] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const filteredItems = items.filter(item => `${item.exam_name ?? ""} ${item.question_no ?? ""} ${item.anonymous_code ?? ""}`.toLocaleLowerCase().includes(keyword.trim().toLocaleLowerCase()));
   const { busyRef, isCurrent, leave } = useIndependentReviewGuard(Boolean(activeItem && (score.score !== null || comment || Object.keys(score.rubricSelections).length)), actioning, label, () => {
     if (imageUrl) URL.revokeObjectURL(imageUrl);
     setOpen(false); setItems([]); setActiveItem(undefined); setContext(undefined); setImageUrl(""); setComment(""); setScore({ score: null, rubricSelections: {} }); setActioning(false); setLoading(false);
@@ -119,7 +123,7 @@ export function RegradeQueue({ canWork, label = "重评" }: Readonly<{ canWork: 
         return;
       }
       if (imageUrl) URL.revokeObjectURL(imageUrl);
-      setActiveItem(claimed.regrade_item);
+      setActiveItem({ ...item, ...claimed.regrade_item }); setSubmitted(false);
       setContext(response.regrade_context);
       setImageUrl(nextImageUrl);
       setScore({ score: null, rubricSelections: {} });
@@ -145,7 +149,9 @@ export function RegradeQueue({ canWork, label = "重评" }: Readonly<{ canWork: 
       });
       if (!isCurrent()) return;
       message.success(`新版细则下的${label}意见已提交，原成绩不会在此处直接修改`);
+      setItems(previous => previous.filter(item => item.id !== activeItem.id));
       closeActive();
+      setSubmitted(true);
       await load();
     } catch (error) {
       if (isCurrent()) message.error(errorMessage(error, label));
@@ -187,7 +193,9 @@ export function RegradeQueue({ canWork, label = "重评" }: Readonly<{ canWork: 
           </div>
         ) : (
           <Spin spinning={loading}>
-            {items.length ? <List dataSource={items} renderItem={(item) => <List.Item actions={[<Button key="open" type="primary" loading={actioning} onClick={() => void openItem(item)}>开始{label}</Button>]}><List.Item.Meta title={`${label}任务 · 满分 ${item.max_score}`} description={`任务创建于 ${new Date(item.created_at).toLocaleString("zh-CN", { hour12: false })}`} /><Tag>{item.status === "claimed" ? "处理中" : "待处理"}</Tag></List.Item>} /> : <Empty description={`暂无分配给你的${label}任务`} />}
+            <input aria-label={`搜索${label}任务`} placeholder="搜索考试、题号或匿名答卷" value={keyword} onChange={event => setKeyword(event.target.value)} />
+            {submitted && filteredItems[0] ? <Button disabled={actioning || loading} onClick={() => void openItem(filteredItems[0])}>继续下一份</Button> : null}
+            {filteredItems.length ? <List dataSource={filteredItems} renderItem={(item) => <List.Item actions={[<Button key="open" type="primary" loading={actioning} onClick={() => void openItem(item)}>开始{label}</Button>]}><List.Item.Meta title={`${item.exam_name || "考试摘要尚未提供"} · ${item.question_no ? `第 ${item.question_no} 题` : "题号尚未提供"}`} description={<>{item.subject ? `${examSubjectLabel(item.subject)} · ` : ""}{item.anonymous_code || "匿名答卷"} · 满分 {item.max_score} · {new Date(item.created_at).toLocaleString("zh-CN", { hour12: false })}</>} /><Tag>{item.status === "claimed" ? "处理中" : "待处理"}</Tag></List.Item>} /> : <Empty description={keyword ? "当前搜索下没有任务" : `暂无分配给你的${label}任务`} />}
           </Spin>
         )}
       </Drawer>

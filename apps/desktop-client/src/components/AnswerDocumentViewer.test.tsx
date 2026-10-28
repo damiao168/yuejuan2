@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 import { AnswerDocumentViewer } from "./AnswerDocumentViewer";
+vi.mock("../lib/pdfAnswerPages", () => ({ renderPdfAnswerPages: vi.fn(async () => { throw new Error("合成 PDF 无法解码"); }) }));
 
 describe("answer document reader", () => {
   it("reports only successfully decoded images as readable and clears the result on errors or document changes", async () => {
@@ -26,9 +27,8 @@ describe("answer document reader", () => {
       expect(readable).toHaveBeenLastCalledWith(false);
 
       await act(async () => root.render(<AnswerDocumentViewer document={{ url: "blob:pdf", contentType: "application/pdf" }} onReadableChange={readable} />));
-      await act(async () => host.querySelector("iframe")!.dispatchEvent(new Event("load")));
-      expect(readable).toHaveBeenLastCalledWith(false); expect(host.textContent).toContain("PDF 阅读器载入不能确认内容已显示");
-      expect(host.textContent).toContain("请重新读取本题可显示图片或答卷文字"); expect(host.textContent).toContain("联系负责人补核材料后提交");
+      expect(readable).toHaveBeenLastCalledWith(false); expect(host.textContent).toContain("PDF 答卷未能完整显示");
+      expect(host.textContent).toContain("原件与人工评分仍保留");
       await act(async () => root.render(<AnswerDocumentViewer document={{ url: "blob:tiff", contentType: "image/tiff" }} onReadableChange={readable} />));
       expect(readable).toHaveBeenLastCalledWith(false); expect(host.querySelector("img")).toBeNull();
     } finally { await act(async () => root.unmount()); host.remove(); }
@@ -45,7 +45,7 @@ describe("answer document reader", () => {
       await click("适合窗口"); expect(host.textContent).toContain("100%");
       expect(host.querySelector("img")?.style.transform).toBe("rotate(90deg)");
       await act(async () => root.render(<AnswerDocumentViewer document={{ url: "blob:pdf", contentType: "application/pdf", filename: "answer.pdf" }} />));
-      expect(host.querySelector("img")).toBeNull(); expect(host.querySelector("iframe")?.src).toContain("blob:pdf#toolbar=1");
+      expect(host.querySelector("img")).toBeNull(); expect(host.querySelector("iframe")).toBeNull(); expect(host.textContent).toContain("PDF 答卷未能完整显示");
       await act(async () => root.render(<AnswerDocumentViewer document={{ url: "blob:tiff", contentType: "image/tiff", filename: "answer.tiff" }} />));
       expect(host.querySelector("iframe")).toBeNull(); expect(host.querySelector("img")).toBeNull();
       expect(host.textContent).toContain("当前答卷为 TIFF"); expect(host.querySelector("a")?.getAttribute("download")).toBe("answer.tiff");

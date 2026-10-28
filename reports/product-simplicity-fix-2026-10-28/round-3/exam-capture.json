@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-28",
+  "scope": "第三轮EX-25、EX-31、EX-32，保留此前全部未提交修改；EX-22由根智能体处理，本组未改动TIFF/文件预检",
+  "baseline": { "file": "reports/product-simplicity-fix-2026-10-28/round-3/source-baseline.json", "note": "基线由根智能体保存；部分EX25/32实现与59项初轮结果已早于该快照实际存在，本报告按实际实现和最终验证记录，不将基线后的文件枚举冒充重新修复。" },
+  "findings": [
+    {
+      "id": "EX-25", "status": "fixed", "implementation": "考试级准备待办携带当前学科的edit_exam和target=scope；在已授权考试列表中解析该学科所属整场，重新读取最新整场权限和归属后打开对应编辑抽屉，并定位参考班级字段。保存后的列表刷新不会重新弹出抽屉。只读、冻结或授权不完整时展示已定位考试详情和学校考试管理员交接提示；不存在于当前授权列表的标识不用于读取任意整场。", "remaining": [],
+      "boundaries": ["使用现有考试编辑字段与版本/幂等规则；场次年级基础资料不在此抽屉直接改写，有问题明确交接学校考试管理员", "原单题question/target定位保留；没有新增修改年级或扩大管理范围的接口"],
+      "files": ["apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx", "apps/web-admin/src/pages/ExamPreparationPage.tsx", "apps/web-admin/src/pages/ExamManagementPage.tsx", "apps/web-admin/src/features/exams/management/ManagementExamEditDrawer.tsx"]
+    },
+    {
+      "id": "EX-31", "status": "fixed", "implementation": "旧答卷入口明确为历史答卷：保留材料、原图和识别记录查看及既有受控单页修复，去掉旧入口的新建上传链与纯状态转换、OCR创建、旧直接切题主操作；正常导入和后续处理引导到当前已读取且授权考试的采集批次页。只读用户展示权限交接，未选到有效考试时不导航任意批次。旧服务端API保持兼容，主界面不再拼接弱边界处理链。", "remaining": [],
+      "boundaries": ["原观察允许历史入口明确定位并引导当前流程；本轮采用这一方案，没有新增服务端Continue端点或在前端连续调用原始状态接口", "采集批次原有完整性、图像质量、身份、模板和处理门禁继续执行；历史旧记录不自动迁移或重建"],
+      "files": ["apps/web-admin/src/pages/SubmissionCapturePage.tsx", "apps/web-admin/src/pages/SubmissionCaptureViews.tsx", "apps/web-admin/src/features/capture/submissionColumns.tsx"]
+    },
+    {
+      "id": "EX-32", "status": "fixed", "implementation": "改为单份样本审阅：当前样本自动读取，显示真实文字或图像后才启用接受/拒绝并下一份；仅在保存成功后移动到下一未抽检样本，失败留在当前样本。按完整冻结材料正文核对并集中展示一次评分依据，不只比较版本号；正文不一致则拒绝复用与抽检提交。保留代表/边界/异常标记、手动前后切换、拒绝样本的真实单份人工交接；统计指标与样本相似度诊断折叠。", "remaining": [],
+      "boundaries": ["只展示接口实际返回的样本，不声称members就是整组全部学生；没有自动接受或批量标记已读", "minimum_sample、全部异常样本、representation_hash、can_confirm与候选修订号沿用；服务端确认时重验所有成员源事实和冻结快照的规则未修改", "G18协作：教师参考案例错误标签复用typicalErrorLabel中文展示，原始值留在折叠诊断，原存储和筛选值未改"],
+      "files": ["apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx", "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx", "apps/web-admin/src/features/answer-groups/AnswerGroupReviewWorkspace.tsx"]
+    }
+  ],
+  "contracts": { "new_endpoints": [], "new_fields": [], "migrations": [], "openapi_sdk_changes": false, "backend_business_changes": false },
+  "verification": [
+    { "command": "web-admin EX25/EX32初轮定向Vitest --maxWorkers=1（7文件）", "status": "passed", "tests": 59, "note": "16:17已存在的真实结果，最终10文件回归完成后由同一报告更新，不累加计数" },
+    { "command": "web-admin EX25/EX31/EX32最终定向Vitest --maxWorkers=1（10文件）", "status": "passed_after_targeted_test_correction", "tests": 82, "logs": ["exam-capture-regression.json", "exam-capture-final-legacy.json"], "note": "首轮82项中81通过；EX31唯一失败为测试把只读状态说明中的“待生成题目区域”误当按钮。改为只核对按钮标签后，该文件14/14全过；两份报告合计覆盖82个独立测试，不把重跑14项累加。" },
+    { "command": "node node_modules/typescript/bin/tsc --project apps/web-admin/tsconfig.json --noEmit", "status": "passed", "exit_code": 0, "note": "最终源码直接tsc复核已完成，无输出且exit 0。先前排队的Vitest曾为避免与grading并行而在启动前取消，随后单独重新启动最终组，不将取消命令计作验证通过" },
+    { "command": "go test ./internal/answergroup -run 'TestAnswerGroupingRequiresSamplingAndNeverProducesFinalGrade|TestConfirmationRevalidatesEveryMemberSource|TestConfirmHandlerReturnsPolicyConflict|TestLegacyGroupingCannotConfirmWithoutRebuilding' -count=1", "status": "passed", "output": "ok edugrade-enterprise/services/api-gateway/internal/answergroup 5.112s", "gotmpdir": "D:/project/yuejuan/output/go-tmp-exam-capture-round3", "note": "只验证既有抽检门禁与源事实复核；未运行数据库集成或生产环境" },
+    { "command": "Biome lint 本组10个生产文件", "status": "passed", "output": "Checked 10 files in 177ms. No fixes applied.", "errors": 0, "warnings": 0 },
+    { "command": "git diff --check 本组生产文件", "status": "passed", "note": "仅Git既有CRLF归一化提示，未发现空白错误" }
+  ],
+  "limitations": ["本轮没有真实登录环境、生产学校数据或浏览器完整流程验收；组件/单测通过不等于线上部署", "没有执行提交、部署、迁移或历史业务数据变更"],
+  "read_scope": [
+    { "file": "AGENTS.md", "status": "read", "scope": "已全文遵循本轮根约定" },
+    { "file": "docs/engineering/commenting-standard.md", "status": "read", "scope": "全文，第三轮复核必要维护点与不承诺未实现行为" },
+    { "file": "reports/product-simplicity-audit-2026-10-27/exam-preparation.md", "status": "partial", "scope": "EX25、EX31、EX32原观察与相邻说明" },
+    { "file": "apps/web-admin/src/pages/ExamManagementPage.tsx", "status": "read", "scope": "全文及深链最新权限、归属、异步失效与保存后重开边界" },
+    { "file": "apps/web-admin/src/features/exams/management/ManagementExamEditDrawer.tsx", "status": "read", "scope": "全文，沿用现有字段、版本与幂等重试，新增定位提示和焦点" },
+    { "file": "apps/web-admin/src/features/exams/management/managementPresentation.ts", "status": "read", "scope": "全文，核对可编辑范围和默认班级继承规则；本轮未改" },
+    { "file": "apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx", "status": "read", "scope": "全文，考试级待办与单题入口" },
+    { "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx", "status": "partial", "scope": "readinessCheckRoute、班级范围编辑、考试级检查入口；其他准备确认逻辑未重新全文审读" },
+    { "file": "apps/web-admin/src/router/query.ts", "status": "read", "scope": "全文，核对路径/兼容hash查询来源" },
+    { "file": "apps/web-admin/src/api/exams.ts", "status": "partial", "scope": "Exam、ManagementExam与管理更新字段、版本和读取接口" },
+    { "file": "apps/web-admin/src/pages/SubmissionCapturePage.tsx", "status": "partial", "scope": "分段审读旧上传链撤下、历史查看/预览、单页替换、OCR详情与当前考试导航；输出曾截断，未以全文审读计数" },
+    { "file": "apps/web-admin/src/pages/SubmissionCaptureViews.tsx", "status": "partial", "scope": "历史记录、加载/错误/空状态、失败提示与上传队列展示；未重新全文审读全部只读OCR详情渲染" },
+    { "file": "apps/web-admin/src/features/capture/submissionColumns.tsx", "status": "read", "scope": "全文，纯状态主动作移除、历史查看和原有单页修复" },
+    { "file": "apps/web-admin/src/features/capture/submissionPresentation.ts", "status": "partial", "scope": "状态标签、latestTask与处理状态投影，未修改" },
+    { "file": "apps/web-admin/src/router/pageRendering.tsx", "status": "partial", "scope": "capture/processing/settings/整场考试现有挂载与后继入口" },
+    { "file": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx", "status": "read", "scope": "全文，读写代次、抽检动作、候选保存/确认/回滚及展示" },
+    { "file": "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx", "status": "read", "scope": "全文，受控材料身份/hash、实际显示登记、取消与对象URL释放" },
+    { "file": "apps/web-admin/src/features/answer-groups/AnswerGroupReviewWorkspace.tsx", "status": "read", "scope": "本轮新增全文，样本切换身份、冻结正文一致性、操作互斥与失败保留" },
+    { "file": "apps/web-admin/src/features/answer-groups/answerGroupingPresentation.ts", "status": "read", "scope": "全文，最低抽检/异常/拒绝/can_confirm门禁未改" },
+    { "file": "apps/web-admin/src/api/answerGroups.ts", "status": "read", "scope": "全文，原接口/载荷保留" },
+    { "file": "apps/web-admin/src/components/TaskScoringReference.tsx", "status": "read", "scope": "全文，完整冻结题干/答案/细则展示" },
+    { "file": "apps/web-admin/src/constants/assessmentLabels.ts", "status": "read", "scope": "全文，复用另一智能体维护的错误标签映射，本组未修改" },
+    { "file": "services/api-gateway/internal/submission/handlers.go", "status": "partial", "scope": "构造、完整性检查与UpdateStatus入口" },
+    { "file": "services/api-gateway/internal/submission/types.go", "status": "partial", "scope": "Submission与Store状态接口" },
+    { "file": "services/api-gateway/internal/submission/store_memory.go", "status": "partial", "scope": "RunQualityCheck、UpdateStatus、qualityIssues门禁" },
+    { "file": "services/api-gateway/internal/submission/store_postgres.go", "status": "partial", "scope": "UpdateStatus版本/CAS与可写状态检查" },
+    { "file": "services/api-gateway/internal/segment/handlers.go", "status": "partial", "scope": "Generate旧切题入口的Deprecation/后继批次与基本门禁" },
+    { "file": "services/api-gateway/internal/ocr/handlers.go", "status": "partial", "scope": "CreateTask与原子runtime创建入口" },
+    { "file": "services/api-gateway/internal/server/module_capture.go", "status": "partial", "scope": "现有受控批次/图像质量/OCR模块依赖" },
+    { "file": "services/api-gateway/internal/answergroup/member_context.go", "status": "read", "scope": "全文，真实成员表示hash、冻结材料来源与人工交接" },
+    { "file": "services/api-gateway/internal/answergroup/types.go", "status": "partial", "scope": "抽检策略和refreshReadiness门禁" },
+    { "file": "services/api-gateway/internal/answergroup/store_memory.go", "status": "partial", "scope": "候选修订、Confirm检查及源事实复核" },
+    { "file": "services/api-gateway/internal/answergroup/store_test.go", "status": "partial", "scope": "最低抽检与候选而非最终成绩的测试" },
+    { "file": "services/api-gateway/internal/answergroup/confirm_sources_test.go", "status": "partial", "scope": "已抽检/未抽检成员变化、快照变化等源事实复核场景" },
+    { "file": "services/api-gateway/internal/paper/readiness_scoring_policy.go", "status": "partial", "scope": "考试级学段缺失/冲突的blocking section和修复语义" },
+    { "file": "apps/web-admin/src/pages/ExamManagementPage.test.tsx", "status": "partial", "scope": "本轮定位、拒绝、保存后不重开及已有列表权限回归" },
+    { "file": "apps/web-admin/src/pages/ExamPreparationPage.test.ts", "status": "read", "scope": "全文，本轮更新精确路由断言" },
+    { "file": "apps/web-admin/src/components/features/assessment/ExamScoringPreparation.test.tsx", "status": "read", "scope": "全文，本轮更新考试级入口断言" },
+    { "file": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.test.tsx", "status": "partial", "scope": "样本选择/权限/旧代次回调/错误范围与当前改动断言；未重新全文审读不相关旧回滚测试" },
+    { "file": "apps/web-admin/src/features/answer-groups/AnswerGroupReviewWorkspace.test.tsx", "status": "read", "scope": "新增全文，实际显示、共用依据、连续点击、失败/迟到与正文冲突" },
+    { "file": "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.test.tsx", "status": "read", "scope": "全文，取消与图像实际显示登记" },
+    { "file": "apps/web-admin/src/features/capture/submissionColumns.batch14.test.tsx", "status": "read", "scope": "全文改为历史查看不写旧链的行为验证" },
+    { "file": "apps/web-admin/src/pages/SubmissionCapturePage.batch9.test.tsx", "status": "read", "scope": "全文分段审读并替换已删除旧上传流程断言，保留列表/权限/预览/OCR查看行为" },
+    { "file": "apps/web-admin/src/pages/SubmissionCaptureViews.simplicity.test.tsx", "status": "read", "scope": "全文，既有上传队列失败可发现性回归未降低" },
+    { "file": "其他未列文件", "status": "pending", "scope": "本组未重新审读；继续沿用旧总报告状态，不以自动枚举补审读" }
+  ]
+}

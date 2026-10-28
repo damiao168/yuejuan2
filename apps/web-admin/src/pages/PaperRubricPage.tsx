@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { App, Form } from "antd";
 import { validatePaperConfig, type Question, type RubricPayload } from "../api/papers";
 import { usePaperConfigData } from "../features/paper-import/usePaperConfigData";
@@ -12,6 +12,7 @@ import { formatPaperError } from "../features/paper-rubric/paperPresentation";
 import { filterPaperQuestions, fixedScoringQuestionTypes, isUnmatchedPlaceholder, questionEditingAccess, type QuestionFilter, type QuestionIssueTarget } from "../features/paper-rubric/paperQuestionPresentation";
 import { PaperRubricView } from "../features/paper-rubric/PaperRubricView";
 import type { PaperRubricPageProps, PaperRubricViewContext } from "../features/paper-rubric/paperRubricViewTypes";
+import type { QuestionSaveArea, QuestionSaveParticipant, RegisterQuestionSaveParticipant } from "../features/paper-rubric/questionSaveParticipant";
 
 type QuestionSaveCheckpoint = { owner: string; payload: string; questionId: string };
 type ScoringSaveCheckpoint = { owner: string; payload: string };
@@ -82,6 +83,8 @@ export function PaperRubricPage({
   canImportQuestionBank = false,
   questionBankScope = "",
   initialExamId = "",
+  initialQuestionId = "",
+  initialQuestionTarget = "rubric",
   fixedExamId,
   mode = "standalone",
   initialView = "materials",
@@ -137,6 +140,13 @@ export function PaperRubricPage({
   );
   const activeSaveOwner = useRef("");
   activeSaveOwner.current = `${selectedExamId}:${selectedQuestion?.id ?? "create"}`;
+  const auxiliarySaves = useRef(new Map<QuestionSaveArea, QuestionSaveParticipant>());
+  const [auxiliaryDirty, setAuxiliaryDirty] = useState(false);
+  const registerSaveParticipant = useCallback<RegisterQuestionSaveParticipant>((area, participant) => {
+    if (participant) auxiliarySaves.current.set(area, participant);
+    else auxiliarySaves.current.delete(area);
+    setAuxiliaryDirty([...auxiliarySaves.current.values()].some(item => item.owner === activeSaveOwner.current && (item.dirty || item.busy)));
+  }, []);
   useEffect(() => () => { activeSaveOwner.current = ""; }, []);
   const latestPaperImport = paperImports[0];
   const structureConfirmed = latestPaperImport && latestPaperImport.structure_confirmed_generation === latestPaperImport.generation;
@@ -184,7 +194,7 @@ export function PaperRubricPage({
   const objectiveRuleType = access.objectiveRuleType;
   const scoringRuleWorkflow = useScoringRules({ selectedQuestion, objectiveRuleType, preserveUnsaved: saveBusy || Boolean(savedQuestionCheckpoint.current) || Boolean(acceptedSaveReceipt), onChanged: onExamChanged });
   const { scoringRuleDirty, discardScoringRuleDraft, saveScoringRule } = scoringRuleWorkflow;
-  const unsavedWork = formDirty || rubricDirty || scoringRuleDirty;
+  const unsavedWork = formDirty || rubricDirty || scoringRuleDirty || auxiliaryDirty;
   const groupedScores = useGroupedQuestionScores({
     selectedExam, questions: questions.filter((question) => !isUnmatchedPlaceholder(question, latestPaperImport, structureConfirmed)),
     canManage: canManage && (!latestPaperImport || Boolean(structureConfirmed) || latestPaperImport.status === "applied"),
@@ -262,6 +272,18 @@ export function PaperRubricPage({
     else navigateAfterDirtyCheck(open);
   }
 
+  const routedQuestion = useRef("");
+  useEffect(() => {
+    if (!initialQuestionId || configLoading || initialView !== "questions") return;
+    const key = `${selectedExamId}:${initialQuestionId}:${initialQuestionTarget}`;
+    if (routedQuestion.current === key) return;
+    const question = questions.find(item => item.id === initialQuestionId);
+    if (!question) return;
+    routedQuestion.current = key;
+    // 只在当前考试已读取的题目中定位；深链接不能跨考试读取或绕过原有未保存确认。
+    openQuestionIssue(question, initialQuestionTarget);
+  }, [initialQuestionId, initialQuestionTarget, initialView, configLoading, questions, selectedExamId]);
+
   useEffect(() => {
     if (!issueFocus || focusedIssue.current === issueFocus || configLoading || selectedQuestion?.id !== issueFocus.questionId
       || detailTab !== (issueFocus.target === "rubric" ? "scoring" : "content")) return;
@@ -315,6 +337,7 @@ export function PaperRubricPage({
         } else {
           discardRubricDraft();
           discardScoringRuleDraft();
+          for (const item of auxiliarySaves.current.values()) if (item.owner === activeSaveOwner.current) item.discard();
         }
       }
     });
@@ -408,7 +431,7 @@ export function PaperRubricPage({
       // 写入已有回执；恢复操作只读取，不重放任何题目或评分写请求。
       await loadConfig(receipt.examId, { silent: true, propagateError: true });
       if (receipt.owner !== activeSaveOwner.current) return;
-      if (formDirty || rubricDirty || scoringRuleDirty) {
+      if (formDirty || rubricDirty || scoringRuleDirty || auxiliaryDirty) {
         setAcceptedSaveReceipt(null);
         const pending = formDirty || scoringRuleDirty ? "其他区域尚有未保存修改，输入已保留，请核对后保存。" : "之后继续编辑的修改仍保留，请核对后保存。";
         setAllSaveMessage(acceptedReadSuccessMessage(receipt, pending));
@@ -433,6 +456,8 @@ export function PaperRubricPage({
     saveInFlight.current = true; setSaveBusy(true); setAllSaveCompleted(false); setAllSaveMessage(null);
     const owner = `${selectedExam.id}:${selectedQuestion?.id ?? "create"}`;
     const stillCurrent = () => activeSaveOwner.current === owner;
+    // 保存次序固定为判分方式、参考图，不随抽屉先后挂载而变化；校验开始前取得同一轮参与区。
+    const auxiliaryParticipants = [auxiliarySaves.current.get("assessment"), auxiliarySaves.current.get("references")];
     let contentSaved = false;
     let scoringSaved = false;
     try {
@@ -440,6 +465,14 @@ export function PaperRubricPage({
       const prepared = await questionWorkflow.prepareQuestionSave();
       if (!stillCurrent()) return;
       const { rubric, rule } = prepareScoringChanges(prepared);
+      const auxiliaryActions: Array<() => Promise<void>> = [];
+      for (const item of auxiliaryParticipants) {
+        if (!item) continue;
+        if (item.owner !== owner) continue;
+        if (item.busy) throw new Error("判分方式或参考图还有待确认操作，请先核对原操作结果。");
+        if (item.dirty) auxiliaryActions.push(await item.prepare());
+        if (!stillCurrent()) return;
+      }
       const payloadKey = JSON.stringify(prepared.payload);
       const checkpoint = savedQuestionCheckpoint.current;
       let questionId = questionIdForWholeSave(checkpoint, owner, payloadKey, prepared.questionId, formDirty);
@@ -457,7 +490,10 @@ export function PaperRubricPage({
       if (!alreadySaved && rule && !await scoringRuleWorkflow.persistScoringRuleSave(questionId, rule, false, { notify: false, reload: false })) throw new Error("评分规则未保存");
       if (!stillCurrent()) return;
       // 两区写入已成功而最终读取失败时，保留回执，重试刷新不再创建评分版本。
-      savedScoringCheckpoint.current = { owner, payload: scoringKey }; scoringSaved = true;
+      savedScoringCheckpoint.current = { owner, payload: scoringKey };
+      // 细则/规则先记回执；判分方式或参考图失败后不能再次创建已经成功的评分版本。
+      for (const persist of auxiliaryActions) { await persist(); if (!stillCurrent()) return; }
+      scoringSaved = true;
       // 即使题目内容未修改，也独立保留评分写入事实；旧缓存不能在解除 busy 后回填到编辑器。
       const receipt: AcceptedSaveReceipt = { owner, examId: prepared.examId, questionId, kind: "whole",
         rubricStatus: fixedScoringQuestionTypes.has(prepared.payload.question_type) ? undefined : rubric?.status ?? selectedQuestion?.rubric?.status ?? "draft" };
@@ -527,9 +563,10 @@ export function PaperRubricPage({
     selectedExam, selectedQuestion, latestPaperImport, structureConfirmed, pendingDrafts, access,
     state: {
       formDirty, unsavedWork, saveBusy, allSaveMessage, allSaveCompleted, saveRefreshPending: Boolean(acceptedSaveReceipt) || groupedRefreshPending, activeCandidateIndex, detailTab, questionFilter, questionSearch,
-      sourceOpen, indexOpen, visibleQuestions, selectedQuestionIndex, watchedQuestionType
+      sourceOpen, indexOpen, visibleQuestions, selectedQuestionIndex, watchedQuestionType, auxiliaryDirty
     },
     actions: {
+      registerSaveParticipant,
       setDetailTab, setQuestionFilter, setQuestionSearch, setSourceOpen, setIndexOpen,
       markQuestionDirty: () => { setFormDirty(true); setAllSaveCompleted(false); },
       openQuestion, openQuestionIssue, createQuestion, openCandidate, saveQuestion: saveCurrentQuestion, discardActiveDraft,

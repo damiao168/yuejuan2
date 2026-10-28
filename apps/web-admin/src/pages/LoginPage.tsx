@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Checkbox, Form, Input, Spin } from "antd";
+import { Alert, Button, Form, Input, Radio, Spin } from "antd";
 import type { FormInstance } from "antd";
 import { LockKeyhole, LogIn, RefreshCw, ScanLine, School, ShieldCheck } from "lucide-react";
 import { isWithinUtf8ByteLimit, LOGIN_FIELD_LIMITS } from "../auth/loginSecurity";
@@ -63,6 +63,11 @@ export function LoginPage({ onLogin, onWechatAuthenticate, loading = false, erro
     setChallenge(undefined);
     setWechatLoading(false);
     setMethod(next);
+    // 学校专属入口已确定范围；首次二维码沿用普通会话策略，后续改设备须显式重建挑战。
+    if (next === "wechat" && tenantHint) {
+      void beginWechatLogin({ tenant_hint: tenantHint, remember_device: false, public_device: false });
+      wechatForm.setFieldsValue({ remember_device: false, public_device: false });
+    }
   };
 
   useEffect(() => {
@@ -155,7 +160,7 @@ export function LoginPage({ onLogin, onWechatAuthenticate, loading = false, erro
         {method === "password" ? (
           <div className="login-method-panel" role="tabpanel">
             {error ? <Alert type="error" showIcon message="登录失败" description={error} /> : null}
-            <Form form={form} layout="vertical" onFinish={onLogin} className="login-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
+            <Form key="password" form={form} layout="vertical" onFinish={onLogin} className="login-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
               <TenantField tenantHint={tenantHint} />
               {/* 沿用 identifier 协议，已有手机号和教职工号别名仍由服务端兼容解析。 */}
               <Form.Item label="用户名" name="identifier" rules={[{ required: true, message: "请输入用户名" }, byteLimitRule(LOGIN_FIELD_LIMITS.identifier, "用户名过长")]}>
@@ -166,13 +171,13 @@ export function LoginPage({ onLogin, onWechatAuthenticate, loading = false, erro
               </Form.Item>
               <DeviceOptions form={form} />
               <Button type="primary" htmlType="submit" block icon={<LogIn size={17} />} loading={loading}>登录</Button>
-              <p className="login-recovery-help">忘记密码？请联系学校管理员核对身份并生成一次性恢复链接。</p>
+              <p className="login-recovery-help">忘记密码？请联系学校管理员。</p>
             </Form>
           </div>
         ) : (
           <div className="login-method-panel login-wechat-panel" role="tabpanel">
             {/* 挑战创建时会冻结会话策略；等待期间禁用策略输入，避免显示值和二维码策略不一致。 */}
-            <Form form={wechatForm} layout="vertical" onFinish={beginWechatLogin} disabled={wechatLoading} className="login-form login-wechat-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
+            <Form key="wechat" form={wechatForm} layout="vertical" onFinish={beginWechatLogin} disabled={wechatLoading} className="login-form login-wechat-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
               <TenantField tenantHint={tenantHint} />
               {!challenge ? <DeviceOptions form={wechatForm} /> : null}
               {wechatError ? <Alert type="warning" showIcon message="微信登录未完成" description={wechatError} /> : null}
@@ -182,10 +187,16 @@ export function LoginPage({ onLogin, onWechatAuthenticate, loading = false, erro
                   <strong>使用微信扫一扫</strong>
                   <span>在手机上确认授权后，此页面将自动登录</span>
                   <Button icon={<RefreshCw size={16} />} onClick={() => void beginWechatLogin(wechatForm.getFieldsValue())}>刷新二维码</Button>
+                  <Button onClick={() => {
+                    challengeGeneration.current += 1;
+                    setChallenge(undefined);
+                    setWechatError(undefined);
+                  }}>更改登录设备</Button>
                 </div>
               ) : <Button type="primary" htmlType="submit" block icon={<ScanLine size={17} />} loading={wechatLoading}>生成微信登录二维码</Button>}
               {wechatLoading && challenge ? <Spin size="small" /> : null}
-              <p className="wechat-security-note"><ShieldCheck size={15} />二维码 5 分钟内有效，仅用于本次登录，不会读取微信好友或聊天信息。</p>
+              {challenge ? <p className="wechat-security-note"><ShieldCheck size={15} />二维码 5 分钟内有效，仅供本次登录。</p> : null}
+              <details><summary>微信登录会读取什么？</summary><p>不会读取微信好友或聊天信息。</p></details>
             </Form>
           </div>
         )}
@@ -204,12 +215,18 @@ function TenantField({ tenantHint }: { tenantHint?: string }) {
 
 function DeviceOptions({ form }: Readonly<{ form: FormInstance }>) {
   return <>
-    <div className="login-options">
-      <Form.Item name="remember_device" valuePropName="checked" noStyle><Checkbox onChange={(event) => { if (event.target.checked) form.setFieldValue("public_device", false); }}>这是我的常用电脑，30 天内减少验证</Checkbox></Form.Item>
-      <Form.Item name="public_device" valuePropName="checked" noStyle><Checkbox onChange={(event) => { if (event.target.checked) form.setFieldValue("remember_device", false); }}>这是学校公共电脑</Checkbox></Form.Item>
-    </div>
+    <Form.Item name="remember_device" hidden><Input /></Form.Item>
+    <Form.Item name="public_device" hidden><Input /></Form.Item>
+    <Form.Item noStyle shouldUpdate>{({ getFieldValue }) => <Radio.Group className="login-options" aria-label="登录设备" value={getFieldValue("public_device") ? "public" : getFieldValue("remember_device") ? "personal" : "normal"} onChange={event => {
+      // 三种选择仍映射现有两个协议字段，不改变公共设备或常用设备的会话策略。
+      form.setFieldsValue({ remember_device: event.target.value === "personal", public_device: event.target.value === "public" });
+    }}>
+      <Radio value="normal">普通登录</Radio>
+      <Radio value="personal">这是我的常用电脑，30 天内减少验证</Radio>
+      <Radio value="public">这是学校公共电脑</Radio>
+    </Radio.Group>}</Form.Item>
     <Form.Item noStyle shouldUpdate={(previous, current) => previous.public_device !== current.public_device}>
-      {({ getFieldValue }) => getFieldValue("public_device") ? <Alert className="login-public-device-alert" type="warning" showIcon message="公共电脑会话最长 4 小时；页面会持续提示，离开前请点退出。" /> : null}
+      {({ getFieldValue }) => getFieldValue("public_device") ? <Alert className="login-public-device-alert" type="warning" showIcon message="公共电脑登录最长 4 小时，离开前请退出。" /> : null}
     </Form.Item>
   </>;
 }

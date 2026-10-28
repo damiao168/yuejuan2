@@ -3,6 +3,7 @@ package platformschools
 import "context"
 
 type Store interface {
+	GetPublicSchool(context.Context, string) (PublicSchool, error)
 	ListSummaries(context.Context, int) ([]PlatformSchoolSummary, error)
 	ListMembers(context.Context, string) ([]Member, error)
 	GetUsage(context.Context, string, UsageRange) (UsageResult, error)

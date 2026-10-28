@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Exam, ManagementExam } from "../../../api/exams";
-import { canEditManagementDefaultClasses, canEditManagementScope, filterManagementExams, isManagementExamArchived, managementDefaultClassesHelp, managementEditPayload, managementExamKey, managementExamRoute, type ManagementFilters } from "./managementPresentation";
+import { canEditManagementDefaultClasses, canEditManagementScope, filterManagementExams, isManagementExamArchived, managementDefaultClassesHelp, managementEditPayload, managementExamKey, managementExamRoute, managementExamWorkspaceRoute, type ManagementFilters } from "./managementPresentation";
 
 function subject(id: string, status: string, classIds = ["class-a"]): Exam {
   return { id, tenant_id: "tenant", school_id: "school", name: id, subject: id, exam_type: "midterm_exam", total_score: 150, status,
@@ -18,6 +18,13 @@ function exam(): ManagementExam {
 const filters: ManagementFilters = { search: "", schoolId: "", gradeId: "", status: "", examType: "", archive: "active" };
 
 describe("整场考试展示与编辑范围", () => {
+  it("独立单科按当前阶段直达，多科只授权一科仍保留整场入口", () => {
+    const target = exam();
+    expect(managementExamWorkspaceRoute({ ...target, kind: "standalone", exams: [subject("math", "grading")] })).toBe("/exams/math/grading");
+    expect(managementExamWorkspaceRoute({ ...target, kind: "standalone", exams: [subject("math", "published")] })).toBe("/exams/math/scores");
+    const partialSession = { ...target, scope_complete: false, exams: [subject("math", "grading")] };
+    expect(managementExamWorkspaceRoute(partialSession)).toBe("/exams/overview/session/session%2F1");
+  });
   it("筛选保留原整场对象及全部学科，不从第一科或匹配科目生成操作目标", () => {
     const target = exam();
     const result = filterManagementExams([target], { ...filters, status: "ongoing", gradeId: "grade", search: "期中" }, new Map());

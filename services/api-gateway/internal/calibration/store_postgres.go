@@ -14,12 +14,20 @@ type PostgresStore struct{ db *sql.DB }
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
 func (s *PostgresStore) PutPolicy(ctx context.Context, tenantID, examID, questionID string, input PutPolicyInput) (Policy, error) {
-	row := s.db.QueryRowContext(ctx, `
+	return putPolicyQuery(ctx, s.db, tenantID, examID, questionID, input)
+}
+
+type policyQueryer interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func putPolicyQuery(ctx context.Context, query policyQueryer, tenantID, examID, questionID string, input PutPolicyInput) (Policy, error) {
+	row := query.QueryRowContext(ctx, `
 INSERT INTO grader_calibration_policy (
  tenant_id,exam_id,question_id,archetype_code,max_score,minimum_samples,maximum_mae,
  minimum_exact_agreement,minimum_within_one_agreement,minimum_criterion_agreement,
- maximum_severe_rate,severe_error_threshold,qualification_validity_days,revision
-) SELECT $1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,1
+ maximum_severe_rate,severe_error_threshold,qualification_validity_days,revision,school_template_id,school_template_revision
+) SELECT $1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,1,NULLIF($15,'')::uuid,NULLIF($16,0)
 WHERE $14=0 OR EXISTS (
  SELECT 1 FROM grader_calibration_policy current
  WHERE current.tenant_id=$1::uuid AND current.exam_id=$2::uuid AND current.question_id=$3::uuid AND current.revision=$14
@@ -30,14 +38,14 @@ ON CONFLICT (tenant_id,exam_id,question_id) DO UPDATE SET
  minimum_within_one_agreement=EXCLUDED.minimum_within_one_agreement,
  minimum_criterion_agreement=EXCLUDED.minimum_criterion_agreement,maximum_severe_rate=EXCLUDED.maximum_severe_rate,
  severe_error_threshold=EXCLUDED.severe_error_threshold,qualification_validity_days=EXCLUDED.qualification_validity_days,
- revision=grader_calibration_policy.revision+1,updated_at=now()
+ revision=grader_calibration_policy.revision+1,updated_at=now(),school_template_id=EXCLUDED.school_template_id,school_template_revision=EXCLUDED.school_template_revision
 WHERE grader_calibration_policy.revision=$14
 RETURNING id::text,exam_id::text,question_id::text,archetype_code,max_score::float8,minimum_samples,maximum_mae::float8,
  minimum_exact_agreement::float8,minimum_within_one_agreement::float8,minimum_criterion_agreement::float8,
- maximum_severe_rate::float8,severe_error_threshold::float8,qualification_validity_days,revision,created_at,updated_at
+ maximum_severe_rate::float8,severe_error_threshold::float8,qualification_validity_days,revision,created_at,updated_at,COALESCE(school_template_id::text,''),COALESCE(school_template_revision,0)
 `, tenantID, examID, questionID, input.ArchetypeCode, input.MaxScore, input.MinimumSamples, input.MaximumMAE,
 		input.MinimumExactAgreement, input.MinimumWithinOneAgreement, input.MinimumCriterionAgreement, input.MaximumSevereRate,
-		input.SevereErrorThreshold, input.QualificationValidityDays, input.ExpectedRevision)
+		input.SevereErrorThreshold, input.QualificationValidityDays, input.ExpectedRevision, input.SchoolTemplateID, input.SchoolTemplateRevision)
 	policy, err := scanPolicy(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Policy{}, ErrConflict
@@ -49,7 +57,7 @@ func (s *PostgresStore) GetPolicy(ctx context.Context, tenantID, examID, questio
 	policy, err := scanPolicy(s.db.QueryRowContext(ctx, `
 SELECT id::text,exam_id::text,question_id::text,archetype_code,max_score::float8,minimum_samples,maximum_mae::float8,
  minimum_exact_agreement::float8,minimum_within_one_agreement::float8,minimum_criterion_agreement::float8,
- maximum_severe_rate::float8,severe_error_threshold::float8,qualification_validity_days,revision,created_at,updated_at
+ maximum_severe_rate::float8,severe_error_threshold::float8,qualification_validity_days,revision,created_at,updated_at,COALESCE(school_template_id::text,''),COALESCE(school_template_revision,0)
 FROM grader_calibration_policy WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$3::uuid
 `, tenantID, examID, questionID))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -276,7 +284,7 @@ func scanPolicy(row rowScanner) (Policy, error) {
 	err := row.Scan(&policy.ID, &policy.ExamID, &policy.QuestionID, &policy.ArchetypeCode, &policy.MaxScore,
 		&policy.MinimumSamples, &policy.MaximumMAE, &policy.MinimumExactAgreement, &policy.MinimumWithinOneAgreement,
 		&criterion, &policy.MaximumSevereRate, &policy.SevereErrorThreshold, &policy.QualificationValidityDays,
-		&policy.Revision, &policy.CreatedAt, &policy.UpdatedAt)
+		&policy.Revision, &policy.CreatedAt, &policy.UpdatedAt, &policy.SchoolTemplateID, &policy.SchoolTemplateRevision)
 	if err != nil {
 		return Policy{}, err
 	}

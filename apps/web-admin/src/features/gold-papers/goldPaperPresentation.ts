@@ -1,3 +1,5 @@
+import { typicalErrorLabel } from "../../constants/assessmentLabels";
+
 export interface GoldRubricPoint {
   id: string;
   description: string;
@@ -40,6 +42,6 @@ const gapLabels: Record<string, string> = {
 };
 
 export function goldCoverageGapLabel(code: string) {
-  if (code.startsWith("missing_pattern:")) return `缺少典型模式：${code.slice("missing_pattern:".length)}`;
-  return gapLabels[code] ?? code;
+  if (code.startsWith("missing_pattern:")) return `缺少典型模式：${typicalErrorLabel(code.slice("missing_pattern:".length))}`;
+  return gapLabels[code] ?? "其他标准卷覆盖缺口";
 }

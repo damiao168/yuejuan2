@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, DatePicker, Segmented, Spin } from "antd";
+import { Alert, Button, DatePicker, Segmented, Spin } from "antd";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getPlatformSchoolUsage, type SchoolUsageResponse, type UsageBreakdown, type UsageWindow } from "../../../api/platformSchools";
 import { ResponsiveTable } from "../../../components/ResponsiveTable";
@@ -14,6 +14,7 @@ export function SchoolUsageTab({ tenantId }: Readonly<{ tenantId: string }>) {
   const [data, setData] = useState<SchoolUsageResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     // 自定义日期尚未选齐时不发查询；换学校或时间范围后丢弃此前请求的回填。
@@ -22,13 +23,13 @@ export function SchoolUsageTab({ tenantId }: Readonly<{ tenantId: string }>) {
     setLoading(true); setError(false);
     void getPlatformSchoolUsage(tenantId, windowValue === "custom" ? customRange ?? {} : { window: windowValue }).then((result) => { if (active) setData(result); }).catch(() => { if (active) setError(true); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [tenantId, windowValue, customRange]);
+  }, [tenantId, windowValue, customRange, retry]);
 
   const renderUsage = () => {
     if (windowValue === "custom" && !customRange) return <p>请选择完整的开始与结束日期，再查看该期间成本。</p>;
     // 展示先判断本轮加载和失败，不能把上一轮保留的数据当作本轮查询成功。
     if (loading) return <div className="platform-school-panel-loading"><Spin /></div>;
-    if (error) return <Alert type="error" showIcon message="AI 用量加载失败" />;
+    if (error) return <Alert type="error" showIcon message="AI 用量加载失败" action={<Button onClick={() => setRetry(value => value + 1)}>重试当前内容</Button>} />;
     if (!data) return <p>请选择时间范围。</p>;
     return <>
       <div className="platform-school-usage-metrics">

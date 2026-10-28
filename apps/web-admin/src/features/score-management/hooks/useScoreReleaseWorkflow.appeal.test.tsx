@@ -48,7 +48,7 @@ describe("复核申请与成绩发布依赖", () => {
   it("可发布草稿确认公开内容和题目复核路径，执行仍经过近期身份验证", async () => {
     workflow.publishRelease({ id: "draft", version: 3, appeal_window: { enabled: true }, visibility_policy: { show_question_scores: true } } as unknown as ScoreRelease);
     const confirmation = mocks.confirm.mock.calls[0][0];
-    expect(renderToStaticMarkup(confirmation.content)).toContain("学生可从逐题详情申请复核");
+    expect(renderToStaticMarkup(confirmation.content)).toContain("学生可在开放时段内从逐题详情申请");
     await act(async () => confirmation.onOk());
     expect(mocks.stepUp).toHaveBeenCalled(); expect(mocks.publish).toHaveBeenCalledWith("draft");
   });

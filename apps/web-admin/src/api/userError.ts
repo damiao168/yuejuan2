@@ -2,6 +2,17 @@ export const DEFAULT_USER_ERROR_MESSAGE = "操作失败，请稍后重试。";
 export const NETWORK_USER_ERROR_MESSAGE = "网络连接异常，请检查网络后重试。";
 
 const apiErrorMessages: Record<string, string> = {
+  score_release_gate_blocked: "发布前仍有待处理事项，请查看本场成绩的发布检查并完成处理后再发布。",
+  score_release_stale_source: "当前正式成绩已更新，请以最新正式版本重新建立复评和发布草稿。",
+  regrade_source_release_invalid: "复评来源不再是本场可用的正式成绩版本，请核对最新正式版本后重新预览。",
+  regrade_no_affected_items: "当前范围没有匹配的已发布答卷，请核对题目、学生范围和来源版本。",
+  calibration_gold_set_incomplete: "已批准标准卷不足，请在标准卷管理中补足本题试评样本后重试。",
+  calibration_policy_missing: "本题尚未设置试评通过标准，请先完成本题试评设置。",
+  calibration_template_forbidden: "请有本校管理权限的阅卷管理员批准或撤回学校试评标准。",
+  calibration_template_unavailable: "所选学校试评标准已撤回、更新或不再适合本题，请重新选择，当前输入已保留。",
+  calibration_template_context_missing: "尚未确定本题作答类型或满分，请先核对题目配置后再使用学校标准。",
+  calibration_conflict: "本题试评标准已更新，请保留当前输入，重新读取后核对再保存。",
+  regrade_revision_conflict: "这条复评候选已更新，请保留本页输入，重新读取材料并核对后再提交。",
   grading_ai_plan_confirmation_required: "请学校管理员先在“阅卷设置”中确认本场大题 AI 评分方案，再启动大题评分。",
   grading_ai_threshold_required: "请学校管理员手动填写大题允许分差；选择题和填空题不需要此设置。",
   answer_segment_answer_missing: "尚未形成可评分的学生作答，请查看本题识别进度或答题图。",

@@ -35,7 +35,7 @@ export function GoldCoverageGaps({ examId }: Readonly<{ examId?: string }>) {
   if (!examId) return null;
   if (loading) return <Spin size="small" />;
   if (failed) return <Alert type="warning" showIcon message="标准卷覆盖暂时无法读取" action={<Button size="small" onClick={() => void load()}>重试</Button>} />;
-  if (unavailableCount > 0 && !items.length) return <Alert type="warning" showIcon message={`${unavailableCount} 道题尚无冻结评估快照，无法判断标准卷覆盖`} />;
+  if (unavailableCount > 0 && !items.length) return <Alert type="warning" showIcon message={`${unavailableCount} 道题的标准卷覆盖暂时无法读取，尚不能判断是否存在缺口`} action={<Button size="small" onClick={() => void load()}>重试覆盖检查</Button>} />;
   if (!items.length) return <Alert type="success" showIcon message="标准卷覆盖暂无阻断缺口" />;
   const unavailableMessage = unavailableCount ? `；另有 ${unavailableCount} 道题无法判断` : "";
   return (
@@ -43,6 +43,7 @@ export function GoldCoverageGaps({ examId }: Readonly<{ examId?: string }>) {
       type="warning"
       showIcon
       message={`${items.length} 道题的标准卷覆盖不完整${unavailableMessage}`}
+      action={unavailableCount ? <Button size="small" onClick={() => void load()}>重试覆盖检查</Button> : undefined}
       description={<List size="small" dataSource={items} renderItem={(item) => <List.Item><strong>{item.questionNo}</strong><span>{item.coverage.gaps.map((gap) => <Tag key={gap}>{goldCoverageGapLabel(gap)}</Tag>)}</span></List.Item>} />}
     />
   );

@@ -57,9 +57,10 @@ function JobStatus({ job }: Readonly<{ job?: RubricDraftJob }>) {
   return null;
 }
 
-export function PaperRubricJobSuggestion({ question, lines, disabled, onApply, onDirtyChange, draft }: Readonly<{
+export function PaperRubricJobSuggestion({ question, lines, disabled, onApply, onDirtyChange, draft, generateRequest = 0 }: Readonly<{
   question: Question; lines: RubricSolutionLine[]; disabled: boolean; onApply: (points: RubricPoint[], validate?: () => Promise<boolean>) => void;
   onDirtyChange: (dirty: boolean) => void; draft: RubricAssistantDraft;
+  generateRequest?: number;
 }>) {
   const { modal } = App.useApp();
   const flow = useJobSuggestion(question, lines, disabled);
@@ -102,6 +103,10 @@ export function PaperRubricJobSuggestion({ question, lines, disabled, onApply, o
     if (!points.length) { run(); return; }
     modal.confirm({ title: "重新生成分值建议？", content: "当前预览与已调整的建议分值将被替换。", okText: "重新生成", cancelText: "保留当前建议", onOk: run });
   }
+  const lastRequestedGeneration = useRef(0);
+  // 主入口的明确点击只提交一次；任务恢复和轮询结果不应自动产生新调用。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 请求号只在主入口递增，生成函数随任务状态变化不能重发。
+  useEffect(() => { if (generateRequest && lastRequestedGeneration.current !== generateRequest) { lastRequestedGeneration.current = generateRequest; generate(); } }, [generateRequest]);
   const total = points.reduce((sum, point) => sum + (point.score ?? 0), 0);
   const complete = points.length > 0 && points.every(point => point.description.trim() && point.score !== null && Number.isFinite(point.score) && point.score >= 0) && Math.abs(total - question.score) < 0.0001;
   async function apply() {

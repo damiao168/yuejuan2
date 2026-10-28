@@ -18,10 +18,10 @@ export function QuestionAppealReviewOpinionPanel({ saved, pending, canSubmit, op
     <h3 id="question-appeal-review-opinion-title">独立复核意见</h3>
     {saved ? <Alert type="info" showIcon message={`${pending ? "已移交学校管理员" : "已记录的独立复核意见"}：${choices.find((item) => item.value === saved.opinion)?.label ?? "复核意见"}`} description={<>
       <p>{saved.explanation}</p>{saved.suggested_score !== undefined ? <p>建议本题得分：{formatQuestionAppealScore(saved.suggested_score)} / {formatQuestionAppealScore(maxScore)}</p> : null}
-      <p>{pending ? "这份意见尚未改变成绩。学校管理员将核对意见、安排必要的复评并向学生答复。" : "此处为教师当时提出的建议，处理结果以管理员答复与正式发布成绩为准。"}</p>
+      <p>{pending ? "意见已移交学校管理员，当前成绩未改变。" : "此处保留教师建议；处理结果以管理员答复和正式成绩为准。"}</p>
     </>} /> : null}
     {canSubmit ? <>
-      <p>核对原公布版本的答卷和评分依据后保存意见，交由学校管理员继续处理。意见和建议分值仅供教职工核对，学生暂不可见。</p>
+      <p>{saved ? "修改后需再次提交；意见和建议分仅供教职工查看。" : "核对原公布材料后提交独立意见。意见和建议分仅供教职工查看，不直接改分。"}</p>
       <label htmlFor="question-appeal-review-opinion">复核意见（必选）</label>
       <Select id="question-appeal-review-opinion" aria-label="复核意见" value={opinion || undefined} options={choices} onChange={onOpinionChange} disabled={busy} placeholder="请选择复核意见" />
       <label htmlFor="question-appeal-suggested-score">建议本题得分（可选，0–{formatQuestionAppealScore(maxScore)} 分）</label>

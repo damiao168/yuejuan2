@@ -1,3 +1,4 @@
+import { PrivateOpinionDraft } from "../components/PrivateOpinionDraft";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, App, Button, Input, Select, Space } from "antd";
 import { RefreshCw, Search } from "lucide-react";
@@ -23,6 +24,8 @@ import { ErrorState } from "../components/PageState";
 import { examSubjectLabel } from "../constants/examStatus";
 import type { ProductExperience } from "../router/experience";
 import { useUnsavedChangesGuard } from "../router/useUnsavedChangesGuard";
+import { loadOpinionDraft, removeOpinionDraft, saveOpinionDraft, useOpinionDraftReloadWarning } from "../auth/reviewOpinionDraft";
+
 import { AppealTaskList } from "../features/appeals/AppealTaskList";
 import { AppealCaseHeading, AppealCasePanel, AppealEvidence } from "../features/appeals/AppealEvidence";
 import { AppealDecisionPanel } from "../features/appeals/AppealDecisionPanel";
@@ -32,6 +35,8 @@ import {
   readableReason,
   statusLabels,
 } from "../features/appeals/appealPresentation";
+
+const legacyOpinionSource = (appeal: Appeal) => `${appeal.exam_id}:${appeal.final_grade_id ?? appeal.submission_grade_id}`;
 
 interface AppealCenterPageProps {
   mode: ProductExperience;
@@ -85,6 +90,12 @@ export function AppealCenterPage({
   const [score, setScore] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [draftTouched, setDraftTouched] = useState(false);
+  const [draftToReview, setDraftToReview] = useState<{ recommendation: SubmitAppealRecommendationPayload["recommendation"]; decision: string; score: number | null; reason: string }>();
+  const [memorySaved, setMemorySaved] = useState(false);
+  useOpinionDraftReloadWarning(draftTouched && memorySaved);
+  const rememberDraft = () => selected && saveOpinionDraft("legacy-appeal", selected.id, legacyOpinionSource(selected), selected.revision, { recommendation, decision, score, reason });
+  // 只缓存当前详情的主动编辑，不把切换期间残留的上一条输入记到新记录。
+  useEffect(() => { if (draftTouched && selected?.id === selectedId) setMemorySaved(Boolean(rememberDraft())); });
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState("");
@@ -95,7 +106,7 @@ export function AppealCenterPage({
   useEffect(() => { onEditorStateChange?.({ dirty: draftTouched, busy: Boolean(actioning) }); }, [draftTouched, actioning, onEditorStateChange]);
   const [error, setError] = useState("");
   useUnsavedChangesGuard({
-    dirty: draftTouched,
+    dirty: draftTouched && !memorySaved,
     busy: Boolean(actioning),
     description: "复核意见或终审结论尚未提交，离开后无法恢复这些内容。",
   });
@@ -198,6 +209,7 @@ export function AppealCenterPage({
     setScore(null);
     setReason("");
     setDraftTouched(false);
+    setDraftToReview(undefined); setMemorySaved(false);
     void getAppeal(selectedId)
       .then(({ appeal }) => {
         if (requestId !== detailRequestRef.current || selectedIdRef.current !== selectedId) return;
@@ -212,6 +224,9 @@ export function AppealCenterPage({
             : "accepted",
         );
         setScore(evidenceNumber(appeal, "score") ?? null);
+        const saved = loadOpinionDraft<{ recommendation: SubmitAppealRecommendationPayload["recommendation"]; decision: string; score: number | null; reason: string }>("legacy-appeal", appeal.id, legacyOpinionSource(appeal), appeal.revision);
+        if (saved?.needsReview) setDraftToReview(saved.values);
+        else if (saved) { setRecommendation(saved.values.recommendation); setDecision(saved.values.decision); setScore(saved.values.score); setReason(saved.values.reason); setDraftTouched(true); setMemorySaved(true); }
       })
       .catch((error_) => {
         if (requestId === detailRequestRef.current && selectedIdRef.current === selectedId)
@@ -224,7 +239,7 @@ export function AppealCenterPage({
 
   const confirmDraftDiscard = (action: () => void, actionLabel: string) => {
     if (actioning) return;
-    if (!draftTouched) {
+    if (!draftTouched || rememberDraft()) {
       action();
       return;
     }
@@ -367,6 +382,7 @@ export function AppealCenterPage({
         ...(recommendation === "adjust_score" && score !== null ? { recommended_score: score } : {}),
         expected_revision: selected.revision,
       });
+      removeOpinionDraft("legacy-appeal", appealId, legacyOpinionSource(selected));
       if (selectedIdRef.current === appealId) setDraftTouched(false);
       message.success("独立复核意见已提交");
       await refreshSelected(appealId);
@@ -407,6 +423,7 @@ export function AppealCenterPage({
         setActioning("decision");
         try {
           await reviewAppeal(appealId, payload);
+          removeOpinionDraft("legacy-appeal", appealId, legacyOpinionSource(selected));
           if (selectedIdRef.current === appealId) setDraftTouched(false);
           message.success("最终处理已提交");
           await refreshSelected(appealId);
@@ -421,6 +438,8 @@ export function AppealCenterPage({
 
   return (
     <div className={`appeal-shell appeal-shell-v2 ${mode === "teacher" ? "teacher" : "admin"}`}>
+      {selected && !["closed","accepted","rejected","score_adjusted"].includes(selected.status) && (canManage || selected.assigned_to === currentUser.id) ? <PrivateOpinionDraft key={`${selected.id}:${selected.revision}`} kind="legacy-appeal" recordId={selected.id} source={legacyOpinionSource(selected)} sourceRevision={selected.revision} dirty={draftTouched} busy={Boolean(actioning)} values={{recommendation,decision,score,reason}} onRestore={(values,needsReview)=>{if(needsReview){setDraftToReview(values);return;}setRecommendation(values.recommendation);setDecision(values.decision);setScore(values.score);setReason(values.reason);setDraftTouched(true);}} /> : null}
+      {draftToReview && selected ? <Alert type="warning" message="已有另一版未提交意见，请核对后恢复" description="请核对当前材料后决定是否恢复；恢复仅生成本地待提交意见。" action={<><Button onClick={() => { setRecommendation(draftToReview.recommendation); setDecision(draftToReview.decision); setScore(draftToReview.score); setReason(draftToReview.reason); setDraftTouched(true); setDraftToReview(undefined); }}>已核对，恢复旧输入</Button><Button onClick={() => { removeOpinionDraft("legacy-appeal", selected.id, legacyOpinionSource(selected)); setDraftToReview(undefined); }}>放弃旧输入</Button></>} /> : null}
       <section className="appeal-topbar">
         <div>
           <h1>{mode === "teacher" ? "复核任务" : "成绩复核"}</h1>
@@ -529,7 +548,7 @@ export function AppealCenterPage({
             <div className="appeal-case-grid">
               <AppealEvidence appeal={selected} mode={mode} workerNames={workerNames} />
               <AppealDecisionPanel
-                mode={mode} selected={selected} terminal={terminal} draftTouched={draftTouched}
+                mode={mode} selected={selected} terminal={terminal} draftTouched={draftTouched} memorySaved={memorySaved}
                 actioning={actioning} score={score} maxScore={maxScore} reason={reason}
                 recommendation={recommendation} canSubmit={canSubmitTeacherRecommendation}
                 workerNames={workerNames} workerOptions={workerOptions} assignedTo={assignedTo}

@@ -8,6 +8,7 @@ import { getPersonalReviewBookmarkCleanup, getPersonalReviewBookmarkContext, get
 import { fetchReviewBookmarkPage, onReviewBookmarkRemoved, reviewBookmarkKeys } from "../../../../query/reviewBookmarks";
 import { assertReviewTaskContextScope, isReviewTaskContextScopeCurrent, type ReviewTaskContextScope } from "../../../../query/reviewTaskContext";
 import type { PersonalReviewBookmarkController } from "../hooks/usePersonalReviewBookmarks";
+import { InternalRouteButton } from "../../../../components/InternalRouteButton";
 
 export function ReviewBookmarkControls({ scope, controller }: { scope: ReviewTaskContextScope; controller: PersonalReviewBookmarkController }) {
   const { message } = App.useApp();
@@ -94,7 +95,7 @@ export function ReviewBookmarkReadOnly({ scope, bookmarkId, onClose, onUnavailab
   </Modal>;
 }
 
-export function ReviewBookmarksDrawer({ scope, controller, open, initialExamId, onClose }: { scope: ReviewTaskContextScope; controller: PersonalReviewBookmarkController; open: boolean; initialExamId: string; onClose: () => void }) {
+export function ReviewBookmarksDrawer({ scope, controller, open, initialExamId, onClose, onResumeTask }: { scope: ReviewTaskContextScope; controller: PersonalReviewBookmarkController; open: boolean; initialExamId: string; onClose: () => void; onResumeTask?: (taskId: string) => void }) {
   const client = useQueryClient();
   const { modal } = App.useApp();
   const [filter, setFilter] = useState<PersonalReviewBookmarkFilter>({ exam_id: initialExamId });
@@ -124,6 +125,10 @@ export function ReviewBookmarksDrawer({ scope, controller, open, initialExamId, 
       {controller.error ? <Alert type="warning" showIcon message={controller.error} action={controller.uncertainTask ? <Button loading={controller.busy} onClick={() => void controller.retry()}>重试原操作</Button> : undefined} /> : null}
       {list.isPending ? <Spin /> : list.isError ? <Alert type="error" message="标记列表读取失败" action={<Button onClick={() => void list.refetch()}>重试</Button>} /> : rows.length ? <ul className="bookmark-list">{rows.map((item) => <li key={item.id}>
         <button type="button" className="bookmark-open" onClick={() => setSelected(item.id!)}><small>{item.exam_name} · {item.question_no}</small><strong>{item.anonymous_code || "匿名答卷"}</strong><span>{item.state === "submitted" || item.state === "completed" ? "已提交·只读" : item.state === "archived" ? "考试归档·只读" : "答题材料"}</span></button>
+        {onResumeTask && item.state === "processable" ? initialExamId && item.exam_id !== initialExamId
+          // 跨考试通过正式路由离开，保留未提交内容拦截；新工作台重新检查任务权限、状态和租约。
+          ? <InternalRouteButton size="small" href={`/grading?task=${encodeURIComponent(item.task_id)}`} disabled={controller.busy || Boolean(controller.uncertainTask)} onClick={event => { if (!isReviewTaskContextScopeCurrent(scope)) event.preventDefault(); }}>继续阅卷</InternalRouteButton>
+          : <Button size="small" disabled={controller.busy || Boolean(controller.uncertainTask)} onClick={() => { if (isReviewTaskContextScopeCurrent(scope)) onResumeTask(item.task_id); }}>继续阅卷</Button> : null}
         <Button size="small" icon={<Trash2 size={14} />} disabled={controller.busy || Boolean(controller.uncertainTask)} onClick={() => remove(item)}>取消标记</Button>
       </li>)}</ul> : <div className="bookmark-empty"><p>{Object.values(filter).some(Boolean) ? "当前筛选下没有标记记录。" : "还没有标记试卷。"}</p>{Object.values(filter).some(Boolean) ? <Button onClick={() => { setFilter({}); setKeyword(""); }}>清除筛选</Button> : null}</div>}
       {list.hasNextPage ? <Button block loading={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{list.isFetchNextPageError ? "重试加载更多" : "加载更多"}</Button> : null}

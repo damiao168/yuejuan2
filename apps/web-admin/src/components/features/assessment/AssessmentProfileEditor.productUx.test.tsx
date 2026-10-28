@@ -6,6 +6,7 @@ import { AssessmentProfileEditor } from "./AssessmentProfileEditor";
 import { ApiClientError } from "../../../api/client";
 import type { AssessmentProfile, AssessmentSnapshot, EducationStage, EvidenceType, QuestionArchetype, SubjectCode, SubjectProfile } from "../../../api/assessment";
 import type { Question } from "../../../api/papers";
+import type { QuestionSaveParticipant, RegisterQuestionSaveParticipant } from "../../../features/paper-rubric/questionSaveParticipant";
 
 const api = vi.hoisted(() => ({ profile: vi.fn(), snapshot: vi.fn(), profiles: vi.fn(), archetypes: vi.fn(), put: vi.fn(), error: vi.fn(), success: vi.fn(), changed: vi.fn() }));
 const fields = vi.hoisted(() => ({ values: {} as Record<string, unknown>, listeners: new Set<() => void>(), validate: vi.fn(), actions: {} as Record<string, () => void> }));
@@ -107,6 +108,35 @@ describe("逐题评分配置的合法默认与恢复", () => {
     await click("保存判分方式");
     expect(api.put).toHaveBeenLastCalledWith("exam-1", "q1", expect.objectContaining({ expected_revision: 8 }));
     expect(api.changed).toHaveBeenCalledTimes(2);
+  });
+
+  it("整题保存参与区先冻结并校验，执行动作后才写入并清除本区未保存状态", async () => {
+    api.profile.mockResolvedValue({ assessment_profile: saved() });
+    let participant: QuestionSaveParticipant | null = null;
+    const register: RegisterQuestionSaveParticipant = (area, next) => { if (area === "assessment") participant = next; };
+    await render({ presentation: "inline", registerSaveParticipant: register });
+    expect(participant!.dirty).toBe(false);
+    await select("scoring_mode", "DUAL_HUMAN");
+    expect(participant!.dirty).toBe(true);
+    let persist!: () => Promise<void>;
+    await act(async () => { persist = await participant!.prepare(); });
+    expect(api.put).not.toHaveBeenCalled();
+    await act(async () => persist());
+    expect(api.put).toHaveBeenCalledExactlyOnceWith("exam-1", "q1", expect.objectContaining({ expected_revision: 7, scoring_policy: expect.objectContaining({ mode: "DUAL_HUMAN" }) }));
+    expect(participant!.dirty).toBe(false);
+  });
+
+  it("切题后拒绝旧参与区写入，旧动作不能清除新题的判分草稿", async () => {
+    api.profile.mockResolvedValue({ assessment_profile: saved() });
+    let participant: QuestionSaveParticipant | null = null;
+    const register: RegisterQuestionSaveParticipant = (area, next) => { if (area === "assessment") participant = next; };
+    await render({ presentation: "inline", registerSaveParticipant: register }); await select("scoring_mode", "DUAL_HUMAN");
+    let oldPersist!: () => Promise<void>;
+    await act(async () => { oldPersist = await participant!.prepare(); });
+    await render({ presentation: "inline", registerSaveParticipant: register, question: question("short_answer", "q2") });
+    await select("scoring_mode", "AI_ASSIST");
+    await expect(oldPersist()).rejects.toThrow("所属题目已变化");
+    expect(api.put).not.toHaveBeenCalled(); expect(participant!.owner).toBe("exam-1:q2"); expect(participant!.dirty).toBe(true);
   });
 
   it("进入评分标签后才读取，切回题目标签再回来保留未保存的选择", async () => {

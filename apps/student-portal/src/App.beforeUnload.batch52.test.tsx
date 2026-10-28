@@ -78,9 +78,9 @@ describe("学生端卸载时的回执和草稿边界", () => {
       return resultRoute(call, makeResult());
     });
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: reason } });
-    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
+    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" });
     await waitFor(() => expect(submit.disabled).toBe(false));
     expect(dispatchUnload().defaultPrevented).toBe(false);
     fireEvent.click(submit);

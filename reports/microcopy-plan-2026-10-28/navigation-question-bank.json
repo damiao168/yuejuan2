@@ -1,0 +1,1418 @@
+{
+  "meta": {
+    "date": "2026-10-28",
+    "scope": "登录、教师首页、题库、助手及公共恢复提示",
+    "status": "proposal_not_implemented",
+    "verification": "静态全文审读与原文定位；复用前轮浏览器证据仅作背景，本轮未新增浏览器复现。"
+  },
+  "items": [
+    {
+      "id": "MC-R01",
+      "page": "教师首页：任务摘要",
+      "role": "阅卷教师、仲裁教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 81,
+          "endLine": 81,
+          "text": "已加载待阅卷",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 82,
+          "endLine": 82,
+          "text": "已加载待仲裁",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 83,
+          "endLine": 83,
+          "text": "已加载已提交",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 183,
+          "endLine": 183,
+          "text": "分别查看已分配的阅卷与仲裁；数量以当前已加载任务为准。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "有阅卷或仲裁权限时显示摘要；有当前任务时另显示段落。",
+      "problem": "同一取数范围重复四次，标签难读；当前响应数量又不能冒充全量。",
+      "actions": [
+        "shorten",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "待阅卷 / 待仲裁 / 已提交",
+        "details": "摘要仅统计当前已读取任务。完整任务请进入阅卷或仲裁列表。"
+      },
+      "targetCondition": "标签常驻；范围说明在摘要下只显示一次。",
+      "placement": "摘要标签及统一范围说明",
+      "dependency": "frontend",
+      "boundaries": [
+        "当前数据未包含全量计数，不能改成‘全部待办’。",
+        "某类别读取失败仍显示‘—’，不可变成0。"
+      ],
+      "acceptance": [
+        "同时有两种任务时范围说明只出现一次。",
+        "任一接口失败时保留对应失败提示与重试。"
+      ]
+    },
+    {
+      "id": "MC-R02",
+      "page": "教师首页：空状态",
+      "role": "阅卷教师、仲裁教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 166,
+          "endLine": 166,
+          "text": "当前没有已加载的待办",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 166,
+          "endLine": 166,
+          "text": "任务分配后会显示在这里；如果任务区加载失败，请重试。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "有权限且tasks为空时；当前也可能伴随接口降级警告。",
+      "problem": "正常空状态提前解释失败，与真实失败提示重叠，且‘没有’可能掩盖尚未读取。",
+      "actions": [
+        "contextual",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "当前暂无待办",
+        "failure": "任务暂时无法读取，请重试。",
+        "details": "任务分配后会显示在这里。"
+      },
+      "targetCondition": "仅相应数据成功读取且为空时显示正常空状态；读取失败显示失败提示。",
+      "placement": "任务列表占位区",
+      "dependency": "frontend",
+      "boundaries": [
+        "先区分空结果与读取失败；不得只替换标题而保留错误条件。"
+      ],
+      "acceptance": [
+        "成功空数组显示暂无待办。",
+        "请求失败不出现‘暂无待办’结论。"
+      ]
+    },
+    {
+      "id": "MC-R03",
+      "page": "密码登录：找回入口",
+      "role": "登录用户",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/LoginPage.tsx",
+          "line": 169,
+          "endLine": 169,
+          "text": "忘记密码？请联系学校管理员核对身份并生成一次性恢复链接。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "密码登录表单底部常驻。",
+      "problem": "用户只需知道联系谁；管理员生成凭据的实现步骤过早出现。",
+      "actions": [
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "忘记密码？请联系学校管理员。"
+      },
+      "targetCondition": "密码登录方式下保留；管理员操作页继续说明身份核验和一次性链接。",
+      "placement": "登录按钮下",
+      "dependency": "copy",
+      "boundaries": [
+        "不能增加尚不存在的自助找回链接；管理员侧身份核验不删。"
+      ],
+      "acceptance": [
+        "用户能识别联系对象，不误认为已发送恢复链接。"
+      ]
+    },
+    {
+      "id": "MC-R04",
+      "page": "登录：公共电脑",
+      "role": "使用共享设备的用户",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/LoginPage.tsx",
+          "line": 212,
+          "endLine": 212,
+          "text": "公共电脑会话最长 4 小时；页面会持续提示，离开前请点退出。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "public_device被勾选时显示。",
+      "problem": "时限与离开前退出是必要提醒；‘页面会持续提示’只是介绍界面。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "公共电脑登录最长 4 小时，离开前请退出。"
+      },
+      "targetCondition": "仍仅公共电脑策略被选中时出现。",
+      "placement": "设备策略旁的可见提示",
+      "dependency": "copy",
+      "boundaries": [
+        "保留4小时时限和主动退出要求；不得改成‘4小时后自动清除全部数据’。"
+      ],
+      "acceptance": [
+        "公共电脑策略开启能直接看到限制；关闭后不残留。"
+      ]
+    },
+    {
+      "id": "MC-R05",
+      "page": "微信登录：有效期与隐私",
+      "role": "微信登录用户",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/LoginPage.tsx",
+          "line": 188,
+          "endLine": 188,
+          "text": "二维码 5 分钟内有效，仅用于本次登录，不会读取微信好友或聊天信息。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "微信登录页常驻，二维码尚未生成时也显示。",
+      "problem": "有效期应与已生成二维码关联，隐私说明适合独立帮助，当前把两件事挤成小字。",
+      "actions": [
+        "contextual",
+        "progressive"
+      ],
+      "replacement": {
+        "summary": "二维码 5 分钟内有效，仅供本次登录。",
+        "detailsLabel": "微信登录会读取什么？",
+        "details": "不会读取微信好友或聊天信息。"
+      },
+      "targetCondition": "生成二维码后显示有效期；隐私帮助在生成前后都可展开。",
+      "placement": "二维码下方和独立帮助入口",
+      "dependency": "frontend",
+      "boundaries": [
+        "5分钟沿用当前实现文案；若后端返回有效期有差异，须以实际挑战期限为准。",
+        "不把二维码过期误写成账号登录会话到期。"
+      ],
+      "acceptance": [
+        "生成前没有悬空的有效期句子；生成后时限可见。",
+        "二维码失败、过期消息仍直接显示。"
+      ]
+    },
+    {
+      "id": "MC-R06",
+      "page": "主站学生身份过渡页",
+      "role": "从主站进入的学生",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+          "line": 11,
+          "endLine": 11,
+          "text": "这里提供学校学生端入口；成绩与学习反馈是否可见，以学生端实际发布状态为准。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+          "line": 30,
+          "endLine": 30,
+          "text": "使用学校提供的学生端查看本人已发布的成绩和学习反馈。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+          "line": 31,
+          "endLine": 31,
+          "text": "此站点尚未配置学生端网址",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+          "line": 31,
+          "endLine": 31,
+          "text": "请使用学校发放的学生端网址；如不清楚入口，请联系学校管理员。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "学生身份进入主站；按是否配置VITE_STUDENT_PORTAL_URL分支。",
+      "problem": "两段都在解释另一个入口；缺失配置时向学生暴露部署状态。",
+      "actions": [
+        "merge",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "进入学生端，查看已发布成绩和学习反馈。",
+        "missing": "请使用学校发放的学生端网址，或联系学校管理员获取。"
+      },
+      "targetCondition": "有网址只保留一句和进入按钮；无网址只显示获取入口的说明。",
+      "placement": "学生入口按钮附近",
+      "dependency": "frontend",
+      "boundaries": [
+        "不承诺跨站自动登录；不改审计员工作台说明。"
+      ],
+      "acceptance": [
+        "有网址和无网址各显示一段；不显示技术环境变量或配置诊断。"
+      ]
+    },
+    {
+      "id": "MC-R07",
+      "page": "题库：首页说明",
+      "role": "题库教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankHeader.tsx",
+          "line": 17,
+          "endLine": 17,
+          "text": "维护题目、答案和评分标准。发布后供授权教师选入考试；已开展考试使用的版本不随题库更新改变。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "题库页页头常驻。",
+      "problem": "任务介绍、权限范围、版本规则混在页头；版本影响应在发布或选题时强调。",
+      "actions": [
+        "shorten",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "维护题目、答案和评分标准。",
+        "details": "发布供授权教师选用；已有考试继续使用原版本。"
+      },
+      "targetCondition": "页头只保留任务说明；发布/新版本/选题位置保留版本影响。",
+      "placement": "页头与发布结果区",
+      "dependency": "frontend",
+      "boundaries": [
+        "必须与MC-R10配套，不能把已有考试不自动更新的事实从所有入口删掉。"
+      ],
+      "acceptance": [
+        "列表首屏不铺开版本规则；发布后仍清楚提示已有考试不变。"
+      ]
+    },
+    {
+      "id": "MC-R08",
+      "page": "题库：审核流程说明",
+      "role": "作者、审核教师、发布教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 109,
+          "endLine": 109,
+          "text": "草稿 → 审核 → 发布到学校题库 → 在考试中选入题目。提交后锁定当前内容，作者不能审核自己的版本。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "题目详情审核区，所有工作流状态均显示。",
+      "problem": "整套流程每次重复，真正决定当前操作的是锁定、独立审核与下一步。",
+      "actions": [
+        "contextual",
+        "progressive"
+      ],
+      "replacement": {
+        "summary": "提交后锁定当前内容，需由其他教师审核。",
+        "reviewing": "审核中，当前内容已锁定。",
+        "approved": "审核通过，等待有发布权限的教师发布。",
+        "detailsLabel": "查看审核与发布流程",
+        "details": "草稿 → 审核 → 发布到题库 → 选入考试。"
+      },
+      "targetCondition": "按draft/reviewing/approved/published状态显示当前一步；完整流程可展开。",
+      "placement": "审核动作附近",
+      "dependency": "frontend",
+      "boundaries": [
+        "提交前锁定影响必须可见，不只放悬浮提示。",
+        "作者不能审核自己的版本，权限校验保持。"
+      ],
+      "acceptance": [
+        "四种状态各只显示相关说明；提交前能看到锁定后果。"
+      ]
+    },
+    {
+      "id": "MC-R09",
+      "page": "题库：交接与未通知事实",
+      "role": "作者、审核教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 112,
+          "endLine": 112,
+          "text": "此处列出实际有权限的人员，提交不会自动发送通知。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 104,
+          "endLine": 104,
+          "text": "审核链接已复制，请发送给上方有权限的审核教师；系统不会自动通知。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/questionBankPageState.ts",
+          "line": 6,
+          "endLine": 6,
+          "text": "已提交审核，请通知本题库的审核教师在题库中处理。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "人员信息段落、复制审核链接成功提示、提交成功提示分别出现。",
+      "problem": "需要人工交接是真实限制，不能只删；三处重复的权限解释可以收敛到一次阶段提示。",
+      "actions": [
+        "merge",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "审核教师：{有权限人员姓名}。请自行联系，系统暂不发送通知。",
+        "submitted": "已提交审核，请联系上方审核教师。",
+        "approved": "发布教师：{有权限人员姓名}。",
+        "copiedReviewing": "链接已复制，请发给审核教师。",
+        "copiedApproved": "链接已复制，请发给发布教师。"
+      },
+      "targetCondition": "草稿/审核中显示审核联系人和一次未通知提示；已批准切换为发布联系人。",
+      "placement": "当前阶段联系人旁；成功提示只确认动作",
+      "dependency": "frontend",
+      "boundaries": [
+        "保留服务端授权人员名单和姓名读取失败分支。",
+        "未增加通知功能前不得写‘已通知’或‘对方将收到待办’。"
+      ],
+      "acceptance": [
+        "提交与复制都不会制造已通知的错觉；名单失败仍可重试且不伪造姓名。",
+        "已批准阶段复制链接时，提示联系发布教师，与当前联系人一致。"
+      ]
+    },
+    {
+      "id": "MC-R10",
+      "page": "题库：发布结果",
+      "role": "发布教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 115,
+          "endLine": 115,
+          "text": "下一步在考试的“小题与分值”页点击“从题库选题”。已有考试保留原版本；新版本不会自动替换考试中的题目。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/questionBankPageState.ts",
+          "line": 5,
+          "endLine": 5,
+          "text": "已发布到学校题库。请在考试的题目页选择此版本；已有考试不受影响。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "发布版本后，详情成功块和成功消息。",
+      "problem": "两个位置重复下一步与版本影响；‘已有考试不受影响’不如明确仍用原版。",
+      "actions": [
+        "merge",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "已发布到学校题库。",
+        "details": "在考试的“小题与分值”中选入此版本。已有考试仍使用原版本。",
+        "action": "去考试中选题"
+      },
+      "targetCondition": "成功消息只报发布成功，版本影响集中在详情成功块。",
+      "placement": "发布结果块及既有选题按钮",
+      "dependency": "frontend",
+      "boundaries": [
+        "已有考试不会自动替换必须保留。",
+        "按钮仍按访问权限显示。"
+      ],
+      "acceptance": [
+        "发布后两处不重复整段说明；无考试权限时不出现不可用的入口。"
+      ]
+    },
+    {
+      "id": "MC-R11",
+      "page": "题库：并发冲突警告",
+      "role": "题目编辑教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 56,
+          "endLine": 56,
+          "text": "本地修改已保留。先查看并比较最新版本，可下载本地备份，再决定是否放弃修改。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictDialog.tsx",
+          "line": 26,
+          "endLine": 26,
+          "text": "查看最新版本不会覆盖本地修改。采用前请核对差异，下载的备份包含当前题目内容、答案、评分编辑和附件信息。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "检测到草稿冲突时，以及查看最新版本弹窗内。",
+      "problem": "‘已保留’易被理解为持久保存；两段重复教程挤占差异本身。",
+      "actions": [
+        "shorten",
+        "merge",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "草稿已有更新。你在本页的修改尚未被覆盖，请先比较版本。",
+        "details": "采用最新版本会替换本页未保存内容。可先下载本地修改备份。",
+        "backupHelp": "备份包含题目、答案、评分编辑和附件信息；附件信息不等同于附件文件。"
+      },
+      "targetCondition": "警告提示只说明当前事实；替换影响在比较弹窗和最终危险确认中可见。",
+      "placement": "冲突提示、比较弹窗与采用确认",
+      "dependency": "frontend",
+      "boundaries": [
+        "不承诺刷新、关闭浏览器后仍可恢复；不暗示备份附带图片二进制。",
+        "保留有未保存修改时的最终危险确认。"
+      ],
+      "acceptance": [
+        "只读比较不改输入；点击采用前看到替换范围；取消不丢修改。"
+      ]
+    },
+    {
+      "id": "MC-R12",
+      "page": "题库：两个编辑区互锁",
+      "role": "题目编辑教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 62,
+          "endLine": 62,
+          "text": "请先保存当前编辑区域，再编辑另一部分或提交审核。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "contentDirty或scoringDirty时显示；另一编辑区禁用。",
+      "problem": "‘当前区域/另一部分’含糊，用户还需推断应按哪个保存按钮。",
+      "actions": [
+        "contextual",
+        "shorten"
+      ],
+      "replacement": {
+        "contentDirty": "先保存题目内容，再编辑评分标准或提交审核。",
+        "scoringDirty": "先保存评分标准，再编辑题目内容或提交审核。"
+      },
+      "targetCondition": "按实际脏区选择文案；仅在互锁存在时显示。",
+      "placement": "禁用区域前并关联相应保存动作",
+      "dependency": "frontend",
+      "boundaries": [
+        "现有版本互锁仍保留；统一保存属于另一项功能方案，不靠改小字假装解决。"
+      ],
+      "acceptance": [
+        "分别只改题干和只改评分时，提示准确指向可用保存动作。"
+      ]
+    },
+    {
+      "id": "MC-R13",
+      "page": "题库：审核记录空意见",
+      "role": "题库教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 118,
+          "endLine": 118,
+          "text": "无补充意见",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "每条审核记录没有comment时，仍渲染独立段落。",
+      "problem": "多次操作都重复一个空值，记录时间和决定才是有效信息。",
+      "actions": [
+        "delete",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "无意见时不渲染意见段落；有意见时原样展示。"
+      },
+      "targetCondition": "只省略空comment的正文，不省略操作记录。",
+      "placement": "审核时间线",
+      "dependency": "frontend",
+      "boundaries": [
+        "不删除决定、操作者已有信息、修订号和时间等审计事实。"
+      ],
+      "acceptance": [
+        "连续5条空意见不出现5段占位；有退回原因仍完整显示。"
+      ]
+    },
+    {
+      "id": "MC-R14",
+      "page": "题库：授权职责解释",
+      "role": "题库管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+          "line": 125,
+          "endLine": 125,
+          "text": "浏览可看题；出题可编辑草稿；审核可批准其他教师的版本；发布可将已批准版本用于题库；管理仅维护结构与授权，不自动获得看题权限。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "访问权限弹窗顶部常驻所有职责解释。",
+      "problem": "五种角色同段解释，新增某一授权时仍需扫描全部；管理不含看题是关键反直觉边界。",
+      "actions": [
+        "progressive",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "按实际职责授权。",
+        "roleHelp": {
+          "Viewer": "可浏览题目和查看统计。",
+          "Author": "可浏览、新建题目并编辑草稿。",
+          "Reviewer": "可浏览并审核其他教师的版本。",
+          "Publisher": "可浏览、发布已批准版本并停止选用题目。",
+          "Manager": "仅管理结构与授权，不自动获得看题权限。"
+        },
+        "detailsLabel": "查看各职责权限"
+      },
+      "targetCondition": "每条授权选择某职责后显示该项说明；完整职责对照可展开。",
+      "placement": "职责选择器邻近；完整权限对照",
+      "dependency": "frontend",
+      "boundaries": [
+        "roleHelp展示键须对照实际preset枚举映射，示例键不是新增契约。",
+        "管理职责不自动获得阅读权限必须选中时可见。",
+        "职责解释须按presetActions完整说明；不能遗漏发布职责同时包含的停止选用权限。"
+      ],
+      "acceptance": [
+        "每种预设职责帮助与服务端权限一致；不因删说明扩大权限。"
+      ]
+    },
+    {
+      "id": "MC-R15",
+      "page": "题库：历史授权保护",
+      "role": "题库管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+          "line": 128,
+          "endLine": 128,
+          "text": "以下历史组合授权由服务端原样保留。可继续调整其他人员与普通题库组的预设职责；本次更新不会删改这些组合权限。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+          "line": 129,
+          "endLine": 129,
+          "text": "创建者和当前操作者的直接授权也由服务端保留。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+          "line": 131,
+          "endLine": 131,
+          "text": "当前授权读取失败，不能据空列表覆盖原授权",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "存在自定义组合、受保护用户或授权读取失败时，分别显示相关提示。",
+      "problem": "历史权限块解释过长；读取失败分支是强保护必须直接可见。",
+      "actions": [
+        "merge",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "这些历史或受保护授权只读保留，本次保存不会修改。",
+        "failure": "授权读取失败，暂不能保存。请重新读取。"
+      },
+      "targetCondition": "只读保留区头部解释一次；读取失败单独显示错误及重试。",
+      "placement": "只读授权区和保存阻断提示",
+      "dependency": "frontend",
+      "boundaries": [
+        "只读用户与自定义组合仍完整列出具体权限。",
+        "失败时继续禁用保存，不能只去掉警告。"
+      ],
+      "acceptance": [
+        "旧授权不被空列表覆盖；保护对象和具体授权可核对。"
+      ]
+    },
+    {
+      "id": "MC-R16",
+      "page": "题库：分类规则维护",
+      "role": "题库管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankClassificationFields.tsx",
+          "line": 14,
+          "endLine": 14,
+          "text": "填写显示名称和内容类型，系统生成内部编号。已有编号保持不变，以便历史题目继续使用。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankClassificationFields.tsx",
+          "line": 31,
+          "endLine": 31,
+          "text": "每行填写一个知识点或分类名称。不再使用的条目请关闭“允许新题目选择”，历史题目中的记录会保留。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+          "line": 161,
+          "endLine": 161,
+          "text": "先建立知识点或分类目录，再按需要添加补充字段。内部编号自动生成，无需填写。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "分类弹窗概览、字段区、目录区均有说明。",
+      "problem": "自动内部编号被两次介绍；‘每行’像批量文本输入，当前实际是逐条表单。",
+      "actions": [
+        "delete",
+        "shorten",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "添加知识点、分类目录或补充字段。",
+        "fields": "设置字段名称和内容类型。",
+        "terms": "停用条目后，新题不能再选，历史题目记录保留。"
+      },
+      "targetCondition": "概览一句；字段区不讲内部编号；停用影响靠近允许新题目选择开关。",
+      "placement": "分类维护分区说明",
+      "dependency": "frontend",
+      "boundaries": [
+        "已有题目继续用原规则的版本说明保留。",
+        "不改历史稳定ID生成与保留逻辑。"
+      ],
+      "acceptance": [
+        "三个区域不重复内部编号；停用时可理解影响仅限新选用。"
+      ]
+    },
+    {
+      "id": "MC-R17",
+      "page": "题库：特殊评分方式已有折叠",
+      "role": "题库教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/ContentFields.tsx",
+          "line": 70,
+          "endLine": 70,
+          "text": "特殊作答与评分方式（通常无需修改）",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/ContentFields.tsx",
+          "line": 74,
+          "endLine": 74,
+          "text": "选择题型时自动带出常用方式；仅在实际作答形式不同时调整。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "特殊设置已放在原生details中，默认收起。",
+      "problem": "现有做法有效；辅助说明解释何时修改，有实际决策价值。",
+      "actions": [
+        "keep"
+      ],
+      "replacement": {
+        "summary": "保留现有折叠和说明。"
+      },
+      "targetCondition": "保持默认收起；用户展开后再看到说明。",
+      "placement": "特殊作答与评分方式折叠内",
+      "dependency": "copy",
+      "boundaries": [
+        "此项是保留决策，不计作需要删除的缺陷。"
+      ],
+      "acceptance": [
+        "键盘可展开；普通题目无需阅读此段便可继续。"
+      ]
+    },
+    {
+      "id": "MC-R18",
+      "page": "题库：引用图片授权",
+      "role": "导题教师、题库教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankReferenceImages.tsx",
+          "line": 13,
+          "endLine": 13,
+          "text": "图片随本题版本保留，原材料授权撤回或图片不可用时将停止使用。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankReferenceImages.tsx",
+          "line": 13,
+          "endLine": 13,
+          "text": "导入将把这份图片清单的使用权绑定到目标草稿版本；原材料撤回后仍会停止使用。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "存在reference materials时，按已有版本与导入预览分支。",
+      "problem": "绑定清单的实现表述较绕，授权撤回的后果必须保留。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "本版本引用这些图片；原材料授权撤回或图片不可用时，将停止使用。",
+        "importing": "导入后本草稿将引用这些图片；原材料授权撤回后，将停止使用。"
+      },
+      "targetCondition": "仍仅有引用图片时显示，保留导入前后语态。",
+      "placement": "图片组上方的一次说明",
+      "dependency": "copy",
+      "boundaries": [
+        "不得改成‘永久保存’或‘离线可用’；不承诺授权撤回后图片仍可访问。"
+      ],
+      "acceptance": [
+        "撤回和不可用状态不被弱化成普通加载延迟。"
+      ]
+    },
+    {
+      "id": "MC-R19",
+      "page": "题库：结构化答案帮助",
+      "role": "出题教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+          "line": 254,
+          "endLine": 254,
+          "text": "按题型选择或逐项填写；系统会保留结构化答案。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "标准答案字段下始终显示。",
+      "problem": "后半句只描述数据表示方式，对如何填写没有帮助；控件本身已按题型变化。",
+      "actions": [
+        "delete",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "删除‘系统会保留结构化答案’。",
+        "details": "仅当某题型有额外填写规则时，在该控件旁说明；规则须来自实际控件约束。"
+      },
+      "targetCondition": "普通输入不显示泛化帮助；特殊多空或判断控件按需显示真实规则。",
+      "placement": "具体答案控件邻近",
+      "dependency": "frontend",
+      "boundaries": [
+        "不删除结构化数据；未知历史答案内容继续可见，不能因文案清理丢字段。"
+      ],
+      "acceptance": [
+        "选择/判断/填空/简答四种题型可完成填写；输入规则不靠猜。"
+      ]
+    },
+    {
+      "id": "MC-R20",
+      "page": "题库：误差单位",
+      "role": "数值题出题教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+          "line": 262,
+          "endLine": 262,
+          "text": "例如答案为10，填写0.1可接受9.9至10.1。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+          "line": 265,
+          "endLine": 265,
+          "text": "0.01表示允许1%的误差。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "绝对误差和相对误差字段当前无题型条件常驻。",
+      "problem": "非数值题无关；相对误差小数与百分比换算是必要单位解释，不能直接删。",
+      "actions": [
+        "progressive",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "误差设置（数值答案）",
+        "absolute": "如标准答案为10，误差0.1可接受9.9～10.1。",
+        "relative": "填写小数，例如0.01表示1%。"
+      },
+      "targetCondition": "按assessment_archetype === numeric_expression判断数值判分适用性，不按一般题型或答案外观判断。误差设置可展开；任何已有误差值均自动展示，并可清除。",
+      "placement": "误差字段及其单位帮助",
+      "dependency": "frontend",
+      "boundaries": [
+        "保持比例入参语义，不能只把label改百分比。",
+        "若要统一百分比需另做输入/输出换算与接口验证，本项不含。",
+        "非numeric_expression的历史误差须能查看和清除，否则发布校验仍会拒绝。不得只隐藏字段而保留用户无法发现的值。"
+      ],
+      "acceptance": [
+        "0.01提交仍为0.01；已有误差不被折叠隐藏到无法发现。",
+        "相同question_type下，数值判分方式可编辑误差，其他判分方式若有旧值会展示清除入口；未清除时不谎报可发布。"
+      ]
+    },
+    {
+      "id": "MC-R21",
+      "page": "题库：选用模板",
+      "role": "题库教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+          "line": 279,
+          "endLine": 279,
+          "text": "保存时复制评分点。模板后续更新不会更改本题。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+          "line": 295,
+          "endLine": 295,
+          "text": "选用模板将以该版本的评分点替换当前评分点；分值需一致。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "模板字段extra常驻，选中模板后再出现第二个info。",
+      "problem": "同一动作的替换、时机、冻结后果分散两处，必须一起读才理解。",
+      "actions": [
+        "merge",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "保存时用此模板替换本题评分细则（评分点、扣分规则和样例答案）；满分须一致。模板后续更新不影响本题。"
+      },
+      "targetCondition": "未选模板不显示替换警告；选中后在保存动作前只显示一次完整后果。",
+      "placement": "已选模板与保存评分标准之间",
+      "dependency": "frontend",
+      "boundaries": [
+        "不得写成选择即已替换；实际复制在保存时发生。",
+        "模板版本和满分不一致的拒绝规则保留。",
+        "服务端复制整个Rubric，包含评分点、扣分规则、样例答案；不替换当前题目的标准答案和解析。"
+      ],
+      "acceptance": [
+        "选中、清除、保存、满分不一致四种场景文案与效果一致。",
+        "本题已有扣分规则和样例答案时，保存前能理解它们也将由模板替换；标准答案与解析不因此被替换。"
+      ]
+    },
+    {
+      "id": "MC-R22",
+      "page": "题库：版本比较重复标签",
+      "role": "处理冲突的教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+          "line": 120,
+          "endLine": 120,
+          "text": "有差异，请核对",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+          "line": 51,
+          "endLine": 51,
+          "text": "未配置",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+          "line": 116,
+          "endLine": 116,
+          "text": "本地修改",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+          "line": 116,
+          "endLine": 116,
+          "text": "最新版本",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "18个固定比较项及评分点逐项渲染，行内反复标两列名称和相同/差异。",
+      "problem": "同列标题与空值重复；真正差异被大量相同项淹没。",
+      "actions": [
+        "merge",
+        "progressive"
+      ],
+      "replacement": {
+        "summary": "{差异项数}项不同",
+        "same": "查看{相同项数}项相同内容",
+        "columns": "本地修改 / 最新版本"
+      },
+      "targetCondition": "列标题集中在表头；默认展示实际有差异项，相同内容可展开。",
+      "placement": "版本比较弹窗",
+      "dependency": "frontend",
+      "boundaries": [
+        "须先修复F01语义空值假差异，不能直接依赖当前fingerprint计数。",
+        "明确删除非空内容仍是差异；未知历史字段和全部原内容可展开核对。"
+      ],
+      "acceptance": [
+        "同一版本未修改时不虚报差异；真删除仍提示；展开可见完整内容。"
+      ]
+    },
+    {
+      "id": "MC-R23",
+      "page": "全局：空状态默认复述",
+      "role": "各角色",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/PageState.tsx",
+          "line": 30,
+          "endLine": 30,
+          "text": "暂无数据",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/PageState.tsx",
+          "line": 30,
+          "endLine": 30,
+          "text": "暂时还没有相关记录。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "EmptyState未传自定义description时，标题和默认说明同时出现。",
+      "problem": "默认说明重复标题，没有说明下一步；所有使用点都多出一行。",
+      "actions": [
+        "delete",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "默认只展示空状态标题。",
+        "details": "调用方仅在有真实下一步或查询范围需要解释时传description。"
+      },
+      "targetCondition": "默认description改为可选，仅显式非空值时渲染。",
+      "placement": "共享空状态组件",
+      "dependency": "frontend",
+      "boundaries": [
+        "逐个核对调用方：筛选无结果、首次无数据、权限不足、加载失败不能混用。"
+      ],
+      "acceptance": [
+        "默认空状态不出现两句同义句；已有业务说明仍显示。"
+      ]
+    },
+    {
+      "id": "MC-R24",
+      "page": "助手：底部业务提醒",
+      "role": "学校AI助手用户",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/school-assistant/AccountConversationView.tsx",
+          "line": 53,
+          "endLine": 53,
+          "text": "业务回答以本轮来源为依据；正式操作请进入业务页面核实。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "对话输入区下方常驻。",
+      "problem": "有必要提示正式操作边界，但‘以本轮来源为依据’像实现说明且非业务对话也出现。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "业务信息请核对来源，正式操作请进入对应页面。"
+      },
+      "targetCondition": "保留一处常驻短提醒；来源缺失、失败或范围不足须另在该条回复旁显示具体问题。",
+      "placement": "输入区下方；具体异常靠近回复",
+      "dependency": "copy",
+      "boundaries": [
+        "不写成所有答案均已核验；不承诺助手已替用户发布或改分。"
+      ],
+      "acceptance": [
+        "撰写普通文本仍不过度警告；业务回答保留来源入口和操作边界。"
+      ]
+    },
+    {
+      "id": "MC-R25",
+      "page": "助手：文件上传规则",
+      "role": "学校AI助手用户",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/school-assistant/AccountConversationView.tsx",
+          "line": 49,
+          "endLine": 49,
+          "text": "可直接粘贴 PNG、JPEG 图片，每张不超过 3 MB；支持 PDF 和文本，共最多 3 个附件",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "目前规则仅在上传按钮Tooltip中。",
+      "problem": "长规则隐藏在悬浮层，触屏用户和键盘用户可能到失败才知道限制。",
+      "actions": [
+        "shorten",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "支持图片、PDF和文本，最多3个附件。",
+        "images": "PNG/JPEG图片每张不超过3MB，可直接粘贴。"
+      },
+      "targetCondition": "选择附件入口或有附件时显示短规则；具体类型/大小失败在附件旁说明，不只靠Tooltip。",
+      "placement": "附件选择区和逐附件错误",
+      "dependency": "frontend",
+      "boundaries": [
+        "3MB仅原文明确约束图片，不可擅自扩大为所有文件统一上限。",
+        "Tooltip若保留需键盘可触发、可关闭并在指针移入时保持。"
+      ],
+      "acceptance": [
+        "触屏不悬停也能知道数量限制；超图片大小有准确提示。"
+      ]
+    },
+    {
+      "id": "MC-R26",
+      "page": "助手：数据来源和查询进度",
+      "role": "学校AI助手用户",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/school-assistant/ConversationEvidenceView.tsx",
+          "line": 31,
+          "endLine": 31,
+          "text": "本轮数据来源（",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/school-assistant/ConversationEvidenceView.tsx",
+          "line": 36,
+          "endLine": 36,
+          "text": "工作区版本 ",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/school-assistant/ConversationEvidenceView.tsx",
+          "line": 37,
+          "endLine": 37,
+          "text": "生效发布版本 v",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "每条有业务证据的回复；来源详情当前已默认折叠，查询工具状态逐项可见。",
+      "problem": "来源折叠已经合理；可减少成功查询过程残留，但失败/部分可用不能被收进折叠后失去风险提示。",
+      "actions": [
+        "keep",
+        "contextual",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "数据来源（{数量}）",
+        "success": "已查询{数量}项资料",
+        "failure": "部分资料未能读取，请核对回答范围。"
+      },
+      "targetCondition": "运行中保留真实进度；全部完成后汇总成功项，异常摘要常显；版本与时间仍留来源详情。",
+      "placement": "回复旁状态及现有来源折叠",
+      "dependency": "frontend",
+      "boundaries": [
+        "不把unavailable/forbidden/partial改成无记录。",
+        "工作区修订和已发布版本含义不同，不合并数值。"
+      ],
+      "acceptance": [
+        "成功查询不铺满过程标签；任一失败或部分可用时摘要提醒可见；详情可追溯。"
+      ]
+    },
+    {
+      "id": "MC-R27",
+      "page": "助手：每条网页引用",
+      "role": "阅读助手回复的用户",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/mathMarkdownRenderers.tsx",
+          "line": 46,
+          "endLine": 46,
+          "text": "复制参考地址",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/mathMarkdownRenderers.tsx",
+          "line": 45,
+          "endLine": 45,
+          "text": "复制失败，请手动复制下方地址",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "模型正文有有效HTTP(S)地址时，引用文字、按钮、完整URL一起渲染。",
+      "problem": "多来源回复出现重复按钮与长地址，打断阅读。",
+      "actions": [
+        "progressive",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "参考资料（{数量}）",
+        "entry": "{引用文字} · {域名}",
+        "action": "复制地址",
+        "failure": "复制失败，请手动复制此地址。"
+      },
+      "targetCondition": "正文保留短来源标记；资料区展示引用文字和域名，完整地址可展开及复制。",
+      "placement": "每条回复的参考资料区",
+      "dependency": "frontend",
+      "boundaries": [
+        "保持模型正文不能直接导航或发起外部访问的限制。",
+        "复制失败时地址必须仍可选择；不要把未经核验的引用文字承诺为真实网页标题。"
+      ],
+      "acceptance": [
+        "多个链接可区分；键盘可查看和复制；恶意协议不变成可执行链接。"
+      ]
+    },
+    {
+      "id": "MC-R28",
+      "page": "全局：待确认操作与原内容",
+      "role": "发生网络中断的阅卷/教务用户",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+          "line": 169,
+          "endLine": 169,
+          "text": "原请求可继续提交",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+          "line": 176,
+          "endLine": 176,
+          "text": "按以上原内容继续提交",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+          "line": 175,
+          "endLine": 175,
+          "text": "原提交内容：",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+          "line": 169,
+          "endLine": 169,
+          "text": "服务器未接收，请返回业务页面重新提交",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "存在当前账号的待确认命令；点击查询回执后按状态显示。",
+      "problem": "‘原请求’偏技术，但原分数/原因/版本是继续提交的决策依据，不能折叠成一个盲点按钮。",
+      "actions": [
+        "shorten",
+        "keep",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "提交结果待确认",
+        "processing": "正在处理，请稍后查看结果。",
+        "takeover": "可以继续提交此前内容。",
+        "action": "按原内容继续提交",
+        "notAccepted": "此次提交未被接收，请返回原页面重新提交。"
+      },
+      "targetCondition": "沿用真实回执状态；只有takeover_ready且含payload时显示续交按钮，原内容始终紧邻。",
+      "placement": "待确认操作摘要、原内容与对应按钮",
+      "dependency": "copy",
+      "boundaries": [
+        "本条不增加自动回执查询；原有手动查询行为保持。",
+        "不得把unknown写成失败，也不得自动重新提交或隐藏冻结分数/原因/版本。"
+      ],
+      "acceptance": [
+        "处理中、未知、未接收、拒绝、可续交、已完成六类结果可区分；继续提交前可核对原内容。"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "7a8dd590ef8f1a213ef1b02449d864276c3c4789a955965dcb5c4489483d447a"
+    },
+    {
+      "file": "apps/web-admin/src/pages/LoginPage.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "54c0f717241465cfa269326200f5a99448f56ec424d04ae702ac640a0288395a"
+    },
+    {
+      "file": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "6e739391e21e3009dc39e6a4f0b82f54f16ea1511119883251bab7431751ecf2"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "e480bc675f39fb23340ff59f58cffd41eade3a413d85a1f0674c4b103c3c3ba6"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/questionBankPageState.ts",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "9d22e1b7e3837a9bbbe4d19934f8bb96a67237e60fde6c089a5ff437a2496695"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/QuestionBankHeader.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "1701b0320b761f410636c59e3dff6075cc613bb1e55ba550dc9c66ab514b2b99"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "69dc042c5d6087d0b9c0b623426126232e39ea62522eea102ab257f45254b369"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/QuestionBankClassificationFields.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "9d94b7033ec9b60e6d25fbfacda23c9840186d9fd1bb787cafe8fa4875ac7b31"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/ContentFields.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "dcac6e86abd8896559946f246850a294ffc2b06416ee2d4c402f74d1e89fc7a6"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/QuestionBankReferenceImages.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "e62fce3c5a05058a7262686f318c7b884e7ce62ec549774a67739170e06cc285"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictDialog.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "c8f7146ed95cbec790dff1cee554c7fbf058edb335994db3ddf24adc34e86ada"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "d32006bdf864412ebfafcbecf073c8627101d2b0666e5ddb1d26819efcf2c5cc"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "d8867ab67ce7a9b12a5960b333e5cf70cabe2e7b357d8ba9f037cd76542a51ca"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/HistoryImportPresentation.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "d4493da63fa857d37a2c9eef2a8c8704b6c7d2726daba613e44f946c989b61f2"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/question-bank-conflict.css",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "c9cf0844fa83676c8f796b52f73bd9dd9ea4126307b144508ad7dee5de4b9fad"
+    },
+    {
+      "file": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "db9c4dfd69125efc8c8f24bda84892860ce3538795882a768d807cc91c639db1"
+    },
+    {
+      "file": "apps/web-admin/src/components/PageState.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "92989747c67d22ddb28226ba20c28bee9c17ba9f4bd9a5ceec3c8f73f624e539"
+    },
+    {
+      "file": "apps/web-admin/src/components/mathMarkdownRenderers.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "88094cbcc141bc395c533d44cfe243cc6c11cada6613bfea5c5d5fdb947d4425"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/AccountConversationView.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "abbaabf7fb7cd1ae8f08e1e240e1ab75cd8d2e62f56383a0dd561e47374c7eba"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/SchoolConversationDisplay.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "433bab9d67dfcdf459bb0f9ffab04b1269e99526bab5e60ac221081b7edc0ee6"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/ConversationEvidenceView.tsx",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "c46d1dcc27a1700ca0ac9a553022c90b1cb057f72e5eb977521fd834901422a1"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/conversationPresentation.ts",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "23e8e67ee2aa62e0b3e00d5fd9395daccd04697e7ac82bfee924aca87099a9ef"
+    },
+    {
+      "file": "apps/web-admin/src/styles/forms.css",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "91d935d38bbf32f5442c6335777e7a09992457ed44153963ad545ec73247b3cb"
+    },
+    {
+      "file": "apps/web-admin/src/styles/foundation.css",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "47e7f08cffd4d15bc72af479cb9c49f250302f16fcce40584c34d1c9fc9f6eb4"
+    },
+    {
+      "file": "packages/ui/src/styles.css",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "bf2cb24f65585e1b72247c1ac664b45c179b49ee5e1d977cd399568892e732d0"
+    },
+    {
+      "file": "packages/design-tokens/src/typography.ts",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "b4a4d07997d20bf805c1868774a8e8af59e8e455a285786db2975fc9d9f93b0c"
+    },
+    {
+      "file": "packages/design-tokens/src/reading.ts",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "1d8a6a0830e975392a08d8009be1bdc149930ab9186ab7c9fbb334cc06ce9675"
+    },
+    {
+      "file": "packages/design-tokens/src/tokens.css",
+      "status": "reviewed",
+      "notes": "本轮全文人工审读；记录辅助文案条件与相关展示，不代表运行全状态验证。",
+      "sha256": "18c323990448ebec84877c3f685a4c72660173047643e66a81f9a3695adfefee"
+    },
+    {
+      "file": "apps/web-admin/src/AppShell.tsx",
+      "status": "partial",
+      "notes": "只搜索会话与提示挂载位置，未全文审读；不得计入本轮完成。"
+    },
+    {
+      "file": "scripts/check-user-facing-copy.mjs",
+      "status": "partial",
+      "notes": "阅读前95行，确认现有脚本主要检查技术错误泄露，不能作为冗余文案质量门禁。"
+    },
+    {
+      "file": "services/api-gateway/internal/questionbank/metadata_acl_search_postgres.go",
+      "status": "partial",
+      "notes": "交叉复核时仅审读职责预设、模板Rubric复制或发布误差校验相关段落；未全文审读。"
+    },
+    {
+      "file": "services/api-gateway/internal/questionbank/publication_postgres.go",
+      "status": "partial",
+      "notes": "交叉复核时仅审读职责预设、模板Rubric复制或发布误差校验相关段落；未全文审读。"
+    },
+    {
+      "file": "services/api-gateway/internal/questionbank/publication_memory.go",
+      "status": "partial",
+      "notes": "交叉复核时仅审读职责预设、模板Rubric复制或发布误差校验相关段落；未全文审读。"
+    },
+    {
+      "file": "services/api-gateway/internal/questionbank/scoring.go",
+      "status": "partial",
+      "notes": "交叉复核时仅审读职责预设、模板Rubric复制或发布误差校验相关段落；未全文审读。"
+    }
+  ]
+}

@@ -57,7 +57,7 @@ describe("历史组合权限保留与按名称组合检索", { timeout: 20_000 }
 
   it("shows custom facts as read-only and saves another teacher's preset with the original revision", async () => {
     await open(); await click("访问权限"); for (let i = 0; i < 20 && !mocks.props?.acl.data; i++) await flush();
-    expect(document.body.textContent).toContain("历史组合权限只读保留"); expect(document.body.textContent).toContain("历史联合复核组"); expect(document.body.textContent).toContain("历史复核教师");
+    expect(document.body.textContent).toContain("这些历史或受保护授权只读保留，本次保存不会修改"); expect(document.body.textContent).toContain("历史联合复核组"); expect(document.body.textContent).toContain("历史复核教师");
     expect(mocks.props!.aclForm.getFieldsValue(true)).toEqual({ bindings: [{ user_id: "ordinary", preset: "Viewer" }], groups: [{ id: "ordinary-group", name: "普通出题组", preset: "Author", members: ["ordinary"] }] });
     await choose("#bindings_0_preset", "审核题目"); await click("核对并更新授权");
     expect(mocks.confirm).toHaveBeenCalledTimes(1); await act(async () => mocks.confirm.mock.calls[0][0].onOk());
@@ -114,7 +114,7 @@ describe("历史组合权限保留与按名称组合检索", { timeout: 20_000 }
     await open(); await click("组合检索"); await choose('[aria-label="检索知识点"]', "旧知识点（已停用，可查历史）"); await choose('[aria-label="检索难度"]', "较难");
     expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ query: expect.objectContaining({ knowledge_point: "stable-old", difficulty_band: "hard" }) }));
     expect(document.body.textContent).not.toContain("知识点 ID");
-    expect(document.body.textContent).toContain("检索结果题干"); expect(document.body.textContent).toContain("较难"); expect(document.body.textContent).not.toContain("hard");
+    expect([...document.querySelectorAll("button")].some(button => button.textContent === "查看筛选结果")).toBe(true); expect(document.body.textContent).toContain("较难"); expect(document.body.textContent).not.toContain("hard");
   });
 
   it("does not reveal a stored identifier when the selected knowledge point is absent from the current directory", async () => {

@@ -6,13 +6,14 @@ import type { AuthUser, OfflineDraftRecord, ReviewTask } from "../types";
 import { DesktopApiClient } from "../api/client";
 import type { OfflineDraftEnvelope } from "../lib/offlineStore";
 import { OfflineWorkbench, type OfflineLeaveGuard } from "./OfflineWorkbench";
+vi.mock("../lib/pdfAnswerPages", () => ({ renderPdfAnswerPages: vi.fn(async () => { throw new Error("合成 PDF 无法解码"); }) }));
 
 const mocks = vi.hoisted(() => ({
   durable: vi.fn(() => true), getTask: vi.fn(), getContext: vi.fn(), listTasks: vi.fn(), submit: vi.fn(), getCommand: vi.fn(),
   save: vi.fn(), update: vi.fn(), listDrafts: vi.fn(), loadDraft: vi.fn(), purge: vi.fn(), log: vi.fn(),
   listQuestions: vi.fn(), listSegments: vi.fn(), listPages: vi.fn(), listAiGrades: vi.fn(), downloadImage: vi.fn(), createURL: vi.fn(), revokeURL: vi.fn(),
   confirm: vi.fn(),
-  buttons: new Map<string, { onClick: () => void; disabled: boolean }>(),
+  buttons: new Map<string, { onClick: () => void; disabled: boolean; loading?: boolean }>(),
   changeScore: undefined as undefined | ((score: number) => void)
 }));
 vi.mock("../api/review", () => ({
@@ -30,6 +31,11 @@ vi.mock("../api/submissions", () => ({
 }));
 vi.mock("../api/files", () => ({ downloadFileBlob: mocks.downloadImage }));
 vi.mock("../lib/durableStore", () => ({ hasDurableDesktopStore: mocks.durable }));
+vi.mock("../lib/offlineAnswerMaterial", () => ({
+  // 原字节、加密和摘要校验由 offlineAnswerMaterial.test 独立覆盖；此处只验证控制器的任务归属与显示回执。
+  prepareOfflineAnswerMaterial: vi.fn(async (pkg, _blob, contentType, filename) => ({ version: 1, taskId: pkg.task.id, taskRevision: pkg.task.revision, questionId: pkg.task.question_id, answerSegmentId: pkg.task.answer_segment_id, contentType, filename, byteLength: 6, sha256: "0".repeat(64), base64: "YW5zd2Vy" })),
+  restoreOfflineAnswerMaterial: vi.fn(async (pkg) => pkg.answerMaterial ? { blob: new Blob(["answer"]), contentType: pkg.answerMaterial.contentType, filename: pkg.answerMaterial.filename } : null)
+}));
 vi.mock("../lib/offlineStore", () => ({
   readOfflineDraftEnvelopes: () => [], listOfflineDraftEnvelopes: mocks.listDrafts,
   saveOfflineDraft: mocks.save, updateOfflineDraftStatus: mocks.update,
@@ -44,12 +50,12 @@ vi.mock("antd", () => {
   });
   return {
     Alert: ({ message, description }: { message: ReactNode; description?: ReactNode }) => <div role="alert">{message}{description}</div>,
-    Button: ({ children, disabled = false, onClick }: { children: ReactNode; disabled?: boolean; onClick: () => void }) => {
-      mocks.buttons.set(String(children), { disabled, onClick });
-      if (String(children).startsWith("下载任务包：")) mocks.buttons.set("下载任务包", { disabled, onClick });
+    Button: ({ children, disabled = false, loading = false, onClick }: { children: ReactNode; disabled?: boolean; loading?: boolean; onClick: () => void }) => {
+      mocks.buttons.set(String(children), { disabled, loading, onClick });
+      if (String(children).startsWith("下载任务包：")) mocks.buttons.set("下载任务包", { disabled, loading, onClick });
       return <button disabled={disabled} onClick={onClick}>{children}</button>;
     },
-    Empty: Box, Form: Object.assign(Box, { Item: Box }), Input,
+    Checkbox: Box, Empty: Box, Form: Object.assign(Box, { Item: Box }), Input,
     InputNumber: ({ value, onChange }: { value: number; onChange: (score: number) => void }) => {
       mocks.changeScore = onChange;
       return <span>{value}</span>;
@@ -147,6 +153,25 @@ describe("offline workbench submission persistence", () => {
     // 提交回执测试需教师主动填写最终分；AI 建议不再默认填入人工评分。
     await act(async () => mocks.changeScore!(6));
   }
+
+  it("统一开始入口获取任务，重开后继续优先恢复原评分而不重新下载", async () => {
+    await act(async () => root.render(<OfflineWorkbench key="first" durableScopeKey="scope-A" client={client} token="token" user={user} isOnline onLog={mocks.log} />));
+    await click("获取我的任务");
+    await click("开始阅卷");
+    expect(mocks.getTask).toHaveBeenCalledWith(client, "task-A");
+    await act(async () => mocks.changeScore!(9));
+    await click("加密保存草稿");
+    expect(payloads.get("task-A")?.draft.score).toBe(9);
+    await act(async () => root.render(<div>离开工作台</div>));
+    mocks.getTask.mockClear(); mocks.getContext.mockClear();
+    await act(async () => root.render(<OfflineWorkbench key="second" durableScopeKey="scope-A" client={client} token="token" user={user} isOnline onLog={mocks.log} />));
+    await click("获取我的任务");
+    await click("继续阅卷");
+    expect(mocks.getTask).not.toHaveBeenCalled(); expect(mocks.getContext).not.toHaveBeenCalled();
+    await click("加密保存草稿");
+    expect(payloads.get("task-A")?.draft.score).toBe(9);
+    expect(container.querySelector<HTMLDetailsElement>("details")?.open).toBe(false);
+  });
 
   it("identifies the selected answer and offers the next task only after confirmed submission", async () => {
     const next = { ...task, id: "task-B", anonymous_code: "anon-B", question_no: "2" };
@@ -411,17 +436,17 @@ describe("offline workbench submission persistence", () => {
 
   it("does not claim persistence until saving succeeds and marks subsequent input unsaved", async () => {
     await mount();
-    expect(container.textContent).toContain("当前任务材料尚未保存");
+    expect(container.textContent).toContain("任务材料尚未保存");
     expect(container.textContent).toContain("当前评分输入尚未保存");
     let finishSave!: () => void;
     mocks.save.mockImplementationOnce(() => new Promise<void>((resolve) => { finishSave = resolve; }));
     await click("加密保存草稿");
-    expect(container.textContent).toContain("当前任务材料尚未保存");
+    expect(container.textContent).toContain("任务材料尚未保存");
     await act(async () => { finishSave(); });
-    expect(container.textContent).toContain("当前任务材料已加密保存");
+    expect(container.textContent).toContain("任务材料与答卷原件已加密保存");
     expect(container.textContent).toContain("当前评分草稿已保存");
     await act(async () => { mocks.changeScore!(9); });
-    expect(container.textContent).toContain("当前任务材料已加密保存");
+    expect(container.textContent).toContain("任务材料与答卷原件已加密保存");
     expect(container.textContent).toContain("当前评分输入尚未保存");
   });
 
@@ -483,18 +508,31 @@ describe("offline workbench submission persistence", () => {
     expect(mocks.buttons.get("加密保存草稿")?.disabled).toBe(false);
   });
 
-  it("clears and revokes the session image when loading a saved draft", async () => {
+  it("revokes the old session image and recreates the saved original after loading a draft", async () => {
     mocks.listSegments.mockResolvedValue({ segments: [{ id: "segment-A", submission_page_id: "page-A" }] });
     mocks.listPages.mockResolvedValue({ pages: [{ id: "page-A", file_asset_id: "file-A" }] });
     await mount();
     expect(container.querySelector("img")?.getAttribute("src")).toBe("blob:answer-A");
-    expect(container.textContent).toContain("仅在本次会话可用");
+    expect(container.textContent).toContain("原件已准备，请保存草稿");
     await click("加密保存草稿");
     expect(payloads.get("task-A")).not.toHaveProperty("imagePreview");
+    expect(payloads.get("task-A")?.packageSnapshot.answerMaterial).toMatchObject({ taskId: "task-A", taskRevision: 3 });
+    mocks.createURL.mockReturnValueOnce("blob:restored-A");
     await click("加载");
-    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("blob:restored-A");
     expect(mocks.revokeURL).toHaveBeenCalledWith("blob:answer-A");
-    expect(container.textContent).toContain("答卷图片尚未加载，不随加密草稿恢复");
+    expect(container.textContent).toContain("原件已随草稿加密保存，恢复后仍须显示核对");
+  });
+
+  it("reopens an image-only encrypted draft offline and requires a fresh display decode before grading", async () => {
+    mocks.getContext.mockResolvedValue({ context: { ...structuredClone(taskContext), answer_artifact: { ...taskContext.answer_artifact, raw_answer: "", ocr_text: "" } } });
+    await mount(); await click("加密保存草稿");
+    await act(async () => root.render(<OfflineWorkbench key="offline-image" durableScopeKey="scope-A" client={client} token={null} user={user} isOnline={false} onLog={mocks.log} />));
+    mocks.downloadImage.mockClear(); mocks.getContext.mockClear(); await click("加载");
+    expect(container.querySelector("img")).not.toBeNull(); expect(mocks.downloadImage).not.toHaveBeenCalled(); expect(mocks.getContext).not.toHaveBeenCalled();
+    expect(container.textContent).toContain("没有可核对答卷材料，不能提交");
+    await displayImage(); expect(container.textContent).toContain("已有可核对答卷材料");
+    expect(payloads.get("task-A")?.draft.score).toBe(6);
   });
 
   it("restores the saved task image after reopening without replacing manual scores or feedback", async () => {

@@ -27,11 +27,11 @@ export function LoadingState({ label = "加载中" }: Readonly<{ label?: string 
   );
 }
 
-export function EmptyState({ title = "暂无数据", description = "暂时还没有相关记录。" }: Readonly<{ title?: string; description?: string }>) {
+export function EmptyState({ title = "暂无数据", description }: Readonly<{ title?: string; description?: string }>) {
   return (
     <div className="state-panel">
       <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span>{title}</span>} />
-      <span className="muted">{description}</span>
+      {description ? <span className="muted">{description}</span> : null}
     </div>
   );
 }

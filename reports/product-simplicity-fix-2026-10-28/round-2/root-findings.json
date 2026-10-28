@@ -1,0 +1,170 @@
+{
+  "date": "2026-10-28",
+  "scope": "题库指派、领取和持久交接记录；统一契约与验收",
+  "findings": [
+    {
+      "id": "R13",
+      "prior_status": "partial",
+      "status": "fixed",
+      "note": "提交审核时选择独立审核教师与发布教师；教师待办只显示本人指派和可领取历史任务池。领取、改派、审核、发布、退回均写持久交接记录。内容修订与交接修订分离，冻结内容保持原锁定规则。",
+      "changes": [
+        "新增正式迁移217，独立交接状态和不可修改事件表，沿用租户RLS。",
+        "接收人同时校验启用账号、全局职责与题库读取及对应动作ACL；管理者读取整题仍需内容授权。",
+        "父行锁后另语句重读交接状态，再比较独立修订；并发领取只有一个成功，旧指派不能执行新审核。",
+        "原作者可退回及恢复交接；无指派历史版本保留可领取池，已指派任务不扩散给同职责其他人员。",
+        "指派与领取回执沿用业务幂等；交接、审核、审计、outbox和回执一起提交。分享链接及交接记录按需展开。",
+        "独立交叉复核后补齐同内容交接投影与命令的一致性；旧查询不降级人员表单，领取回执不重填题干和评分；已增加3条父组件回归。"
+      ],
+      "remaining": "",
+      "files": [
+        "services/api-gateway/migrations/000217_question_bank_handoff.sql",
+        "services/api-gateway/internal/questionbank/handoff.go",
+        "services/api-gateway/internal/questionbank/handoff_memory.go",
+        "services/api-gateway/internal/questionbank/handoff_postgres.go",
+        "services/api-gateway/internal/questionbank/handoff_handlers.go",
+        "apps/web-admin/src/features/question-bank/QuestionBankHandoffPanel.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx"
+      ],
+      "boundary": "产品内交接状态、事件和待办；不包含邮件、短信或外部消息。数据库验证使用本轮新建的隔离PostgreSQL集群与合成账号，未连接学校部署。"
+    }
+  ],
+  "read_scope": [
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读新增状态和兼容规则，说明独立修订及退回职责。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff_memory.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读内存实现与锁边界，仅用于开发测试。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff_postgres.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读权限、事务锁、CAS和事件同事务提交。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff_handlers.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读，管理与编辑能力由认证身份派生。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "并发领取、失效接收人、撤权、跨租户、幂等和失败原子性。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff_postgres_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "真实隔离数据库检验迁移、并发锁、事件不可改和冻结题目不可改。"
+    },
+    {
+      "path": "services/api-gateway/migrations/000217_question_bank_handoff.sql",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "正式新增迁移，无历史迁移改写；实际应用于隔离集群。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankHandoffPanel.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读人员选择、领取条件、记录按需查询和切换世代。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "审核与发布段及相邻预览核对，未全文重审整个文件。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "读取、编辑世代、转换和交接变更段核对，未全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/questionBankWorkspaceTypes.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读回调约定，保留旧独立调用方兼容。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/publication_postgres.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "锁顺序和正式状态转换核对；其他评分、实例化段未全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/publication_memory.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "状态转换和内存事务边界核对；未全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/store_postgres.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "版本扫描、回执授权与投影调用核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/store_memory.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "交接复制、内存锁和回执授权核对。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/reference_materials_postgres_test.go",
+      "status": "pending",
+      "read_scope": "fixture_setup_and_relevant_callers",
+      "note": "临时schema正式应用217，保留既有引用图片回归；未全文重审测试。"
+    },
+    {
+      "path": "services/api-gateway/openapi/edugrade-api.openapi.json",
+      "status": "pending",
+      "read_scope": "changed_operations_and_schemas",
+      "note": "本轮交接、准入目录、审计、单校名称与结案标记契约；未全文重审全部契约。"
+    }
+  ],
+  "verification": [
+    {
+      "log": "questionbank-go-final.log",
+      "result": "passed",
+      "scope": "questionbank、apicontract Go整包；数据库用例另列，不当作默认Go测试已执行。"
+    },
+    {
+      "log": "questionbank-web-final.log",
+      "result": "passed",
+      "files": 1,
+      "tests": 40
+    },
+    {
+      "log": "questionbank-web.log",
+      "result": "initial_failure_fixed",
+      "note": "73/74通过；旧单参数断言已修，38条原组与2条新增最终40/40通过。其余3文件36/36通过。"
+    },
+    {
+      "log": "handoff-postgres.log",
+      "result": "passed",
+      "scope": "本轮新隔离集群，真实迁移217和并发领取、审批、不可改事件及冻结内容断言。"
+    },
+    {
+      "log": "root-web-final.log",
+      "result": "passed",
+      "files": 9,
+      "tests": 103
+    },
+    {
+      "log": "questionbank-postgres-final.log",
+      "result": "passed",
+      "tests": 2
+    }
+  ]
+}

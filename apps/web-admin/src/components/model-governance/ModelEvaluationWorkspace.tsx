@@ -43,7 +43,9 @@ import {
 } from "../../api/modelGovernance";
 import { ResponsiveTable } from "../ResponsiveTable";
 import { downloadGovernanceMaterial, evaluationReportExample } from "./governanceMaterials";
-import { costToMicros, formatUSDCost } from "./costUnits";
+import { costToMicros, formatUSDCost, microsToCost } from "./costUnits";
+import { evaluationMaterialMatchesRun, parseEvaluationRunMaterial, type EvaluationRunMaterial } from "./evaluationReportImport";
+import type { MaterialDelivery } from "./materialIntake";
 
 const statusLabels: Record<EvaluationRunStatus, string> = {
   draft: "采集中",
@@ -116,6 +118,7 @@ function renderRunEvidence(run: EvaluationRun) {
 }
 
 type TransitionKind = "complete" | "invalidate";
+type CandidateFormValues = Omit<AddEvaluationCandidateInput, "total_cost_micros"> & { total_cost_micros: number | string };
 
 export function ModelEvaluationWorkspace({
   runs,
@@ -125,7 +128,9 @@ export function ModelEvaluationWorkspace({
   canManage,
   onRefresh,
   onDirtyChange,
-  onSavingChange
+  onSavingChange,
+  materialDelivery,
+  onMaterialReceived
 }: Readonly<{
   runs: EvaluationRun[];
   tenantID: string;
@@ -135,6 +140,8 @@ export function ModelEvaluationWorkspace({
   onRefresh: () => Promise<void>;
   onDirtyChange?: (dirty: boolean) => void;
   onSavingChange?: (saving: boolean) => void;
+  materialDelivery?: MaterialDelivery<EvaluationRunMaterial>;
+  onMaterialReceived?: () => void;
 }>) {
   const { message } = App.useApp();
   const [keyword, setKeyword] = useState("");
@@ -152,8 +159,22 @@ export function ModelEvaluationWorkspace({
   const candidateScope = useRef<{ tenantID: string; runID: string } | undefined>(undefined);
   const transitionScope = useRef<{ tenantID: string; runID: string } | undefined>(undefined);
   const [createForm] = Form.useForm<CreateEvaluationRunInput>();
-  const [candidateForm] = Form.useForm<AddEvaluationCandidateInput>();
+  const [importNotice, setImportNotice] = useState("");
+  const [importedMaterial, setImportedMaterial] = useState<{ tenantID: string; material: EvaluationRunMaterial }>();
+  const [candidateImportNotice, setCandidateImportNotice] = useState("");
+  const [candidateForm] = Form.useForm<CandidateFormValues>();
   const [transitionForm] = Form.useForm<{ reason: string }>();
+  const receivedMaterial = useRef(0);
+  useEffect(() => {
+    if (!materialDelivery || materialDelivery.sequence === receivedMaterial.current || materialDelivery.tenantID !== tenantID || !canManage) return;
+    receivedMaterial.current = materialDelivery.sequence;
+    interactionVersion.current += 1;
+    createScope.current = tenantID;
+    createForm.resetFields(); createForm.setFieldsValue(materialDelivery.material.run);
+    setImportedMaterial({ tenantID, material: materialDelivery.material });
+    setImportNotice(`已带入 ${materialDelivery.material.candidateCount} 个候选及来源版本，创建后可选择对应候选。`);
+    setCreateDrawerOpen(true); onMaterialReceived?.();
+  }, [materialDelivery, tenantID, canManage, createForm, onMaterialReceived]);
   // 打开登记草稿后离开学校须确认；工作区切视图时保持挂载，失败输入仍留在原学校。
   useEffect(() => { onDirtyChange?.(createDrawerOpen || candidateDrawerOpen || Boolean(transitionKind)); return () => onDirtyChange?.(false); }, [createDrawerOpen, candidateDrawerOpen, transitionKind, onDirtyChange]);
   useEffect(() => { onSavingChange?.(saving); return () => onSavingChange?.(false); }, [saving, onSavingChange]);
@@ -216,6 +237,8 @@ export function ModelEvaluationWorkspace({
       && capabilityVerified(config)
       && !selectedRun.candidates.some((candidate) => candidate.model_config_id === config.id))
     : [];
+  const importedCandidates = importedMaterial?.tenantID === tenantID && selectedRun && evaluationMaterialMatchesRun(importedMaterial.material, selectedRun)
+    ? importedMaterial.material.candidates.filter(candidate => availableConfigs.some(config => config.id === candidate.model_config_id)) : [];
   const canCompleteSelected = Boolean(
     selectedRun
     && selectedRun.candidates.length >= 2
@@ -386,6 +409,8 @@ export function ModelEvaluationWorkspace({
     interactionVersion.current += 1;
     createScope.current = tenantID;
     createForm.resetFields();
+    setImportNotice("");
+    setImportedMaterial(undefined);
     createForm.setFieldsValue({
       evidence_class: "protocol_fixture",
       modality: "text",
@@ -401,6 +426,7 @@ export function ModelEvaluationWorkspace({
     candidateScope.current = { tenantID, runID: selectedRun.id };
     const repeatComparisons = selectedRun.sample_count * Math.max(0, selectedRun.repeat_count - 1);
     candidateForm.resetFields();
+    setCandidateImportNotice("");
     candidateForm.setFieldsValue({
       evaluated_samples: selectedRun.sample_count,
       teacher_reviewed_samples: selectedRun.evidence_class === "authorized_frozen_set" ? selectedRun.sample_count : 0,
@@ -638,6 +664,20 @@ export function ModelEvaluationWorkspace({
           description="由评测负责人先完成授权数据的离线评分和人工核验，再登记数据集引用、版本与候选汇总。登记后仍须冻结和人工批准；不会调用外部模型或改变评分路由。"
         />
         <Form name="model-evaluation-create" form={createForm} layout="vertical" className="model-evaluation-form">
+          <label>导入已有报告 JSON（仅预填）<input type="file" accept=".json,application/json" disabled={saving} onChange={async event => {
+            const file = event.target.files?.[0]; event.target.value = "";
+            if (!file) return;
+            const owner = createScope.current; const version = interactionVersion.current;
+            try {
+              if (file.size > 2 * 1024 * 1024) throw new Error("报告请控制在 2 MB 以内");
+              const material = parseEvaluationRunMaterial(await file.text());
+              if (!mounted.current || owner !== tenantID || createScope.current !== owner || interactionVersion.current !== version) return;
+              createForm.setFieldsValue(material.run);
+              setImportedMaterial({ tenantID, material });
+              setImportNotice(`已预填批次元数据和 ${material.candidateCount} 个候选指标；请核对哈希、授权引用及统计范围。创建批次后可选择报告中的候选，核对后分别保存。`);
+            } catch (cause) { if (mounted.current && createScope.current === owner && interactionVersion.current === version) setImportNotice(errorMessage(cause)); }
+          }} /></label>
+          {importNotice ? <p role="status">{importNotice}</p> : null}
           <div className="model-governance-form-row two">
             <Form.Item
               name="run_key"
@@ -730,6 +770,27 @@ export function ModelEvaluationWorkspace({
             />
             {/* 抽屉关闭后仍保留表单；独立名称避免与批准表单的同名字段争用 DOM id 和标签关联。 */}
             <Form name="model-evaluation-candidate" form={candidateForm} layout="vertical" className="model-evaluation-form">
+              <label>读取候选报告 JSON（仅预填）<input type="file" accept=".json,application/json" disabled={saving} onChange={async event => {
+                const file = event.target.files?.[0]; event.target.value = "";
+                if (!file) return;
+                const scope = candidateScope.current; const version = interactionVersion.current;
+                try {
+                  if (file.size > 2 * 1024 * 1024) throw new Error("报告请控制在 2 MB 以内");
+                  const material = parseEvaluationRunMaterial(await file.text());
+                  if (!scope || !mounted.current || scope !== candidateScope.current || interactionVersion.current !== version || currentContext.current.tenantID !== scope.tenantID) return;
+                  const currentRun = currentContext.current.run;
+                  if (!currentRun || !evaluationMaterialMatchesRun(material, currentRun)) throw new Error("报告的批次、数据集、授权或样本范围与当前批次不一致");
+                  setImportedMaterial({ tenantID: scope.tenantID, material });
+                  setCandidateImportNotice("报告已读取。请选择当前学校已验证的模型候选，核对指标后保存。");
+                } catch (cause) { if (mounted.current && scope === candidateScope.current && interactionVersion.current === version) setCandidateImportNotice(errorMessage(cause)); }
+              }} /></label>
+              {importedCandidates.length ? <Form.Item label="从报告预填候选"><Select placeholder="选择待核对的候选指标" value={undefined} disabled={saving} options={importedCandidates.map(candidate => ({ value: candidate.model_config_id, label: `${modelConfigOptionLabel(availableConfigs.find(config => config.id === candidate.model_config_id)!)} · ${candidate.prompt_version}` }))} onChange={id => {
+                const candidate = importedCandidates.find(item => item.model_config_id === id);
+                if (!candidate || !selectedRun || !canMutateRun(selectedRun.id, "candidate")) return;
+                candidateForm.setFieldsValue({ ...candidate, total_cost_micros: microsToCost(candidate.total_cost_micros) });
+                setCandidateImportNotice("已预填候选版本与指标，请核对后保存；尚未登记或冻结。");
+              }} /></Form.Item> : null}
+              {candidateImportNotice ? <p role="status">{candidateImportNotice}</p> : null}
               <Form.Item name="model_config_id" label="评测模型" rules={[{ required: true }]}>
                 <Select
                   options={availableConfigs.map((config) => ({

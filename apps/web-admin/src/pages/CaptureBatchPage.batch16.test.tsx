@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   loadBatches: vi.fn(), loadDetail: vi.fn(), loadMatching: vi.fn(), resetDetail: vi.fn(), setBatches: vi.fn(), setSelectedId: vi.fn(), setMatching: vi.fn(),
   upload: vi.fn(), confirm: vi.fn(), retry: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn(), matchingProps: vi.fn(),
   matchStudent: vi.fn(), markUnknown: vi.fn(), matchPage: vi.fn(), lifecycle: vi.fn(), split: vi.fn(), merge: vi.fn(),
-  form: { validateFields: vi.fn(), resetFields: vi.fn() },
+  form: { validateFields: vi.fn(), resetFields: vi.fn(), setFieldsValue: vi.fn() },
   targets: vi.fn(), getBatch: vi.fn(),
   uploading: false, uploadProps: undefined as UploadProps | undefined,
   collectionProps: vi.fn(), exclude: vi.fn(),
@@ -70,7 +70,7 @@ vi.mock("antd", () => {
     Select: ({ options = [], onChange, disabled, value, "aria-label": label }: { options?: { value: string | number; label: string }[]; onChange?: (value: string | number) => void; disabled?: boolean; value?: string | number; "aria-label"?: string }) => <select aria-label={label} value={value ?? ""} disabled={disabled} onChange={event => onChange?.(options.find(option => String(option.value) === event.target.value)?.value ?? "")}><option value="">选择</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>,
     Alert: ({ message, description, action }: { message: ReactNode; description?: ReactNode; action?: ReactNode }) => <aside>{message}{description}{action}</aside>, Space: Wrap,
     Upload: (props: UploadProps) => { mocks.uploadProps = props; return <div>{props.children}</div>; },
-    Modal: ({ open, children }: { open: boolean; children: ReactNode }) => open ? <div>{children}</div> : null,
+    Modal: ({ open, children, onOk, okText, okButtonProps }: { open: boolean; children: ReactNode; onOk?: () => void; okText?: string; okButtonProps?: { disabled?: boolean } }) => open ? <div>{children}<button disabled={okButtonProps?.disabled} onClick={onOk}>{okText ?? "确认"}</button></div> : null,
     Progress: ({ percent }: { percent: number }) => <progress value={percent} max={100} />,
     Tabs: ({ items }: { items: { key: string; children: ReactNode }[] }) => <div>{items.map((item) => <section key={item.key} data-tab={item.key}>{item.children}</section>)}</div>,
   };
@@ -144,8 +144,14 @@ describe("采集批次页条件展示与对齐回读", () => {
     expect(importButton()?.disabled).toBe(false);
     const files = [new File(["front"], "front.png"), new File(["back"], "back.png")] as Parameters<NonNullable<UploadProps["beforeUpload"]>>[1];
     await act(async () => { for (const current of files) await mocks.uploadProps!.beforeUpload!(current, files); });
+    expect(mocks.upload).not.toHaveBeenCalled();
+    expect(host.textContent).toContain("第 1 份答卷，第 2 页");
+    await click("确认导入并处理");
     expect(mocks.upload).toHaveBeenCalledExactlyOnceWith(files, 2);
-    expect(host.textContent).toContain("不会跨两次选择凑页");
+    expect(host.textContent).toContain("每人2页，按学生连续排列；每次须选择完整答卷。");
+    const groupingHelp = [...host.querySelectorAll("details")].find(item => item.querySelector("summary")?.textContent === "查看页序与分组规则");
+    expect(groupingHelp?.open).toBe(false);
+    expect(groupingHelp?.textContent).toContain("不能跨两次选择补页");
   });
 
   it("上传期间冻结页数、批次选择和处理操作", async () => {
@@ -226,6 +232,7 @@ describe("采集批次页条件展示与对齐回读", () => {
     const files = [new File(["front"], "front.png"), new File(["back"], "back.png")] as Parameters<NonNullable<UploadProps["beforeUpload"]>>[1];
     await act(async () => { await mocks.uploadProps!.beforeUpload!(files[0], files); });
     expect(mocks.exclude).not.toHaveBeenCalled();
+    await click("确认导入并处理");
     const onRegistered = mocks.upload.mock.lastCall![2] as (ids: string[]) => Promise<void>;
     await act(async () => onRegistered(["new-first", "new-second"]));
     expect(mocks.exclude).toHaveBeenCalledExactlyOnceWith("old-file", "重新导出完整答卷", "new-first");

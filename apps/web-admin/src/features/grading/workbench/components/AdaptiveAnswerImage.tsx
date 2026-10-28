@@ -80,7 +80,7 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
     <div className="answer-reading-toolbar">
       <Space size={6} wrap>
         {props.controls}
-        <Tooltip title="按图像和窗口比例自动分段；整图内容完整保留"><Segmented value={layout} onChange={value => changeLayout(value as "smart" | "whole")} options={[{ label: "智能分段", value: "smart" }, { label: "整图查看", value: "whole" }]} size="small" aria-label="答题图阅读布局" /></Tooltip>
+        {plan.tiles.length > 1 ? <Tooltip title="按图像和窗口比例自动分段；整图内容完整保留"><Segmented value={layout} onChange={value => changeLayout(value as "smart" | "whole")} options={[{ label: "智能分段", value: "smart" }, { label: "整图查看", value: "whole" }]} size="small" aria-label="答题图阅读布局" /></Tooltip> : null}
         <Button size="small" icon={<ZoomOut size={15} />} aria-label="缩小答题图" onClick={() => onZoom(-1)} />
         <output className="answer-reading-scale" aria-label="答题图缩放比例">{Math.round(displayedScale * 100)}%</output>
         <Button size="small" icon={<ZoomIn size={15} />} aria-label="放大答题图" onClick={() => onZoom(1)} />

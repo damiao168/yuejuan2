@@ -31,6 +31,7 @@ vi.mock("./GradingAIPlanSettings", () => ({
   GradingAIPlanSettings: (props: Record<string, unknown>) => { rendered.widgets.push({ name: "GradingAIPlanSettings", props }); return null; },
   GradingAIPlanSummary: (props: Record<string, unknown>) => { rendered.widgets.push({ name: "GradingAIPlanSummary", props }); return null; }
 }));
+vi.mock("./TrialScoringDrawer", () => ({ TrialScoringDrawer: (props: Record<string, unknown>) => { rendered.widgets.push({ name: "TrialScoringDrawer", props }); return <div>AI试改工作区</div>; } }));
 vi.mock("../../../../components/StatusTag", async () => {
   const React = await vi.importActual<typeof import("react")>("react");
   return { StatusTag: (props: Record<string, unknown>) => React.createElement("span", { "data-tone": props.tone }, props.children as ReactNode) };
@@ -154,6 +155,18 @@ describe("batch8 scoring panel common original/current contract (mock UI/control
     expect(confirmation.title).toBe("继续完成取消？");
     expect((confirmation.onConfirm as () => unknown)()).toBeUndefined();
     expect(props.scoring.cancel).toHaveBeenCalledWith();
+  });
+
+  it("管理端可明确打开AI小样本试改，换运行或教师视角不沿用旧抽屉", async () => {
+    await render({ scoring: controller({ summary: summary("needs_review") }) });
+    expect(host.textContent).not.toContain("AI试改工作区");
+    await act(async () => click("AI 小样本试改"));
+    expect(host.textContent).toContain("AI试改工作区");
+    const next = summary("needs_review"); next.run.id = "run-2";
+    await render({ scoring: controller({ summary: next }) });
+    expect(host.textContent).not.toContain("AI试改工作区");
+    await render({ canManageTasks: false });
+    expect(button("AI 小样本试改")).toBeUndefined();
   });
 
   it("preserves current-question priority and manager-only calibration", async () => {

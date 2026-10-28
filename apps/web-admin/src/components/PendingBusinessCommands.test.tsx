@@ -38,16 +38,19 @@ describe("pending command UI session ownership", () => {
   it("does not resend A's takeover receipt or alter B's recovery state after switching accounts", async () => {
     window.localStorage.setItem(key("A"), JSON.stringify({ id: "A-command" }));
     const response = deferred<unknown>();
-    const request = vi.spyOn(apiClient, "request").mockImplementation(() => response.promise as Promise<never>);
+    const newResponse = deferred<unknown>();
+    const request = vi.spyOn(apiClient, "request").mockImplementationOnce(() => response.promise as Promise<never>).mockImplementationOnce(() => newResponse.promise as Promise<never>);
     await act(async () => root.render(<PendingBusinessCommands key="A" tenant="tenant" actor="A" />));
     await act(async () => host.querySelector("button")!.click());
     window.localStorage.setItem(key("B"), JSON.stringify({ id: "B-command" }));
     await act(async () => { setBusinessCommandScope("tenant", "B"); root.render(<PendingBusinessCommands key="B" tenant="tenant" actor="B" />); });
     await act(async () => response.resolve({ command_id: "A-command", status: "takeover_ready", payload: { reason: "frozen-A" } }));
-    expect(request).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledTimes(2);
     expect(window.localStorage.getItem(key("A"))).toBe(JSON.stringify({ id: "A-command" }));
     expect(window.localStorage.getItem(key("B"))).toBe(JSON.stringify({ id: "B-command" }));
-    expect(host.querySelector("button")?.disabled).toBe(false);
+    expect(host.querySelector("button")?.disabled).toBe(true);
+    await act(async () => newResponse.resolve({ command_id: "B-command", status: "processing" }));
+    expect(host.textContent).toContain("正在处理");
     expect(host.textContent).not.toContain("失败");
   });
 
@@ -83,14 +86,44 @@ describe("pending command UI session ownership", () => {
       throw new Error(`unexpected ${path}`);
     });
     await act(async () => root.render(<PendingBusinessCommands tenant="tenant" actor="A" />));
-    await act(async () => host.querySelector("button")!.click());
     expect(host.textContent).toContain("期中考试"); expect(host.textContent).toContain("原发布说明");
     expect(request.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(0);
-    const continueButton = [...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "按以上原内容继续提交")!;
+    const continueButton = [...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "按原内容继续提交")!;
     await act(async () => { continueButton.click(); continueButton.click(); });
     const writes = request.mock.calls.filter(([, init]) => init?.method === "POST");
     expect(writes).toHaveLength(1); expect(writes[0]).toEqual(["/api/v1/exams/exam/publish", { method: "POST", headers: { "Idempotency-Key": "original" }, body: JSON.stringify(payload) }]);
     expect(host.textContent).toContain("已完成"); expect(localStorage.getItem(key("A"))).toBeNull();
+  });
+  it("自动逐条读取队列且处理中只有限刷新，不续发命令", async () => {
+    vi.useFakeTimers();
+    try {
+      localStorage.setItem(key("A"), JSON.stringify({ id: "original" }));
+      const request = vi.spyOn(apiClient, "request").mockImplementation(async path => path === "/api/v1/score-commands/original"
+        ? { command_id: "original", status: "processing" } as never : { exam: { name: "合成考试" } } as never);
+      await act(async () => root.render(<PendingBusinessCommands tenant="tenant" actor="A" />));
+      expect(request.mock.calls.filter(([path]) => path.includes("commands/"))).toHaveLength(1);
+      for (let round = 0; round < 4; round++) await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+      expect(request.mock.calls.filter(([path]) => path.includes("commands/"))).toHaveLength(3);
+      expect(request.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(true);
+      expect(localStorage.getItem(key("A"))).not.toBeNull(); expect(host.textContent).toContain("正在处理");
+    } finally { vi.useRealTimers(); }
+  });
+  it("辅助名称接口悬挂也先确认成功并继续核对下一条回执", async () => {
+    localStorage.setItem(key("A"), JSON.stringify({ id: "first" }));
+    const secondKey = "business-command:tenant:A:score.confirm:second-exam";
+    localStorage.setItem(secondKey, JSON.stringify({ id: "second" }));
+    const name = deferred<unknown>();
+    const request = vi.spyOn(apiClient, "request").mockImplementation(async path => {
+      if (path.endsWith("commands/first")) return { command_id: "first", status: "succeeded" } as never;
+      if (path.endsWith("commands/second")) return { command_id: "second", status: "processing" } as never;
+      return name.promise as Promise<never>;
+    });
+    await act(async () => root.render(<PendingBusinessCommands tenant="tenant" actor="A" />));
+    expect(localStorage.getItem(key("A"))).toBeNull();
+    expect(request).toHaveBeenCalledWith("/api/v1/score-commands/second");
+    expect(host.textContent).toContain("已完成"); expect(host.querySelector("button")?.disabled).toBe(false);
+    await act(async () => name.resolve({ exam: { name: "合成考试" } }));
+    expect(host.textContent).toContain("合成考试");
   });
 
   it.each([
@@ -105,7 +138,6 @@ describe("pending command UI session ownership", () => {
     });
     const navigate = vi.fn();
     await act(async () => root.render(<PendingBusinessCommands tenant="tenant" actor="A" onNavigate={navigate} />));
-    await act(async () => host.querySelector("button")!.click());
     expect(localStorage.getItem(pendingKey)).toBeNull();
     expect(host.textContent).toContain(expected);
     expect(host.textContent).not.toContain("对象 task-id");

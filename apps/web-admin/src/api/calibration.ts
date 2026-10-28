@@ -1,7 +1,9 @@
 import { EduGradeApi } from "@edugrade/sdk";
 import type {
   PutCalibrationPolicyRequest,
-  SubmitCalibrationAttemptRequest
+  SubmitCalibrationAttemptRequest,
+  ApproveCalibrationSchoolTemplateRequest,
+  WithdrawCalibrationSchoolTemplateRequest
 } from "@edugrade/sdk";
 import { apiClient } from "./client";
 
@@ -11,6 +13,8 @@ export type {
   CalibrationAttempt,
   CalibrationMetrics,
   CalibrationPolicy,
+  CalibrationSchoolTemplate,
+  CalibrationSchoolTemplateDirectory,
   CalibrationSession,
   GraderQualification,
   PutCalibrationPolicyRequest,
@@ -38,4 +42,16 @@ export async function getGraderQualification(examId: string, questionId: string,
     path: { examId, questionId },
     query: graderId ? { grader_id: graderId } : undefined
   });
+}
+
+export async function listCalibrationSchoolTemplates(examId: string, questionId: string, signal?: AbortSignal) {
+  return generatedApi.listCalibrationSchoolTemplates({ path: { examId, questionId }, signal });
+}
+
+export async function approveCalibrationSchoolTemplate(examId: string, questionId: string, body: ApproveCalibrationSchoolTemplateRequest) {
+  return generatedApi.approveCalibrationSchoolTemplate({ path: { examId, questionId }, body });
+}
+
+export async function withdrawCalibrationSchoolTemplate(examId: string, questionId: string, templateId: string, body: WithdrawCalibrationSchoolTemplateRequest) {
+  return generatedApi.withdrawCalibrationSchoolTemplate({ path: { examId, questionId, templateId }, body });
 }

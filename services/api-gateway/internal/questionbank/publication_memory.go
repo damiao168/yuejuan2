@@ -100,6 +100,10 @@ func (s *MemoryStore) Transition(ctx context.Context, scope auth.AccessScope, id
 		if err != nil {
 			return v, err
 		}
+		handoff, recipient, err := s.transitionHandoff(scope, i, v, decision, in)
+		if err != nil {
+			return v, err
+		}
 		r := Review{ID: uuid.NewString(), VersionID: id, ReviewerID: scope.ActorID, Decision: decision, Comment: in.Comment, ContentRevision: v.Revision, BundleHash: v.BundleHash, CreatedAt: time.Now().UTC()}
 		s.reviews[id] = append(s.reviews[id], r)
 		v.WorkflowStatus = status
@@ -112,8 +116,11 @@ func (s *MemoryStore) Transition(ctx context.Context, scope auth.AccessScope, id
 			s.items[i.ID] = i
 		}
 		v.UpdatedAt = r.CreatedAt
+		v.Handoff = handoff
 		// 审核记录保留当时的修订号与哈希；退回草稿会增加修订号，旧审核结果不能继续沿用。
 		s.versions[id] = copyVersion(v)
+		kind := map[string]string{"submit-review": "assigned", "approve": "approved", "publish": "published", "return-to-draft": "returned"}[decision]
+		s.rememberHandoff(v, scope.ActorID, kind, recipient)
 		return copyVersion(v), nil
 	})
 }

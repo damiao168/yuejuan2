@@ -28,7 +28,7 @@ type scanner interface{ Scan(...any) error }
 
 const bankCols = `b.id::text,b.tenant_id::text,b.school_id::text,b.name,b.description,b.status,b.revision,b.metadata_schema_version,b.created_by::text,b.created_at,b.updated_at`
 const itemCols = `id::text,tenant_id::text,bank_id::text,item_code,subject_code,grade_scope,current_published_version_id::text,status,revision,created_by::text,created_at,kind`
-const versionCols = `id::text,tenant_id::text,item_id::text,version_no,schema_version,revision,workflow_status,source_version_id::text,author_id::text,content_hash,content,created_at,updated_at,scoring,bundle_hash`
+const versionCols = `id::text,tenant_id::text,item_id::text,version_no,schema_version,revision,workflow_status,source_version_id::text,author_id::text,content_hash,content,created_at,updated_at,scoring,bundle_hash,(SELECT to_jsonb(h)-'tenant_id'-'version_id' FROM question_bank_handoff h WHERE h.tenant_id=question_bank_item_version.tenant_id AND h.version_id=question_bank_item_version.id)`
 
 func scanBank(row scanner) (b Bank, err error) {
 	err = row.Scan(&b.ID, &b.TenantID, &b.SchoolID, &b.Name, &b.Description, &b.Status, &b.Revision, &b.MetadataSchemaVersion, &b.CreatedBy, &b.CreatedAt, &b.UpdatedAt)
@@ -39,14 +39,17 @@ func scanItem(row scanner) (i Item, err error) {
 	return i, pgError(err)
 }
 func scanVersion(row scanner) (v Version, err error) {
-	var raw, scoring []byte
-	err = row.Scan(&v.ID, &v.TenantID, &v.ItemID, &v.VersionNo, &v.SchemaVersion, &v.Revision, &v.WorkflowStatus, &v.SourceVersionID, &v.AuthorID, &v.ContentHash, &raw, &v.CreatedAt, &v.UpdatedAt, &scoring, &v.BundleHash)
+	var raw, scoring, handoff []byte
+	err = row.Scan(&v.ID, &v.TenantID, &v.ItemID, &v.VersionNo, &v.SchemaVersion, &v.Revision, &v.WorkflowStatus, &v.SourceVersionID, &v.AuthorID, &v.ContentHash, &raw, &v.CreatedAt, &v.UpdatedAt, &scoring, &v.BundleHash, &handoff)
 	if err != nil {
 		return v, pgError(err)
 	}
 	err = json.Unmarshal(raw, &v.Content)
 	if err == nil {
 		err = json.Unmarshal(scoring, &v.Scoring)
+	}
+	if err == nil && len(handoff) > 0 {
+		err = json.Unmarshal(handoff, &v.Handoff)
 	}
 	v.HashScope = "draft_content_v1"
 	v.BundleSchemaVersion = 2
@@ -241,6 +244,10 @@ func (s *PostgresStore) checkMutationReplay(ctx context.Context, tx *sql.Tx, sco
 		_, err = s.bank(ctx, tx, scope, v.Item.BankID, action, "")
 	case Version:
 		_, err = s.item(ctx, tx, scope, v.ItemID, action, "")
+		// 返回整题的管理命令仍需内容读取授权；结构管理权限不能借回执读取题干答案。
+		if err == nil && action == "manage" {
+			_, err = s.item(ctx, tx, scope, v.ItemID, "read", "")
+		}
 	case MaterializeResult:
 		err = s.checkMaterializeReplay(ctx, tx, scope, v)
 	case MetadataSchema:
@@ -444,6 +451,30 @@ func (s *PostgresStore) UpdateVersion(ctx context.Context, scope auth.AccessScop
 		}
 		if err = validationErr(validateContentMetadata(schema, content, true)); err != nil {
 			return Version{}, err
+		}
+		if input.Scoring != nil {
+			// 评分预处理先取与独立评分保存相同的锁和资产权限，再一次更新整份草稿。
+			v, i, err = s.lockedVersion(ctx, tx, scope, id, "edit")
+			if err != nil {
+				return Version{}, err
+			}
+			if v.WorkflowStatus != "draft" {
+				return Version{}, ErrLocked
+			}
+			if v.Revision != input.ExpectedRevision {
+				return Version{}, ErrConflict
+			}
+			scoring, err := normalizeScoring(*input.Scoring)
+			if err != nil {
+				return Version{}, err
+			}
+			scoring, err = s.prepareVersionScoring(ctx, tx, scope, i, v, scoring)
+			if err != nil {
+				return Version{}, err
+			}
+			rawContent, _ := json.Marshal(content)
+			rawScoring, _ := json.Marshal(scoring)
+			return scanVersion(tx.QueryRowContext(ctx, `UPDATE question_bank_item_version SET content=$3::jsonb,content_hash=$4,scoring=$5::jsonb,revision=revision+1,updated_at=now() WHERE tenant_id=$1 AND id=$2 RETURNING `+versionCols, scope.TenantID, id, rawContent, contentHash(content), rawScoring))
 		}
 		raw, _ := json.Marshal(content)
 		result, err := scanVersion(tx.QueryRowContext(ctx, `UPDATE question_bank_item_version SET content=$3::jsonb,content_hash=$4,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid AND revision=$5 AND workflow_status='draft' RETURNING `+versionCols, scope.TenantID, id, raw, contentHash(content), input.ExpectedRevision))

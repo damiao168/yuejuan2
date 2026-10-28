@@ -1,7 +1,8 @@
-param(
+﻿param(
   [string]$ComposeFile = "..\docker-compose.yml",
   [string]$EnvFile = "..\.env",
   [switch]$SkipBuild,
+  [switch]$BuildWorkers,
   [switch]$SkipSmoke,
   [switch]$BootstrapAdmin,
   [ValidatePattern('^000020$')][string]$MigrationBaselineVersion,
@@ -32,6 +33,7 @@ function Read-EnvFile([string]$Path) {
 }
 
 $deploymentSettings = Read-EnvFile $envPath
+foreach ($entry in Get-ChildItem Env:) { if ($entry.Name.StartsWith('EDUGRADE_')) { $deploymentSettings[$entry.Name] = $entry.Value } }
 
 function Assert-WorkerCredentials([string]$Name, [string]$Prefix) {
   foreach ($suffix in @("TENANT_CODE", "USERNAME", "PASSWORD")) {
@@ -96,10 +98,40 @@ try {
     Invoke-Compose -Arguments @("run", "--rm", "-e", "EDUGRADE_BOOTSTRAP_PASSWORD", "api-gateway", "bootstrap-admin")
   }
 
+  $requestedWorkers = @()
+  if ($EnableOcr) { $requestedWorkers += ,@('ocr','EDUGRADE_OCR_WORKER') }
+  if ($EnableQuality) { $requestedWorkers += ,@('quality','EDUGRADE_IMAGE_QUALITY') }
+  if ($EnableProcessing) { $requestedWorkers += ,@('processing','EDUGRADE_PAGE_PROCESSING') }
+  if ($requestedWorkers.Count) {
+    foreach ($worker in $requestedWorkers) { Assert-WorkerCredentials $worker[0] $worker[1] }
+    if ($deploymentSettings['EDUGRADE_ENV'] -in @('local','development','dev','test')) {
+    # 凭据只通过子进程环境继承，不放 Docker 命令行，也不覆盖已有账号密码。正式环境仍由管理员管理账号。
+    $priorWorkerEnvironment = @{}
+    $workerEnvironment = @{ EDUGRADE_PROVISION_WORKERS = (($requestedWorkers | ForEach-Object { $_[0] }) -join ',') }
+    foreach ($worker in $requestedWorkers) { foreach ($suffix in @('TENANT_CODE','USERNAME','PASSWORD')) { $key = "$($worker[1])_$suffix"; $workerEnvironment[$key] = $deploymentSettings[$key] } }
+    $provisionArgs = @('run','--rm','--no-deps')
+    try {
+      foreach ($key in $workerEnvironment.Keys) { $priorWorkerEnvironment[$key] = [Environment]::GetEnvironmentVariable($key,'Process'); [Environment]::SetEnvironmentVariable($key,$workerEnvironment[$key],'Process'); $provisionArgs += @('-e',$key) }
+      Invoke-Compose -Arguments ($provisionArgs + @('api-gateway','provision-local-workers'))
+    } finally { foreach ($key in $priorWorkerEnvironment.Keys) { [Environment]::SetEnvironmentVariable($key,$priorWorkerEnvironment[$key],'Process') } }
+    $workerApiPort = if ($deploymentSettings['EDUGRADE_API_PORT']) { $deploymentSettings['EDUGRADE_API_PORT'] } else { '8080' }
+    foreach ($worker in $requestedWorkers) {
+      $prefix = $worker[1]
+      $payload = @{ tenant_code = $deploymentSettings["${prefix}_TENANT_CODE"]; username = $deploymentSettings["${prefix}_USERNAME"]; password = $deploymentSettings["${prefix}_PASSWORD"]; client_type = 'service'; device_name = 'Local deployment connection check' } | ConvertTo-Json -Compress
+      try {
+        $authentication = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$workerApiPort/api/v1/auth/token" -ContentType 'application/json' -Body $payload -TimeoutSec 20
+        if (-not $authentication.access_token -or @($authentication.user.roles).Count -ne 1 -or $authentication.user.roles[0] -ne 'page_processing_worker') { throw 'Restricted service identity was not verified.' }
+        Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$workerApiPort/api/v1/auth/logout" -Headers @{ Authorization = "Bearer $($authentication.access_token)" } -ContentType 'application/json' -Body '{}' -TimeoutSec 20 | Out-Null
+      } catch { throw "$($worker[0]) service login verification failed; worker was not started. Existing account credentials were preserved." }
+      finally { $payload = $null; $authentication = $null }
+    }
+    }
+  }
+
   if ($EnableOcr) {
     Assert-WorkerCredentials "OCR worker" "EDUGRADE_OCR_WORKER"
     $workerArgs = @("--profile", "ocr", "up", "-d")
-    if (-not $SkipBuild) { $workerArgs += "--build" }
+    if (-not $SkipBuild -or $BuildWorkers) { $workerArgs += "--build" }
     $workerArgs += "ocr-worker"
     Invoke-Compose -Arguments $workerArgs
     Wait-ComposeService "ocr-worker"
@@ -107,7 +139,7 @@ try {
   if ($EnableQuality) {
     Assert-WorkerCredentials "image-quality worker" "EDUGRADE_IMAGE_QUALITY"
     $workerArgs = @("--profile", "quality", "up", "-d")
-    if (-not $SkipBuild) { $workerArgs += "--build" }
+    if (-not $SkipBuild -or $BuildWorkers) { $workerArgs += "--build" }
     $workerArgs += "image-quality-worker"
     Invoke-Compose -Arguments $workerArgs
     Wait-ComposeService "image-quality-worker"
@@ -115,7 +147,7 @@ try {
   if ($EnableProcessing) {
     Assert-WorkerCredentials "page-processing worker" "EDUGRADE_PAGE_PROCESSING"
     $workerArgs = @("--profile", "processing", "up", "-d")
-    if (-not $SkipBuild) { $workerArgs += "--build" }
+    if (-not $SkipBuild -or $BuildWorkers) { $workerArgs += "--build" }
     $workerArgs += "page-processing-worker"
     Invoke-Compose -Arguments $workerArgs
     Wait-ComposeService "page-processing-worker"

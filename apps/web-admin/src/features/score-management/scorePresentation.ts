@@ -88,7 +88,7 @@ export function scoreWorkspacePresentation(mode: ProductExperience) {
   }
   return {
     shellClass: "score-shell", workspaceClass: "score-workspace", title: "成绩发布",
-    description: "核对成绩与发布门禁后，分别管理基础成绩查询和学生门户版本。", summaryTitle: "基础成绩检查",
+    description: "处理发布待办，汇总并确认成绩，再核对学生预览和发布。", summaryTitle: "基础成绩检查",
     emptyGrades: "该考试暂无成绩。请先完成阅卷，再点击『汇总最终成绩』生成成绩。"
   };
 }

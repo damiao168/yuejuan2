@@ -184,6 +184,8 @@ func TestSchoolScopeRejectsKnownForeignDirectIDsAcrossCoreResources(t *testing.T
 
 func TestRegisteredDirectIDRoutesDeclareResourceBoundaryOrExplicitTenantScope(t *testing.T) {
 	routePattern := regexp.MustCompile(`"(?:GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]*\{[^"}]+\}[^" ]*)"`)
+	// 公开学校入口只按已知代码返回code/name，独立限流；不能用此前缀豁免任何其他业务资源。
+	publicDisplayRoutes := map[string]bool{"/api/v1/public/schools/{code}": true}
 	tenantScopedPrefixes := []string{
 		"/api/v1/auth/sessions/", "/api/v1/users/", "/api/v1/tenants/",
 		"/api/v1/exam-sessions/commands/",
@@ -216,7 +218,7 @@ func TestRegisteredDirectIDRoutesDeclareResourceBoundaryOrExplicitTenantScope(t 
 		}
 		for _, match := range routePattern.FindAllStringSubmatch(string(raw), -1) {
 			route := match[1]
-			if strings.HasPrefix(route, "/api/v1/internal/") || hasAnyPrefix(route, tenantScopedPrefixes) || routeHasRecognizedBoundary(route) {
+			if publicDisplayRoutes[route] || strings.HasPrefix(route, "/api/v1/internal/") || hasAnyPrefix(route, tenantScopedPrefixes) || routeHasRecognizedBoundary(route) {
 				continue
 			}
 			uncovered = append(uncovered, path+": "+route)

@@ -299,6 +299,7 @@ export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditL
   const [exams, setExams] = useState<Exam[]>([]);
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [usersFailed, setUsersFailed] = useState(false);
+  const [usersRetry, setUsersRetry] = useState(0);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [actionFilter, setActionFilter] = useState("");
@@ -322,12 +323,13 @@ export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditL
   const pendingFilter = useMemo<AuditLogFilter>(
     () => ({
       action: actionFilter.trim() || undefined,
+      q: keyword.trim() || undefined,
       actor_id: actorFilter.trim() || undefined,
       exam_id: examFilter || undefined,
       created_from: createdFrom || undefined,
       created_to: createdTo || undefined
     }),
-    [actionFilter, actorFilter, createdFrom, createdTo, examFilter]
+    [actionFilter, actorFilter, createdFrom, createdTo, examFilter, keyword]
   );
 
   const actionOptions = useMemo(
@@ -347,17 +349,6 @@ export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditL
     },
     [userNameById]
   );
-
-  const filteredLogs = useMemo(() => {
-    const text = keyword.trim().toLowerCase();
-    if (!text) {
-      return logs;
-    }
-    return logs.filter((item) => {
-      const haystack = [item.actor_id, actorName(item.actor_id), item.action, actionLabel(item.action), item.target_type, targetTypeLabel(item.target_type), item.target_id, item.reason, item.ip_address, item.user_agent, item.request_id].join(" ").toLowerCase();
-      return haystack.includes(text);
-    });
-  }, [actorName, keyword, logs]);
 
   const summary = useMemo(
     () => ({
@@ -383,6 +374,7 @@ export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditL
 
   useEffect(() => {
     let active = true;
+    setUsersFailed(false);
     listManagedUsers({ limit: 200 })
       .then((result) => {
         if (active) {
@@ -398,7 +390,7 @@ export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditL
     return () => {
       active = false;
     };
-  }, []);
+  }, [usersRetry]);
 
   const loadLogs = useCallback(async () => {
     // 新筛选或刷新开始后，旧查询和旧分页只能结束自己的请求，不能再写入当前列表。
@@ -468,13 +460,13 @@ export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditL
   const exportLogs = () => {
     modal.confirm({
       title: "导出操作记录",
-      content: "将导出已应用筛选条件下最新的最多 200 条操作记录为 CSV；表内关键字仅搜索已加载记录，不影响导出。此次导出会被记录在案，文件带有可追溯水印，请妥善保管。",
+      content: "将导出已应用筛选条件（含关键词）下最新的最多 200 条操作记录为 CSV。此次导出会被记录在案，文件带有可追溯水印，请妥善保管。",
       okText: "确认导出",
       cancelText: "取消",
       onOk: async () => {
         setExporting(true);
         try {
-          // 导出使用已提交的服务端筛选；下方关键字只过滤已加载列表，不改变导出范围。
+          // 列表、后续游标和导出使用同一份已提交筛选；未应用的输入不能改变这次导出。
           const result = await exportAuditLogs({ ...filter, limit: 200 });
           setLastWatermark(result.watermark ?? "");
           saveBlob(result.blob, result.filename ?? "audit-logs.csv");
@@ -522,6 +514,7 @@ export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditL
       </section>
 
       <section className="audit-filter-panel">
+        <label className="audit-filter-field"><span>关键词</span><Input prefix={<Search size={16} />} placeholder="搜索账号、操作说明或对象编号" aria-label="搜索操作记录" maxLength={128} value={keyword} onChange={event => setKeyword(event.target.value)} onPressEnter={() => setFilter(pendingFilter)} allowClear /></label>
         <label className="audit-filter-field audit-filter-dates">
           <span>时间范围</span>
           <DatePicker.RangePicker
@@ -534,11 +527,8 @@ export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditL
         </label>
         <label className="audit-filter-field">
           <span>操作人</span>
-          {usersFailed ? (
-            <Input placeholder="操作人 ID" value={actorFilter} onChange={(event) => setActorFilter(event.target.value)} allowClear />
-          ) : (
-            <Select allowClear showSearch placeholder="全部人员" optionFilterProp="label" value={actorFilter || undefined} options={users.map((item) => ({ value: item.id, label: item.display_name }))} onChange={(value) => setActorFilter(value ?? "")} />
-          )}
+          <Select allowClear showSearch disabled={usersFailed} placeholder={usersFailed ? "人员列表暂不可用" : "全部人员"} optionFilterProp="label" value={actorFilter || undefined} options={users.map((item) => ({ value: item.id, label: item.display_name }))} onChange={(value) => setActorFilter(value ?? "")} />
+          {usersFailed ? <Button size="small" onClick={() => setUsersRetry(value => value + 1)}>重试人员列表</Button> : null}
         </label>
         <label className="audit-filter-field">
           <span>操作类型</span>
@@ -575,9 +565,8 @@ export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditL
         <div className="panel-head">
           <div>
             <h2>操作记录</h2>
-            <p>当前已加载 {logs.length} 条{hasMore ? "，还有更多可加载" : ""}；表内关键字只查已加载记录。{lastLoadedAt ? `最近成功读取：${formatTime(lastLoadedAt)}` : ""}</p>
+            <p>当前已加载 {logs.length} 条{hasMore ? "，还有更多可加载" : ""}。{lastLoadedAt ? `最近成功读取：${formatTime(lastLoadedAt)}` : ""}</p>
           </div>
-          <Input className="audit-keyword" prefix={<Search size={16} />} placeholder="在已加载记录中搜索" value={keyword} onChange={(event) => setKeyword(event.target.value)} allowClear aria-label="在已加载记录中搜索" />
         </div>
         {loading ? (
           <LoadingState label="正在读取操作记录" />
@@ -588,8 +577,8 @@ export function AuditLogPage({ canRead, canExport, tenantName }: Readonly<AuditL
               rowKey="id"
               size="small"
               columns={columns}
-              dataSource={filteredLogs}
-              pagination={{ pageSize: 12 }}
+              dataSource={logs}
+              pagination={false}
               onRow={(record) => ({
                 tabIndex: 0,
                 onClick: (event) => openDetail(record, event.currentTarget),

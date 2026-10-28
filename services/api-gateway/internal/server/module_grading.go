@@ -18,6 +18,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/grading"
 	"edugrade-enterprise/services/api-gateway/internal/mathunderstanding"
 	"edugrade-enterprise/services/api-gateway/internal/modelgovernance"
+	"edugrade-enterprise/services/api-gateway/internal/opiniondraft"
 	"edugrade-enterprise/services/api-gateway/internal/org"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/processing"
@@ -164,6 +165,11 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 		WithSeedHook(seedQualityService).
 		WithSeedObservationRefresher(graderDriftService).
 		WithAIHumanDisagreementObserver(dependencies.DisagreementObserver)
+	if dependencies.DB != nil {
+		reviewHandler.WithPrivateDrafts(opiniondraft.NewPostgresStore(dependencies.DB))
+	} else {
+		reviewHandler.WithPrivateDrafts(opiniondraft.NewMemoryStore())
+	}
 	if failureReader, ok := stores.Subjective.(review.AIFailureReader); ok {
 		reviewHandler.WithAIFailureReader(failureReader)
 	}

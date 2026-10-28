@@ -1,0 +1,599 @@
+{
+  "meta": {
+    "date": "2026-10-28",
+    "scope": "MC-P01—MC-P27",
+    "status": "implemented",
+    "implemented": 27,
+    "retained": 0,
+    "deferred": 0,
+    "sourceFileCount": 20,
+    "modifiedRelatedTestCount": 22,
+    "testedFiles": 30,
+    "uniqueTestsCovered": 409,
+    "method": "只修改辅助文案及前端展示条件/折叠；没有改会话、权限、存储、上传、评分业务控制器或后端。未进行新增浏览器/原生硬件验收。",
+    "baseline": "主agent已保存基线；不覆盖其他分区改动。",
+    "attemptNotes": [
+      "首次 pnpm exec 找不到 vitest，改用仓库既有 ../../node_modules/.bin/vitest.cmd。",
+      "旧文案断言按公开文案更新，提交来源、发布ID、权限、草稿恢复、敏感操作、禁用与回执断言保留。",
+      "班级新测试初次遇到jsdom伪元素/Modal动画导致超时，移除无关Modal展示替身后保留真实表单响应测试并通过。"
+    ]
+  },
+  "items": [
+    {
+      "id": "MC-P01",
+      "status": "implemented",
+      "files": [
+        "apps/student-portal/src/features/session/SessionScreens.tsx"
+      ],
+      "summary": "合并学生账号来源与成绩范围说明，缩短求助文案；保留学校代码与本人已发布成绩限制。",
+      "tests": [
+        "S",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "仅本人已发布成绩；不省略学校代码这一身份范围。"
+      ]
+    },
+    {
+      "id": "MC-P02",
+      "status": "implemented",
+      "files": [
+        "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx"
+      ],
+      "summary": "次数规则绑定题目和发布版本，只在提交前说明一次；成功回执带版号并直接查看处理记录。",
+      "tests": [
+        "S",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "限制为每题每版一次，不能写成永久一次。",
+        "保留版本核对、读取失败等阻断与已收到确认。"
+      ]
+    },
+    {
+      "id": "MC-P03",
+      "status": "implemented",
+      "files": [
+        "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx"
+      ],
+      "summary": "草稿提示按保存成功/失败保留独立状态、会话范围、退出清除和复制提醒。",
+      "tests": [
+        "S",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "不承诺跨标签页、跨设备或永久保存。",
+        "保留重新登录可恢复与主动退出清除的区别。"
+      ]
+    },
+    {
+      "id": "MC-P04",
+      "status": "implemented",
+      "files": [
+        "apps/student-portal/src/features/results/ResultDetail.tsx"
+      ],
+      "summary": "新版提示与核对失败分别说清版号、草稿复制与重新核对，保留主动换版。",
+      "tests": [
+        "S",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "不自动迁移草稿与选区。",
+        "核对失败仅描述正在展示的版本，不能称当前生效版。",
+        "保留错误、重试、必要重新登录。"
+      ]
+    },
+    {
+      "id": "MC-P05",
+      "status": "implemented",
+      "files": [
+        "apps/student-portal/src/features/appeals/AppealStatus.tsx"
+      ],
+      "summary": "每个申请状态只显示一次，学校决定与进度分开；拒绝优先、发布 ID 关系和缺失分数判断保留。",
+      "tests": [
+        "S",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "按 release ID 相等判断，不能凭版本号大小或 resolved 判断生效。",
+        "保留原版原分、复核分、当前分与学校回复。",
+        "未核实当前结果不能写已生效。",
+        "保留现有拒绝结论优先：decision=reject 或 status=rejected 时不能因唯一状态标题而吞掉拒绝事实。",
+        "当前本题分数未公开时保留缺失说明，不能用历史复核分补成当前分。"
+      ]
+    },
+    {
+      "id": "MC-P06",
+      "status": "implemented",
+      "files": [
+        "apps/student-portal/src/features/results/OldAppealDrafts.tsx"
+      ],
+      "summary": "在已有默认折叠的旧草稿内缩短说明，保留说明可复制、选区不迁移和退出清除。",
+      "tests": [
+        "S",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "保留来源版号题号，不承诺自动迁移。",
+        "保留复制失败的手动选择回退。"
+      ]
+    },
+    {
+      "id": "MC-P07",
+      "status": "implemented",
+      "files": [
+        "apps/student-portal/src/features/questions/QuestionCohortScope.tsx",
+        "apps/student-portal/src/features/questions/QuestionTables.tsx"
+      ],
+      "summary": "表前集中说明统计范围，同题人数仅显示一次；详情保留完整范围，逐题未知人数不补零。",
+      "tests": [
+        "S",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "逐题 sample_size 可能不同，不能合并成班级人数。",
+        "未知人数仍为暂未提供，不写 0。",
+        "群体位置不等于知识掌握。"
+      ]
+    },
+    {
+      "id": "MC-P08",
+      "status": "implemented",
+      "files": [
+        "apps/desktop-client/src/App.tsx"
+      ],
+      "summary": "取消检查、保存必经顺序的文案暗示；密码保存边界仅在凭据能力可用时贴近自动登录选项。",
+      "tests": [
+        "D",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "不省略服务器、学校代码和账号范围。",
+        "浏览器开发模式不承诺保存密码。",
+        "连接成功不等于认证成功。"
+      ]
+    },
+    {
+      "id": "MC-P09",
+      "status": "implemented",
+      "files": [
+        "apps/desktop-client/src/App.tsx"
+      ],
+      "summary": "简化离线授权选项，只有账号、学校、服务器匹配且未过期时显示真实到期时间；建立条件和撤销边界仍可见。",
+      "tests": [
+        "D",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "限当前 Windows 用户、本服务器、本学校和本账号本机数据。",
+        "有效期不超过本次登录且最多七天，不固定承诺七天。",
+        "退出或清除保存信息撤销；获取任务和上传仍需在线登录。"
+      ]
+    },
+    {
+      "id": "MC-P10",
+      "status": "implemented",
+      "files": [
+        "apps/desktop-client/src/App.tsx",
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx"
+      ],
+      "summary": "任务、冻结细则和评分草稿的保存范围集中说明；图片不随草稿保存/恢复常显，原生与浏览器开发模式分开。",
+      "tests": [
+        "D",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "显式点击保存，不承诺自动保存。",
+        "本机授权不提供离线图片恢复。",
+        "原生与浏览器回退分开，浏览器不能冒充生产扫描站验收。",
+        "恢复图片不改人工评分；无可核对材料仍按现有门禁。"
+      ]
+    },
+    {
+      "id": "MC-P11",
+      "status": "implemented",
+      "files": [
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx"
+      ],
+      "summary": "原生显示使用本机加密存储；浏览器按显式密钥长度显示开发密钥状态，不冒充用户已输入原生密钥。",
+      "tests": [
+        "D",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "原生能力可用不等于当前账号绑定、授权或数据保存成功。",
+        "浏览器达到长度不等于密钥已验证或安全强度保证。",
+        "仍保留至少八位和显式保存。"
+      ]
+    },
+    {
+      "id": "MC-P12",
+      "status": "implemented",
+      "files": [
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx"
+      ],
+      "summary": "未知提交结果说明改为查询上次提交，保留冻结分数评语及同一操作回执处理。",
+      "tests": [
+        "D",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "未知不等于失败，不鼓励新开提交。",
+        "不取消同一操作核对及冻结，不承诺重试必成功或成绩已生效。"
+      ]
+    },
+    {
+      "id": "MC-P13",
+      "status": "implemented",
+      "files": [
+        "apps/desktop-client/src/features/scan/ScanWorkspace.tsx"
+      ],
+      "summary": "移除真假上下文术语，保留考试批次范围、收到文件、匹配、页数与图像质量各自含义。",
+      "tests": [
+        "D",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "不取消真实考试批次与允许上传校验。",
+        "保留当前批次或全部批次范围。",
+        "页数通过不等于图像通过；未启用设备直接采集仍明确。"
+      ]
+    },
+    {
+      "id": "MC-P14",
+      "status": "implemented",
+      "files": [
+        "apps/desktop-client/src/App.tsx"
+      ],
+      "summary": "本机错误和关键操作记录正向标明来源；专业端点和未配置状态仍保留。",
+      "tests": [
+        "D",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "不能称本机记录为学校完整审计。",
+        "未配置或未接入仍真实显示。",
+        "不整体删掉专业排障信息。"
+      ]
+    },
+    {
+      "id": "MC-P15",
+      "status": "implemented",
+      "files": [
+        "apps/desktop-client/src/components/NativeStoragePanel.tsx"
+      ],
+      "summary": "压缩归档与永久删除说明，保留磁盘不释放、动态保留期、回执留存、备份核对及本机不可恢复。",
+      "tests": [
+        "D",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "保留天数不写死；仅删本机原件，回执保留。",
+        "本机无法恢复，必须先核对备份与学校保留要求。",
+        "不缩减候选资格、留存期、数量上限与确认步骤。"
+      ]
+    },
+    {
+      "id": "MC-P16",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/components/TOTPManagement.tsx"
+      ],
+      "summary": "TOTP 试点范围和只读会话原因常显；更换/丢失帮助默认折叠，保留无自动重置与普通登录不阻断。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "不声称已保护登录阅卷。",
+        "无自动重置，重置密码不清除验证器。",
+        "双重丢失仍不阻断当前试点普通登录。",
+        "只读会话不能获得管理能力。"
+      ]
+    },
+    {
+      "id": "MC-P17",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/components/totpManagementPresentation.tsx"
+      ],
+      "summary": "扫码路径保留二维码与秘密警告，手动参数折叠，完整算法/账号/密钥与到期提示保留。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "勿截图分享上传第三方的提醒不能随手动参数一起隐藏。",
+        "保留时间类型、SHA-1、六位、三十秒及账号。",
+        "保留成功码不能复用、刷新等待和手机时间提示。"
+      ]
+    },
+    {
+      "id": "MC-P18",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/components/TOTPManagement.tsx",
+        "apps/web-admin/src/components/totpManagementPresentation.tsx"
+      ],
+      "summary": "首次启用和重新生成用不同提示，明确未勾选也已启用、旧码失效及一次展示；不自动确认保存。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "验证成功已启用；重新生成不得冒充首次启用事件。",
+        "每码一次，仅关闭验证器用途，不能登录改密码或验证其他业务。",
+        "旧码重新生成后全失效；复制下载不自动确认安全保存。",
+        "仍提醒独立安全位置、不留公共电脑共享文件夹聊天，不与手机同失。"
+      ]
+    },
+    {
+      "id": "MC-P19",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/components/totpManagementPresentation.tsx"
+      ],
+      "summary": "验证前说明成功即消耗，验证后说明已消耗；取消不返还恢复码，关闭退出全部设备警告保留。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "消耗在验证成功，不在最终确认关闭。",
+        "取消不关闭验证器，也不退还已消耗码。",
+        "关闭导致所有设备退出及原验证器恢复码失效的警告保留。"
+      ]
+    },
+    {
+      "id": "MC-P20",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/members/teachers/MemberProfileDialog.tsx"
+      ],
+      "summary": "教职工号清空删除、手机号留空不改各贴字段；登录身份变化、邀请及冲突提示保持原条件。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "不改 payload 空白语义。",
+        "仅登录身份变更需重新登录。",
+        "保留邀请失效重生成、并发冲突与输入保留提醒。"
+      ]
+    },
+    {
+      "id": "MC-P21",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx"
+      ],
+      "summary": "新增班级说明导入用途，编辑仅在代码相对原值变化时警告后续文件同步，改回即隐藏。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "仍必填并保留服务端约束。",
+        "不承诺更新历史导入文件或自动迁移学生。",
+        "不省略学校和年级范围。"
+      ]
+    },
+    {
+      "id": "MC-P22",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/platform-model-config/components/ModelConfigForm.tsx"
+      ],
+      "summary": "编辑密钥帮助按 API 域名/端口变化切换，保留现有校验；新建、复用与轮换规则分别缩写。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "不回显密钥、不取消换源站重填。",
+        "复用单独验证加密，后续轮换不自动同步。",
+        "保存连接检查不代表通过其他用途检测。",
+        "零生成 Token 不可改为供应商绝不收费。"
+      ]
+    },
+    {
+      "id": "MC-P23",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/platform-model-config/components/ModelConfigForm.tsx"
+      ],
+      "summary": "用不生成回复解释获取模型列表，保留手工输入和生成测试用量区别，不承诺供应商免费。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "不保证免费、不受限流。",
+        "生成检测发送合成内容且会用量。",
+        "拉列表失败仍允许手动输入。"
+      ]
+    },
+    {
+      "id": "MC-P24",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.tsx"
+      ],
+      "summary": "自动阅卷用途集中人工最终确认与无本地回退；保存前后按阶段显示，图片通过不等于正式准入。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "单模型不免除准入与最终确认。",
+        "图片读取通过不等于正式评分全部门禁通过。",
+        "密钥停用或配置变化需重检。",
+        "不把当前已折叠的多模型角色误写成全展开。"
+      ]
+    },
+    {
+      "id": "MC-P25",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/pages/PlatformModelConfigPage.tsx"
+      ],
+      "summary": "模型全局用途指南默认折叠，保留一行独立配置/检测原则；学校状态和用途动作边界仍就近显示。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "聊天切换不改独立解析/答题卡用途。",
+        "答题卡人工核对后发布，正式评分依准入与最终确认。",
+        "自动阅卷不回退本地；多密钥加密与轮换可查。",
+        "保留所选学校与未保存切校保护。"
+      ]
+    },
+    {
+      "id": "MC-P26",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/platform-model-config/hooks/useSchoolModelActions.tsx"
+      ],
+      "summary": "保留按需打开的专业诊断和技术字段，只缩短返回摘要的长度/不入库及未提供说明。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "保留 Token、finish_reason、response_format、API 地址。",
+        "不写入数据库仅指摘要，不扩大为检测无记录。",
+        "不承诺摘要永久可追溯。",
+        "缺失字段不等于已通过、零用量或零输出；本条不授权改默认值。"
+      ]
+    },
+    {
+      "id": "MC-P27",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx"
+      ],
+      "summary": "预算保留美元、六位小数、零值阻断和每场考试范围，删除主要小字中的存储单位解释。",
+      "tests": [
+        "W",
+        "R"
+      ],
+      "reason": null,
+      "retainedBoundaries": [
+        "0 不等于不限额，不能默认放行。",
+        "美元输入、六位精度和精确微美元转换保持。",
+        "整场不是学校月额度。",
+        "保留学校、策略版本、expected_version 与外发授权范围。"
+      ]
+    }
+  ],
+  "checks": {
+    "S": {
+      "result": "passed_after_assertion_updates",
+      "files": 19,
+      "tests": 189,
+      "command": "../../node_modules/.bin/vitest.cmd run src/App --maxWorkers=1 --reporter=json --outputFile=C:/Users/pc/AppData/Local/Temp/yuejuan-portals-student.json",
+      "verification": "最后一轮 188/189 通过；唯一失败是旧版失败草稿完整文案断言。改为新文案后，仅该文件 App.releaseConsistency.test.tsx 11/11 通过；覆盖集合中的189项均已通过。"
+    },
+    "D": {
+      "result": "passed",
+      "files": 5,
+      "tests": 117,
+      "commands": [
+        "../../node_modules/.bin/vitest.cmd run src/components/OfflineWorkbench src/components/NativeStoragePanel.test.tsx src/App.offlineDescription.batch47.test.tsx src/features/scan/ScanWorkspace.batch34.test.tsx --maxWorkers=1 --reporter=dot",
+        "../../node_modules/.bin/vitest.cmd run src/features/scan/ScanWorkspace.batch34.test.tsx --maxWorkers=1 --reporter=dot",
+        "../../node_modules/.bin/vitest.cmd run src/App.offlineDescription.batch47.test.tsx --maxWorkers=1 --reporter=dot"
+      ],
+      "verification": "首轮115项中114通过，唯一旧扫描文案断言修正后扫描26/26通过；新增两个授权身份匹配显示场景后App说明5/5通过。未改变硬件/存储/上传控制器。"
+    },
+    "W": {
+      "result": "passed",
+      "files": 6,
+      "tests": 103,
+      "commands": [
+        "../../node_modules/.bin/vitest.cmd run src/components/totpManagementPresentation.test.tsx src/pages/PlatformModelConfigPage.test.tsx src/features/platform-model-config/components/ImageGradingModelForm.test.tsx src/components/model-governance/ManagedGovernanceWorkspace.ux.test.tsx src/features/members/teachers/TeacherManagementPage.batch37.test.tsx --maxWorkers=1 --reporter=dot",
+        "../../node_modules/.bin/vitest.cmd run src/pages/PlatformModelConfigPage.test.tsx --maxWorkers=1 --reporter=dot",
+        "../../node_modules/.bin/vitest.cmd run src/features/members/classes/ClassManagementPage.microcopy.test.tsx src/features/platform-model-config/components/ImageGradingModelForm.test.tsx --maxWorkers=1 --reporter=dot"
+      ],
+      "verification": "五文件99/99通过；新增三个API地址帮助条件场景后模型页82/82通过；班级与图片用途两文件5/5通过。班级测试保留真实AntD Form/useWatch/Input，仅移除Modal动画和滚动条测量。"
+    },
+    "R": {
+      "result": "passed",
+      "command": "git diff --check -- <本分区修改文件>",
+      "verification": "没有空白错误；未运行全仓测试/typecheck/build，由主agent统一执行。"
+    }
+  },
+  "sourceFiles": [
+    "apps/desktop-client/src/App.tsx",
+    "apps/desktop-client/src/components/NativeStoragePanel.tsx",
+    "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+    "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+    "apps/student-portal/src/features/appeals/AppealStatus.tsx",
+    "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx",
+    "apps/student-portal/src/features/questions/QuestionCohortScope.tsx",
+    "apps/student-portal/src/features/questions/QuestionTables.tsx",
+    "apps/student-portal/src/features/results/OldAppealDrafts.tsx",
+    "apps/student-portal/src/features/results/ResultDetail.tsx",
+    "apps/student-portal/src/features/session/SessionScreens.tsx",
+    "apps/web-admin/src/components/TOTPManagement.tsx",
+    "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx",
+    "apps/web-admin/src/components/totpManagementPresentation.tsx",
+    "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+    "apps/web-admin/src/features/members/teachers/MemberProfileDialog.tsx",
+    "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.tsx",
+    "apps/web-admin/src/features/platform-model-config/components/ModelConfigForm.tsx",
+    "apps/web-admin/src/features/platform-model-config/hooks/useSchoolModelActions.tsx",
+    "apps/web-admin/src/pages/PlatformModelConfigPage.tsx"
+  ],
+  "relatedTestFiles": [
+    "apps/desktop-client/src/App.offlineDescription.batch47.test.tsx",
+    "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+    "apps/desktop-client/src/features/scan/ScanWorkspace.batch34.test.tsx",
+    "apps/student-portal/src/App.appealAvailability.test.tsx",
+    "apps/student-portal/src/App.appealPresentation.batch29.test.tsx",
+    "apps/student-portal/src/App.batch8.test.tsx",
+    "apps/student-portal/src/App.beforeUnload.batch52.test.tsx",
+    "apps/student-portal/src/App.output.batch8.test.tsx",
+    "apps/student-portal/src/App.paperRecovery.test.tsx",
+    "apps/student-portal/src/App.presentation.batch19.test.tsx",
+    "apps/student-portal/src/App.productUx.test.tsx",
+    "apps/student-portal/src/App.questionCohortScope.test.tsx",
+    "apps/student-portal/src/App.questionConflict.test.tsx",
+    "apps/student-portal/src/App.reauthentication.test.tsx",
+    "apps/student-portal/src/App.releaseConsistency.test.tsx",
+    "apps/student-portal/src/App.submissionReceipt.test.tsx",
+    "apps/student-portal/src/App.test.tsx",
+    "apps/student-portal/src/App.volatileReceipt.test.tsx",
+    "apps/web-admin/src/components/totpManagementPresentation.test.tsx",
+    "apps/web-admin/src/features/members/classes/ClassManagementPage.microcopy.test.tsx",
+    "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.test.tsx",
+    "apps/web-admin/src/pages/PlatformModelConfigPage.test.tsx"
+  ],
+  "remaining": []
+}

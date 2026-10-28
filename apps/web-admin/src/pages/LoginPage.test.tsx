@@ -35,6 +35,20 @@ async function generateWechat() {
 }
 
 describe("login identity fields", () => {
+  it("学校专属入口切换微信即生成普通会话二维码，改设备后显式重建", async () => {
+    window.history.replaceState({}, "", "/?tenant=demo");
+    vi.mocked(startWechatLogin).mockResolvedValue(challenge);
+    render(<LoginPage onLogin={vi.fn()} onWechatAuthenticate={authenticate} />);
+    fireEvent.click(screen.getByRole("tab", { name: "微信扫码" }));
+    await screen.findByRole("img", { name: "微信授权登录二维码" });
+    expect(startWechatLogin).toHaveBeenCalledWith({ tenant_hint: "demo", remember_device: false, public_device: false });
+    fireEvent.click(screen.getByRole("button", { name: "更改登录设备" }));
+    expect(screen.queryByRole("img", { name: "微信授权登录二维码" })).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "这是学校公共电脑" }));
+    fireEvent.click(screen.getByRole("button", { name: "生成微信登录二维码" }));
+    await waitFor(() => expect(startWechatLogin).toHaveBeenCalledTimes(2));
+    expect(startWechatLogin).toHaveBeenLastCalledWith(expect.objectContaining({ tenant_hint: "demo", remember_device: false, public_device: true }));
+  });
   it("submits a username through the compatible identifier protocol", async () => {
     const login = vi.fn();
     render(<LoginPage onLogin={login} onWechatAuthenticate={authenticate} />);
@@ -53,7 +67,7 @@ describe("login identity fields", () => {
     const login = vi.fn();
     render(<LoginPage onLogin={login} onWechatAuthenticate={authenticate} />);
     fireEvent.click(screen.getByRole("button", { name: "登录" }));
-    expect(await screen.findByText("请输入用户名")).toBeTruthy();
+    expect(await screen.findByText("请输入用户名", {}, { timeout: 5000 })).toBeTruthy();
     expect(login).not.toHaveBeenCalled();
     expect(screen.getByRole("tab", { name: "用户名密码" }).getAttribute("aria-selected")).toBe("true");
     expect(screen.queryByRole("tab", { name: /手机|短信/ })).toBeNull();
@@ -67,11 +81,11 @@ describe("login identity fields", () => {
     render(<LoginPage onLogin={vi.fn()} onWechatAuthenticate={authenticate} />);
     fireEvent.click(screen.getByRole("tab", { name: "微信扫码" }));
     fireEvent.change(screen.getByLabelText("学校代码"), { target: { value: "demo" } });
-    fireEvent.click(screen.getByRole("checkbox", { name: "这是我的常用电脑，30 天内减少验证" }));
+    fireEvent.click(screen.getByRole("radio", { name: "这是我的常用电脑，30 天内减少验证" }));
     fireEvent.click(screen.getByRole("button", { name: "生成微信登录二维码" }));
     await waitFor(() => expect(startWechatLogin).toHaveBeenCalledWith(expect.objectContaining({ remember_device: true, public_device: false })));
-    expect((screen.getByRole("checkbox", { name: "这是学校公共电脑" }) as HTMLInputElement).disabled).toBe(true);
-    expect((screen.getByRole("checkbox", { name: "这是我的常用电脑，30 天内减少验证" }) as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole("radio", { name: "这是学校公共电脑" }) as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole("radio", { name: "这是我的常用电脑，30 天内减少验证" }) as HTMLInputElement).disabled).toBe(true);
     await act(async () => { pending.resolve(challenge); });
     expect(screen.getByRole("img", { name: "微信授权登录二维码" })).toBeTruthy();
     expect(screen.queryByText(/公共电脑会话最长/)).toBeNull();

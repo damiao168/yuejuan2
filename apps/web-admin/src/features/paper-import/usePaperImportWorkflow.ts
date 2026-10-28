@@ -281,7 +281,9 @@ export function usePaperImportWorkflow({
     reviewEditBaselineRef.current ??= authoritativeReviewRef.current && structuredClone(authoritativeReviewRef.current);
     setReviewDirty(true);
     const next = reviewDraftsRef.current.map((draft, draftIndex) =>
-      draftIndex === index ? markImportFieldConfirmed(draft, field, patch) : draft
+      // 满分由题目分值派生；保留采分点原值，让教师明确处理差额，不能自动按比例改分。
+      draftIndex === index ? markImportFieldConfirmed(draft, field, field === "score" && typeof patch.score === "number" && draft.rubric
+        ? { ...patch, rubric: { ...draft.rubric, max_score: patch.score } } : patch) : draft
     );
     reviewDraftsRef.current = next; setReviewDrafts(next);
   };

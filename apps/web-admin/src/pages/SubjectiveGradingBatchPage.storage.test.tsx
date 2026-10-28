@@ -5,13 +5,13 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { SubjectiveGradingBatch } from "../api/subjectiveGrading";
 import { SubjectiveGradingBatchPage } from "./SubjectiveGradingBatchPage";
 
-const transport = vi.hoisted(() => ({ create: vi.fn(), recover: vi.fn(), get: vi.fn() }));
+const transport = vi.hoisted(() => ({ create: vi.fn(), recover: vi.fn(), get: vi.fn(), enqueue: vi.fn(), recoverEnqueue: vi.fn() }));
 vi.mock("../api/subjectiveGrading", () => ({
   createSubjectiveGradingBatch: transport.create,
   recoverSubjectiveBatchCommand: transport.recover,
   getSubjectiveGradingBatch: transport.get,
-  enqueueSubjectiveGradingBatch: vi.fn(),
-  recoverSubjectiveEnqueueCommand: vi.fn()
+  enqueueSubjectiveGradingBatch: transport.enqueue,
+  recoverSubjectiveEnqueueCommand: transport.recoverEnqueue
 }));
 vi.mock("antd", () => {
   const Input = Object.assign(({ prefix, ...props }: InputHTMLAttributes<HTMLInputElement> & { prefix?: ReactNode }) =>
@@ -33,7 +33,7 @@ const scopeKey = "school-a:teacher-a";
 const commandKey = `subjective-batch-command:${scopeKey}`;
 const segments = "segment-a, segment-b";
 const segmentInput = () => screen.getByPlaceholderText("输入答题片段 ID，使用换行或逗号分隔（最多 1000 个）") as HTMLTextAreaElement;
-const commandInput = () => screen.getByRole("textbox", { name: "幂等键" }) as HTMLInputElement;
+const commandInput = () => screen.getByRole("textbox", { name: "幂等键", hidden: true }) as HTMLInputElement;
 const accepted: SubjectiveGradingBatch = {
   id: "accepted-batch", tenant_id: "school-a", idempotency_key: "accepted-command", status: "completed",
   created_by: "teacher-a", created_at: "2026-10-15T00:00:00Z", updated_at: "2026-10-15T00:00:00Z",
@@ -60,21 +60,21 @@ it.each(["getter", "read", "write"] as const)("存储%s被拒绝时可挂载，�
       ? vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw unavailable; })
       : vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw unavailable; });
   render(<SubjectiveGradingBatchPage scopeKey={scopeKey} />);
-  expect(screen.getByRole("heading", { name: "主观题 AI 批次" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "主观题影子评分" })).toBeTruthy();
   expect(transport.get).not.toHaveBeenCalled();
   fireEvent.change(segmentInput(), { target: { value: segments } });
   const originalCommand = commandInput().value;
-  fireEvent.click(screen.getByRole("button", { name: "创建批次" }));
+  fireEvent.click(screen.getByRole("button", { name: "创建并开始影子评分" }));
   await screen.findByRole("alert");
   expect(screen.getByRole("alert").textContent).toBe("主观题批次操作失败");
   expect(segmentInput().value).toBe(segments);
   expect(commandInput().value).toBe(originalCommand);
-  expect(screen.getByRole<HTMLButtonElement>("button", { name: "创建批次" }).disabled).toBe(false);
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "创建并开始影子评分" }).disabled).toBe(false);
   expect(transport.create).not.toHaveBeenCalled();
   expect(transport.recover).not.toHaveBeenCalled();
 
   fault.mockRestore();
-  fireEvent.click(screen.getByRole("button", { name: "创建批次" }));
+  fireEvent.click(screen.getByRole("button", { name: "创建并开始影子评分" }));
   await waitFor(() => expect(transport.create).toHaveBeenCalledExactlyOnceWith(originalCommand, ["segment-a", "segment-b"]));
   await waitFor(() => expect(localStorage.getItem(`${commandKey}:batch`)).toBe(accepted.id));
   expect(localStorage.getItem(commandKey)).toBeNull();
@@ -92,7 +92,7 @@ it("正常存储下先写入当前账号命令再发送，成功后保存批次�
   render(<SubjectiveGradingBatchPage scopeKey={scopeKey} />);
   fireEvent.change(segmentInput(), { target: { value: segments } });
   const originalCommand = commandInput().value;
-  fireEvent.click(screen.getByRole("button", { name: "创建批次" }));
+  fireEvent.click(screen.getByRole("button", { name: "创建并开始影子评分" }));
   await waitFor(() => expect(transport.create).toHaveBeenCalledExactlyOnceWith(originalCommand, ["segment-a", "segment-b"]));
   await screen.findByText("已完成");
   expect(localStorage.getItem(commandKey)).toBeNull();
@@ -111,4 +111,19 @@ it("在原批次进度内展示失败原因并保留未知用量，不增加模�
   expect(screen.getByText("输出达到上限 · 1 项")).toBeTruthy();
   expect(screen.getByText("尝试次数未知 · 上游调用 1 次 · 用量：部分报告，仍有未知用量")).toBeTruthy();
   expect(transport.create).not.toHaveBeenCalled();
+});
+
+it("创建后直接入队，入队失败保留已创建批次并单独继续，不重新创建", async () => {
+  const planned = { ...accepted, status: "planned" as const };
+  transport.create.mockResolvedValue({ batch: planned });
+  transport.enqueue.mockRejectedValueOnce(new Error("temporary unavailable")).mockResolvedValue({ batch: accepted, enqueue_result: { accepted_count: 2, failed_count: 0 } });
+  transport.recoverEnqueue.mockResolvedValue({ status: "not_accepted" });
+  render(<SubjectiveGradingBatchPage scopeKey={scopeKey} />);
+  fireEvent.change(segmentInput(), { target: { value: segments } });
+  fireEvent.click(screen.getByRole("button", { name: "创建并开始影子评分" }));
+  await screen.findByText(/批次已创建，尚未确认入队/);
+  expect(transport.create).toHaveBeenCalledOnce(); expect(transport.enqueue).toHaveBeenCalledWith(accepted.id);
+  fireEvent.click(screen.getByRole("button", { name: "入队评分" }));
+  await screen.findByText("已完成");
+  expect(transport.create).toHaveBeenCalledOnce(); expect(transport.enqueue).toHaveBeenCalledTimes(2);
 });

@@ -5,7 +5,7 @@ import { canWorkTeacherAppeals } from "../auth/capabilities";
 import { passwordMinimumForRoles } from "../auth/loginSecurity";
 import { ForbiddenState, NotFoundState } from "../components/PageState";
 import { invalidateExamWorkspace } from "../query/examWorkspace";
-import { managementExamRoute } from "../features/exams/management/managementPresentation";
+import { managementExamWorkspaceRoute } from "../features/exams/management/managementPresentation";
 import { workspacesForExperience } from "../workspaces/registry";
 import { hasExperienceAccess, type ProductExperience } from "./experience";
 import { hasExamWorkspaceSectionAccess, hasRouteAccess, managementExamFromPath, notFoundRoute, type AppRoute } from "./routes";
@@ -95,7 +95,7 @@ function renderExamWorkspaceModule(context: Readonly<RouteRenderingContext>, rea
         return <ExamStudentScopePage examId={examId} canManage={writeAllows(["exam:manage", "org:manage"])} onExamChanged={refreshWorkspace} />;
       case "paper":
       case "questions":
-        return <PaperRubricPage canManage={writeAllows(["exam:manage", "file:manage"])} canReadQuestionBank={hasEveryPermission(user,["question_bank:read"])} canImportQuestionBank={writeAllows(["question_bank:read","question_bank:create","question_bank:edit"])} questionBankScope={`${user.tenant}:${user.id}`} canManageAssessment={adminAllows(["exam:manage"])} fixedExamId={examId} mode="embedded" initialView={examWorkspace.section === "questions" ? "questions" : "materials"} onExamChanged={refreshWorkspace} onNavigate={navigate} />;
+        return <PaperRubricPage canManage={writeAllows(["exam:manage", "file:manage"])} canReadQuestionBank={hasEveryPermission(user,["question_bank:read"])} canImportQuestionBank={writeAllows(["question_bank:read","question_bank:create","question_bank:edit"])} questionBankScope={`${user.tenant}:${user.id}`} canManageAssessment={adminAllows(["exam:manage"])} fixedExamId={examId} mode="embedded" initialView={examWorkspace.section === "questions" ? "questions" : "materials"} initialQuestionId={new URLSearchParams(context.path.split("?", 2)[1] ?? "").get("question") ?? ""} initialQuestionTarget={new URLSearchParams(context.path.split("?", 2)[1] ?? "").get("target") === "answer" ? "answer" : new URLSearchParams(context.path.split("?", 2)[1] ?? "").get("target") === "score" ? "score" : "rubric"} onExamChanged={refreshWorkspace} onNavigate={navigate} />;
       case "template":
         return <AnswerSheetTemplatePage key={`${user.tenant}:${user.id}:${examId}`} scopeKey={`${user.tenant}:${user.id}`} examId={examId} canManage={adminAllows(["exam:manage", "file:manage"])} canCalibrate={adminAllows(["grading:manage"])} onExamChanged={refreshWorkspace} />;
       case "settings":
@@ -156,7 +156,7 @@ export function renderAppRouteContent(context: Readonly<RouteRenderingContext>):
         mode={experience}
         canManage={adminAllows(["exam:manage"])}
         currentUser={user}
-        onOpenWorkspace={(exam) => navigate(managementExamRoute(exam))}
+        onOpenWorkspace={(exam) => navigate(managementExamWorkspaceRoute(exam))}
         onCreateExam={() => navigate("/exams/new")}
       />;
     case "/organization/setup":

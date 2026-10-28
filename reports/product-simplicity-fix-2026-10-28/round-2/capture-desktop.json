@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-28",
+  "scope": "第二轮考试采集与桌面端；沿用此前全部未提交修改，不覆盖旧报告",
+  "status_definitions": { "fixed": "原观察在本次明确支持的格式与容量范围内已修复，限制单列；不等于真实扫描设备或Tauri发行包验证", "partial": "本轮有进展，仍有明确未覆盖范围", "pending": "本轮没有修改实现" },
+  "findings": [
+    { "id": "D04", "status": "fixed", "implementation": "上传成功后自动刷新同一账号、考试与批次的处理结果和锁定模板；后台仍在拆页或匹配时每2秒有限读取，最多30次。服务端形成真实答卷关联后，扫描页自动读取图像质量并检查页数。检查失败保留显式重试，不重复发送已成功上传文件。", "remaining": ["超过约60秒仍处理中的批次明确提示稍后刷新，不无限轮询", "后台需人工修复的问题仍在学校管理端处理；上传成功不等于质量通过"], "files": ["apps/desktop-client/src/features/upload/useUploadSync.ts", "apps/desktop-client/src/features/capture/useExamCaptureContext.ts", "apps/desktop-client/src/features/quality/useSubmissionQuality.ts", "apps/desktop-client/src/features/scan/ScanWorkspace.tsx", "apps/desktop-client/src/App.tsx"] },
+    { "id": "D06", "status": "fixed", "implementation": "受控任务接口下载的完整PNG/JPEG/WebP/GIF/PDF原件可随现有草稿正文一同加密保存；恢复时核对任务、修订、题目、答卷段、长度及SHA-256，再生成当前会话Blob。浏览器或PDF逐页实际显示成功前不作为可核对材料。旧草稿兼容，超限与不支持格式明确提示不能离线准备，原评分仍可保存。", "remaining": ["单份原件2MiB；含base64的任务包按UTF-8实际字节核算并预留512KiB，完整草稿正文沿用原生4MiB限制，绝不截断原件", "超过容量的完整材料仍需联网读取；本轮没有新增大文件原生存储接口", "没有验证真实Windows凭据库、Tauri发行包跨重启或真实硬件；复用既有原生加密正文路径"], "files": ["apps/desktop-client/src/lib/offlineAnswerMaterial.ts", "apps/desktop-client/src/lib/offlineStore.ts", "apps/desktop-client/src/components/offlineWorkbench/useOfflineWorkbench.tsx", "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx", "apps/desktop-client/src/types.ts"] },
+    { "id": "D10", "status": "fixed", "implementation": "PDF由本机PDF.js逐页转为PNG展示；所有页完成渲染且每张图片实际解码成功后才放行纯PDF答卷评分。任一页失败、换文档或取消均撤回可读状态。只读取当前任务已下载的Blob，不嵌入PDF脚本、表单或外部页面。", "remaining": ["最多50页、单页至多约800万像素、总计6400万像素与64MiB页面数据；超限保留原件并提示按题拆分", "真实Tauri WebView与发行包仍未验证"], "files": ["apps/desktop-client/src/lib/pdfAnswerPages.ts", "apps/desktop-client/src/components/PdfAnswerPages.tsx", "apps/desktop-client/src/components/AnswerDocumentViewer.tsx", "apps/desktop-client/src-tauri/tauri.conf.json", "apps/desktop-client/scripts/check-security-config.mjs"] },
+    { "id": "EX-22", "status": "partial", "implementation": "本轮补classic TIFF多页缩略图与页内重排，沿用PDF预检的应用/恢复确认与未应用阻止导入。改序只重连完整IFD页面链，保留全部压缩像素与其余标签字节，不以缩略图生成答卷。支持双端序与UTIF列明的常见压缩编码，按文件内真实页数核对。", "remaining": ["BigTIFF、非标准目录、子IFD、非默认方向、不支持压缩或尺寸超限保持原文件并拒绝本地改序，可按原页序导入", "最多100页、单页3200万像素、合计1.28亿像素；服务端原有解码/分组/质量检查全部保留"], "files": ["apps/web-admin/src/features/capture/captureTiffPreview.ts", "apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx", "apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx"] },
+    { "id": "EX-27", "status": "fixed", "implementation": "异常表格及筛选以立即处理、优先处理、常规处理、稍后处理展示既有等级。核对服务端severityFor及SQL CASE后保留原P0-P3筛选枚举和排序，未把等级标签伪装为质量通过；blocking与真实问题原因继续独立使用。", "remaining": [], "files": ["apps/web-admin/src/components/ProcessingOperationsPanel.tsx"] },
+    { "id": "EX-25", "status": "partial", "implementation": "保留上一轮单题question/target精确定位；本轮核对考试级评分异常与现有编辑能力。", "remaining": ["考试级问题仍指向考试列表，尚未实施对应编辑定位；现有考试编辑抽屉不能修改考试场次年级，不能承诺现有编辑入口可修复所有学段问题"], "files": ["apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx", "apps/web-admin/src/pages/ExamPreparationPage.tsx"] },
+    { "id": "EX-31", "status": "pending", "implementation": "未修改旧处理页或后端编排。", "remaining": ["纯状态转换仍须收敛为受控处理命令，不能仅在前端连续调用绕过质量、身份、模板与完整性检查"], "files": ["apps/web-admin/src/pages/SubmissionCaptureViews.tsx"] },
+    { "id": "EX-32", "status": "pending", "implementation": "本轮未修改相似答案抽检。", "remaining": ["逐份样本审阅与共用冻结依据尚未实现，最低抽检、异常样本和材料hash门禁不得降低"], "files": ["apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx", "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx"] }
+  ],
+  "dependencies": {
+    "pdfjs-dist": "desktop与web-admin均精确固定5.4.149",
+    "utif": "web-admin 3.1.0",
+    "@types/utif": "web-admin 3.0.6",
+    "official_sources": ["https://github.com/photopea/UTIF.js", "https://github.com/advisories/GHSA-hq66-cqwq-w95j"],
+    "note": "最初沿用^5.4.149被npm解析到新公告影响的5.x，核对公告后正式安装回仓库既有5.4.149并精确锁定；npm audit最终0项漏洞，未自动升级无关依赖。曾请求不存在的@types/utif ^3.1.4，随后通过npm view核实并正式安装实际3.0.6，失败命令未伪称通过。"
+  },
+  "verification": [
+    { "command": "desktop-client定向Vitest run --maxWorkers=1（12文件）", "status": "passed", "tests": 197, "log": "capture-desktop-regression.json" },
+    { "command": "最终D04定向Vitest run --maxWorkers=1（2文件）", "status": "passed", "tests": 36, "log": "capture-desktop-final-d04.json", "note": "与前述197项有重叠，不累加成独立测试总数" },
+    { "command": "web-admin TIFF/PDF预检与异常展示Vitest run --maxWorkers=1（4文件）", "status": "passed", "tests": 15, "log": "capture-web-regression.json" },
+    { "command": "npm exec --workspace apps/desktop-client -- tsc --noEmit", "status": "passed" },
+    { "command": "npm exec --workspace apps/web-admin -- tsc --noEmit", "status": "passed" },
+    { "command": "npm run --workspace apps/desktop-client check:security-config", "status": "passed" },
+    { "command": "npm audit --json", "status": "passed", "vulnerabilities": 0 },
+    { "command": "Playwright CLI合成双页PDF/TIFF组件级真实浏览器检查", "status": "passed", "artifacts": "output/playwright/round2-capture-desktop/verified.png", "log": "capture-desktop-browser.json", "note": "实际PDF.js逐页渲染且两页图片显示成功，pdfReadable=true；TIFF两页预览后重排得到白页、黑页的原像素。只验证组件与合成材料，不等于真实业务全流程、Tauri发行包或扫描硬件。自建5186 Vite服务和专用浏览器会话已关闭。" }
+  ],
+  "read_scope": [
+    { "path": "AGENTS.md; docs/engineering/commenting-standard.md", "status": "read", "scope": "全文" },
+    { "path": "apps/desktop-client/src/features/upload/useUploadSync.ts; apps/desktop-client/src/features/capture/useExamCaptureContext.ts; apps/desktop-client/src/features/capture/useCaptureScanContext.ts; apps/desktop-client/src/features/quality/useSubmissionQuality.ts", "status": "read", "scope": "全文及修改后关键异步边界" },
+    { "path": "apps/desktop-client/src/lib/offlineStore.ts; apps/desktop-client/src/lib/durableStore.ts; apps/desktop-client/src/components/AnswerDocumentViewer.tsx", "status": "read", "scope": "全文" },
+    { "path": "apps/desktop-client/src/lib/offlineAnswerMaterial.ts; apps/desktop-client/src/lib/pdfAnswerPages.ts; apps/desktop-client/src/components/PdfAnswerPages.tsx", "status": "read", "scope": "本轮新增文件全文" },
+    { "path": "apps/desktop-client/src/components/offlineWorkbench/useOfflineWorkbench.tsx", "status": "partial", "scope": "会话与显示回执、下载/恢复原件、保存/加载草稿、替换确认、原命令包复用；未重新全文审读剩余同步实现" },
+    { "path": "apps/desktop-client/src/components/offlineWorkbench/taskPackage.ts; apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx; apps/desktop-client/src/App.tsx; apps/desktop-client/src/features/scan/ScanWorkspace.tsx; apps/desktop-client/src/types.ts", "status": "partial", "scope": "本轮关联接口、材料身份、保存说明、显示门禁、扫描选择与上传后检查接线" },
+    { "path": "apps/desktop-client/src-tauri/src/durable_store/drafts.rs", "status": "partial", "scope": "1-110行，原生4MiB正文上限、加密写入与加载入口" },
+    { "path": "apps/desktop-client/src-tauri/tauri.conf.json; apps/desktop-client/scripts/check-security-config.mjs", "status": "partial", "scope": "生产/开发CSP、worker/frame边界与既有能力白名单" },
+    { "path": "apps/web-admin/src/features/capture/capturePdfPreview.ts; apps/web-admin/src/features/capture/captureTiffPreview.ts; apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx; apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx; apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx", "status": "read", "scope": "全文" },
+    { "path": "apps/web-admin/src/components/ProcessingOperationsPanel.tsx; apps/web-admin/src/components/ProcessingExceptionEvidence.tsx; apps/web-admin/src/pages/ExamPreparationPage.tsx; apps/web-admin/src/features/exams/management/ManagementExamEditDrawer.tsx", "status": "partial", "scope": "等级/筛选/材料展示与考试级处理入口、已有可编辑字段；未重新审读不相关处理命令" },
+    { "path": "services/api-gateway/internal/processing/store_memory.go; services/api-gateway/internal/processing/store_postgres.go; services/api-gateway/internal/capture/store_memory.go", "status": "partial", "scope": "severityFor与对应SQL CASE；上传文件完成、页面拆分/关联和批次matching状态生成" },
+    { "path": "apps/web-admin/src/pages/SubmissionCaptureViews.tsx; apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx; apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx", "status": "pending", "scope": "本轮仅核对旧报告中的EX-31/EX-32残余，不以文件枚举冒充审读" },
+    { "path": "全部其他仓库文件", "status": "pending", "scope": "本子任务没有重新全仓审读；承接旧报告既有状态" }
+  ]
+}

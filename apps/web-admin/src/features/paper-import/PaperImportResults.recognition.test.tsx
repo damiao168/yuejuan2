@@ -74,7 +74,8 @@ describe("retained paper import recognition results", () => {
     expect(container.textContent).toContain("识别答案");
     expect(container.textContent).not.toContain("未识别到答案");
     if (answer === false) expect(container.textContent).toContain("false");
-    else expect(container.querySelector("code.language-json")?.textContent).toContain(Array.isArray(answer) ? '"C"' : '"value": 0');
+    else expect(container.textContent).toContain(Array.isArray(answer) ? "写法 2：C" : "答案值：0");
+    expect(container.querySelector("code.language-json")).toBeNull();
     expect(container.textContent).toContain("列式正确（5 分）");
     expect(container.textContent).toContain("标准满分：5");
     expect(container.textContent).not.toContain("可编辑识别草稿");
@@ -103,13 +104,13 @@ describe("retained paper import recognition results", () => {
     expect(container.querySelector("article[aria-label='第 1 题识别结果']")).toBeNull();
   });
 
-  it("makes an empty saved snapshot explicit and leaves an unconfirmed generation editable", async () => {
+  it("makes an empty saved snapshot explicit and keeps an unconfirmed generation read-only in the overview", async () => {
     await mount(job({ questions: [] }));
     expect(container.textContent).toContain("暂无可展示的识别结果");
     await mount(job({ generation: 8 }));
-    expect(container.textContent).toContain("可编辑识别草稿");
-    expect(container.textContent).not.toContain("本轮识别快照");
-    expect(container.querySelector("article")).toBeNull();
+    expect(container.textContent).not.toContain("可编辑识别草稿");
+    expect(container.textContent).toContain("本轮识别快照");
+    expect(container.querySelector("article")).not.toBeNull();
   });
 
   it("displays a failed empty parse instead of leaving an empty results section", async () => {

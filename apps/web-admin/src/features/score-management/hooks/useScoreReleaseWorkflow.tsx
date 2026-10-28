@@ -26,11 +26,18 @@ export const defaultReleaseVisibility = {
   show_high_score_paper: false
 };
 
+export function releaseVisibilityPreset(kind: "basic" | "question", appealEnabled: boolean) {
+  if (kind === "question") return { ...defaultReleaseVisibility, show_feedback: true, show_rubric_summary: true, show_question_stem: true, show_exact_rank: false, show_high_score_paper: false };
+  // 基础模板只公开成绩；开放逐题复核的考试仍保留逐题得分，但不顺带公开答案和反馈。
+  return { ...Object.fromEntries(Object.keys(defaultReleaseVisibility).map(key => [key, false])) as typeof defaultReleaseVisibility, show_question_scores: appealEnabled };
+}
+
+export const questionReleaseContent = new Set<keyof typeof releaseVisibilityLabels>(["show_feedback", "show_rubric_summary", "show_question_statistics", "show_question_stem", "show_knowledge_analysis", "show_answers", "show_high_score_paper"]);
+
 export function visibleReleaseContent(policy: ScoreRelease["visibility_policy"]) {
-  const questionContent = new Set<keyof typeof releaseVisibilityLabels>(["show_feedback", "show_rubric_summary", "show_question_statistics", "show_question_stem", "show_knowledge_analysis", "show_answers", "show_high_score_paper"]);
   // 逐题详情关闭时，后端不返回这些子内容；确认摘要也只列实际会生效的公开项。
   return (Object.keys(releaseVisibilityLabels) as Array<keyof typeof releaseVisibilityLabels>)
-    .filter((key) => policy[key] && (policy.show_question_scores || !questionContent.has(key)))
+    .filter((key) => policy[key] && (policy.show_question_scores || !questionReleaseContent.has(key)))
     .map((key) => releaseVisibilityLabels[key]);
 }
 
@@ -119,12 +126,12 @@ export function useScoreReleaseWorkflow({
         <div>
           <p>考试：{selectedExam?.name} · 第 {release.version} 版 · 发布内容以此草稿冻结的成绩为准</p>
           <p>向学生公开：{visibleItems}</p>
-          <p>成绩复核：{release.appeal_window.enabled ? "学生可从逐题详情申请复核；未限制原因时提供六种常用原因。" : "此版本未开放学生复核申请。"}</p>
+          <p>成绩复核：{release.appeal_window.enabled ? "此版本启用逐题复核；学生可在开放时段内从逐题详情申请。" : "此版本未开放学生复核申请。"}</p>
           {currentPublishedRelease && release.version < currentPublishedRelease.version
             ? <p role="alert">门户当前为 V{currentPublishedRelease.version}；此次发布较早创建的 V{release.version}，学生看到的版本号会变小。请核对草稿内容。</p>
             : null}
           {release.visibility_policy.show_high_score_paper ? <p>发布前将生成匿名范例卷；如答卷缺少已确认的版面和身份区域，发布会被阻断。</p> : null}
-          <p>请先从版本记录打开学生视角预览。发布后学生门户将展示此版本；学校原有成绩查询的状态不会因此改变。后续更正需创建新版本。</p>
+          <p>请先核对学生预览。发布后，学生门户将展示此版本；学校原查询入口状态不变。更正须创建新版本。</p>
         </div>
       ),
       okText: "发布到学生门户",

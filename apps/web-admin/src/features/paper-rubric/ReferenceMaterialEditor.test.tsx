@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setBusinessCommandScope } from "../../api/businessCommand";
 import * as api from "../../api/referenceMaterials";
 import { ProtectedReferenceImage, ReferenceMaterialEditor, orderReferenceItems, validReferenceBox, validReferenceSelection } from "./ReferenceMaterialEditor";
+import type { QuestionSaveParticipant, RegisterQuestionSaveParticipant } from "./questionSaveParticipant";
 
 vi.mock("../../api/referenceMaterials", () => ({
   getReferenceMaterials: vi.fn(), getReferenceSources: vi.fn(), getReferenceSourceImage: vi.fn(), getReferenceCropImage: vi.fn(),
@@ -41,7 +42,7 @@ beforeEach(() => {
   vi.mocked(api.getReferenceSourceImage).mockResolvedValue(blobResult());
   vi.mocked(api.getReferenceCropImage).mockResolvedValue(blobResult());
   vi.mocked(api.createReferenceCrop).mockResolvedValue({ crop: crop() });
-  vi.mocked(api.saveReferenceMaterials).mockResolvedValue({ materials: { ...materials(), mode: "text_only", revision: 2 } });
+  vi.mocked(api.saveReferenceMaterials).mockImplementation(async (_exam, _question, input) => ({ materials: { ...materials(input.items.map(item => ({ ...crop(item.crop_ref, item.role), ordinal: item.ordinal }))), mode: input.mode, revision: 2 } }));
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setBusinessCommandScope("", ""); });
 
@@ -70,12 +71,39 @@ describe("参考图选择和像素边界", () => {
 });
 
 describe("来源拖框与实际裁图确认", () => {
+  it("拖框结束后自动生成一次实际预览，仍须图片显示并由教师核对后添加保存", async () => {
+    render(<ReferenceMaterialEditor examId="exam" questionId="question-a" editable />); await openEditor();
+    const image = await chooseSource(); fireEvent.load(image);
+    const surface = screen.getByRole("group", { name: "拖动选择参考图范围，也可使用下方像素输入框" });
+    Object.assign(surface, { setPointerCapture: vi.fn(), hasPointerCapture: () => true, releasePointerCapture: vi.fn() });
+    vi.spyOn(image, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, left: 0, top: 0, right: 600, bottom: 500, width: 600, height: 500, toJSON: () => ({}) });
+    fireEvent.pointerDown(surface, { pointerId: 8, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(surface, { pointerId: 8, clientX: 250, clientY: 150 });
+    expect(api.createReferenceCrop).not.toHaveBeenCalled();
+    fireEvent.pointerUp(surface, { pointerId: 8, clientX: 250, clientY: 150 });
+    const actual = await screen.findByAltText("待确认的实际裁图");
+    expect(api.createReferenceCrop).toHaveBeenCalledTimes(1); expect(api.saveReferenceMaterials).not.toHaveBeenCalled();
+    expect(button("已核对，添加并保存").disabled).toBe(true); fireEvent.load(actual); fireEvent.click(button("已核对，添加并保存"));
+    await waitFor(() => expect(api.saveReferenceMaterials).toHaveBeenCalledTimes(1));
+    expect(api.createReferenceCrop).toHaveBeenCalledTimes(1);
+  });
+  it("整题保存不能把未核对裁图自动加入参考图，关闭重开继续保留原裁图", async () => {
+    let participant: QuestionSaveParticipant | null = null;
+    const register: RegisterQuestionSaveParticipant = (area, next) => { if (area === "references") participant = next; };
+    const view = render(<ReferenceMaterialEditor examId="exam" questionId="question-a" editable registerSaveParticipant={register} />);
+    await openEditor(); await generateCrop();
+    expect(participant!.dirty).toBe(true);
+    await expect(participant!.prepare()).rejects.toThrow("未核对"); expect(api.saveReferenceMaterials).not.toHaveBeenCalled();
+    fireEvent.click(button("关闭抽屉")); fireEvent.click(button("核对本题参考图"));
+    expect(await screen.findByAltText("待确认的实际裁图")).toBeTruthy();
+    view.unmount(); expect(participant).toBeNull();
+  });
   it("waits for displayed images and the final drag coordinates before confirming the crop", async () => {
     render(<ReferenceMaterialEditor examId="exam" questionId="question-a" editable />); await openEditor();
     const image = await chooseSource();
     expect(button("生成实际裁图").disabled).toBe(true);
     fireEvent.load(image);
-    const surface = screen.getByRole("group");
+    const surface = screen.getByRole("group", { name: "拖动选择参考图范围，也可使用下方像素输入框" });
     Object.assign(surface, { setPointerCapture: vi.fn(), hasPointerCapture: () => true, releasePointerCapture: vi.fn() });
     vi.spyOn(image, "getBoundingClientRect").mockReturnValue({ x: 100, y: 50, left: 100, top: 50, right: 700, bottom: 550, width: 600, height: 500, toJSON: () => ({}) });
     fireEvent.pointerDown(surface, { pointerId: 7, button: 0, clientX: 150, clientY: 100 });
@@ -87,22 +115,22 @@ describe("来源拖框与实际裁图确认", () => {
     await screen.findByRole("heading", { name: "核对将发送的实际图片" });
     expect(api.createReferenceCrop).toHaveBeenCalledWith("exam", "question-a", expect.objectContaining({ pixel_bbox: { x: 100, y: 100, width: 400, height: 300 } }));
     const actual = await screen.findByAltText("待确认的实际裁图");
-    expect(button("已核对，加入本题").disabled).toBe(true);
+    expect(button("已核对，添加并保存").disabled).toBe(true);
     fireEvent.load(actual);
-    expect(button("已核对，加入本题").disabled).toBe(false);
-    fireEvent.click(button("已核对，加入本题"));
-    expect(screen.getByText("题目图 1")).toBeTruthy();
+    expect(button("已核对，添加并保存").disabled).toBe(false);
+    fireEvent.click(button("已核对，添加并保存"));
+    await screen.findByText("题目图 1"); expect(api.saveReferenceMaterials).toHaveBeenCalledTimes(1);
   });
   it("does not allow a failed actual image to be confirmed", async () => {
     render(<ReferenceMaterialEditor examId="exam" questionId="question-a" editable />); await openEditor(); await generateCrop();
     fireEvent.error(await screen.findByAltText("待确认的实际裁图"));
-    expect(button("已核对，加入本题").disabled).toBe(true);
+    expect(button("已核对，添加并保存").disabled).toBe(true);
     expect(screen.getByRole("alert").textContent).toContain("图片暂不可用");
   });
   it("does not allow a source image with no visible dimensions to start selection", async () => {
     render(<ReferenceMaterialEditor examId="exam" questionId="question-a" editable />); await openEditor();
     fireEvent.load(await chooseSource());
-    fireEvent.pointerDown(screen.getByRole("group"), { pointerId: 7, button: 0 });
+    fireEvent.pointerDown(screen.getByRole("group", { name: "拖动选择参考图范围，也可使用下方像素输入框" }), { pointerId: 7, button: 0 });
     expect(button("生成实际裁图").disabled).toBe(false);
   });
   it("prevents a third crop in either role and preserves role order in the saved payload", async () => {
@@ -113,9 +141,9 @@ describe("来源拖框与实际裁图确认", () => {
     fireEvent.change(roleSelector, { target: { value: "question_diagram" } });
     expect(roleSelector.value).toBe("reference_solution");
     await generateCrop(); fireEvent.load(await screen.findByAltText("待确认的实际裁图"));
-    expect(button("已核对，加入本题").disabled).toBe(true);
+    expect(button("已核对，添加并保存").disabled).toBe(true);
     fireEvent.change(screen.getByLabelText("待添加图片角色"), { target: { value: "reference_solution" } });
-    fireEvent.click(button("已核对，加入本题")); fireEvent.click(button("保存参考图清单"));
+    fireEvent.click(button("已核对，添加并保存"));
     await waitFor(() => expect(api.saveReferenceMaterials).toHaveBeenCalled());
     expect(vi.mocked(api.saveReferenceMaterials).mock.calls[0][2].items.map(item => [item.role, item.ordinal])).toEqual([["question_diagram", 1], ["question_diagram", 2], ["reference_solution", 3], ["reference_solution", 4]]);
   });
@@ -162,8 +190,8 @@ describe("命令恢复与会话归属", () => {
     render(<ReferenceMaterialEditor examId="exam" questionId="question-a" editable />); await openEditor();
     fireEvent.click(button("核对原操作结果"));
     const image = await screen.findByAltText("待确认的实际裁图");
-    expect(button("已核对，加入本题").disabled).toBe(true);
-    fireEvent.load(image); expect(button("已核对，加入本题").disabled).toBe(false);
+    expect(button("已核对，添加并保存").disabled).toBe(true);
+    fireEvent.load(image); expect(button("已核对，添加并保存").disabled).toBe(false);
     expect(api.createReferenceCrop).not.toHaveBeenCalled(); expect(sessionStorage.getItem(pendingKey())).toBeNull();
   });
   it("unblocks a closed rejected command only after reading current materials", async () => {

@@ -4,9 +4,11 @@ import type {
   QuestionBank, QuestionBankItem, QuestionBankItemPage, QuestionBankMetadataSchemaResponse,
   QuestionBankReviewsResponse, QuestionBankVersion, QuestionBankVersionPage,
   QuestionBankVersionResponse, UpdateQuestionBankVersionRequest,
+  QuestionBankScoring,
 } from "@edugrade/sdk";
 import type { SessionUser } from "../../auth/session";
 import type { QuestionBankMember } from "./questionBankMembers";
+import type { ScoringDraftSnapshot } from "./questionBankDraftMerge";
 
 type QueryView<T> = Pick<UseQueryResult<T, Error>, "data" | "isError" | "isLoading" | "error" | "refetch">;
 export type QuestionBankWorkspaceProps = Readonly<{
@@ -17,7 +19,7 @@ export type QuestionBankWorkspaceProps = Readonly<{
   openSchema: () => void;
   openAcl: () => void;
   items: QueryView<QuestionBankItemPage>;
-  selectItem: (item: QuestionBankItem) => void;
+  selectItem: (item: QuestionBankItem, versionId?: string) => void;
   offset: number;
   setOffset: (offset: number) => void;
   item: QuestionBankItem | null;
@@ -44,10 +46,15 @@ export type QuestionBankWorkspaceProps = Readonly<{
   setScoringDirty: (dirty: boolean) => void;
   onScoringDraftSnapshot?: (draft: unknown) => void;
   scoringResetToken?: number;
+  restoredScoringDraft?: ScoringDraftSnapshot;
+  saveAllDraft?: () => void;
+  saveCombinedScoring?: (scoring: QuestionBankScoring) => Promise<QuestionBankVersion>;
+  registerScoringSubmit?: (submit: (() => void) | null) => void;
   user: SessionUser;
   comment: string;
   setComment: (comment: string) => void;
-  transition: (decision: "submit-review" | "approve" | "return-to-draft" | "publish") => void;
+  transition: (decision: "submit-review" | "approve" | "return-to-draft" | "publish", assignees?: { reviewer_id: string; publisher_id: string }) => void;
+  handoff?: (action: "assign" | "review" | "publish", assignees?: { reviewer_id: string; publisher_id: string }) => void;
   reviews: QueryView<QuestionBankReviewsResponse>;
   members?: QueryView<{members:QuestionBankMember[]}>;
 }>;

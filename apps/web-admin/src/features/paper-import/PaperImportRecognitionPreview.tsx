@@ -3,6 +3,7 @@ import { Alert, Button, Pagination } from "antd";
 import type { PaperImportDraftQuestion, PaperImportJob, PaperImportSourceRef } from "../../api/papers";
 import { MathMarkdown } from "../../components/MathMarkdown";
 import { questionTypeOptions } from "../../constants/examCatalog";
+import { answerNeedsRawDetails, recognizedAnswerText } from "./recognizedAnswerPresentation";
 
 const PREVIEW_PAGE_SIZE = 5;
 type OpenSource = (fileAssetID: string, pageNo?: number) => void;
@@ -12,10 +13,9 @@ function scoringPointText(point: { description: string; score?: number | null })
   return `${point.description}（${score}）`;
 }
 
-function answerText(value: unknown) {
-  if (value == null || typeof value === "string" && !value.trim()) return "未识别到答案";
-  if (typeof value === "object") return "```json\n" + JSON.stringify(value, null, 2) + "\n```";
-  return String(value);
+function AnswerPreview({ value, questionType }: Readonly<{ value: unknown; questionType?: string }>) {
+  return <><MathMarkdown promoteInlineMath={false}>{recognizedAnswerText(value, questionType)}</MathMarkdown>
+    {answerNeedsRawDetails(value) ? <details><summary>原始答案内容</summary><pre>{JSON.stringify(value, null, 2)}</pre></details> : null}</>;
 }
 
 function RecognitionSource({ refs, job, onOpenSource }: Readonly<{ refs?: PaperImportSourceRef[]; job: PaperImportJob; onOpenSource: OpenSource }>) {
@@ -47,8 +47,8 @@ function RecognizedQuestion({ item, index, job, onOpenSource }: Readonly<{
       <RecognitionSource job={job} refs={questionCandidate?.source_refs.length ? questionCandidate.source_refs : item.source_refs} onOpenSource={onOpenSource} />
     </div>
     <div className="paper-import-readable-field">
-      <span>识别答案</span><MathMarkdown promoteInlineMath={false}>{answerText(item.answer_key?.standard_answer)}</MathMarkdown>
-      {item.answer_key?.equivalent_answers.length ? <details><summary>等价答案</summary><MathMarkdown promoteInlineMath={false}>{answerText(item.answer_key.equivalent_answers)}</MathMarkdown></details> : null}
+      <span>识别答案</span><AnswerPreview value={item.answer_key?.standard_answer} questionType={item.question_type} />
+      {item.answer_key?.equivalent_answers.length ? <details><summary>等价答案</summary><AnswerPreview value={item.answer_key.equivalent_answers} /></details> : null}
       <RecognitionSource job={job} refs={answerCandidate?.source_refs} onOpenSource={onOpenSource} />
     </div>
     <div className="paper-import-readable-field">
@@ -69,14 +69,14 @@ function UnmatchedRecognitionPreview({ job, onOpenSource }: Readonly<{ job: Pape
   // 没有合并草稿时直接展示候选内容；预览不能自行按题号配对并伪装成已确认题目。
   const candidates = [
     ...(job.question_candidates ?? []).map((item) => ({ key: `question-${item.candidate_id}`, label: `题目 ${item.question_no_normalized || item.question_no_raw || "（题号待核对）"}`, text: [item.stem || "未识别到题干", ...item.options, item.score == null ? "分值待确认" : `${item.score} 分`].join("\n\n"), refs: item.source_refs })),
-    ...(job.answer_candidates ?? []).map((item) => ({ key: `answer-${item.candidate_id}`, label: `答案 ${item.question_no_normalized || item.question_no_hint || "（题号待核对）"}`, text: answerText(item.standard_answer), refs: item.source_refs })),
+    ...(job.answer_candidates ?? []).map((item) => ({ key: `answer-${item.candidate_id}`, label: `答案 ${item.question_no_normalized || item.question_no_hint || "（题号待核对）"}`, text: recognizedAnswerText(item.standard_answer), rawAnswer: answerNeedsRawDetails(item.standard_answer) ? item.standard_answer : undefined, refs: item.source_refs })),
     ...(job.solution_candidates ?? []).map((item) => ({ key: `solution-${item.candidate_id}`, label: `解析 ${item.question_no_normalized || item.question_no_hint || "（题号待核对）"}`, text: item.raw_text || item.steps.map((step) => step.content).join("\n\n") || "未识别到解析正文", refs: item.source_refs })),
     ...(job.rubric_candidates ?? []).map((item) => ({ key: `rubric-${item.candidate_id}`, label: `评分标准 ${item.question_no_normalized || item.question_no_hint || "（题号待核对）"}`, text: item.points.map(scoringPointText).join("\n\n") || "未识别到评分点", refs: item.source_refs }))
   ];
   if (!candidates.length) return <Alert type="warning" showIcon message="暂无可展示的识别结果" description="当前任务未返回题目、答案、解析或评分标准。请查看上方资料来源，或到小题与分值核对现有配置。" />;
   return <div className="paper-import-review-panel">
     <Alert type="info" showIcon message="以下为尚未形成题目草稿的识别内容" description="题号和内容关联仍需人工核对，当前仅展示资料提取结果。" />
-    {candidates.map((item) => <article className="paper-import-readable-field" key={item.key}><strong>{item.label}</strong><MathMarkdown promoteInlineMath={false}>{item.text}</MathMarkdown><RecognitionSource job={job} refs={item.refs} onOpenSource={onOpenSource} /></article>)}
+    {candidates.map((item) => <article className="paper-import-readable-field" key={item.key}><strong>{item.label}</strong><MathMarkdown promoteInlineMath={false}>{item.text}</MathMarkdown>{"rawAnswer" in item && item.rawAnswer !== undefined ? <details><summary>原始答案内容</summary><pre>{JSON.stringify(item.rawAnswer, null, 2)}</pre></details> : null}<RecognitionSource job={job} refs={item.refs} onOpenSource={onOpenSource} /></article>)}
   </div>;
 }
 

@@ -30,33 +30,34 @@ describe("score release gate rendering", () => {
     expect(html).toContain('href="/admin/exams/exam%2F1/quality"');
     expect(html).toContain('href="/admin/exams/exam%2F1/questions"');
     expect(html).not.toContain('href="#');
+    expect(html).toContain("<summary>技术详情</summary><code>quality</code>");
   });
   it("keeps an unread gate separate from a passed gate", () => {
     const html = renderToStaticMarkup(<ScoreReleaseWorkspace {...baseProps} />);
-    expect(html).toContain("门禁待读取");
-    expect(html).toContain("等待发布门禁数据");
-    expect(html).not.toContain("当前发布门禁通过");
+    expect(html).toContain("发布检查待读取");
+    expect(html).toContain("正在读取发布检查，暂不能发布。");
+    expect(html).not.toContain("正式发布时将再次检查。");
   });
 
   it("shows a passed gate when no warnings remain", () => {
     const html = renderToStaticMarkup(<ScoreReleaseWorkspace {...baseProps} releaseGate={baseGate} />);
-    expect(html).toContain("门禁通过");
-    expect(html).toContain("当前发布门禁通过");
-    expect(html).not.toContain("等待发布门禁数据");
+    expect(html).toContain("发布检查通过");
+    expect(html).toContain("正式发布时将再次检查。");
+    expect(html).not.toContain("正在读取发布检查，暂不能发布。");
   });
 
   it("keeps a blocked gate in the issue list even when the issue list is empty", () => {
     const html = renderToStaticMarkup(<ScoreReleaseWorkspace {...baseProps} releaseGate={{ ...baseGate, passed: false }} />);
-    expect(html).toContain("门禁待处理");
+    expect(html).toContain("发布检查待处理");
     expect(html).toContain("score-release-gate-list");
-    expect(html).not.toContain("当前发布门禁通过");
+    expect(html).not.toContain("正式发布时将再次检查。");
   });
 
   it("keeps warnings visible when the gate otherwise passes", () => {
     const gate = { ...baseGate, warnings: [{ code: "warning", message: "复核提醒", count: 1, blocking: false }] };
     const html = renderToStaticMarkup(<ScoreReleaseWorkspace {...baseProps} releaseGate={gate} />);
-    expect(html).toContain("门禁通过");
+    expect(html).toContain("发布检查通过");
     expect(html).toContain("复核提醒");
-    expect(html).not.toContain("当前发布门禁通过");
+    expect(html).not.toContain("正式发布时将再次检查。");
   });
 });

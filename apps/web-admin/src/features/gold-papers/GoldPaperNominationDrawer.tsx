@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { typicalErrorOptions } from "../../constants/assessmentLabels";
 import { Alert, App, Button, Descriptions, Drawer, Input, InputNumber, List, Select, Space, Tag } from "antd";
 import { nominateGoldPaper } from "../../api/goldPapers";
 import { getUserErrorMessage } from "../../api/client";
@@ -83,7 +84,7 @@ export function GoldPaperNominationDrawer({
             type="info"
             showIcon
             message={`${candidate.questionNo} · 真实答卷`}
-            description="标准卷会引用已提交的人工评分事实，并冻结当前 Rubric；审批前不会进入校准或模型评测。"
+            description="标准卷会引用已提交的人工评分事实，并冻结当前评分细则；审批前不会进入校准或模型评测。"
           />
           <img className="gold-paper-answer" src={candidate.answerImageUrl} alt={`${candidate.questionNo} 答题区域`} />
           <Descriptions size="small" column={2} bordered>
@@ -93,11 +94,11 @@ export function GoldPaperNominationDrawer({
             <Descriptions.Item label="评分事实">1 条已提交人工评分</Descriptions.Item>
           </Descriptions>
           <section>
-            <h3>Rubric 采分点证据</h3>
+            <h3>评分细则与采分点证据</h3>
             <List
               size="small"
               bordered
-              locale={{ emptyText: "本题冻结 Rubric 未定义采分点，以解释和已提交评分事实为证据" }}
+              locale={{ emptyText: "本题冻结评分细则未定义采分点，以解释和已提交评分事实为证据" }}
               dataSource={candidate.rubricPoints}
               renderItem={(point) => (
                 <List.Item extra={<Tag color={(rubricEvidence[point.id] ?? 0) > 0 ? "green" : "default"}>{rubricEvidence[point.id] ?? 0} / {point.score} 分</Tag>}>
@@ -112,7 +113,7 @@ export function GoldPaperNominationDrawer({
           </label>
           <label className="gold-paper-field">
             <span>典型错误标签（可选）</span>
-            <Select mode="tags" value={errorTags} onChange={setErrorTags} placeholder="例如 unit_error、missing_key_step" tokenSeparators={[","]} />
+            <Select mode="tags" value={errorTags} onChange={setErrorTags} placeholder="选择或填写典型错误" options={typicalErrorOptions} tokenSeparators={[","]} />
           </label>
           <Space>
             <Button type="primary" loading={submitting} onClick={() => void submit()}>提交提名</Button>

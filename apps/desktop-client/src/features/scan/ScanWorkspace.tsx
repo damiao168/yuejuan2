@@ -55,14 +55,14 @@ export function ScanWorkspace({ token, isOnline, capture, scanner, scanQueue, up
   return <div className="workspace-grid scan-workstation">
     <section className="panel full">
       <SectionHead icon={<UploadCloud size={20} />} title="扫描工作站" description="导入已有 PDF/图片无需连接本机扫描仪；确认考试、批次和答题卡模板参数后写入本机加密队列。" action={<Tag color={isOnline ? "success" : "error"}>{isOnline ? "在线" : "离线，上传暂停"}</Tag>} />
-      <ScanTemplateControls token={token} isOnline={isOnline} capture={capture} scanner={scanner} template={template} showTemplatePreview={showTemplatePreview} onTemplatePreviewChange={setShowTemplatePreview} />
-      <ScannerDeviceControls scanner={scanner} template={template} />
       <div className="scan-toolbar">
         <Form layout="vertical" className="scan-context-form">
           <Form.Item label="考试"><Space.Compact block><Select value={selectedExamId || undefined} placeholder={token ? "选择真实考试" : "登录后加载考试"} loading={isLoadingExams} disabled={!token} onChange={(examID) => { setSelectedExamId(examID); setCaptureBatchId(""); setCaptureBatches([]); }} options={exams.map((exam) => ({ value: exam.id, label: `${exam.name} / ${subjectLabels[exam.subject] ?? "其他学科"} / ${genericStatusLabel(exam.status)}` }))} /><Button icon={<RefreshCw size={16} />} disabled={!token} loading={isLoadingExams} onClick={handleLoadExams}>刷新</Button></Space.Compact></Form.Item>
           <Form.Item label="采集批次"><Space.Compact block><Select value={captureBatchId || undefined} placeholder={selectedExamId ? "选择批次上传或查看结果" : "请先选择考试"} loading={isLoadingCaptureBatches} disabled={!selectedExamId} onChange={setCaptureBatchId} options={captureBatches.map((batch) => ({ value: batch.id, label: `${batch.name} · ${genericStatusLabel(batch.status)}${["completed", "cancelled"].includes(batch.status) ? "（仅查看）" : ""} · ${batch.file_count} 个文件` }))} /><Button icon={<RefreshCw size={16} />} disabled={!selectedExamId} loading={isLoadingCaptureBatches} onClick={() => void handleLoadCaptureBatches()}>刷新</Button></Space.Compact></Form.Item>
           <Form.Item label="起始页码"><InputNumber min={1} value={scanStartPage} onChange={(value) => setScanStartPage(value ?? 1)} /></Form.Item>
         </Form>
+      <ScanTemplateControls token={token} isOnline={isOnline} capture={capture} scanner={scanner} template={template} showTemplatePreview={showTemplatePreview} onTemplatePreviewChange={setShowTemplatePreview} />
+      <details><summary>设备诊断（可选）</summary><ScannerDeviceControls scanner={scanner} template={template} /></details>
         <div className="scan-actions">
           <input ref={fileInputRef} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff" onChange={(event) => { void handleFileSelection(event.target.files); event.target.value = ""; }} />
           <Button icon={<FileUp size={16} />} disabled={!importReady} onClick={() => fileInputRef.current?.click()}>批量选择 PDF/图片（含 TIFF）</Button>
@@ -77,29 +77,29 @@ export function ScanWorkspace({ token, isOnline, capture, scanner, scanQueue, up
       {scanQueue.importResults.length > 0 && <Alert className="section-alert" type={scanQueue.importResults.some((item) => !item.saved) ? "warning" : "success"} showIcon message={`本次导入：已保留 ${scanQueue.importResults.filter((item) => item.saved).length} 个，未保留 ${scanQueue.importResults.filter((item) => !item.saved).length} 个`}
         description={<div>{scanQueue.importResults.map((item, index) => <p key={`${item.filename}:${index}`}>{item.filename}：{item.detail}</p>)}</div>} />}
       {!token && <Alert className="section-alert" type="warning" message="未登录：不会读取考试，也不会上传文件。" showIcon />}
-      {(!selectedExamId || !captureBatchId.trim()) && token && <p className="muted">请先选择真实考试和可继续上传的采集批次；客户端不会创建假考试上下文。</p>}
+      {(!selectedExamId || !captureBatchId.trim()) && token && <p className="muted">请选择考试和可上传的采集批次。</p>}
       {selectedExam && <p className="muted">当前考试：{selectedExam.name} / {subjectLabels[selectedExam.subject] ?? "其他学科"} / {genericStatusLabel(selectedExam.status)}</p>}
       {selectedBatch && !batchAcceptsUpload && <Alert type="info" showIcon message="当前批次仅供查看处理结果" description="该批次已结束，不能继续导入或上传。需要补采时，请学校管理员核对后重新开启或创建采集批次。" />}
     </section>
-    <section className="panel full"><SectionHead icon={<ListChecks size={20} />} title="上传前预览与本地质量检查" description="默认只显示当前考试/批次。文件上传后仍需等待服务端匹配与质量检查。" action={<Checkbox checked={showAllQueue} onChange={(event) => setShowAllQueue(event.target.checked)}>查看本账号全部批次</Checkbox>} />
+    <section className="panel full"><SectionHead icon={<ListChecks size={20} />} title="上传前预览与本地质量检查" description="当前考试与批次的待上传文件。上传后仍需服务端匹配与质量检查。" action={<Checkbox checked={showAllQueue} onChange={(event) => setShowAllQueue(event.target.checked)}>查看本账号全部批次</Checkbox>} />
       {scanQueue.queueContextError && <Alert type="warning" showIcon message={scanQueue.queueContextError} />}
-      <Button disabled={!token || !isOnline || !allScanItems.length} loading={scanQueue.loadingQueueContext} onClick={() => void scanQueue.refreshQueueContext()}>重新读取考试与批次名称</Button>
+      {scanQueue.queueContextError ? <Button disabled={!token || !isOnline || !allScanItems.length} loading={scanQueue.loadingQueueContext} onClick={() => void scanQueue.refreshQueueContext()}>重试考试与批次名称</Button> : null}
       {showAllQueue && <Button disabled={!token || !isOnline || !allScanItems.some((item) => item.status === "pending")} onClick={() => Modal.confirm({ title: "上传本账号全部批次的等待项？", content: "请核对表格中每份文件的考试和采集批次，再确认上传。", okText: "确认全部等待项", cancelText: "继续核对", onOk: () => uploadQueueItems("pending") })}>上传全部批次的等待项</Button>}
       <ScanQueueTable items={scanItems} emptyText={scanQueueEmptyText(scanQueue.queueRestoreStatus)} canRetry={(item) => item.examId !== selectedExamId || item.captureBatchId !== captureBatchId || batchAcceptsUpload} onRetry={(id) => void uploadQueueItem(id)} onRemove={(id) => void scanQueue.removeQueueItem(id)} onReinspect={(id) => void scanQueue.reinspectQueueItem(id)} onReplace={(id) => scanQueue.chooseReplacement(id)} />
     </section>
     <section className="panel full">
       <details><summary>高级关联与诊断（学校技术人员提供）</summary><Form.Item label="答卷标识（旧流程可选）"><Input value={scanSubmissionId} onChange={(event) => setScanSubmissionId(event.target.value)} placeholder="仅在学校技术人员提供答卷标识时手填" /></Form.Item></details>
-      <SectionHead icon={<CloudUpload size={20} />} title="服务端处理状态" description="已确认上传表示服务端收到文件；页数完整性与图像质量分别显示，图像通过后才能继续识别与阅卷。" action={<Button icon={<RefreshCw size={16} />} loading={isCheckingQuality} disabled={!token || !isOnline || !batchAcceptsUpload || !quality.canRunQualityCheck || isCheckingQuality} onClick={handleRunQualityCheck}>检查页数完整性</Button>} />
-      <Space wrap><Button disabled={!token || !captureBatchId} loading={capture.loadingProcessing} onClick={() => void capture.handleRefreshProcessing()}>刷新当前批次处理结果</Button>
+      <SectionHead icon={<CloudUpload size={20} />} title="服务端处理状态" description="上传确认仅表示已收到文件；请分别查看页数和图像质量，图像通过后才能继续识别与阅卷。" action={<Button icon={<RefreshCw size={16} />} loading={isCheckingQuality} disabled={!token || !isOnline || !batchAcceptsUpload || !quality.canRunQualityCheck || isCheckingQuality} onClick={handleRunQualityCheck}>检查页数完整性</Button>} />
+      <Space wrap><Button disabled={!token || !captureBatchId} loading={capture.loadingProcessing} onClick={() => void capture.handleRefreshProcessing()}>更新当前批次进度</Button>
         <Select value={linkedSubmissions.includes(scanSubmissionId) ? scanSubmissionId : undefined} placeholder="选择服务端已关联的答卷" disabled={!linkedSubmissions.length} onChange={setScanSubmissionId} options={linkedSubmissions.map((id, index) => ({ value: id, label: `答卷 ${index + 1} · ${capture.processingDetail!.pages.filter((page) => page.submission_id === id).length} 页` }))} /></Space>
       {capture.processingError && <Alert type="error" message={capture.processingError} showIcon />}
       {capture.processingDetail ? <div><p>当前批次：{capture.processingDetail.batch.name} / {genericStatusLabel(capture.processingDetail.batch.status)} / 已形成 {linkedSubmissions.length} 份答卷</p>
         {!linkedSubmissions.length && <Alert type="info" message="服务端尚未完成答卷匹配" description="请在学校管理端完成批次处理，或稍后刷新本页。收到文件不等于已形成答卷或质量通过。" showIcon />}
-        {capture.processingDetail.files.map((file) => <p key={file.id}>{file.original_name}：{genericStatusLabel(file.status)}{file.error_code ? ` / 处理异常 ${getSafeUserText(file.error_code, "需学校管理员核对")}，请在批次处理页面修复后刷新` : ""}</p>)}</div> : <p className="muted">上传后点击刷新，服务端形成答卷后可直接选择运行质量检查。采集批次需先由学校管理端创建。</p>}
+        {capture.processingDetail.files.map((file) => <p key={file.id}>{file.original_name}：{genericStatusLabel(file.status)}{file.error_code ? ` / 处理异常 ${getSafeUserText(file.error_code, "需学校管理员核对")}，请在批次处理页面修复后刷新` : ""}</p>)}</div> : <p className="muted">上传后自动更新本批次进度，并在答卷关联后检查页数与图像质量。</p>}
       {qualityError && <Alert type="error" message={qualityError} showIcon />}
       <SubmissionQualitySummary qualityResult={qualityResult} />
       <h4>服务端图像质量</h4>
-      <Button disabled={!token || !isOnline || !quality.canRunQualityCheck} loading={quality.isReadingImageQuality} onClick={() => void quality.handleRefreshImageQuality()}>刷新图像检查状态</Button>
+      {quality.imageQualityError ? <Button disabled={!token || !isOnline || !quality.canRunQualityCheck} loading={quality.isReadingImageQuality} onClick={() => void quality.handleRefreshImageQuality()}>重试图像检查状态</Button> : null}
       {quality.imageQualityError && <Alert type="warning" showIcon message={quality.imageQualityError} />}
       <ImageQualitySummary value={quality.imageQuality} loading={quality.isReadingImageQuality} />
     </section>
@@ -116,10 +116,12 @@ function ScanTemplateControls({ token, isOnline, capture, scanner, template, sho
   return <>
     <Form layout="vertical" className="scan-context-form">
       <Form.Item label="本批答题卡模板"><div>{template ? <Space wrap><strong>{template.name} · 第 {template.version_no} 版 · {template.page_count} 页</strong><Button onClick={() => onTemplatePreviewChange(true)}>查看模板布局</Button></Space> : <span>{capture.loadingScanContext ? "正在读取当前批次模板…" : "模板尚未确认"}</span>}
-        {!selectedExamId || !captureBatchId ? <p>请先在下方选择考试和采集批次。</p> : null}
+        {!selectedExamId || !captureBatchId ? <p>请先选择考试和采集批次。</p> : null}
         <Button disabled={!token || !isOnline || !captureBatchId} loading={capture.loadingScanContext} onClick={() => void capture.handleRefreshScanContext()}>重新读取模板</Button></div></Form.Item>
+      <details><summary>检查参数：{expectedPaperSize} · {expectedDpi} DPI</summary>
       <Form.Item label="导入检查纸张"><Select value={expectedPaperSize} onChange={(value) => { setExpectedPaperSize(value); setScannerPreflight(null); }} options={["A3", "A4", "A5", "Letter", "Legal"].map((value) => ({ value, label: value }))} /></Form.Item>
       <Form.Item label="导入检查清晰度（DPI）"><InputNumber min={150} max={1200} value={expectedDpi} onChange={(value) => { setExpectedDpi(value ?? 300); setScannerPreflight(null); }} /></Form.Item>
+      </details>
     </Form>
     <p className="muted">模板从当前采集批次所属考试自动读取，无需填写内部编号。模板未记录纸张尺寸和扫描清晰度，请按实际原件与扫描设置确认以上参数；本机检查不代表原件已匹配模板，上传后仍须通过服务端模板和质量门禁。</p>
     {capture.scanContextError && <Alert type="error" showIcon message={capture.scanContextError} description="当前模板未核实，暂停新导入。请点击重新读取模板；持续失败时联系学校管理员。" />}
@@ -193,7 +195,7 @@ function scannerPreflightTone(status: ScannerPreflightCheck["status"]) {
 
 function SubmissionQualitySummary({ qualityResult }: Readonly<{ qualityResult: SubmissionQualityResult | null }>) {
   if (!qualityResult) return <Empty description="尚未检查页数完整性" />;
-  return <div className="quality-result"><Tag color={qualityResult.valid ? "success" : "warning"}>{qualityResult.valid ? "页数完整" : "页数需核对"}</Tag>{qualityResult.issues.length ? qualityResult.issues.map((issue) => <p key={`${issue.code}-${issue.message}`}>{getSafeUserText(issue.message, "页数完整性未通过，请核对缺页和页码")}</p>) : <p>页数与页码检查通过。图像质量请以下方服务端结论为准。</p>}</div>;
+  return <div className="quality-result"><Tag color={qualityResult.valid ? "success" : "warning"}>{qualityResult.valid ? "页数完整" : "页数需核对"}</Tag>{qualityResult.issues.length ? qualityResult.issues.map((issue) => <p key={`${issue.code}-${issue.message}`}>{getSafeUserText(issue.message, "页数完整性未通过，请核对缺页和页码")}</p>) : <p>页数检查通过；图像质量以下方结果为准。</p>}</div>;
 }
 
 function ImageQualitySummary({ value, loading }: Readonly<{ value: SubmissionImageQuality | null; loading: boolean }>) {

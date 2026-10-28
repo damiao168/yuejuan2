@@ -29,6 +29,7 @@ describe("exam capture context controller", () => {
   afterEach(async () => {
     await act(async () => { root.unmount(); });
     container.remove();
+    vi.useRealTimers();
   });
   async function mount() {
     // 同一次挂载保持依赖引用稳定，避免夹具每次渲染重新触发批次加载 effect。
@@ -82,6 +83,22 @@ describe("exam capture context controller", () => {
     await act(async () => { await current.handleRefreshProcessing(); });
     expect(current.scanSubmissionId).toBe(""); expect(current.processingDetail).toBeNull(); expect(current.processingError).toContain("不一致");
   });
+  it("refreshes uploaded context, waits for real page association and ignores completions from another batch", async () => {
+    vi.useFakeTimers();
+    api.listCaptureBatches.mockResolvedValue({ batches: [{ id: "batch-a", exam_id: "exam-a", status: "uploading" }] });
+    api.getCaptureBatchDetail.mockResolvedValue({ batch: { id: "batch-a", exam_id: "exam-a", status: "matching" }, pages: [], files: [{ id: "file", status: "completed" }] });
+    await mount(); await act(async () => current.setSelectedExamId("exam-a"));
+    api.getCaptureBatchDetail.mockClear(); api.getCaptureScanContext.mockClear();
+    await act(async () => current.handleUploadCompleted({ examId: "exam-a", captureBatchId: "other-batch" }));
+    expect(api.getCaptureBatchDetail).not.toHaveBeenCalled();
+    await act(async () => current.handleUploadCompleted({ examId: "exam-a", captureBatchId: "batch-a" }));
+    expect(api.getCaptureBatchDetail).toHaveBeenCalledOnce(); expect(api.getCaptureScanContext).toHaveBeenCalledOnce(); expect(current.scanSubmissionId).toBe("");
+    api.getCaptureBatchDetail.mockResolvedValue({ batch: { id: "batch-a", exam_id: "exam-a" }, pages: [{ submission_id: "real-answer", status: "ready" }], files: [{ id: "file", status: "completed" }] });
+    await act(async () => vi.advanceTimersByTimeAsync(2000));
+    expect(current.scanSubmissionId).toBe("real-answer"); expect(current.processingPending).toBe(false);
+    const count = api.getCaptureBatchDetail.mock.calls.length; await act(async () => vi.advanceTimersByTimeAsync(6000));
+    expect(api.getCaptureBatchDetail).toHaveBeenCalledTimes(count);
+  });
 
   it("clears the previous answer immediately when another batch or exam is selected", async () => {
     api.listCaptureBatches.mockResolvedValue({ batches: [{ id: "batch-a", exam_id: "exam-a", status: "uploading" }, { id: "batch-b", exam_id: "exam-a", status: "uploading" }] });
@@ -103,7 +120,7 @@ describe("exam capture context controller", () => {
     await act(async () => current.setCaptureBatchId("batch-b"));
     await act(async () => current.setCaptureBatchId("batch-a"));
     await act(async () => { old.resolve({ batch: { id: "batch-a", exam_id: "exam-a" }, pages: [{ submission_id: "stale-answer" }], files: [] }); await pending; });
-    expect(current.scanSubmissionId).toBe(""); expect(current.processingDetail).toBeNull(); expect(current.processingError).toBeNull();
+    expect(current.scanSubmissionId).not.toBe("stale-answer"); expect(current.linkedSubmissionIds).not.toContain("stale-answer"); expect(current.processingError).toBeNull();
   });
 
   it("opens the queued exam's completed batch even when it is absent from the first list page", async () => {

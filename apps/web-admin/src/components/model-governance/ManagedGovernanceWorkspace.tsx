@@ -15,6 +15,9 @@ import { PromptVersionWorkspace } from "./PromptVersionWorkspace";
 import { costToMicros, microsToCost } from "./costUnits";
 import { replaceRouteQuery, routeQueryParam } from "../../router/query";
 import { eligibilitySelection } from "./eligibilityScope";
+import { GovernanceMaterialIntake } from "./GovernanceMaterialIntake";
+import type { GovernanceMaterial, MaterialDelivery, ScoringMaterial } from "./materialIntake";
+import type { EvaluationRunMaterial } from "./evaluationReportImport";
 
 type View = "evaluations" | "approvals" | "assurance" | "policy" | "prompts";
 const modeOptions = [
@@ -37,6 +40,18 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
   const [assuranceDirty, setAssuranceDirty] = useState(false);
   const [evaluationSaving, setEvaluationSaving] = useState(false);
   const [assuranceSaving, setAssuranceSaving] = useState(false);
+  const [materialDirty, setMaterialDirty] = useState(false);
+  const [candidateMaterial, setCandidateMaterial] = useState<MaterialDelivery<EvaluationRunMaterial>>();
+  const [scoringMaterial, setScoringMaterial] = useState<MaterialDelivery<ScoringMaterial>>();
+  const materialSequence = useRef(0);
+  const candidateReceived = useCallback(() => setCandidateMaterial(undefined), []);
+  const scoringReceived = useCallback(() => setScoringMaterial(undefined), []);
+  const acceptMaterial = (input: GovernanceMaterial) => {
+    const sequence = ++materialSequence.current;
+    if (input.kind === "candidate_summary") { setCandidateMaterial({ tenantID, sequence, material: input.material }); setView("evaluations"); }
+    else { setScoringMaterial({ tenantID, sequence, material: input.material }); setView("assurance"); }
+    replaceRouteQuery(params => params.set("view", input.kind === "candidate_summary" ? "evaluations" : "assurance"));
+  };
   const requestRef = useRef(0);
   const [runs, setRuns] = useState<EvaluationRun[]>([]);
   const [approvals, setApprovals] = useState<ModelApproval[]>([]);
@@ -53,7 +68,7 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
   }, [onSavingChange]);
   const handleEvaluationSaving = useCallback((busy: boolean) => { setEvaluationSaving(busy); markSaving("evaluation", busy); }, [markSaving]);
   const handleAssuranceSaving = useCallback((busy: boolean) => { setAssuranceSaving(busy); markSaving("assurance", busy); }, [markSaving]);
-  useEffect(() => { onDirtyChange?.(dirty || evaluationDirty || assuranceDirty); return () => onDirtyChange?.(false); }, [dirty, evaluationDirty, assuranceDirty, onDirtyChange]);
+  useEffect(() => { onDirtyChange?.(dirty || evaluationDirty || assuranceDirty || materialDirty); return () => onDirtyChange?.(false); }, [dirty, evaluationDirty, assuranceDirty, materialDirty, onDirtyChange]);
   useEffect(() => () => { requestRef.current++; onSavingChange?.(false); }, [onSavingChange]);
 
   const load = useCallback(async () => {
@@ -137,11 +152,12 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
         { value: "prompts", label: "系统提示词" }
       ]} />
       <Button icon={<RefreshCw size={15} />} disabled={dirty || saving || evaluationDirty || assuranceDirty || evaluationSaving || assuranceSaving} loading={loading} onClick={() => void load()}>刷新</Button>
+      <GovernanceMaterialIntake tenantID={tenantID} disabled={dirty || saving || evaluationDirty || assuranceDirty || evaluationSaving || assuranceSaving} onReady={acceptMaterial} onDirtyChange={setMaterialDirty} />
     </Space>
     {error ? <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} /> : null}
-    <div hidden={view !== "evaluations"}><ModelEvaluationWorkspace tenantID={tenantID} configs={configs} runs={runs} loading={loading} canManage onRefresh={load} onDirtyChange={setEvaluationDirty} onSavingChange={handleEvaluationSaving} /></div>
+    <div hidden={view !== "evaluations"}><ModelEvaluationWorkspace tenantID={tenantID} configs={configs} runs={runs} loading={loading} canManage onRefresh={load} onDirtyChange={setEvaluationDirty} onSavingChange={handleEvaluationSaving} materialDelivery={candidateMaterial} onMaterialReceived={candidateReceived} /></div>
     {view === "approvals" ? <ModelApprovalWorkspace tenantID={tenantID} approvals={approvals} evaluationRuns={runs} canManage onRefresh={load} /> : null}
-    <div hidden={view !== "assurance"}><ScoringAssuranceWorkspace tenantID={tenantID} initialAxis={initialEligibilityAxis} canReadEligibility canManageEligibility canManageEvaluations canReadDisagreements canManageDisagreements onDirtyChange={setAssuranceDirty} onSavingChange={handleAssuranceSaving} /></div>
+    <div hidden={view !== "assurance"}><ScoringAssuranceWorkspace tenantID={tenantID} initialAxis={initialEligibilityAxis} canReadEligibility canManageEligibility canManageEvaluations canReadDisagreements canManageDisagreements onDirtyChange={setAssuranceDirty} onSavingChange={handleAssuranceSaving} materialDelivery={scoringMaterial} onMaterialReceived={scoringReceived} /></div>
     {view === "prompts" ? <PromptVersionWorkspace /> : null}
     {view === "policy" && policy ? <div className="model-policy-layout">
       <div className="model-policy-primary">
@@ -163,8 +179,8 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
           <Form.Item name="allowed_model_config_ids" label="允许使用的学校模型">
             <Select mode="multiple" options={configs.filter((item) => item.status === "active" && capabilityVerified(item)).map((item) => ({ value: item.id, label: modelConfigOptionLabel(item) }))} />
           </Form.Item>
-          <Form.Item name="max_cost_micros_per_question" label="每题预算上限（美元）" extra="0 表示尚未配置预算，不能通过外部沙箱准入；不是不限额。" rules={[{ required: true }]}><InputNumber stringMode min="0" precision={6} style={{ width: "100%" }} /></Form.Item>
-          <Form.Item name="max_cost_micros_per_exam" label="整场考试预算上限（美元）" extra="按平台微美元口径保存，最多六位小数；不是本月的学校总额度。" rules={[{ required: true }]}><InputNumber stringMode min="0" precision={6} style={{ width: "100%" }} /></Form.Item>
+          <Form.Item name="max_cost_micros_per_question" label="每题预算上限（美元）" extra="0 表示预算未配置，不能通过外部沙箱准入。" rules={[{ required: true }]}><InputNumber stringMode min="0" precision={6} style={{ width: "100%" }} /></Form.Item>
+          <Form.Item name="max_cost_micros_per_exam" label="整场考试预算上限（美元）" extra="仅限这一场考试，非学校月总额度；最多六位小数。" rules={[{ required: true }]}><InputNumber stringMode min="0" precision={6} style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="fallback_mode" label="故障回退" rules={[{ required: true }]}><Select options={[{ value: "manual_only", label: "转人工" }, { value: "approved_deployment_only", label: "仅用已批准模型" }]} /></Form.Item>
           <Form.Item name="reason" label="修改原因" rules={[{ required: true, min: 4 }]}><Input.TextArea rows={2} /></Form.Item>
           <Button type="primary" htmlType="submit" loading={saving}>保存策略</Button>

@@ -24,7 +24,7 @@ vi.mock("antd", () => {
     Alert: ({ type, message, description }: { type: string; message: ReactNode; description?: ReactNode }) => <div data-alert-type={type}><span>{message}</span><p>{description}</p></div>,
     Form: Object.assign(passthrough, { Item: passthrough, useForm: () => [mocks.form] }),
     Input: Object.assign(() => null, { TextArea: () => null }), InputNumber: () => null,
-    Select: () => null, Modal: ({ open, title, children, onOk, okText }: { open: boolean; title: string; children?: ReactNode; onOk: () => void; okText: string }) => open ? <section role="dialog" aria-label={title}>{children}<button onClick={onOk}>{okText}</button></section> : null, Empty: Object.assign(() => null, { PRESENTED_IMAGE_SIMPLE: "simple" }),
+    Select: ({ placeholder, options, onChange }: { placeholder?: string; options?: { value: string; label: string }[]; onChange?: (value: string) => void }) => placeholder ? <select aria-label={placeholder} onChange={event => onChange?.(event.target.value)}><option value="">请选择</option>{options?.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : null, Modal: ({ open, title, children, onOk, okText }: { open: boolean; title: string; children?: ReactNode; onOk: () => void; okText: string }) => open ? <section role="dialog" aria-label={title}>{children}<button onClick={onOk}>{okText}</button></section> : null, Empty: Object.assign(() => null, { PRESENTED_IMAGE_SIMPLE: "simple" }),
     Space: passthrough, Tag: passthrough, Tooltip: passthrough
   };
 });
@@ -64,6 +64,24 @@ const availableConfig: ManagedModelAPIConfig = {
 beforeEach(() => { vi.clearAllMocks(); mocks.form.validateFields.mockResolvedValue({ reason: "人工核对证据" }); });
 afterEach(cleanup);
 describe("模型评测展示", () => {
+  it("候选报告只预填匹配批次和当前学校模型，切校不沿用文件指标", async () => {
+    const metadata = { run_key: "batch", display_name: "数学评测", dataset_reference: "dataset", dataset_sha256: "a".repeat(64), evidence_class: "authorized_frozen_set" as const, authorization_reference: "approval-1", subject: "数学", grade: "高一", question_type: "short_answer", modality: "text" as const, sample_count: 2, repeat_count: 2, reason: "人工核对报告" };
+    const data = { model_config_id: "available", prompt_version: "prompt-3", rubric_version: "rubric-4", evaluated_samples: 2, teacher_reviewed_samples: 2, teacher_accepted_samples: 1, serious_error_samples: 0, evidence_valid_samples: 2, repeat_comparisons: 2, stable_repeat_samples: 1, p95_latency_ms: 50, total_cost_micros: 1, reason: "人工核对候选" };
+    const selected = run(metadata);
+    const props = { runs: [selected], tenantID: "school", configs: [availableConfig], loading: false, canManage: true, onRefresh: vi.fn() };
+    const view = render(<ModelEvaluationWorkspace {...props} />);
+    fireEvent.click(await screen.findByRole("button", { name: "添加候选" }));
+    const file = Object.assign(new File(["report"], "report.json", { type: "application/json" }), { text: async () => JSON.stringify({ ...metadata, candidates: [data], tenant_id: "untrusted" }) });
+    fireEvent.change(screen.getByLabelText("读取候选报告 JSON（仅预填）"), { target: { files: [file] } });
+    const selector = await screen.findByRole("combobox", { name: "选择待核对的候选指标" });
+    fireEvent.change(selector, { target: { value: "available" } });
+    expect(mocks.form.setFieldsValue).toHaveBeenLastCalledWith({ ...data, total_cost_micros: "0.000001" });
+    expect(mocks.addCandidate).not.toHaveBeenCalled();
+    view.rerender(<ModelEvaluationWorkspace {...props} tenantID="another-school" />);
+    expect(screen.queryByRole("combobox", { name: "选择待核对的候选指标" })).toBeNull();
+    expect(mocks.addCandidate).not.toHaveBeenCalled();
+  });
+
   it.each<{ status: EvaluationRun["status"]; evidence: EvaluationRun["evidence_class"]; title: string; type: string }>([
     { status: "invalidated", evidence: "authorized_frozen_set", title: "这组评测证据已失效", type: "error" },
     { status: "draft", evidence: "authorized_frozen_set", title: "授权冻结集证据", type: "success" },
@@ -151,4 +169,14 @@ describe("模型评测展示", () => {
     expect(mocks.addCandidate).not.toHaveBeenCalled();
   });
 
+});
+
+
+it("统一材料入口直接带入候选汇总，保留来源与候选版本供核对", async () => {
+  const material = { run: { tenant_id: "ignored", run_key: "imported", display_name: "导入汇总", dataset_reference: "source", dataset_sha256: "a".repeat(64), evidence_class: "protocol_fixture" as const, subject: "mathematics", grade: "九年级", question_type: "short_answer", modality: "text" as const, sample_count: 1, repeat_count: 1, reason: "离线报告" }, candidates: [], candidateCount: 0 };
+  const received = vi.fn();
+  render(<ModelEvaluationWorkspace runs={[]} tenantID="school" configs={[]} loading={false} canManage onRefresh={async () => {}} materialDelivery={{ tenantID: "school", sequence: 1, material }} onMaterialReceived={received} />);
+  await screen.findByLabelText("登记已有离线评测报告");
+  expect(mocks.form.setFieldsValue).toHaveBeenCalledWith(material.run);
+  expect(received).toHaveBeenCalledTimes(1);
 });

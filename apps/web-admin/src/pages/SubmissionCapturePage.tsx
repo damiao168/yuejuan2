@@ -5,34 +5,24 @@ import {
   Button,
   Drawer,
   Input,
-  InputNumber,
   Select,
   Space,
-  Tooltip,
-  Upload,
-  type UploadProps
 } from "antd";
 import {
   FileUp,
   RefreshCw,
   Search,
 } from "lucide-react";
-import { getUserErrorMessage } from "../api/client";
-import { runImageQualityCheck } from "../api/capture";
-import { downloadFileBlob, uploadFile, uploadFileWithProgress } from "../api/files";
+import { downloadFileBlob, uploadFile } from "../api/files";
 import { listExams, type Exam } from "../api/exams";
 import type { Student } from "../api/org";
 import {
-  addSubmissionPage,
-  createSubmission,
   getSubmission,
   listOcrTasks,
   replaceSubmissionPage,
-  runQualityCheck,
   type Submission,
   type SubmissionPage
 } from "../api/submissions";
-import { OcrWorkerAlert } from "../components/OcrWorkerAlert";
 import { ProcessingOperationsPanel } from "../components/ProcessingOperationsPanel";
 import { FilterBar, PageHeader } from "@edugrade/ui";
 import { hashQueryParam } from "../router/query";
@@ -42,8 +32,6 @@ import { SubmissionCaptureSummary } from "../features/capture/SubmissionCaptureS
 import {
   qualityFilterOptions,
   formatError,
-  compactFileName,
-  sourceTypeFor,
   processingState,
   derivedIssues,
   matchesQualityFilter,
@@ -59,13 +47,9 @@ import {
   CaptureRecords,
   SubmissionOcrDetails,
   SubmissionPageDetails,
-  UploadQueuePanel,
   type OcrDrawerState,
   type PreviewState,
-  type UploadQueueItem,
 } from "./SubmissionCaptureViews";
-
-type UploadRequest = Parameters<NonNullable<UploadProps["customRequest"]>>[0];
 
 export function SubmissionCapturePage({
   canManage,
@@ -86,7 +70,6 @@ export function SubmissionCapturePage({
     const issue = hashQueryParam("issue");
     return { search: "", quality: "all", issue: ["failed", "unmatched", "quality"].includes(issue) ? issue as Filters["issue"] : "all" };
   });
-  const [expectedPages, setExpectedPages] = useState(1);
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExamId, setSelectedExamId] = useState(initialExamId);
   const [rows, setRows] = useState<SubmissionView[]>([]);
@@ -99,7 +82,6 @@ export function SubmissionCapturePage({
   const [hasMoreSubmissions, setHasMoreSubmissions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
-  const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [actioning, setActioning] = useState<string | null>(null);
   const [pageDrawer, setPageDrawer] = useState<SubmissionView | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
@@ -137,7 +119,7 @@ export function SubmissionCapturePage({
 
   const loadCaptureData = useCallback(
     async (examId: string) => {
-      // 上传命令可以在旧考试继续完成，但它的刷新不能接管已切换考试的列表。
+      // 历史材料读取属于当前考试；修复后的刷新也不能接管已切换考试的列表。
       if (examId !== selectedExamRef.current) return;
       const scope = captureScopeRef.current;
       const requestId = captureRequestRef.current.begin();
@@ -227,81 +209,6 @@ export function SubmissionCapturePage({
     setOcrDrawer((current) => (current?.row.submission.id === submissionId ? { ...current, row: view } : current));
   };
 
-  const patchUpload = (id: string, patch: Partial<UploadQueueItem>) => {
-    setUploadQueue((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
-  };
-
-  const uploadAnswerFile = async (request: UploadRequest) => {
-    const file = request.file as File & { uid?: string };
-    const uploadId = file.uid ?? `${Date.now()}-${file.name}`;
-    let submissionId = "";
-    let pageUploaded = false;
-    setUploadQueue((current) => [
-      { id: uploadId, fileName: file.name, status: "processing", phase: "创建答题卡记录", percent: 2 },
-      ...current
-    ]);
-    if (!selectedExam) {
-      const errorMessage = "请先选择考试";
-      patchUpload(uploadId, { status: "error", phase: "失败", error: errorMessage, percent: 0 });
-      request.onError?.(new Error(errorMessage));
-      return;
-    }
-    try {
-      const submissionResult = await createSubmission(selectedExam.id, {
-        candidate_no: compactFileName(file.name),
-        source_type: sourceTypeFor(file),
-        expected_page_count: expectedPages
-      });
-      submissionId = submissionResult.submission.id;
-      patchUpload(uploadId, { phase: "上传文件", percent: 8 });
-      const uploadResult = await uploadFileWithProgress(
-        file,
-        {
-          owner_type: "submission",
-          owner_id: submissionId,
-          school_id: selectedExam.school_id,
-          exam_id: selectedExam.id,
-          submission_id: submissionId
-        },
-        (percent) => patchUpload(uploadId, { percent: Math.min(92, Math.max(8, percent)) })
-      );
-      patchUpload(uploadId, { phase: "关联第 1 页", percent: 94 });
-      await addSubmissionPage(submissionId, uploadResult.file.id, 1);
-      pageUploaded = true;
-      patchUpload(uploadId, { phase: "检查答卷完整性", percent: 96 });
-      const integrity = await runQualityCheck(submissionId);
-      if (integrity.result.valid) {
-        patchUpload(uploadId, { phase: "提交图像质量检测", percent: 98 });
-        await runImageQualityCheck(submissionId);
-        patchUpload(uploadId, { status: "success", phase: "图像质检已进入队列", percent: 100 });
-      } else {
-        patchUpload(uploadId, { status: "success", phase: "已上传，答卷完整性需处理", percent: 100 });
-      }
-      request.onSuccess?.({ ok: true });
-      await loadCaptureData(selectedExam.id);
-    } catch (currentError) {
-      const errorMessage = formatError(currentError);
-      // 页面关联成功后，即使后续质检或刷新失败，上传事实仍成立；不要再报“上传失败”诱发重复提交。
-      if (pageUploaded) {
-        patchUpload(uploadId, { status: "success", phase: "答题卡已上传，自动处理未启动", error: errorMessage, percent: 100 });
-        request.onSuccess?.({ ok: true });
-        if (selectedExam) await loadCaptureData(selectedExam.id);
-      } else {
-        patchUpload(uploadId, { status: "error", phase: "上传失败", error: errorMessage });
-        request.onError?.(new Error(getUserErrorMessage(currentError, errorMessage)));
-      }
-    }
-  };
-
-  const uploadProps: UploadProps = {
-    multiple: true,
-    showUploadList: false,
-    accept: ".pdf,.png,.jpg,.jpeg,.tif,.tiff",
-    customRequest: (request) => {
-      void uploadAnswerFile(request);
-    }
-  };
-
   const filteredRows = useMemo(() => {
     const keyword = filters.search.trim().toLowerCase();
     return rows.filter((row) => {
@@ -320,13 +227,6 @@ export function SubmissionCapturePage({
       return keywordMatched && issueMatched && matchesQualityFilter(row, filters.quality);
     });
   }, [filters.issue, filters.quality, filters.search, rows, studentById]);
-
-  const uploadPercent = useMemo(() => {
-    if (uploadQueue.length === 0) {
-      return 0;
-    }
-    return Math.round(uploadQueue.reduce((sum, item) => sum + item.percent, 0) / uploadQueue.length);
-  }, [uploadQueue]);
 
   const summary = useMemo(() => {
     const states = rows.map(processingState);
@@ -408,7 +308,7 @@ export function SubmissionCapturePage({
         });
         await replaceSubmissionPage(pageDrawer.submission.id, page.page_no, upload.file.id);
       },
-      "页面已替换，系统将重新检查图片质量",
+      "页面已替换，请前往批次处理重新检查图片质量",
       () => refreshSingle(pageDrawer.submission.id)
     );
   };
@@ -445,39 +345,32 @@ export function SubmissionCapturePage({
     }
   };
 
-  const columns = captureSubmissionColumns({ studentName, canWrite, actioning, runAction, refreshSingle, openPages, openOcrDrawer });
+  const columns = captureSubmissionColumns({ studentName, openPages, openOcrDrawer });
   const pageColumns = capturePageColumns({ previewLoading, previewPage, replacePage, canWrite, actioning });
   const ocrTaskColumns = captureOcrTaskColumns();
 
   return (
     <div className="page-stack">
       <PageHeader
-        title="答题卡导入"
-        description="选择考试并上传扫描件，系统自动完成图片检查和文字识别；失败记录可在下方直接重试。"
+        title="历史答卷"
+        description="查看既有答卷、原始页面与识别记录。新答卷统一从批次导入，由服务端检查完整性、图像质量、身份与模板。"
         actions={<Space wrap>
-          <Tooltip title="上传时用于校验答题卡页数是否齐全">
-            <label className="inline-number-field capture-advanced-control">
-              <span>每份答题卡页数</span>
-              <InputNumber min={1} max={200} precision={0} value={expectedPages} onChange={(value) => setExpectedPages(Number(value ?? 1))} />
-            </label>
-          </Tooltip>
           <Button icon={<RefreshCw size={16} />} onClick={() => void loadCaptureData(selectedExamId)} loading={captureLoading}>
             刷新
           </Button>
-          <Upload {...uploadProps}>
-            <Button type="primary" icon={<FileUp size={16} />} disabled={!canWrite || !selectedExam}>
-              上传答题卡
-            </Button>
-          </Upload>
+          <Button type={canManageProcessing ? "primary" : "default"} icon={<FileUp size={16} />} disabled={!onNavigate || !selectedExam}
+            onClick={() => { if (selectedExam) onNavigate?.(`/exams/${encodeURIComponent(selectedExam.id)}/capture`); }}>
+            {canManageProcessing ? "前往批次导入与处理" : "查看本场采集批次"}
+          </Button>
         </Space>}
       />
 
-      <OcrWorkerAlert enabled={canManage} />
+      {!canManageProcessing ? <Alert type="info" showIcon message="当前入口用于历史材料核对" description="你可以查看已授权材料；新增导入或继续处理需要采集权限，请联系学校采集负责人。" /> : null}
 
       {selectedExamId && canManageProcessing ? <ProcessingOperationsPanel key={selectedExamId} examId={selectedExamId} canManage={canManageProcessing} onNavigate={onNavigate} /> : null}
 
       {studentLookupError ? (
-        <Alert type="info" showIcon message="学生姓名未完全加载" description="部分学生姓名暂时无法加载，不影响答题卡导入，稍后刷新重试即可。" />
+        <Alert type="info" showIcon message="学生姓名未完全加载" description="部分学生姓名暂时无法加载，不影响查看已授权答卷，稍后刷新重试即可。" />
       ) : null}
 
       <FilterBar>
@@ -505,8 +398,6 @@ export function SubmissionCapturePage({
           />
         </div>
       </FilterBar>
-
-      <UploadQueuePanel queue={uploadQueue} percent={uploadPercent} />
 
       <SubmissionCaptureSummary summary={summary} />
 

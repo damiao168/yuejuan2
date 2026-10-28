@@ -46,7 +46,7 @@ describe("exam materials confirmation", () => {
   }
   function openAndCheck() {
     fireEvent.click(screen.getByRole("button", { name: "确认考试资料" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "我已核对试卷资料完整，题目范围与实际试卷一致" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "我已核对完整试卷，题目范围与实际试卷一致。" }));
   }
   async function submit() {
     fireEvent.click(screen.getByRole("button", { name: "提交确认" }));

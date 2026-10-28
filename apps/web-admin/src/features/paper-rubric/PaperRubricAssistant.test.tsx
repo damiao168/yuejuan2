@@ -38,6 +38,20 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("正式题目 AI 分值建议", () => {
+  it("主入口一次点击直接生成建议，重绘和返回工具不会重复调用模型", async () => {
+    mocks.generate.mockResolvedValue(suggestion());
+    const props = { question, disabled: false, contentDirty: false, hasExistingPoints: false, dirty: false, onDirtyChange: vi.fn(), onApply: vi.fn() };
+    const view = render(<PaperRubricAssistant {...props} />);
+    expect(screen.getByText("按步骤配分与其他工具").closest("details")?.open).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "生成 AI 采分建议" }));
+    await screen.findByText("AI 建议 · 待教师核对"); expect(mocks.generate).toHaveBeenCalledTimes(1);
+    view.rerender(<PaperRubricAssistant {...props} />);
+    expect(mocks.generate).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "返回采分点草稿" }));
+    await act(async () => mocks.confirm.mock.calls[mocks.confirm.mock.calls.length - 1][0].onOk());
+    fireEvent.click(screen.getByText("AI 建议分值划分"));
+    expect(mocks.generate).toHaveBeenCalledTimes(1);
+  });
   it("分值不完整时先修改再应用，保留对应解答且不直接保存", async () => {
     mocks.generate.mockResolvedValue(suggestion("q1", null));
     const { props } = setup();

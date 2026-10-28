@@ -9,15 +9,17 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/binaryresourcehttp"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
+	"edugrade-enterprise/services/api-gateway/internal/opiniondraft"
 	"edugrade-enterprise/services/api-gateway/internal/segment"
 )
 
 // PublishedQuestionAppealHandler 分别提供学生端和教职工端的数据结构。其来源与可见性边界不同，因此不复用旧的可变成绩申诉处理器。
 type PublishedQuestionAppealHandler struct {
-	service      *PublishedQuestionAppealService
-	audit        auth.AuditRecorder
-	segmentImage segment.CropImageReader
-	examSummary  QuestionAppealExamSummaryReader
+	service       *PublishedQuestionAppealService
+	audit         auth.AuditRecorder
+	segmentImage  segment.CropImageReader
+	examSummary   QuestionAppealExamSummaryReader
+	privateDrafts opiniondraft.Store
 }
 
 func (h *PublishedQuestionAppealHandler) WithExamSummaryReader(reader QuestionAppealExamSummaryReader) *PublishedQuestionAppealHandler {
@@ -75,7 +77,7 @@ func (h *PublishedQuestionAppealHandler) AnswerImage(w http.ResponseWriter, r *h
 }
 
 func NewPublishedQuestionAppealHandler(service *PublishedQuestionAppealService, auditStore auth.AuditRecorder) *PublishedQuestionAppealHandler {
-	return &PublishedQuestionAppealHandler{service: service, audit: auditStore}
+	return &PublishedQuestionAppealHandler{service: service, audit: auditStore, privateDrafts: opiniondraft.NewMemoryStore()}
 }
 
 func (h *PublishedQuestionAppealHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -218,6 +220,7 @@ func (h *PublishedQuestionAppealHandler) Decide(w http.ResponseWriter, r *http.R
 		writePublishedQuestionAppealError(w, r, err)
 		return
 	}
+	commitPrivateDraft(r, h.privateDrafts, "question-appeal", input.ExpectedRevision)
 	h.auditAction(r, "question_appeal.decided", "question_appeal", updated.ID, "appeal decision recorded")
 	updated = h.withStaffExamSummary(r, updated, nil)
 	if hasPermission(user, appealWorkPermission) && !hasPermission(user, appealManagePermission) {
@@ -246,6 +249,7 @@ func (h *PublishedQuestionAppealHandler) Resolve(w http.ResponseWriter, r *http.
 		writePublishedQuestionAppealError(w, r, err)
 		return
 	}
+	commitPrivateDraft(r, h.privateDrafts, "question-appeal", input.ExpectedRevision)
 	h.auditAction(r, "question_appeal.resolved", "question_appeal", item.ID, "successor score release linked")
 	item = h.withStaffExamSummary(r, item, nil)
 	if hasPermission(user, appealWorkPermission) && !hasPermission(user, appealManagePermission) {
@@ -294,6 +298,7 @@ func (h *PublishedQuestionAppealHandler) SubmitReviewOpinion(w http.ResponseWrit
 		writePublishedQuestionAppealError(w, r, err)
 		return
 	}
+	commitPrivateDraft(r, h.privateDrafts, "question-appeal", input.ExpectedRevision)
 	h.auditAction(r, "question_appeal.review_opinion_submitted", "question_appeal", updated.ID, "independent review opinion handed to school administrator")
 	updated = h.withStaffExamSummary(r, updated, nil)
 	if !hasPermission(user, appealManagePermission) {
@@ -395,6 +400,7 @@ func workerQuestionAppealContextView(context PublishedQuestionAppealContext) Pub
 	context.Appeal = workerQuestionAppealView(context.Appeal)
 	for index := range context.ReleaseHistory {
 		context.ReleaseHistory[index].ID = ""
+		context.ReleaseHistory[index].EligibleForResolution = false
 	}
 	return context
 }

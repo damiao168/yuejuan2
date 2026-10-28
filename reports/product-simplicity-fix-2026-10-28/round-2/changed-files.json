@@ -1,0 +1,1223 @@
+{
+  "date": "2026-10-28",
+  "baseline": "source-baseline.json",
+  "files": [
+    {
+      "path": "README.md",
+      "status": "pending",
+      "read_scope": "local_launch_and_TLS_paragraphs",
+      "review_report": "round-2/deployment.json",
+      "sha256": "dfa057e412960ce2381ca5100a8f86ea4f27d2bc84b33021cb29301ae0bad3fe",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/package.json",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "7e983abec22b59e972991c3cd0284c7ca7fe122a0a02c80e7513146d7263f7a3",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/scripts/check-security-config.mjs",
+      "status": "pending",
+      "scope": "生产/开发CSP、worker/frame边界与既有能力白名单",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "ccff696cd5ff95ba79b837f42a064beae173799d86ac37bc6a5bed61888ac68a",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src-tauri/tauri.conf.json",
+      "status": "pending",
+      "scope": "生产/开发CSP、worker/frame边界与既有能力白名单",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "ddcf0089204ab112e22cf5ecae265fbe7025eee2f09253c857c152ff84cbac17",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/App.offlineDescription.batch47.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "0f9c4de131bcf486d6826168166037e9e1b310906fc1e5b84ae9126d13653cc4",
+      "baseline_sha256": "9d02b23baecac715bae7a114aaf05c5c7a63c913fd40428ba3d0a9f0a8a18cf4"
+    },
+    {
+      "path": "apps/desktop-client/src/App.tsx",
+      "status": "pending",
+      "scope": "本轮关联接口、材料身份、保存说明、显示门禁、扫描选择与上传后检查接线",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "8b57d0ffa2f259653e5834eb78252c11868d662e57708f93d2eda88fcaf32638",
+      "baseline_sha256": "a00cd53d6cea97070268ee60376785bda57d66075807d16cd23aea9593541079"
+    },
+    {
+      "path": "apps/desktop-client/src/components/AnswerDocumentViewer.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "bd522d5108da4e73e8637b901058275656666a1434827ddcdd8a3947a2a9c699",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/components/AnswerDocumentViewer.tsx",
+      "status": "read",
+      "scope": "全文",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "1f5ace46301ebd1f4a2f5e79d5b7a619c64e2633f978a0ce5ab061277f628967",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "本次修改/相关状态维护点已核对，未计全文审读。",
+      "review_report": "portals-ops.json",
+      "sha256": "1bdf3929d4f05a647b067637fde13c9ad46465a4a617bb4c7e9bc26f4e1a7e7c",
+      "baseline_sha256": "ea525fa5622fc0d0b8528e1fc2083a9cab780e43db5cc238a556e20d62b1c1e1"
+    },
+    {
+      "path": "apps/desktop-client/src/components/PdfAnswerPages.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "2055c7c096424ee05f9bb02ffd2e2b520a2ac3d76215f323b7ab4c71e491d5c4",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/components/PdfAnswerPages.tsx",
+      "status": "read",
+      "scope": "本轮新增文件全文",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "2e4beab527a6e13ac829411aa388e7239882d850f782f86c817e3ce5c445afd1",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+      "status": "pending",
+      "scope": "本轮关联接口、材料身份、保存说明、显示门禁、扫描选择与上传后检查接线",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "b163cab22a600e27debccdfc0febbdcca96777fb34a2cb1c19a1edb4c41ec018",
+      "baseline_sha256": "267883ad762adebc6274bd191cbecc8ca4f59da5386af2b386816e760e5659b1"
+    },
+    {
+      "path": "apps/desktop-client/src/components/offlineWorkbench/useOfflineWorkbench.tsx",
+      "status": "pending",
+      "scope": "会话与显示回执、下载/恢复原件、保存/加载草稿、替换确认、原命令包复用；未重新全文审读剩余同步实现",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "1c63b31c54ddb72534d4038b0ae78af487b5edc7e3b3921d049c5a90ac60be77",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/features/capture/useExamCaptureContext.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "f26297a496734e1822c06058adf058f6773c7cac0d41e3dd84d868ec7ca615e8",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/features/capture/useExamCaptureContext.ts",
+      "status": "read",
+      "scope": "全文及修改后关键异步边界",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "40acd925089903ecbafa81df993c5852351c6834b323a8700f2de88fc42c0817",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/features/quality/useSubmissionQuality.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "e90f05ea4b91bc4720ada39360a6328d2daa8c2050433038ae9e453ed365a0b0",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/features/quality/useSubmissionQuality.ts",
+      "status": "read",
+      "scope": "全文及修改后关键异步边界",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "e2f282ad29801fb0e052f2db44ca1baa6bb572bc9810a1d9156395e91f1ca6d3",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan/ScanWorkspace.batch34.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "223151d418d4da455312bce32ec64f4c1dd47f0a7ffc73b69444d9afa5fb7eb1",
+      "baseline_sha256": "51e44b74fa70cc494a15f553c35dbf7f65120872e25f95230116f6dd1025356f"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+      "status": "pending",
+      "scope": "本轮关联接口、材料身份、保存说明、显示门禁、扫描选择与上传后检查接线",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "32185ea1bd54459ab3db28d48664bd2a660e35c325f2b1417c3d0a266a1c1a1b",
+      "baseline_sha256": "bb2e72adde21845d2f6a4bb84dc660c247ac20049d8841cb007fbae5e885b0b1"
+    },
+    {
+      "path": "apps/desktop-client/src/features/upload/useUploadSync.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "fa23852d7ab7b37e2e9c0c2d7b6257aa293917a5ba70a0e8c0c2f916239e91de",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+      "status": "read",
+      "scope": "全文及修改后关键异步边界",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "0a80370159c27d9a67b43d207df05af313cb6cc67ea6e9b839eb6fcb388615bf",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/lib/offlineAnswerMaterial.test.ts",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "b0eed88afe438a115eba1e32173f02987261d492092d4c696dbac4a6a42743bd",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/lib/offlineAnswerMaterial.ts",
+      "status": "read",
+      "scope": "本轮新增文件全文",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "8d162ff26be02c2637c7e22e23663e6883930b2dd7e56e8f631fa6bad5266e5b",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/lib/offlineStore.ts",
+      "status": "read",
+      "scope": "全文",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "a4023953956a5cb33965420fd191bd7921059779fb3928e6a3f897d0d0388a45",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/lib/pdfAnswerPages.test.ts",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "973e108d091416f8dd0270e0c4df9898cae30aa2167a99d1cc715fb8e2df9a6d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/lib/pdfAnswerPages.ts",
+      "status": "read",
+      "scope": "本轮新增文件全文",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "991a5f00eb6375f8733497f537fe70e4e1d23beb0a414bb43d33ecbb083b676a",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/desktop-client/src/types.ts",
+      "status": "pending",
+      "scope": "本轮关联接口、材料身份、保存说明、显示门禁、扫描选择与上传后检查接线",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "7ff345be7949c691d1717d93621d5cd040c505aa78e37ea2029cb95d5373c9b6",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/student-portal/src/api.ts",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "3ec3cbbb1980ce057608eea244529292f27ea81787381b9cebe524bdc757aefb",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/student-portal/src/features/session/SessionScreens.school.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "aef0f8be8376d1b9e188a2477a11a1137dc26f81444f863dfe42cfc9a22a4c1c",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/student-portal/src/features/session/SessionScreens.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。",
+      "review_report": "portals-ops.json",
+      "sha256": "eb2f5471fc923e9b92c52409e6a73c0b86a7735a352a22de84c9cb418561e466",
+      "baseline_sha256": "5e1f639d8085da9bcbc7c045e942c4bd9fe545f61372edd6f888fb5747ee0a6d"
+    },
+    {
+      "path": "apps/web-admin/package.json",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "6883ea69c8b6dddf00cc8bd055a1c9b767edad128ef13ac815ccc0a408afdcdf",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/api/audit.ts",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "1ca1fdb53c418af5c865969289ab03df2482cba5cdd8317a47d603f70da77c2a",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/api/scoringAssurance.ts",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "本次修改/相关状态维护点已核对，未计全文审读。",
+      "review_report": "portals-ops.json",
+      "sha256": "905499564ac78b78507af46a5ac133aa3162081e6c9d4c0927bd18f21ef8fec9",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/ProcessingOperationsPanel.presentation.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "ef389d8c8bbfe9d9a982a9439b44f82b24f1734a90f447c77445f8fa921485b6",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/ProcessingOperationsPanel.tsx",
+      "status": "pending",
+      "scope": "等级/筛选/材料展示与考试级处理入口、已有可编辑字段；未重新审读不相关处理命令",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "ddea6c9209e414b035b127942c86352a92e7574fd3a0c8b266bc21dbdd848f9c",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealViews.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "07a739d62a7219e4e850f53e2f2b6c42b6d873bd85e974bb29995c69b7df8293",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealWorkspace.batch10.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "5cee9bfc72feddd534c45ca1ae4a192ad6ef20abeefe7f61a560b6115e22016a",
+      "baseline_sha256": "ef69a54981011888e9707150885b2372ee3d8f1cdc7db64adee39ca2275d4cf4"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "14fc05c6930803b1347b011e7a0f94ab81168a0ab44712297253d9fd5e4ce459",
+      "baseline_sha256": "ac468201dfa5c094d965263798a2494677a76a9b7cc5d163cef63e8416432955"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/DecisionLookup.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "8f217a9d14712e9204eac45f7ff94604d3a926e00ad0de9ee05ad65633d98b3f",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/DecisionLookup.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "3db8cb4932e5e6238909ab0f1ba3d96e8cb54d1f82cc399b0aec1032c8ef8791",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/GovernanceMaterialIntake.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "867821455afbba02b9a5cc5a9addc9c0aab307c9973bf004f4f238242cd048ea",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/GovernanceMaterialIntake.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "7290ba00b7c23e9bbf93b372f6f2bcceb067445a35d5833b0783ec93a807c7aa",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "ea70ac869cd7a3ddaf66079754686ad3f38e2dabbc9c763ecb0b921ea5b947fb",
+      "baseline_sha256": "adbe4c52a279e188e72ea2adf76eb260a3bf360467fbb81f3381bc682df762dc"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。",
+      "review_report": "portals-ops.json",
+      "sha256": "d75bacd64eb82f259399da6e91b298ee166e218c55279eb2a957de04b0ba2535",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。",
+      "review_report": "portals-ops.json",
+      "sha256": "f6a0d4f6065132b11775d4f16ef054d0ba93936cd7b692723c3307f0c26196ca",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.batch46.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "cb860d1e9aa61cf036ec800638941131824ea78a372977fbdbc236c37fa97ea6",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。",
+      "review_report": "portals-ops.json",
+      "sha256": "e93b7c3952f1bd812741d30203fc26f2220a26d05798fd29f32ad7704f508597",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/assuranceOptions.ts",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "2ba489f8fd712071684f1fed4f1185eb25cca14ffa5c3f95927cb4ed26f5559b",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/materialIntake.test.ts",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "d1308e11f6296c4c0889361626861986f577b2a019a7c1cdf13bfe91e5b6addd",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/materialIntake.ts",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "b8f926bb50208f8543395d705887839f8daa96eb64a2d65bfc4aa56cc39c0c28",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/observationMaterial.ts",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "4bf74b810c481f5d0ead2159ba58059530db482bdf589aa8766fc516d852a911",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx",
+      "status": "read",
+      "scope": "全文",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "322c95261f52f2bb87fadd8808443f69ecc1a19ff595e42060d5fd3e9c192a49",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CapturePdfOrderPreview.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。",
+      "review_report": "exam-preparation.json",
+      "sha256": "8b81e24f2e43776f907db0493441d741eb7e5dc9110d61ac8c839623e03a223d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx",
+      "status": "read",
+      "scope": "全文",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "8efed2935cd38ca20dd0ee44b9d01e968f83645b4f45e1575f5b069df5188b46",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureTiffPreview.test.ts",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "81a22d547bc100ffc3566fd60b89db007afffc6cae94fc95a4961060cac05ace",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureTiffPreview.ts",
+      "status": "read",
+      "scope": "全文",
+      "review_report": "round-2/capture-desktop.json",
+      "read_scope": "full",
+      "sha256": "872357a37c13abb7d6215ffae16a2b3883881275fd1fbaeb3bdea42aeb7ee41f",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "02d55a7b0bc5d5284fe4938f099fd01b0b3bc4a1c7ac39760197781848d07f2a",
+      "baseline_sha256": "b7519874c225b4762b8a0ed0f82eaa14acc21204bc896567451f078528344624"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ReviewBookmarks.resume.test.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "30b7095d8193057e540eaaa43195d68fb03e41c0c75ecabbe9dd97c13b76f766",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ReviewBookmarks.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "d976196eb1c79a26f078c7429f51bb9b9c26682bf88c62dff3b5edb82a57e17c",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankHandoffPanel.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读人员选择、领取条件、记录按需查询和切换世代。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "f19a92ec272ef7b5a4628cd5379953e0ee73814dc14c8300dbae365711bc6078",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankHandoffs.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "f0717fa8efeea16f617073df22a1c593f4a53e437f5a9e6823b13188bd75b24b",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankHandoffs.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "已核对整份实现及本次非直观并发、权限或失败恢复说明。",
+      "sha256": "80b552dee77a3dfe0c348103eb5d6924cef99a37b5345bbafdf4804cdb7b12c8",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.batch45.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "cde68d2b0fe53e6a275065c1b95ab7b97a0a88da6e93797c0a14306ee9e576ac",
+      "baseline_sha256": "c4237d247f573b6d8346518cd923d9ef5e0f9abd7f346d4df0829550b4fbc36f"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "读取、编辑世代、转换和交接变更段核对，未全文重审。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "996592f8b6f7459ef083db81bfa68719690c8ec8d4ce11e86e01ca7e5f4d8d79",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "审核与发布段及相邻预览核对，未全文重审整个文件。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "2fe76c33ac942cdf8256747e9877d06fc9540498bb1f5f9fb09c314aafa4c314",
+      "baseline_sha256": "8e2330cfbb601ff9711421974ad204e946e51a52489c76a8ff0e0ae6ec520ce0"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/questionBank.batch7.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "bc5af493bfb0e5207074645150d5f1588a3b7c9dcbab4638983e9f8e6fe36382",
+      "baseline_sha256": "050361df57085f16e314022a1c3d1cdcf6037b7a64fddd608a6e6df30fc78ba8"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/questionBankWorkspaceTypes.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读回调约定，保留旧独立调用方兼容。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "a6ce14a32c278eda90c07716704bbf9c83a9076d24a34d205f45b0648693fcde",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "8529f28858593791d29b00c19ce2ad53f1134ec7179fef5c0029f12abd8e47f1",
+      "baseline_sha256": "93da61ac2e23005f719396824546bb61d479cc499f624b60bee1c17d3f722c1e"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScorePublicationChecklist.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "586e27c7bc372d11a7cbf5f22e22c7fdd901d27b1ae0ae289e020352d9a10be5",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "64fbea8a4f4d2ed8d69d8495045fd3065db60213dbf619d13f70db4ad8ce527b",
+      "baseline_sha256": "0b7ef837213729a2a28d953f5e9021f7a966ab171fcba14925e57d55d5f87c46"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.batch36.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "4337227986af9961bfa2ba7ae31997dce63821341403dd5b06beaa39e8bc1400",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "67087d30108f57e80862187c7cbd3c03e03292705b86c041705cdb174ca4182c",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/publicationChecklist.test.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "1e6a0084de03d29c1d8425ac89c6f0ca088920d3969c844b473034f1fe1e8f09",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/publicationChecklist.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "73e545685fba7acb3d5627ef5033464409ba32d3db806ffcc1b893f52d37e26d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/scorePresentation.ts",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "f9d38eef8b62086c539a2815147f1527640fdd5b11e9263f538cc60588bf7d3e",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/pages/AuditLogPage.batch20.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "fbd6e7259200e35d300801936fc2890dd1ff3d49f42b9702f36015f879e35fc2",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/pages/AuditLogPage.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。",
+      "review_report": "portals-ops.json",
+      "sha256": "bce91dbbc4ed46749d8c1737e9ade46ef558ca1fa7b60d3ddfa1aea4e5e35b0e",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/pages/ScoreManagementPage.batch53.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "37796b1e6b1f14505593f397114bc196e360f94b885ae1dc484d0e790d121f30",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "5712fc518915ecb60602ab209e5263c7853f52b60da2dcf03a7f46951164b361",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/scoring.css",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "ab7fc1643596e4f53c13c79f8cc5768d3f4bc07d535968d844a46a24ac7d4fde",
+      "baseline_sha256": null
+    },
+    {
+      "path": "contracts/openapi/registered-route-exceptions.json",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "1c944fe9dd24947866cfd559c21b6903d026906eff2a3e4b3a389c693a9cc63b",
+      "baseline_sha256": null
+    },
+    {
+      "path": "infra/docker-compose/.env.example",
+      "status": "pending",
+      "read_scope": "worker_credential_keys",
+      "note": "只读，版本号由主智能体正式同步。",
+      "review_report": "round-2/deployment.json",
+      "sha256": "1eb48a254b2eb81451e65400b7278cfa7f0b2b2c19de28bb1880e95dbd24d528",
+      "baseline_sha256": null
+    },
+    {
+      "path": "infra/docker-compose/README.md",
+      "status": "pending",
+      "read_scope": "local_TLS_and_worker_provisioning_paragraphs",
+      "review_report": "round-2/deployment.json",
+      "sha256": "ace17310cc61fcbccb21480d6426fde360bd8f8a6f212308f166f50e7f2818c4",
+      "baseline_sha256": null
+    },
+    {
+      "path": "infra/docker-compose/docker-compose.yml",
+      "status": "pending",
+      "read_scope": "TLS_mounts_and_service_names",
+      "note": "只读，版本号由主智能体正式同步。",
+      "review_report": "round-2/deployment.json",
+      "sha256": "fd3dab6e3d69ac54cadf0e10396d1bb2388a31f773c6a8e2d9f9701a77da1232",
+      "baseline_sha256": null
+    },
+    {
+      "path": "infra/docker-compose/scripts/init.ps1",
+      "status": "annotated",
+      "read_scope": "full",
+      "review_report": "round-2/deployment.json",
+      "sha256": "dede41dbed1031e243cc5d27f5b7fbcf167443c519a9eadca4b41b2affbb96a6",
+      "baseline_sha256": null
+    },
+    {
+      "path": "infra/docker-compose/scripts/rotate-local-tls.py",
+      "status": "annotated",
+      "read_scope": "full",
+      "review_report": "round-2/deployment.json",
+      "sha256": "9aa2097675af746e3bd1de53cba65ad0760046b71db090ad864271b002a98904",
+      "baseline_sha256": null
+    },
+    {
+      "path": "infra/docker-compose/scripts/test_local_tls_rotation.py",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "review_report": "round-2/deployment.json",
+      "sha256": "903af53a236535895f15a79cc165352836cf07b29f442196e5757368e05c6317",
+      "baseline_sha256": null
+    },
+    {
+      "path": "infra/docker-compose/scripts/tests/local-workers.tests.ps1",
+      "status": "annotated",
+      "read_scope": "full",
+      "review_report": "round-2/deployment.json",
+      "sha256": "7ce1abc5d0fa16403a31b0c42897c676ce2486f52af795084a18486e06da46f9",
+      "baseline_sha256": null
+    },
+    {
+      "path": "package-lock.json",
+      "status": "protected",
+      "read_scope": "generated_or_locked",
+      "note": "依正常SDK/路由生成、包管理或合成测试夹具生成流程更新，未手改生成结果。",
+      "sha256": "83ac16783c0f6d9e3f359e3b37bef97c224f6ec15c370af41909e630aa33d1ac",
+      "baseline_sha256": null
+    },
+    {
+      "path": "packages/sdk/src/generated/client.ts",
+      "status": "protected",
+      "read_scope": "generated_or_locked",
+      "note": "依正常SDK/路由生成、包管理或合成测试夹具生成流程更新，未手改生成结果。",
+      "sha256": "9a7c0a4d4fa2c1bcc9971466c1a79e619d9bb381afc7ca36be2c851622161308",
+      "baseline_sha256": null
+    },
+    {
+      "path": "packages/sdk/src/generated/types.ts",
+      "status": "protected",
+      "read_scope": "generated_or_locked",
+      "note": "依正常SDK/路由生成、包管理或合成测试夹具生成流程更新，未手改生成结果。",
+      "sha256": "3dd5dcafd6b386477456e38d39785baa34c208c0eb8628f9af90dcca4f96cc80",
+      "baseline_sha256": null
+    },
+    {
+      "path": "scripts/launch-local.ps1",
+      "status": "annotated",
+      "read_scope": "full",
+      "review_report": "round-2/deployment.json",
+      "sha256": "9386bf4b95430b691e256dd40415fdef1c09587909e48033459d6564efec7948",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/cmd/api-gateway/local_workers.go",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "review_report": "round-2/deployment.json",
+      "sha256": "969b32dc13334b722f06800ef7cac3e86468dc62bd2fe79a04386963e609b12f",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/cmd/api-gateway/local_workers_test.go",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "review_report": "round-2/deployment.json",
+      "sha256": "aabecc5c0163dc3d42a26b62e62856a4f4408b79b62a90fe7a3ba068f50fbf86",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/cmd/api-gateway/main.go",
+      "status": "pending",
+      "read_scope": "changed_command_dispatch_and_bootstrap_callers",
+      "note": "未全文重审。",
+      "review_report": "round-2/deployment.json",
+      "sha256": "824dc5c2f4549796f5cc6d3af9d6fc76bde85877fedf018691e874a09577caaf",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/decision_directory.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "611eb379a36cfecf28ee9fa5d649d7dd2cdc75f96d6d1aa26c160452289c6980",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/decision_directory_test.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "21f50b024fa6323066a424ea2678a771db527213267312bccaf5223ca921b421",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/handlers.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "dc2801d65e7951440241c6a8d26656825610c9ac48fd2ab0e91354dafa9d180b",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/types.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "a09b9ff8dc4a177415db4904f930a7ea9529b539c1c109a58c4a2627622a7de4",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "4b0ffb604ac669c2a74f04b871b1f6dff7b9eb414f5dbfc13534818316e227cd",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_service_test.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "e9da3f0c6f952a274a53d3a06af322a896cef08a8af4b28ae3420e29411a7680",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_store_memory.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "39d8f2cfdcb2e476203603d5020e8831726d1f0db75180caabd671e8048220b4",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_store_postgres.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "3bc008fbbd07000db31277fd124cb5ce634e17f3a769d529b5dad4d5f5b194b6",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_types.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "7273acf87b8079dfd98f6a737802b55823b1d23cb3f8601808c31abb24e3e236",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_workflow_regression_test.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "5d4b40ef75a470375c0a002fae8aeaa0c0eb7cdcbf36a3efb51c8f6210fe00cc",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/auth/audit.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "4aa10712a804c82330dcc6d07542dde195c18da4c687c0dd1070e6ac7f04104a",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/auth/audit_keyword_test.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "7a5bcddbc6947c235307d67eade5bf3d331ae092d303ad983b11d70c8a5e5e56",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/auth/handlers_audit.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "87229be3a38d0319493b581e3ba904eaf4af72a949dfb751a91b928f5e36a96f",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/auth/local_worker_provision.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "review_report": "round-2/deployment.json",
+      "sha256": "920b51829411dc6c9c476f2944f2347582acbd19fc39c1240d3a2c33eb1a44bf",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/auth/local_worker_provision_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "review_report": "round-2/deployment.json",
+      "sha256": "709ed258443295e55513d73c9801789d3da337343200760087b84fdae61eaa42",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/auth/resource_scope_test.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "d491eb09c796c2725fc23b3753e4c388db6a1759e141a962b1b4696a9bcc5498",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_memory.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "acc635f5a5b5641a39eed138ab56bc5a5ba7874564bff4ff46a6152c279a8967",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_postgres.go",
+      "status": "pending",
+      "read_scope": "bootstrap_and_existing_worker_provisioning",
+      "note": "只读相关存储边界，未全文重审。",
+      "review_report": "round-2/deployment.json",
+      "sha256": "c82ed5caffba28296ead7b28fba73ced4284ff780cf0c841dc5910f0cdb60cd1",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/auth/types.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "8412ec400a69920c98b0d373409f67bcf93255ec7e7fda40f8ab34efa089e62d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/public_school.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "38bb57c04b6e59f21c678d12304b6fb4e2cae5248eda1cbaf827940177881915",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/public_school_limit.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "af91513a9b8aab57cc1777b003d7317ebf3445b278ea06b5041c5561e7456957",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/public_school_test.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "1435875d25c77154e7ae13b704027c3fdbff400393b971927c62824ac7938725",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/store.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "1ef059258f8582c2f5b43d1db812c3ab2a46ed688bacc22bc8577f3c9e1a11c6",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读新增状态和兼容规则，说明独立修订及退回职责。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "b0a6b47ad5812fa7465c958d26cbbacf3a6b8fb2e01c5ac7dd0e13d56b492065",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff_handlers.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读，管理与编辑能力由认证身份派生。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "d82945e7868f56cd8d7b51bc9cb5990dc415b2d19ffbf4fe40f9a4c6f91a3daa",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff_memory.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读内存实现与锁边界，仅用于开发测试。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "267ce49c306f07f3f03a49717968a5a92b4046951160d2453f04da01fd8a7460",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff_postgres.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读权限、事务锁、CAS和事件同事务提交。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "cb2cf434bdf819da5d340c15eee5ca5f0691990b599a4b9154a5eee05f2e9918",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff_postgres_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "真实隔离数据库检验迁移、并发锁、事件不可改和冻结题目不可改。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "471187d701a76ccbe6550b2bd632a23ae0d22301eedb2df949657d48fc65da24",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/handoff_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "并发领取、失效接收人、撤权、跨租户、幂等和失败原子性。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "d653a34aaac8d18b93c3b0f0734c53005fbf94dabc524731f5f00d240a704ff4",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/metadata_acl_search_memory.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "9e01a49e8932a364b00a2ee5f01030cb7c3a766dc274d0e56982d451f59364d3",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/metadata_acl_search_postgres.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "4fd88c62122186775204c717e3458c8126cd56553c6ebba1330036e1db54a1cb",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/postgres_batch22_test.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "6386b293445c92ac662d79998ae4d47b5d4c7c361907dfbf6b209398f366a20a",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/publication_memory.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "状态转换和内存事务边界核对；未全文重审。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "89e527e956b13834bde8755146de0a490e53a5399967c01bf792c12f0fddea73",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/publication_postgres.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "锁顺序和正式状态转换核对；其他评分、实例化段未全文重审。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "c9cdfb5d2214eef13c0d1fc9c0394f64f169e0d48187553457007e5647121df7",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/reference_materials_postgres_test.go",
+      "status": "pending",
+      "read_scope": "fixture_setup_and_relevant_callers",
+      "note": "临时schema正式应用217，保留既有引用图片回归；未全文重审测试。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "6cdf904078b4b583ebe1f3233e35f0ace29d2ee1073345f16f016501690085b7",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/store_memory.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "交接复制、内存锁和回执授权核对。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "50333b0284e28ee98921cb7b363b15f8a1adc82d3d88d2692c6b4ff752e12faf",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/store_postgres.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "版本扫描、回执授权与投影调用核对。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "18207022ac17a7c3f5928d2ba94968269ba0e22fca5bbb5f902f9e55f45d080c",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/types.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "c92d8ce30df5da59e29a3132b50cdb275cc4363cb5ba4965304372fc37eed050",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/regraderelease/service.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "fbb7d03ac471f7bc7faddbc6f4ce828a676c2716f0e722be9561431f9fe540cb",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/regraderelease/service_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "6c4a3d2df06e1c0eb426b13532b62bbe426d579e51f8e387cc6cbae4db56b9ae",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/public_school_route_test.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "ee3837e7e49e0ae7df335db0d9b448deacfa56b80617ee403a52db1a4727245e",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "12b466a01a8ab605675e30c9b0f3abf198f37fc4dd2b5bcf6b43d2c95191fec9",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_questionbank.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "ead6d5e41ca00c53ea875650c3d00f5cf117bd2272f7cc5ed905cf0e89a1a333",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/migrations/000217_question_bank_handoff.sql",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "正式新增迁移，无历史迁移改写；实际应用于隔离集群。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "b60b7d917cef0e962cbda115228441b49710ce24b0f31213cf83f86728c84396",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/openapi/edugrade-api.openapi.json",
+      "status": "pending",
+      "read_scope": "changed_operations_and_schemas",
+      "note": "本轮交接、准入目录、审计、单校名称与结案标记契约；未全文重审全部契约。",
+      "review_report": "round-2/root-findings.json",
+      "sha256": "7e48902d6a50151dd3b99864ce35426d00f4c32dcb8defdc9e16c8cfbfb20109",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/openapi/route-coverage.json",
+      "status": "protected",
+      "read_scope": "generated_or_locked",
+      "note": "依正常SDK/路由生成、包管理或合成测试夹具生成流程更新，未手改生成结果。",
+      "sha256": "ec7f23cf56ad8deac3a9dacd473bbd21795329178adb4473b3e7bac6d7b7d1cb",
+      "baseline_sha256": null
+    }
+  ],
+  "status_counts": {
+    "pending": 98,
+    "read": 11,
+    "self_explanatory": 4,
+    "annotated": 24,
+    "protected": 4
+  },
+  "missing_baseline_files": [],
+  "boundary": "逐文件采用实际审读范围；局部核对仍为pending。不是全仓重新全文审读。"
+}

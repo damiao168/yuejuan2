@@ -299,6 +299,17 @@ func (s *MemoryStore) SearchItems(_ context.Context, scope auth.AccessScope, fil
 		if _, err = s.bank(scope, i.BankID, "read"); err != nil {
 			continue
 		}
+		if f.PendingAction != "" {
+			if assignee := handoffRecipient(v); assignee != "" && assignee != scope.ActorID {
+				continue
+			}
+			if _, err = s.bank(scope, i.BankID, f.PendingAction); err != nil {
+				continue
+			}
+			if f.PendingAction == "review" && (v.WorkflowStatus != "reviewing" || v.AuthorID == scope.ActorID) || f.PendingAction == "publish" && v.WorkflowStatus != "approved" {
+				continue
+			}
+		}
 		if !searchVersionVisible(f.Mode, i, v, scope.ActorID) || !matchesSearchVersion(i, v, f) {
 			continue
 		}

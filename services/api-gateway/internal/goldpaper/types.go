@@ -33,6 +33,7 @@ const (
 type Source struct {
 	ExamID            string
 	QuestionID        string
+	QuestionNo        string
 	SubmissionID      string
 	SnapshotID        string
 	SubjectCode       string
@@ -86,6 +87,7 @@ type GoldPaper struct {
 	ID               string     `json:"id"`
 	ExamID           string     `json:"exam_id"`
 	QuestionID       string     `json:"question_id"`
+	QuestionNo       string     `json:"question_no,omitempty"`
 	SubmissionID     string     `json:"submission_id"`
 	AnswerImageURL   string     `json:"answer_image_url,omitempty"`
 	ActiveVersion    int        `json:"active_version,omitempty"`

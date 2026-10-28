@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"unicode/utf8"
 
 	"edugrade-enterprise/services/api-gateway/internal/regrade"
 	"edugrade-enterprise/services/api-gateway/internal/scorerelease"
@@ -32,7 +33,7 @@ func NewService(regrades *regrade.Service, releases *scorerelease.Service) *Serv
 
 func (s *Service) Create(ctx context.Context, tenantID, jobID, actorID string, input Input) (scorerelease.Release, error) {
 	input.Reason, input.IdempotencyKey = strings.TrimSpace(input.Reason), strings.TrimSpace(input.IdempotencyKey)
-	if s == nil || s.regrades == nil || s.releases == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(jobID) == "" || strings.TrimSpace(actorID) == "" || input.Reason == "" {
+	if s == nil || s.regrades == nil || s.releases == nil || strings.TrimSpace(tenantID) == "" || strings.TrimSpace(jobID) == "" || strings.TrimSpace(actorID) == "" || input.Reason == "" || utf8.RuneCountInString(input.IdempotencyKey) < 8 || utf8.RuneCountInString(input.IdempotencyKey) > 200 {
 		return scorerelease.Release{}, ErrInvalid
 	}
 	summary, err := s.regrades.Get(ctx, tenantID, jobID)
@@ -52,6 +53,7 @@ func (s *Service) Create(ctx context.Context, tenantID, jobID, actorID string, i
 	}
 	return s.releases.CreateFromRegrade(ctx, tenantID, summary.ReleasePlan.ExamID, actorID, scorerelease.CreateRegradeInput{
 		SourceReleaseID: summary.ReleasePlan.SourceReleaseID, QuestionID: summary.ReleasePlan.QuestionID,
-		Reason: input.Reason, IdempotencyKey: input.IdempotencyKey, Changes: changes,
+		// 同一已完成任务只有一份后继草稿。响应丢失、刷新或另一管理员重试都复用它，避免半成功后复制版本。
+		Reason: input.Reason, IdempotencyKey: "regrade-job:" + summary.Job.ID, Changes: changes,
 	})
 }

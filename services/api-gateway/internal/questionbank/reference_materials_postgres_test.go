@@ -70,7 +70,7 @@ func newReferenceImportFixture(t *testing.T) referenceImportFixture {
 			t.Fatalf("fixture SQL: %v", err)
 		}
 	}
-	rows, err := admin.QueryContext(t.Context(), `SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'question_bank_reference_grant' ORDER BY tablename`)
+	rows, err := admin.QueryContext(t.Context(), `SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename NOT IN('question_bank_reference_grant','question_bank_handoff','question_bank_handoff_event') ORDER BY tablename`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,6 +96,12 @@ func newReferenceImportFixture(t *testing.T) referenceImportFixture {
 		t.Fatal(err)
 	}
 	exec(string(migration))
+	// 版本读取包含独立交接投影；临时结构也应用正式迁移，不能用空列代替生产表与约束。
+	handoffMigration, err := os.ReadFile(filepath.Join("..", "..", "migrations", "000217_question_bank_handoff.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec(string(handoffMigration))
 	triggerRows, err := admin.QueryContext(t.Context(), `SELECT pg_get_triggerdef(t.oid) FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid WHERE NOT t.tgisinternal AND c.relnamespace='public'::regnamespace AND (
  c.relname IN('question_bank_item_version','question_bank_import','question_reference_manifest','question_reference_manifest_item')
  OR c.relname='file_asset' AND t.tgname='trg_reference_material_object_pin') AND t.tgname NOT IN('trg_bank_version_reference_grant','trg_reference_manifest_origin') ORDER BY c.relname,t.tgname`)

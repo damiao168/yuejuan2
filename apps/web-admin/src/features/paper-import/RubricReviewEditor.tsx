@@ -38,7 +38,7 @@ export function RubricReviewEditor({ value, questionScore, jsonTexts, onJsonText
   const updatePoint = (index: number, patch: Partial<RubricPoint>) => onChange({ ...rubric, points: rubric.points.map((point, i) => i === index ? { ...point, ...patch } : point) });
   return <div className="paper-import-rubric-editor">
     <Space wrap size="small">
-      <span>满分</span><InputNumber min={0} value={rubric.max_score} onChange={(score) => onChange({ ...rubric, max_score: Number(score ?? 0) })} />
+      <span>满分 {questionScore} 分（随题目分值）</span>
       <Select value={rubric.status} options={[{ label: "草稿", value: "draft" }, { label: "锁定", value: "locked" }]} onChange={(status) => onChange({ ...rubric, status })} />
       <strong className={mismatch ? "text-danger" : "text-success"}>采分点合计 {total} / 题目 {questionScore}</strong>
     </Space>

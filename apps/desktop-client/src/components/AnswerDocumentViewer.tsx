@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Alert, Button, Space } from "antd";
+import { PdfAnswerPages } from "./PdfAnswerPages";
 
 export interface AnswerDocument { url: string; contentType: string; filename?: string }
 
@@ -19,7 +20,7 @@ function calculateImageGeometry(size: DocumentSize, viewportSize: DocumentSize, 
 
 export function AnswerDocumentViewer({ document, onReadableChange }: Readonly<{
   document: AnswerDocument;
-  /** 仅浏览器成功解码且具有有效尺寸的图片可报告为可核对；PDF 阅读器载入不提供这项保证。 */
+  /** 图片须实际解码；PDF 须全部逐页渲染且显示成功，原件下载或容器载入不能放行评分。 */
   onReadableChange?: (readable: boolean) => void;
 }>) {
   const [zoom, setZoom] = useState(1);
@@ -51,8 +52,8 @@ export function AnswerDocumentViewer({ document, onReadableChange }: Readonly<{
   const size = imageSize.url === document.url ? imageSize : { width: 0, height: 0 };
   // biome-ignore lint/correctness/useExhaustiveDependencies: 新 URL 即使与旧图片尺寸相同也须先撤回可读回执，防止新原件解码前放行评分。
   useEffect(() => {
-    // 下载到 Blob 不代表图片可显示；损坏、TIFF 和 PDF 均不能作为成功解码的图片放行评分。
-    onReadableChange?.(!pdf && !unsupported && !failed && size.width > 0 && size.height > 0);
+    // PDF 的可读回执由逐页查看器管理；此处只处理单张图片，不能用容器加载代替实际解码。
+    if (!pdf) onReadableChange?.(!unsupported && !failed && size.width > 0 && size.height > 0);
     return () => onReadableChange?.(false);
   }, [document.url, pdf, unsupported, failed, size.width, size.height, onReadableChange]);
   const { imageWidth, imageHeight, canvasWidth, canvasHeight } = calculateImageGeometry(size, viewportSize, rotation, zoom);
@@ -73,8 +74,8 @@ export function AnswerDocumentViewer({ document, onReadableChange }: Readonly<{
         const start = dragging.current; if (!start) return;
         event.currentTarget.scrollLeft = start.left - (event.clientX - start.x); event.currentTarget.scrollTop = start.top - (event.clientY - start.y);
       }} onPointerUp={() => { dragging.current = null; }} onPointerCancel={() => { dragging.current = null; }}>
-        {/* PDF 交给 WebView 的文档阅读器显示分页与局部缩放；不能将 PDF/TIFF 当作 img 假装已预览。 */}
-        {pdf ? <iframe key={`${document.url}:${zoom}`} src={`${document.url}#toolbar=1&zoom=${Math.round(zoom * 100)}`} title={document.filename ?? "答卷 PDF"} onError={() => setFailed(true)} /> :
+        {/* PDF 只展示本机逐页转换的像素；脚本、表单与外链不进入答卷查看器。 */}
+        {pdf ? <PdfAnswerPages url={document.url} zoom={zoom} onReadableChange={onReadableChange} /> :
           <div className="answer-document-canvas" style={{ width: canvasWidth || "100%", height: canvasHeight || undefined }}>
             {/* 画布占据旋转后的宽高；图片绕中心旋转后落在正坐标，四边都可通过滚动到达。 */}
             <img src={document.url} alt={document.filename ?? "答卷图片"} draggable={false} onError={() => setFailed(true)}
@@ -83,7 +84,6 @@ export function AnswerDocumentViewer({ document, onReadableChange }: Readonly<{
                 top: (canvasHeight - imageHeight) / 2, transform: `rotate(${rotation}deg)` }} />
           </div>}
       </div>}
-    {!unsupported && !failed && <p className="muted">图片可拖动查看局部；PDF 可使用阅读器页码、缩放与旋转工具。显示失败时可下载原件。</p>}
-    {pdf && onReadableChange ? <p className="muted">PDF 阅读器载入不能确认内容已显示；请重新读取本题可显示图片或答卷文字，仍缺失时联系负责人补核材料后提交。</p> : null}
+    {!unsupported && !failed && <p className="muted">{pdf ? "向下滚动核对每页答卷，可放大查看。" : "图片可拖动查看局部。"}显示失败时可下载原件。</p>}
   </div>;
 }

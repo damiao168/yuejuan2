@@ -55,7 +55,7 @@ func (s *MemoryStore) Nominate(_ context.Context, tenantID, examID, questionID, 
 	}
 	now := time.Now().UTC()
 	item := GoldPaper{
-		ID: s.id("gold"), ExamID: examID, QuestionID: questionID, SubmissionID: input.SubmissionID,
+		ID: s.id("gold"), ExamID: examID, QuestionID: questionID, QuestionNo: source.QuestionNo, SubmissionID: input.SubmissionID,
 		Status: StatusPendingApproval, SubjectCode: source.SubjectCode, ArchetypeCode: source.ArchetypeCode,
 		RiskTier: source.RiskTier, NominatedBy: actorID, CreatedAt: now, UpdatedAt: now,
 	}

@@ -3,13 +3,16 @@ import { act, StrictMode, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CalibrationDrawer } from "./CalibrationDrawer";
-import type { CalibrationPolicy, CalibrationSession } from "../../api/calibration";
+import type { CalibrationPolicy, CalibrationSession, PutCalibrationPolicyRequest } from "../../api/calibration";
+import type { CalibrationSchoolTemplates } from "./CalibrationSchoolTemplates";
 
 const mocks = vi.hoisted(() => ({
   policy: vi.fn(), qualification: vi.fn(), start: vi.fn(), submit: vi.fn(), savePolicy: vi.fn(), qualified: vi.fn(),
   success: vi.fn(), error: vi.fn(), warning: vi.fn(),
-  form: { setFieldsValue: vi.fn(), setFieldValue: vi.fn(), validateFields: vi.fn() }
+  school: vi.fn(), formChanged: { current: undefined as undefined | (() => void) },
+  form: { setFieldsValue: vi.fn(), setFieldValue: vi.fn(), validateFields: vi.fn(), getFieldsValue: vi.fn() }
 }));
+vi.mock("./CalibrationSchoolTemplates", () => ({ CalibrationSchoolTemplates: (props: Parameters<typeof CalibrationSchoolTemplates>[0]) => { mocks.school(props); return null; } }));
 vi.mock("../../api/calibration", () => ({
   getCalibrationPolicy: mocks.policy, getGraderQualification: mocks.qualification,
   createCalibrationSession: mocks.start, submitCalibrationAttempt: mocks.submit, putCalibrationPolicy: mocks.savePolicy
@@ -26,7 +29,7 @@ vi.mock("antd", () => {
     Drawer: ({ open, children, extra }: { open: boolean; children: ReactNode; extra: ReactNode }) => open ? <div>{extra}{children}</div> : null,
     Button: ({ children, onClick, disabled, loading }: { children: ReactNode; onClick: () => void; disabled?: boolean; loading?: boolean }) => <button onClick={onClick} disabled={disabled || loading}>{children}</button>,
     Alert: ({ message, description }: { message: ReactNode; description: ReactNode }) => <div>{message}{description}</div>,
-    Form: Object.assign(passthrough, { useForm: () => [mocks.form], Item: passthrough }),
+    Form: Object.assign(({ children, onValuesChange }: { children: ReactNode; onValuesChange?: () => void }) => { mocks.formChanged.current = onValuesChange; return <>{children}</>; }, { useForm: () => [mocks.form], Item: passthrough }),
     Input: () => null, Select: () => null, InputNumber: () => null, Space: passthrough, Tag: passthrough, Divider: passthrough,
     Descriptions: Object.assign(passthrough, { Item: passthrough }),
     Empty: Object.assign(({ description }: { description?: ReactNode }) => <div>{description}</div>, { PRESENTED_IMAGE_SIMPLE: null }),
@@ -61,6 +64,8 @@ describe("校准异步结果与盲评边界", () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.policy.mockImplementation((_exam: string, question: string) => Promise.resolve({ policy: policy(question) }));
     mocks.qualification.mockResolvedValue({ qualification: undefined });
+    mocks.form.getFieldsValue.mockReturnValue({ expected_revision: 4 });
+    mocks.formChanged.current = undefined;
     mocks.start.mockResolvedValue({ session: session() });
     host = document.createElement("div"); document.body.appendChild(host); root = createRoot(host);
     props = { open: true, examId: "exam", questionId: "A", graderId: "grader", canManagePolicy: false, onClose: vi.fn(), onQualified: mocks.qualified };
@@ -75,6 +80,14 @@ describe("校准异步结果与盲评边界", () => {
     expect(target, text).toBeDefined(); return target!;
   }
   async function click(text: string) { await act(async () => button(text).click()); }
+  function schoolProps() { return mocks.school.mock.calls[mocks.school.mock.calls.length - 1]![0] as Parameters<typeof CalibrationSchoolTemplates>[0]; }
+  it("新建本题标准继承已知作答类型和满分，没有同题依据时留空", async () => {
+    mocks.policy.mockResolvedValue({ policy: undefined });
+    await render({ canManagePolicy: true, questionDefaults: { questionId: "A", archetypeCode: "numeric_expression", maxScore: 7 } });
+    expect(mocks.form.setFieldsValue).toHaveBeenLastCalledWith(expect.objectContaining({ archetype_code: "numeric_expression", max_score: 7 }));
+    await render({ questionId: "B" });
+    expect(mocks.form.setFieldsValue).toHaveBeenLastCalledWith(expect.objectContaining({ archetype_code: undefined, max_score: undefined }));
+  });
   async function score(value: number) {
     const input = host.querySelector<HTMLInputElement>('[aria-label="校准样本分数"]')!;
     await act(async () => {
@@ -82,6 +95,16 @@ describe("校准异步结果与盲评边界", () => {
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
   }
+
+  it.each([false, true])("未读到标准的说明按管理权限显示，不开放开始试评 canManagePolicy=%s", async (canManagePolicy) => {
+    mocks.policy.mockResolvedValue({ policy: undefined });
+    await render({ canManagePolicy });
+    expect(button("开始本题试评").disabled).toBe(true);
+    expect(host.textContent).toContain(canManagePolicy ? "暂未读到本题通过标准。请核对并保存标准，同时准备已批准的标准卷。" : "暂未读到本题通过标准，当前不能开始试评。请联系管理员核对。");
+    expect(host.textContent).not.toContain("尚未设置本题通过标准");
+    expect(host.textContent).not.toContain("展开上方设置");
+    expect(mocks.start).not.toHaveBeenCalled();
+  });
 
   it("切换题目后迟到的旧资格与政策不能覆盖新题目", async () => {
     // A 的请求先开始，B 已显示后 A 才完成；不能恢复 A 的资格或表单版本。
@@ -95,7 +118,7 @@ describe("校准异步结果与盲评边界", () => {
       oldPolicy.resolve({ policy: policy("A", 99) });
       oldQualification.resolve({ qualification: { status: "qualified", valid_until: "2099-01-01" } });
     });
-    expect(host.textContent).not.toContain("本题试评已通过，已具备阅卷资格");
+    expect(host.textContent).not.toContain("试评已通过");
     expect(mocks.form.setFieldsValue).toHaveBeenLastCalledWith(expect.objectContaining({ expected_revision: 4 }));
   });
 
@@ -126,7 +149,7 @@ describe("校准异步结果与盲评边界", () => {
       qualification: { status: "qualified", valid_until: "2099-01-01" } }));
     expect(mocks.qualified).not.toHaveBeenCalled();
     expect(host.textContent).not.toContain("参考分 8");
-    expect(host.textContent).not.toContain("本题试评已通过，已具备阅卷资格");
+    expect(host.textContent).not.toContain("试评已通过");
   });
 
   it("同一题目的并行刷新只接受最后发起的政策版本", async () => {
@@ -147,6 +170,52 @@ describe("校准异步结果与盲评边界", () => {
     await render({ canManagePolicy: true }); await click("保存通过标准");
     expect(mocks.savePolicy).toHaveBeenCalledWith("exam", "A", values);
     expect(mocks.form.setFieldValue).toHaveBeenCalledWith("expected_revision", 5);
+  });
+
+  it("学校标准带入保留来源，人工调整后清除来源身份并保留目标修订", async () => {
+    await render({ canManagePolicy: true });
+    const props = schoolProps();
+    await act(async () => props.onApply({ ...policy(), expected_revision: 4, school_template_id: "template", school_template_revision: 2 }));
+    expect(mocks.form.setFieldsValue).toHaveBeenLastCalledWith(expect.objectContaining({ expected_revision: 4, school_template_id: "template", school_template_revision: 2 }));
+    expect(schoolProps().hasUnsavedChanges).toBe(true);
+    await act(async () => mocks.formChanged.current?.());
+    expect(mocks.form.setFieldsValue).toHaveBeenLastCalledWith({ school_template_id: undefined, school_template_revision: undefined });
+  });
+
+  it("带入未保存模板后刷新手动策略，保存只使用刷新后的阈值与来源", async () => {
+    // Ant Design以合并方式更新字段；漏掉undefined清空会让隐藏模板身份继续为另一组阈值背书。
+    let fields: Partial<PutCalibrationPolicyRequest> = {};
+    mocks.form.setFieldsValue.mockImplementation((next: Partial<PutCalibrationPolicyRequest>) => { fields = { ...fields, ...next }; });
+    mocks.form.getFieldsValue.mockImplementation(() => fields);
+    mocks.form.validateFields.mockImplementation(async () => fields);
+    mocks.savePolicy.mockResolvedValue({ policy: policy("A", 5) });
+    await render({ canManagePolicy: true });
+    await act(async () => schoolProps().onApply({ ...policy(), expected_revision: 4, maximum_mae: 0, school_template_id: "template", school_template_revision: 1 }));
+    expect(fields.school_template_id).toBe("template");
+    await click("刷新"); await click("保存通过标准");
+    expect(mocks.savePolicy).toHaveBeenCalledWith("exam", "A", expect.objectContaining({ maximum_mae: 1, expected_revision: 4, school_template_id: undefined, school_template_revision: undefined }));
+  });
+
+  it("重新打开已采用学校模板的策略，原样保存保留正式来源", async () => {
+    const saved = { ...policy(), school_template_id: "approved-template", school_template_revision: 1 };
+    let fields: Partial<PutCalibrationPolicyRequest> = {};
+    mocks.form.setFieldsValue.mockImplementation((next: Partial<PutCalibrationPolicyRequest>) => { fields = { ...fields, ...next }; });
+    mocks.form.validateFields.mockImplementation(async () => fields);
+    mocks.policy.mockResolvedValue({ policy: saved }); mocks.savePolicy.mockResolvedValue({ policy: { ...saved, revision: 5 } });
+    await render({ canManagePolicy: true }); await click("保存通过标准");
+    expect(mocks.savePolicy).toHaveBeenCalledWith("exam", "A", expect.objectContaining({ expected_revision: 4, school_template_id: "approved-template", school_template_revision: 1 }));
+  });
+
+  it("模板读取和管理期间不能同时保存本题或开始试评，八项规则默认收在按题调整", async () => {
+    await render({ canManagePolicy: true });
+    const props = schoolProps();
+    const advanced = [...host.querySelectorAll("details")].find(item => item.querySelector("summary")?.textContent === "按题调整通过标准");
+    expect(advanced?.open).toBe(false);
+    await act(async () => props.onWorkingChange(true));
+    expect(button("保存通过标准").disabled).toBe(true); expect(button("开始本题试评").disabled).toBe(true);
+    await click("保存通过标准"); expect(mocks.savePolicy).not.toHaveBeenCalled();
+    await act(async () => props.onWorkingChange(false));
+    expect(button("保存通过标准").disabled).toBe(false);
   });
 
   it("同一份提交不并发发送，当前提交成功后才显示参考结果", async () => {

@@ -202,6 +202,21 @@ export interface OfflineTaskPackage {
   rubricVersion?: string;
   // 旧加密草稿可能没有来源标记；界面不能把旧版可编辑题库快照称为任务冻结细则。
   assessmentSource?: "task_context";
+  // 原件随草稿正文一同加密；身份与摘要在恢复时重新核对，不能把旧任务的图片用作当前评分材料。
+  answerMaterial?: OfflineAnswerMaterial;
+}
+
+export interface OfflineAnswerMaterial {
+  version: 1;
+  taskId: string;
+  taskRevision: number;
+  questionId: string;
+  answerSegmentId: string;
+  contentType: string;
+  filename?: string;
+  byteLength: number;
+  sha256: string;
+  base64: string;
 }
 
 export interface OfflineGradeDraft {

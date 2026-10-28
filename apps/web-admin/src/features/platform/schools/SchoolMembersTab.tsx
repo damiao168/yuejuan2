@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Input, Select, Spin, Tooltip, type TableColumnsType } from "antd";
+import { Alert, Button, Input, Select, Spin, Tooltip, type TableColumnsType } from "antd";
 import { Search } from "lucide-react";
 import { listPlatformSchoolMembers, type SchoolMembersResponse } from "../../../api/platformSchools";
 import type { ManagedUser } from "../../../api/users";
@@ -18,6 +18,7 @@ export function SchoolMembersTab({ tenantId, studentCount, focus }: Readonly<{ t
   const [data, setData] = useState<SchoolMembersResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [query, setQuery] = useState("");
   const [role, setRole] = useState(focus ?? "");
   const [status, setStatus] = useState("");
@@ -28,7 +29,7 @@ export function SchoolMembersTab({ tenantId, studentCount, focus }: Readonly<{ t
     setLoading(true); setError(false);
     void listPlatformSchoolMembers(tenantId).then((result) => { if (active) setData(result); }).catch(() => { if (active) setError(true); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [tenantId]);
+  }, [tenantId, retry]);
 
   useEffect(() => { setRole(focus ?? ""); }, [focus]);
 
@@ -50,7 +51,7 @@ export function SchoolMembersTab({ tenantId, studentCount, focus }: Readonly<{ t
   ];
 
   if (loading) return <div className="platform-school-panel-loading"><Spin /></div>;
-  if (error) return <Alert type="error" message="账号信息加载失败" showIcon />;
+  if (error) return <Alert type="error" message="账号信息加载失败" showIcon action={<Button onClick={() => setRetry(value => value + 1)}>重试当前内容</Button>} />;
   return <div className="platform-school-tab-stack">
     <div className="platform-school-inline-summary">共 {data?.summary.total ?? 0} 个账号 · {numberText(studentCount)} 名学生 · {data?.summary.active ?? 0} 正常 · {data?.summary.invited ?? data?.members.filter((item) => item.status === "invited").length ?? 0} 待激活 · {data?.summary.disabled ?? 0} 已停用 · {data?.summary.admins ?? 0} 管理员</div>
     <div className="platform-school-member-filters">

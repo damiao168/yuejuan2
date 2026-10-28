@@ -1,4 +1,4 @@
-import { Alert, Input, Modal, Select, Tabs } from "antd";
+import { Input, Modal, Select, Tabs } from "antd";
 import type { PaperImportRole } from "../../api/papers";
 import { MathMarkdown } from "../../components/MathMarkdown";
 import { MAX_PASTED_MATERIAL_CHARS } from "./materials";
@@ -9,17 +9,18 @@ export function PaperImportTextModal({ open, parsing, text, role, tab, onTextCha
   onTextChange: (text: string) => void; onRoleChange: (role: PaperImportRole) => void;
   onTabChange: (tab: string) => void; onSubmit: () => void; onCancel: () => void;
 }>) {
-  return <Modal title="粘贴 Markdown 资料" open={open} width={760} okText="添加并识别" cancelText="取消"
+  return <Modal title="粘贴试卷或答案" open={open} width={760} okText="添加并识别" cancelText="取消"
     confirmLoading={parsing} okButtonProps={{ disabled: text.trim().length < 20 || text.length > MAX_PASTED_MATERIAL_CHARS }}
     onOk={onSubmit} onCancel={onCancel}>
     <div className="paper-text-import">
       <div className="paper-text-import-toolbar">
         <label htmlFor="paper-text-import-role">资料类型</label>
         <Select<PaperImportRole> id="paper-text-import-role" value={role} options={importRoleOptions} onChange={onRoleChange} />
-        <span>行内公式使用 <code>$x^2$</code>，独立公式使用 <code>$$...$$</code>；也兼容 <code>\(...\)</code> 与 <code>\[...\]</code>。</span>
       </div>
-      <Alert type="info" showIcon message="结构清晰的 Markdown 在本地解析"
-        description="题号、【答案】和【解析/详解】明确时不会调用大模型。只有结构无法可靠确定时，才发送本次新增资料的相关原文片段进入模型解析；若本次上传的是图片，则发送本次新增图片页面。不会重发已识别的历史资料。" />
+      <p>粘贴题目、答案或解析，至少20个字符；建议保留题号。</p>
+      {/* 数据发送范围是输入前的必要告知；只有公式格式帮助可以折叠。 */}
+      <p>结构清晰的文本在本地解析；无法可靠确定结构时，相关新增原文会送入模型解析。不会重发已识别的历史资料。</p>
+      <details><summary>公式格式帮助</summary><p>行内公式用 <code>$x^2$</code>，独立公式用 <code>$$...$$</code>；也支持 <code>\(...\)</code> 与 <code>\[...\]</code>。</p></details>
       <Tabs activeKey={tab} onChange={onTabChange} items={[
         { key: "edit", label: "编辑", children: <Input.TextArea autoFocus value={text}
           onChange={(event) => onTextChange(event.target.value)}

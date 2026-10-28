@@ -1,0 +1,879 @@
+{
+  "meta": {
+    "date": "2026-10-28",
+    "reviewer": "exam_preparation_audit",
+    "plan": "reports/microcopy-plan-2026-10-28/exam-preparation.json",
+    "scope": "MC-E01–MC-E26；只改辅助文案、重复提示与对应显示/折叠，未改后端、提交、冻结或恢复逻辑。",
+    "counts": {
+      "items": 26,
+      "implemented": 26,
+      "retained": 0,
+      "deferred": 0,
+      "sourceFiles": 15,
+      "testFilesModified": 6,
+      "evidence": 29
+    },
+    "verification": "12个相关测试文件共312个不同测试场景通过，含更新断言后的分组重跑；根任务统一执行typecheck/lint/build。",
+    "runtimeLimit": "本分区未执行浏览器视觉回归，未宣称完成真实账号、扫描设备或全部权限分支验收。"
+  },
+  "items": [
+    {
+      "id": "MC-E01",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ],
+      "summary": "删除创建页两处复述标签的导语；保留示例、必填、范围与错误。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 183,
+          "text": "1. 考试名称与基本信息"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.batch37.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E02",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ],
+      "summary": "创建方式按真实先后顺序说明创建、上传和方案带入范围。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 22,
+          "text": "创建后上传试卷，识别题目与分值。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.batch37.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E03",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ],
+      "summary": "上传预告集中第4节一次；删除逐科与页脚重复，保留学科和满分。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 228,
+          "text": "创建后按学科上传试卷、答案或评分资料。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.batch37.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E04",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ],
+      "summary": "压缩展开后的组织方式说明，保留逐题策略冻结与教师确认。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 245,
+          "text": "这里设置阅卷组织方式；各题判分策略在准备确认时冻结。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.batch37.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E05",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ],
+      "summary": "方案抽屉保留科目、满分、时长、题目结构及选择后可调整。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 261,
+          "text": "带入科目、满分、时长和已有题目结构，选择后可调整。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.batch37.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E06",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/pages/ExamPreparationPage.tsx"
+      ],
+      "summary": "标题下按冻结前后只显示一条名单说明，权限和同步/保存禁用不变。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 136,
+          "text": "名单已冻结，不能再改范围或同步。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/pages/ExamReadinessFreeze.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.test.ts",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E07",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/pages/ExamPreparationPage.tsx"
+      ],
+      "summary": "准备标题下按匹配确认、导入、可编辑、只读记录不匹配显示单一状态，保留错误和下一步按钮。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 189,
+          "text": "const stateNotice = confirmed"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/pages/ExamReadinessFreeze.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.test.ts",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E08",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/pages/ExamPreparationPage.tsx"
+      ],
+      "summary": "最终确认保留全部冻结对象、在读学籍和不可直接修改；删除导航教程。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 383,
+          "text": "确认后将冻结本场准备"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/pages/ExamReadinessFreeze.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.test.ts",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E09",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/pages/ExamPreparationPage.tsx"
+      ],
+      "summary": "仅advisories显示“仅提醒，不影响准备确认”，不修改阻断检查。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 352,
+          "text": "仅提醒，不影响准备确认"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/pages/ExamReadinessFreeze.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.test.ts",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E10",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx",
+        "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx"
+      ],
+      "summary": "文本输入前常显模型发送范围，仅公式帮助折叠；文件上传入口独立常显新增原文/图片发送范围。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx",
+          "line": 22,
+          "text": "结构清晰的文本在本地解析"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+          "line": 59,
+          "text": "图片资料发送本次新增图片页面"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E11",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx"
+      ],
+      "summary": "上传任务提示要求核对匹配结果；格式列明确docx和多文件，不改accept。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+          "line": 56,
+          "text": "添加试题、答案、解析或评分标准，识别后请核对匹配结果。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E12",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx"
+      ],
+      "summary": "连接异常明确下方是上次结果，保留重查原任务动作。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+          "line": 72,
+          "text": "结果状态未更新"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E13",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx"
+      ],
+      "summary": "按真实资料状态压缩详情，保留结构、完整试卷、正式配置和资料登记区别。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx",
+          "line": 45,
+          "text": "资料已登记；答案、分值和评分配置以"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E14",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx"
+      ],
+      "summary": "结构摘要和最终警告分别说明当前任务与完整性风险，保留计数和阻断。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+          "line": 168,
+          "text": "部分页面、答案或解析不能作为减少题目的依据。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperStructurePanel.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E15",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+        "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx"
+      ],
+      "summary": "两个业务节点分别保留完整试卷结构/题目范围勾选，不改校验和代次重置。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+          "line": 188,
+          "text": "我已核对完整试卷，以上题目结构与实际试卷一致。"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx",
+          "line": 196,
+          "text": "我已核对完整试卷，题目范围与实际试卷一致。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperStructurePanel.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E16",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx"
+      ],
+      "summary": "首次答题卡上传只展示任务与格式；来源与复用限制放入原生可展开帮助。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx",
+          "line": 71,
+          "text": "答题卡来源与复用"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.interaction.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/AnswerSheetTemplatePage.uploadBatch.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E17",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx"
+      ],
+      "summary": "页序处理中去掉模型术语，不改条件和进度。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx",
+          "line": 35,
+          "text": "正在识别页序…"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.interaction.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/AnswerSheetTemplatePage.uploadBatch.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E18",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx"
+      ],
+      "summary": "模板库说明和收录成功反馈压缩，保留本场还需确认的边界。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx",
+          "line": 45,
+          "text": "已收录到学校库；本场仍需"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.interaction.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/AnswerSheetTemplatePage.uploadBatch.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E19",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx"
+      ],
+      "summary": "收录确认保留空白来源、无个人信息、逐页完整区域两个勾选；重复信息Alert改为辅助文本。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx",
+          "line": 51,
+          "text": "底图为空白答题卡，不含学生姓名、学号、条码、手写答案等个人信息。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.interaction.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/AnswerSheetTemplatePage.uploadBatch.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E20",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateBindingView.tsx",
+        "apps/web-admin/src/features/answer-sheet-template/view/templateViewRules.ts"
+      ],
+      "summary": "草稿锁定、未本场使用、自动识别待确认分别说明，不改usageConfirmed。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateBindingView.tsx",
+          "line": 31,
+          "text": "确认后保存并锁定当前版本；修改区域需另建版本。"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/templateViewRules.ts",
+          "line": 71,
+          "text": "已自动识别为第"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.interaction.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/AnswerSheetTemplatePage.uploadBatch.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E21",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateRegionSettingsView.tsx"
+      ],
+      "summary": "压缩坐标帮助，保留整页/题区参照系、百分比和一个填涂点，保留原高级折叠。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateRegionSettingsView.tsx",
+          "line": 13,
+          "text": "以整页为参照，单位为百分比"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.interaction.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/AnswerSheetTemplatePage.uploadBatch.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E22",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/view/OMRCalibrationView.tsx"
+      ],
+      "summary": "压缩OMR模式与校准状态文案，保留98%和其他自动确认条件及盲标不可改。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/OMRCalibrationView.tsx",
+          "line": 85,
+          "text": "校准已生效：识别把握≥98%且满足自动确认条件"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.interaction.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/AnswerSheetTemplatePage.uploadBatch.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E23",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/view/StudentPrintingView.tsx"
+      ],
+      "summary": "打印和补打分别保留身份条码、每人每页唯一、签发范围、旧卡作废及核验后果。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/StudentPrintingView.tsx",
+          "line": 107,
+          "text": "按班级生成带学生身份条码的PDF，不打印姓名或学号。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.interaction.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/AnswerSheetTemplatePage.uploadBatch.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E24",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/capture/CaptureBatchPanels.tsx"
+      ],
+      "summary": "文件选择前常显每人页数和完整答卷要求；详细规则使用原生details，保留1–20页、顺序和不能跨选择补页。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureBatchPanels.tsx",
+          "line": 250,
+          "text": "查看页序与分组规则"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/pages/CaptureBatchPage.batch16.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/pages/SubmissionCapturePage.batch9.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E25",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx"
+      ],
+      "summary": "按取消整批、替代整组、排除整组、名册调整分支说明准确后果，保留登记/处理成功时点和有评分不可移除。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+          "line": 201,
+          "text": "请选择每人页数，并一次上传原选择对应的全部完整答卷。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/pages/CaptureBatchPage.batch16.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    },
+    {
+      "id": "MC-E26",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx"
+      ],
+      "summary": "普通说明去重；最终确认保留实时人数、封存和普通导入/补传不同阶段后果。",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+          "line": 79,
+          "text": "结束时再次核对学生与材料，并封存已处理批次。"
+        }
+      ],
+      "tests": [
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.test.tsx",
+          "status": "passed"
+        },
+        {
+          "file": "apps/web-admin/src/pages/CaptureBatchPage.batch16.test.tsx",
+          "status": "passed"
+        }
+      ],
+      "reason": "已实施辅助文案或必要呈现条件；原有业务动作、权限、校验及失败恢复保持。"
+    }
+  ],
+  "files": [
+    {
+      "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "添加准确中文注释：只读/导入提示须以匹配的确认记录为准。"
+    },
+    {
+      "file": "apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "添加准确中文注释：数据发送范围常显，只有公式帮助可折叠。"
+    },
+    {
+      "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateBindingView.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/templateViewRules.ts",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateRegionSettingsView.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/OMRCalibrationView.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/StudentPrintingView.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/capture/CaptureBatchPanels.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+      "status": "modified",
+      "reviewScope": "核对当前受影响文案、条件与相邻动作；未把片段审读计为全文件覆盖。",
+      "note": "保留附近准确既有注释；未重格式全文件。"
+    },
+    {
+      "file": "apps/web-admin/src/pages/ExamReadinessFreeze.test.tsx",
+      "status": "modified",
+      "reviewScope": "更新真实含义断言并验证必要状态或失败边界。"
+    },
+    {
+      "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.test.tsx",
+      "status": "modified",
+      "reviewScope": "更新真实含义断言并验证必要状态或失败边界。"
+    },
+    {
+      "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.test.tsx",
+      "status": "modified",
+      "reviewScope": "更新真实含义断言并验证必要状态或失败边界。"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+      "status": "modified",
+      "reviewScope": "更新真实含义断言并验证必要状态或失败边界。"
+    },
+    {
+      "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.test.tsx",
+      "status": "modified",
+      "reviewScope": "更新真实含义断言并验证必要状态或失败边界。"
+    },
+    {
+      "file": "apps/web-admin/src/pages/CaptureBatchPage.batch16.test.tsx",
+      "status": "modified",
+      "reviewScope": "更新真实含义断言并验证必要状态或失败边界。"
+    }
+  ],
+  "tests": {
+    "status": "passed",
+    "uniqueFiles": [
+      "apps/web-admin/src/features/exams/create/CreateExamComposer.batch37.test.tsx",
+      "apps/web-admin/src/pages/ExamReadinessFreeze.test.tsx",
+      "apps/web-admin/src/features/paper-import/PaperImportWorkspace.test.tsx",
+      "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.test.tsx",
+      "apps/web-admin/src/features/paper-import/PaperStructurePanel.test.tsx",
+      "apps/web-admin/src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+      "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.interaction.test.tsx",
+      "apps/web-admin/src/features/capture/CaptureCollectionPanel.test.tsx",
+      "apps/web-admin/src/pages/CaptureBatchPage.batch16.test.tsx",
+      "apps/web-admin/src/pages/SubmissionCapturePage.batch9.test.tsx",
+      "apps/web-admin/src/features/answer-sheet-template/AnswerSheetTemplatePage.uploadBatch.test.tsx",
+      "apps/web-admin/src/pages/ExamPreparationPage.test.ts"
+    ],
+    "uniqueScenarioCount": 312,
+    "runs": [
+      {
+        "command": "node ../../node_modules/vitest/vitest.mjs run --maxWorkers=2 [上述12个相关文件]",
+        "result": "11文件通过；答题卡页2处旧文案断言失败，随后按新语义修订并重跑。",
+        "tests": 307
+      },
+      {
+        "command": "node ../../node_modules/vitest/vitest.mjs run --maxWorkers=2 src/pages/ExamReadinessFreeze.test.tsx src/features/answer-sheet-template/answerSheetTemplatePage.batch7.test.tsx",
+        "result": "2文件、129测试全部通过，覆盖修订的断言及新增名单状态/首次上传折叠场景。",
+        "tests": 129
+      }
+    ],
+    "static": [
+      {
+        "check": "git diff --check（限定本分区源码与测试）",
+        "status": "passed"
+      },
+      {
+        "check": "29处最终源码锚点逐项匹配",
+        "status": "passed"
+      }
+    ],
+    "notes": [
+      "首次pnpm --filter因仓库输出目录存在同名包且找不到vitest而未形成有效测试；改用apps/web-admin目录下直接node调用根vitest，不再递归工作区。",
+      "只新增显示/状态边界验收，不为纯措辞增加镜像实现测试；原幂等、冻结版本、权限变化和失败恢复测试均保留。"
+    ]
+  },
+  "remaining": [],
+  "boundaries": [
+    "未改变任何后端契约。",
+    "未改变准备确认、资料登记、答题卡锁定/绑定、模板收录、条码签发、批次上传、排除或结束导入的校验与请求。",
+    "原生details提供键盘可操作的披露；模型发送范围、冻结/替换后果和最终确认仍在动作前可见。"
+  ]
+}

@@ -71,7 +71,7 @@ vi.mock("../features/score-management/components/ScoreActionsPanel", () => ({
   ScoreActionsPanel: (props: ActionProps) => {
     mocks.actions(props);
     return <aside data-testid="actions-panel">
-      <input aria-label="确认原因" value={props.confirmReason} onChange={(event) => props.setConfirmReason(event.target.value)} />
+      <input id="score-confirm-reason" aria-label="确认原因" value={props.confirmReason} onChange={(event) => props.setConfirmReason(event.target.value)} />
       <input aria-label="发布原因" value={props.publishReason} onChange={(event) => props.setPublishReason(event.target.value)} />
       <button onClick={props.publish} disabled={!props.canWrite}>公开并锁定基础成绩</button>
     </aside>;
@@ -89,6 +89,7 @@ vi.mock("../features/score-management/components/QualityPanel", () => ({
     })}</div>;
   }
 }));
+vi.mock("../features/score-management/components/ScorePublicationChecklist", () => ({ ScorePublicationChecklist: () => <section aria-label="发布待办" /> }));
 vi.mock("../components/ResponsiveTable", () => ({
   ResponsiveTable: (props: TableProps) => {
     mocks.tables(props);
@@ -199,12 +200,24 @@ describe("评分管理页第53批展示拆分", () => {
   };
 
   describe("展示接线", () => {
+    it("未确认成绩的处理动作聚焦确认原因，不展开原查询入口", async () => {
+      data = { ...data, quality: { stage: "publish", can_publish: false, quality: { passed: false, issues: [{ code: "grades_not_confirmed", message: "待确认", count: 1, blocking: true }] } } };
+      await render({ onNavigate: vi.fn() });
+      const originalEntry = document.createElement("details"); originalEntry.className = "score-advanced-details"; host.append(originalEntry);
+      const input = host.querySelector<HTMLInputElement>("#score-confirm-reason")!;
+      const scroll = vi.fn(); Object.defineProperty(input, "scrollIntoView", { value: scroll });
+      await click("定位成绩确认");
+      expect(document.activeElement).toBe(input);
+      expect(scroll).toHaveBeenCalledOnce();
+      expect(originalEntry.open).toBe(false);
+    });
     it("身份降级和读取失败可同时提示，教师模式仍省略管理端发布区域", async () => {
       data = { ...data, error: "成绩重读失败", identities: { ...data.identities, error: "身份读取不完整" } };
       await render();
       const alerts = [...host.querySelectorAll('[role="alert"]')];
       expect(alerts.map((item) => item.textContent)).toEqual(["学生身份信息读取不完整身份读取不完整", "成绩重读失败重试读取"]);
-      expect(host.querySelector(".score-publication-status")).not.toBeNull();
+      expect(host.querySelectorAll('[aria-label="成绩发布任务"]')).toHaveLength(1);
+      expect(host.querySelector(".score-publication-status")).toBeNull();
       expect(host.querySelector('[data-testid="release-workspace"]')).not.toBeNull();
       await click("重试读取");
       expect(mocks.refresh).toHaveBeenCalledTimes(1);
@@ -227,9 +240,9 @@ describe("评分管理页第53批展示拆分", () => {
       await render();
       expect(table("key").dataSource).toBe(data.roster!.entries);
       expect(table("id").dataSource).toBe(data.grades);
-      expect(table("id").pagination).toEqual({ pageSize: 8, showSizeChanger: false });
+      expect(table("id").pagination).toBe(false);
       expect(latest(mocks.quality.mock.calls).quality).toBe(data.quality);
-      expect(host.textContent?.replace(/\s+/g, "")).toContain("已加载1/1条（全场2条）");
+      expect(host.textContent?.replace(/\s+/g, "")).toContain("当前显示1条·共1条（全场2条）");
       expect(host.querySelector(".load-more-row button")?.getAttribute("data-loading")).toBe("true");
       await click("加载更多成绩");
       expect(mocks.loadMoreGrades).toHaveBeenCalledTimes(1);
@@ -311,6 +324,14 @@ describe("评分管理页第53批展示拆分", () => {
   });
 
   describe("基础成绩发布确认", () => {
+    it("导出直接请求本场全部成绩，保留服务端导出流程且不再弹固定确认", async () => {
+      mocks.export.mockReturnValue(new Promise(() => undefined));
+      await render();
+      await act(async () => actions().exportGrades());
+      expect(mocks.export).toHaveBeenCalledWith("exam /a");
+      expect(mocks.modal).not.toHaveBeenCalled();
+      expect(mocks.run).toHaveBeenCalledWith("export", expect.any(Function), "成绩已导出");
+    });
     it("窗口打开后重渲染仍使用原考试和原因，确认后先完成二次校验再重读考试", async () => {
       await render();
       await act(async () => actions().setPublishReason(" 原发布原因 "));

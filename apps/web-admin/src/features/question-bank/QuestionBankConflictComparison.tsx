@@ -100,7 +100,7 @@ export function QuestionBankConflictComparison({ original, latest, localContent,
     { label: "解析", local: local("solution", originalScoring.solution?.raw_text), latest: latest.scoring.solution?.raw_text },
     { label: "分步解析", local: parseDraft(local("steps", originalScoring.solution?.steps ?? [])), latest: latest.scoring.solution?.steps ?? [] },
     { label: "使用评分细则", local: rubricEnabled, latest: Boolean(latest.scoring.rubric) },
-    { label: "评分细则满分（分）", local: rubricEnabled ? original?.default_score : undefined, latest: latest.scoring.rubric?.max_score },
+    { label: "评分细则满分（分）", local: rubricEnabled ? content("default_score") : undefined, latest: latest.scoring.rubric?.max_score },
     ...Array.from({ length: Math.max(points.length, latestPoints.length) }, (_, index) => ({ label: `评分点 ${index + 1}`, local: points[index] ? { description: points[index].description, score: points[index].score, required: points[index].required } : undefined, latest: latestPoints[index] ? { description: latestPoints[index].description, score: latestPoints[index].score, required: latestPoints[index].required } : undefined })),
     ...Array.from({ length: Math.max(points.length, latestPoints.length) }, (_, index) => ({ label: `评分点 ${index + 1} · 核对条件`, local: points[index]?.conditions, latest: latestPoints[index]?.conditions })),
     { label: "扣分规则", local: rubricEnabled ? parseDraft(local("deductions", originalScoring.rubric?.deductions ?? [])) : [], latest: latest.scoring.rubric?.deductions ?? [] },
@@ -112,14 +112,19 @@ export function QuestionBankConflictComparison({ original, latest, localContent,
   const attachmentNames = (value: unknown) => Array.isArray(value) ? value.map(asset => typeof asset === "string" ? asset : record(asset).name || "附件名称未确认") : value;
   // 正常模板引用是 ID；历史草稿若保留了对象，展示完整字段供人工核对，不能隐成 [object Object]。
   const display = (row: ComparisonRow, value: unknown) => row.templateReference ? <><span>{value ? "已选用评分模板；请核对对应评分点" : "未选用评分模板"}</span>{value ? <details><summary>查看模板版本记录</summary><code>{typeof value === "string" ? value : JSON.stringify(value, null, 2)}</code></details> : null}</> : <ComparisonValue value={row.attachments ? attachmentNames(value) : value} />;
+  // 表单把缺失答案/解析读为空字符串，保存又转为空值；只统一这些可空标量，不能吞掉真正清空或结构化差异。
+  const comparable = (row: ComparisonRow, value: unknown) => ["标准答案", "解析", "允许绝对误差", "允许相对误差（比例）"].includes(row.label) && (value == null || value === "") ? undefined : value;
+  const changed = (row: ComparisonRow) => fingerprint(comparable(row, row.local)) !== fingerprint(comparable(row, row.latest));
+  const differentRows = rows.filter(changed);
+  const sameRows = rows.filter(row => !changed(row));
+  const renderRow = (row: ComparisonRow, isChanged: boolean) => <section key={row.label} className="question-bank-conflict-row" data-changed={isChanged} aria-label={`${row.label} · ${isChanged ? "有差异" : "相同"}`}>
+    <h4>{row.label}</h4>
+    <div className="form-grid"><div aria-label={`本地${row.label}`}>{display(row, row.local)}</div><div aria-label={`最新${row.label}`}>{display(row, row.latest)}</div></div>
+  </section>;
   return <div className="question-bank-conflict-comparison">
+    <p role="status">{differentRows.length}项不同</p>
     <div className="form-grid"><h3>本地修改 · 原修订 {original?.revision ?? "待核对"}</h3><h3>最新版本 · 修订 {latest.revision}</h3></div>
-    {rows.map(row => {
-      const changed = fingerprint(row.local) !== fingerprint(row.latest);
-      return <section key={row.label} data-changed={changed} aria-label={`${row.label}${changed ? " · 有差异" : " · 相同"}`}>
-        <h4>{row.label} <small>{changed ? "有差异，请核对" : "相同"}</small></h4>
-        <div className="form-grid"><div aria-label={`本地${row.label}`}><small>本地修改</small>{display(row, row.local)}</div><div aria-label={`最新${row.label}`}><small>最新版本</small>{display(row, row.latest)}</div></div>
-      </section>;
-    })}
+    {differentRows.map(row => renderRow(row, true))}
+    {sameRows.length ? <details><summary>查看{sameRows.length}项相同内容</summary>{sameRows.map(row => renderRow(row, false))}</details> : null}
   </div>;
 }

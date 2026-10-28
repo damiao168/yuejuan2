@@ -4,6 +4,7 @@ import { getBusinessCommandSession } from "../../api/businessCommand";
 import { createReferenceCrop, getReferenceCropImage, getReferenceMaterials, getReferenceSourceImage, getReferenceSources, resumeReferenceCommand, saveReferenceMaterials, withdrawReferenceMaterials,
   type ReferenceBox, type ReferenceItem, type ReferenceMaterials, type ReferenceRole, type ReferenceSource } from "../../api/referenceMaterials";
 import "./reference-materials.css";
+import type { RegisterQuestionSaveParticipant } from "./questionSaveParticipant";
 
 export function validReferenceSelection(items: readonly Pick<ReferenceItem, "crop_ref" | "role">[]): boolean {
   return items.length > 0 && items.length <= 4 && items.every(item => item.crop_ref && (item.role === "question_diagram" || item.role === "reference_solution")) && new Set(items.map(item => item.crop_ref)).size === items.length
@@ -53,18 +54,20 @@ function ReferenceCropSurface({ source,examId,identity,box,onBox,onReadyChange,o
   </div>;
 }
 
-type ReferenceMaterialEditorProps = Readonly<{ examId: string; questionId: string; editable: boolean; onChanged?: () => void }>;
+type ReferenceMaterialEditorProps = Readonly<{ examId: string; questionId: string; editable: boolean; onChanged?: () => void; registerSaveParticipant?: RegisterQuestionSaveParticipant; externalSaving?: boolean }>;
 export function ReferenceMaterialEditor(props: ReferenceMaterialEditorProps) {
   const session=useReferenceSession();
   // 同账号重新登录、切题或进入只读状态都重建草稿；旧实例只能保留原命令记录。
   return <ReferenceMaterialEditorContent key={`${session.scope}:${session.generation}:${props.examId}:${props.questionId}:${props.editable}`} {...props}/>;
 }
-function ReferenceMaterialEditorContent({ examId, questionId, editable, onChanged }: ReferenceMaterialEditorProps) {
+function ReferenceMaterialEditorContent({ examId, questionId, editable, onChanged, registerSaveParticipant, externalSaving = false }: ReferenceMaterialEditorProps) {
   const [open, setOpen] = useState(false); const [materials, setMaterials] = useState<ReferenceMaterials | null>(null);
   const [items, setItems] = useState<ReferenceItem[]>([]); const [sources, setSources] = useState<ReferenceSource[]>([]);
   const [source, setSource] = useState<ReferenceSource | null>(null); const [box, setBox] = useState<ReferenceBox>({ x: 0, y: 0, width: 1, height: 1 });
   const [role, setRole] = useState<ReferenceRole>("question_diagram"); const [crop, setCrop] = useState<ReferenceItem | null>(null);
   const [sourceReady, setSourceReady] = useState(false); const [cropReady, setCropReady] = useState(false); const [dragging, setDragging] = useState(false);
+  const [selectionChanged, setSelectionChanged] = useState(false);
+  const attemptedCrop = useRef("");
   const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const [pending, setPending] = useState(""); const [reason, setReason] = useState("");
   const owner = `${examId}:${questionId}`; const current = useRef(owner); current.current = owner;
   const session = getBusinessCommandSession(); const key = `reference-material-command:${session.scope}:${owner}`;
@@ -81,19 +84,19 @@ function ReferenceMaterialEditorContent({ examId, questionId, editable, onChange
     if (!active() || version !== epoch.current) return;
     setMaterials(response.materials); setItems(orderReferenceItems(response.materials.items));
   };
-  const show = async () => { if (lock.current) return; lock.current = true; setOpen(true); setBusy(true); setError(""); const version = epoch.current;
+  const show = async () => { if (lock.current || externalSaving) return; if (listDirty || selectionDirty) { setOpen(true); return; } lock.current = true; setOpen(true); setBusy(true); setError(""); const version = epoch.current;
     try { const [response, candidates] = await Promise.all([getReferenceMaterials(examId, questionId), editable ? getReferenceSources(examId) : Promise.resolve({ sources: [] })]);
       if (!active() || version !== epoch.current) return; setMaterials(response.materials); setItems(orderReferenceItems(response.materials.items)); setSources(candidates.sources);
     } catch { if (active() && version === epoch.current) setError("材料读取失败，请重新打开核对。"); } finally { if (active() && version === epoch.current) { lock.current = false; setBusy(false); } }
   };
   const finish = (id: string) => { if (!active()) return; let next = ""; try { const stored = sessionStorage.getItem(key); if (stored === id) sessionStorage.removeItem(key); else next = stored ?? ""; } catch { /* 远端结果已接受；本地清理失败不撤销成功。 */ } setPending(next); onChanged?.(); };
   const execute = async (work: (id: string) => Promise<void>) => {
-    if (!active() || lock.current || pending || !session.scope) return; const id = crypto.randomUUID(); const version = epoch.current;
-    try { const existing = sessionStorage.getItem(key); if (existing) { setPending(existing); setError("本题已有待确认操作，请先核对原操作结果。"); return; } sessionStorage.setItem(key, id); } catch { setError("无法保存待确认操作，请检查浏览器存储后重试。"); return; }
+    if (!active() || lock.current || pending || !session.scope) return false; const id = crypto.randomUUID(); const version = epoch.current;
+    try { const existing = sessionStorage.getItem(key); if (existing) { setPending(existing); setError("本题已有待确认操作，请先核对原操作结果。"); return false; } sessionStorage.setItem(key, id); } catch { setError("无法保存待确认操作，请检查浏览器存储后重试。"); return false; }
     setPending(id); setBusy(true); setError(""); lock.current = true;
     // 本次闭包冻结输入；浏览器只保存命令 ID，刷新后由服务端恢复原裁图或封闭旧命令。
-    try { await work(id); if (active() && version === epoch.current) finish(id); }
-    catch { if (active() && version === epoch.current) setError("操作结果尚未确认，请核对原操作结果。不要重复创建操作。"); }
+    try { await work(id); if (active() && version === epoch.current) { finish(id); return true; } return false; }
+    catch { if (active() && version === epoch.current) setError("操作结果尚未确认，请核对原操作结果。不要重复创建操作。"); return false; }
     finally { if (active() && version === epoch.current) { lock.current = false; setBusy(false); } }
   };
   // 恢复可能补完裁图或封闭旧命令，属于写入；只读或会话未确定时不能继续原操作。
@@ -122,15 +125,47 @@ function ReferenceMaterialEditorContent({ examId, questionId, editable, onChange
     } catch { if (active() && version === epoch.current) setError("原操作核对失败，请稍后再次核对。"); }
     finally { if (active() && version === epoch.current) { lock.current = false; setBusy(false); } }
   };
-  const canEdit = editable && materials && !materials.frozen && !pending && !busy;
-  const chooseSource = (ref: string) => { const next = sources.find(item => item.page_ref === ref) ?? null; setSource(next); setSourceReady(false); setDragging(false); setCrop(null); if (next) setBox({ x: 0, y: 0, width: next.width, height: next.height }); };
+  const canEdit = editable && materials && !materials.frozen && !pending && !busy && !externalSaving;
+  const chooseSource = (ref: string) => { const next = sources.find(item => item.page_ref === ref) ?? null; setSource(next); setSourceReady(false); setDragging(false); setCrop(null); setSelectionChanged(false); attemptedCrop.current = ""; if (next) setBox({ x: 0, y: 0, width: next.width, height: next.height }); };
   const createCrop = () => { if (!canEdit || !source || !sourceReady || dragging || !validReferenceBox(box, source)) return; const input = { page_ref: source.page_ref, page_sha256: source.sha256, page_width: source.width, page_height: source.height, pixel_bbox: { ...box } };
+    attemptedCrop.current = JSON.stringify([source.page_ref, box]);
     setCrop(null); setCropReady(false); void execute(async id => { const result = await createReferenceCrop(examId, questionId, { ...input, command_id: id }); if (active()) setCrop(result.crop); }); };
-  const save = (mode: "reference_images" | "text_only") => { if (!canEdit || !materials || (mode === "reference_images" && !validReferenceSelection(items))) return;
-    const input = { expected_revision: materials.revision, mode, items: mode === "text_only" ? [] : orderReferenceItems(items).map(({ crop_ref, role, ordinal }) => ({ crop_ref, role, ordinal })) };
-    void execute(async id => { const result = await saveReferenceMaterials(examId, questionId, { ...input, command_id: id }); if (active()) { setMaterials(result.materials); setItems(orderReferenceItems(result.materials.items)); } }); };
+  const cropAction = useRef(createCrop); cropAction.current = createCrop;
+  const selectionKey = JSON.stringify([source?.page_ref, box]);
+  useEffect(() => {
+    if (!open || !canEdit || !sourceReady || dragging || crop || !selectionChanged || !source || !validReferenceBox(box, source) || attemptedCrop.current === selectionKey) return;
+    // 拖框结束后才生成预览；相同选区失败时保留原命令，不能由重绘自动新建裁图任务。
+    const timer = window.setTimeout(() => { attemptedCrop.current = selectionKey; cropAction.current(); }, 250);
+    return () => window.clearTimeout(timer);
+  }, [open, canEdit, sourceReady, dragging, crop, selectionChanged, source, box, selectionKey]);
+  const save = (mode: "reference_images" | "text_only", selection = items, includesCrop = false) => { if (!canEdit || !materials || (mode === "reference_images" && !validReferenceSelection(selection))) return;
+    const input = { expected_revision: materials.revision, mode, items: mode === "text_only" ? [] : orderReferenceItems(selection).map(({ crop_ref, role, ordinal }) => ({ crop_ref, role, ordinal })) };
+    // 添加与保存共用一份冻结清单；写入未确认前保留实际裁图，不能先移除预览再让教师猜是否已添加。
+    void execute(async id => { const result = await saveReferenceMaterials(examId, questionId, { ...input, command_id: id }); if (active()) { setMaterials(result.materials); setItems(orderReferenceItems(result.materials.items)); if (includesCrop) { setCrop(null); setSource(null); } } }); };
+  const selectionDirty = Boolean(crop || dragging || source && (box.x !== 0 || box.y !== 0 || box.width !== source.width || box.height !== source.height));
+  const listDirty = Boolean(materials && JSON.stringify(items) !== JSON.stringify(orderReferenceItems(materials.items)));
+  const participant = useRef({ prepare: async (): Promise<() => Promise<void>> => { throw new Error("参考图尚未就绪"); }, discard: () => {} });
+  participant.current = {
+    prepare: async () => {
+      if (selectionDirty) throw new Error("参考图尚有未核对的选区或裁图，请先查看实际图片并添加，或放弃该选区。");
+      if (!editable || !materials || materials.frozen || lock.current || pending || !validReferenceSelection(items)) throw new Error("参考图清单暂不可保存，请先核对本区状态。");
+      const version = epoch.current;
+      const input = { expected_revision: materials.revision, mode: "reference_images" as const, items: orderReferenceItems(items).map(({ crop_ref, role, ordinal }) => ({ crop_ref, role, ordinal })) };
+      return async () => {
+        if (!active() || version !== epoch.current) throw new Error("参考图所属题目已变化，请重新核对。");
+        const accepted = await execute(async id => { const result = await saveReferenceMaterials(examId, questionId, { ...input, command_id: id }); if (active() && version === epoch.current) { setMaterials(result.materials); setItems(orderReferenceItems(result.materials.items)); } });
+        if (!accepted) throw new Error("参考图保存结果尚未确认，请先核对原操作结果；其他区域已保存的内容继续保留。");
+      };
+    },
+    discard: () => { if (materials) setItems(orderReferenceItems(materials.items)); setCrop(null); setSource(null); setDragging(false); }
+  };
+  useEffect(() => {
+    registerSaveParticipant?.("references", { owner, dirty: listDirty || selectionDirty, busy: busy || Boolean(pending),
+      prepare: () => participant.current.prepare(), discard: () => participant.current.discard() });
+  }, [registerSaveParticipant, owner, listDirty, selectionDirty, busy, pending]);
+  useEffect(() => () => registerSaveParticipant?.("references", null), [registerSaveParticipant, owner]);
   return <section className="reference-material-editor" aria-label="本题参考图片">
-    <div className="section-head"><div><h3>参考图</h3><p>题目图、参考解答图随本场评分依据一起冻结。</p></div><Button onClick={() => void show()}>核对本题参考图</Button></div>
+    <div className="section-head"><div><h3>参考图</h3><p>题目图、参考解答图随本场评分依据一起冻结。</p></div><Button disabled={externalSaving} onClick={() => void show()}>核对本题参考图</Button></div>
     <Drawer title="本题参考图" open={open} width={760} onClose={() => { setOpen(false); setSourceReady(false); setCropReady(false); setDragging(false); }} destroyOnClose>
       {error && <Alert type="warning" showIcon message={error} />}
       {pending && <Button disabled={busy || !editable || !session.scope} onClick={() => void recover()}>核对原操作结果</Button>}
@@ -145,15 +180,15 @@ function ReferenceMaterialEditorContent({ examId, questionId, editable, onChange
         <p>题目图和参考解答图各最多 2 张，合计最多 4 张；题目图先发送。</p>
         <Select aria-label="选择已有资料页" value={source?.page_ref} placeholder="从已有资料选择页面" style={{ width: "100%" }} options={sources.map(item => ({ value: item.page_ref, label: `${item.name} · 第 ${item.page_no} 页` }))} onChange={chooseSource} />
         {!sources.length && <p>没有可用图片页。请先在原资料入口导入图片，或完成 PDF 页面解析。</p>}
-        {source && <><ReferenceCropSurface key={source.page_ref} source={source} examId={examId} identity={`${session.scope}:${owner}:${source.page_ref}`} box={box} onBox={value=>{setCrop(null);setBox(value);}} onReadyChange={setSourceReady} onDraggingChange={setDragging}/>
-          <p>以页面左上角为原点填写整数像素范围。保留图例、条件和辅助线，并核对可见身份信息。</p>
-          <div className="reference-coordinate-grid">{(["x", "y", "width", "height"] as const).map(field => <label key={field}>{({ x: "左边距", y: "上边距", width: "宽度", height: "高度" })[field]}<InputNumber min={field === "x" || field === "y" ? 0 : 1} precision={0} value={box[field]} onChange={value => { setCrop(null); setBox({ ...box, [field]: value ?? 0 }); }} /></label>)}</div>
+        {source && <><ReferenceCropSurface key={source.page_ref} source={source} examId={examId} identity={`${session.scope}:${owner}:${source.page_ref}`} box={box} onBox={value=>{setCrop(null);setBox(value);setSelectionChanged(true);}} onReadyChange={setSourceReady} onDraggingChange={setDragging}/>
+          <p>拖框保留图例、条件和辅助线，并核对可见身份信息。</p>
+          <details><summary>精确像素范围</summary><p>以页面左上角为原点，填写整数像素。</p><div className="reference-coordinate-grid">{(["x", "y", "width", "height"] as const).map(field => <label key={field}>{({ x: "左边距", y: "上边距", width: "宽度", height: "高度" })[field]}<InputNumber min={field === "x" || field === "y" ? 0 : 1} precision={0} value={box[field]} onChange={value => { setCrop(null); setBox({ ...box, [field]: value ?? 0 }); setSelectionChanged(true); }} /></label>)}</div></details>
           <Button disabled={!sourceReady || dragging || !validReferenceBox(box, source)} onClick={createCrop}>生成实际裁图</Button>
         </>}
       </>}
       {crop && <section><h4>核对将发送的实际图片</h4><ProtectedReferenceImage identity={`${session.scope}:${owner}:${crop.crop_ref}`} alt="待确认的实际裁图" load={() => getReferenceCropImage(examId, questionId, crop.crop_ref)} onReadyChange={setCropReady} />
         {/* Blob 已取回不代表图片已显示；加载失败或仍在加载时，教师不能确认实际内容。 */}
-        <Space wrap><Select className="reference-role-select" aria-label="待添加图片角色" value={role} options={(["question_diagram", "reference_solution"] as const).map(value => ({ value, label: referenceRoleLabel(value), disabled: items.filter(current => current.role === value).length >= 2 }))} onChange={setRole} /><Button disabled={!canEdit || !cropReady || !validReferenceSelection([...items, { ...crop, role }])} onClick={() => { if (!cropReady) return; setItems(orderReferenceItems([...items, { ...crop, role, ordinal: items.length + 1 }])); setCrop(null); }}>已核对，加入本题</Button></Space>
+        <Space wrap><Select className="reference-role-select" aria-label="待添加图片角色" value={role} options={(["question_diagram", "reference_solution"] as const).map(value => ({ value, label: referenceRoleLabel(value), disabled: items.filter(current => current.role === value).length >= 2 }))} onChange={setRole} /><Button disabled={!canEdit || !cropReady || !validReferenceSelection([...items, { ...crop, role }])} onClick={() => { if (!cropReady) return; save("reference_images", [...items, { ...crop, role, ordinal: items.length + 1 }], true); }}>已核对，添加并保存</Button></Space>
       </section>}
       {canEdit && <Space wrap><Button type="primary" disabled={!validReferenceSelection(items)} onClick={() => save("reference_images")}>保存参考图清单</Button><Button onClick={() => save("text_only")}>明确仅使用文字参考</Button></Space>}
       {editable && materials?.frozen && materials.manifest_id && materials.use_state === "active" && <section><h4>撤回本题材料使用授权</h4><p>冻结内容保留；撤回会阻断后续 AI 调用及未提交建议。</p><Input.TextArea aria-label="撤回原因" maxLength={1000} value={reason} onChange={event => setReason(event.target.value)} /><Button danger disabled={busy || Boolean(pending) || !reason.trim()} onClick={() => { const id = materials.manifest_id!; const revision = materials.authorization_revision!; const frozenReason = reason.trim(); void execute(async command => { const response = await withdrawReferenceMaterials(examId, questionId, id, { command_id: command, expected_authorization_revision: revision, reason: frozenReason }); if (active()) { setMaterials(response.materials); await refresh(); } }); }}>撤回使用授权</Button></section>}

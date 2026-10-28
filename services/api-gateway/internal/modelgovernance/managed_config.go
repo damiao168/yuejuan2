@@ -100,6 +100,9 @@ type ManagedAPIConfigUpdateInput struct {
 	Status       string                 `json:"status"`
 	IsDefault    bool                   `json:"is_default"`
 	InitialProbe *ManagedAPIProbeResult `json:"-"`
+	// 轮换向导冻结已选配置的版本；仅轮换密钥时其他字段由服务端补全，不接受文件或旧表单覆盖。
+	CredentialOnly          bool   `json:"credential_only,omitempty"`
+	ClientExpectedUpdatedAt string `json:"expected_updated_at,omitempty"`
 	// ExpectedUpdatedAt 由服务端读取，检测与保存必须针对同一版配置；客户端不能指定。
 	ExpectedUpdatedAt time.Time `json:"-"`
 }
@@ -398,6 +401,7 @@ func normalizeManagedAPIUpdate(input ManagedAPIConfigUpdateInput) (ManagedAPICon
 		ModelVersion: normalized.ModelVersion, Region: normalized.Region,
 		APIKey: normalized.APIKey, Status: normalized.Status, IsDefault: normalized.IsDefault,
 		InitialProbe: input.InitialProbe, ExpectedUpdatedAt: input.ExpectedUpdatedAt,
+		CredentialOnly: input.CredentialOnly, ClientExpectedUpdatedAt: strings.TrimSpace(input.ClientExpectedUpdatedAt),
 	}, nil
 }
 

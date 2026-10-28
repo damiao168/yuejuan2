@@ -1,5 +1,7 @@
 import { EduGradeApi } from "@edugrade/sdk";
 import type {
+  AIHumanDisagreement,
+  ReviewTaskPage,
   AddGradingEvaluationObservationRequest,
   AddModelCalibrationEvidenceRequest,
   AIHumanDisagreementSeverity,
@@ -70,8 +72,21 @@ export function putAIEligibilityPolicy(body: PutAIEligibilityPolicyRequest) {
   return api.putAIEligibilityPolicy({ body });
 }
 
-export function getAIEligibilityDecision(runItemId: string) {
+export function getAIEligibilityDecision(runItemId: string, tenantID?: string) {
+  if (tenantID) return apiClient.request<{ decision: import("@edugrade/sdk").AIEligibilityDecision }>(`/api/v1/ai-eligibility/decisions/${encodeURIComponent(runItemId)}?tenant_id=${encodeURIComponent(tenantID)}`);
   return api.getAIEligibilityDecision({ path: { runItemId } });
+}
+
+export interface AIEligibilityDecisionSummary {
+  id: string; tenant_id: string; run_item_id: string;
+  subject_code: string; education_stage: string; archetype_code: string; risk_tier: string;
+  decision: string; external_ai_allowed: boolean; created_at: string;
+}
+export function listAIEligibilityDecisions(tenantID: string, query: { q?: string; cursor?: string } = {}) {
+  const params = new URLSearchParams({ tenant_id: tenantID, limit: "30" });
+  if (query.q) params.set("q", query.q);
+  if (query.cursor) params.set("cursor", query.cursor);
+  return apiClient.request<{ decisions: AIEligibilityDecisionSummary[]; next_cursor: string; has_more: boolean }>(`/api/v1/ai-eligibility/decisions?${params}`);
 }
 
 export function listGradingEvaluations() {
@@ -148,4 +163,13 @@ export function classifyAIHumanDisagreement(id: string, body: ClassifyAIHumanDis
 
 export function routeAIHumanDisagreement(id: string, body: RouteAIHumanDisagreementRequest) {
   return api.routeAIHumanDisagreement({ path: { id }, body });
+}
+
+export async function listDisagreementReviewTasks(tenantID: string, disagreement: Pick<AIHumanDisagreement, "exam_id" | "question_id" | "submission_id" | "answer_segment_id">, cursor = "") {
+  const params = new URLSearchParams({ tenant_id: tenantID, exam_id: disagreement.exam_id, question_id: disagreement.question_id, limit: "100" });
+  if (cursor) params.set("cursor", cursor);
+  // 沿用阅卷列表的账号权限，平台代管参数不会授予额外权限；客户端再核对同学校、同题和同答卷。
+  const response = await apiClient.request<ReviewTaskPage>(`/api/v1/review-tasks?${params}`);
+  if (response.tasks.some(task => task.tenant_id !== tenantID)) throw new Error("当前账号不能读取所选学校的阅卷任务，请由该校有阅卷权限的管理员处理");
+  return { ...response, tasks: response.tasks.filter(task => task.exam_id === disagreement.exam_id && task.question_id === disagreement.question_id && task.submission_id === disagreement.submission_id && task.answer_segment_id === disagreement.answer_segment_id) };
 }

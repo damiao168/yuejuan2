@@ -17,7 +17,7 @@ export function OldAppealDrafts({
 		<details key={revision} className="old-appeal-drafts">
 			<summary>旧版复核草稿（{drafts.length}）</summary>
 			<p>
-				这些草稿只保存在当前标签页会话，退出登录会清除。说明可复制；旧版圈选不会迁移，新版必须重新核对证据。
+				可复制旧说明；旧版圈选不会迁移，新版需重新核对。草稿仅存于当前标签页会话，退出登录会清除。
 			</p>
 			{drafts.map((item) => (
 				<article key={item.key}>

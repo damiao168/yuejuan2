@@ -191,9 +191,16 @@ describe("markdown renderer identity and footnote scope", () => {
     const copy = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: copy } });
     await act(async () => root.render(<MathMarkdown>{"[参考资料](https://example.test/source) 与 [危险地址](javascript:alert(1))"}</MathMarkdown>));
-    const buttons = [...container.querySelectorAll<HTMLButtonElement>("button")].filter(button => button.textContent === "复制参考地址");
+    const references = container.querySelector<HTMLDetailsElement>(".math-markdown-references")!;
+    expect(references.open).toBe(false);
+    const marker = container.querySelector<HTMLButtonElement>('[aria-label="查看参考资料 1"]')!;
+    marker.click();
+    expect(references.open).toBe(true);
+    const buttons = [...container.querySelectorAll<HTMLButtonElement>("button")].filter(button => button.textContent === "复制地址");
     expect(buttons).toHaveLength(1);
-    const status = within(buttons[0].closest<HTMLElement>(".math-markdown-link")!).getByRole("status");
+    const details = buttons[0].closest("details")!;
+    details.open = true;
+    const status = within(details).getByRole("status");
     expect(status.tagName).toBe("OUTPUT");
     expect(status.getAttribute("aria-live")).toBe("polite");
     expect(status.getAttribute("aria-atomic")).toBe("true");
@@ -203,6 +210,21 @@ describe("markdown renderer identity and footnote scope", () => {
     copy.mockRejectedValueOnce(new Error("denied"));
     await act(async () => buttons[0].click());
     expect(container.textContent).toContain("复制失败");
-    expect(status.textContent).toBe("复制失败，请手动复制下方地址");
+    expect(status.textContent).toBe("复制失败，请手动复制此地址。");
+    expect(container.querySelector("a[href^='https:']")).toBeNull();
+    expect(container.querySelector("a[href^='javascript:']")).toBeNull();
+  });
+
+  it("同一地址合并为一条资料，正文标记只展开当前回复且不改变路由", async () => {
+    const content = "[来源甲](https://example.test/source) 和 [来源乙](https://example.test/source)";
+    await act(async () => root.render(<><MathMarkdown>{content}</MathMarkdown><MathMarkdown>{content}</MathMarkdown></>));
+    const panels = container.querySelectorAll<HTMLDetailsElement>(".math-markdown-references");
+    expect(panels).toHaveLength(2);
+    expect(panels[0].querySelectorAll("li")).toHaveLength(1);
+    expect(container.querySelectorAll('[aria-label="查看参考资料 1"]')).toHaveLength(4);
+    container.querySelector<HTMLButtonElement>('[aria-label="查看参考资料 1"]')!.click();
+    expect(panels[0].open).toBe(true);
+    expect(panels[1].open).toBe(false);
+    expect(window.location.hash).toBe("#/admin/dashboard");
   });
 });

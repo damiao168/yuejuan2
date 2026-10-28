@@ -6,8 +6,9 @@ import type { AddGradingEvaluationObservationRequest, GradingEvaluationRun } fro
 import { ScoringAssuranceWorkspace } from "./ScoringAssuranceWorkspace";
 
 const mocks = vi.hoisted(() => ({
-  list: vi.fn(), write: vi.fn(), school: vi.fn(), success: vi.fn(), error: vi.fn()
+  list: vi.fn(), write: vi.fn(), school: vi.fn(), success: vi.fn(), error: vi.fn(), create: vi.fn()
 }));
+const form = vi.hoisted(() => ({ values: {} as Record<string, unknown>, setFieldsValue: vi.fn(), resetFields: vi.fn(), validateFields: vi.fn() }));
 const appContext = vi.hoisted(() => ({ message: { success: mocks.success, error: mocks.error } }));
 vi.mock("../../api/scoringAssurance", async () => ({
   ...await vi.importActual<typeof import("../../api/scoringAssurance")>("../../api/scoringAssurance"),
@@ -18,6 +19,7 @@ vi.mock("../../api/scoringAssurance", async () => ({
   listGradingEvaluationResponseDifficulty: async () => ({ response_difficulty: [] }),
   getGradingEvaluationQualitySummary: async () => ({ quality_summary: undefined }),
   addGradingEvaluationObservation: mocks.write
+  ,createGradingEvaluation: mocks.create
 }));
 vi.mock("./ScoringAssuranceViews", () => ({
   CalibrationDetail: () => null, DisagreementQueue: () => null,
@@ -31,11 +33,11 @@ vi.mock("antd", () => {
   return {
     App: { useApp: () => appContext },
     Button: ({ children, disabled, onClick }: { children?: ReactNode; disabled?: boolean; onClick?: () => void }) => <button type="button" disabled={disabled} onClick={onClick}>{children}</button>,
-    Drawer: ({ title, children, open }: { title: string; children?: ReactNode; open: boolean }) => open ? <section aria-label={title}>{children}</section> : null,
+    Drawer: ({ title, children, open, extra }: { title: string; children?: ReactNode; open: boolean; extra?: ReactNode }) => open ? <section aria-label={title}>{extra}{children}</section> : null,
     Alert: ({ message, description }: { message?: ReactNode; description?: ReactNode }) => <div>{message}{description}</div>,
     Space: Object.assign(Box, { Compact: Box }), Card: Box, Divider: Box,
     Empty: Object.assign(() => null, { PRESENTED_IMAGE_SIMPLE: "simple" }),
-    Form: Object.assign(Box, { Item: Box, useForm: () => [{ setFieldsValue: vi.fn(), validateFields: vi.fn(), resetFields: vi.fn() }] }),
+    Form: Object.assign(Box, { Item: Box, useForm: () => [form] }),
     Input, InputNumber: () => null, Select: () => null, Table: () => null,
     Tag: Box, Typography: { Text: Box }, Descriptions: () => null
   };
@@ -52,6 +54,7 @@ function observation(response_key: string): AddGradingEvaluationObservationReque
 
 beforeEach(() => {
   vi.clearAllMocks();
+  form.values={};form.setFieldsValue.mockImplementation((values:Record<string,unknown>)=>Object.assign(form.values,values));form.resetFields.mockImplementation(()=>{form.values={};});form.validateFields.mockImplementation(async()=>({...form.values}));
   const run: GradingEvaluationRun = {
     id: "evaluation-a", key: "evaluation-a", display_name: "评分验证报告",
     model_reference: "model-v1", prompt_version: "prompt-v1", rubric_version: "rubric-v1",
@@ -61,6 +64,26 @@ beforeEach(() => {
   mocks.list.mockResolvedValue({ evaluation_runs: [run] });
 });
 afterEach(cleanup);
+
+it("统一入口逐卷材料登记后直接绑定新报告，来源版本改变时不创建报告", async () => {
+  const evaluation = { key:"new-report",display_name:"统一逐卷报告",model_reference:"model-v2",prompt_version:"prompt-v2",rubric_version:"rubric-v2",dataset_reference:"dataset-v2",dataset_sha256:"a".repeat(64) };
+  const material={evaluation,observations:[observation("new-answer")]};
+  mocks.create.mockResolvedValue({evaluation_run:{...evaluation,id:"new-report-id",status:"draft",observation_count:0,created_at:""}});
+  const received=vi.fn();
+  render(<ScoringAssuranceWorkspace tenantID="school-a" canReadEligibility={false} canManageEligibility={false} canManageEvaluations canReadDisagreements={false} canManageDisagreements={false} materialDelivery={{tenantID:"school-a",sequence:1,material}} onMaterialReceived={received} />);
+  await screen.findByText(/已带入 1 条逐卷记录/);
+  form.values.prompt_version="changed";
+  fireEvent.click(screen.getByRole("button",{name:"登记报告"}));
+  await waitFor(()=>expect(mocks.error).toHaveBeenCalledWith("材料的来源或版本已改变，请清除原材料后重新登记。"));
+  expect(mocks.create).not.toHaveBeenCalled();
+  form.values.prompt_version=evaluation.prompt_version;
+  fireEvent.click(screen.getByRole("button",{name:"登记报告"}));
+  await screen.findByRole("button",{name:"确认导入"});
+  expect(mocks.create).toHaveBeenCalledWith(evaluation);
+  expect(received).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole("button",{name:"确认导入"}));
+  await waitFor(()=>expect(mocks.write).toHaveBeenCalledWith("new-report-id",material.observations[0]));
+});
 
 async function openImport() {
   render(<ScoringAssuranceWorkspace tenantID="school-a" canReadEligibility={false}

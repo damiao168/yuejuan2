@@ -1,7 +1,8 @@
 import { Alert, Button, Form, Input, Modal, Select } from "antd";
 import type { FormInstance } from "antd";
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type {
   CreateQuestionBankItemRequest,
   CreateQuestionBankRequest,
@@ -22,6 +23,18 @@ import { QuestionBankClassificationFields } from "./QuestionBankClassificationFi
 type QueryView<T> = Pick<UseQueryResult<T, Error>, "data" | "isError" | "isLoading" | "error" | "refetch">;
 const aclActionLabels: Record<string, string> = { read: "浏览题目", create: "新建题目", edit: "编辑草稿", review: "审核题目", publish: "发布题目", retire: "停止选用", statistics: "查看统计", manage: "管理结构与授权" };
 const difficultyLabels: Record<string, string> = { easy: "容易", medium: "中等", hard: "较难", unclassified: "尚未标注" };
+function SearchFiltersContainer({ open, onCancel, container, children }: Readonly<{ open: boolean; onCancel: () => void; container?: HTMLElement | null; children: ReactNode }>) {
+  if (container) return open ? createPortal(<section aria-label="筛选题目" className="question-bank-inline-filters"><h2>筛选题目</h2><Button onClick={onCancel}>收起筛选</Button>{children}</section>, container) : null;
+  return <Modal title="组合检索" open={open} onCancel={onCancel} footer={null} width={980} destroyOnHidden>{children}</Modal>;
+}
+// 职责说明对应服务端预设动作；管理结构不隐含读题权限，发布职责也包括停止选用。
+const roleHelp: Record<string, string> = {
+  Viewer: "可浏览题目和查看统计。",
+  Author: "可浏览、新建题目并编辑草稿。",
+  Reviewer: "可浏览并审核其他教师的版本。",
+  Publisher: "可浏览、发布已批准版本并停止选用题目。",
+  Manager: "仅管理结构与授权，不自动获得看题权限。"
+};
 
 type QuestionBankDialogsProps = Readonly<{
   bankId: string;
@@ -47,6 +60,8 @@ type QuestionBankDialogsProps = Readonly<{
   schemaForm: FormInstance;
   saveSchema: (values: MetadataSchemaFormValues) => void;
   searchOpen: boolean;
+  showSearchResults?: boolean;
+  searchContainer?: HTMLElement | null;
   setSearchOpen: (open: boolean) => void;
   searchFilters: SearchFilters;
   setSearchFilters: Dispatch<SetStateAction<SearchFilters>>;
@@ -122,20 +137,21 @@ export function QuestionBankDialogs(props: QuestionBankDialogsProps) {
 				</Form>
 			</Modal>
 			<Modal title="访问权限" open={aclOpen} onCancel={() => setAclOpen(false)} footer={null} width={820} destroyOnHidden>
-				<Alert type="info" showIcon message="按实际职责授予权限" description="浏览可看题；出题可编辑草稿；审核可批准其他教师的版本；发布可将已批准版本用于题库；管理仅维护结构与授权，不自动获得看题权限。" />
+				<p>按实际职责授权。</p>
+                <details><summary>查看各职责权限</summary><ul>{bankRoleOptions.map(role => <li key={role.value}>{role.label}：{roleHelp[role.value]}</li>)}</ul></details>
 				{members?.isError ? <Alert type="warning" message="人员列表暂不可读取，已有授权仍保留" action={<Button onClick={()=>void members.refetch()}>重试人员列表</Button>} /> : null}
                 {ambiguousMembers.length > 0 && <Alert type="warning" showIcon message="部分同名人员缺少可区分的账号，暂不能选用" description="请重新读取人员列表；已有授权继续保留，确认身份后再调整。" action={<Button onClick={() => void members?.refetch()}>重新读取人员列表</Button>} />}
-                {retainedBindings.some(binding => binding.preset === "Custom") || retainedGroups.length ? <Alert type="info" showIcon message="历史组合权限只读保留" description="以下历史组合授权由服务端原样保留。可继续调整其他人员与普通题库组的预设职责；本次更新不会删改这些组合权限。" /> : null}
-                {retainedBindings.length > 0 && <section aria-label="只读保留的用户授权"><h3>只读保留的用户授权</h3><ul>{retainedBindings.map(binding => <li key={binding.user_id}><strong>{memberName(binding.user_id)}</strong> · {binding.preset === "Custom" ? "历史组合权限" : "受保护用户"}：{binding.actions.map(action => aclActionLabels[action] ?? "既有权限").join("、") || "既有权限"}</li>)}</ul><p>创建者和当前操作者的直接授权也由服务端保留。</p></section>}
+                {retainedBindings.length || retainedGroups.length ? <p>这些历史或受保护授权只读保留，本次保存不会修改。</p> : null}
+                {retainedBindings.length > 0 && <section aria-label="只读保留的用户授权"><h3>只读保留的用户授权</h3><ul>{retainedBindings.map(binding => <li key={binding.user_id}><strong>{memberName(binding.user_id)}</strong> · {binding.preset === "Custom" ? "历史组合权限" : "受保护用户"}：{binding.actions.map(action => aclActionLabels[action] ?? "既有权限").join("、") || "既有权限"}</li>)}</ul></section>}
                 {retainedGroups.length > 0 && <section aria-label="只读保留的题库组"><h3>只读保留的题库组</h3><ul>{retainedGroups.map(group => <li key={group.id}><strong>{group.name}</strong>：{group.actions.map(action => aclActionLabels[action] ?? "既有权限").join("、")}；组内人员：{group.member_user_ids.map(memberName).join("、") || "暂无人员"}</li>)}</ul></section>}
-                {acl.isError ? <Alert type="error" message="当前授权读取失败，不能据空列表覆盖原授权" action={<Button onClick={()=>void acl.refetch()}>重新读取授权</Button>} /> : null}
+                {acl.isError ? <Alert type="error" message="授权读取失败，暂不能保存。请重新读取。" action={<Button onClick={()=>void acl.refetch()}>重新读取授权</Button>} /> : null}
 				<Form form={aclForm} layout="vertical" onFinish={saveACL} disabled={saving || acl.isLoading || acl.isError}>
 					<h3>用户授权</h3>
 					<Form.List name="bindings">
 						{(fields, { add, remove }) => <>
 							{fields.map(({ key, ...field }) => <div className="question-bank-rule-row" key={key}>
 								<Form.Item {...field} name={[field.name,"user_id"]} rules={[{required:true}]}><Select showSearch optionFilterProp="label" loading={members?.isLoading} options={assignableMembers} placeholder="按姓名或账号选择本校人员" /></Form.Item>
-								<Form.Item {...field} name={[field.name,"preset"]} rules={[{required:true}]}><Select options={bankRoleOptions} /></Form.Item>
+								<Form.Item noStyle shouldUpdate>{() => <Form.Item {...field} name={[field.name,"preset"]} extra={roleHelp[aclForm.getFieldValue(["bindings",field.name,"preset"])]} rules={[{required:true}]}><Select options={bankRoleOptions} /></Form.Item>}</Form.Item>
 								<Button danger onClick={() => remove(field.name)}>移除</Button>
 							</div>)}
 							<Button onClick={() => add({preset:"Viewer"})}>添加用户</Button>
@@ -147,7 +163,7 @@ export function QuestionBankDialogs(props: QuestionBankDialogsProps) {
 							{fields.map(({ key, ...field }) => <div className="question-bank-group-row" key={key}>
 								<Form.Item {...field} name={[field.name,"id"]} hidden><Input /></Form.Item>
 								<Form.Item {...field} name={[field.name,"name"]} label="组名" rules={[{required:true}]}><Input /></Form.Item>
-								<Form.Item {...field} name={[field.name,"preset"]} label="职责权限" rules={[{required:true}]}><Select options={bankRoleOptions} /></Form.Item>
+								<Form.Item noStyle shouldUpdate>{() => <Form.Item {...field} name={[field.name,"preset"]} label="职责权限" extra={roleHelp[aclForm.getFieldValue(["groups",field.name,"preset"])]} rules={[{required:true}]}><Select options={bankRoleOptions} /></Form.Item>}</Form.Item>
 									<Form.Item {...field} name={[field.name,"members"]} label="组内人员"><Select mode="multiple" showSearch optionFilterProp="label" loading={members?.isLoading} options={memberOptions} placeholder="按姓名或账号选择组内人员" /></Form.Item>
 								<Button danger onClick={() => remove(field.name)}>移除组</Button>
 							</div>)}
@@ -158,16 +174,16 @@ export function QuestionBankDialogs(props: QuestionBankDialogsProps) {
 				</Form>
 			</Modal>
 			<Modal title={`题目分类与知识点 · 第 ${currentSchema.data?.schema.version ?? "—"} 版`} open={schemaOpen} onCancel={() => !saving && setSchemaOpen(false)} footer={null} width={900} destroyOnHidden>
-                <Alert type="info" showIcon message="更新规则会另存一版，已有题目继续使用原规则" description="先建立知识点或分类目录，再按需要添加补充字段。内部编号自动生成，无需填写。" />
+                <Alert type="info" showIcon message="更新规则会另存一版，已有题目继续使用原规则" description="添加知识点、分类目录或补充字段。" />
                 {schemaLoadFailed ? <Alert type="error" showIcon message="当前分类规则读取失败，暂不能保存修改" description="读取失败不代表题库没有配置。请重新读取，成功后再编辑或保存。" action={<Button onClick={() => void currentSchema.refetch()}>重新读取分类规则</Button>} /> : null}
                 <Form form={schemaForm} layout="vertical" onFinish={saveSchema} disabled={saving || !schemaFormReady}>
                     <QuestionBankClassificationFields form={schemaForm} />
                     <Button type="primary" htmlType="submit" loading={saving}>保存新的分类规则</Button>
                 </Form>
             </Modal>
-            <Modal title="组合检索" open={searchOpen} onCancel={() => setSearchOpen(false)} footer={null} width={980} destroyOnHidden>
+            <SearchFiltersContainer open={searchOpen} onCancel={() => setSearchOpen(false)} container={props.searchContainer}>
 				<div className="question-bank-filter-grid">
-					<Input.Search value={searchFilters.q} placeholder="题干或题目编号" onChange={event=>setSearchFilters(current=>({...current,q:event.target.value}))} onSearch={()=>{setSearchOffset(0);void searchResults.refetch();}} />
+					<Input.Search value={searchFilters.q} placeholder="题干或题目编号" onChange={event=>setSearchFilters(current=>({...current,q:event.target.value}))} onSearch={()=>{setSearchOffset(0);if (props.showSearchResults !== false) void searchResults.refetch();}} />
 					<Select allowClear placeholder="学科" value={searchFilters.subject_code} options={subjects} onChange={value=>{setSearchOffset(0);setSearchFilters(current=>({...current,subject_code:value}))}} />
 					<Select allowClear placeholder="题型" value={searchFilters.question_type} options={types} onChange={value=>{setSearchOffset(0);setSearchFilters(current=>({...current,question_type:value}))}} />
 					<Select allowClear placeholder="版本状态" value={searchFilters.workflow_status} options={Object.entries(workflowLabels).map(([value,label])=>({value,label}))} onChange={value=>{setSearchOffset(0);setSearchFilters(current=>({...current,workflow_status:value}))}} />
@@ -176,14 +192,14 @@ export function QuestionBankDialogs(props: QuestionBankDialogsProps) {
 					<Select value={searchFilters.mode} options={[{value:"default",label:"已发布 + 我的草稿"},{value:"published",label:"当前发布版"},{value:"my_drafts",label:"我的草稿"},{value:"all",label:"全部可见版本"}]} onChange={value=>{setSearchOffset(0);setSearchFilters(current=>({...current,mode:value}))}} />
 				</div>
 				{schemaLoadFailed ? <Alert type="warning" message="知识点目录读取失败" action={<Button onClick={()=>void currentSchema.refetch()}>重试知识点目录</Button>} /> : emptyKnowledgeNotice}
-				<ResponsiveTable<QuestionBankSearchItem> className="dense-data-table" rowKey={record=>record.version.id} loading={searchResults.isLoading} dataSource={searchResults.data?.items ?? []} columns={[
+                {props.showSearchResults === false ? <Button onClick={() => { setSearchOffset(0); setSearchOpen(false); }}>查看筛选结果</Button> : <ResponsiveTable<QuestionBankSearchItem> className="dense-data-table" rowKey={record=>record.version.id} loading={searchResults.isLoading} dataSource={searchResults.data?.items ?? []} columns={[
 					{title:"编号",render:(_,record)=><Button type="link" onClick={()=>selectItem(record.item,record.version.id,()=>setSearchOpen(false))}>{record.item.item_code}</Button>},
 					{title:"题干",dataIndex:["version","stem"],ellipsis:true},
 					{title:"版本",render:(_,record)=>`v${record.version.version_no} · ${workflowLabels[record.version.workflow_status]}`},
 					{title:"难度",render:(_,record)=>difficultyLabels[record.version.metadata.difficulty_band] ?? "其他难度标签"},
 					{title:"统计",render:(_,record)=>record.statistics_available?"已有观测":"尚无观测"},
-				]} pagination={{current:searchOffset/20+1,pageSize:20,total:searchResults.data?.total,showSizeChanger:false,onChange:page=>setSearchOffset((page-1)*20)}} />
-			</Modal>
+				]} pagination={{current:searchOffset/20+1,pageSize:20,total:searchResults.data?.total,showSizeChanger:false,onChange:page=>setSearchOffset((page-1)*20)}} />}
+			</SearchFiltersContainer>
 			<Modal
 				title={
 					kind === "rubric_template" ? "新建评分标准模板草稿" : "新建题目草稿"
@@ -200,9 +216,10 @@ export function QuestionBankDialogs(props: QuestionBankDialogsProps) {
 					key={bankId}
 					layout="vertical"
 					onFinish={createItem}
-					initialValues={defaults}
+					initialValues={{ ...defaults, item_code: `Q-${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}` }}
 					disabled={saving || !schemaReadable}
 				>
+          <details><summary>题目编号（已自动生成，可修改）</summary>
 					<Form.Item
 						name="item_code"
 						label="题目编号"
@@ -216,6 +233,7 @@ export function QuestionBankDialogs(props: QuestionBankDialogsProps) {
 					>
 						<Input />
 					</Form.Item>
+          </details>
 					<ContentFields schema={currentSchema.data?.schema} />
 					<Button type="primary" htmlType="submit" loading={saving}>
 						{kind === "rubric_template" ? "创建模板草稿" : "创建题目草稿"}

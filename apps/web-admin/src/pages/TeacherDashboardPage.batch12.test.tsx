@@ -8,6 +8,7 @@ import { TeacherDashboardPage } from "./TeacherDashboardPage";
 
 const mocks = vi.hoisted(() => ({ reviews: vi.fn(), arbitrations: vi.fn(), navigate: vi.fn() }));
 vi.mock("../api/review", () => ({ listReviewTasks: mocks.reviews, listArbitrationTasks: mocks.arbitrations }));
+vi.mock("../api/questionBank", () => ({ questionBankApi: { searchQuestionBankItems: async () => ({ items: [], total: 0 }) } }));
 vi.mock("../api/client", () => ({
   getSafeUserText: (text: string) => text,
   getUserErrorMessage: (_error: unknown, fallback: string) => fallback,
@@ -22,6 +23,7 @@ vi.mock("../components/StatusTag", () => ({ StatusTag: ({ children }: { children
 vi.mock("antd", () => ({
   Button: ({ children, onClick, loading }: { children: ReactNode; onClick?: () => void; loading?: boolean }) => <button type="button" disabled={loading} onClick={onClick}>{children}</button>,
   Alert: ({ message, description }: { message: string; description?: string }) => <aside>{message}{description}</aside>,
+  Space: ({ children }: { children: ReactNode }) => <div>{children}</div>, Pagination: () => null,
 }));
 
 const user: SessionUser = {
@@ -120,13 +122,13 @@ describe("教师工作台展示分支", () => {
   });
 
   it.each([
-    { permission: "review:work", expected: ["0", "0"], label: "已加载待阅卷" },
-    { permission: "arbitration:work", expected: ["0"], label: "已加载待仲裁" },
+    { permission: "review:work", expected: ["0", "0"], label: "待阅卷" },
+    { permission: "arbitration:work", expected: ["0"], label: "待仲裁" },
   ])("仅有 $permission 时显示对应摘要及空任务提示", async ({ permission, expected, label }) => {
     await render(user.roles, [permission]);
     expect(counts()).toEqual(expected);
     expect(host.querySelector(".teacher-summary span")?.textContent).toBe(label);
-    expect(host.querySelector("[data-empty] strong")?.textContent).toBe("当前没有已加载的待办");
+    expect(host.querySelector("[data-empty] strong")?.textContent).toBe("当前暂无待办");
     if (permission === "review:work") {
       expect(mocks.reviews).toHaveBeenCalledWith({ assigned_to: user.id });
       expect(mocks.arbitrations).not.toHaveBeenCalled();
@@ -134,5 +136,14 @@ describe("教师工作台展示分支", () => {
       expect(mocks.arbitrations).toHaveBeenCalledWith({ assigned_to: user.id });
       expect(mocks.reviews).not.toHaveBeenCalled();
     }
+  });
+
+  it("全部任务读取失败时不把降级空数组说成没有待办", async () => {
+    mocks.reviews.mockRejectedValue(new Error("读取失败"));
+    mocks.arbitrations.mockRejectedValue(new Error("读取失败"));
+    await render(user.roles, ["review:work", "arbitration:work"]);
+    expect(counts()).toEqual(["—", "—", "—"]);
+    expect(host.querySelector("[data-empty]")).toBeNull();
+    expect(host.querySelectorAll("aside")).toHaveLength(2);
   });
 });

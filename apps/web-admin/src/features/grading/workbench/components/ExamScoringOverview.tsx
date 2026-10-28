@@ -29,7 +29,7 @@ function StartAction({ scoring }: { scoring: ExamScoringController }) {
   return <Button type="primary" icon={<Play size={15} />} disabled={!scoring.readiness?.ready} loading={scoring.actioning === "prepare-scoring"} onClick={() => void scoring.prepareStart()}>{scoring.summary?.run ? "重新评分" : "开始评分"}</Button>;
 }
 
-export function ExamScoringOverview({ scoring, canManageTasks, onOpenAssignments, onOpenResults }: Readonly<ScoringActionsProps>) {
+export function ExamScoringOverview({ scoring, canManageTasks, onOpenTrial, onOpenAssignments, onOpenResults }: Readonly<ScoringActionsProps>) {
   const run = scoring.summary?.run;
   const [showQuestions, setShowQuestions] = useState(false);
   const questions = scoring.summary?.questions ?? [];
@@ -63,6 +63,7 @@ export function ExamScoringOverview({ scoring, canManageTasks, onOpenAssignments
     </> : <div className="grading-focus-actions"><StartAction scoring={scoring} /></div>}
     {!run && checks.length ? <Alert type={scoring.blockingChecks.length ? "warning" : "info"} showIcon message="开始前请完成以下事项" description={<ul>{checks.map(check => <li key={check.code}>{getSafeUserText(check.message, "请完成相关准备")}</li>)}</ul>} /> : null}
     <div className="grading-overview-secondary">
+      {onOpenTrial ? <Button type="text" onClick={onOpenTrial}>AI 小样本试改</Button> : null}
       <Button type="text" aria-expanded={showQuestions} onClick={() => setShowQuestions(value => !value)}>各题进度</Button>
       {canCancel ? <details className="grading-options"><summary>更多操作</summary><Space wrap>
         <Popconfirm title={run.status === "cancelling" ? "继续完成取消？" : "取消本次评分？"} description="未完成任务将停止，已有历史结果保留。" okText="取消评分" cancelText="保留" onConfirm={() => void scoring.cancel()}><Button danger icon={<CircleStop size={15} />} loading={scoring.actioning === "cancel-scoring"}>{run.status === "cancelling" ? "继续取消" : "取消评分"}</Button></Popconfirm>

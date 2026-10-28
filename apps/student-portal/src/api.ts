@@ -164,6 +164,15 @@ function normalizeApiBaseUrl(value: string): string {
 
 const baseUrl = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL ?? "");
 
+export async function getPublicSchool(code: string): Promise<{ code: string; name: string }> {
+  // 学校名称是公开展示提示，不发送会话Cookie；登录仍独立核实学校和账号。
+  const response = await fetch(`${baseUrl}/api/v1/public/schools/${encodeURIComponent(code)}`, { credentials: "omit" });
+  if (!response.ok) throw new Error("暂时无法核对学校名称，请核对学校代码后登录");
+  const data = await response.json() as { school: { code: string; name: string } };
+  if (data.school?.code !== code || typeof data.school.name !== "string" || !data.school.name.trim()) throw new Error("学校信息与入口不一致，请核对学校代码");
+  return data.school;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, App, Button, Descriptions, Divider, Drawer, Empty, Form, InputNumber, List, Progress, Select, Space, Tag } from "antd";
+import { Alert, App, Button, Descriptions, Divider, Drawer, Empty, Form, Input, InputNumber, List, Progress, Select, Space, Tag } from "antd";
 import { apiClient, getUserErrorMessage } from "../../api/client";
 import {
   createCalibrationSession,
@@ -18,6 +18,8 @@ import { rubricPointsFromSnapshot } from "../gold-papers/goldPaperPresentation";
 import { TaskScoringReference } from "../../components/TaskScoringReference";
 import { calibrationThresholdChecks, formatCriterionValue, formatMetric } from "./calibrationPresentation";
 import "./calibration.css";
+import { CalibrationPolicyReuse } from "./CalibrationPolicyReuse";
+import { CalibrationSchoolTemplates } from "./CalibrationSchoolTemplates";
 
 const emptyScore: SharedScoreValue = { score: null, rubricSelections: {} };
 const archetypeOptions = [
@@ -40,8 +42,8 @@ function renderCalibrationQualification(qualification?: GraderQualification) {
   return <Alert
     showIcon
     type={qualification?.status === "qualified" ? "success" : "warning"}
-    message={qualification?.status === "qualified" ? "本题试评已通过，已具备阅卷资格" : "高风险题需先通过试评，再领取正式任务"}
-    description={qualification?.status === "qualified" ? `本题资格有效至 ${new Date(qualification.valid_until).toLocaleDateString()}；标准卷变化后需重新确认资格。` : "独立给标准卷打分，系统会与参考分比较。每份提交后才显示参考分和相差分数。"}
+    message={qualification?.status === "qualified" ? "试评已通过" : "高风险题需先通过试评，再领取正式任务"}
+    description={qualification?.status === "qualified" ? `有效至 ${new Date(qualification.valid_until).toLocaleDateString()}；标准卷变化后需重新确认资格。` : "独立完成全部样本；每份提交后才显示参考分，完成后判定是否通过。"}
   />;
 }
 
@@ -76,7 +78,8 @@ function ScopedCalibrationDrawer({
   graderId,
   canManagePolicy,
   onClose,
-  onQualified
+  onQualified,
+  questionDefaults
 }: Readonly<{
   open: boolean;
   examId: string;
@@ -85,10 +88,16 @@ function ScopedCalibrationDrawer({
   canManagePolicy: boolean;
   onClose: () => void;
   onQualified?: () => void;
+  questionDefaults?: { questionId: string; archetypeCode: string; maxScore: number };
 }>) {
   const { message } = App.useApp();
+  const inheritedType = questionDefaults?.questionId === questionId && archetypeOptions.some(option => option.value === questionDefaults.archetypeCode) ? questionDefaults.archetypeCode : undefined;
+  const inheritedMax = questionDefaults?.questionId === questionId && questionDefaults.maxScore > 0 ? questionDefaults.maxScore : undefined;
   const [policyForm] = Form.useForm<PutCalibrationPolicyRequest>();
   const [loading, setLoading] = useState(false);
+  const [policyLoaded, setPolicyLoaded] = useState(false);
+  const [policyEdited, setPolicyEdited] = useState(false);
+  const [templateWorking, setTemplateWorking] = useState(false);
   const [acting, setActing] = useState(false);
   const [policy, setPolicy] = useState<CalibrationPolicy>();
   const [qualification, setQualification] = useState<GraderQualification>();
@@ -99,6 +108,8 @@ function ScopedCalibrationDrawer({
   const loadRequestRef = useRef(0);
   const actionRequestRef = useRef(0);
   const actionPendingRef = useRef(false);
+  const policyEditRef = useRef(0);
+  const templateWorkingRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -130,6 +141,7 @@ function ScopedCalibrationDrawer({
       const nextQualification = qualificationResult.status === "fulfilled" ? qualificationResult.value.qualification : undefined;
       setPolicy(nextPolicy);
       setQualification(nextQualification);
+      setPolicyEdited(false);
       if (nextPolicy) {
         policyForm.setFieldsValue({
           archetype_code: nextPolicy.archetype_code,
@@ -142,19 +154,24 @@ function ScopedCalibrationDrawer({
           maximum_severe_rate: nextPolicy.maximum_severe_rate,
           severe_error_threshold: nextPolicy.severe_error_threshold,
           qualification_validity_days: nextPolicy.qualification_validity_days,
-          expected_revision: nextPolicy.revision
+          expected_revision: nextPolicy.revision,
+          // 来源身份与阈值必须同次恢复；合并式表单更新不能留下刷新前尚未保存的模板身份。
+          school_template_id: nextPolicy.school_template_id,
+          school_template_revision: nextPolicy.school_template_revision
         });
       } else {
         policyForm.setFieldsValue({
-          archetype_code: "extended_response", max_score: 10, minimum_samples: 3, maximum_mae: 1,
+          // 仅继承同题的已知配置；未知时留空，不能把开放题和 10 分冒充本题事实。
+          archetype_code: inheritedType, max_score: inheritedMax, minimum_samples: 3, maximum_mae: 1,
           minimum_exact_agreement: 0.6, minimum_within_one_agreement: 0.9, minimum_criterion_agreement: 0.8,
-          maximum_severe_rate: 0, severe_error_threshold: 3, qualification_validity_days: 30, expected_revision: 0
+          maximum_severe_rate: 0, severe_error_threshold: 3, qualification_validity_days: 30, expected_revision: 0,
+          school_template_id: undefined, school_template_revision: undefined
         });
       }
     } finally {
-      if (mountedRef.current && requestId === loadRequestRef.current) setLoading(false);
+      if (mountedRef.current && requestId === loadRequestRef.current) { setLoading(false); setPolicyLoaded(true); }
     }
-  }, [examId, graderId, open, policyForm, questionId]);
+  }, [examId, graderId, open, policyForm, questionId, inheritedType, inheritedMax]);
 
   useEffect(() => {
     if (!open) return;
@@ -165,17 +182,19 @@ function ScopedCalibrationDrawer({
   }, [load, open]);
 
   const savePolicy = async () => {
-    if (!open || !canManagePolicy || actionPendingRef.current) return;
+    if (!open || !canManagePolicy || actionPendingRef.current || templateWorkingRef.current) return;
     const requestId = ++actionRequestRef.current;
     actionPendingRef.current = true;
     setActing(true);
     try {
       const values = await policyForm.validateFields();
       if (!mountedRef.current || requestId !== actionRequestRef.current) return;
+      const editRevision = policyEditRef.current;
       const result = await putCalibrationPolicy(examId, questionId, values);
       if (!mountedRef.current || requestId !== actionRequestRef.current) return;
       setPolicy(result.policy);
       policyForm.setFieldValue("expected_revision", result.policy.revision);
+      if (policyEditRef.current === editRevision) setPolicyEdited(false);
       message.success("试评通过标准已保存");
     } catch (error) {
       if (mountedRef.current && requestId === actionRequestRef.current) message.error(getUserErrorMessage(error, "试评通过标准保存失败"));
@@ -188,7 +207,7 @@ function ScopedCalibrationDrawer({
   };
 
   const start = async () => {
-    if (!open || !policy || actionPendingRef.current) return;
+    if (!open || !policy || actionPendingRef.current || templateWorkingRef.current) return;
     const requestId = ++actionRequestRef.current;
     actionPendingRef.current = true;
     setActing(true);
@@ -245,38 +264,51 @@ function ScopedCalibrationDrawer({
   const checks = session?.metrics ? calibrationThresholdChecks(session.metrics, policy) : [];
 
   return (
-    <Drawer title="阅卷前试评" className="grader-trial-drawer" width="min(860px, 100vw)" open={open} onClose={onClose} extra={<Button loading={loading} onClick={() => void load()}>刷新</Button>}>
+    <Drawer title="阅卷前试评" className="grader-trial-drawer" width="min(860px, 100vw)" open={open} onClose={onClose} extra={<Button loading={loading} disabled={acting || templateWorking} onClick={() => void load()}>刷新</Button>}>
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
-        <div className="grader-trial-intro"><h3>先试评，统一本题的给分尺度</h3><p>用已批准的标准卷练习评分，检查你的给分与参考标准是否一致。</p><ol><li>管理员准备标准卷和通过标准</li><li>阅卷老师独立评分</li><li>提交后查看分差，全部完成后判定是否达标</li></ol></div>
         {renderCalibrationQualification(qualification)}
 
         {canManagePolicy ? (
           <details className="grader-trial-settings">
             <summary>设置本题试评通过标准<span>管理员设置</span></summary>
-            <p className="muted">各项要求需同时达标。题型和满分须与标准卷一致；请先在“标准卷”中准备足量且已批准的样本。</p>
-            <Form form={policyForm} layout="vertical" style={{ marginTop: 12 }}>
+            {policyLoaded && !loading ? <CalibrationSchoolTemplates examId={examId} questionId={questionId} disabled={acting} policy={policy} hasUnsavedChanges={policyEdited}
+              readCurrent={() => policyForm.getFieldsValue()} onKnownQuestion={values => policyForm.setFieldsValue(values)}
+              onWorkingChange={working => { templateWorkingRef.current = working; setTemplateWorking(working); }}
+              onApply={values => { policyEditRef.current++; setPolicyEdited(true); policyForm.setFieldsValue(values); }} /> : null}
+            {policy?.school_template_id && !policyEdited ? <p>本题标准来源于学校模板第 {policy.school_template_revision} 版。</p> : null}
+            <Form form={policyForm} layout="vertical" disabled={loading || acting || templateWorking} style={{ marginTop: 12 }} onValuesChange={() => {
+              // 人工改阈值后按本题标准保存，不再携带学校模板身份；复制来源不能为不同规则背书。
+              policyEditRef.current++; setPolicyEdited(true); policyForm.setFieldsValue({ school_template_id: undefined, school_template_revision: undefined });
+            }}>
+              <details><summary>按题调整通过标准</summary>
+              <CalibrationPolicyReuse key={`${examId}:${questionId}`} examId={examId} questionId={questionId} disabled={loading || acting || templateWorking} readCurrent={() => policyForm.getFieldsValue()} onKnownQuestion={values => policyForm.setFieldsValue(values)} onApply={values => {
+                policyEditRef.current++; setPolicyEdited(true); policyForm.setFieldsValue({ ...values, school_template_id: undefined, school_template_revision: undefined }); message.success("已带入通过标准，请核对后保存本题。");
+              }} />
               <div className="grader-trial-fields">
                 <Form.Item name="archetype_code" label="作答类型" rules={[{ required: true }]}><Select options={archetypeOptions} /></Form.Item>
                 <Form.Item name="max_score" label="本题满分" rules={[{ required: true }]}><InputNumber min={0.5} addonAfter="分" /></Form.Item>
                 <Form.Item name="minimum_samples" label="至少试评几份" extra="标准卷数量不能少于此值" rules={[{ required: true }]}><InputNumber min={1} precision={0} addonAfter="份" /></Form.Item>
-                <Form.Item name="maximum_mae" label="平均分差上限" extra="每份与参考分相差的绝对值，再取平均" rules={[{ required: true }]}><InputNumber min={0} step={0.1} addonAfter="分" /></Form.Item>
-                <Form.Item name="minimum_exact_agreement" label="分数完全相同的最低比例" extra="例如 60%：至少六成样本与参考分相同" {...rateFieldProps}><InputNumber min={0} max={100} step={5} addonAfter="%" /></Form.Item>
+                <Form.Item name="maximum_mae" label="平均分差上限" extra="各样本与参考分的绝对差，再取平均。" rules={[{ required: true }]}><InputNumber min={0} step={0.1} addonAfter="分" /></Form.Item>
+                <Form.Item name="minimum_exact_agreement" label="分数完全相同的最低比例" extra="例如 60% 表示至少六成样本同分。" {...rateFieldProps}><InputNumber min={0} max={100} step={5} addonAfter="%" /></Form.Item>
                 <Form.Item name="minimum_within_one_agreement" label="分差不超过 1 分的最低比例" {...rateFieldProps}><InputNumber min={0} max={100} step={5} addonAfter="%" /></Form.Item>
-                <Form.Item name="minimum_criterion_agreement" label="采分点判断相同的最低比例" extra="设置后须有可比较的采分点数据" {...rateFieldProps}><InputNumber min={0} max={100} step={5} addonAfter="%" /></Form.Item>
-                <Form.Item name="maximum_severe_rate" label="严重分差的最高比例" extra="0% 表示不允许出现严重分差" {...rateFieldProps}><InputNumber min={0} max={100} step={5} addonAfter="%" /></Form.Item>
-                <Form.Item name="severe_error_threshold" label="相差几分算严重分差" extra="达到此分差即计为严重" ><InputNumber min={0.1} step={0.5} addonAfter="分" /></Form.Item>
+                <Form.Item name="minimum_criterion_agreement" label="采分点判断相同的最低比例" extra="须有可比较的采分点数据。" {...rateFieldProps}><InputNumber min={0} max={100} step={5} addonAfter="%" /></Form.Item>
+                <Form.Item name="maximum_severe_rate" label="严重分差的最高比例" extra="0% 表示不允许严重分差。" {...rateFieldProps}><InputNumber min={0} max={100} step={5} addonAfter="%" /></Form.Item>
+                <Form.Item name="severe_error_threshold" label="相差几分算严重分差" extra="相差达到此值即计入（含等于）。" ><InputNumber min={0.1} step={0.5} addonAfter="分" /></Form.Item>
                 <Form.Item name="qualification_validity_days" label="通过后资格有效期"><InputNumber min={1} precision={0} addonAfter="天" /></Form.Item>
                 <Form.Item name="expected_revision" hidden><InputNumber /></Form.Item>
+                <Form.Item name="school_template_id" hidden><Input /></Form.Item>
+                <Form.Item name="school_template_revision" hidden><InputNumber /></Form.Item>
               </div>
-              <Button type="primary" loading={acting} onClick={() => void savePolicy()}>保存通过标准</Button>
+              </details>
+              <Button type="primary" loading={acting} disabled={templateWorking} onClick={() => void savePolicy()}>保存通过标准</Button>
             </Form>
           </details>
         ) : null}
 
         {!session ? (
           <div>
-            <Button type="primary" loading={acting} disabled={!policy} onClick={() => void start()}>开始本题试评</Button>
-            {!policy ? <p className="muted">尚未设置本题通过标准。请管理员展开上方设置并保存，同时在“标准卷”中准备已批准的样本。</p> : <p className="muted">本题至少需 {policy.minimum_samples} 份标准卷；开始后请完成系统提供的全部样本。</p>}
+            <Button type="primary" loading={acting} disabled={!policy || templateWorking} onClick={() => void start()}>开始本题试评</Button>
+            {!policy ? <p className="muted">{canManagePolicy ? "暂未读到本题通过标准。请核对并保存标准，同时准备已批准的标准卷。" : "暂未读到本题通过标准，当前不能开始试评。请联系管理员核对。"}</p> : <p className="muted">本题至少需 {policy.minimum_samples} 份标准卷；开始后请完成系统提供的全部样本。</p>}
           </div>
         ) : (
           <>

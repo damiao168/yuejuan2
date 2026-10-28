@@ -72,6 +72,9 @@ function processingExceptionTone(exception: ProcessingException): StatusTone {
   return "neutral";
 }
 
+// 接口保留 P0–P3 用于筛选与兼容；教师按处理优先级阅读，是否阻断仍单独使用 blocking 的真实状态。
+const processingPriorityLabels: Record<ProcessingExceptionSeverity, string> = { P0: "立即处理", P1: "优先处理", P2: "常规处理", P3: "稍后处理" };
+
 function processingExceptionStatusTone(status: string): StatusTone {
   if (status === "resolved") return "success";
   if (status === "assigned") return "processing";
@@ -259,10 +262,10 @@ export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Rea
       )
     },
     {
-      title: "级别",
+      title: "处理优先级",
       dataIndex: "severity",
       width: 96,
-      render: (_value, exception) => <StatusTag tone={processingExceptionTone(exception)}>{exception.severity}</StatusTag>
+      render: (_value, exception) => <StatusTag tone={processingExceptionTone(exception)}>{processingPriorityLabels[exception.severity] ?? "待核对优先级"}</StatusTag>
     },
     {
       title: "状态",
@@ -395,9 +398,9 @@ export function ProcessingOperationsPanel({ examId, canManage, onNavigate }: Rea
           <Select<ProcessingExceptionSeverity>
             className="toolbar-select"
             allowClear
-            placeholder="全部级别"
+            placeholder="全部优先级"
             value={severity}
-            options={["P0", "P1", "P2", "P3"].map((value) => ({ label: value, value }))}
+            options={(Object.keys(processingPriorityLabels) as ProcessingExceptionSeverity[]).map((value) => ({ label: processingPriorityLabels[value], value }))}
             onChange={(value) => setSeverity(value)}
           />
           <Select<ProcessingExceptionStatus>

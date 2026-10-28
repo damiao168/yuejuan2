@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Alert, Button, Collapse, Descriptions, Empty, Select, Space, Statistic, Table, Tag } from "antd";
 import { RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { QualityDashboard } from "../api/qualityDashboard";
@@ -5,9 +6,11 @@ import type { BackmarkBatch, BackmarkSummary } from "../api/backmark";
 import type { RegradePreview, ScoreRelease } from "../api/scoreReleases";
 import type { WorkflowActor } from "../api/workflowActors";
 import { LoadingState } from "../components/PageState";
+import { assessmentArchetypeLabels as archetypeLabels } from "../constants/assessmentLabels";
 
 type Gate = QualityDashboard["gate"];
 type QualityQuestion = QualityDashboard["questions"][number];
+const riskLabels: Record<string, string> = { R1: "课堂与形成性评价", R2: "校内总结性考试", R3: "高风险考试" };
 
 function gateLabel(gate: Gate) {
   if (gate === "blocked") return "不可发布";
@@ -23,7 +26,7 @@ function gateColor(gate: Gate): "error" | "success" | "warning" {
 
 function gateDescription(gate: Gate) {
   if (gate === "blocked") return "存在必须先处置的质量问题，不能发布成绩。";
-  if (gate === "ready") return "当前没有阻断性质量事件。";
+  if (gate === "ready") return "未发现阻断性质量事件；其他发布条件以成绩发布检查为准。";
   return "当前没有阻断项，但仍有待补齐的质量证据或处理项。";
 }
 
@@ -108,6 +111,8 @@ export function QualityDashboardOverview({ data, error, canManage, onSeed, onInc
   onSeed: () => void; onIncidents: () => void; onBackmark: () => void; onRefresh: () => void; onRecompute: (questionId: string) => void;
   onHandleFinding?: (code: string, questionId: string) => void;
 }>) {
+  const pendingSection = useRef<HTMLElement>(null);
+  const pending = data.questions.flatMap(row => row.findings.filter(finding => finding.status !== "ready").map(finding => ({ ...finding, questionNo: row.question.question_no })));
   return <>
     <div className="page-heading compact-heading">
       <div><span className="eyebrow">评分质量</span><h1>质量总览</h1><p>基于标准卷、阅卷员标定、盲测、双评和回标的考试级质量证据。</p></div>
@@ -119,20 +124,24 @@ export function QualityDashboardOverview({ data, error, canManage, onSeed, onInc
         <Button icon={<RefreshCw size={16} />} onClick={onRefresh}>刷新</Button>
       </Space>
     </div>
-    <Alert showIcon type={gateColor(data.gate)} icon={data.gate === "ready" ? <ShieldCheck size={19} /> : <ShieldAlert size={19} />} message={`发布可行性：${gateLabel(data.gate)}`} description={gateDescription(data.gate)} />
+    <Alert showIcon type={gateColor(data.gate)} icon={data.gate === "ready" ? <ShieldCheck size={19} /> : <ShieldAlert size={19} />} message={`评分质量检查：${gateLabel(data.gate)}`} description={gateDescription(data.gate)} />
     <div className="quality-dashboard-summary">
-      <Statistic title="阻断项" value={data.blocking.length} valueStyle={{ color: data.blocking.length ? "#cf1322" : undefined }} />
-      <Statistic title="需关注" value={data.warnings.length} valueStyle={{ color: data.warnings.length ? "#d48806" : undefined }} />
+      <div><Statistic title="阻断项" value={data.blocking.length} valueStyle={{ color: data.blocking.length ? "#cf1322" : undefined }} />{data.blocking.length ? <Button type="link" onClick={() => pendingSection.current?.scrollIntoView({ block: "start" })}>处理阻断事项</Button> : null}</div>
+      <div><Statistic title="需关注" value={data.warnings.length} valueStyle={{ color: data.warnings.length ? "#d48806" : undefined }} />{data.warnings.length ? <Button type="link" onClick={() => pendingSection.current?.scrollIntoView({ block: "start" })}>查看关注事项</Button> : null}</div>
       <Statistic title="题目数" value={data.questions.length} />
       <Statistic title="可继续题目" value={data.questions.filter((item) => item.gate === "ready").length} valueStyle={{ color: "#389e0d" }} />
     </div>
     {error ? <Alert type="warning" showIcon message={error} /> : null}
+    {pending.length ? <section className="content-card" ref={pendingSection} aria-label="发布前待办"><h2>发布前待办</h2><Table size="small" pagination={false} rowKey={item => `${item.question_id}-${item.code}-${item.incident_ref ?? ""}`} dataSource={pending} columns={[
+      { title: "题号", dataIndex: "questionNo" }, { title: "问题", dataIndex: "reason" }, { title: "负责人", dataIndex: "owner" },
+      { title: "处理", render: (_value, finding) => canManage && onHandleFinding ? <Button onClick={() => onHandleFinding(finding.code, finding.question_id)}>处理本题事项</Button> : finding.resolution }
+    ]} /></section> : null}
     <div className="content-card">
       <div className="section-header"><div><h2>每题质量状态</h2><p>展开题目可查看数据依据、负责人和处理路径。</p></div></div>
       <Table size="middle" rowKey={(row) => row.question.id} pagination={false} dataSource={data.questions} columns={[
         { title: "题号", dataIndex: ["question", "question_no"], width: 92 },
-        { title: "题型", dataIndex: ["question", "archetype_code"], render: (value: string) => value || "未配置" },
-        { title: "风险", dataIndex: ["question", "risk_tier"], render: (value: string) => value ? <Tag>{value}</Tag> : "未配置" },
+        { title: "题型", dataIndex: ["question", "archetype_code"], render: (value: string) => value ? <span title={archetypeLabels[value] ? undefined : value}>{archetypeLabels[value] ?? "其他题型"}</span> : "未配置" },
+        { title: "风险", dataIndex: ["question", "risk_tier"], render: (value: string) => value ? <Tag title={riskLabels[value] ? undefined : value}>{riskLabels[value] ?? "其他风险"}</Tag> : "未配置" },
         { title: "质量状态", dataIndex: "gate", render: (value: Gate) => <Tag color={gateColor(value)}>{gateLabel(value)}</Tag> },
         { title: "标准卷", dataIndex: "gold", render: (value: QualityQuestion["gold"]) => value.ready ? `已覆盖 ${value.active_approved} 份` : "待补充" },
         { title: "盲测一致", dataIndex: "seed", render: (value: QualityQuestion["seed"]) => `${percentage(value.exact_agreement.rate)} · ${value.sample_size} 份` },
@@ -183,7 +192,7 @@ function BackmarkRegradeOptions({ summary, questionLabel, error, releases, revie
       <Select value={assignee || undefined} disabled={loading} placeholder="选择复评阅卷员" options={workflowActorOptions(reviewers)} onChange={onAssigneeChange} />
       <Button loading={loading} disabled={!releaseID || !reviewers.some((user) => user.id === assignee && user.username?.trim())} onClick={onPreview}>预览正式复评范围</Button>
     </Space>
-    {preview ? <Alert className="backmark-preview" type="info" showIcon message={`将冻结 ${preview.affected_count} 份已发布答卷`} description={`${questionLabel}；接手教师：${workflowActorLabel(reviewers.find((user) => user.id === assignee)!)}；来源成绩版本 V${preview.source_release_version}。确认后仍需审批、复评、差异复核和新版本发布。`} action={<Button type="primary" size="small" loading={loading} onClick={onCreate}>创建复评任务</Button>} /> : null}
+    {preview ? <Alert className="backmark-preview" type="info" showIcon message={`来源成绩 V${preview.source_release_version} · 将冻结 ${preview.affected_count} 份答卷`} description={`${questionLabel} · 接手教师：${workflowActorLabel(reviewers.find((user) => user.id === assignee)!)}。创建后仍需审批、独立复评、差异复核并发布新版本。`} action={<Button type="primary" size="small" loading={loading} onClick={onCreate}>创建复评任务</Button>} /> : null}
   </>;
 }
 
@@ -192,7 +201,7 @@ function BackmarkRegradeHandoff(props: BackmarkSummaryProps & Readonly<{ summary
   const hasRegradeCandidates = (props.summary.regrade_required_count ?? 0) > 0;
   if (!props.canManage || !hasRegradeCandidates) return null;
   return <>
-    <div className="section-header backmark-batch-history"><div><h3>转入题目复评</h3><p>系统将从已发布成绩版本重新冻结本批次对应的学生范围；不会直接采用回标候选分。</p></div></div>
+    <div className="section-header backmark-batch-history"><div><h3>转入题目复评</h3>{!props.error && props.summary.batch.status === "ready_for_confirmation" ? <p>仅已完成且标记“需重评”的项目可转入题目复评；范围以已发布成绩版本为准，不采用回标候选分。</p> : null}</div></div>
     <BackmarkRegradeOptions {...props} />
   </>;
 }
@@ -207,7 +216,7 @@ export function BackmarkSummaryContent(props: BackmarkSummaryProps) {
   }
   const hasRegradeCandidates = (summary.regrade_required_count ?? 0) > 0;
   return <>
-    <Alert type="info" showIcon message="回标只记录候选差异，不会修改当前成绩" description="只有标记为“需重评”的已完成项目，才能由质量管理员明确转入题目复评。新任务仍需审批、人工复评并创建新的成绩发布版本。" />
+    <Alert type="info" showIcon message="回标仅记录差异，当前成绩不变。" />
     <Descriptions size="small" bordered column={2} items={[
       { key: "batch", label: "回标题目", children: questionLabel },
       { key: "time", label: "创建时间", children: batchTime(summary.batch.created_at) },

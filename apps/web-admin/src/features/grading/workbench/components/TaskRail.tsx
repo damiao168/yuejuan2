@@ -163,15 +163,17 @@ function ReviewTaskRail({
       <section className="grading-taskbar">
         {canManageTasks && canWork ? <Segmented value={queueScope} options={[{ label: "待我处理", value: "mine" }, { label: "全部任务", value: "all" }]} onChange={(value) => onQueueScopeChange(value as "mine" | "all")} /> : null}
         <div className="grading-scope-filters">
-          <label>学科<Select allowClear disabled={Boolean(actioning) || fixedExam} value={scope.subjectFilter || undefined} placeholder="全部学科" options={scope.subjectOptions} onChange={(value) => onSubjectChange(value || "")} /></label>
-          <label>考试<Select allowClear disabled={Boolean(actioning) || fixedExam} value={scope.effectiveExamId || undefined} placeholder="全部考试" options={scope.examOptions} onChange={(value) => onExamChange(value || "")} /></label>
+          {fixedExam ? <span>{scope.examOptions.find(option => option.value === scope.effectiveExamId)?.label || "本场考试"}{scope.subjectFilter ? ` · ${examSubjectLabel(scope.subjectFilter)}` : ""}</span> : <>
+          <label>学科<Select allowClear disabled={Boolean(actioning)} value={scope.subjectFilter || undefined} placeholder="全部学科" options={scope.subjectOptions} onChange={(value) => onSubjectChange(value || "")} /></label>
+          <label>考试<Select allowClear disabled={Boolean(actioning)} value={scope.effectiveExamId || undefined} placeholder="全部考试" options={scope.examOptions} onChange={(value) => onExamChange(value || "")} /></label>
+          </>}
           <label>题目<Select allowClear disabled={Boolean(actioning)} value={scope.questionFilter || undefined} placeholder="全部题目" options={scope.questionOptions} onChange={(value) => onQuestionChange(value || "")} /></label>
         </div>
         <Select aria-label="任务状态" disabled={Boolean(actioning)} className="toolbar-select" value={taskFilter} options={taskFilterOptions} onChange={onTaskFilterChange} />
         <Input disabled={Boolean(actioning)} prefix={<Search size={16} />} placeholder="搜索考试、题号或密号" value={keyword} onChange={(event) => onKeywordChange(event.target.value)} />
         {canManageTasks && queueScope === "all" ? <Checkbox disabled={Boolean(actioning)} checked={scope.unassignedOnly} onChange={(event) => onUnassignedChange(event.target.checked)}>只看未分配</Checkbox> : null}
         <span className="muted">已加载 {tasks.length} 份 · 当前显示 {filteredTasks.length} 份 · 全部匹配 {scope.matchedAggregate?.total_count ?? "—"} 份</span>
-        <small className="muted">考试与题目选项来自已加载的授权任务；也可搜索考试名称。</small>
+        <small className="muted">筛选选项仅含已加载任务；可搜索考试名称。</small>
       </section>
       {renderAssignmentBar()}
       <div className="grading-task-list">

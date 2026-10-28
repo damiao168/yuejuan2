@@ -5,6 +5,8 @@ import { Play, RefreshCw, Sparkles } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
 import { enqueueSubjectiveGradingBatch, getSubjectiveGradingBatch, recoverSubjectiveEnqueueCommand, type SubjectiveGradingBatch } from "../api/subjectiveGrading";
 import { AIExecutionFailureSummary } from "../features/grading/AIExecutionFailureSummary";
+import { SubjectiveBatchSourcePicker } from "../features/grading/SubjectiveBatchSourcePicker";
+import { getBusinessCommandSession } from "../api/businessCommand";
 
 function errorMessage(error: unknown) {
   return getUserErrorMessage(error, "主观题批次操作失败");
@@ -35,8 +37,14 @@ function readBatchCommand(key: string) {
 }
 
 export function SubjectiveGradingBatchPage({ scopeKey }: Readonly<{ scopeKey: string }>) {
+  return <ScopedSubjectiveGradingBatchPage key={scopeKey} scopeKey={scopeKey} />;
+}
+
+function ScopedSubjectiveGradingBatchPage({ scopeKey }: Readonly<{ scopeKey: string }>) {
   const storageKey = `subjective-batch-command:${scopeKey}`;
   const busy = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [pending, setPending] = useState(() => Boolean(readBatchCommand(storageKey)));
   useEffect(() => {
     const id = readBatchCommand(`${storageKey}:batch`);
@@ -51,6 +59,7 @@ export function SubjectiveGradingBatchPage({ scopeKey }: Readonly<{ scopeKey: st
   const [error, setError] = useState<string>();
   const [enqueueNotice, setEnqueueNotice] = useState<string>();
   const [pollError, setPollError] = useState<string>();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const progress = useMemo(() => {
     if (!batch || batch.total_count === 0) return 0;
@@ -120,18 +129,28 @@ export function SubjectiveGradingBatchPage({ scopeKey }: Readonly<{ scopeKey: st
     setLoading(true);
     setError(undefined);
     setEnqueueNotice(undefined);
+    const session = getBusinessCommandSession();
+    const isCurrent = () => mounted.current && session === getBusinessCommandSession();
     try {
       const segmentIds = segmentText.split(/[\s,，]+/).map((value) => value.trim()).filter(Boolean);
       const result = await submitSubjectiveBatchCommand(localStorage, storageKey, { commandId: idempotencyKey.trim(), segmentIds });
+      // 创建回包可能晚于切账号或离开工具；旧请求不能替新会话继续入队。
+      if (!isCurrent()) return;
       setBatch(result.batch);
       setIdempotencyKey(newBatchIdempotencyKey());
       setPending(false);
+      if (result.batch.status === "planned") {
+        // 创建已有持久回执后再入队；入队失败保留批次，用户可单独继续，不能重新创建。
+        try {
+          const queued = await enqueueSubjectiveGradingBatch(result.batch.id); if (!isCurrent()) return; setBatch(queued.batch);
+          if (queued.enqueue_result.failed_count > 0) setEnqueueNotice(`批次已创建：${queued.enqueue_result.accepted_count} 个已入队，${queued.enqueue_result.failed_count} 个尚未入队，可继续入队。`);
+        } catch (cause) { if (isCurrent()) setEnqueueNotice(`批次已创建，尚未确认入队：${errorMessage(cause)}。请继续本批次入队。`); }
+      }
     } catch (createError) {
-      setError(errorMessage(createError));
-      setPending(Boolean(readBatchCommand(storageKey)));
+      if (isCurrent()) { setError(errorMessage(createError)); setPending(Boolean(readBatchCommand(storageKey))); }
     } finally {
       busy.current = false;
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }
 
@@ -182,7 +201,7 @@ export function SubjectiveGradingBatchPage({ scopeKey }: Readonly<{ scopeKey: st
   return (
     <div className="page-stack">
       <section className="page-heading">
-        <div><span className="dashboard-kicker">管理员</span><h1>主观题 AI 批次</h1><p>创建受治理的影子评分批次，AI 结果只进入教师复核，不直接改写最终成绩。</p></div>
+        <div><span className="dashboard-kicker">内部工具</span><h1>主观题影子评分</h1><p>用于独立评估 AI 评分效果；结果供教师核对，不直接改写正式成绩。</p></div>
         <Sparkles size={28} aria-hidden="true" />
       </section>
       {error ? <Alert type="error" showIcon message={error} /> : null}
@@ -190,12 +209,13 @@ export function SubjectiveGradingBatchPage({ scopeKey }: Readonly<{ scopeKey: st
       {pollError ? <Alert type="warning" showIcon message={pollError} action={<Button size="small" onClick={() => void refresh()}>立即重试</Button>} /> : null}
       <Card title="创建批次">
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-          <Input value={idempotencyKey} onChange={(event) => setIdempotencyKey(event.target.value)} prefix="幂等键" />
-          <Input.TextArea value={segmentText} onChange={(event) => { setSegmentText(event.target.value); setIdempotencyKey(newBatchIdempotencyKey()); }} placeholder="输入答题片段 ID，使用换行或逗号分隔（最多 1000 个）" autoSize={{ minRows: 4, maxRows: 8 }} />
-          <Button type="primary" loading={loading} onClick={() => void createBatch()}>{pending ? "继续确认原批次" : "创建批次"}</Button>
+          <Button disabled={loading || pending} onClick={() => setPickerOpen(value => !value)}>{pickerOpen ? "收起答卷选择" : "按考试选择答卷"}</Button>
+          {pickerOpen ? <SubjectiveBatchSourcePicker disabled={loading || pending} onSelect={ids => { setSegmentText(ids.join("\n")); setIdempotencyKey(newBatchIdempotencyKey()); }} /> : null}
+          <details><summary>高级输入与诊断编号</summary><Input value={idempotencyKey} readOnly prefix="幂等键" /><Input.TextArea disabled={loading || pending} value={segmentText} onChange={(event) => { setSegmentText(event.target.value); setIdempotencyKey(newBatchIdempotencyKey()); }} placeholder="输入答题片段 ID，使用换行或逗号分隔（最多 1000 个）" autoSize={{ minRows: 4, maxRows: 8 }} /></details>
+          <Button type="primary" loading={loading} onClick={() => void createBatch()}>{pending ? "继续确认原批次" : "创建并开始影子评分"}</Button>
         </Space>
       </Card>
-      {batch ? <Card title={<Space>批次进度 <Tag color={batchStatusColor(batch.status)}>{batchStatusLabels[batch.status] ?? "未知状态"}</Tag></Space>} extra={<Space><Button icon={<Play size={15} />} disabled={batch.status !== "planned" && batch.status !== "processing"} loading={loading} onClick={() => void enqueue()}>入队评分</Button><Button icon={<RefreshCw size={15} />} loading={loading} onClick={() => void refresh()}>刷新</Button></Space>}>
+      {batch ? <Card title={<Space>批次进度 <Tag color={batchStatusColor(batch.status)}>{batchStatusLabels[batch.status] ?? "未知状态"}</Tag></Space>} extra={<Space><Button icon={<Play size={15} />} disabled={batch.status === "cancelled" || (batch.status !== "planned" && batch.status !== "processing" && !enqueueNotice)} loading={loading} onClick={() => void enqueue()}>入队评分</Button><Button icon={<RefreshCw size={15} />} loading={loading} onClick={() => void refresh()}>刷新</Button></Space>}>
         <Progress percent={progress} status={batch.failed_count ? "exception" : undefined} />
         <div className="subjective-batch-counts"><span><strong>{batch.total_count}</strong>总量</span><span><strong>{batch.queued_count}</strong>排队</span><span><strong>{batch.processing_count}</strong>处理中</span><span><strong>{batch.succeeded_count}</strong>成功</span><span className={batch.failed_count ? "danger" : ""}><strong>{batch.failed_count}</strong>失败</span></div>
         <AIExecutionFailureSummary summary={batch.failure_summary} />

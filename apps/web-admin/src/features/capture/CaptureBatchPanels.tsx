@@ -246,7 +246,8 @@ export function CaptureBatchWorkspace({
         )}
       </Space>
     </header>
-    <Alert type="info" showIcon message="请将同一学生的全部页面连续排列，再排列下一名学生" description="按选择的文件顺序、文件内页序，每 N 页组成一份学生答卷。1 页用于单面，2 页用于正反面，支持 1–20 页。PDF/TIFF 按解码页数计算；每次选择独立分组，缺页不会进入后续处理，也不会跨两次选择凑页。" />
+    <p>每人{pagesPerStudent ?? "待选择"}页，按学生连续排列；每次须选择完整答卷。</p>
+    <details><summary>查看页序与分组规则</summary><p>按文件选择顺序及文件内页序，每N页组成一份答卷。支持每人1–20页；PDF/TIFF按解码页数计算。每次选择独立分组，不能跨两次选择补页；缺页须处理后才能继续。</p></details>
     {pendingUpload ? <Alert type={pendingUpload.error ? "warning" : "info"} showIcon message={`${uploading ? "正在上传" : "本次上传未完成"}：已登记 ${pendingUpload.completedFiles}/${pendingUpload.totalFiles} 个文件，每名学生 ${pendingUpload.pagesPerStudent} 页`}
       description={pendingUpload.error || "请等待本次选择的文件按顺序上传和登记。"}
       action={!uploading ? <Space><Button onClick={() => void retryUpload()} disabled={!batchCanManage}>重试本次上传</Button><Button onClick={discardUpload}>结束本次上传</Button></Space> : undefined} /> : null}

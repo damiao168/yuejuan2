@@ -8,7 +8,7 @@ import { examTypeOptions } from "../../../constants/examCatalog";
 import { examSubjectLabel, examSubjectOptions } from "../../../constants/examStatus";
 import { createSubjectDraft, subjectDraftFromTemplate } from "./createExamDraft";
 import { createExamFieldId, type CreateExamValidationIssue } from "./createExamValidation";
-import { examTypeLabel, gradingLabel, gradingPresentation, publishPolicyOptions } from "./presentation";
+import { examTypeLabel, gradingLabel, gradingPresentation } from "./presentation";
 import type { CreateExamDraft, ExamCreationMode, GradingChoice, SubjectExamDraft } from "./types";
 import "./exam-create.css";
 
@@ -19,9 +19,9 @@ const creationModes: Array<{
   icon: typeof Upload;
   recommended?: boolean;
 }> = [
-  { value: "materials", title: "从试卷资料创建", description: "上传完整试卷识别题目与分值，无需预填题目数量", icon: Upload, recommended: true },
-  { value: "quick", title: "快速创建", description: "先建立考试与科目，稍后继续完善资料和设置", icon: Zap },
-  { value: "template", title: "使用考试方案", description: "套用学校或系统方案中的科目和试卷结构", icon: LayoutTemplate }
+  { value: "materials", title: "从试卷资料创建", description: "创建后上传试卷，识别题目与分值。", icon: Upload, recommended: true },
+  { value: "quick", title: "快速创建", description: "先创建考试，稍后补充资料。", icon: Zap },
+  { value: "template", title: "使用考试方案", description: "带入方案中的科目和试卷结构。", icon: LayoutTemplate }
 ];
 
 const creationSubmitLabels = new Map<ExamCreationMode, string>([
@@ -99,7 +99,7 @@ function SubjectCard({ subject, classes, issues, onChange }: Readonly<{
         <FieldError message={scoreError} />
       </label>
       <label className="exam-composer-field" data-exam-field={`${prefix}.durationMinutes`} htmlFor={createExamFieldId(`${prefix}.durationMinutes`)}>
-        <span>考试时间</span>
+        <span>考试时长</span>
         <InputNumber id={createExamFieldId(`${prefix}.durationMinutes`)} min={1} precision={0} value={subject.durationMinutes} status={durationError ? "error" : undefined} aria-invalid={Boolean(durationError)} suffix="分钟" onChange={(value) => onChange({ ...subject, durationMinutes: Number(value ?? 0) })} />
         <FieldError message={durationError} />
       </label>
@@ -164,7 +164,7 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
       <section className="exam-composer-mode" aria-label="创建方式">
         {selectedTemplate ? <div className="exam-composer-section-heading"><button type="button" onClick={() => setTemplateOpen(true)}>当前方案：{selectedTemplate.name}</button></div> : null}
         <div className="exam-mode-grid">
-          {creationModes.map((item) => {
+          {creationModes.filter(item => item.value === "template").map((item) => {
             const Icon = item.icon;
             const selected = draft.creationMode === item.value;
             return <button type="button" key={item.value} className={`exam-mode-option${selected ? " is-selected" : ""}`} aria-pressed={selected} onClick={() => selectMode(item.value)}>
@@ -174,13 +174,14 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
             </button>;
           })}
         </div>
+        {selectedTemplate ? <Button onClick={() => selectMode("materials")}>取消方案，使用空白考试</Button> : null}
         <FieldError message={issueFor(issues, "templateId")} />
       </section>
 
       <div className="exam-composer-layout">
         <main className="exam-composer-main">
           <section className="exam-section" id="exam-section-basic">
-            <header><h2>1. 考试名称与基本信息</h2><p>名称用于考试列表；类型和年级决定后续可选范围。</p></header>
+            <header><h2>1. 考试名称与基本信息</h2></header>
             <label className="exam-composer-field" data-exam-field="name" htmlFor={createExamFieldId("name")}>
               <span>考试名称 <em>*</em></span>
               <Input id={createExamFieldId("name")} value={draft.name} maxLength={100} placeholder="例如：2026—2027学年高二第一学期期中考试" status={issueFor(issues, "name") ? "error" : undefined} aria-invalid={Boolean(issueFor(issues, "name"))} onChange={(event) => onChange({ name: event.target.value })} />
@@ -202,7 +203,7 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
           </section>
 
           <section className="exam-section" id="exam-section-subjects" data-exam-field="subjects">
-            <header><h2>2. 添加考试学科</h2><p>选择本场考试包含的学科，并设置每科满分和考试时间。</p></header>
+            <header><h2>2. 添加考试学科</h2></header>
             <fieldset className="exam-subject-picker" aria-label="选择考试科目">
               {examSubjectOptions.map((item) => {
                 const selected = draft.subjects.some((subject) => subject.subject === item.value);
@@ -224,31 +225,25 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
             <FieldError message={issueFor(issues, "classIds")} />
           </section>
 
-          <section className="exam-section" id="exam-section-materials">
-            <header><h2>4. 分学科导入考试资料</h2><p>考试创建后，按学科上传试卷、答案、解析和评分标准；系统会逐科识别，不混合资料。</p></header>
-            {draft.subjects.length ? <div className="exam-material-plan">{draft.subjects.map((subject) => <div key={subject.subject}><span>{examSubjectLabel(subject.subject)}</span><small>创建后上传试卷与答案</small><strong>{subject.totalScore} 分</strong></div>)}</div> : <div className="exam-composer-empty">先在第 2 题添加学科，资料入口会按学科生成。</div>}
-          </section>
-
           <section className="exam-section" id="exam-section-advanced">
             <button type="button" className="exam-advanced-trigger" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen((open) => !open)}>
-              <span><Gauge size={18} /><span><strong>5. 阅卷与发布设置</strong><small>阅卷：{gradingLabel(draft.gradingMode)} · 成绩：管理员确认后发布</small></span></span>
+              <span><Gauge size={18} /><span><strong>4. 阅卷与发布设置</strong><small>阅卷：{gradingLabel(draft.gradingMode)} · 成绩：管理员确认后发布</small></span></span>
               <ChevronDown size={18} className={advancedOpen ? "is-open" : ""} />
             </button>
             <AnimatePresence initial={false}>
               {advancedOpen ? <motion.div className="exam-advanced-content" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: .2 }}>
-                <div className="exam-advanced-group" data-exam-field="gradingMode"><span>阅卷方式</span><Radio.Group value={draft.gradingMode} onChange={(event) => onChange({ gradingMode: event.target.value as GradingChoice })}>
-                  {(["ai_assisted", "auto_objective_only", "human_review_required"] as GradingChoice[]).map((value) => <Radio key={value} value={value}><span className="exam-radio-copy"><strong>{gradingPresentation[value].title}{value === "ai_assisted" ? <em>推荐</em> : null}</strong><small>{gradingPresentation[value].description}</small></span></Radio>)}
+                <div className="exam-advanced-group" data-exam-field="gradingMode"><span>阅卷组织方式</span><Radio.Group value={draft.gradingMode} onChange={(event) => onChange({ gradingMode: event.target.value as GradingChoice })}>
+                  {(["ai_assisted", "auto_objective_only", "human_review_required", "double_mark", "blind_double_mark"] as GradingChoice[]).map((value) => <Radio key={value} value={value}><span className="exam-radio-copy"><strong>{gradingPresentation[value].title}{value === "ai_assisted" ? <em>推荐</em> : null}</strong><small>{gradingPresentation[value].description}</small></span></Radio>)}
                 </Radio.Group></div>
-                <div className="exam-advanced-inline"><label className="exam-composer-field"><span>更多阅卷方式</span><Radio.Group value={draft.gradingMode} onChange={(event) => onChange({ gradingMode: event.target.value as GradingChoice })}><Radio value="double_mark">双评</Radio><Radio value="blind_double_mark">盲双评</Radio></Radio.Group></label></div>
-                <label className="exam-composer-field"><span>成绩发布</span><Select value={draft.publishPolicy} options={publishPolicyOptions} onChange={(publishPolicy) => onChange({ publishPolicy })} /></label>
+                <p>成绩由管理员确认后发布。</p>
                 <Checkbox checked={draft.appealEnabled} onChange={(event) => onChange({ appealEnabled: event.target.checked })}>成绩发布后允许申诉</Checkbox>
-                <p>此处选择阅卷组织方式。每道题实际采用的评分策略会在考试准备时核对并冻结，AI 建议不能代替教师确认。</p>
+                <p>这里设置阅卷组织方式；各题判分策略在准备确认时冻结。AI 建议须由教师确认。</p>
               </motion.div> : null}
             </AnimatePresence>
           </section>
 
           <footer className="exam-composer-submit">
-            <div><strong>{draft.name.trim() || "尚未命名的考试"}</strong><span>{draft.examType ? examTypeLabel(draft.examType) : "未选择考试类型"} · {grade?.name ?? "未选择年级"} · {selectedClasses.length} 个班级 · {draft.subjects.length} 个学科</span><small>{mode.title} · 创建后进入工作区按学科继续上传资料</small></div>
+            <div><strong>{draft.name.trim() || "尚未命名的考试"}</strong><span>{draft.examType ? examTypeLabel(draft.examType) : "未选择考试类型"} · {grade?.name ?? "未选择年级"} · {selectedClasses.length} 个班级 · {draft.subjects.length} 个学科</span><small>{mode.title} · 创建后按学科上传试卷、答案或评分资料。</small></div>
             <Button type="primary" size="large" loading={submitting} onClick={onSubmit}>{cta}</Button>
           </footer>
         </main>
@@ -258,7 +253,7 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
     <div className="exam-composer-mobile-action"><span>已选 {draft.subjects.length} 科 · {draft.classIds.length} 个班级</span><Button type="primary" loading={submitting} onClick={onSubmit}>{draft.creationMode === "materials" ? "创建并上传" : "创建考试"}</Button></div>
 
     <Drawer className="exam-template-drawer" title="选择考试方案" placement="right" width={480} open={templateOpen} onClose={() => setTemplateOpen(false)}>
-      <p className="exam-template-drawer-intro">方案会带入科目、满分、时长和已有试卷结构，选中后仍可调整。</p>
+      <p className="exam-template-drawer-intro">带入科目、满分、时长和已有题目结构，选择后可调整。</p>
       <div className="exam-template-drawer-list">
         {visibleTemplates.map((template) => <button type="button" key={template.id} className={draft.templateId === template.id ? "is-selected" : ""} onClick={() => selectTemplate(template)}>
           <span className="exam-template-drawer-icon"><LayoutTemplate size={18} /></span>

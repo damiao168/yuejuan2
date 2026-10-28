@@ -7,7 +7,8 @@ describe("gold paper presentation", () => {
     expect(buildRubricEvidence({ step: 1.5, ignored: 9 }, points)).toEqual({ step: 1.5 });
   });
 
-  it("labels a subject coverage pattern without hiding its code", () => {
-    expect(goldCoverageGapLabel("missing_pattern:unit_error")).toBe("缺少典型模式：unit_error");
+  it("典型模式显示中文，未知机器标签不直接暴露在教师提示中", () => {
+    expect(goldCoverageGapLabel("missing_pattern:unit_error")).toBe("缺少典型模式：单位错误");
+    expect(goldCoverageGapLabel("missing_pattern:internal_unknown_tag")).toBe("缺少典型模式：其他典型错误");
   });
 });

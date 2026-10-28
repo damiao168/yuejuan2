@@ -76,23 +76,35 @@ flowchart LR
 
 首次运行时，脚本会自动完成以下工作：
 
-1. 启动并等待 Docker Desktop，确认使用 Linux containers。
+1. 首次创建管理员前先输入并校验密码，再启动并等待 Docker Desktop，确认使用 Linux containers。
 2. 从 Compose 样例创建 `infra/docker-compose/.env`，自动生成数据库、Redis、MinIO、Qdrant、内部服务和 Worker 随机密钥。
-3. 在默认 `certs` 目录完全不存在时生成两天有效的本地测试 CA 和内部服务证书，验证证书、私钥配对、有效期、信任链和调用主机名。
-4. 下载并校验固定版本的 llama.cpp 与 Qwen3-4B 模型，启动本地模型并同步 API Key。
+3. 在默认 `certs` 目录完全不存在时生成默认365天的本地开发 CA 和内部服务证书，可用 `-LocalCertificateDays`指定期限；验证证书、私钥配对、有效期、信任链和调用主机名。
+4. 选择并保存人工、外部API或本地模型启动模式。仅选择本地模式时下载并校验 llama.cpp 与 Qwen3-4B，并向受管本地连接同步 API Key；外部连接设置保持原值。
+   首次还会选择是否启用答卷处理。选择启用后，自动建立受限服务账号、核验服务登录，再启动 OCR、图像质量和页面处理；以后复用该选择。
 5. 执行部署预检、数据库迁移、MinIO 初始化、核心镜像构建和健康检查。
-6. 只提示一次 `platform_admin` 管理员密码，创建管理员并完成带登录的 smoke test。
+6. 使用开始时已校验、仅保存在当前进程的密码创建 `platform_admin`，完成带登录的 smoke test。
 7. 自动打开 `http://127.0.0.1:8088`。
 
-以后每天启动仍然执行同一条 `.\start-edugrade.cmd`；脚本会识别已经安装的环境，复用配置、数据、模型和镜像，不会重新生成密钥。首次安装需要下载约 2.4 GiB 的本地模型以及 Docker 镜像，实际耗时取决于网络。
+启动时显示当前源码提交和指纹、上次本地构建版本；发现源码或镜像改变时，明确要求用 `-Build` 更新。尚无构建记录的旧安装会提示版本未知，首次成功构建后建立记录。
 
-证书缺失、过期、不匹配或未通过 CA/主机名校验时，脚本会在模型下载和服务构建前停止。已有或自定义证书目录均保留；按[本地内部 TLS 说明](infra/docker-compose/README.md#本地内部-tls)在新目录生成并修改未提交 `.env` 的三个证书目录，不能覆盖正在使用的密钥。两天测试证书仅供隔离开发与验收；长期使用应配置组织签发的有效证书。
+以后每天启动仍然执行同一条 `.\start-edugrade.cmd`；脚本复用已保存模式、配置、数据和镜像，不会重新生成密钥。仅本地模型模式首次需要下载约2.4 GiB模型；其他模式无需这项下载。
+
+证书缺失、过期、不匹配或未通过 CA/主机名校验时，脚本会在模型下载和服务构建前停止。默认本地环境可用 `.\start-edugrade.cmd -RotateLocalCertificate -LocalCertificateDays 365` 执行新目录预检、切换、健康检查和失败恢复，旧证书及私钥保留。自定义 API HTTPS 和组织 PKI 按[本地内部 TLS 说明](infra/docker-compose/README.md#本地内部-tls)协调轮换，不覆盖正在使用的密钥。
 
 常用参数：
 
 ```powershell
 # 源码或依赖更新后重建核心镜像
 .\start-edugrade.cmd -Build
+
+# 明确选择并保存模式；Manual本次关闭智能评分调度，不清除已有连接或密钥
+.\start-edugrade.cmd -ModelMode Manual
+.\start-edugrade.cmd -ModelMode External
+.\start-edugrade.cmd -ModelMode Local
+
+# 单次跳过本地模型，不改保存的模式；短期验收可指定两天证书
+.\start-edugrade.cmd -SkipLocalModel
+.\start-edugrade.cmd -LocalCertificateDays 2
 
 # 启动完成后不自动打开浏览器
 .\start-edugrade.cmd -NoBrowser
@@ -101,7 +113,7 @@ flowchart LR
 .\start-edugrade.cmd -DryRun
 ```
 
-默认一键流程先启动可登录、可管理的核心系统。OCR、图像质量、页面处理等 Worker 需要与平台服务账号匹配，不能用随机占位账号冒充；完成账号配置后按第 4.2 节启用。脚本参数和实现见 [`scripts/launch-local.ps1`](scripts/launch-local.ps1)。
+一键流程首次询问答卷处理模式，也可用 `-ProcessingMode Enabled` 启用 OCR、图像质量和页面处理，或 `-ProcessingMode Disabled` 只启动管理核心。选择仅保存在本地忽略文件，不含凭据；以后复用，不重复询问。新安装自动生成随机凭据并建立受限服务账号；已有配置及账号密码保持原值，不完整或不匹配时停止对应 Worker 启动。旧的 `-EnableOcr` 等单项参数保持精确启用范围。脚本参数和实现见 [`scripts/launch-local.ps1`](scripts/launch-local.ps1)。
 
 下面保留完整手工流程，供排错、定制配置和运维审计使用。它面向一台新的 Windows 电脑，覆盖从下载代码到首次登录、健康检查和日常启停。命令均在 PowerShell 中执行；除非特别说明，路径都以仓库根目录为起点。生产或跨机器部署还必须继续阅读[私有化部署说明](infra/docker-compose/README.md)和[预生产 Runbook](docs/deployment/preproduction-runbook.md)。
 
@@ -245,7 +257,7 @@ $postgresApp = New-EduGradeSecret
 | `EDUGRADE_*_WORKER_PASSWORD` | 启用对应 Worker 前填入非空强密码，并确保用户名/密码与平台内的服务账号一致 |
 | `EDUGRADE_GRADING_MODEL_API_KEY` | 使用仓库本地模型时先留空，下一步由同步脚本写入 |
 
-Worker 密码包括 `EDUGRADE_OCR_WORKER_PASSWORD`、`EDUGRADE_IMAGE_QUALITY_PASSWORD`、`EDUGRADE_PAGE_PROCESSING_PASSWORD` 和 `EDUGRADE_SUBJECTIVE_WORKER_PASSWORD`。核心系统可先不启动这些可选 profile；首次登录后再按组织与用户管理流程创建相应服务账号并启用 Worker。
+Worker 密码包括 `EDUGRADE_OCR_WORKER_PASSWORD`、`EDUGRADE_IMAGE_QUALITY_PASSWORD`、`EDUGRADE_PAGE_PROCESSING_PASSWORD` 和 `EDUGRADE_SUBJECTIVE_WORKER_PASSWORD`。本地新安装选择启用答卷处理后，前三类账号由受控初始化命令建立并核验；主观题异步 Worker 和正式环境服务身份仍按对应管理流程配置。
 
 保存后可确认 Git 不会跟踪密钥文件：
 

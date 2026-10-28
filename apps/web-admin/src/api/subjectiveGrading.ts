@@ -1,6 +1,12 @@
 import { apiClient } from "./client";
+import { EduGradeApi } from "@edugrade/sdk";
 
 export type SubjectiveGradingBatch = import("@edugrade/sdk").SubjectiveGradingBatch;
+
+export type SubjectiveGradingSource = import("@edugrade/sdk").SubjectiveGradingSource;
+export function listSubjectiveGradingSources(examId: string, cursor?: string) {
+  return new EduGradeApi(apiClient).listSubjectiveGradingSources({ path: { examId }, query: { limit: 100, cursor } });
+}
 
 export interface SubjectiveGradingBatchEnqueueResult {
   requested_count: number;

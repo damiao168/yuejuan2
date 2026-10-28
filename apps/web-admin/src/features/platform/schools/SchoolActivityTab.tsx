@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Empty, Spin, Timeline } from "antd";
+import { Alert, Button, Empty, Spin, Timeline } from "antd";
 import { getPlatformSchoolActivity, type SchoolActivityResponse } from "../../../api/platformSchools";
 import { fullDate, numberText } from "./schoolPresentation";
 
@@ -13,15 +13,16 @@ export function SchoolActivityTab({ tenantId }: Readonly<{ tenantId: string }>) 
   const [data, setData] = useState<SchoolActivityResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     // 切换学校或卸载后关闭本轮回填，防止旧学校活动在新面板中显示。
     let active = true;
     setLoading(true); setError(false);
     void getPlatformSchoolActivity(tenantId).then((result) => { if (active) setData(result); }).catch(() => { if (active) setError(true); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [tenantId]);
+  }, [tenantId, retry]);
   if (loading) return <div className="platform-school-panel-loading"><Spin /></div>;
-  if (error) return <Alert type="error" showIcon message="活动记录加载失败" />;
+  if (error) return <Alert type="error" showIcon message="活动记录加载失败" action={<Button onClick={() => setRetry(value => value + 1)}>重试当前内容</Button>} />;
   return <div className="platform-school-detail-sections">
     <section><h3>账号安全</h3><dl className="platform-school-facts">
       <div><dt>活跃管理员</dt><dd>{numberText(data?.security.active_admins ?? 0)}</dd></div>

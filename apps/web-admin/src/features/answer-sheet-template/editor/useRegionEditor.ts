@@ -160,10 +160,10 @@ export function useRegionEditor({
     setSelectedRegionId("");
     releasePointer();
   };
-  const createRegionWithoutDragging = () => {
-    if (readonly || !currentPage || !selectedQuestionId) return;
+  const createRegionWithoutDragging = (questionId = selectedQuestionId) => {
+    if (readonly || !currentPage || !questionId) return;
     const existing = layout.pages.flatMap((page) => page.question_regions)
-      .find((region) => region.question_id === selectedQuestionId);
+      .find((region) => region.question_id === questionId);
     if (existing) {
       const page = layout.pages.find((item) => item.question_regions.some((region) => region.id === existing.id));
       if (page) setPageNo(page.page_no);
@@ -171,11 +171,12 @@ export function useRegionEditor({
       return;
     }
     const region: LayoutRegion = {
-      id: crypto.randomUUID(), question_id: selectedQuestionId,
-      label: questions.find((question) => question.id === selectedQuestionId)?.question_no ?? "题目",
+      id: crypto.randomUUID(), question_id: questionId,
+      label: questions.find((question) => question.id === questionId)?.question_no ?? "题目",
       x: .1, y: .1, width: .8, height: .2, option_regions: []
     };
     dispatchLayout({ type: "addRegion", pageNo, region });
+    setSelectedQuestionId(questionId);
     setSelectedRegionId(region.id);
   };
   const removeRegion = (regionId: string) => {

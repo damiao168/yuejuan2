@@ -109,7 +109,7 @@ func (h *Handler) executeImagePlan(ctx context.Context, tenantID string, prepare
 		}
 		execution.RoleResults = append(execution.RoleResults, h.executeImageRole(ctx, tenantID, input, "single", identity))
 	} else if plan.EffectiveMode == "dual" || plan.EffectiveMode == "dual_conditional_arbiter" {
-		if plan.DecisionConfig.PrimaryAllowedDiffPoints == nil || plan.DecisionConfig.TeacherAllowedDiffPoints == nil {
+		if plan.DecisionConfig.PrimaryAllowedDiffPoints == nil || (plan.EffectiveMode == "dual_conditional_arbiter" && plan.DecisionConfig.TeacherAllowedDiffPoints == nil) {
 			return AdapterOutput{}, ErrInvalidInput
 		}
 		type roleResult struct {
@@ -203,7 +203,7 @@ func settleImagePanelOutput(value Context, policy ModelPolicy, output *AdapterOu
 	execution.RawScore, execution.FinalScore = nil, nil
 	execution.PrimaryThreshold, execution.TeacherThreshold = nil, nil
 	if plan.EffectiveMode == "dual" || plan.EffectiveMode == "dual_conditional_arbiter" {
-		if plan.DecisionConfig.PrimaryAllowedDiffPoints == nil || plan.DecisionConfig.TeacherAllowedDiffPoints == nil {
+		if plan.DecisionConfig.PrimaryAllowedDiffPoints == nil || (plan.EffectiveMode == "dual_conditional_arbiter" && plan.DecisionConfig.TeacherAllowedDiffPoints == nil) {
 			return ErrInvalidModelOutput
 		}
 		execution.PrimaryThreshold, execution.TeacherThreshold = plan.DecisionConfig.PrimaryAllowedDiffPoints, plan.DecisionConfig.TeacherAllowedDiffPoints

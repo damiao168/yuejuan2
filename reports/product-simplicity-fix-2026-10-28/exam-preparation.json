@@ -1,0 +1,629 @@
+{
+  "date": "2026-10-28",
+  "scope": "exam-preparation",
+  "audited_findings": 32,
+  "withdrawn": [
+    "EX-16"
+  ],
+  "status_definitions": {
+    "fixed": "实现已核对并有适用回归，具体边界见note",
+    "already_fixed": "前轮小字方案已完成，本轮核对保留",
+    "partial": "已改善但明确仍有残余",
+    "pending": "尚未完成实现或审读，不计完成"
+  },
+  "summary": {
+    "fixed": 23,
+    "already_fixed": 4,
+    "partial": 3,
+    "pending": 2
+  },
+  "findings": [
+    {
+      "id": "EX-01",
+      "status": "fixed",
+      "note": "默认直接进入创建表单，仅保留套用考试方案为可选入口；保留已有 creation_mode 载荷与命令恢复语义。",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ]
+    },
+    {
+      "id": "EX-02",
+      "status": "fixed",
+      "note": "移除创建前无动作的资料分节，上传说明留在创建操作附近。",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ]
+    },
+    {
+      "id": "EX-03",
+      "status": "fixed",
+      "note": "唯一发布策略显示为文字，提交策略保持原值。",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ]
+    },
+    {
+      "id": "EX-04",
+      "status": "fixed",
+      "note": "五种阅卷组织方式在同一组单选，区分本题判分方式。",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ]
+    },
+    {
+      "id": "EX-05",
+      "status": "already_fixed",
+      "note": "考试时长与分钟单位已在前轮文案整理中明确。",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ]
+    },
+    {
+      "id": "EX-06",
+      "status": "fixed",
+      "note": "题目配置回读完成后自动GET检查一次，未保存或处理中暂停；旧版本响应不能回填。查看结果复用当前事实，读取失败保留重试；未自动确认或冻结整场考试。",
+      "files": [
+        "apps/web-admin/src/features/paper-rubric/PaperQuestionConfirmation.tsx"
+      ]
+    },
+    {
+      "id": "EX-07",
+      "status": "fixed",
+      "note": "整题保存纳入判分方式与参考图清单。全部参与区先校验并冻结输入，再顺序保存；成功修订保留，后区失败只重试未完成区。未核对裁图阻断保存；切题拒绝旧动作，离页提示包含参与区。此实现为顺序保存与半成功恢复，未宣称跨接口事务。",
+      "files": [
+        "apps/web-admin/src/pages/PaperRubricPage.tsx",
+        "apps/web-admin/src/features/paper-rubric/PaperScoringConfiguration.tsx",
+        "apps/web-admin/src/features/paper-rubric/questionSaveParticipant.ts",
+        "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+        "apps/web-admin/src/features/paper-rubric/ReferenceMaterialEditor.tsx"
+      ]
+    },
+    {
+      "id": "EX-08",
+      "status": "fixed",
+      "note": "答案历史容差保留载荷但隐藏编辑，数值误差集中到固定规则，按百分比展示并换算为原比例单位；尚无规则时继承历史答案容差，发布仍需明确确认。",
+      "files": [
+        "apps/web-admin/src/features/paper-rubric/PaperQuestionForm.tsx",
+        "apps/web-admin/src/features/paper-rubric/PaperScoringConfiguration.tsx",
+        "apps/web-admin/src/features/paper-import/useScoringRules.ts"
+      ]
+    },
+    {
+      "id": "EX-09",
+      "status": "fixed",
+      "note": "来源抽屉直接列出原文件页入口，调用现有授权文件读取与页码定位，无需跳资料页重新找来源。",
+      "files": []
+    },
+    {
+      "id": "EX-10",
+      "status": "fixed",
+      "note": "默认围绕当前采分点草稿编辑，主入口一次点击直接生成AI建议，省去先选AI再生成。手工步骤配分、解答拆合及仅采用分段收入工具详情；显式采用后更新同一采分点草稿，保存与锁定仍为独立事实。生成意图绑定题目与来源，恢复页面或回读不自动调用模型。",
+      "files": []
+    },
+    {
+      "id": "EX-11",
+      "status": "fixed",
+      "note": "题目检查与逐题待办共用一个抽屉；顶部保留考试级完整性/总分检查，下方按题呈现答案、分值、细则待办并提供下一项直接定位。左侧筛选作为列表视图保留，不另立待办流程。",
+      "files": [
+        "apps/web-admin/src/features/paper-rubric/PaperQuestionIssues.tsx",
+        "apps/web-admin/src/features/paper-rubric/PaperQuestionConfirmation.tsx"
+      ]
+    },
+    {
+      "id": "EX-12",
+      "status": "fixed",
+      "note": "资料页只显示已读取的识别快照、摘要与逐题核对主入口；逐题编辑和确认集中小题页，未保存草稿仍由原工作流与离页保护管理。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportResults.tsx"
+      ]
+    },
+    {
+      "id": "EX-13",
+      "status": "already_fixed",
+      "note": "标题与输入提示已精简，公式帮助折叠；资料发送范围继续在输入前告知，沿用已确认的小字方案。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx"
+      ]
+    },
+    {
+      "id": "EX-14",
+      "status": "fixed",
+      "note": "资料排序、类型和删除先在本地调整，一次保存并重新匹配；取消恢复原列表，仍沿用代次与未保存人工核对保护。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportSourceList.tsx",
+        "apps/web-admin/src/features/paper-import/usePaperImportMaterials.ts"
+      ]
+    },
+    {
+      "id": "EX-15",
+      "status": "fixed",
+      "note": "失败或停止后的主操作统一为继续处理本次资料，说明保留历史结果；全部重新识别收入其他恢复方式，沿用原代次和失败恢复调用。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportResults.tsx"
+      ]
+    },
+    {
+      "id": "EX-17",
+      "status": "fixed",
+      "note": "最终确认置于工具栏；原区域覆盖、异常、锁定与考试绑定门禁复用同一规则。设置面板保留配置事实。",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateBindingView.tsx",
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx",
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateSettingsView.tsx"
+      ]
+    },
+    {
+      "id": "EX-18",
+      "status": "fixed",
+      "note": "移除重复题目下拉与创建/定位按钮，列表支持题号或题干搜索，未配置题直接添加区域，已配置题点击定位。",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateQuestionPane.tsx",
+        "apps/web-admin/src/features/answer-sheet-template/editor/useRegionEditor.ts"
+      ]
+    },
+    {
+      "id": "EX-19",
+      "status": "fixed",
+      "note": "精确像素默认折叠；拖框结束后自动生成一次实际裁图预览，教师看见图片并核对后一次添加并保存。相同选区失败不自动新建命令，保留原命令恢复；整题保存不自动采纳未核对选区。",
+      "files": [
+        "apps/web-admin/src/features/paper-rubric/ReferenceMaterialEditor.tsx"
+      ]
+    },
+    {
+      "id": "EX-20",
+      "status": "fixed",
+      "note": "主入口先选择文件，再核对页序；系统预填网页来源与记录名称。取消选择不创建空批次，名称折叠可改；补传原因与幂等恢复保留。",
+      "files": [
+        "apps/web-admin/src/pages/CaptureBatchPage.tsx"
+      ]
+    },
+    {
+      "id": "EX-21",
+      "status": "fixed",
+      "note": "一次选择完整登记后自动排队；替代时先完整登记再退出旧组。排队失败仅重试排队，不重传、不重登记、不再次替代；手工处理作为历史记录/失败兜底保留。",
+      "files": [
+        "apps/web-admin/src/features/capture/useCaptureUpload.ts"
+      ]
+    },
+    {
+      "id": "EX-22",
+      "status": "partial",
+      "note": "新旧批次均有上传前预检：PNG/JPG缩略图、分组边界、排序和完整份数校验。PDF支持本地逐页缩略图（最多100页）与页内重排，应用后复制原PDF页面为新本地文件，未应用的调整阻止导入；TIFF仅预览文件顺序，逐页预览与重排尚未完成，服务端解码校验保留。",
+      "files": [
+        "apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx",
+        "apps/web-admin/src/pages/CaptureBatchPage.tsx"
+      ]
+    },
+    {
+      "id": "EX-23",
+      "status": "already_fixed",
+      "note": "日常显示每人页数和连续排列规则，详细分组边界折叠；异常仍就地提示。",
+      "files": [
+        "apps/web-admin/src/features/capture/CaptureBatchPanels.tsx"
+      ]
+    },
+    {
+      "id": "EX-24",
+      "status": "fixed",
+      "note": "真实独立单科按当前阶段直达；多科场次只授权一科时仍保留整场总览，不扩张授权。",
+      "files": [
+        "apps/web-admin/src/features/exams/management/managementPresentation.ts",
+        "apps/web-admin/src/router/pageRendering.tsx"
+      ]
+    },
+    {
+      "id": "EX-25",
+      "status": "partial",
+      "note": "评分方案的单题问题携带 question/target 定位题目与评分区，并在已读取的当前考试题目中匹配；考试级问题仍跳考试列表，对应编辑定位尚未补齐。",
+      "files": [
+        "apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx",
+        "apps/web-admin/src/pages/PaperRubricPage.tsx",
+        "apps/web-admin/src/router/pageRendering.tsx"
+      ]
+    },
+    {
+      "id": "EX-26",
+      "status": "fixed",
+      "note": "算法、七项指标、历史记录和处理条件收入检测详情，结论与问题继续直接显示。",
+      "files": [
+        "apps/web-admin/src/features/capture/ImageQualityWorkspace.tsx"
+      ]
+    },
+    {
+      "id": "EX-27",
+      "status": "partial",
+      "note": "答卷/页面内部标识已收入排障信息；P0–P3 仍保留原等级，尚未建立经后端核实的业务影响标签。",
+      "files": [
+        "apps/web-admin/src/components/ProcessingExceptionEvidence.tsx"
+      ]
+    },
+    {
+      "id": "EX-28",
+      "status": "already_fixed",
+      "note": "精确坐标默认折叠，保留拖点/键盘操作、0–1坐标说明与预览门禁。",
+      "files": [
+        "apps/web-admin/src/components/RegistrationCorrectionWorkspace.tsx"
+      ]
+    },
+    {
+      "id": "EX-29",
+      "status": "fixed",
+      "note": "识别答案按多选、逐空和已知答案对象展示可读文字；未知字段仅在原始答案详情中展示，输入与保存数据结构不变。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportRecognitionPreview.tsx",
+        "apps/web-admin/src/features/paper-import/recognizedAnswerPresentation.ts"
+      ]
+    },
+    {
+      "id": "EX-30",
+      "status": "fixed",
+      "note": "细则满分由题目分值派生，修改分值保留原采分点并继续检查合计差额，不自动按比例改点。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/RubricReviewEditor.tsx",
+        "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.ts"
+      ]
+    },
+    {
+      "id": "EX-31",
+      "status": "pending",
+      "note": "旧答卷处理页面仍包含纯状态转换动作，服务端受控编排未实施。",
+      "files": [
+        "apps/web-admin/src/pages/SubmissionCaptureViews.tsx"
+      ]
+    },
+    {
+      "id": "EX-32",
+      "status": "pending",
+      "note": "相似答案逐份审阅与共用冻结评分依据尚未实施。",
+      "files": []
+    },
+    {
+      "id": "EX-33",
+      "status": "fixed",
+      "note": "失败和进行中队列全部可见，完成记录按需展开，较早失败不会被八项截断隐藏；保留服务端事实。",
+      "files": [
+        "apps/web-admin/src/pages/SubmissionCaptureViews.tsx"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "apps/web-admin/src/pages/PaperRubricPage.tsx",
+      "status": "pending",
+      "read_scope": "partial",
+      "note": "参与区保存次序、全区先校验、成功回执、换题和失败恢复。 本轮核对变更及其调用，不计作全文件重新审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/questionSaveParticipant.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "明确prepare只校验、返回动作才写入。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/paperRubricViewTypes.ts",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "参与区注册与未保存展示类型。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperScoringConfiguration.tsx",
+      "status": "pending",
+      "read_scope": "partial",
+      "note": "注册判分方式与参考图，数值误差单位。 本轮核对变更及其调用，不计作全文件重新审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionDetail.tsx",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "评分标签包含参与区dirty，保留原表单挂载与锁定注释。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionForm.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "隐藏历史容差保留载荷，只有固定规则编辑数值误差。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "先校验冻结再写入；上下文代次和成功修订保留。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/ReferenceMaterialEditor.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "裁图实际核对、命令恢复、整题参与区、旧作用域响应与URL释放。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "status": "pending",
+      "read_scope": "partial",
+      "note": "选文件预检、创建后上传顺序、跨考试回执隔离。 本轮核对变更及其调用，不计作全文件重新审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "本地图片URL生命周期与确认前不登记；PDF/TIFF页数边界。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureUpload.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "全组完整登记后排队；重试复用回执和替代结果。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportSourceList.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "本地资料批量调整与原代次提交。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportMaterials.ts",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "核对替换资料返回布尔结果及代次、脏草稿保护。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.ts",
+      "status": "pending",
+      "read_scope": "partial",
+      "note": "只派生细则满分，保留采分点；本轮未重新审计全部导入分支。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/RubricReviewEditor.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "显示派生满分，保留分值合计与身份校验。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportRecognitionPreview.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "保留已存识别快照与未配对候选语义，展示已知结构和未知原始详情。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/recognizedAnswerPresentation.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "仅展示层转换已知结构，不改写保存值。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportResults.tsx",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "核对重复编辑器和恢复按钮仍在，故相关项保留pending。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "保留数据发送范围告知、折叠公式帮助。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "核对进入逐题页面和资料页当前职责。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateBindingView.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "最终完成入口复用完整门禁。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/view/TemplateQuestionPane.tsx",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "列表搜索、题目定位与行内添加，保留定位说明。"
+    },
+    {
+      "path": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionEditor.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "按指定题目创建区域，保留坐标、只读与已有区域定位规则。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+      "status": "pending",
+      "read_scope": "partial",
+      "note": "核对默认表单、单组阅卷组织方式和固定发布策略。 本轮核对变更及其调用，不计作全文件重新审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/exams/management/managementPresentation.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "只跳过真实独立单科总览，多科授权语义不变。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubmissionCaptureViews.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "失败/进行中完整保留，完成项按需展开。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "核对题目定位参数和服务端准备事实。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionConfirmation.tsx",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "全文确认手动只读检查未改，自动检查方案仍pending。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionIssues.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "全文确认独立待处理抽屉仍存在，统一列表方案pending。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/capturePdfPreview.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/capturePdfPreview.test.ts",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CapturePdfOrderPreview.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureFileOrderPreview.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-import/recognizedAnswerPresentation.test.ts",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/ReferenceMaterialEditor.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.productUx.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperQuestionConfirmation.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubmissionCaptureViews.simplicity.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "本轮新增/修改并核对：本地预览与保存边界，或相应的故障、重试和版本保护回归。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricAssistant.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整核对本题方案切换、AI调用来源、主入口生成意图及恢复，不以展开高级工具自动生成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/paper-rubric/PaperRubricJobSuggestion.tsx",
+      "status": "pending",
+      "read_scope": "partial",
+      "note": "核对后台建议生成/读取/采用和主入口请求号；分段后续分支未全文重读，本轮不计全文件审读。"
+    }
+  ],
+  "verification": [
+    {
+      "log": "exam-final-priority.log",
+      "result": "passed",
+      "files": 6,
+      "tests": 273,
+      "description": "整题保存、实际裁图、判分参与区、模板主确认、上传预检"
+    },
+    {
+      "log": "exam-secondary-green.log",
+      "result": "passed",
+      "description": "资料批调、答案展示、创建方式、深链接、自动排队、队列与满分派生",
+      "files": 10,
+      "tests": 114
+    },
+    {
+      "log": "exam-pdf-preview-green.log",
+      "result": "passed",
+      "files": 4,
+      "tests": 49,
+      "description": "PDF原页面复制重排、非法页序拒绝、本地解码取消、未应用页序阻断与上传预检"
+    },
+    {
+      "log": "exam-materials-focus.log",
+      "result": "terminated",
+      "description": "新自动检查进入父页测试后，旧测试未模拟readiness GET，产生悬挂；已终止该次测试，修正为合成读取并在exam-page-final.log重跑。"
+    },
+    {
+      "log": "exam-materials-and-checks.log",
+      "result": "passed",
+      "files": 3,
+      "tests": 44,
+      "description": "自动题目检查代次隔离、资料概览只读、失败恢复主路径"
+    },
+    {
+      "log": "exam-page-final.log",
+      "result": "passed",
+      "description": "补齐合成readiness后的父页回归、来源直达与PDF稳定内容哈希",
+      "files": 2,
+      "tests": 45
+    },
+    {
+      "log": "exam-workspace-simplicity.log",
+      "result": "passed",
+      "files": 8,
+      "tests": 118,
+      "description": "主工作区统一待办、AI一步生成、自动实际裁图及保存/来源/恢复边界"
+    },
+    {
+      "log": "exam-task-entry-final.log",
+      "result": "passed",
+      "description": "后台任务主入口、AI来源隔离、自动裁图最终补充",
+      "files": 3,
+      "tests": 54
+    }
+  ],
+  "limitations": [
+    "未运行真实学校或真实学生数据；前端回归使用合成数据与接口替身。",
+    "未验证浏览器实机文件对话框；PDF本地页面复制已使用真实pdf-lib回归，TIFF逐页预览仍待实施。",
+    "此批逐文件清单只计实际读过范围，其余原审计枚举文件在本批记录为pending。"
+  ],
+  "cross_review": {
+    "target": "O08",
+    "result": "未发现阻断问题",
+    "checked": [
+      "学校与供应商连接作用域",
+      "检测前客户端冻结版本与检测后SQL更新版本",
+      "批量UI整批互斥锁及部分成功",
+      "A→B→A切校代次隔离"
+    ],
+    "suggestion": "响应config.id/tenant_id回填前校验，已消息负责智能体",
+    "files": [
+      "apps/web-admin/src/features/platform-model-config/components/CredentialRotation.tsx",
+      "apps/web-admin/src/features/platform-model-config/components/CredentialRotation.test.tsx",
+      "services/api-gateway/internal/modelgovernance/managed_config_handlers.go",
+      "services/api-gateway/internal/modelgovernance/managed_config_store_postgres.go",
+      "services/api-gateway/internal/modelgovernance/managed_credential_rotation_test.go"
+    ],
+    "scope": "只读交叉复核，未改对方文件或重复运行其测试"
+  },
+  "xlsx_cross_review": {
+    "result": "未发现阻断问题",
+    "scope": "只读核对worker终止/超时、页面abort与导入generation隔离、真实数字字符串、多表与行列上限",
+    "files": [
+      "apps/web-admin/src/features/members/students/studentImportWorkbook.ts",
+      "apps/web-admin/src/features/members/students/studentImportWorkbook.worker.ts",
+      "apps/web-admin/src/features/members/students/studentImportSheet.ts",
+      "apps/web-admin/src/features/members/students/studentImportWorkbook.test.ts",
+      "apps/web-admin/src/pages/StudentManagementPage.tsx"
+    ],
+    "suggestion": "postMessage同步异常时立即finish清理，已报告主智能体，未改对方文件。"
+  }
+}

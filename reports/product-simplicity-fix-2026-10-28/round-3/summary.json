@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-28",
+  "completed": 118,
+  "observations": 120,
+  "summary": {
+    "fixed": 110,
+    "already_fixed": 8,
+    "partial": 2
+  },
+  "P1": {
+    "fixed": 21,
+    "partial": 1
+  },
+  "newly_completed": 9,
+  "status_changes": [
+    {
+      "id": "EX-25",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "EX-31",
+      "before": "pending",
+      "after": "fixed"
+    },
+    {
+      "id": "EX-32",
+      "before": "pending",
+      "after": "fixed"
+    },
+    {
+      "id": "G01",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "G02",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "G05",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "G14",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "G18",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "DP05",
+      "before": "partial",
+      "after": "fixed"
+    }
+  ]
+}

@@ -155,7 +155,7 @@ describe("学生查分与复核第二批真实边界", () => {
 		let result = makeResult();
 		const calls = installApi((call) => resultRoute(call, result));
 		render(<App />);
-		fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+		fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
 		const input = await screen.findByRole<HTMLTextAreaElement>("textbox", {
 			name: "具体说明",
 		});
@@ -177,7 +177,7 @@ describe("学生查分与复核第二批真实边界", () => {
 			screen.getByRole<HTMLTextAreaElement>("textbox", { name: "旧版复核说明" })
 				.value,
 		).toContain("第二步");
-		fireEvent.click(screen.getByRole("button", { name: /^第 1 题，/ }));
+		fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
 		expect(
 			(
 				await screen.findByRole<HTMLTextAreaElement>("textbox", {

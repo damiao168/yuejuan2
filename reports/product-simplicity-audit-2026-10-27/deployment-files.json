@@ -1,0 +1,137 @@
+{
+  "date": "2026-10-27",
+  "scope": "首次安装、日常启动与升级小范围体验审计",
+  "source_modified": false,
+  "deployment_commands_executed": false,
+  "live_secrets_read": false,
+  "findings": 10,
+  "total_files": 20,
+  "reviewed_files": 11,
+  "pending_files": 9,
+  "status_definition": {
+    "pending": "仅相关片段、搜索、入口引用或盘点，未完整审读。",
+    "reviewed": "完整静态阅读本文件，不代表运行验证或全运维审计。"
+  },
+  "files": [
+    {
+      "path": "scripts/launch-local.ps1",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "start-edugrade.cmd",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "scripts/start-local.ps1",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "infra/docker-compose/scripts/prepare-internal-tls.ps1",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "infra/docker-compose/scripts/init.ps1",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "infra/docker-compose/scripts/ensure-internal-tls.py",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "infra/docker-compose/scripts/generate-internal-test-certificates.py",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "infra/docker-compose/scripts/sync-local-grading-model-key.ps1",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "lab/AGENTS.md",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "lab/scripts/prepare-local-runtime.ps1",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "lab/scripts/start-local-server.ps1",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件；只读、未运行。"
+    },
+    {
+      "path": "README.md",
+      "status": "pending",
+      "method": "partial_read_or_inventory",
+      "note": "审读一键启动、日常参数及首次准备相关段落 81-167；本轮未完整审读。"
+    },
+    {
+      "path": "infra/docker-compose/README.md",
+      "status": "pending",
+      "method": "partial_read_or_inventory",
+      "note": "审读 1-100、124-164、192-227 等启动/证书/升级相关段落；其余 pending。"
+    },
+    {
+      "path": "infra/docker-compose/docker-compose.yml",
+      "status": "pending",
+      "method": "partial_read_or_inventory",
+      "note": "只核对模型 URL、API KEY、适配器注入；未完整审读。"
+    },
+    {
+      "path": "infra/docker-compose/.env.example",
+      "status": "pending",
+      "method": "partial_read_or_inventory",
+      "note": "只核对已提交样例中的模型配置键；未读取实际 .env。"
+    },
+    {
+      "path": "infra/docker-compose/scripts/preflight.ps1",
+      "status": "pending",
+      "method": "partial_read_or_inventory",
+      "note": "只盘点文件并由入口确认调用；未完整审读。"
+    },
+    {
+      "path": "infra/docker-compose/scripts/smoke-test.ps1",
+      "status": "pending",
+      "method": "partial_read_or_inventory",
+      "note": "只由调用处确认；未完整审读。"
+    },
+    {
+      "path": "docs/deployment/preproduction-runbook.md",
+      "status": "pending",
+      "method": "partial_read_or_inventory",
+      "note": "由文档引用盘点；未审读。"
+    },
+    {
+      "path": "lab/config/local-runtime.json",
+      "status": "pending",
+      "method": "partial_read_or_inventory",
+      "note": "由启动器引用盘点；运行输入未修改、未完整审读。"
+    },
+    {
+      "path": "lab/config/model-candidates.json",
+      "status": "pending",
+      "method": "partial_read_or_inventory",
+      "note": "由启动器引用盘点；运行输入未修改、未完整审读。"
+    }
+  ]
+}

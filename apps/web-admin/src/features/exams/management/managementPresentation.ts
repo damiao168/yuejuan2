@@ -1,5 +1,6 @@
 import type { ManagementExam, ManagementExamUpdate } from "../../../api/exams";
 import { managementExamVersion } from "../../../api/exams";
+import { defaultExamWorkspaceRoute } from "../workspace/defaultExamWorkspaceRoute";
 
 export interface ManagementFilters {
   search: string;
@@ -24,6 +25,12 @@ export function isManagementExamArchived(exam: ManagementExam) {
 
 export function managementExamRoute(exam: Pick<ManagementExam, "kind" | "id">) {
   return `/exams/overview/${exam.kind}/${encodeURIComponent(exam.id)}`;
+}
+
+export function managementExamWorkspaceRoute(exam: Pick<ManagementExam, "kind" | "id" | "exams">) {
+  // 只对真实独立单科省去总览；多科场次即使只授权一科，也仍保留原来的整场入口。
+  return exam.kind === "standalone" && exam.exams.length === 1
+    ? defaultExamWorkspaceRoute(exam.exams[0]) : managementExamRoute(exam);
 }
 
 export function managementExamKey(exam: Pick<ManagementExam, "kind" | "id">) {

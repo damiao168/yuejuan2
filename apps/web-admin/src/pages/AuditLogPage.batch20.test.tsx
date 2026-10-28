@@ -2,6 +2,7 @@
 import { act, type HTMLAttributes, type MouseEventHandler, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent } from "@testing-library/react";
 import type { AuditLog } from "../api/audit";
 import { AuditLogPage } from "./AuditLogPage";
 
@@ -42,7 +43,7 @@ vi.mock("antd", async () => {
     // 保留关闭时的 children，只核对页面传入的详情分支，不覆盖 Ant Design 的挂载策略。
     Drawer: ({ children, open, onClose, title, width }: { children: ReactNode; open: boolean; onClose: () => void; title: string; width: number }) =>
       React.createElement("section", { "data-drawer-open": String(open), "data-drawer-width": width }, title, React.createElement("button", { onClick: onClose }, "关闭详情"), children),
-    Input: ({ value, placeholder, className }: { value: string; placeholder: string; className?: string }) => React.createElement("input", { value, placeholder, className, readOnly: true }),
+    Input: ({ value, placeholder, className, onChange, onPressEnter, "aria-label": label }: { value: string; placeholder: string; className?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; onPressEnter?: () => void; "aria-label"?: string }) => React.createElement("input", { value, placeholder, className, onChange, "aria-label": label, onKeyDown: (event: React.KeyboardEvent) => { if (event.key === "Enter") onPressEnter?.(); } }),
     Select: ({ placeholder }: { placeholder: string }) => React.createElement("div", { "data-select": placeholder }),
     Space: wrapper,
     Tooltip: wrapper,
@@ -98,6 +99,27 @@ describe("操作记录页展示拆分回归", () => {
   function field(label: string) {
     return drawer().querySelector<HTMLElement>(`[data-description="${label}"]`)!;
   }
+
+  it("关键词仅在应用后发给服务端，导出沿用相同条件且不在客户端过滤已加载记录", async () => {
+    await render();
+    const input = host.querySelector<HTMLInputElement>('[aria-label="搜索操作记录"]')!;
+    await act(async () => fireEvent.change(input, { target: { value: " 老师 " } }));
+    expect(host.querySelector('[data-row="audit-1"]')).not.toBeNull();
+    expect(mocks.listLogs).toHaveBeenCalledTimes(1);
+    mocks.exportLogs.mockResolvedValue({ blob: new Blob(["csv"]), filename: "audit.csv", watermark: "" });
+    await click("导出 CSV");
+    await act(async () => (mocks.confirm.mock.calls[0][0] as { onOk: () => Promise<void> }).onOk());
+    expect(mocks.exportLogs).toHaveBeenLastCalledWith({ limit: 200 });
+    mocks.listLogs.mockResolvedValue({ audit_logs: [log({ id: "older-match" })], next_cursor: "", has_more: false });
+    await click("应用筛选");
+    expect(mocks.listLogs).toHaveBeenLastCalledWith(expect.objectContaining({ q: "老师" }));
+    expect(host.querySelector('[data-row="older-match"]')).not.toBeNull();
+    await act(async () => fireEvent.change(input, { target: { value: "未应用" } }));
+    expect(host.querySelector('[data-row="older-match"]')).not.toBeNull();
+    await click("导出 CSV");
+    await act(async () => (mocks.confirm.mock.calls[1][0] as { onOk: () => Promise<void> }).onOk());
+    expect(mocks.exportLogs).toHaveBeenLastCalledWith(expect.objectContaining({ q: "老师" }));
+  });
 
   it.each([
     ["", "每次导出都会自动记录在操作日志中"],

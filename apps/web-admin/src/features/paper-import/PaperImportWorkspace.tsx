@@ -53,14 +53,15 @@ export function PaperImportWorkspace({
   return <>
     <section className={"workspace-section paper-source-files" + (latestPaperImport ? " has-materials" : " is-empty")}>
       <div className="section-head">
-        <div className="paper-source-heading"><div className="paper-source-title"><h2>{latestPaperImport ? "已添加的资料" : "添加试卷资料"}</h2>{headerStatus}</div><p>上传试题、答案、解析或评分标准，系统会自动识别并匹配到题目。</p></div>
+        <div className="paper-source-heading"><div className="paper-source-title"><h2>{latestPaperImport ? "已添加的资料" : "添加试卷资料"}</h2>{headerStatus}</div><p>添加试题、答案、解析或评分标准，识别后请核对匹配结果。</p></div>
         <Button icon={<ClipboardPaste size={16} />} disabled={!canManage || parsing} onClick={() => setTextImportOpen(true)}>粘贴文本</Button>
       </div>
+      <p>需要模型解析时，发送本次新增资料的相关原文片段；图片资料发送本次新增图片页面。不会重发已识别的历史资料。</p>
       <Upload.Dragger {...uploadProps} disabled={!canManage || parsing} className="paper-import-dropzone">
         <div className="paper-import-upload-content">
           <FileUp size={22} />
           <strong>{parsing ? "正在上传并识别…" : "选择文件或拖到这里"}</strong>
-          <span>PDF、Word、图片、Markdown、TXT；可一次添加多份资料</span>
+          <span>PDF、Word（.docx）、图片、Markdown、TXT；支持多文件。</span>
         </div>
       </Upload.Dragger>
       <PaperImportSourceList job={latestPaperImport} workflow={workflow} />
@@ -68,7 +69,7 @@ export function PaperImportWorkspace({
         onTextChange={setPastedText} onRoleChange={setPastedRole} onTabChange={setTextImportTab}
         onSubmit={() => void submitPastedText()} onCancel={() => setTextImportOpen(false)} />
     </section>
-    {connectionError ? <Alert type="warning" showIcon message="当前任务结果尚未确认" description={`${connectionError}。下方显示最后一次读取的状态，请重新检查原任务获取最新结果。`} action={<Button onClick={onRecheck}>重新检查原任务</Button>} /> : null}
+    {connectionError ? <Alert type="warning" showIcon message="结果状态未更新" description={`下方是上次读取的结果。请重新检查原任务；${connectionError}`} action={<Button onClick={onRecheck}>重新检查原任务</Button>} /> : null}
     {latestPaperImport ? <PaperImportResults job={latestPaperImport} workflow={workflow} existingQuestions={existingQuestions} onReview={goToQuestionReview} /> : null}
   </>;
 }

@@ -3,6 +3,7 @@ import { GoldPaperManagerDrawer, GoldPaperNominationDrawer, type GoldPaperNomina
 import { DraftConflictModal } from "./DraftConflictModal";
 import type { DraftConflictResolution } from "../draftConflict";
 import type { DraftFallbackSnapshot } from "../gradingWorkbench.types";
+import type { RubricPoint } from "../../../../api/papers";
 
 export interface WorkbenchOverlaysProps {
   goldPaperManagerOpen: boolean;
@@ -21,6 +22,8 @@ export interface WorkbenchOverlaysProps {
   resolvingConflict: boolean;
   onClearDraftConflict: () => void;
   onApplyDraftConflict: (snapshot: DraftFallbackSnapshot) => void;
+  rubricPoints?: RubricPoint[];
+  calibrationQuestionDefaults?: { questionId: string; archetypeCode: string; maxScore: number };
 }
 
 export function WorkbenchOverlays({
@@ -39,7 +42,9 @@ export function WorkbenchOverlays({
   draftConflict,
   resolvingConflict,
   onClearDraftConflict,
-  onApplyDraftConflict
+  onApplyDraftConflict,
+  rubricPoints,
+  calibrationQuestionDefaults
 }: Readonly<WorkbenchOverlaysProps>) {
   return (
     <>
@@ -50,6 +55,7 @@ export function WorkbenchOverlays({
         questionId={calibrationQuestionId}
         graderId={currentUserId}
         canManagePolicy={canManageTasks}
+        questionDefaults={calibrationQuestionDefaults}
         onClose={onCloseCalibration}
         onQualified={onCalibrationQualified}
       />
@@ -59,6 +65,7 @@ export function WorkbenchOverlays({
         loading={resolvingConflict}
         onCancel={onClearDraftConflict}
         onApply={onApplyDraftConflict}
+        rubricPoints={rubricPoints}
       />
     </>
   );

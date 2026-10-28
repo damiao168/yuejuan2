@@ -52,7 +52,7 @@ export function NativeStoragePanel({ scope }: Readonly<{ scope: string }>) {
     inFlight.current = true; setBusy(true);
     const accepted = await new Promise<boolean>((resolve) => Modal.confirm({
       title: `永久删除 ${selected.length} 份已确认归档原件？`,
-      content: <><p>学校要求保留 {days} 天。仅删除本机加密原件，上传回执仍保留。删除后不能从本机恢复；请先确认学校的服务端备份和保留要求。</p><div style={{ maxHeight: 260, overflowY: "auto" }}><List size="small" dataSource={selected} renderItem={(item) => <List.Item>{item.filename} · {formatDate(item.confirmedAt)} · {formatBytes(item.sizeBytes)}</List.Item>} /></div></>,
+      content: <><p>学校要求保留 {days} 天。将永久删除所选本机加密原件，上传回执保留；本机无法恢复。请先确认服务端备份和学校保留要求。</p><div style={{ maxHeight: 260, overflowY: "auto" }}><List size="small" dataSource={selected} renderItem={(item) => <List.Item>{item.filename} · {formatDate(item.confirmedAt)} · {formatBytes(item.sizeBytes)}</List.Item>} /></div></>,
       okText: "确认永久删除本机原件", okButtonProps: { danger: true }, cancelText: "保留原件",
       onOk: () => resolve(true), onCancel: () => resolve(false)
     }));
@@ -77,7 +77,7 @@ export function NativeStoragePanel({ scope }: Readonly<{ scope: string }>) {
   if (!hasDurableDesktopStore()) return <p>浏览器开发模式不统计原生扫描磁盘，也不提供生产原件清理。</p>;
   if (!scope) return <p>在线登录或解锁本账号的有效本机授权后，可查看该账号原件占用。</p>;
   return <div className="native-storage-panel">
-    <p>原件持续留存在本机；归档只隐藏队列，不释放磁盘。当前没有自动清理期限。</p>
+    <p>归档只隐藏队列，不释放磁盘。原件保留在本机，目前不会自动清理。</p>
     {usage ? <div className="diagnostic-summary-grid">
       <div><span>本账号加密原件</span><strong>{formatBytes(usage.spoolBytes)}</strong><small>{usage.assetCount} 份，包括未完成写入占用</small></div>
       <div><span>本账号数据库及日志</span><strong>{formatBytes(usage.databaseBytes)}</strong><small>SQLite、WAL 和共享内存文件</small></div>

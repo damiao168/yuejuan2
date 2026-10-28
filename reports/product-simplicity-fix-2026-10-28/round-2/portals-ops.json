@@ -1,0 +1,411 @@
+{
+  "date": "2026-10-28",
+  "round": 2,
+  "scope": "学生入口S01、操作审计O04、准入运行目录O13、统一治理材料O14",
+  "status": "implemented_and_targeted_verified",
+  "baseline": "round-2/source-baseline.json；保留全部既有未提交改动，不改第一轮报告",
+  "instructions_read": [
+    "AGENTS.md",
+    "docs/engineering/commenting-standard.md"
+  ],
+  "findings": [
+    {
+      "id": "S01",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "学校分享链接按已知school代码核对服务端公开名称，首屏显示名称并折叠学校码。切校时清除密码，仅确认学校后查一次名称；旧学校响应隔离，名称失败保留原代码且仍走原登录核实。公开单校响应仅code/name；活动学校、平台/停用/未知过滤及独立每来源60次/分钟限流。",
+      "files": [
+        "apps/student-portal/src/features/session/SessionScreens.tsx",
+        "apps/student-portal/src/features/session/SessionScreens.school.test.tsx",
+        "apps/student-portal/src/api.ts",
+        "services/api-gateway/internal/platformschools/public_school.go",
+        "services/api-gateway/internal/platformschools/public_school_limit.go",
+        "services/api-gateway/internal/platformschools/public_school_test.go",
+        "services/api-gateway/internal/server/routes_platform_schools.go",
+        "services/api-gateway/internal/server/public_school_route_test.go"
+      ],
+      "verification": [
+        "portals-student-tests.log",
+        "portals-go-final.log",
+        "portals-route-tests.log"
+      ],
+      "remaining": []
+    },
+    {
+      "id": "O04",
+      "priority": "P1",
+      "status": "fixed",
+      "implementation": "q在授权租户和ScopeMode过滤下服务端检索账号/姓名、操作/对象标识、说明和网络/请求字段，再分页；不检索before/after。Postgres使用字面包含匹配，%和_不作通配。关键词进入已应用筛选，与导出共用；输入未应用时不在客户端隐藏已加载记录，导出上限仍200。",
+      "files": [
+        "apps/web-admin/src/api/audit.ts",
+        "apps/web-admin/src/pages/AuditLogPage.tsx",
+        "apps/web-admin/src/pages/AuditLogPage.batch20.test.tsx",
+        "services/api-gateway/internal/auth/audit.go",
+        "services/api-gateway/internal/auth/handlers_audit.go",
+        "services/api-gateway/internal/auth/types.go",
+        "services/api-gateway/internal/auth/store_memory.go",
+        "services/api-gateway/internal/auth/store_postgres.go",
+        "services/api-gateway/internal/auth/audit_keyword_test.go"
+      ],
+      "verification": [
+        "portals-go-tests.log",
+        "portals-go-final.log",
+        "portals-web-recheck.log"
+      ],
+      "remaining": []
+    },
+    {
+      "id": "O13",
+      "priority": "P1",
+      "status": "fixed",
+      "implementation": "新增现有model:read与withGovernanceSchoolScope下的冻结准入决策目录，目录仅维度/方式/时间，服务端关键词与稳定游标分页；支持中文学科/题型标签搜索。用户按中文学科、学段、题型、风险、时间选运行后直接读取原详情，原编号查询折叠保留。关闭/重查/切校淘汰旧响应，并核对目录/详情租户和运行ID。",
+      "files": [
+        "apps/web-admin/src/api/scoringAssurance.ts",
+        "apps/web-admin/src/components/model-governance/DecisionLookup.tsx",
+        "apps/web-admin/src/components/model-governance/DecisionLookup.test.tsx",
+        "apps/web-admin/src/components/model-governance/assuranceOptions.ts",
+        "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx",
+        "services/api-gateway/internal/aieligibility/types.go",
+        "services/api-gateway/internal/aieligibility/handlers.go",
+        "services/api-gateway/internal/aieligibility/decision_directory.go",
+        "services/api-gateway/internal/aieligibility/decision_directory_test.go"
+      ],
+      "verification": [
+        "portals-go-final.log",
+        "portals-eligibility-final.log",
+        "portals-web-tests.log",
+        "portals-label-final.log"
+      ],
+      "remaining": []
+    },
+    {
+      "id": "O14",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "治理工作区统一导入评测材料入口，自动识别候选模型汇总或包含evaluation/observations的逐卷材料；预览来源、数据集哈希和版本后带入相应原登记流程。候选保留既有来源一致性校验；逐卷材料登记后只绑定刚创建的新报告并直接预览导入，来源/模型/提示词/细则变化阻止沿用旧记录。报告名称和新报告标识可调整，避免无关限制。文件不能指定学校/状态/批准事实，逐卷仅复制脱敏白名单；部分成功重试仍沿用已确认游标，冻结/批准仍走原流程。",
+      "files": [
+        "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx",
+        "apps/web-admin/src/components/model-governance/GovernanceMaterialIntake.tsx",
+        "apps/web-admin/src/components/model-governance/GovernanceMaterialIntake.test.tsx",
+        "apps/web-admin/src/components/model-governance/materialIntake.ts",
+        "apps/web-admin/src/components/model-governance/materialIntake.test.ts",
+        "apps/web-admin/src/components/model-governance/observationMaterial.ts",
+        "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+        "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.test.tsx",
+        "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx",
+        "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.batch46.test.tsx"
+      ],
+      "verification": [
+        "portals-web-recheck.log",
+        "portals-intake-tests.log",
+        "portals-material-final.log",
+        "portals-label-final.log"
+      ],
+      "remaining": []
+    }
+  ],
+  "summary": {
+    "fixed": 4,
+    "partial": 0,
+    "pending": 0
+  },
+  "verification": [
+    {
+      "log": "portals-go-tests.log",
+      "result": "auth关键词/分页与准入目录定向通过"
+    },
+    {
+      "log": "portals-go-full.log",
+      "result": "首轮auth包构建遇共享临时目录unicode/utf8缺文件；非业务失败，独立GOTMPDIR后重跑"
+    },
+    {
+      "log": "portals-go-isolated.log",
+      "result": "新增公开学校直接代码路由需显式边界分类，auth静态守卫失败；已仅精确分类该公开名称端点"
+    },
+    {
+      "log": "portals-go-final.log",
+      "result": "auth/aieligibility/platformschools三个Go包完整通过"
+    },
+    {
+      "log": "portals-eligibility-final.log",
+      "result": "中文目录标签搜索最终版aieligibility包全量通过"
+    },
+    {
+      "log": "portals-route-tests.log",
+      "result": "公开校名无认证可读取code/name、平台运营目录仍需认证的路由验证及既有平台权限路由用例通过"
+    },
+    {
+      "log": "portals-web-tests.log",
+      "result": "首轮8文件60/61项通过；唯一新增审计测试漏写既有limit=200预期，已修正，无业务回退"
+    },
+    {
+      "log": "portals-web-recheck.log",
+      "result": "修正审计断言并补材料传递后4文件35项通过"
+    },
+    {
+      "log": "portals-intake-tests.log",
+      "result": "统一入口真实文件预览/确认和切校迟到读取2项通过"
+    },
+    {
+      "log": "portals-material-final.log",
+      "result": "材料白名单、版本校验与新报告绑定3文件11项通过"
+    },
+    {
+      "log": "portals-label-final.log",
+      "result": "中文运行目录、来源版本/名称编辑边界2文件5项通过；与前述用例有重复，不累加"
+    },
+    {
+      "log": "portals-student-tests.log",
+      "result": "学生学校入口、产品流程、重新认证、API baseUrl共4文件26项通过"
+    }
+  ],
+  "read_files": [
+    {
+      "path": "apps/student-portal/src/features/session/SessionScreens.tsx",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/student-portal/src/features/session/SessionScreens.school.test.tsx",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/api/audit.ts",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/pages/AuditLogPage.batch20.test.tsx",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/assuranceOptions.ts",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/DecisionLookup.tsx",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/DecisionLookup.test.tsx",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/observationMaterial.ts",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/materialIntake.ts",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/materialIntake.test.ts",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/GovernanceMaterialIntake.tsx",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/GovernanceMaterialIntake.test.tsx",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.batch46.test.tsx",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/auth/audit.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/auth/handlers_audit.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/auth/audit_keyword_test.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/types.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/handlers.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/decision_directory.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/aieligibility/decision_directory_test.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/store.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/public_school.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/public_school_limit.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/platformschools/public_school_test.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "services/api-gateway/internal/server/public_school_route_test.go",
+      "status": "reviewed",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true
+    },
+    {
+      "path": "apps/student-portal/src/api.ts",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "公开学校解析函数、baseUrl与request入口；其他成绩/复核请求未全文复读"
+    },
+    {
+      "path": "apps/web-admin/src/api/scoringAssurance.ts",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "学校请求包装、准入目录/详情和治理API调用；未计全文审读"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AuditLogPage.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "筛选状态、加载/导出、列表和关键词入口；旧展示映射未全文复读"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "材料接收、视图路由、dirty/saving学校范围与持久挂载；旧策略表单末尾未全文复读"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "材料接收、创建/候选导入、学校与异步操作边界；旧列表/指标渲染未全文复读"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "测试mock、导入相关用例与新增材料传递用例；其余旧用例未全文复读"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "准入目录接入、逐卷材料传递/登记/导入、权限/草稿/学校范围；旧校准与分歧渲染未全文复读"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/types.go",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "AuditFilter/AuditRecord/UserWithPassword等相关类型"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_memory.go",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "审计追加、账号索引、ListAudits与相关过滤/游标"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_postgres.go",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "Audit/ListAudits查询与附近权限限制"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/resource_scope_test.go",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "直接资源路由边界分类用例，精确记录公开学校名称路由"
+    }
+  ],
+  "real_remaining": [],
+  "verification_limits": [
+    "未用真实生产学生/教师账号或浏览器视觉回放；只做源代码与合成数据定向回归。",
+    "本路新增Postgres查询未连接真实Postgres执行；SQL权限和过滤已静态核对，服务/内存与路由回归通过。",
+    "公开名称限流是进程内按RemoteAddr的60次/分钟，最多10000活跃来源桶；不信任任意转发头。多副本共享限流及反向代理来源规则仍依赖入口部署；名称查询失败/限流不阻断原登录。",
+    "材料入口保留既有两类证据资源和冻结/批准语义，文件名仅本地核对，持久证据来源由数据集引用/哈希与各版本记录承载；不将候选汇总自动换算为逐卷真值。",
+    "OpenAPI/SDK由根智能体统一修改生成；本路未修改生成物、锁文件、提交或部署。",
+    "全仓build/lint/typecheck由根智能体统筹，本路未运行。"
+  ],
+  "handoff_independent_review": {
+    "status": "no_blocking_findings_in_read_scope",
+    "read_scope": "handoff.go、handoff_handlers.go、handoff_memory.go、handoff_postgres.go及migration217全文；publication_postgres锁/transition、store_memory/Postgres ACL/回执相关片段",
+    "notes": "Manage仅认证权限填入且JSON不可传；作者edit回退保留ACL和作者核对；Postgres接收人核活动账号/全局read+动作职责/题库ACL。父行锁后另语句重读handoff、旧修订CAS、事件和转换同事务；历史未指派0修订兼容。未修改根文件，未验证真实PG并发。"
+  }
+}

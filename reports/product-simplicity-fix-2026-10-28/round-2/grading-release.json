@@ -1,0 +1,330 @@
+{
+  "scope": "第二轮：阅卷、复评与成绩发布剩余项",
+  "date": "2026-10-28",
+  "baseline": "round-2/before-grading-release.json 与 source-baseline.json；保留全部未提交修改，未覆盖第一轮报告。",
+  "findings": [
+    {
+      "id": "G01",
+      "status": "partial",
+      "changes": [
+        "本轮未扩展影子评分材料目录，保留上一轮授权阅卷任务选择与创建后自动入队"
+      ],
+      "remaining": "未进入现有阅卷任务目录的答题片段仍需高级输入；没有独立影子评分材料目录。",
+      "prior_status": "partial",
+      "files": [
+        "apps/web-admin/src/pages/SubjectiveGradingBatchPage.tsx",
+        "apps/web-admin/src/features/grading/SubjectiveBatchSourcePicker.tsx"
+      ]
+    },
+    {
+      "id": "G02",
+      "status": "partial",
+      "changes": [
+        "从申请直接定位关联复评任务，并保留返回原申请的深链接；申请只从当前授权队列预选",
+        "生成后继成绩版本按复评任务采用服务端稳定幂等键，刷新或不同管理员重试复用同一版本",
+        "生成成功直接打开该版本学生预览，迟到的跨会话或跨考试回执不打开",
+        "结案候选由服务端共用正式提交规则核验；唯一候选自动匹配，非本申请的同考试版本不参与选择",
+        "教师投影不暴露结果版本内部标记；正式审批、核对、发布与结案仍需显式操作"
+      ],
+      "remaining": "复评创建但关联失败后，刷新恢复仍需从已有任务选择；历史采用随机幂等键已生成的草稿不能由新稳定键自动回认。批准、启动、候选复核和正式发布仍是独立人工治理动作。",
+      "prior_status": "partial",
+      "files": [
+        "apps/web-admin/src/components/QuestionAppealRegradeLaunch.tsx",
+        "apps/web-admin/src/components/QuestionAppealWorkspace.tsx"
+      ]
+    },
+    {
+      "id": "G03",
+      "status": "fixed",
+      "changes": [
+        "跨考试的可处理标记提供继续阅卷正式路由",
+        "同考试沿用现有草稿切换保护；跨考试经过路由未保存拦截，新工作台重读权限、任务状态和租约",
+        "已提交/归档标记保持只读，过期会话按钮不能导航"
+      ],
+      "remaining": "",
+      "prior_status": "partial",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/ReviewBookmarks.tsx",
+        "apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx"
+      ]
+    },
+    {
+      "id": "G05",
+      "status": "partial",
+      "changes": [
+        "已确认方案在启动窗口缩为可展开摘要；未确认或读取失败状态仍直接提示"
+      ],
+      "remaining": "修改方案时，图片能力检测仍按实际选中模型逐项展示，尚未设计成受控批量检测。",
+      "prior_status": "partial",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx"
+      ]
+    },
+    {
+      "id": "G07",
+      "status": "fixed",
+      "changes": [
+        "成绩准备、统一待办和门户版本放进同一个成绩发布任务区",
+        "移除并排双发布状态栏；主状态为门户当前版本",
+        "学校原查询入口及其独立状态收进可选详情，继续保留独立权限、发布确认与服务端门禁"
+      ],
+      "remaining": "保留学校原查询入口的兼容发布能力；其独立事务是业务边界，不自动联动门户发布。",
+      "prior_status": "partial",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx"
+      ]
+    },
+    {
+      "id": "G08",
+      "status": "fixed",
+      "changes": [
+        "名册、基础成绩和门户检查相同规则合为一条待办，使用较大读数而非相加",
+        "每条保留来源与原读数，提醒不会吞掉阻断，未知规则不按文案误合并",
+        "名册与基础检查明细默认折叠，教师只读视图维持明细可见",
+        "任一检查缺失、未通过或名册未解决，都不能显示全部通过或启用门户发布"
+      ],
+      "remaining": "检查数量是规则项或记录数，来源明细保留各自口径，不宣称为去重后的学生总人数。",
+      "prior_status": "partial",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+        "apps/web-admin/src/features/score-management/components/QualityPanel.tsx"
+      ]
+    },
+    {
+      "id": "G14",
+      "status": "partial",
+      "changes": [
+        "本轮未修改既有私有草稿不落浏览器磁盘保护"
+      ],
+      "remaining": "没有现成受控私有草稿接口，仍只保留同会话内存草稿；刷新、退出或切换会话后不可恢复。",
+      "prior_status": "partial",
+      "files": [
+        "apps/web-admin/src/auth/reviewOpinionDraft.ts",
+        "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+        "apps/web-admin/src/pages/AppealCenterPage.tsx",
+        "apps/web-admin/src/pages/ArbitrationPage.tsx"
+      ]
+    },
+    {
+      "id": "G17",
+      "status": "partial",
+      "changes": [
+        "本轮未创建未经学校审批的评分模板，沿用同题已知满分及类型继承"
+      ],
+      "remaining": "缺少学校已审批模板和未知题目摘要的受控来源，未知字段仍需人工填写。",
+      "prior_status": "partial",
+      "files": [
+        "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+        "apps/web-admin/src/features/grading/workbench/components/WorkbenchOverlays.tsx",
+        "apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+        "apps/web-admin/src/pages/QualityDashboardPage.tsx"
+      ]
+    },
+    {
+      "id": "G18",
+      "status": "partial",
+      "changes": [
+        "本轮统一发布待办使用中文规则标题，技术代码留在来源详情"
+      ],
+      "remaining": "高级盲测题目选择仍有原始题型代码，部分参考材料仍显示原始错误标签；未完成统一枚举词表。",
+      "prior_status": "partial",
+      "files": [
+        "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+        "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx",
+        "apps/web-admin/src/features/gold-papers/GoldPaperNominationDrawer.tsx",
+        "apps/web-admin/src/features/score-management/components/QualityPanel.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx"
+      ]
+    }
+  ],
+  "read_scope": [
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ReviewBookmarks.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ReviewBookmarks.resume.test.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/publicationChecklist.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/publicationChecklist.test.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScorePublicationChecklist.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.batch36.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/scorePresentation.ts",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ScoreManagementPage.batch53.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealWorkspace.batch10.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealViews.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/scoring.css",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_types.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_store_postgres.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_store_memory.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_workflow_regression_test.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_service_test.go",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/regraderelease/service.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。"
+    },
+    {
+      "path": "services/api-gateway/internal/regraderelease/service_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读并核对必要注释。"
+    }
+  ],
+  "validation": [
+    {
+      "command": "go test ./internal/appeal ./internal/regraderelease",
+      "note": "进程 GOTMPDIR 使用独立临时目录；没有连接真实数据库或实际部署。",
+      "status": "passed",
+      "log": "grading-go-final.log"
+    },
+    {
+      "command": "Vitest 7 files --maxWorkers=1",
+      "note": "109/110 通过；旧双发布状态栏断言已改为单任务断言。",
+      "status": "initial_failure_fixed",
+      "log": "grading-vitest.log"
+    },
+    {
+      "command": "Vitest 8 files --maxWorkers=1",
+      "note": "115/116 通过，AI方案既有测试超过默认5秒；其余7文件全部通过。",
+      "status": "partial",
+      "log": "grading-vitest-final.log"
+    },
+    {
+      "command": "GradingAIPlanSettings.test.tsx --maxWorkers=1 --testTimeout=15000",
+      "status": "passed",
+      "log": "grading-ai-vitest-retry.log",
+      "note": "6/6通过；加长时限重跑唯一超时文件。其余7文件110/110通过。"
+    },
+    {
+      "note": "22/22通过；服务端复用结果时文案不再声称新建草稿。",
+      "status": "passed",
+      "command": "复评结果版本继续动作最终回归（2文件，maxWorkers=1）",
+      "log": "grading-result-resume-final.log"
+    }
+  ],
+  "limitations": [
+    "未运行真实学校浏览器流程、真实 PostgreSQL 并发验收或部署。",
+    "未提交、未推送、未部署；未写入真实环境配置、证书或账号。",
+    "全仓类型检查由主智能体统一执行。"
+  ]
+}

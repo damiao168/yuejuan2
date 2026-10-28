@@ -71,7 +71,7 @@
 
 .score-summary-strip {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 0;
   overflow: hidden;
 }
@@ -107,15 +107,25 @@
   min-width: 0;
 }
 
-/* 宽屏并列展示两条发布流程，窄屏将操作区提到长表格前。 */
+/* 发布检查、准备和门户版本在同一任务区按顺序展示，明细留在下方按需展开。 */
 .score-workspace:not(.read-only) {
-  grid-template-columns: minmax(0, 1fr) 340px;
-  grid-template-areas: "release actions" "main actions";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "publication" "main";
 }
 
 .score-workspace:not(.read-only) .score-main { grid-area: main; }
-.score-workspace:not(.read-only) .score-actions-panel { grid-area: actions; }
-.score-workspace:not(.read-only) .score-release-workspace { grid-area: release; }
+.score-workspace:not(.read-only) .score-publication-task { grid-area: publication; }
+.score-publication-task { min-width: 0; display: grid; gap: 16px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.score-regrade-focused { border-left: 3px solid var(--primary); padding-left: 12px !important; }
+.score-publication-task .score-actions-panel { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.score-publication-task .score-actions-panel > .panel-head,
+.score-publication-task .score-actions-panel > .ant-alert,
+.score-publication-task .score-actions-panel > .score-step-divider,
+.score-publication-task .score-actions-panel > .score-advanced-details { grid-column: 1 / -1; }
+.score-publication-task .score-release-workspace { padding: 0; border: 0; }
+.score-roster-panel > summary,
+.score-quality-panel > summary { cursor: pointer; font-weight: 600; }
+@media (max-width: 640px) { .score-publication-task .score-actions-panel { grid-template-columns: minmax(0, 1fr); } }
 
 .score-main {
   min-width: 0;
@@ -357,7 +367,7 @@
 @container score-shell (max-width: 1180px) {
   .score-workspace:not(.read-only) {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "actions" "release" "main";
+    grid-template-areas: "publication" "main";
   }
 
   .score-actions-panel {
@@ -380,6 +390,7 @@
 
 @container score-shell (max-width: 760px) {
   .score-actions-panel { grid-template-columns: 1fr; }
+  .score-publication-task .score-actions-panel { grid-template-columns: 1fr; }
   .score-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .score-release-heading,
   .score-release-subhead,

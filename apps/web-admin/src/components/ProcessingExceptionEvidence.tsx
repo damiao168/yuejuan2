@@ -12,7 +12,7 @@ function renderExceptionMaterial(value: ProcessingExceptionContext | undefined, 
   }
   return <>
     <p>考号：{value.candidate_no || "尚未匹配"} · 第 {value.page_no} 页</p>
-    <p className="muted-text">答卷：{value.submission_id} · 页面：{value.exception.page_id}</p>
+    <details><summary>排障信息</summary><p className="muted-text">答卷：{value.submission_id} · 页面：{value.exception.page_id}</p></details>
     {value.capture_batch_id && onNavigate ? <Button onClick={() => onNavigate(`/exams/${encodeURIComponent(examId)}/capture?batch=${encodeURIComponent(value.capture_batch_id!)}&submission=${encodeURIComponent(value.submission_id)}&page=${encodeURIComponent(value.capture_page_id || "")}&tab=${value.exception.code === "BLOCKED_MISSING_IDENTITY" || value.exception.code === "BLOCKED_MISSING_PAGE" ? "matching" : "image-quality"}`)}>打开本页处理工作区</Button> : null}
   </>;
 }

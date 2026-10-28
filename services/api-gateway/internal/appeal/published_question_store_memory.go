@@ -204,7 +204,7 @@ func (s *PublishedQuestionAppealMemoryStore) GetPublishedQuestionAppealContext(c
 	history := make([]QuestionAppealReleaseVersion, 0)
 	for _, release := range s.publishedReleases {
 		if release.TenantID == tenantID && release.ExamID == item.ExamID {
-			history = append(history, QuestionAppealReleaseVersion{ID: release.ID, Version: release.Version, Source: "published", Status: "published"})
+			history = append(history, QuestionAppealReleaseVersion{ID: release.ID, Version: release.Version, Source: release.Source, Status: "published", EligibleForResolution: item.Status == QuestionAppealUpheldPendingRegrade && s.resolutionReleaseMatchesLocked(item, release.ID)})
 		}
 	}
 	sort.Slice(history, func(i, j int) bool { return history[i].Version > history[j].Version })
@@ -297,30 +297,11 @@ func (s *PublishedQuestionAppealMemoryStore) ResolvePublishedQuestionAppeal(_ co
 	if item.Revision != input.ExpectedRevision {
 		return PublishedQuestionAppeal{}, ErrRevisionConflict
 	}
-	resolution, ok := s.publishedReleases[publishedQuestionReleaseKey(tenantID, item.ExamID, input.NewReleaseID)]
-	if !ok || resolution.Version <= item.SourceReleaseVersion {
+	if !s.resolutionReleaseMatchesLocked(item, input.NewReleaseID) {
 		return PublishedQuestionAppeal{}, ErrResolutionRelease
 	}
-	job, regrade, ok := s.matchingRegradeJobLocked(item, item.RegradeJobID)
-	source, sourceExists := s.sources[publishedQuestionSourceKey(tenantID, item.ExamID, item.StudentID, input.NewReleaseID, item.QuestionID)]
-	// 夹具也必须具化真实发布的学生答卷题目及重评结果，只有版本号的记录不能结案。
-	if !ok || job.Status != "ready_for_release" || job.FinalizedAt == nil || regrade.Status != "resolved" ||
-		resolution.Source != "regrade" || resolution.SourceReleaseID != item.SourceReleaseID ||
-		resolution.PublishedAt == nil || resolution.PublishedAt.Before(*job.FinalizedAt) ||
-		!sourceExists || !source.Published || source.SubmissionID != item.SubmissionID ||
-		source.FinalGradeID != regrade.OldFinalGradeID || source.MaxScore != regrade.MaxScore {
-		return PublishedQuestionAppeal{}, ErrResolutionRelease
-	}
-	expectedScore := regrade.OldScore
-	if regrade.ReviewedScore != nil {
-		expectedScore = *regrade.ReviewedScore
-		if source.SourceType != "single_review" || source.SourceID != regrade.ReviewedGradeID {
-			return PublishedQuestionAppeal{}, ErrResolutionRelease
-		}
-	}
-	if source.Score != expectedScore {
-		return PublishedQuestionAppeal{}, ErrResolutionRelease
-	}
+	resolution := s.publishedReleases[publishedQuestionReleaseKey(tenantID, item.ExamID, input.NewReleaseID)]
+	source := s.sources[publishedQuestionSourceKey(tenantID, item.ExamID, item.StudentID, input.NewReleaseID, item.QuestionID)]
 	item.NewReleaseID, item.Status, item.UpdatedAt, item.Revision = input.NewReleaseID, QuestionAppealResolved, s.now().UTC(), item.Revision+1
 	item.NewReleaseVersion = resolution.Version
 	item.ReviewedScore, item.ReviewedMaxScore = &source.Score, &source.MaxScore
@@ -333,6 +314,35 @@ func (s *PublishedQuestionAppealMemoryStore) ResolvePublishedQuestionAppeal(_ co
 	s.appeals[appealID] = item
 	s.appendEventLocked(appealID, actorID, "resolved", map[string]any{"new_release_id": item.NewReleaseID})
 	return clonePublishedQuestionAppeal(item), nil
+}
+
+// 展示候选与正式结案共用事实规则；调用者必须持有读锁或写锁，不能只根据版本号匹配。
+func (s *PublishedQuestionAppealMemoryStore) resolutionReleaseMatchesLocked(item PublishedQuestionAppeal, releaseID string) bool {
+	resolution, exists := s.publishedReleases[publishedQuestionReleaseKey(item.TenantID, item.ExamID, releaseID)]
+	if !exists || resolution.Version <= item.SourceReleaseVersion {
+		return false
+	}
+	job, regrade, ok := s.matchingRegradeJobLocked(item, item.RegradeJobID)
+	source, sourceExists := s.sources[publishedQuestionSourceKey(item.TenantID, item.ExamID, item.StudentID, releaseID, item.QuestionID)]
+	// 夹具也必须具化真实发布的学生答卷题目及重评结果，只有版本号的记录不能结案。
+	if !ok || job.Status != "ready_for_release" || job.FinalizedAt == nil || regrade.Status != "resolved" ||
+		resolution.Source != "regrade" || resolution.SourceReleaseID != item.SourceReleaseID ||
+		resolution.PublishedAt == nil || resolution.PublishedAt.Before(*job.FinalizedAt) ||
+		!sourceExists || !source.Published || source.SubmissionID != item.SubmissionID ||
+		source.FinalGradeID != regrade.OldFinalGradeID || source.MaxScore != regrade.MaxScore {
+		return false
+	}
+	expectedScore := regrade.OldScore
+	if regrade.ReviewedScore != nil {
+		expectedScore = *regrade.ReviewedScore
+		if source.SourceType != "single_review" || source.SourceID != regrade.ReviewedGradeID {
+			return false
+		}
+	}
+	if source.Score != expectedScore {
+		return false
+	}
+	return true
 }
 
 func (s *PublishedQuestionAppealMemoryStore) matchingRegradeJobLocked(item PublishedQuestionAppeal, jobID string) (publishedQuestionAppealRegradeJob, PublishedQuestionAppealRegradeItemSource, bool) {

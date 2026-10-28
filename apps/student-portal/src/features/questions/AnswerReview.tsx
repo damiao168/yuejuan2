@@ -1,12 +1,13 @@
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import type { StudentQuestion, StudentQuestionAnnotation } from "../../api";
 import { StudentText } from "./StudentText";
 import { QuestionCohortScope } from "./QuestionCohortScope";
 
-export function AnswerReview({ question, annotations, imageURL, onImageUnavailable }: Readonly<{
+export function AnswerReview({ question, annotations, imageURL, imageEditor, onImageUnavailable }: Readonly<{
   question: StudentQuestion;
   annotations: StudentQuestionAnnotation[];
   imageURL: string;
+  imageEditor?: ReactNode;
   onImageUnavailable?: () => void;
 }>) {
   const [activeAnnotation, setActiveAnnotation] = useState<string | null>(annotations[0]?.id ?? null);
@@ -16,7 +17,7 @@ export function AnswerReview({ question, annotations, imageURL, onImageUnavailab
   return <div className="answer-review">
     <section className="answer-canvas" aria-label="我的原始答卷">
       <div className="answer-canvas-header"><strong>我的原始答卷</strong><span>{annotations.length ? `${annotations.length} 条教师批注` : "原卷"}</span></div>
-      {imageAvailable ? <div className="answer-image-stage">
+      {imageEditor ?? (imageAvailable ? <div className="answer-image-stage">
         <div className="answer-image-anchor">
         <img src={imageURL} alt={`第 ${question.question_no} 题答题区域`} onError={() => { setImageAvailable(false); onImageUnavailable?.(); }} />
         {annotations.map((annotation) => <button
@@ -28,7 +29,7 @@ export function AnswerReview({ question, annotations, imageURL, onImageUnavailab
           onClick={() => setActiveAnnotation(annotation.id)}
         />)}
         </div>
-      </div> : <div className="answer-unavailable"><strong>原卷图暂时不可用</strong><p>你仍然可以查看本题得分与公开反馈。</p></div>}
+      </div> : <div className="answer-unavailable"><strong>原卷图暂时不可用</strong><p>你仍然可以查看本题得分与公开反馈。</p></div>)}
     </section>
     <aside className="answer-inspector">
       <div className="question-result-line"><div><span>本题得分</span><strong>{question.score} / {question.max_score}</strong></div><i style={{ "--score-rate": `${rate}%` } as CSSProperties} /></div>

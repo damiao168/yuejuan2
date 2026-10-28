@@ -42,7 +42,7 @@ export function TemplateSettingsDrawer({ view }: Readonly<{ view: TemplateSettin
 					onChange={(event) => setName(event.target.value)}
 				/>
 			</label>
-			<TemplateBindingPanel view={view} />
+			<TemplateBindingPanel view={view} showAction={false} />
       <details className="template-settings-omr"><summary>选择题识别方式</summary><OMRProfilePanel view={view} /></details>
       {view.editor.selectedRegion ? <div className="template-current-region-settings">
         <strong>当前选区：{selectedIdentity ? normalizeIdentityRegionLabel(view.editor.selectedRegion.label) : `第 ${view.editor.selectedRegion.label || view.editor.selectedRegion.question_id} 题`}</strong>

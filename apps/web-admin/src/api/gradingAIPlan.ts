@@ -45,8 +45,8 @@ export function getGradingAIPlan(examId: string) {
 export function saveGradingAIPlan(examId: string, payload: SaveGradingAIPlan) {
   return apiClient.request<GradingAIPlanResponse>(`/api/v1/exams/${encodeURIComponent(examId)}/grading-ai-plan`, { method: "PUT", body: JSON.stringify(payload) });
 }
-export function probeGradingAIModel(examId: string, modelConfigId: string) {
+export function probeGradingAIModel(examId: string, modelConfigId: string, frozen?: { requestId: string; configRevision: string; bindingRevision: string }) {
   return apiClient.request<{ model_config_id: string; vision_probe_status: string; vision_probe_reason: string; cache_hit: boolean }>(`/api/v1/exams/${encodeURIComponent(examId)}/grading-ai-plan/probe`, {
-    method: "POST", body: JSON.stringify({ model_config_id: modelConfigId, request_id: crypto.randomUUID() })
+    method: "POST", body: JSON.stringify({ model_config_id: modelConfigId, request_id: frozen?.requestId ?? crypto.randomUUID(), ...(frozen ? { expected_config_revision: frozen.configRevision, expected_binding_revision: frozen.bindingRevision } : {}) })
   });
 }

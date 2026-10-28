@@ -97,6 +97,18 @@ describe("single-question inspector focus", () => {
     for (const obsolete of ["提交并下一份", "提交并提名标准卷", "连续阅卷", "Ctrl / ⌘ + Enter"]) expect(editable.textContent).not.toContain(obsolete);
   });
 
+  it.each([undefined, false, true])("交分提示在快捷键帮助之外，标记状态=%s", (bookmarkMarked) => {
+    const editor = { ...evidenceProps("calculation"), setDraft: vi.fn(), rubricPoints: [], canEditDraft: true, canReturn: false,
+      bookmarkMarked, onAdoptAiScore: vi.fn(), onMarkDispute: vi.fn(async () => undefined) } as ScoreEditorProps;
+    const host = parse(<ScoreEditor {...editor} />);
+    const notice = host.querySelector('[role="status"]');
+    expect(notice?.closest("details")).toBeNull();
+    expect(notice?.textContent).toBe(bookmarkMarked === undefined ? "标记状态尚未确认，暂不能自动提交。" : bookmarkMarked ? "已标记：当前仅编辑草稿；取消标记后恢复自动提交。" : "联网且满足提交条件后，本次修改的有效得分将自动提交；稍后核对请先标记答卷。");
+    expect(editor.setDraft).not.toHaveBeenCalled();
+    const readonly = parse(<ScoreEditor {...editor} canEditDraft={false} />);
+    expect(readonly.querySelector('[role="status"]')).toBeNull();
+  });
+
   it("评分记录不再展示评语，保留草稿中的历史字段", () => {
     const editor = { ...evidenceProps("calculation"), setDraft: vi.fn(), rubricPoints: [], canReturn: false,
       onAdoptAiScore: vi.fn(), onMarkDispute: vi.fn(async () => undefined) } as ScoreEditorProps;

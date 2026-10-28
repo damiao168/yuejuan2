@@ -104,8 +104,8 @@ describe("Student Portal released-score boundaries", () => {
       if (call.url.pathname.endsWith("/questions/question-2")) return jsonResponse({ question: second });
       return undefined;
     });
-    fireEvent.click(screen.getByRole("button", { name: /^第 1 题，/ }));
-    fireEvent.click(screen.getByRole("button", { name: /^第 2 题，/ }));
+    fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((screen.getByRole("button", { name: /^第 2 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("第二题评分依据");
     resolveFirst(jsonResponse({ question: { ...releasedResult.questions[0], feedback: "过期的第一题内容" } }));
     await waitFor(() => expect(screen.queryByText("正在加载本题…")).toBeNull());
@@ -228,8 +228,9 @@ describe("Student Portal released-score boundaries", () => {
     }));
 
     expect(screen.getByRole("heading", { name: "数学逐题分析" })).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("显示比较数据"));
     expect(screen.getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
-      "题号", "正确答案", "实际答案", "得分", "班级平均分", "参试学生平均分", "群体中位分对比"
+      "题号", "正确答案", "实际答案", "我的得分", "班级平均分", "参试学生平均分", "群体中位分对比"
     ]);
     expect(screen.getByText("达到群体中位分")).toBeTruthy();
     expect(screen.getByText("低于群体中位分")).toBeTruthy();
@@ -315,7 +316,7 @@ describe("Student Portal released-score boundaries", () => {
       return undefined;
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /14 \/ 20 分/ }));
+    fireEvent.click(screen.getByRole("button", { name: /14 \/ 20 分/ }).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
 
     await screen.findByText("请复核第二步的计算过程。");
     expect(screen.getByText("公开批注内容")).toBeTruthy();
@@ -348,12 +349,12 @@ describe("Student Portal released-score boundaries", () => {
       return undefined;
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /14 \/ 20 分/ }));
+    fireEvent.click(screen.getByRole("button", { name: /14 \/ 20 分/ }).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const reason = await screen.findByRole("textbox", { name: "具体说明" });
     fireEvent.change(reason, { target: { value: "第二步计算过程已正确完成，请重新核对采分点。" } });
     // 表单先核对当前版本是否已有申请；文本框出现不代表核对已完成。
-    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" }).disabled).toBe(false));
-    fireEvent.click(screen.getByRole("button", { name: "确认提交（仅一次）" }));
+    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(false));
+    fireEvent.click(screen.getByRole("button", { name: "提交复核申请" }));
 
     await waitFor(() => expect(appealCall).toBeTruthy());
     const payload = JSON.parse(String(appealCall?.init.body)) as Record<string, unknown>;
@@ -400,10 +401,10 @@ describe("Student Portal released-score boundaries", () => {
       return undefined;
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /14 \/ 20 分/ }));
+    fireEvent.click(screen.getByRole("button", { name: /14 \/ 20 分/ }).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
 
-    await screen.findByText("本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。");
-    expect(screen.queryByRole("button", { name: "确认提交（仅一次）" })).toBeNull();
+    await screen.findByText(/已收到第 \d+ 版的本题申请，不可重复提交。/);
+    expect(screen.queryByRole("button", { name: "提交复核申请" })).toBeNull();
   });
 
   it("shows a safe non-blank state when the result API fails", async () => {

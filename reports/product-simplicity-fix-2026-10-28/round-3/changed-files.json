@@ -1,0 +1,818 @@
+{
+  "date": "2026-10-28",
+  "baseline": "source-baseline.json",
+  "files": [
+    {
+      "path": "README.md",
+      "status": "pending",
+      "read_scope": "local_launch_and_TLS_paragraphs",
+      "review_report": "round-2/deployment.json",
+      "sha256": "770543a743ee58196e93024af7b5faf5d1a93c518ab64f690fed7ff333a97861",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/api/gradingAIPlan.ts",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "73577027bf8aa64e7e9e330cfcee59ce579782694ce443f4312187db08292523",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/api/subjectiveGrading.ts",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "目录使用正式生成的SDK类型和方法，其他批次恢复接口保留。",
+      "review_report": "round-3/grading.json",
+      "sha256": "4875c1ad8d2b29c9219997c9e9afaebae42502592f3166caaec1c21019b41339",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/auth/reviewOpinionDraft.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "自动内存暂存与显式服务端私稿的边界，按账号会话代际隔离。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "2f4b4ccd8bbadcbda7c6ee06131eb35125e288669c9fa7898828de40576ac4ae",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/PrivateOpinionDraft.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "跨记录、冲突、会话变化和不写浏览器存储。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "41fb6b07ba01ffae96487f3e7f3c82bfb1e2e5c3194f5b142cd8c73d8da2c756",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/PrivateOpinionDraft.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "保存快照、CAS、当前来源核对、会话失效与迟到结果隔离。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "c359b359959c82ac6cb81f6ef5a3b6e9b098cfcd448688d03d42fa41b0ff18cc",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealRegradeLaunch.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "根完整核对原回归并补异步回调最新值验证。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "c44f3d7822122b49c327d63d2f585226b53151a953cd3ced0eb2d7d033caeb23",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealRegradeLaunch.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "核对候选恢复、创建与关联分步回执、重试和会话失效。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "fe28c1eec3d418a2cbf5cf4482785b5975609cd759c890e8075cb0e3a8ff929f",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealWorkspace.batch10.test.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读变更函数、相邻状态及调用或测试；未作全文重审。",
+      "review_report": "round-2/grading-release.json",
+      "sha256": "59a2948dabd27a07eab75caa0320e2561089a69b8cc3075d63757a3f992f1d8a",
+      "baseline_sha256": "ef69a54981011888e9707150885b2372ee3d8f1cdc7db64adee39ca2275d4cf4"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "draft_restore_submit_and_regrade_integration",
+      "note": "只核对本轮草稿与复评集成块及正式成功后的本地清理，未计整份工作台重新全文审读。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "406795007021f420ef90112bf5dfed63ad697ea4e3730b301fa9c4d42371cf5c",
+      "baseline_sha256": "ac468201dfa5c094d965263798a2494677a76a9b7cc5d163cef63e8416432955"
+    },
+    {
+      "file": "apps/web-admin/src/components/features/assessment/ExamScoringPreparation.test.tsx",
+      "status": "existing_sufficient",
+      "scope": "全文，本轮更新考试级入口断言",
+      "path": "apps/web-admin/src/components/features/assessment/ExamScoringPreparation.test.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "f4cd59c2a7c9216a23a48ec001981637c97ffea46bee63efc38f2cce40d4f9c5",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx",
+      "status": "existing_sufficient",
+      "scope": "全文，考试级待办与单题入口",
+      "path": "apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "a97d326fe0d2f3b9656207fdb4e654a031c73f4763cb1e6abcff963fd1a75f15",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/questionAppealRegradeRecovery.test.ts",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "290630187ce633455f70f4abec4a683d65b43c9d38b8723c859e144e7d6da957",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/components/questionAppealRegradeRecovery.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "仅匹配本人同来源单份人工复评，排除扩大范围和新评分规则。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "043663eae1e059b0e97bb80965b4532bb75f7d0082488e578d92584b61612e08",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/constants/assessmentLabels.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "中文词表与未知机器标签回退，接口值不改。",
+      "review_report": "round-3/grading.json",
+      "sha256": "330426695f3d54856a1da2edff3bf521d846c22eef363b026300559c2882fc86",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-groups/AnswerGroupReviewWorkspace.test.tsx",
+      "status": "existing_sufficient",
+      "scope": "新增全文，实际显示、共用依据、连续点击、失败/迟到与正文冲突",
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupReviewWorkspace.test.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "3744fc9e466bdda7eb29c47ec931bb249c1c2bcd2889ef8558ce9b8138f170ae",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-groups/AnswerGroupReviewWorkspace.tsx",
+      "status": "existing_sufficient",
+      "scope": "本轮新增全文，样本切换身份、冻结正文一致性、操作互斥与失败保留",
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupReviewWorkspace.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "1da1532925b963f296bee330eae3d04767daf9c6bd194635963f1064e875f968",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx",
+      "status": "existing_sufficient",
+      "scope": "全文，受控材料身份/hash、实际显示登记、取消与对象URL释放",
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "17e1d163ddf70b3cbd4b99f2f5a0857d1a482c99f62ab8004c3097605a7e4ec2",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.test.tsx",
+      "status": "pending",
+      "scope": "样本选择/权限/旧代次回调/错误范围与当前改动断言；未重新全文审读不相关旧回滚测试",
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.test.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "9bb4c299124581655c5473cd698f7aeb3900472e5fd34e22becf3e1ab7a91148",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx",
+      "status": "existing_sufficient",
+      "scope": "全文，读写代次、抽检动作、候选保存/确认/回滚及展示",
+      "path": "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "1560ee60f6c8644f8cafaf1d7d63ed45819ebfc79aa557c83464092935e88722",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/appeals/AppealDecisionPanel.tsx",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "已审读完整文件并核对必要规则说明。",
+      "review_report": "grading-release.json",
+      "sha256": "d8df0001d1f43b60bd0317b7074144adeba842e2b9465e7d49917b970e297ead",
+      "baseline_sha256": "a2b6be66eedc53a6982123623cdffdc5cb3463d7e18a84933ae438fde335ef40"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "本轮完整审读加载、正式保存/试评、盲评参考揭示边界与新复用入口。",
+      "review_report": "round-3/grading.json",
+      "sha256": "164669c2a69cb89d91b9e74ed0892dc0098c30951dc0febe068ca7ba8b2f09d4",
+      "baseline_sha256": "f3b2dfa917662e247afac8c8c1afd36a5f69e88c869eb90deb297a9c83cfd944"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationPolicyReuse.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "review_report": "round-3/grading.json",
+      "sha256": "e4970b26880b3d41b3ca2b8988aa272868baf53235be30527cdd1e1ad6c255c7",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationPolicyReuse.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "匹配真实来源，区分已保存标准与学校审批模板，保留目标修订，异步后重读表单避免覆盖。",
+      "review_report": "round-3/grading.json",
+      "sha256": "8339d73b509430bd582fc0a06dbb6b0d743d1ae3442ff6e7e2f430842abefd01",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureFileOrderPreview.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "父确认缺页阻断与切文件迟到计数隔离。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "a4eaac363eac244464039d625b043605867aeb2dde188c370e8e95f3311ba1c2",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "核对本地计数、跨文件分组、取消/迟到结果与父确认阻断。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "a6e8a5e43331a30f188effba679a1b7c693a216d4c871d20c2a5dc5dd8eeb6ec",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "核对原件改序与未应用排序阻断，补逐份答卷位置。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "f57855c0d285a9d47de5a3a299fa43728178b20bb421bb1b9ed298c42464052a",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/ImageQualityWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "IssueList_and_nearby_labels",
+      "note": "只核对未知问题码显示，不计整个质量工作台全文审读。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "bb454b14ebfacb2e334eda3067c8de43a43c43483e0772fe7655847cc62fadb2",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/capturePageGrouping.test.ts",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "跨文件、改序和未知页数不猜测。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "31487377a128ce9b903363e523cc059299aaaeda2ab352e6fa984a33af317de8",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/capturePageGrouping.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "解释同次选择跨文件连续分组，保持原页号来源。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "991eb0e7458afa0fa2ee7fcff74ea435fbb8c354880c5b2107009be8d05a8382",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/capturePdfPreview.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "仅取页数时仍取消并销毁PDF任务，不提前登记文件。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "838bcf92f96518ab64566f39601392af3f2abfb73afcbcd4ed77df14e647bf0a",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureTiffPreview.test.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "双端序原件与BigTIFF页数、方向四角、循环与越界拒绝。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "26daabdc37d8ab8b37dc1ac298d161a2d5084afc098136dee37a6107d6fc6853",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureTiffPreview.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "真实64位目录范围与循环验证、八方向缩略图、原件保留。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "e4ee6997abaf16e6c617a1e7efd68eea456307d838a2b81589a48daf8982daa1",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/features/capture/submissionColumns.batch14.test.tsx",
+      "status": "existing_sufficient",
+      "scope": "全文改为历史查看不写旧链的行为验证",
+      "path": "apps/web-admin/src/features/capture/submissionColumns.batch14.test.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "d212bb51db2a7156e01dfede828e482b63a8bfcd29c60540f1ae0cc3a958aaac",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/features/capture/submissionColumns.tsx",
+      "status": "existing_sufficient",
+      "scope": "全文，纯状态主动作移除、历史查看和原有单页修复",
+      "path": "apps/web-admin/src/features/capture/submissionColumns.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "3108f78b0c5d90ad25ec7348672964d5a745396a152dbc3b517221818a9f29e4",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/features/exams/management/ManagementExamEditDrawer.tsx",
+      "status": "existing_sufficient",
+      "scope": "全文，沿用现有字段、版本与幂等重试，新增定位提示和焦点",
+      "path": "apps/web-admin/src/features/exams/management/ManagementExamEditDrawer.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "fdc25e8a425635175cf9268f0f1baf7cf877c222d611f800b87c261fd301976d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "完整审读标准卷版本、审批、覆盖、标签显示；本轮只改变显示词表。",
+      "review_report": "round-3/grading.json",
+      "sha256": "4245d496e7d218ef67bfca203a41d998c8c101f7f607aa2614331fb68ff1d0df",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/GoldPaperNominationDrawer.tsx",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "完整审读提名冻结事实及标签输入；本轮不改变提名/批准语义。",
+      "review_report": "round-3/grading.json",
+      "sha256": "5ceaaff3c6888be764e7dea2a3b6af2051d74bdb6210a46832b7ab7e61d293e2",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/goldPaperPresentation.test.ts",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "review_report": "round-3/grading.json",
+      "sha256": "9b07a6d498404f7dcd458492689aa0a2830d893b02621fba2618b015f0a1cf2b",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/goldPaperPresentation.ts",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "review_report": "round-3/grading.json",
+      "sha256": "697c7c434a3a122599c0d493efe9f185fa103f154a40fb3272b5e22369ad134d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/SubjectiveBatchSourcePicker.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "review_report": "round-3/grading.json",
+      "sha256": "e370a2c6ca8e4d03159623c14d18ce6414885cfba1f8308cf4ca478a4643e3aa",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/SubjectiveBatchSourcePicker.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "目录去重、选择上限、准备状态、会话/考试世代与清空选择。",
+      "review_report": "round-3/grading.json",
+      "sha256": "584b2c66c7b88efe5389003cab47a3edfd16f840bb4a55568041a9d840b9293f",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "review_report": "round-3/grading.json",
+      "sha256": "e23af585a3270c4055b6af42d03027e42806c9d281c1fd38ea0f2be1addeea4d",
+      "baseline_sha256": "c2f03f82382ba8c02aa8a578283b60d35cc0ed1a7a2c8b7d99bb3b80f43cdc36"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "保留前代理已落盘的批量检测，核对配置冻结、请求身份、只重试失败、能力刷新不重置表单和会话废弃。",
+      "review_report": "round-3/grading.json",
+      "sha256": "5f2c394f584ba33ab778bfc7678bb72c741909c6d3e1b774de948181b2f26e19",
+      "baseline_sha256": "b7519874c225b4762b8a0ed0f82eaa14acc21204bc896567451f078528344624"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AppealCenterPage.tsx",
+      "status": "pending",
+      "read_scope": "draft_restore_submit_and_private_draft_integration",
+      "note": "只核对旧申诉输入、恢复和正式提交清理。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "1f40427e966259eb3f119edf80ea4e74d16d45740b1603e4d447418bf16c8243",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationDecisionPanel.tsx",
+      "status": "pending",
+      "read_scope": "changed_functions_and_relevant_callers",
+      "note": "已审读本次实现及相关测试；局部审读仍保持 pending。",
+      "review_report": "grading-release.json",
+      "sha256": "91b8c94185133412c9c37142c508ee843fef9293c85f32ad0ba32724250c7cbd",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPage.tsx",
+      "status": "pending",
+      "read_scope": "draft_restore_submit_and_private_draft_integration",
+      "note": "只核对本人仲裁恢复、修订核对和正式提交清理。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "d18c5e8182f420d6cc788e524bb851036c27f0f51a2f1ad2aaa9b0e82f482e7f",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/pages/ExamManagementPage.test.tsx",
+      "status": "pending",
+      "scope": "本轮定位、拒绝、保存后不重开及已有列表权限回归",
+      "path": "apps/web-admin/src/pages/ExamManagementPage.test.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "a4028cecbc81fd9222f289a2699f921f82b64bc76b4470a645a87a80478891cc",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/pages/ExamManagementPage.tsx",
+      "status": "existing_sufficient",
+      "scope": "全文及深链最新权限、归属、异步失效与保存后重开边界",
+      "path": "apps/web-admin/src/pages/ExamManagementPage.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "a9904c3650a0fa8ae9ca572e0b31e8c3a27c7d907988270c57ed55626af74034",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/pages/ExamPreparationPage.test.ts",
+      "status": "existing_sufficient",
+      "scope": "全文，本轮更新精确路由断言",
+      "path": "apps/web-admin/src/pages/ExamPreparationPage.test.ts",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "d51a676b06b08d52ee594ff9f7488c0d235cb9c0502421e5f92238209eac5477",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "status": "pending",
+      "scope": "readinessCheckRoute、班级范围编辑、考试级检查入口；其他准备确认逻辑未重新全文审读",
+      "path": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "dd33cbb9e090c7484ec3adda3a05ece4f0b786a2f30a2a8e7295698f1da92903",
+      "baseline_sha256": "7a72d7757bb2864a8946c3197b60a3990a40f00cdf0da91a7c0859b569ba0f83"
+    },
+    {
+      "path": "apps/web-admin/src/pages/QualityDashboardPage.tsx",
+      "status": "pending",
+      "read_scope": "changed_selectors_and_calibration_callers",
+      "note": "核对两个高级题目选择和校准默认调用，未重新全文审读整个大页面。",
+      "review_report": "round-3/grading.json",
+      "sha256": "ba33941e0cc7af48f07a60ed5e440795ca107e02ecc724984c55d7dddfadee82",
+      "baseline_sha256": null
+    },
+    {
+      "path": "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+      "status": "pending",
+      "read_scope": "changed_label_column_and_imports",
+      "note": "仅核对中央词表和题型显示列。",
+      "review_report": "round-3/grading.json",
+      "sha256": "de25b76d7508ad9c0b5168762f55b0e2142d18b079ac0d12f70c2c5aeda8eb80",
+      "baseline_sha256": "361e60ae16c7e4e9e2e7ecadc5987e6eb0012d52320797d7afecca6400544458"
+    },
+    {
+      "file": "apps/web-admin/src/pages/SubmissionCapturePage.batch9.test.tsx",
+      "status": "existing_sufficient",
+      "scope": "全文分段审读并替换已删除旧上传流程断言，保留列表/权限/预览/OCR查看行为",
+      "path": "apps/web-admin/src/pages/SubmissionCapturePage.batch9.test.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "full",
+      "sha256": "d7248cbc2d49189bd9fd28467318dd4e708011c9efdd64e9d0586f25f6521684",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+      "status": "pending",
+      "scope": "分段审读旧上传链撤下、历史查看/预览、单页替换、OCR详情与当前考试导航；输出曾截断，未以全文审读计数",
+      "path": "apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "212ea4f3fd7b58441a652112d76f10158a2cf74dee83bec26c6eceb4f2fb10c6",
+      "baseline_sha256": null
+    },
+    {
+      "file": "apps/web-admin/src/pages/SubmissionCaptureViews.tsx",
+      "status": "pending",
+      "scope": "历史记录、加载/错误/空状态、失败提示与上传队列展示；未重新全文审读全部只读OCR详情渲染",
+      "path": "apps/web-admin/src/pages/SubmissionCaptureViews.tsx",
+      "review_report": "round-3/exam-capture.json",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "sha256": "746a393d8db31a891d776935edb751a8163669046f3f0b7e112bee845b06b409",
+      "baseline_sha256": null
+    },
+    {
+      "path": "infra/docker-compose/.env.example",
+      "status": "pending",
+      "read_scope": "worker_credential_keys",
+      "note": "只读，版本号由主智能体正式同步。",
+      "review_report": "round-2/deployment.json",
+      "sha256": "118850f45df6bf0ff3a041652b8b7dc1bf250de54191339c84b4c8076a68dd67",
+      "baseline_sha256": null
+    },
+    {
+      "path": "infra/docker-compose/README.md",
+      "status": "pending",
+      "read_scope": "local_TLS_and_worker_provisioning_paragraphs",
+      "review_report": "round-2/deployment.json",
+      "sha256": "b705fa9a1b1056ee79cd083e9a87f365eac637c43dff767a058a4cd4446a848d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "infra/docker-compose/docker-compose.yml",
+      "status": "pending",
+      "read_scope": "TLS_mounts_and_service_names",
+      "note": "只读，版本号由主智能体正式同步。",
+      "review_report": "round-2/deployment.json",
+      "sha256": "ef9f6832663bc6e1897c9561f0406b88360055a4e0db607f664b8da24770219d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "packages/sdk/src/generated/client.ts",
+      "status": "protected",
+      "read_scope": "generated_or_locked",
+      "note": "依正常SDK/路由生成、包管理或合成测试夹具生成流程更新，未手改生成结果。",
+      "sha256": "e6d4c7238886f1328c42d86bff80f1040d986f4e1fff1aaeea4ae7395db4e0a6",
+      "baseline_sha256": null
+    },
+    {
+      "path": "packages/sdk/src/generated/types.ts",
+      "status": "protected",
+      "read_scope": "generated_or_locked",
+      "note": "依正常SDK/路由生成、包管理或合成测试夹具生成流程更新，未手改生成结果。",
+      "sha256": "e136352b3b7b95d8f72a9d4ed9cfe01bc163bd47cbe5caf4a9800b09bf9c684d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "scripts/ci/local-processing-mode.test.mjs",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "合成进程验证模式选择、冲突、停止及失败。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "1a1e1f941b186a625d94a973585fd54c34b5ecf7e2ef540cc22c7f8c98462d9f",
+      "baseline_sha256": null
+    },
+    {
+      "path": "scripts/launch-local.ps1",
+      "status": "pending",
+      "read_scope": "mode_selection_initial_env_and_init_final_readiness",
+      "note": "核对模式、已有账号/密钥保留、启停调用顺序；未重新全文检查Docker启动辅助函数。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "b84079686b32558e98be073869515422d86d6e262f8d4d7dc7ffeb06323a2e6d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "scripts/local-processing-mode.ps1",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "单项旧命令不扩范围；禁用必须实际停止已运行处理服务。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "b2ae9b082f28bf087b80b55c29511787c43f88e9fa1ddd5713c62cf53d2e43c1",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/handlers.go",
+      "status": "pending",
+      "read_scope": "formal_success_private_draft_cleanup_calls",
+      "note": "只核对提交成功后清理调用；数据库原子清理由新迁移触发器承担。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "273d424068c83fcfca19467588cf92f46f6fbc88df37f6c37d020175a0be6cca",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/private_drafts.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "旧申诉和题目复核的当前人员分派及可编辑状态。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "78c1bcbc7e35c19a9a65d808dbbd283fd36fa3c8042a3b9e2826ba6be7067e22",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "status": "pending",
+      "read_scope": "formal_success_private_draft_cleanup_calls",
+      "note": "只核对独立意见、决定和结案成功后的清理调用。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "c680cc74e5dfbc8c312496bca62e9168cbcd18e12574913831680134f11c26b3",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/grading/exam_ai_plan_handlers.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "f3c4558bff30764fa206084f2eaa9d100ce7dc186fd4d314d1a8fd78cacd0b5b",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/opiniondraft/draft.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "固定字段、期限、本人隔离、来源修订、CAS墓碑和存储错误。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "813daec4d2cd85cbccc5b3f6ad60048079e0f1d1a507c0773a2e78ad7bd4545b",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/opiniondraft/draft_postgres_integration_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "随机schema真实218迁移触发器与两种提交/保存并发顺序；不宣称完整学校业务种子。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "5a5b04f7110121cd78b29993c58c6805d4f954cfc7ea09ca4cb4a9aa5500af50",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/opiniondraft/draft_test.go",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "身份隔离、墓碑、来源伪造、非允许字段和终态读取拒绝。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "6e19a11f86015dd39c3054d37c6bdff617130f582719f49df14a4585b9a24cdf",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/review/handlers.go",
+      "status": "pending",
+      "read_scope": "arbitration_submit_private_draft_cleanup",
+      "note": "只核对仲裁正式成功后的清理调用。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "fe49425248998eb40148ae8fa0dee0c395357119db75d97e6113b9a0215a4d9b",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/review/opinion_draft.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "只能保存本人受派且未提交的仲裁。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "852797178cb070a9a3a53740ae85402fb56832f712052b0ec168a0ba51bd7710",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/regrade_recovery.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "按整份冻结事实与评分来源ID比较，不按同分或相似说明回认。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "f366b5d7daf044d3a7c517b9fbfb13661539366f92128826dc214c8ca5be8f15",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/regrade_recovery_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "旧随机键重试、不同正式复核来源和多个历史候选。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "6aa3fb38571af425eb4d18eb597f368d259632f103330400bce6d395a51fda8f",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_memory.go",
+      "status": "pending",
+      "read_scope": "CreateFromRegrade_and_nearby_idempotency",
+      "note": "仅核对本轮回认、新建与锁范围，未重新全文审读其他发布方法。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "8e051cf4ea33b63fb032fc11b0a8270d1a3054a062ea42ea367e04f155c7c330",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres.go",
+      "status": "pending",
+      "read_scope": "CreateFromRegrade_and_nearby_idempotency",
+      "note": "核对考试锁、事务内历史快照回认、无歧义返回及新建。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "2c1c5053523a49a934b2de4353480901828e618736a029442dc7d05eb93b5ca8",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/module_grading.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "ac9efaa7bfd0c881cfef8355d4d666ea70fc8ce65f9db8b48f63b5ca8fd2a271",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/module_release.go",
+      "status": "pending",
+      "read_scope": "changed_blocks_and_relevant_callers",
+      "note": "仅核对本次改动及相关状态边界；未计全文重新审读。",
+      "sha256": "38120f2133f1084ed8c5284add60a1d88ea168fe32caad7cb2cd4adb67b098a2",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/private_opinion_draft_route_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "本轮新增完整路由与回执存储、改派权限回归。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "6274b3b9dacd74e68c661f9ecee4475db1e7866e45151e8f6211db11cd34cea8",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/router_guards.go",
+      "status": "pending",
+      "read_scope": "requirePrivateOpinionDraft_and_requireAuth",
+      "note": "核对专用guard绕过响应缓存，保留身份与资源检查；其他guard未全文重审。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "e2d10c730afe9679389bc128b9f5577e2cd1e5e0ecedea3ae47259ba8a27b2f5",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_grading.go",
+      "status": "pending",
+      "read_scope": "arbitration_private_draft_routes",
+      "note": "三条仲裁草稿路由使用专用guard。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "406d3172ae632f017ecd1a50b2bf4cf16bf6de47d304d7346d4c9dd03ec7520d",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_release.go",
+      "status": "pending",
+      "read_scope": "private_draft_routes_and_nearby_formal_operations",
+      "note": "六条申诉草稿路由使用专用guard。",
+      "review_report": "round-3/appeals-drafts.json",
+      "sha256": "afa63c274b6b3bd400b4a999ef8f24eadfc94fb3155fc4989a46c47bc0fccfc9",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/source_directory.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整审读新增目录、明确管理范围、匿名投影、分页和创建重新校验边界。",
+      "review_report": "round-3/grading.json",
+      "sha256": "e181de1116835aaccec2b48c9560bdcf11c4cbccb981112e8cb1d2c8ca35569a",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/source_directory_postgres_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "隔离随机schema的真实SQL关联、游标与学校范围，不声称生产完整触发器验证。",
+      "review_report": "round-3/grading.json",
+      "sha256": "f707c671084a4f673258244eb679058927f5da436c4cb025e0980360a5948a43",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/internal/subjective/source_directory_test.go",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "租户/考试/作答准备状态、未分派材料和处理器身份边界。",
+      "review_report": "round-3/grading.json",
+      "sha256": "99a8a809babb674a19ed2dc8a773a066bcc2c61393f292c10fa551b7b44527af",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/migrations/000218_private_opinion_drafts.sql",
+      "status": "pending",
+      "read_scope": "table_and_resource_validation_cleanup_triggers",
+      "note": "独立核对SQL、父锁与清理函数；实际应用于新隔离集群，生产代码归申诉代理。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "920f3dfa5bf849bb6e2191eff0a5bd331e21a2bfd3dde42dcffa1c6cf71df3fc",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/openapi/edugrade-api.openapi.json",
+      "status": "pending",
+      "read_scope": "new_source_directory_and_private_draft_operations",
+      "note": "新增来源目录与9条私稿接口；其他契约未全文重审。",
+      "review_report": "round-3/root-findings.json",
+      "sha256": "4c93eea3487fd93571940003e8046cc57ffc083971c00ce9e25d4ced99d9ecac",
+      "baseline_sha256": null
+    },
+    {
+      "path": "services/api-gateway/openapi/route-coverage.json",
+      "status": "protected",
+      "read_scope": "generated_or_locked",
+      "note": "依正常SDK/路由生成、包管理或合成测试夹具生成流程更新，未手改生成结果。",
+      "sha256": "9e41e3ec8ad1fd844a56d0db42122f66d0b8fb3ece098908ab63947ebe34a83d",
+      "baseline_sha256": null
+    }
+  ],
+  "status_counts": {
+    "pending": 32,
+    "existing_sufficient": 17,
+    "annotated": 25,
+    "self_explanatory": 12,
+    "protected": 3
+  },
+  "missing_baseline_files": [],
+  "boundary": "逐文件记录实际阅读范围；局部核对仍为pending。EX25/EX32部分实现早于本轮保存基线，不把差异枚举当全文审读或新增实现。"
+}

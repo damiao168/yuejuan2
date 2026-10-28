@@ -16,24 +16,33 @@ import (
 
 // MemoryStore 明确用于开发和测试，不提供持久化。
 type MemoryStore struct {
-	mu       sync.Mutex
-	banks    map[string]Bank
-	items    map[string]Item
-	versions map[string]Version
-	acl      map[string]bool
-	reviews  map[string][]Review
-	schemas  map[string]MetadataSchema
-	aclDocs  map[string]ACLDocument
-	receipts commandreceipt.Memory
+	mu            sync.Mutex
+	banks         map[string]Bank
+	items         map[string]Item
+	versions      map[string]Version
+	acl           map[string]bool
+	reviews       map[string][]Review
+	handoffEvents map[string][]HandoffEvent
+	schemas       map[string]MetadataSchema
+	aclDocs       map[string]ACLDocument
+	receipts      commandreceipt.Memory
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{banks: map[string]Bank{}, items: map[string]Item{}, versions: map[string]Version{}, acl: map[string]bool{}, reviews: map[string][]Review{}, schemas: map[string]MetadataSchema{}, aclDocs: map[string]ACLDocument{}}
+	return &MemoryStore{banks: map[string]Bank{}, items: map[string]Item{}, versions: map[string]Version{}, acl: map[string]bool{}, reviews: map[string][]Review{}, handoffEvents: map[string][]HandoffEvent{}, schemas: map[string]MetadataSchema{}, aclDocs: map[string]ACLDocument{}}
 }
 func aclKey(tenant, bank, actor, action string) string {
 	return tenant + ":" + bank + ":" + actor + ":" + action
 }
 func copyVersion(v Version) Version {
+	if v.Handoff != nil {
+		h := *v.Handoff
+		if h.ClaimedAt != nil {
+			claimedAt := *h.ClaimedAt
+			h.ClaimedAt = &claimedAt
+		}
+		v.Handoff = &h
+	}
 	v.Scoring = copyScoring(v.Scoring)
 	v.Options = append([]string{}, v.Options...)
 	v.KnowledgePoints = append([]string{}, v.KnowledgePoints...)
@@ -99,6 +108,9 @@ func memoryMutation[T any](ctx context.Context, s *MemoryStore, scope auth.Acces
 			_, err = s.bank(scope, v.Item.BankID, command.action)
 		case Version:
 			_, err = s.item(scope, v.ItemID, command.action)
+			if err == nil && command.action == "manage" {
+				_, err = s.item(scope, v.ItemID, "read")
+			}
 		case MetadataSchema:
 			_, err = s.bank(scope, v.BankID, "manage")
 		case ACLDocument:
@@ -282,6 +294,36 @@ func (s *MemoryStore) UpdateVersion(ctx context.Context, scope auth.AccessScope,
 		}
 		if v.Revision != in.ExpectedRevision {
 			return Version{}, ErrConflict
+		}
+		if in.Scoring != nil {
+			scoring, err := normalizeScoring(*in.Scoring)
+			if err != nil {
+				return Version{}, err
+			}
+			scoring, err = preserveImportedReferences(v.Scoring, scoring)
+			if err != nil {
+				return Version{}, err
+			}
+			if len(scoring.Assets) > 0 {
+				return Version{}, ErrUnavailable
+			}
+			scoring, err = s.resolveMemoryScoringTemplate(scope, i, scoring)
+			if err != nil {
+				return Version{}, err
+			}
+			v.Scoring = scoring
+			if scoring.Answer != nil {
+				a := uuid.NewString()
+				v.AnswerVersionID = &a
+			} else {
+				v.AnswerVersionID = nil
+			}
+			if scoring.Rubric != nil {
+				r := uuid.NewString()
+				v.RubricVersionID = &r
+			} else {
+				v.RubricVersionID = nil
+			}
 		}
 		v.Content = content
 		v.ContentHash = contentHash(content)

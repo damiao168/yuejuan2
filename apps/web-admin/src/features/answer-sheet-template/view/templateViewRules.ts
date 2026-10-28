@@ -68,7 +68,7 @@ export function bindingDescription(view: TemplateConfirmationView) {
 	if (examBinding.template_id !== selectedTemplate.id)
 		return "本场考试已绑定其他模板版本，请先核对当前答题卡设置。";
 	if (examBinding.mode === "bound_auto")
-		return `首张答卷自动识别为 v${selectedTemplate.version_no}，仍需人工核对并确认。`;
+		return `已自动识别为第${selectedTemplate.version_no}版，请核对后确认用于本场。`;
 	if (!templateConfirmationState(view).usageConfirmed)
 		return "绑定所属考试或内容版本待核对，请核对后重新确认。";
 	return `当前版本 v${selectedTemplate.version_no} 已用于本场考试；后续页面会先做一致性检查。`;

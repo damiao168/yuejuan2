@@ -43,6 +43,9 @@
 .math-markdown .contains-task-list { list-style: none; padding-left: .2em; }
 .math-markdown .task-list-item > input { width: 14px; height: 14px; margin: 0 .5em 0 0; vertical-align: -.1em; accent-color: #397acb; }
 .math-markdown .math-markdown-link { color: inherit; }
+.math-markdown-link sup button { padding: 0 3px; border: 0; background: transparent; color: #3168b2; cursor: pointer; font: inherit; }
+.math-markdown-references { margin-block: .75em; border-top: 1px solid #dce3ec; padding-top: .5em; }
+.math-markdown-references summary { cursor: pointer; }
 .math-markdown .math-markdown-copy-reference { margin-inline: 6px; border: 1px solid currentColor; border-radius: 4px; background: transparent; color: #3168b2; cursor: pointer; font: inherit; font-size: .85em; }
 .math-markdown .math-markdown-reference-address { margin-inline-end: 6px; overflow-wrap: anywhere; color: #667085; font-size: .85em; user-select: all; }
 .math-markdown .math-markdown-image-label { color: #64748b; font-style: italic; }

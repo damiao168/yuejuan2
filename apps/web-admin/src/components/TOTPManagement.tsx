@@ -157,7 +157,7 @@ export function TOTPManagement({ personalSession, accountLabel, refreshKey, onCh
     link.href = url; link.download = "edugrade-mfa-recovery-codes.txt";
     document.body.appendChild(link); link.click(); link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    message.info("这是明文文件，请移至安全位置后清理下载目录；下载不等于已安全保存");
+    message.info("下载的是明文文件，请转存安全位置并清理下载目录；下载不等于已安全保存");
   };
 
   const deadline = totpDeadlineLabel(flow, clock);
@@ -166,14 +166,17 @@ export function TOTPManagement({ personalSession, accountLabel, refreshKey, onCh
 
   return <section className="workspace-section totp-management">
     <div className="section-heading compact totp-heading">
-      <div><h2>身份验证器 <Tag>可选试点</Tag></h2><p>验证器生成 6 位动态码，无需短信。目前仅用于本页的验证器管理，尚未用于登录或阅卷操作的强制验证。</p></div>
+      <div><h2>身份验证器 <Tag>可选试点</Tag></h2><p>目前仅验证本页的验证器管理操作，登录和阅卷尚不强制使用。</p></div>
       <Button aria-label="刷新身份验证器状态" icon={<RefreshCw size={16} />} loading={loading} disabled={flow.busy} onClick={() => void load()} />
     </div>
     {statusError ? <Alert type="error" showIcon message={statusError} action={<Button size="small" onClick={() => void load()}>重试</Button>} /> : <TOTPStatusRow status={status} canManage={canManage} onOpen={open} />}
-    {!personalSession && <Alert type="info" showIcon message="公共电脑和服务会话只能查看状态。请在个人设备上登录后设置、关闭或重新生成恢复码。" />}
+    {!personalSession && <Alert type="info" showIcon message="当前为公共电脑或服务会话，仅可查看。请在个人设备登录后管理验证器。" />}
     {status?.enabled && status.recovery_codes_remaining === 0 && <Alert type="warning" showIcon message="恢复码已用完，请在验证器仍可使用时重新生成并安全保存。" />}
     {flow.phase === "closed" && flow.error && <Alert type="warning" showIcon message={flow.error} />}
-    <p className="totp-help">更换验证器：验证并关闭原验证器，重新登录后再设置。若手机和恢复码都丢失，请联系学校管理员记录问题；目前没有自动重置入口，密码恢复链接也不会清除验证器。当前试点不会因此阻断普通登录。</p>
+    <details className="totp-help"><summary>更换或丢失验证器</summary>
+      <p>更换验证器：先验证并关闭，重新登录后再设置。</p>
+      <p>手机和恢复码都丢失时，请联系学校管理员记录问题。目前无自动重置入口，重置密码也不会清除验证器；普通登录仍可使用。</p>
+    </details>
 
     <Modal open={flow.phase !== "closed"} title={totpModalTitle(flow)}
       className="totp-flow-modal" onCancel={close} footer={null} destroyOnHidden maskClosable={!flow.busy} keyboard={!flow.busy} closable={!flow.busy} width={560}>

@@ -78,8 +78,8 @@ export function useSchoolModelActions({ selectedTenantID, configs, configLoading
             <div><dt>Token 用量</dt><dd>{usage?.total_tokens ?? 0}（输出 {usage?.output_tokens ?? 0}）</dd></div>
           </dl>
           {diagnostic.content_preview ? (
-            <><small>本次返回摘要（最多 256 个字符，不会写入数据库）</small><pre>{diagnostic.content_preview}</pre></>
-          ) : <small>供应商没有返回可展示的内容摘要。</small>}
+            <><small>本次返回摘要（最多 256 字符，不写入数据库）</small><pre>{diagnostic.content_preview}</pre></>
+          ) : <small>供应商未提供可展示的返回摘要。</small>}
         </div>
       )
     });

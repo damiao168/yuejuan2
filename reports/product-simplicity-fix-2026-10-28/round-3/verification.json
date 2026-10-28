@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-28",
+  "status": "passed_with_warnings",
+  "exam_capture": {
+    "report": "exam-capture.json",
+    "tests": 82,
+    "result": "passed_after_test_correction",
+    "note": "10个文件首组81通过，旧页按钮断言修正后该文件14条全过，合并覆盖82条，不累加重跑。"
+  },
+  "capture_preflight": {
+    "log": "capture-preflight.log",
+    "files": 4,
+    "tests": 22,
+    "result": "passed"
+  },
+  "grading": {
+    "report": "grading.json",
+    "files": 7,
+    "tests": 71,
+    "result": "passed_after_targeted_retry",
+    "note": "旧中文标签断言更新；AI批量用例资源紧张超时，受影响2文件9条重跑通过。"
+  },
+  "appeals_drafts": {
+    "log": "appeals-web-delivery-final.log",
+    "files": 8,
+    "tests": 88,
+    "result": "passed"
+  },
+  "typecheck": {
+    "log": "typecheck-delivery.log",
+    "result": "passed",
+    "note": "desktop、student、web、sdk与可见文案检查；最终根回调修改由web最终构建中的tsc再次覆盖。"
+  },
+  "builds": {
+    "logs": [
+      "build-delivery.log",
+      "web-build-delivery-final.log"
+    ],
+    "result": "passed_after_final_web_rebuild",
+    "note": "desktop/student首次构建通过；首次web构建与根最后编辑重叠读到写入中的文件而失败。源码稳定后单独完整重建web通过。保留构建体积提示。"
+  },
+  "lint": {
+    "log": "lint-delivery-final.log",
+    "errors": 0,
+    "warnings": 51,
+    "result": "passed_with_warnings",
+    "note": "本轮补齐异步回调依赖说明，未对既有全仓警告作虚假清零声明。"
+  },
+  "contracts": {
+    "log": "contracts-delivery.log",
+    "registered_routes": 604,
+    "openapi": 364,
+    "reviewed_gaps": 240,
+    "schema_version": "000218",
+    "result": "passed",
+    "note": "正式生成SDK/路由覆盖并核对breaking、授权、schema门禁。"
+  },
+  "backend": {
+    "logs": [
+      "appeals-go-full.log",
+      "grading-go-delivery.log",
+      "private-draft-routes-delivery.log"
+    ],
+    "report": "exam-capture.json",
+    "result": "passed",
+    "scope": "相关申诉、阅卷、发布包、源目录与抽检门禁；新增路由测试证明不产生通用回执并逐次执行当前分派检查。未运行全部Go测试。"
+  },
+  "isolated_postgres": {
+    "log": "postgres-delivery-retry.log",
+    "setup": "postgres-setup.log",
+    "stop": "postgres-stop.log",
+    "result": "passed",
+    "stopped": true,
+    "data_directory": "output/postgres-round3-d39b007673/data",
+    "scope": "在独立PostgreSQL17应用正式迁移；随机schema载入最终218私稿规则，验证三类清理、其他账号隔离、CAS与两种正式提交/保存并发顺序，及匿名材料目录真实SQL分页与管理范围。",
+    "initial_retry": "postgres-delivery.log仅因服务退出连接失败；重启隔离集群后复验通过。"
+  },
+  "local_processing": {
+    "logs": [
+      "processing-mode-final.log",
+      "worker-init-regression.log",
+      "launch-dryrun.log"
+    ],
+    "tests": 2,
+    "result": "passed_in_isolation",
+    "scope": "模式选择矩阵、禁用冲突、旧服务停止失败；假Docker/API和dry-run，无实际部署启停。"
+  },
+  "baseline_preservation": {
+    "missing_baseline_files": 0,
+    "diff_check": "passed",
+    "log": "diff-check-delivery.log"
+  },
+  "limits": [
+    "未运行全仓全部测试；定向组有重叠，不累加称全仓独立用例。",
+    "没有真实学校业务写入、迁移、提交、推送或部署。",
+    "真实模型付费调用、扫描硬件和Tauri发行包未验收。",
+    "7天仅隐藏过期私稿，未物理删除；跨业务事务清理保证来自PostgreSQL，MemoryStore只提供草稿CAS和后置清理。",
+    "EX-22特殊TIFF本地调整和G17学校审批模板生命周期仍为部分完成。"
+  ]
+}

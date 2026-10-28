@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-28",
+  "status": "passed_with_warnings",
+  "frontend": {
+    "logs": [
+      "web-delivery.log",
+      "calibration-source-final.log",
+      "capture-file-order-delivery.log"
+    ],
+    "files": 9,
+    "tests": 107,
+    "result": "passed",
+    "note": "105条全组通过；来源修复新增2条后完整Drawer16条、分组文案/折叠后原6条重跑通过。用例重叠不另累加。"
+  },
+  "typecheck": {
+    "log": "typecheck-delivery.log",
+    "result": "passed",
+    "scope": "desktop/student/web/sdk和用户可见文案；最终web构建再覆盖最后源字段与文案变更。",
+    "initial": "typecheck-final.log命中文案Error.message直接回退，已改统一转换。"
+  },
+  "build": {
+    "log": "build-final.log",
+    "result": "passed",
+    "scope": "本轮修改的web管理端生产构建与tsc；未修改desktop/student源码，其上一轮构建证据保留。",
+    "warnings": "保留大块体积提示。"
+  },
+  "lint": {
+    "log": "lint-delivery.log",
+    "errors": 0,
+    "warnings": 51,
+    "result": "passed_with_warnings",
+    "targeted": "root-lint-final.log及两个分区lint0诊断。"
+  },
+  "contracts": {
+    "log": "contracts-final.log",
+    "registered_routes": 607,
+    "openapi": 367,
+    "reviewed_gaps": 240,
+    "schema_version": "000219",
+    "result": "passed",
+    "note": "SDK/路由由正常脚本生成，breaking/授权/schema门禁通过。"
+  },
+  "backend": {
+    "logs": [
+      "calibration-go-postgres-delivery.log",
+      "calibration-routes-final.log"
+    ],
+    "result": "passed",
+    "scope": "calibration包含4条真实隔离PG回归；真实server注册路由认证/能力/批准/应用/撤回拒绝。未运行全仓所有Go测试。"
+  },
+  "postgres": {
+    "setup": "postgres-setup.log",
+    "migration": "migration-219-final.log",
+    "tests": "calibration-go-postgres-delivery.log",
+    "status_log": "postgres-status.log",
+    "result": "passed",
+    "stopped": true,
+    "data_directory": "output/postgres-round4-b7749be804/data",
+    "scope": "新独立PostgreSQL17先应用完整217份迁移至218，再应用219；随机schema测试正式079策略表+219的生命周期与两种撤回/采用事务顺序及目标变化，不修改真实学校数据。"
+  },
+  "browser": {
+    "report": "browser.json",
+    "result": "passed"
+  },
+  "baseline_preservation": {
+    "missing_baseline_files": 0,
+    "diff_check": "passed",
+    "log": "diff-check-delivery.log"
+  },
+  "limits": [
+    "原120项观察修复完成不等于全仓零缺陷，未重新审读的代码仍pending。",
+    "TIFF本地支持保留100页、256MiB、32MP/页、128MP累计等预算，超限/特殊变体需显式核对原件并由服务端继续检查；不绕过缺页或身份门禁。",
+    "学校模板不代替真实标准卷或教师独立试评，撤回不倒改已保存事实。",
+    "没有提交、推送、真实学校业务写入、迁移或部署。"
+  ]
+}

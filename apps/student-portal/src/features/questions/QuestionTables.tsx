@@ -20,11 +20,12 @@ function cohortComparison(question: StudentQuestion) {
 }
 
 // 行组件保持模块级定义；选中状态和详情请求仍由 QuestionTables 管理。
-function QuestionRow({ question, expanded, onOpen, onAppeal }: Readonly<{
+function QuestionRow({ question, expanded, onOpen, onAppeal, showComparisons }: Readonly<{
   question: StudentQuestion;
   expanded: boolean;
   onOpen: (question: StudentQuestion) => Promise<void>;
   onAppeal?: (question: StudentQuestion) => void;
+  showComparisons: boolean;
 }>) {
   const { submitting } = useStudentSession();
   const comparison = cohortComparison(question);
@@ -46,14 +47,14 @@ function QuestionRow({ question, expanded, onOpen, onAppeal }: Readonly<{
         </button>
         {onAppeal ? <button type="button" className="text-button" disabled={submitting} onClick={() => onAppeal(question)}>申请本题复核</button> : null}
       </td>
-      <td data-label="正确答案" title={question.correct_answer}>{answerText(question.correct_answer)}</td>
-      <td data-label="实际答案" className="actual-answer" title={question.actual_answer}>{answerText(question.actual_answer)}</td>
+      {showComparisons ? <><td data-label="正确答案" title={question.correct_answer}>{answerText(question.correct_answer)}</td>
+      <td data-label="实际答案" className="actual-answer" title={question.actual_answer}>{answerText(question.actual_answer)}</td></> : null}
       <td data-label="得分" className="student-cell">
         <strong>{formatScore(question.score)}</strong><small> / {formatScore(question.max_score)}</small>
       </td>
-      <td data-label="班级平均分">{question.cohort?.class_mean_score !== undefined ? scoreOrDash(question.cohort.class_mean_score) : statisticsReason(question.cohort?.class_unavailable_reason ?? question.cohort_unavailable_reason)}</td>
-      <td data-label="参试学生平均分">{question.cohort?.school_mean_score !== undefined ? scoreOrDash(question.cohort.school_mean_score) : statisticsReason(question.cohort_unavailable_reason)}<QuestionCohortScope question={question} /></td>
-      <td data-label="群体对比"><span className={`mastery ${comparison.className}`}>{comparison.label}</span><QuestionCohortScope question={question} /></td>
+      {showComparisons ? <><td data-label="班级平均分">{question.cohort?.class_mean_score !== undefined ? scoreOrDash(question.cohort.class_mean_score) : statisticsReason(question.cohort?.class_unavailable_reason ?? question.cohort_unavailable_reason)}</td>
+      <td data-label="参试学生平均分">{question.cohort?.school_mean_score !== undefined ? scoreOrDash(question.cohort.school_mean_score) : statisticsReason(question.cohort_unavailable_reason)}<QuestionCohortScope question={question} compact /></td>
+      <td data-label="群体对比"><span className={`mastery ${comparison.className}`}>{comparison.label}</span></td></> : <td data-label="失分">{formatScore(Math.max(0, question.max_score - question.score))} 分</td>}
     </tr>
   );
 }
@@ -98,10 +99,12 @@ export function QuestionTables({ examID, result, questions, fallbackSubject, app
   const [evidenceChecking, setEvidenceChecking] = useState(false);
   const evidenceVerificationRef = useRef({ requestID: 0, pending: false, changed: false });
   const [lostOnly, setLostOnly] = useState(false);
+  const [showComparisons, setShowComparisons] = useState(false);
   const detailRegionRef = useRef<HTMLDivElement>(null);
   const tablesRef = useRef<HTMLDivElement>(null);
   const listPositionRef = useRef<number | undefined>(undefined);
   const appealFocusRef = useRef(false);
+  const appealIntentRef = useRef(false);
   const requestedOpenedRef = useRef<string | undefined>(undefined);
   useEffect(() => { if (selected) detailRegionRef.current?.scrollIntoView?.({ block: "nearest" }); }, [selected]);
   const requestRef = useRef(0);
@@ -118,8 +121,9 @@ export function QuestionTables({ examID, result, questions, fallbackSubject, app
     setAnnotations([]); setAnnotationError(""); setAnnotationNeedsLogin(false); setDetailNeedsLogin(false); setDetailError(friendlyError(reason));
     return true;
   }, []);
-  const openQuestion = useCallback(async (question: StudentQuestion, retry = false) => {
+  const openQuestion = useCallback(async (question: StudentQuestion, retry = false, forAppeal = false) => {
     if (submitting || isSubmitting?.()) return;
+    appealIntentRef.current = forAppeal;
     if (!selected) listPositionRef.current = window.scrollY;
     const requestId = ++requestRef.current;
     evidenceVerificationRef.current = { requestID: requestId, pending: false, changed: false };
@@ -137,7 +141,7 @@ export function QuestionTables({ examID, result, questions, fallbackSubject, app
       const verifiedQuestion = validatedQuestionEvidence(question.question_id, questionResponse, annotationResponse);
       setDetail(verifiedQuestion);
       // 这里只保留申请身份；评分证据可被清空，回执仍属于原题、原发布版本和原账户。
-      setAppealQuestion({ question_id: verifiedQuestion.question_id, question_no: verifiedQuestion.question_no });
+      if (forAppeal) setAppealQuestion({ question_id: verifiedQuestion.question_id, question_no: verifiedQuestion.question_no });
       if (annotationResponse.status === "fulfilled") setAnnotations(annotationResponse.value.annotations);
       else { setAnnotationNeedsLogin(sessionExpired(annotationResponse.reason)); setAnnotationError(sessionExpired(annotationResponse.reason) ? friendlyError(annotationResponse.reason) : "教师批注暂时无法加载，当前显示的评分详情仍可查看。"); }
     } catch (reason) { if (requestId === requestRef.current && !evidenceVerificationRef.current.changed) { setDetailError(friendlyError(reason, "question")); setDetailNeedsLogin(sessionExpired(reason)); setReleaseChanged(studentReleaseChanged(reason)); } }
@@ -214,22 +218,23 @@ export function QuestionTables({ examID, result, questions, fallbackSubject, app
       requestRef.current += 1;
       setActiveSubject(subject); setSelected(null); setDetail(null); setAppealQuestion(null); listPositionRef.current = undefined;
     }} key={subject}>{subject}</button>)}</nav> : null}
-    <div className="question-filter"><label><input type="checkbox" disabled={submitting} checked={lostOnly} onChange={(event) => setLostOnly(event.target.checked)} /> 只看有失分的题目</label><span>群体对比仅表示本次得分位置，不代表知识掌握程度。</span></div>
+    {showComparisons ? <p className="muted">统计范围：本版成绩中，本次考试本题已发布成绩的参试学生，非班级人数。</p> : null}
+    <div className="question-filter"><label><input type="checkbox" disabled={submitting} checked={lostOnly} onChange={(event) => setLostOnly(event.target.checked)} /> 只看有失分的题目</label><label><input type="checkbox" checked={showComparisons} onChange={(event) => setShowComparisons(event.target.checked)} /> 显示比较数据</label><span>群体对比仅表示本次得分位置，不代表知识掌握程度。</span></div>
     {activeGroups.map(([subject, items]) => <section className="subject-table" key={subject}>
     <header><h2 id="questions-title">{subject}逐题分析</h2><span>学生得分：{formatScore(items.reduce((sum, item) => sum + item.score, 0))} 分　满分：{formatScore(items.reduce((sum, item) => sum + item.max_score, 0))} 分</span></header>
     <div className="paper-table-scroll"><table className="paper-score-table">
-      <thead><tr><th>题号</th><th>正确答案</th><th>实际答案</th><th>得分</th><th>班级平均分</th><th>参试学生平均分</th><th title="中位分将本次参试成绩分为高低两半，同分同学可能位于同一分值。">群体中位分对比</th></tr></thead>
-      <tbody>{items.filter((question) => !lostOnly || question.score < question.max_score).map((question) => <QuestionRow key={question.question_id} question={question} expanded={selected?.question_id === question.question_id} onOpen={openQuestion} onAppeal={result.appeal_window.open ? (item) => {appealFocusRef.current=true;void openQuestion(item,true);} : undefined} />)}</tbody>
+      <thead><tr><th>题号</th>{showComparisons ? <><th>正确答案</th><th>实际答案</th></> : null}<th>我的得分</th>{showComparisons ? <><th>班级平均分</th><th>参试学生平均分</th><th title="中位分将本次参试成绩分为高低两半，同分同学可能位于同一分值。">群体中位分对比</th></> : <th>失分</th>}</tr></thead>
+      <tbody>{items.filter((question) => !lostOnly || question.score < question.max_score).map((question) => <QuestionRow key={question.question_id} question={question} showComparisons={showComparisons} expanded={selected?.question_id === question.question_id} onOpen={openQuestion} onAppeal={result.appeal_window.open ? (item) => {appealFocusRef.current=true;void openQuestion(item,true,true);} : undefined} />)}</tbody>
     </table></div>
     {lostOnly && !items.some((item) => item.score < item.max_score) ? <p><output>本学科没有失分题目，可以切换为查看全部题目。</output></p> : null}
     {selected && items.some((item) => item.question_id === selected.question_id) ? <div className="question-drilldown" ref={detailRegionRef}>
       <nav className="question-review-navigation" aria-label="连续复盘">
-        <button type="button" className="secondary-button" disabled={submitting || !previousLost} onClick={() => previousLost && void openQuestion(previousLost)}>上一失分题</button>
-        <button type="button" className="secondary-button" disabled={submitting || !nextLost} onClick={() => nextLost && void openQuestion(nextLost)}>下一失分题</button>
+        <button type="button" className="secondary-button" disabled={submitting || !previousLost} onClick={() => previousLost && void openQuestion(previousLost, true, Boolean(appealQuestion))}>上一失分题</button>
+        <button type="button" className="secondary-button" disabled={submitting || !nextLost} onClick={() => nextLost && void openQuestion(nextLost, true, Boolean(appealQuestion))}>下一失分题</button>
         <button type="button" className="text-button" disabled={submitting} onClick={returnToList}>返回题目列表</button>
       </nav>
       {(detailNeedsLogin || annotationNeedsLogin) ? <button type="button" className="secondary-button" disabled={submitting} onClick={reauthenticate}>重新登录</button> : null}
-      <QuestionDrilldownContent evidenceChecking={evidenceChecking} isEvidenceBlocked={isEvidenceBlocked} onImageUnavailable={() => void verifyFailedImage(selected.question_id, selectedRequestID)} releaseChanged={releaseChanged} onSourceUnavailable={(reason) => { markReleaseChanged(reason, selectedRequestID); }} onViewCurrent={viewCurrent} examID={examID} result={result} selected={selected} detail={detail} appealQuestion={appealQuestion} detailLoading={detailLoading} detailError={detailError} annotationError={annotationError} annotations={annotations} onRetry={() => void openQuestion(selected, true)} onRetryAnnotations={() => void retryAnnotations()} onAppealSubmitted={onAppealSubmitted} />
+      <QuestionDrilldownContent evidenceChecking={evidenceChecking} isEvidenceBlocked={isEvidenceBlocked} onImageUnavailable={() => void verifyFailedImage(selected.question_id, selectedRequestID)} releaseChanged={releaseChanged} onSourceUnavailable={(reason) => { markReleaseChanged(reason, selectedRequestID); }} onViewCurrent={viewCurrent} examID={examID} result={result} selected={selected} detail={detail} appealQuestion={appealQuestion} detailLoading={detailLoading} detailError={detailError} annotationError={annotationError} annotations={annotations} onRetry={() => void openQuestion(selected, true, appealIntentRef.current)} onRetryAnnotations={() => void retryAnnotations()} onAppealSubmitted={onAppealSubmitted} />
     </div> : null}
   </section>)}</div>;
 }
@@ -258,13 +263,14 @@ interface QuestionDrilldownContentProps {
 // 这里只展示当前题目的状态；请求代次、重试和滚动引用仍由父组件维护。
 function QuestionDrilldownContent({ evidenceChecking, isEvidenceBlocked, onImageUnavailable, releaseChanged, onSourceUnavailable, onViewCurrent, examID, result, selected, detail, appealQuestion, detailLoading, detailError, annotationError, annotations, onRetry, onRetryAnnotations, onAppealSubmitted }: Readonly<QuestionDrilldownContentProps>) {
   const { submitting } = useStudentSession();
+  const showAppeal = result.appeal_window.open && appealQuestion?.question_id === selected.question_id;
   return <>
     <h3>第 {selected.question_no} 题 · 作答与评分依据</h3>
     {detailLoading ? <p className="muted"><output>正在加载本题…</output></p> : null}
     {detailError ? <p className="detail-error" role="alert">{detailError} <button type="button" className="text-button" disabled={submitting} onClick={releaseChanged ? onViewCurrent : onRetry}>{releaseChanged ? "查看当前成绩并重新核对" : "重试本题"}</button></p> : null}
     {annotationError ? <p role="alert">{annotationError} <button type="button" className="text-button" onClick={onRetryAnnotations}>重试批注</button></p> : null}
-    {detail?.question_id === selected.question_id ? <AnswerReview onImageUnavailable={onImageUnavailable} key={detail.question_id} question={detail} annotations={annotations} imageURL={studentQuestionAnswerImageURL(examID,detail.question_id, result.release_id)} /> : null}
-    {result.appeal_window.open && appealQuestion?.question_id === selected.question_id ? <QuestionAppealForm evidenceChecking={evidenceChecking} evidenceUnavailable={releaseChanged} isEvidenceBlocked={isEvidenceBlocked} onSourceUnavailable={onSourceUnavailable} onImageUnavailable={onImageUnavailable} key={`${result.release_id}:${appealQuestion.question_id}`} examID={examID} releaseID={result.release_id} releaseVersion={result.release_version} question={appealQuestion} allowedReasonCodes={result.appeal_window.allowed_reason_codes ?? []} onSubmitted={onAppealSubmitted} /> : null}
+    {detail?.question_id === selected.question_id && !showAppeal ? <AnswerReview onImageUnavailable={onImageUnavailable} key={detail.question_id} question={detail} annotations={annotations} imageURL={studentQuestionAnswerImageURL(examID,detail.question_id, result.release_id)} /> : null}
+    {showAppeal && appealQuestion ? <QuestionAppealForm renderReview={detail?.question_id === selected.question_id ? (imageEditor) => <AnswerReview imageEditor={imageEditor} onImageUnavailable={onImageUnavailable} key={detail.question_id} question={detail} annotations={annotations} imageURL={studentQuestionAnswerImageURL(examID,detail.question_id, result.release_id)} /> : undefined} evidenceChecking={evidenceChecking} evidenceUnavailable={releaseChanged} isEvidenceBlocked={isEvidenceBlocked} onSourceUnavailable={onSourceUnavailable} onImageUnavailable={onImageUnavailable} key={`${result.release_id}:${appealQuestion.question_id}`} examID={examID} releaseID={result.release_id} releaseVersion={result.release_version} question={appealQuestion} allowedReasonCodes={result.appeal_window.allowed_reason_codes ?? []} onSubmitted={onAppealSubmitted} /> : null}
   </>;
 }
 

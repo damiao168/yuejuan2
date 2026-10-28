@@ -8,12 +8,7 @@ export const MarkdownFootnoteContext = createContext("");
 
 function MarkdownLink({ children, href, node, id }: Readonly<ComponentProps<"a"> & ExtraProps>) {
   const prefix = useContext(MarkdownFootnoteContext);
-  const [copyStatus, setCopyStatus] = useState("");
-  let referenceAddress: string | undefined;
-  try {
-    const address = new URL(href ?? "");
-    if (["http:", "https:"].includes(address.protocol)) referenceAddress = address.href;
-  } catch { /* 不完整或非网页地址只展示文字。 */ }
+  const referenceTarget = node?.properties.dataReferenceTarget;
   const footnote = node?.properties.dataFootnoteRef !== undefined || node?.properties.dataFootnoteBackref !== undefined;
   // 脚注只允许跳到当前回复的自动生成锚点；模型文稿不能提供业务入口或触发外部访问。
   if (prefix && footnote && href?.startsWith(`#${prefix}`)) {
@@ -37,16 +32,34 @@ function MarkdownLink({ children, href, node, id }: Readonly<ComponentProps<"a">
       }}
     >{children}</a>;
   }
-  // 普通地址仅供复制核对；模型内容不能改变应用路由或直接打开外部页面。
-  return <span className="math-markdown-link">
-    {children}
-    {referenceAddress ? <button type="button" className="math-markdown-copy-reference" onClick={async () => {
-      try { await navigator.clipboard.writeText(referenceAddress); setCopyStatus("参考地址已复制"); }
-      catch { setCopyStatus("复制失败，请手动复制下方地址"); }
-    }}>复制参考地址</button> : null}
-    {referenceAddress ? <span className="math-markdown-reference-address">{referenceAddress}</span> : null}
-    <output aria-live="polite" aria-atomic="true">{copyStatus}</output>
-  </span>;
+  return <span className="math-markdown-link">{children}{typeof referenceTarget === "string" && referenceTarget.startsWith(`${prefix}reference-`) ? <sup><button type="button" aria-label={`查看参考资料 ${node?.properties.dataReferenceIndex}`} onClick={event => {
+    const root = event.currentTarget.closest(".math-markdown");
+    const target = root?.querySelector<HTMLElement>(`[id="${CSS.escape(referenceTarget)}"]`);
+    if (!target) return;
+    const details = target.closest("details");
+    if (details) details.open = true;
+    target.tabIndex = -1;
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ block: "nearest" });
+  }}>[{node?.properties.dataReferenceIndex}]</button></sup> : null}</span>;
+}
+
+function MarkdownReferenceBlock({ children, node, ...props }: Readonly<ComponentProps<"div"> & ExtraProps>) {
+  const [copyStatus, setCopyStatus] = useState("");
+  const count = node?.properties.dataReferenceCount;
+  if (typeof count === "number") return <details className="math-markdown-references"><summary>参考资料（{count}）</summary>{children}</details>;
+  const address = node?.properties.dataReferenceAddress;
+  if (typeof address !== "string") return <div {...props}>{children}</div>;
+  return <div>
+    <span>{node?.properties.dataReferenceLabel} · {new URL(address).hostname}</span>
+    <details><summary>查看完整地址</summary><span className="math-markdown-reference-address">{address}</span>
+      <button type="button" className="math-markdown-copy-reference" onClick={async () => {
+        try { await navigator.clipboard.writeText(address); setCopyStatus("参考地址已复制"); }
+        catch { setCopyStatus("复制失败，请手动复制此地址。"); }
+      }}>复制地址</button>
+      <output aria-live="polite" aria-atomic="true">{copyStatus}</output>
+    </details>
+  </div>;
 }
 
 function MarkdownImage({ alt }: Readonly<ComponentProps<"img">>) {
@@ -87,6 +100,7 @@ function MarkdownTable({ children }: Readonly<ComponentProps<"table">>) {
 
 export const mathMarkdownComponents: Components = {
   a: MarkdownLink,
+  div: MarkdownReferenceBlock,
   img: MarkdownImage,
   h2: MarkdownHeading,
   pre: MarkdownCodeBlock,

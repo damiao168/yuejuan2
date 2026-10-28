@@ -2,6 +2,10 @@
 param(
     [switch]$Build,
     [switch]$SkipLocalModel,
+    [ValidateSet('Auto', 'Manual', 'External', 'Local')][string]$ModelMode = 'Auto',
+    [ValidateSet('Auto', 'Enabled', 'Disabled')][string]$ProcessingMode = 'Auto',
+    [ValidateRange(1,3650)][int]$LocalCertificateDays = 365,
+    [switch]$RotateLocalCertificate,
     [switch]$SkipBootstrap,
     [switch]$EnableOcr,
     [switch]$EnableQuality,
@@ -20,6 +24,14 @@ $composeFile = Join-Path $composeDirectory "docker-compose.yml"
 $envExampleFile = Join-Path $composeDirectory ".env.example"
 $envFile = Join-Path $composeDirectory ".env"
 $installMarker = Join-Path $composeDirectory ".env.local-install-complete"
+$modelModeFile = Join-Path $composeDirectory ".env.local-model-mode"
+$processingModeFile = Join-Path $composeDirectory '.env.local-processing-mode'
+$buildVersionFile = Join-Path $composeDirectory '.env.local-build-version.json'
+. (Join-Path $PSScriptRoot 'application-source-version.ps1')
+. (Join-Path $PSScriptRoot 'local-processing-mode.ps1')
+if ($ProcessingMode -eq 'Disabled' -and ($EnableOcr -or $EnableQuality -or $EnableProcessing)) {
+    throw 'ProcessingMode Disabled conflicts with explicit Enable* processing switches.'
+}
 $initScript = Join-Path $composeDirectory "scripts\init.ps1"
 $prepareTlsScript = Join-Path $composeDirectory "scripts\prepare-internal-tls.ps1"
 $smokeScript = Join-Path $composeDirectory "scripts\smoke-test.ps1"
@@ -94,7 +106,7 @@ function Initialize-DeploymentEnv([string]$Path) {
     Set-EnvValue $Path "EDUGRADE_SUBJECTIVE_WORKER_PASSWORD" (New-HexSecret)
 }
 
-function Read-DeploymentSettings([string]$Path) {
+function Read-DeploymentSettings([string]$Path, [switch]$Effective) {
     $values = @{}
     foreach ($line in Get-Content -LiteralPath $Path -Encoding UTF8) {
         $trimmed = $line.Trim()
@@ -103,6 +115,12 @@ function Read-DeploymentSettings([string]$Path) {
         }
         $parts = $trimmed.Split("=", 2)
         $values[$parts[0].Trim()] = $parts[1].Trim().Trim('"').Trim("'")
+    }
+    if ($Effective) {
+        # 与 Compose 和密钥同步一致，宿主机的显式覆盖优先；读取不打印任何配置值。
+        foreach ($entry in Get-ChildItem Env:) {
+            if ($entry.Name.StartsWith('EDUGRADE_')) { $values[$entry.Name] = $entry.Value }
+        }
     }
     return $values
 }
@@ -255,10 +273,19 @@ if ($DryRun) {
     Write-Host "Mode: $(if ($firstInstall) { 'first install' } else { 'daily start' })"
     Write-Host "Deployment env exists: $envExists"
     Write-Host "Build requested: $Build"
-    Write-Host "Local model enabled: $(-not $SkipLocalModel)"
+    Write-Host "Model mode requested: $ModelMode (SkipLocalModel: $SkipLocalModel)"
+    Write-Host "Answer-sheet processing requested: $ProcessingMode (explicit worker switches preserved)"
+    Write-Host "Controlled local TLS rotation requested: $RotateLocalCertificate"
     Write-Host "Generated configuration self-test: passed"
     Write-Host "No files or services were changed because -DryRun was used."
     return
+}
+
+$bootstrapPassword = $null
+if ($firstInstall -and -not $SkipBootstrap) {
+    # 在下载和构建前完成交互与规则校验；密码仅留进程内，不写模式文件或日志。
+    $bootstrapPassword = Read-BootstrapPassword
+    Assert-BootstrapPassword $bootstrapPassword
 }
 
 Ensure-Docker
@@ -277,10 +304,52 @@ if (-not $envExists) {
     Write-Warning "An existing .env was found. It will be preserved; preflight will reject missing required values."
 }
 
-Write-Step "Preparing and validating internal TLS certificates"
-& $prepareTlsScript -EnvFile $envFile -ComposeDirectory $composeDirectory
+$savedProcessingMode = if (Test-Path -LiteralPath $processingModeFile -PathType Leaf) { (Get-Content -Raw -LiteralPath $processingModeFile).Trim() } else { '' }
+$processingChoice = Resolve-LocalProcessingMode -Requested $ProcessingMode -Saved $savedProcessingMode -ExplicitWorkers ([bool]($EnableOcr -or $EnableQuality -or $EnableProcessing))
+if ($processingChoice -eq 'Enabled') { $EnableOcr = $true; $EnableQuality = $true; $EnableProcessing = $true }
+if ($processingChoice -ne 'Explicit') {
+    # 只保存能力选择，不保存凭据或“已就绪”结论；中途失败后仍按原选择重试账号核验与健康检查。
+    [IO.File]::WriteAllText($processingModeFile, $processingChoice, [Text.UTF8Encoding]::new($false))
+}
+Write-Host "Answer-sheet processing mode: $processingChoice"
 
-if (-not $SkipLocalModel) {
+Write-Step "Preparing and validating internal TLS certificates"
+if ($RotateLocalCertificate) {
+    # 轮换工具先验证新目录，再切换已运行服务；失败会恢复旧配置，不删除旧证书或私钥。
+    & python -B (Join-Path $composeDirectory 'scripts/rotate-local-tls.py') --env-file $envFile --compose-directory $composeDirectory --days $LocalCertificateDays --apply
+    if ($LASTEXITCODE -ne 0) { throw 'Controlled local TLS rotation failed. Review the recovery instructions before continuing.' }
+}
+& $prepareTlsScript -EnvFile $envFile -ComposeDirectory $composeDirectory -LocalValidDays $LocalCertificateDays
+
+$mode = $ModelMode
+if ($SkipLocalModel) { $mode = 'Manual' }
+if ($mode -eq 'Auto' -and (Test-Path -LiteralPath $modelModeFile -PathType Leaf)) {
+    $savedMode = (Get-Content -Raw -LiteralPath $modelModeFile).Trim()
+    if ($savedMode -in @('Manual', 'External', 'Local')) { $mode = $savedMode }
+}
+$modelSettings = Read-DeploymentSettings $envFile -Effective
+if ($mode -eq 'Auto') {
+    if (([string]$modelSettings['EDUGRADE_GRADING_MODEL_BASE_URL']).TrimEnd('/') -ne 'http://host.docker.internal:8087/v1' -or $modelSettings['EDUGRADE_AI_ADAPTER_TYPE'] -ne 'local_llama_cpp') {
+        $mode = 'External'
+    } else {
+        $choice = Read-Host 'Model runtime: 1 = manual grading / no local download; 2 = existing external API; 3 = managed local model (~2.4 GiB). Choose 1, 2 or 3'
+        $mode = switch ($choice) { '1' { 'Manual' } '2' { 'External' } '3' { 'Local' } default { throw 'Choose model mode 1, 2 or 3, or pass -ModelMode.' } }
+    }
+}
+Write-Host "Model runtime mode: $mode"
+if ($mode -eq 'Local' -and (([string]$modelSettings['EDUGRADE_GRADING_MODEL_BASE_URL']).TrimEnd('/') -ne 'http://host.docker.internal:8087/v1' -or $modelSettings['EDUGRADE_AI_ADAPTER_TYPE'] -ne 'local_llama_cpp')) {
+    throw 'Local mode requires the managed local URL and local_llama_cpp adapter. Existing external settings were preserved.'
+}
+if (-not $SkipLocalModel) { [IO.File]::WriteAllText($modelModeFile, $mode, [Text.UTF8Encoding]::new($false)) }
+$priorAIEnabled = [Environment]::GetEnvironmentVariable('EDUGRADE_AI_GRADING_ENABLED', 'Process')
+$priorMathEnabled = [Environment]::GetEnvironmentVariable('EDUGRADE_MATH_GRADING_V2_ENABLED', 'Process')
+try {
+if ($mode -eq 'Manual') {
+    # 人工模式不只是跳过下载，还要停止调度依赖模型的任务；只覆盖本次 Compose 进程，不改外部连接和密钥。
+    $env:EDUGRADE_AI_GRADING_ENABLED = 'false'
+    $env:EDUGRADE_MATH_GRADING_V2_ENABLED = 'false'
+}
+if ($mode -eq 'Local') {
     $manifest = Get-Content -Raw -LiteralPath $modelManifestFile -Encoding utf8 | ConvertFrom-Json
     $labRoot = Join-Path $repositoryRoot "lab"
     $runtimeBinary = Join-Path (Join-Path $labRoot $manifest.runtime.install_dir) $manifest.runtime.server_binary
@@ -304,7 +373,7 @@ if (-not $SkipLocalModel) {
         throw "Starting the local grading model failed."
     }
 
-    & $syncModelKeyScript -EnvFile $envFile
+    & $syncModelKeyScript -EnvFile $envFile -ManagedLocal
     if ($LASTEXITCODE -ne 0) {
         throw "Synchronizing the local model API key failed."
     }
@@ -312,17 +381,45 @@ if (-not $SkipLocalModel) {
 
 Write-Step $(if ($firstInstall) { "Installing EduGrade" } else { "Starting EduGrade" })
 $initParameters = @{}
+$sourceVersion = Get-ApplicationSourceVersion $repositoryRoot
+Write-Host "Source revision: $($sourceVersion.commit) / $($sourceVersion.fingerprint.Substring(0,12))"
+$builtVersion = $null
+if (Test-Path -LiteralPath $buildVersionFile -PathType Leaf) {
+    try {
+        $builtVersion = Get-Content -Raw -LiteralPath $buildVersionFile | ConvertFrom-Json
+        if (-not $builtVersion.PSObject.Properties['fingerprint'] -or ([string]$builtVersion.fingerprint) -notmatch '^[a-f0-9]{64}$' -or -not $builtVersion.PSObject.Properties['commit']) { $builtVersion = $null; throw 'Invalid build version record.' }
+    }
+    catch { Write-Warning 'The local build version record is unreadable. Use -Build to establish a verified source version.' }
+}
+if ($builtVersion) {
+    Write-Host "Last local build: $($builtVersion.commit) / $(([string]$builtVersion.fingerprint).Substring(0,12))"
+    if ($builtVersion.fingerprint -ne $sourceVersion.fingerprint -and -not $Build) {
+        throw 'Application sources changed since the last local build. Run start-edugrade.cmd -Build to update core applications; existing data and credentials are preserved.'
+    }
+} elseif (-not $Build) { Write-Warning 'Existing image source version is unknown. Run start-edugrade.cmd -Build once to record the application source version.' }
 $coreImagesReady = $true
-foreach ($imageName in @("edugrade/api-gateway:local", "edugrade/grading-agent:local", "edugrade/web-admin:local")) {
-    $null = & docker image inspect $imageName 2>$null
+$coreImageNames = @(
+    $(if ($modelSettings['EDUGRADE_API_GATEWAY_IMAGE']) { $modelSettings['EDUGRADE_API_GATEWAY_IMAGE'] } else { 'edugrade/api-gateway:local' }),
+    $(if ($modelSettings['EDUGRADE_GRADING_AGENT_IMAGE']) { $modelSettings['EDUGRADE_GRADING_AGENT_IMAGE'] } else { 'edugrade/grading-agent:local' }),
+    $(if ($modelSettings['EDUGRADE_WEB_ADMIN_IMAGE']) { $modelSettings['EDUGRADE_WEB_ADMIN_IMAGE'] } else { 'edugrade/web-admin:local' })
+)
+$currentImageIDs = @()
+foreach ($imageName in $coreImageNames) {
+    $imageID = & docker image inspect --format '{{.Id}}' $imageName 2>$null
     if ($LASTEXITCODE -ne 0) {
         $coreImagesReady = $false
         break
     }
+    $currentImageIDs += [string]$imageID
+}
+if ($builtVersion -and $builtVersion.PSObject.Properties['images'] -and -not $Build -and ($currentImageIDs -join ',') -ne ($builtVersion.images -join ',')) {
+    throw 'Core images changed outside this launcher. Run start-edugrade.cmd -Build to verify the local source/image relationship.'
 }
 $workerBuildRequested = $EnableOcr -or $EnableQuality -or $EnableProcessing
-if (-not $Build -and -not $envCreatedThisRun -and -not $workerBuildRequested -and $coreImagesReady) {
+if (-not $Build -and -not $envCreatedThisRun -and $coreImagesReady -and (-not $workerBuildRequested -or $builtVersion)) {
+    # 启用 Worker 时只有已核验来源的核心镜像才能复用；旧镜像可能尚无受限账号配置命令。
     $initParameters["SkipBuild"] = $true
+    if ($workerBuildRequested) { $initParameters['BuildWorkers'] = $true }
 }
 if ($EnableOcr) { $initParameters["EnableOcr"] = $true }
 if ($EnableQuality) { $initParameters["EnableQuality"] = $true }
@@ -333,9 +430,23 @@ if ($EnableObservability) { $initParameters["EnableObservability"] = $true }
 if ($LASTEXITCODE -ne 0) {
     throw "EduGrade initialization failed."
 }
+Stop-DisabledLocalProcessingWorkers -Mode $processingChoice -EnvFile $envFile -ComposeFile $composeFile
+if (-not $initParameters.ContainsKey('SkipBuild')) {
+    $afterBuildVersion = Get-ApplicationSourceVersion $repositoryRoot
+    if ($afterBuildVersion.fingerprint -ne $sourceVersion.fingerprint) {
+        throw 'Services started, but application sources changed during the build. No verified build record was written. Run start-edugrade.cmd -Build again from a stable checkout.'
+    }
+    # 只在构建与服务健康检查成功后记录来源；失败不能把旧镜像标成已更新。
+    $sourceVersion['images'] = @($coreImageNames | ForEach-Object {
+        $builtImageID = & docker image inspect --format '{{.Id}}' $_
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot verify a newly built core image.' }
+        [string]$builtImageID
+    })
+    [IO.File]::WriteAllText($buildVersionFile, ($sourceVersion | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+}
 
 # 初始化及本地模型配置可能更新 .env；认证冒烟和启动地址使用同一份最终部署设置。
-$deploymentSettings = Read-DeploymentSettings $envFile
+$deploymentSettings = Read-DeploymentSettings $envFile -Effective
 $apiPort = if ([string]::IsNullOrWhiteSpace($deploymentSettings["EDUGRADE_API_PORT"])) { "8080" } else { $deploymentSettings["EDUGRADE_API_PORT"] }
 $publicPort = if ([string]::IsNullOrWhiteSpace($deploymentSettings["EDUGRADE_NGINX_HTTP_PORT"])) { "8088" } else { $deploymentSettings["EDUGRADE_NGINX_HTTP_PORT"] }
 $sessionCookieName = if ([string]::IsNullOrWhiteSpace($deploymentSettings["EDUGRADE_SESSION_COOKIE_NAME"])) { "edugrade_session" } else { $deploymentSettings["EDUGRADE_SESSION_COOKIE_NAME"] }
@@ -344,8 +455,6 @@ $publicUrl = "http://127.0.0.1:$publicPort"
 
 if ($firstInstall -and -not $SkipBootstrap) {
     Write-Step "Creating the first platform administrator"
-    $bootstrapPassword = Read-BootstrapPassword
-    Assert-BootstrapPassword $bootstrapPassword
     try {
         $env:EDUGRADE_BOOTSTRAP_PASSWORD = $bootstrapPassword
         Push-Location $composeDirectory
@@ -382,10 +491,23 @@ if (-not (Test-Path -LiteralPath $installMarker -PathType Leaf)) {
 }
 
 Write-Host ""
-Write-Host "EduGrade is ready." -ForegroundColor Green
+Write-Host "EduGrade management is ready." -ForegroundColor Green
 Write-Host "Web: $publicUrl"
 Write-Host "Tenant: platform"
 Write-Host "Username: platform_admin"
+Write-Host "OCR worker requested: $EnableOcr; image quality worker requested: $EnableQuality; page processing worker requested: $EnableProcessing"
+if ($processingChoice -eq 'Disabled') { Write-Host 'Answer-sheet processing is disabled. To enable the full local pipeline, run start-edugrade.cmd -ProcessingMode Enabled.' }
+Write-Host 'Explicitly enabled local workers use separate restricted service accounts and a service-login check; existing passwords are never reset. See infra/docker-compose/README.md.'
+$runningServices = @(& docker compose --env-file $envFile -f $composeFile ps --status running --services)
+if ($LASTEXITCODE -eq 0) {
+    foreach ($capability in @(@('OCR', 'ocr-worker'), @('Image quality', 'image-quality-worker'), @('Page processing', 'page-processing-worker'))) {
+        Write-Host "$($capability[0]): $(if ($capability[1] -in $runningServices) { 'worker running; verify the first business task' } else { 'not enabled' })"
+    }
+}
 if (-not $NoBrowser) {
     Start-Process $publicUrl
+}
+} finally {
+    [Environment]::SetEnvironmentVariable('EDUGRADE_AI_GRADING_ENABLED', $priorAIEnabled, 'Process')
+    [Environment]::SetEnvironmentVariable('EDUGRADE_MATH_GRADING_V2_ENABLED', $priorMathEnabled, 'Process')
 }

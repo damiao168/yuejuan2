@@ -134,7 +134,7 @@ export function PaperStructurePanel({
                   : `资料分值合计 ${preview.recognized_total} 分`}
                 ，考试预期满分 {preview.expected_total} 分。
               </p>
-              <p>核对完整试卷及题目范围后确认，系统会登记试卷来源并采用题目结构。小题分值和评分配置在下一步核对。</p>
+              <p>确认完整试卷与题目范围；分值和评分配置在下一步核对。</p>
               {preview.blocked_reasons.map((reason) => (
                 <p key={reason}>{reason}</p>
               ))}
@@ -164,8 +164,8 @@ export function PaperStructurePanel({
           <Alert
             showIcon
             type="info"
-            message="请先确认上传了完整试卷"
-            description="仅上传部分页面、答案或解析时，不能据此减少题目。未识别到可靠分值的小题将显示待确认，不能直接开始阅卷。已有答案和解析会保留。"
+            message="请核对完整试卷"
+            description="部分页面、答案或解析不能作为减少题目的依据。缺少可靠分值的小题仍需核对，不能直接阅卷；已有答案和解析保留。"
           />
           {preview?.blocked_reasons.length ? <Alert type="error" message={preview.blocked_reasons.join("；")} /> : null}
           <Table
@@ -185,7 +185,7 @@ export function PaperStructurePanel({
             ]}
           />
           <Checkbox checked={complete} disabled={saving} onChange={(event) => setComplete(event.target.checked)}>
-            我已核对资料完整，以上题目结构与实际试卷一致
+            我已核对完整试卷，以上题目结构与实际试卷一致。
           </Checkbox>
         </Space>
       </Modal>

@@ -76,19 +76,19 @@ describe("pending command result and report boundaries", () => {
     const response = deferred<unknown>();
     const request = vi.spyOn(apiClient, "request").mockImplementation(async path => {
       if (path === "/api/v1/score-commands/original") return response.promise as Promise<never>;
+      if (path === "/api/v1/score-commands/replacement") return { command_id: "replacement", status: "processing" } as never;
       if (path === `/api/v1/exams/${encodeURIComponent(target)}`) throw new Error("名称无读取权限");
       throw new Error(`unexpected ${path}`);
     });
     const navigate = vi.fn();
     await act(async () => root.render(<PendingBusinessCommands tenant="tenant" actor="A" onNavigate={navigate} />));
-    await act(async () => button("查看操作结果").click());
     // 回执尚未返回时同一键已换成新命令；旧成功结果只能展示，不能删除新 ID。
     localStorage.setItem(key, JSON.stringify({ id: "replacement" }));
     await act(async () => response.resolve({ command_id: "original", operation: "score.publish", target_id: target, status: "succeeded", result: { human_grade: { score: 0 }, final_grade: { score: 9 } } }));
     expect(localStorage.getItem(key)).toBe(JSON.stringify({ id: "replacement" }));
     expect(host.textContent).toContain(`考试 ${target}`);
     const outputs = [...host.querySelectorAll("output")];
-    expect(outputs.map(item => item.textContent)).toEqual(["已完成", `成绩发布已完成 · 对象 ${target} · 得分 0`]);
+    expect(outputs.map(item => item.textContent)).toEqual(["正在处理，请稍后查看结果。", `成绩发布已完成 · 对象 ${target} · 得分 0`]);
     expect(outputs.every(item => item.getAttribute("aria-live") === "polite" && !item.querySelector("button"))).toBe(true);
     expect(outputs[1].parentElement?.tagName).toBe("DIV");
     expect(host.querySelector('[role="alert"]')).toBeNull();
@@ -106,7 +106,6 @@ describe("pending command result and report boundaries", () => {
     });
     const timeout = vi.spyOn(window, "setTimeout");
     await act(async () => root.render(<PendingBusinessCommands tenant="tenant" actor="A" />));
-    await act(async () => button("查看操作结果").click());
     expect(createURL).not.toHaveBeenCalled();
     expect(localStorage.getItem(reportKey)).toBeNull();
     await act(async () => button("下载已完成的报表").click());
@@ -141,9 +140,8 @@ describe("pending command result and report boundaries", () => {
     const requestBlob = vi.spyOn(apiClient, "requestBlob");
     const timeout = vi.spyOn(window, "setTimeout");
     await act(async () => root.render(<PendingBusinessCommands tenant="tenant" actor="A" />));
-    await act(async () => button("查看操作结果").click());
     expect(createURL).not.toHaveBeenCalled();
-    const continueButton = button("按以上原内容继续提交");
+    const continueButton = button("按原内容继续提交");
     await act(async () => { continueButton.click(); continueButton.click(); });
     expect(receiptReads).toBe(2);
     expect(requestBlob).not.toHaveBeenCalled();

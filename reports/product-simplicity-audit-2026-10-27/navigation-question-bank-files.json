@@ -1,0 +1,659 @@
+{
+  "date": "2026-10-27",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "docs/engineering/commenting-standard.md",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "lab/AGENTS.md",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "package.json",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/package.json",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/student-portal/package.json",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/desktop-client/package.json",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/vite.config.ts",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "playwright.config.ts",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "playwright.real.config.ts",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/AppShell.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/appLayoutPresentation.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/router/experience.ts",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/router/navigation.ts",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/router/appRouter.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/main.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/LoginPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ActivationPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ModulePage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformGettingStartedPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SchoolAIChatPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/dashboard/SchoolDashboard.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/onboarding/OnboardingGate.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/onboarding/ReadinessBanner.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/onboarding/NextActionCard.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/onboarding/AISetupCard.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/onboarding/OnboardingCheckCard.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/onboarding/OnboardingProgress.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/onboarding/DataPolicyCard.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/onboarding/SystemReadinessCard.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/onboarding/FirstSchoolCard.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankHeader.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankWorkspace.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankClassificationFields.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/ContentFields.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/HistoryImportPresentation.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/HistoryQuestionImporter.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/BankQuestionPicker.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/school-assistant/SchoolAssistantProvider.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/school-assistant/SchoolAssistantPanel.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/school-assistant/SchoolConversation.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/school-assistant/SchoolConversationDisplay.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/school-assistant/AccountConversationView.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/school-assistant/ConversationEvidenceView.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/api/questionBank.ts",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "scripts/check-user-facing-copy.mjs",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "tests/e2e/fixtures/schoolAdminLogin.ts",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "tests/e2e/specs/exam-workspace.visual.spec.ts",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/TeacherDashboardPage.batch12.test.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/App.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/auth/stepUpContext.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/api/businessCommand.ts",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/AppLayout.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/ErrorBoundary.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/InternalRouteButton.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/MarkdownCodeBlock.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/MathMarkdown.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/mathMarkdownRenderers.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/MockBadge.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/PageState.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/ResponsiveTable.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/responsiveTableInteraction.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/StatusTag.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/StructuredTeacherFields.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/components/math-markdown.css",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/experience.css",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankConflictDialog.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankReferenceImages.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/question-bank-conflict.css",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/questionBankPageState.ts",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.batch50.test.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/school-assistant/ConversationImage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/features/school-assistant/SchoolAssistantResult.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/DashboardPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/RecoveryPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/router/pageRendering.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/router/routes.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/router/RouteContent.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "apps/web-admin/src/test-utils/antdTextAreaLayout.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/WorkspaceLayout.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/WorkspaceStageRail.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/StageNav.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/PageHeader.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/DataTableShell.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/FilterBar.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/MetricCard.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/ExamStageIndicator.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/QualityIndicator.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/StatusBadge.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/RiskBanner.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/RubricCriterion.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/WorkspaceNoticeList.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "packages/ui/src/workspace/WorkspaceMetricStrip.tsx",
+      "status": "reviewed",
+      "read_coverage": "full",
+      "note": "主智能体完整阅读当前文件，核对体验展示/调用；不代表技术和注释全量验收。"
+    },
+    {
+      "path": "README.md",
+      "status": "pending",
+      "read_coverage": "partial",
+      "note": "只核实相关片段；不计入全文审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/questionBank.batch7.test.tsx",
+      "status": "pending",
+      "read_coverage": "partial",
+      "note": "只核实相关片段；不计入全文审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.batch45.test.tsx",
+      "status": "pending",
+      "read_coverage": "partial",
+      "note": "只核实相关片段；不计入全文审读。"
+    },
+    {
+      "path": "tests/e2e/fixtures/apiMocks.ts",
+      "status": "pending",
+      "read_coverage": "partial",
+      "note": "只核实相关片段；不计入全文审读。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/store_postgres.go",
+      "status": "pending",
+      "read_coverage": "partial",
+      "note": "只核实相关片段；不计入全文审读。"
+    },
+    {
+      "path": "services/api-gateway/internal/questionbank/metadata_acl_search_postgres.go",
+      "status": "pending",
+      "read_coverage": "partial",
+      "note": "只核实相关片段；不计入全文审读。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_questionbank.go",
+      "status": "pending",
+      "read_coverage": "partial",
+      "note": "只核实相关片段；不计入全文审读。"
+    },
+    {
+      "path": "packages/sdk/src/generated/client.ts",
+      "status": "pending",
+      "read_coverage": "partial",
+      "note": "只核实相关片段；不计入全文审读。"
+    }
+  ]
+}

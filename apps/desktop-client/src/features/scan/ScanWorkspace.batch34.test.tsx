@@ -42,7 +42,7 @@ function workspaceProps(): WorkspaceProps {
       captureBatchId: "batch-1", setCaptureBatchId: vi.fn(), captureBatches: [{ id: "batch-1", exam_id: "exam-1", status: "uploading" } as never],
       setCaptureBatches: vi.fn(), isLoadingCaptureBatches: false, scanStartPage: 1,
       setScanStartPage: vi.fn(), handleLoadExams: vi.fn(), handleLoadCaptureBatches: vi.fn(), handleOpenQueueContext: vi.fn(),
-      processingDetail: null, linkedSubmissionIds: ["submission-1"], processingError: null, loadingProcessing: false, handleRefreshProcessing: vi.fn(),
+      processingDetail: null, linkedSubmissionIds: ["submission-1"], processingError: null, loadingProcessing: false, processingPending: false, handleRefreshProcessing: vi.fn(), handleUploadCompleted: vi.fn(),
       scanContextError: null, loadingScanContext: false, handleRefreshScanContext: vi.fn(),
       scanContext: { batch: { id: "batch-1", exam_id: "exam-1", name: "上午批次", created_at: "2026-10-10T01:00:00Z", status: "uploading", source_type: "scan", file_count: 0, page_count: 0 }, exam: { id: "exam-1", name: "考试一", subject: "english" }, template_status: "ready",
         template: { id: "locked-template", name: "英语答题卡", version_no: 3, page_count: 1, content_hash: "hash", binding_revision: 1, layout: { pages: [{ page_no: 1, width: 1000, height: 1400, registration_marks: [], identity_regions: [], question_regions: [] }] } } }
@@ -113,7 +113,7 @@ describe("scan workspace quality presentation", () => {
     props.quality.qualityResult = { valid: true, issues: [] };
     const container = renderWorkspace(props);
     expect(container.querySelector(".quality-result .ant-tag-success")?.textContent).toBe("页数完整");
-    expect(container.querySelector(".quality-result p")?.textContent).toContain("图像质量请以下方服务端结论为准");
+    expect(container.querySelector(".quality-result p")?.textContent).toContain("图像质量以下方结果为准");
     expect(container.textContent).toContain("图像检查结果尚未确认"); expect(container.textContent).not.toContain("图像质量已通过");
   });
 
@@ -182,7 +182,8 @@ describe("scan workspace quality presentation", () => {
     expect(button(host, "上传当前批次 1 个等待项").disabled).toBe(true);
     expect(button(host, "重试当前批次 1 个失败项").disabled).toBe(true);
     expect(button(host, "检查页数完整性").disabled).toBe(true);
-    expect(button(host, "刷新图像检查状态").disabled).toBe(false);
+    expect(host.textContent).not.toContain("刷新图像检查状态");
+    expect(button(host, "更新当前批次进度").disabled).toBe(false);
   });
 
   it.each(["missing_template", "missing_batch", "wrong_exam", "completed", "cancelled", "bad_dpi"])("blocks file import when context is %s", (failure) => {

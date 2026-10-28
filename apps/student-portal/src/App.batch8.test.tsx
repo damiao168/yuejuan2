@@ -36,7 +36,7 @@ async function renderResult(questions: StudentQuestion[] = [makeQuestion()], han
 }
 
 async function openFirstQuestion() {
-  fireEvent.click(screen.getByRole("button", { name: /^第 1 题，/ }));
+  fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
   await screen.findByRole("heading", { name: "申请复核" });
 }
 
@@ -138,6 +138,7 @@ describe("Batch8 equivalent student portal behavior", () => {
   ] as const)("preserves median boundary %s with score %s", async (median, score, className, label) => {
     const question = makeQuestion({ score, cohort: median === undefined ? undefined : cohort(median) });
     await renderResult([question]);
+    fireEvent.click(screen.getByLabelText("显示比较数据"));
     const comparison = screen.getByText(label);
     expect(comparison.classList.contains(className)).toBe(true);
     expect(screen.queryByText("已掌握")).toBeNull();
@@ -159,6 +160,7 @@ describe("Batch8 equivalent student portal behavior", () => {
     const reason = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
     fireEvent.change(reason, { target: { value: "请核对原卷第二步中的识别内容。" } });
     fireEvent.change(screen.getByRole("combobox", { name: "复核原因" }), { target: { value: "rubric_disagreement" } });
+    if (!screen.queryByAltText("本题答题区域")) fireEvent.click(screen.getByRole("button", { name: "标记争议位置（可选）" }));
     fireEvent.load(screen.getByAltText("本题答题区域"));
     fireEvent.click(screen.getByRole("button", { name: "选择整个答题区域" }));
     reason.focus();
@@ -178,7 +180,7 @@ describe("Batch8 equivalent student portal behavior", () => {
     const first = makeQuestion();
     const second = makeQuestion({ question_id: "english-2", question_no: "2", subject: "english" });
     await renderResult([first, second], (call) => call.url.pathname.endsWith("/questions/question-1") ? oldResponse.promise : undefined);
-    fireEvent.click(screen.getByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.click(screen.getByRole("button", { name: /^英语$/ }));
     await act(async () => oldResponse.resolve(dataResponse({ question: { ...first, feedback: "过期的第一题评分依据" } })));
     expect(screen.queryByText("过期的第一题评分依据")).toBeNull();
@@ -186,7 +188,7 @@ describe("Batch8 equivalent student portal behavior", () => {
     fireEvent.click(screen.getByRole("button", { name: /^数学$/ }));
     const unmountedResponse = deferredResponse();
     installApi((call) => call.url.pathname.endsWith("/questions/question-1") ? unmountedResponse.promise : resultRoute(call, makeResult([first, second])));
-    fireEvent.click(screen.getByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     act(() => {
       window.history.replaceState(null, "", "/#/");
       window.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -209,9 +211,10 @@ describe("Batch8 equivalent student portal behavior", () => {
     await openFirstQuestion();
     const reason = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
     fireEvent.change(reason, { target: { value: "  请核对原卷第二步中的识别内容。  " } });
+    if (!screen.queryByAltText("本题答题区域")) fireEvent.click(screen.getByRole("button", { name: "标记争议位置（可选）" }));
     fireEvent.load(screen.getByAltText("本题答题区域"));
     fireEvent.click(screen.getByRole("button", { name: "选择整个答题区域" }));
-    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
+    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" });
     // 表单显示时已有申请查询可能仍未结束；等待按钮启用后再验证首次提交失败和重试。
     await waitFor(() => expect(submit.disabled).toBe(false));
     fireEvent.click(submit);
@@ -221,7 +224,7 @@ describe("Batch8 equivalent student portal behavior", () => {
     expect(screen.queryByText("PRIVATE_UPSTREAM_DETAIL")).toBeNull();
     expect(submit.disabled).toBe(false);
     fireEvent.click(submit);
-    await screen.findByText("本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。");
+    await screen.findByText(/已收到第 \d+ 版的本题申请，不可重复提交。/);
     const submitted = calls.filter((call) => call.init.method === "POST");
     expect(submitted).toHaveLength(2);
     for (const call of submitted) {
@@ -242,9 +245,9 @@ describe("Batch8 equivalent student portal behavior", () => {
     await renderResult(undefined, (call) => call.init.method === "POST" ? pending.promise : undefined);
     await openFirstQuestion();
     const reason = screen.getByRole("textbox", { name: "具体说明" });
-    expect(screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(true);
     fireEvent.change(reason, { target: { value: "请核对原卷第二步中的识别内容。" } });
-    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
+    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" });
     // 表单标题先于已有申请查询结束出现；等待按钮启用后，点击才会进入待回执的提交状态。
     await waitFor(() => expect(submit.disabled).toBe(false));
     fireEvent.click(submit);
@@ -253,7 +256,7 @@ describe("Batch8 equivalent student portal behavior", () => {
     expect(screen.getByRole("textbox", { name: "具体说明" })).toBe(reason);
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "正在提交…" }).disabled).toBe(true);
     await act(async () => pending.resolve(jsonResponse({ appeal: makeAppeal() })));
-    await screen.findByText("本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。");
+    await screen.findByText(/已收到第 \d+ 版的本题申请，不可重复提交。/);
   });
 
   it.each([

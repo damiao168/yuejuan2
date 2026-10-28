@@ -46,12 +46,15 @@ describe("自动阅卷模型用途与图片检测", () => {
 
   it("未做文本结构化检测也可独立保存，取消用途不会改成其他模型", async () => {
     await render(config, { revision: "absent", mode: "unconfigured" });
-    expect(button("使用此模型自动阅卷").disabled).toBe(false);
-    await act(async () => button("使用此模型自动阅卷").click());
+    expect(button("设置并验证图片能力").disabled).toBe(false);
+    await act(async () => button("设置并验证图片能力").click());
     expect(save).toHaveBeenLastCalledWith("model");
     expect(mocks.probe).not.toHaveBeenCalled();
-    expect(host.textContent).toContain("一个 API 模型测试");
+    expect(host.textContent).toContain("先保存本校自动阅卷模型，再发送合成图片验证");
     await render();
+    expect(host.textContent).toContain("会产生少量模型用量");
+    expect(host.textContent).toContain("教师确认最终分数");
+    expect(host.textContent).toContain("不回退本地模型");
     await act(async () => button("取消用途").click());
     expect(save).toHaveBeenLastCalledWith("unconfigured");
   });
@@ -68,6 +71,19 @@ describe("自动阅卷模型用途与图片检测", () => {
     await act(async () => button("检测图片能力").click());
     expect(mocks.probe).toHaveBeenCalledTimes(2);
     expect(host.textContent).toContain("图片读取检测通过");
+  });
+
+  it("一次设置在保存确认且用途回填后才检测，保存失败不发检测", async () => {
+    save.mockResolvedValueOnce(true);
+    await render(config, { revision: "absent", mode: "unconfigured" });
+    await act(async () => button("设置并验证图片能力").click());
+    expect(mocks.probe).not.toHaveBeenCalled();
+    await render();
+    expect(mocks.probe).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain("图片读取检测通过");
+    save.mockResolvedValueOnce(false);
+    await act(async () => button("设置并验证图片能力").click());
+    expect(mocks.probe).toHaveBeenCalledTimes(1);
   });
 
   it("学校切换后不显示旧学校检测结果，已有通过结果随用途版本变化清除", async () => {

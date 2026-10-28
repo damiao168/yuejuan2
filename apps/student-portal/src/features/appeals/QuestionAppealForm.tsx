@@ -1,5 +1,5 @@
 // 申诉表单保留草稿、会话提交锁和服务端回执顺序；证据失效时不能继续提交。
-import { SubmitEvent, PointerEvent, useCallback, useEffect, useRef, useState } from "react";
+import { SubmitEvent, PointerEvent, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createQuestionAppeal, listQuestionAppeals, PortalApiError, studentQuestionAnswerImageURL, type StudentQuestionAppeal, type StudentQuestion, type SelectedAppealRegion } from "../../api";
 import { appealDraftKey, isAppealDraftStored, readAppealDraft, removeAppealDraft, writeAppealDraft, type AppealDraft } from "../../appealDrafts";
 import { useStudentSession } from "../../studentSession";
@@ -9,10 +9,10 @@ import { appealStatusLabel } from "./AppealStatus";
 
 function AppealDraftNotice({ stored }: Readonly<{ stored: boolean }>) {
   // 这里只展示存储结果；同步写入和离开保护仍由表单及 App 执行。
-  return <p className={stored ? "muted" : "detail-error"}><output aria-live="polite">{stored ? "草稿已保存在当前标签页会话，切题、返回或重新登录后可恢复；退出登录将清除。" : "浏览器未允许保存草稿，当前输入仅在本页保留。刷新或关闭前请先复制说明。"}</output></p>;
+  return <p className={stored ? "muted" : "detail-error"}><output aria-live="polite">{stored ? "草稿仅存于当前标签页会话，切题、返回或重新登录可恢复；退出登录会清除。" : "草稿未能保存，仅在本页保留。刷新或关闭前，请先复制说明。"}</output></p>;
 }
 
-export function QuestionAppealForm({ examID, releaseID, releaseVersion, question, allowedReasonCodes, onSubmitted, onImageUnavailable, evidenceChecking = false, evidenceUnavailable = false, isEvidenceBlocked, onSourceUnavailable }: Readonly<{
+export function QuestionAppealForm({ examID, releaseID, releaseVersion, question, allowedReasonCodes, onSubmitted, onImageUnavailable, evidenceChecking = false, evidenceUnavailable = false, isEvidenceBlocked, onSourceUnavailable, renderReview }: Readonly<{
   examID: string;
   releaseID: string;
   releaseVersion: number;
@@ -24,6 +24,7 @@ export function QuestionAppealForm({ examID, releaseID, releaseVersion, question
   isEvidenceBlocked?: () => boolean;
   onSourceUnavailable?: (reason: unknown) => void;
   onImageUnavailable?: () => void;
+  renderReview?: (imageEditor?: ReactNode) => ReactNode;
 }>) {
   const { draftOwner, submitting: sessionSubmitting, isSubmitting, setSubmitting: setSessionSubmitting, reauthenticate } = useStudentSession();
   // 服务端将空白名单解释为不限制原因；学生端必须按同一规则提供六种已有原因。
@@ -76,10 +77,10 @@ export function QuestionAppealForm({ examID, releaseID, releaseVersion, question
   }, [examID, question.question_id, releaseID, storageKey]);
 
   if (existingAppeal) {
-    return <output className="question-appeal-confirmation"><strong>{appealStatusLabel(existingAppeal.status)}</strong><span>学校已收到本题复核申请。</span><span>本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。</span><a href="#my-question-appeals" onClick={(event) => { event.preventDefault(); document.getElementById("my-question-appeals")?.scrollIntoView({ behavior: "smooth" }); }}>查看我的申请</a>{evidenceUnavailable ? <span>此申请对应第 {releaseVersion} 版成绩，当前成绩需重新核对。</span> : null}</output>;
+    return <>{!evidenceUnavailable ? renderReview?.() : null}<output className="question-appeal-confirmation"><strong>{appealStatusLabel(existingAppeal.status)}</strong><span>已收到第 {releaseVersion} 版的本题申请，不可重复提交。</span><a href="#my-question-appeals" onClick={(event) => { event.preventDefault(); document.getElementById("my-question-appeals")?.scrollIntoView({ behavior: "smooth" }); }}>查看申请与处理结果</a>{evidenceUnavailable ? <span>此申请对应第 {releaseVersion} 版成绩，当前成绩需重新核对。</span> : null}</output></>;
   }
   if (availableReasons.length === 0) {
-    return <output className="question-appeal-confirmation" aria-live="polite" aria-atomic="true"><strong>暂时无法申请复核</strong><span>学校配置的复核原因当前不可用，请联系学校考试负责人核对设置。</span></output>;
+    return <>{renderReview?.()}<output className="question-appeal-confirmation" aria-live="polite" aria-atomic="true"><strong>暂时无法申请复核</strong><span>学校配置的复核原因当前不可用，请联系学校考试负责人核对设置。</span></output></>;
   }
   const submit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -119,7 +120,7 @@ export function QuestionAppealForm({ examID, releaseID, releaseVersion, question
     return <QuestionAppealReceipt hasSubmission={submitting || Boolean(error) || duplicateDetected} questionNo={question.question_no} releaseVersion={releaseVersion} submitting={submitting} sessionSubmitting={sessionSubmitting} error={error} storageKey={storageKey} reason={reason} selectedRegion={selectedRegion} draftStored={draftStored} existingError={existingError} loginRequired={loginRequired} reauthenticate={reauthenticate} duplicateDetected={duplicateDetected} existingLoading={existingLoading} checkExisting={checkExisting} />;
   }
   return <form className="question-appeal-form" onSubmit={submit}>
-    <QuestionAppealFields examID={examID} questionID={question.question_id} releaseID={releaseID} releaseVersion={releaseVersion} storageKey={storageKey} reason={reason} selectedRegion={selectedRegion} reasonCode={reasonCode} draftStored={draftStored} evidenceChecking={evidenceChecking} existingLoading={existingLoading} existingError={existingError} checkExisting={checkExisting} submitting={submitting} sessionSubmitting={sessionSubmitting} onImageUnavailable={onImageUnavailable} updateDraft={updateDraft} availableReasons={availableReasons} error={error} loginRequired={loginRequired} reauthenticate={reauthenticate} duplicateDetected={duplicateDetected} existingAppeal={existingAppeal} closed={closed} />
+    <QuestionAppealFields renderReview={renderReview} examID={examID} questionID={question.question_id} releaseID={releaseID} releaseVersion={releaseVersion} storageKey={storageKey} reason={reason} selectedRegion={selectedRegion} reasonCode={reasonCode} draftStored={draftStored} evidenceChecking={evidenceChecking} existingLoading={existingLoading} existingError={existingError} checkExisting={checkExisting} submitting={submitting} sessionSubmitting={sessionSubmitting} onImageUnavailable={onImageUnavailable} updateDraft={updateDraft} availableReasons={availableReasons} error={error} loginRequired={loginRequired} reauthenticate={reauthenticate} duplicateDetected={duplicateDetected} existingAppeal={existingAppeal} closed={closed} />
   </form>;
 }
 
@@ -172,31 +173,33 @@ interface QuestionAppealFieldsProps extends QuestionAppealFeedbackProps {
   availableReasons: string[];
   existingAppeal: StudentQuestionAppeal | null;
   closed: boolean;
+  renderReview?: (imageEditor?: ReactNode) => ReactNode;
 }
 
 // 输入区没有独立草稿或提交状态，避免展示组件重挂载后改变原题原版本的请求边界。
-function QuestionAppealFields({ examID, questionID, releaseID, releaseVersion, storageKey, reason, selectedRegion, reasonCode, draftStored, evidenceChecking, existingLoading, existingError, checkExisting, submitting, sessionSubmitting, onImageUnavailable, updateDraft, availableReasons, error, loginRequired, reauthenticate, duplicateDetected, existingAppeal, closed }: Readonly<QuestionAppealFieldsProps>) {
+function QuestionAppealFields({ examID, questionID, releaseID, releaseVersion, storageKey, reason, selectedRegion, reasonCode, draftStored, evidenceChecking, existingLoading, existingError, checkExisting, submitting, sessionSubmitting, onImageUnavailable, updateDraft, availableReasons, error, loginRequired, reauthenticate, duplicateDetected, existingAppeal, closed, renderReview }: Readonly<QuestionAppealFieldsProps>) {
+  const [markRegion, setMarkRegion] = useState(Boolean(selectedRegion));
+  const regionEditor = <AppealRegionSelector onImageUnavailable={onImageUnavailable} imageURL={studentQuestionAnswerImageURL(examID, questionID, releaseID)} value={selectedRegion} onChange={(selectedRegion) => updateDraft({ selectedRegion })} />;
   return <>
+    {/* 圈选沿用原卷的位置；关闭工具保留已选区域，未主动开启时不加载第二张图片。 */}
+    {renderReview?.(markRegion ? regionEditor : undefined)}
     <h3>申请复核</h3>
-    <p>每道题在同一版成绩下只能提交一次。学校将按第 {releaseVersion} 版成绩核对原卷和评分标准。</p>
+    <p>第 {releaseVersion} 版：本题仅可申请一次，学校将核对这一版的原卷与评分标准。</p>
     {storageKey && (reason || selectedRegion) ? <AppealDraftNotice stored={draftStored} /> : null}
     {evidenceChecking ? <p><output aria-live="polite">正在核对答卷所属成绩版本，完成前暂不能提交。</output></p> : null}
     {existingLoading ? <p><output aria-live="polite">正在核对已有复核申请…</output></p> : null}
     {existingError ? <p role="alert">无法确认是否已提交。{existingError} <button type="button" className="text-button" onClick={() => void checkExisting()}>重试申请记录</button></p> : null}
     <fieldset disabled={submitting} className="appeal-form-fields">
-    <AppealRegionSelector
-      onImageUnavailable={onImageUnavailable}
-      imageURL={studentQuestionAnswerImageURL(examID, questionID, releaseID)}
-      value={selectedRegion}
-      onChange={(selectedRegion) => updateDraft({ selectedRegion })}
-    />
+    <button type="button" className="text-button" aria-pressed={markRegion} disabled={submitting || sessionSubmitting} onClick={() => setMarkRegion(value => !value)}>{markRegion ? "收起位置标记" : "标记争议位置（可选）"}</button>
+    {markRegion && !renderReview ? regionEditor : null}
+    {selectedRegion && !markRegion ? <p>已保留圈选区域，可展开后调整。</p> : null}
     <label>复核原因<select value={reasonCode} onChange={(event) => updateDraft({ reasonCode: event.target.value })}>{availableReasons.map((code) => <option key={code} value={code}>{appealReasonLabels[code]}</option>)}</select></label>
     <label>具体说明<textarea required minLength={10} maxLength={500} value={reason} onChange={(event) => updateDraft({ reason: event.target.value })} placeholder="请具体说明哪一步、哪一评分点或哪段识别内容需要复核（10—500字）" /></label>
     </fieldset>
     {error ? <p className="detail-error" role="alert">{error}</p> : null}
     {loginRequired ? <button type="button" className="secondary-button" disabled={submitting || sessionSubmitting} onClick={reauthenticate}>重新登录</button> : null}
     {duplicateDetected && !existingAppeal ? <button type="button" className="text-button" onClick={() => void checkExisting()}>查看已有申请记录</button> : null}
-    <button className="secondary-button" type="submit" disabled={submitting || evidenceChecking || existingLoading || Boolean(existingError) || closed || duplicateDetected || reason.trim().length < 10}>{submitting ? "正在提交…" : "确认提交（仅一次）"}</button>
+    <button className="secondary-button" type="submit" disabled={submitting || evidenceChecking || existingLoading || Boolean(existingError) || closed || duplicateDetected || reason.trim().length < 10}>{submitting ? "正在提交…" : "提交复核申请"}</button>
   </>;
 }
 

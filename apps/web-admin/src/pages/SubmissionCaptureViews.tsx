@@ -6,6 +6,7 @@ import {
   Progress,
   type TableColumnsType,
 } from "antd";
+import { useState } from "react";
 import { Eye } from "lucide-react";
 import type { Exam } from "../api/exams";
 import type { OcrTask, Submission, SubmissionPage } from "../api/submissions";
@@ -74,7 +75,12 @@ export function UploadQueuePanel({
   queue,
   percent,
 }: Readonly<{ queue: UploadQueueItem[]; percent: number }>) {
+  const [showCompleted, setShowCompleted] = useState(false);
   if (queue.length === 0) return null;
+  // 失败与进行中的记录始终完整可见；新的完成项不能把较早的失败挤出八项窗口。
+  const pending = queue.filter(item => item.status !== "success");
+  const completed = queue.filter(item => item.status === "success");
+  const visible = showCompleted ? [...pending, ...completed] : pending;
   return (
     <section className="workspace-section upload-progress-panel">
       <div className="section-head">
@@ -86,7 +92,7 @@ export function UploadQueuePanel({
       </div>
       <List
         className="upload-queue-list"
-        dataSource={queue.slice(0, 8)}
+        dataSource={visible}
         renderItem={(item) => (
           <List.Item className="upload-queue-item">
             <div>
@@ -101,6 +107,7 @@ export function UploadQueuePanel({
           </List.Item>
         )}
       />
+      {completed.length ? <Button aria-expanded={showCompleted} onClick={() => setShowCompleted(value => !value)}>{showCompleted ? "收起完成记录" : `查看 ${completed.length} 个完成记录`}</Button> : null}
     </section>
   );
 }
@@ -108,7 +115,7 @@ export function UploadQueuePanel({
 function captureTableDescription(table: Readonly<CaptureTableData>) {
   let failureText = "";
   if (table.summary.failed > 0) {
-    failureText = `；${table.summary.failed} 份处理失败，可直接重试`;
+    failureText = `；${table.summary.failed} 份需核对，请查看原因后前往批次处理`;
   }
   return `${table.filteredRows.length} / ${table.rows.length} 条记录，已完成 ${table.summary.completed} 份${failureText}`;
 }
@@ -137,7 +144,7 @@ export function CaptureRecords({
   if (!exam) {
     return (
       <section className="workspace-section">
-        <EmptyState title="暂无考试" description="暂无可采集的考试。请先在『考试管理』创建考试并完成开考准备。" />
+        <EmptyState title="暂无考试" description="暂无可查看的考试，请联系学校考试管理员核对考试与授权。" />
       </section>
     );
   }
@@ -150,7 +157,7 @@ export function CaptureRecords({
   }
   if (state.captureError) return <ErrorState message={state.captureError} onRetry={() => void reloadCapture(exam.id)} />;
   return (
-    <DataTableShell title="答题卡处理" description={captureTableDescription(table)}>
+    <DataTableShell title="历史答卷记录" description={captureTableDescription(table)}>
       <ResponsiveTable<SubmissionView>
         className="dense-data-table"
         rowKey={(row) => row.submission.id}
@@ -159,7 +166,7 @@ export function CaptureRecords({
         pagination={{ pageSize: 10, showSizeChanger: false }}
         size="small"
         rowClassName={(row) => (row.detailError ? "row-with-warning" : "")}
-        locale={{ emptyText: <EmptyState title="暂无答题卡" description="当前考试还没有答题卡。点击右上角『上传答题卡』导入扫描件。" /> }}
+        locale={{ emptyText: <EmptyState title="暂无历史答卷" description="当前考试没有可查看的既有答卷；新答卷请使用批次导入。" /> }}
       />
       {table.hasMoreSubmissions ? (
         <Button block loading={table.loadingMore} onClick={() => void table.loadMore()}>

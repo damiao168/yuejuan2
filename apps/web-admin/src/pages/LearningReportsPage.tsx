@@ -50,6 +50,8 @@ interface LearningReportsPageProps {
 }
 
 type ClassMetric = "average" | "passRate";
+type ReportPart = "overview" | "classes" | "questions" | "quality";
+const reportPartLabels: Record<ReportPart, string> = { overview: "总览", classes: "班级报告", questions: "题目报告", quality: "阅卷质量" };
 interface ClassComparisonChartEntry {
   name: string;
   average: number;
@@ -142,7 +144,7 @@ function LearningReportNotices({ canRead, error, empty, onRetry }: Readonly<{
 }
 
 export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: Readonly<LearningReportsPageProps>) {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExamId, setSelectedExamId] = useState(initialExamId);
   const [overview, setOverview] = useState<OverviewReport | null>(null);
@@ -154,12 +156,14 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
   // 目录返回后才会读取所选考试的报告；没有读取权限时不能阻塞权限提示的显示。
   usePageLoading(canRead && (loadingExams || loadingReports));
   const [error, setError] = useState<string | null>(null);
+  const [reportErrors, setReportErrors] = useState<Partial<Record<ReportPart, string>>>({});
   const [exporting, setExporting] = useState(false);
   const [lastExport, setLastExport] = useState<{ filename?: string; watermark?: string } | null>(null);
   const [view, setView] = useState<"overview" | "questions" | "classes" | "quality">("overview");
   const [classMetric, setClassMetric] = useState<ClassMetric>("average");
   const [optionQuestionId, setOptionQuestionId] = useState("first-four");
   const reportRequestRef = useRef(0);
+  const reportDataExamRef = useRef("");
   const currentExamRef = useRef(selectedExamId);
   currentExamRef.current = selectedExamId;
 
@@ -300,7 +304,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
   }, [initialExamId]);
 
   const loadReports = useCallback(
-    async (examId: string) => {
+    async (examId: string, onlyPart?: ReportPart) => {
       // 旧刷新可能先等待考试列表；返回后不能让旧考试读取抢占当前考试的请求代次。
       if (examId !== currentExamRef.current) return;
       const requestId = ++reportRequestRef.current;
@@ -310,30 +314,34 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
         setClassReports([]);
         setQuestions([]);
         setQuality(null);
+        setReportErrors({});
         setLoadingReports(false);
         return;
       }
       setLoadingReports(true);
-      setError(null);
+      // 同场刷新失败可保留旧结果并标明失效；换场必须先清理，不能把另一场成功数据拼进当前报告。
+      if (reportDataExamRef.current !== examId) {
+        reportDataExamRef.current = examId;
+        setOverview(null); setClassReports([]); setQuestions([]); setQuality(null); setReportErrors({});
+      }
       try {
-        const [overviewResult, classResult, questionResult, qualityResult] = await Promise.all([
-          getReportOverview(examId),
-          listClassReports(examId),
-          listQuestionReports(examId),
-          getGradingQualityReport(examId)
-        ]);
+        const requests: Record<ReportPart, () => Promise<void>> = {
+          overview: async () => { const result = await getReportOverview(examId); if (isCurrent()) setOverview(result.overview); },
+          classes: async () => { const result = await listClassReports(examId); if (isCurrent()) setClassReports(result.classes); },
+          questions: async () => { const result = await listQuestionReports(examId); if (isCurrent()) setQuestions(result.questions); },
+          quality: async () => { const result = await getGradingQualityReport(examId); if (isCurrent()) setQuality(result.grading_quality); }
+        };
+        const parts: ReportPart[] = onlyPart ? [onlyPart] : ["overview", "classes", "questions", "quality"];
+        const results = await Promise.allSettled(parts.map(part => requests[part]()));
         if (!isCurrent()) return;
-        setOverview(overviewResult.overview);
-        setClassReports(classResult.classes);
-        setQuestions(questionResult.questions);
-        setQuality(qualityResult.grading_quality);
-      } catch (currentError) {
-        if (!isCurrent()) return;
-        setError(formatError(currentError));
-        setOverview(null);
-        setClassReports([]);
-        setQuestions([]);
-        setQuality(null);
+        setReportErrors(previous => {
+          const next = { ...previous };
+          results.forEach((result, index) => {
+            if (result.status === "rejected") next[parts[index]] = formatError(result.reason);
+            else delete next[parts[index]];
+          });
+          return next;
+        });
       } finally {
         if (isCurrent()) setLoadingReports(false);
       }
@@ -366,12 +374,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
       message.error("请先选择考试");
       return;
     }
-    modal.confirm({
-      title: "导出学情报告",
-      content: "将导出该考试的学情报告（CSV 表格文件）。导出文件带追溯水印，导出操作会被系统记录。请确认仅提供给有权查看的人员。",
-      okText: "确认导出",
-      cancelText: "取消",
-      onOk: async () => {
+    void (async () => {
         setExporting(true);
         try {
           const result = await exportLearningReport(selectedExamId);
@@ -384,8 +387,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
         } finally {
           setExporting(false);
         }
-      }
-    });
+    })();
   };
 
   const stats = overview?.stats;
@@ -420,7 +422,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
             刷新
           </Button>
           <Button type="primary" icon={<Download size={16} />} disabled={!canExportReport} loading={exporting} onClick={exportReport}>
-            导出报告
+            导出本场学情报告 CSV
           </Button>
         </Space>
       </section>
@@ -428,6 +430,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
       {lastExport?.watermark ? <p className="muted reports-watermark-note">最近导出水印编号：{lastExport.watermark}</p> : null}
 
       <LearningReportNotices canRead={canRead} error={error} empty={overview?.empty} onRetry={refresh} />
+      {(Object.entries(reportErrors) as Array<[ReportPart, string]>).map(([part, failure]) => <Alert key={part} type="warning" showIcon message={`${reportPartLabels[part]}暂时无法更新`} description={<><p>{failure}</p><p>本次结果尚未取得；本区域已有结果可能已过时。</p></>} action={<Button loading={loadingReports} onClick={() => void loadReports(selectedExamId, part)}>重试{reportPartLabels[part]}</Button>} />)}
 
       <div className="reports-view-nav"><Segmented aria-label="报告视图" value={view} options={[{ value: "overview", label: "总览" }, { value: "questions", label: "题目" }, { value: "classes", label: "班级" }, { value: "quality", label: "阅卷质量" }]} onChange={(next) => setView(next as typeof view)} /></div>
       {view === "overview" ? <section className="reports-kpi-strip">
@@ -489,7 +492,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
                 <p>基于本次阅卷过程统计，数据不足的指标不显示。</p>
               </div>
             </div>
-            {!quality ? (
+            {!quality && reportErrors.quality ? <p>阅卷质量尚未读取成功，请使用上方重试入口。</p> : !quality ? (
               <EmptyState title="暂无阅卷质量" description="暂无阅卷质量数据。" />
             ) : (
               <>

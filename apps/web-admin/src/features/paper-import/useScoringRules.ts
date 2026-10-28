@@ -19,6 +19,10 @@ function isScoringRuleConfigKeyApplicable(type: string, key: string, config: Rec
 }
 
 function editableScoringRuleConfig(question: Question, type: string, config?: Record<string, unknown>) {
+  if (type === "numeric") {
+    const tolerance = question.answer_key?.tolerance;
+    return config ?? (tolerance && typeof tolerance === "object" && !Array.isArray(tolerance) ? { ...tolerance as Record<string, unknown> } : {});
+  }
   if (type !== "multiple_choice") return config ?? {};
   const tolerance = question.answer_key?.tolerance;
   // 已有评分规则优先；只有尚无规则的多选题才沿用答案容差中的历史政策。

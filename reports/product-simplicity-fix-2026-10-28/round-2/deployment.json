@@ -1,0 +1,199 @@
+{
+  "scope": "第二轮：DP03 受控本地证书轮换、DP05 本地受限 Worker 账号",
+  "date": "2026-10-28",
+  "baseline": "保留本轮开始前全部未提交修改；只新增本轮工具和修订相邻启动逻辑，不覆盖第一轮报告。",
+  "findings": [
+    {
+      "id": "DP03",
+      "status": "fixed",
+      "changes": [
+        "主启动器提供 -RotateLocalCertificate -LocalCertificateDays，轮换工具默认仅说明步骤，显式 --apply 才执行。",
+        "新证书写入已忽略的 certs/rotations/唯一目录；先检查证书、私钥、CA、主机名和 Compose 配置，再原子切换三个目录。",
+        "只重建此前正在运行的受管理 CA 使用者；包含普通 OCR、数学识别、试卷公式、图像质量、页面处理和主观评分 Worker，等待 Compose 健康检查。",
+        "新证书健康失败恢复旧目录并重建旧服务；旧证书与私钥不删除。恢复也失败时保留不含秘密配置的恢复日志，--recover --apply 可继续。",
+        "系统文件锁避免同时轮换；生成或核验期间发现配置被修改时拒绝覆盖。",
+        "正式环境、TLS 目录进程覆盖和自定义 API HTTPS 拒绝自动生成轮换，避免更换 CA 后破坏另一个未签发端点。"
+      ],
+      "remaining": "默认本地两端点证书生命周期已有受控实现。组织 PKI、自定义 API HTTPS 仍按组织签发和协调流程处理；没有执行真实 Docker/TLS 切换验收。",
+      "files": [
+        "scripts/launch-local.ps1",
+        "infra/docker-compose/scripts/rotate-local-tls.py",
+        "infra/docker-compose/scripts/test_local_tls_rotation.py",
+        "infra/docker-compose/README.md",
+        "README.md"
+      ]
+    },
+    {
+      "id": "DP05",
+      "status": "partial",
+      "changes": [
+        "新增 local/dev/development/test 专用 provision-local-workers 命令，仅允许明确选中的 OCR、图像质量、页面处理能力和 platform 租户。",
+        "一个事务中校验既有 service 角色仅含 file:manage / ocr:manage，创建不同服务用户名并写审计；既有账号必须活动、无学校绑定、仅有相同服务职责且密码匹配，才复用。",
+        "不重置密码、不复活禁用账号、不接管人类身份、不给管理员角色；多能力中任一不匹配，整批回滚。",
+        "init 仅在显式 Enable* 时自动建立本地受限账号。凭据通过进程环境传入，命令行和审计不含密码或哈希，操作结束恢复原进程环境。",
+        "开启目标 Worker 前先检查 service 登录与注销。账号已建立但连接检查失败时保留受限身份、停止 Worker 启动，下次凭据匹配后可继续。",
+        "启用 Worker 时没有已验证来源记录的旧核心镜像会重新构建，避免旧二进制不识别新账号配置命令。"
+      ],
+      "remaining": "现有 file:manage / ocr:manage 权限仍覆盖多类后台队列，未拆分每类 Worker 的独立权限；正式环境仍由管理员配置账号。既有 .env 缺少用户名、platform 租户或至少15字符密码时不会擅自改写配置，仍需管理员补齐。服务登录通过不代表首份业务任务验收完成。",
+      "files": [
+        "services/api-gateway/internal/auth/local_worker_provision.go",
+        "services/api-gateway/internal/auth/local_worker_provision_test.go",
+        "services/api-gateway/cmd/api-gateway/local_workers.go",
+        "services/api-gateway/cmd/api-gateway/local_workers_test.go",
+        "services/api-gateway/cmd/api-gateway/main.go",
+        "infra/docker-compose/scripts/init.ps1",
+        "infra/docker-compose/scripts/tests/local-workers.tests.ps1",
+        "scripts/launch-local.ps1",
+        "infra/docker-compose/README.md"
+      ]
+    }
+  ],
+  "validation": [
+    {
+      "command": "python -B -m unittest discover -s infra/docker-compose/scripts -p test_local_tls_rotation.py -v",
+      "status": "passed",
+      "result": "7/7：健康切换、预检失败、健康失败回退、回退续做、并发配置修改、正式环境/覆盖拒绝、自定义API HTTPS拒绝",
+      "log": "deployment-tls-final.log"
+    },
+    {
+      "command": "go test ./internal/auth ./cmd/api-gateway",
+      "status": "passed",
+      "result": "两包通过；覆盖新建哈希与审计、既有账号复用、额外权限/人类身份/错密拒绝、重复用户名、平台/环境/能力边界",
+      "log": "deployment-worker-go-final.log"
+    },
+    {
+      "command": "go test ./internal/auth ./cmd/api-gateway -run TestLocalWorker",
+      "status": "passed",
+      "result": "auth与cmd两包通过；可诊断错误包装不会回显数据库错误或凭据。",
+      "log": "deployment-worker-go-target.log"
+    },
+    {
+      "command": "infra/docker-compose/scripts/tests/local-workers.tests.ps1",
+      "status": "passed",
+      "result": "仅临时目录、假Docker和假API：选择、环境继承、登录、启动顺序、失败阻断、环境恢复通过",
+      "log": "deployment-worker-powershell.log"
+    },
+    {
+      "command": "scripts/launch-local.ps1 -DryRun",
+      "status": "passed",
+      "result": "临时配置生成自检；没有调用Docker、读取真实部署配置值或修改运行环境文件",
+      "log": "deployment-launch-dry-run.log"
+    },
+    {
+      "command": "git diff --check（本组已有跟踪文件）",
+      "status": "passed",
+      "result": "仅Windows换行提示，无空白错误"
+    }
+  ],
+  "read_scope": [
+    {
+      "path": "scripts/launch-local.ps1",
+      "status": "annotated",
+      "read_scope": "full"
+    },
+    {
+      "path": "infra/docker-compose/scripts/init.ps1",
+      "status": "annotated",
+      "read_scope": "full"
+    },
+    {
+      "path": "infra/docker-compose/scripts/rotate-local-tls.py",
+      "status": "annotated",
+      "read_scope": "full"
+    },
+    {
+      "path": "infra/docker-compose/scripts/test_local_tls_rotation.py",
+      "status": "self_explanatory",
+      "read_scope": "full"
+    },
+    {
+      "path": "infra/docker-compose/scripts/tests/local-workers.tests.ps1",
+      "status": "annotated",
+      "read_scope": "full"
+    },
+    {
+      "path": "infra/docker-compose/scripts/ensure-internal-tls.py",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "只读，复用既有预检，未再次修改。"
+    },
+    {
+      "path": "infra/docker-compose/scripts/generate-internal-test-certificates.py",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "只读，复用已有新目录生成约束。"
+    },
+    {
+      "path": "infra/docker-compose/scripts/prepare-internal-tls.ps1",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "只读。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/local_worker_provision.go",
+      "status": "annotated",
+      "read_scope": "full"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/local_worker_provision_test.go",
+      "status": "annotated",
+      "read_scope": "full"
+    },
+    {
+      "path": "services/api-gateway/cmd/api-gateway/local_workers.go",
+      "status": "self_explanatory",
+      "read_scope": "full"
+    },
+    {
+      "path": "services/api-gateway/cmd/api-gateway/local_workers_test.go",
+      "status": "self_explanatory",
+      "read_scope": "full"
+    },
+    {
+      "path": "services/api-gateway/cmd/api-gateway/main.go",
+      "status": "pending",
+      "read_scope": "changed_command_dispatch_and_bootstrap_callers",
+      "note": "未全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/store_postgres.go",
+      "status": "pending",
+      "read_scope": "bootstrap_and_existing_worker_provisioning",
+      "note": "只读相关存储边界，未全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/auth/role_policy.go",
+      "status": "pending",
+      "read_scope": "service_role_policy",
+      "note": "只读相关声明。"
+    },
+    {
+      "path": "infra/docker-compose/docker-compose.yml",
+      "status": "pending",
+      "read_scope": "TLS_mounts_and_service_names",
+      "note": "只读，版本号由主智能体正式同步。"
+    },
+    {
+      "path": "infra/docker-compose/.env.example",
+      "status": "pending",
+      "read_scope": "worker_credential_keys",
+      "note": "只读，版本号由主智能体正式同步。"
+    },
+    {
+      "path": "README.md",
+      "status": "pending",
+      "read_scope": "local_launch_and_TLS_paragraphs"
+    },
+    {
+      "path": "infra/docker-compose/README.md",
+      "status": "pending",
+      "read_scope": "local_TLS_and_worker_provisioning_paragraphs"
+    }
+  ],
+  "limitations": [
+    "没有运行实际部署、实际Docker、真实数据库账号创建、实际服务登录或证书轮换。",
+    "没有读取或改写正在使用的.env、证书、私钥、账号和密码。",
+    "新证书工具的状态机和恢复使用临时目录/假执行器验证；实际Windows ACL、Docker TLS和真实数据库并发仍需部署验收。",
+    "没有提交、推送或部署。"
+  ]
+}

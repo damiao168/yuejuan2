@@ -4,20 +4,37 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LearningReportsPage } from "./LearningReportsPage";
 import { PageReadinessContext } from "../components/pageReadiness";
-const mocks = vi.hoisted(() => ({ exams: vi.fn(), questions: vi.fn(), overview: vi.fn(), classes: vi.fn() }));
+const mocks = vi.hoisted(() => ({ exams: vi.fn(), questions: vi.fn(), overview: vi.fn(), classes: vi.fn(), quality: vi.fn() }));
 vi.mock("../api/exams", () => ({ listAllExams: mocks.exams }));
 vi.mock("../components/PageState", () => ({ EmptyState: ({ title }: { title: string }) => <p>{title}</p>, ErrorState: ({ message }: { message: string }) => <p>{message}</p>, LoadingState: ({ label }: { label: string }) => <p>{label}</p> }));
-vi.mock("../api/reports", () => ({ exportLearningReport: vi.fn(), getReportOverview: mocks.overview, listClassReports: mocks.classes, listQuestionReports: mocks.questions, getGradingQualityReport: async () => ({ grading_quality: null }) }));
+vi.mock("../api/reports", () => ({ exportLearningReport: vi.fn(), getReportOverview: mocks.overview, listClassReports: mocks.classes, listQuestionReports: mocks.questions, getGradingQualityReport: mocks.quality }));
 vi.mock("../components/ResponsiveTable", () => ({ ResponsiveTable: ({ dataSource, columns }: { dataSource: Record<string, unknown>[]; columns: { title: string; dataIndex?: string; render?: (value: unknown, row: Record<string, unknown>) => ReactNode }[] }) => <table><thead><tr>{columns.map(column => <th key={column.title}>{column.title}</th>)}</tr></thead><tbody>{dataSource.map((row, index) => <tr key={index}>{columns.map(column => <td key={column.title}>{column.render ? column.render(row[column.dataIndex || ""], row) : String(row[column.dataIndex || ""] ?? "")}</td>)}</tr>)}</tbody></table> }));
-vi.mock("antd", () => ({ App: { useApp: () => ({ message: { error: vi.fn() }, modal: { confirm: vi.fn() } }) }, Alert: ({ message, description }: { message: string; description: string }) => <aside role="alert">{message}<span>{description}</span></aside>, Tag: ({ children }: { children: ReactNode }) => <span>{children}</span>, Button: ({ children, onClick }: { children: ReactNode; onClick: () => void }) => <button onClick={onClick}>{children}</button>, Space: ({ children }: { children: ReactNode }) => <div>{children}</div>, Segmented: ({ options, value, onChange }: { options: { value: string; label: ReactNode }[]; value: string; onChange: (value: string) => void }) => <div>{options.map(option => <button key={option.value} aria-pressed={option.value === value} onClick={() => onChange(option.value)}>{option.label}</button>)}</div>, Select: ({ options, value, onChange, placeholder, "aria-label": label }: { options: { value: string; label: string }[]; value: string; onChange: (value: string) => void; placeholder?: string; "aria-label"?: string }) => <select aria-label={label || placeholder} value={value} onChange={event => onChange(event.target.value)}>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select> }));
+vi.mock("antd", () => ({ App: { useApp: () => ({ message: { error: vi.fn() }, modal: { confirm: vi.fn() } }) }, Alert: ({ message, description, action }: { message: ReactNode; description: ReactNode; action?: ReactNode }) => <aside role="alert">{message}<span>{description}</span>{action}</aside>, Tag: ({ children }: { children: ReactNode }) => <span>{children}</span>, Button: ({ children, onClick }: { children: ReactNode; onClick: () => void }) => <button onClick={onClick}>{children}</button>, Space: ({ children }: { children: ReactNode }) => <div>{children}</div>, Segmented: ({ options, value, onChange }: { options: { value: string; label: ReactNode }[]; value: string; onChange: (value: string) => void }) => <div>{options.map(option => <button key={option.value} aria-pressed={option.value === value} onClick={() => onChange(option.value)}>{option.label}</button>)}</div>, Select: ({ options, value, onChange, placeholder, "aria-label": label }: { options: { value: string; label: string }[]; value: string; onChange: (value: string) => void; placeholder?: string; "aria-label"?: string }) => <select aria-label={label || placeholder} value={value} onChange={event => onChange(event.target.value)}>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select> }));
 vi.mock("recharts", () => { const passthrough = ({ children }: { children: ReactNode }) => <div>{children}</div>; return { ResponsiveContainer: passthrough, BarChart: ({ children, data }: { children: ReactNode; data: unknown }) => <div data-bar-chart-values={JSON.stringify(data)}>{children}</div>, LineChart: ({ children, data }: { children: ReactNode; data: unknown }) => <div data-chart-values={JSON.stringify(data)}>{children}</div>, CartesianGrid: () => null, XAxis: () => null, YAxis: ({ domain, label }: { domain?: number[]; label?: { value: string } }) => <div data-domain={JSON.stringify(domain)} data-axis-label={label?.value} />, Tooltip: () => null, Line: () => null, Bar: ({ dataKey, name, fill }: { dataKey: string; name: string; fill: string }) => <div data-bar-key={dataKey} data-bar-name={name} data-bar-fill={fill} /> }; });
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.overview.mockResolvedValue({ overview: { student_count: 10, stats: { distribution: [] }, empty: { empty: false } } });
   mocks.classes.mockResolvedValue({ classes: [] });
+  mocks.quality.mockResolvedValue({ grading_quality: null });
 });
 afterEach(cleanup);
 describe("学情题目统计可解释与完整访问", () => {
+  it("质量报告失败不清空成功的总览和题目数据，区域重试只请求失败项", async () => {
+    mocks.exams.mockResolvedValue({ exams: [{ id: "exam", name: "考试一", subject: "biology" }] });
+    mocks.questions.mockResolvedValue({ questions: [{ question_id: "q", question_no: "Q1", question_type: "single_choice", score_rate: .8, correct_rate: .6, discrimination: .25, option_distribution: [], frequent_errors: [] }] });
+    mocks.quality.mockRejectedValueOnce(new Error("阅卷质量暂不可用"));
+    render(<LearningReportsPage canRead canExport={false} initialExamId="exam" />);
+    await screen.findByText("阅卷质量暂不可用");
+    expect(document.querySelector(".reports-kpi-strip")?.textContent).toContain("参考人数10");
+    expect(document.querySelector('[data-chart-values]')?.getAttribute("data-chart-values")).toContain('"name":"Q1"');
+    const overviewCalls = mocks.overview.mock.calls.length, questionCalls = mocks.questions.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "重试阅卷质量" }));
+    await act(async () => {});
+    expect(mocks.quality).toHaveBeenCalledTimes(2);
+    expect(mocks.overview).toHaveBeenCalledTimes(overviewCalls);
+    expect(mocks.questions).toHaveBeenCalledTimes(questionCalls);
+    expect(screen.queryByText("阅卷质量暂不可用")).toBeNull();
+  });
   it("切页等待从考试目录交接到报告首读，报告完成后解除阻塞", async () => {
     let finishExams!: (value: { exams: { id: string; name: string; subject: string }[] }) => void;
     let finishOverview!: (value: { overview: { student_count: number; stats: { distribution: never[] }; empty: { empty: boolean } } }) => void;

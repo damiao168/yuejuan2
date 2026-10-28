@@ -44,8 +44,9 @@ vi.mock("antd", async () => {
     mocks.forms.push(store);
     return store;
   }
-  function FormItem({ name, label, valuePropName = "value", children }: {
+  function FormItem({ name, label, valuePropName = "value", children, getValueProps, normalize }: {
     name?: string; label?: string; valuePropName?: string;
+    getValueProps?: (value: unknown) => Record<string, unknown>; normalize?: (value: unknown) => unknown;
     children: React.ReactElement<Record<string, unknown>> | ((form: Store) => ReactNode);
   }) {
     const context = React.useContext(Context)!;
@@ -53,10 +54,11 @@ vi.mock("antd", async () => {
     if (typeof children === "function") return children(context.store);
     if (!name) return <label>{label}{children}</label>;
     return <label data-field={name}>{label}{React.cloneElement(children, {
-      [valuePropName]: context.store.getFieldValue(name) ?? "",
+      ...(getValueProps ? getValueProps(context.store.getFieldValue(name)) : { [valuePropName]: context.store.getFieldValue(name) ?? "" }),
       onChange: (value: unknown) => {
         const next = typeof value === "object" && value !== null && "target" in value ? (value.target as HTMLInputElement).value : value;
-        context.store.setFieldsValue({ [name]: next }); context.change?.({ [name]: next });
+        const stored = normalize ? normalize(next) : next;
+        context.store.setFieldsValue({ [name]: stored }); context.change?.({ [name]: stored });
       }
     })}</label>;
   }
@@ -189,7 +191,7 @@ describe("质量看板展示职责回归", () => {
     const assignee = drawer().querySelector<HTMLSelectElement>('select[aria-label="选择复评阅卷员"]')!;
     await act(async () => { assignee.value = "grader-2"; assignee.dispatchEvent(new Event("change", { bubbles: true })); });
     await click("预览正式复评范围", drawer());
-    expect(drawer().textContent).toContain("Q1；接手教师：王老师（账号：wang.physics）");
+    expect(drawer().textContent).toContain("Q1 · 接手教师：王老师（账号：wang.physics）");
     await click("创建复评任务", drawer());
     expect(mocks.regradeCreate).toHaveBeenCalledWith("batch", { source_release_id: "release", assignee_id: "grader-2" });
     expect(mocks.message.success).toHaveBeenCalledWith(expect.stringContaining("接手教师：王老师（账号：wang.physics）"));
@@ -208,12 +210,12 @@ describe("质量看板展示职责回归", () => {
 
   it.each([
     ["blocked", "不可发布", "error", "存在必须先处置的质量问题，不能发布成绩。"],
-    ["ready", "可继续", "success", "当前没有阻断性质量事件。"],
+    ["ready", "可继续", "success", "未发现阻断性质量事件；其他发布条件以成绩发布检查为准。"],
     ["warning", "需要关注", "warning", "当前没有阻断项，但仍有待补齐的质量证据或处理项。"],
     ["insufficient_data", "需要关注", "warning", "当前没有阻断项，但仍有待补齐的质量证据或处理项。"]
   ])("发布状态 %s 与题目证据保留原展示", async (gate, label, tone, description) => {
     mocks.dashboard.mockResolvedValue({ dashboard: dashboard(gate as QualityDashboard["gate"]) }); await render(false);
-    expect(host.querySelector("aside")?.getAttribute("data-tone")).toBe(tone); expect(host.querySelector("aside strong")?.textContent).toBe(`发布可行性：${label}`); expect(host.querySelector("aside p")?.textContent).toBe(description);
+    expect(host.querySelector("aside")?.getAttribute("data-tone")).toBe(tone); expect(host.querySelector("aside strong")?.textContent).toBe(`评分质量检查：${label}`); expect(host.querySelector("aside p")?.textContent).toBe(description);
     expect(host.querySelector('[data-column="质量状态"] [data-tone]')?.textContent).toBe(label);
     expect(host.textContent).toContain("样本不足 · 0 份"); expect(host.textContent).toContain("当前没有待处理事项");
     expect([...host.querySelectorAll("button")].map((item) => item.textContent)).toEqual(["刷新"]);
@@ -253,7 +255,7 @@ describe("质量看板展示职责回归", () => {
   });
 
   it("复评选择变化清预览，创建保持批次和来源版本请求", async () => {
-    await openSummary(); await click("预览正式复评范围", drawer()); expect(mocks.regradePreview).toHaveBeenCalledWith("batch", { source_release_id: "release", assignee_id: "grader" }); expect(drawer().textContent).toContain("将冻结 8 份已发布答卷");
+    await openSummary(); await click("预览正式复评范围", drawer()); expect(mocks.regradePreview).toHaveBeenCalledWith("batch", { source_release_id: "release", assignee_id: "grader" }); expect(drawer().textContent).toContain("将冻结 8 份答卷");
     const select = drawer().querySelector<HTMLSelectElement>('select[aria-label="选择已发布成绩版本"]')!;
     await act(async () => { select.value = "release-2"; select.dispatchEvent(new Event("change", { bubbles: true })); }); expect(drawer().textContent).not.toContain("将冻结");
     await click("预览正式复评范围", drawer()); await click("创建复评任务", drawer());
@@ -279,6 +281,27 @@ describe("质量看板展示职责回归", () => {
   it("盲测保存继续提交修订号和暂停值", async () => {
     await render(); await click("盲测策略"); await act(async () => mocks.forms[1].setFieldsValue({ enabled: false })); await click("保存");
     expect(mocks.saveSeed).toHaveBeenCalledWith("exam", "q1", { rate: .1, min_interval: 10, max_interval: 30, status: "paused", expected_revision: 3 }); expect(mocks.message.success).toHaveBeenCalledWith("盲测策略已保存");
+  });
+
+  it("抽样比例以百分数编辑，提交仍保持原协议小数单位", async () => {
+    await render(); await click("盲测策略");
+    const rate = host.querySelector<HTMLInputElement>('[data-field="rate"] input')!;
+    expect(rate.value).toBe("10");
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(rate, "0.1"); rate.dispatchEvent(new Event("input", { bubbles: true })); });
+    await click("保存");
+    expect(mocks.saveSeed).toHaveBeenCalledWith("exam", "q1", expect.objectContaining({ rate: .001 }));
+  });
+
+  it("发布前待办直接提供本题处理入口，无需展开质量证据", async () => {
+    const value = dashboard("blocked");
+    const finding = { code: "calibration_not_configured", status: "blocked" as const, question_id: "q1", question_no: "Q1", reason: "本题尚未设置试评", owner: "学校管理员", resolution: "设置本题试评" };
+    value.blocking = [finding]; value.questions[0].findings = [finding];
+    mocks.dashboard.mockResolvedValue({ dashboard: value });
+    await render();
+    const pending = host.querySelector<HTMLElement>('[aria-label="发布前待办"]')!;
+    expect(pending.textContent).toContain("本题尚未设置试评");
+    await click("处理本题事项", pending);
+    expect(host.querySelector('[data-material="calibration"]')?.textContent).toBe("exam:q1");
   });
 
   it("选人走考试专属目录，质量事件只可选择当前题并在切题后清除", async () => {

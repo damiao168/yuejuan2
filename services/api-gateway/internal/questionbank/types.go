@@ -82,6 +82,7 @@ type Content struct {
 // Version 同时保留题目版本号、内容修订号和绑定的元数据规则版本，三者用途不同。
 // ContentHash 只覆盖题目内容，BundleHash 还覆盖评分规则，审核须以整包为准。
 type Version struct {
+	Handoff             *HandoffState     `json:"handoff,omitempty"`
 	ImportProvenance    *ImportProvenance `json:"import_provenance,omitempty"`
 	BundleSchemaVersion int               `json:"bundle_schema_version"`
 	Scoring             Scoring           `json:"scoring"`
@@ -126,6 +127,8 @@ type CreateVersionInput struct {
 type UpdateVersionInput struct {
 	ExpectedRevision int64 `json:"expected_revision"`
 	Content
+	// 缺省仍只改题目；提供评分时与题目内容在同一修订内提交，任一步失败均不落盘。
+	Scoring *Scoring `json:"scoring,omitempty"`
 }
 type ItemResult struct {
 	Item    Item    `json:"item"`
@@ -217,6 +220,7 @@ type SearchFilter struct {
 	Query, BankID, SubjectCode, KnowledgePoint, QuestionType, Archetype    string
 	WorkflowStatus, DifficultyBand, CognitiveLevel, Copyright, IntendedUse string
 	UsePolicy, MetadataKey, MetadataValue, Mode, Sort                      string
+	PendingAction                                                          string
 	StatisticsAvailable                                                    *bool
 	Limit, Offset                                                          int
 }
@@ -294,6 +298,9 @@ type MetadataStore interface {
 
 // PublicationStore 声明审核与采用能力；实际授权仍由 AccessScope 和版本状态检查执行。
 type PublicationStore interface {
+	AssignHandoff(context.Context, auth.AccessScope, string, HandoffInput) (Version, error)
+	ClaimHandoff(context.Context, auth.AccessScope, string, string, HandoffInput) (Version, error)
+	ListHandoffEvents(context.Context, auth.AccessScope, string) ([]HandoffEvent, error)
 	Transition(context.Context, auth.AccessScope, string, string, ReviewInput) (Version, error)
 	ListReviews(context.Context, auth.AccessScope, string) ([]Review, error)
 	BindReviewers(context.Context, auth.AccessScope, string, ReviewerBinding) (Bank, error)
@@ -465,9 +472,12 @@ type UpdateScoringInput struct {
 	Scoring          Scoring `json:"scoring"`
 }
 type ReviewInput struct {
-	ExpectedRevision int64  `json:"expected_revision"`
-	BundleHash       string `json:"bundle_hash"`
-	Comment          string `json:"comment"`
+	ExpectedRevision        int64  `json:"expected_revision"`
+	BundleHash              string `json:"bundle_hash"`
+	Comment                 string `json:"comment"`
+	ReviewerID              string `json:"reviewer_id,omitempty"`
+	PublisherID             string `json:"publisher_id,omitempty"`
+	ExpectedHandoffRevision int64  `json:"expected_handoff_revision,omitempty"`
 }
 type Review struct {
 	ID              string    `json:"id"`

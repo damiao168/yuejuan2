@@ -1,0 +1,581 @@
+{
+  "meta": {
+    "date": "2026-10-28",
+    "scope": "MC-G01..MC-G28；仅阅卷、试评、质量、成绩发布和教师复核辅助文案及展示条件。",
+    "status": "implemented",
+    "counts": {
+      "implemented": 28,
+      "retained": 0,
+      "deferred": 0,
+      "sourceFiles": 17,
+      "modifiedTestFiles": 8
+    },
+    "boundaries": [
+      "未修改后端、评分计算、草稿/正式提交条件、冻结/发布状态转换、权限或盲评隔离。",
+      "GradingWorkbench.tsx仅增加传给ScoreEditor的真实书签状态；未知状态不承诺交分。",
+      "所有测试为本地组件/Hook模拟回归，不等同端到端生产验证。",
+      "未运行全库typecheck/build，由主agent统一检查。"
+    ],
+    "validationNote": "相关14个测试文件累计206项不同测试最终均有通过记录；记录分散在首轮与定向复跑日志，不能把各日志测试数直接相加。首轮两项旧措辞断言及三项5秒超时已通过后续复跑解决。未修改全局测试超时/业务保护。",
+    "distinctTestFilesPassed": 14,
+    "distinctTestsPassed": 206
+  },
+  "items": [
+    {
+      "id": "MC-G01",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx"
+      ],
+      "summary": "设置页适用范围合并为一处，启动摘要独立保留范围。",
+      "tests": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G02",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx"
+      ],
+      "summary": "分差字段常显约束，按编辑中独立模型分支显示规则；计算细节折叠，保存与生效判断不变。",
+      "tests": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G03",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx"
+      ],
+      "summary": "缩短模型检测调用提醒；无已选模型时不显示无对应按钮的检测说明。",
+      "tests": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G04",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx"
+      ],
+      "summary": "只读方案按confirmed_at区分已确认与待确认，不再一律催促重复确认。",
+      "tests": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G05",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx"
+      ],
+      "summary": "保存按钮旁明确仅影响之后启动的评分；保留建议分须教师确认。",
+      "tests": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G06",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/ExamScoringDialogs.tsx"
+      ],
+      "summary": "启动弹窗按路线处理作答，避免把人工路线概括为全自动完成。",
+      "tests": [
+        "apps/web-admin/src/features/grading/workbench/components/ExamScoringPanel.batch8.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G07",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/ScoreEditor.tsx",
+        "apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx"
+      ],
+      "summary": "交分后果移至最终分控件旁，明确仅联网且满足提交条件后才交分；根据确认后的书签状态显示，未知时不承诺交分；仅从控制器传入状态。",
+      "tests": [
+        "apps/web-admin/src/features/grading/workbench/components/InspectorFocus.test.tsx",
+        "apps/web-admin/src/features/grading/workbench/GradingWorkbench.batch8.test.tsx",
+        "apps/web-admin/src/features/grading/workbench/hooks/useAutomaticGradeSubmission.test.tsx",
+        "apps/web-admin/src/features/grading/workbench/components/ReviewBookmarkControls.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G08",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/WorkbenchHeader.tsx"
+      ],
+      "summary": "冲突提示收短，保留自动保存暂停和逐项合并/放弃入口。",
+      "tests": [],
+      "verification": "纯文案变更，已静态核对原显示条件及原事件处理不变；没有新增镜像文案测试。",
+      "reason": null
+    },
+    {
+      "id": "MC-G09",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/TaskRail.tsx"
+      ],
+      "summary": "任务筛选范围收短，保留仅已加载任务的范围限制。",
+      "tests": [],
+      "verification": "纯文案变更，已静态核对原显示条件及原事件处理不变；没有新增镜像文案测试。",
+      "reason": null
+    },
+    {
+      "id": "MC-G10",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx"
+      ],
+      "summary": "教师试评引导并入资格卡；管理员准备要求移至已有设置区域，与字段总说明合并。",
+      "tests": [
+        "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G11",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx"
+      ],
+      "summary": "试评通过提示收短，保留valid_until与标准卷变更后重确认。",
+      "tests": [
+        "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G12",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx"
+      ],
+      "summary": "压缩试评字段说明，保留平均绝对差、严重阈值含等于和零比例含义。",
+      "tests": [
+        "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G13",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx"
+      ],
+      "summary": "未读到通过标准时按管理权限给下一步，不把读取缺失写成确定未配置。",
+      "tests": [
+        "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G14",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/QualityPanel.tsx",
+        "apps/web-admin/src/pages/QualityDashboardViews.tsx"
+      ],
+      "summary": "基础成绩与考试级质量检查成功仅描述各自范围，不宣称门户已发布或全部门禁满足。",
+      "tests": [
+        "apps/web-admin/src/pages/QualityDashboardPage.batch11.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G15",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx"
+      ],
+      "summary": "完整发布流程仅保留在版本区域，基础操作栏只说明汇总确认职责。",
+      "tests": [
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.test.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.recovery.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G16",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx"
+      ],
+      "summary": "门禁展示改用发布检查；阻断和数量常显，技术代码置于details；通过状态下保留正式发布再次检查。",
+      "tests": [
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.test.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.recovery.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G17",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx"
+      ],
+      "summary": "锁定后更正路径与原查询入口警示收短，原入口仍在高级折叠区域。",
+      "tests": [
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.test.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.recovery.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G18",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx"
+      ],
+      "summary": "创建草稿提示收短，保留不对学生公开及成绩/公开设置冻结。",
+      "tests": [
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.recovery.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G19",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx"
+      ],
+      "summary": "逐题复核与逐题公开的联动收短，不改变强制公开和相关详情禁用。",
+      "tests": [
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.recovery.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G20",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx"
+      ],
+      "summary": "保留匿名范例卷警告，明确人工逐页核对覆盖范围；系统只按配置区域遮挡。",
+      "tests": [
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.recovery.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G21",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx"
+      ],
+      "summary": "将逐项接受纠正为逐项完成复核，接受/驳回及异常说明要求不变。",
+      "tests": [
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.recovery.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G22",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx"
+      ],
+      "summary": "复评说明按进入、预览、创建阶段分配；保留来源范围冻结与后续新版本发布。",
+      "tests": [
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.test.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.recovery.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G23",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx"
+      ],
+      "summary": "最终发布确认收短，保留学生预览、独立查询入口、更新新版本及冻结复核开放时段。",
+      "tests": [
+        "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.appeal.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G24",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/components/QuestionAppealReviewOpinionPanel.tsx"
+      ],
+      "summary": "教师意见首次/已移交/已处理分别说明，已有意见不重复首次导语；保留教职工可见范围。",
+      "tests": [
+        "apps/web-admin/src/components/QuestionAppealWorkspace.batch10.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G25",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/pages/QuestionAppealCenterPage.tsx"
+      ],
+      "summary": "教师复核导语与历史入口说明收短，匿名与管理员后续处理不变。",
+      "tests": [
+        "apps/web-admin/src/components/QuestionAppealWorkspace.batch10.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G26",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/appeals/AppealDecisionPanel.tsx"
+      ],
+      "summary": "历史独立复核提醒收短，保留身份隐藏、管理员终审、不直接改分或结案。",
+      "tests": [
+        "apps/web-admin/src/features/appeals/AppealDecisionPanel.ux.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G27",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/appeals/AppealDecisionPanel.tsx",
+        "apps/web-admin/src/components/QuestionAppealWorkspace.tsx"
+      ],
+      "summary": "统一未提交用语；可编辑表单常显状态，dirty提示丢失后果，已有离开守卫不变。",
+      "tests": [
+        "apps/web-admin/src/components/QuestionAppealWorkspace.batch10.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    },
+    {
+      "id": "MC-G28",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/pages/QualityDashboardViews.tsx"
+      ],
+      "summary": "回标卡只常显当前成绩不变；转交条件和预览治理链按已有权限及阶段显示。",
+      "tests": [
+        "apps/web-admin/src/pages/QualityDashboardPage.batch11.test.tsx"
+      ],
+      "verification": "相关既有回归及状态分支核对；测试文件列出的是相关保护，不表示每个静态句子单独有断言。",
+      "reason": null
+    }
+  ],
+  "files": [
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/components/ExamScoringDialogs.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/components/ScoreEditor.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/components/WorkbenchHeader.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/components/TaskRail.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/components/QualityPanel.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/components/QuestionAppealReviewOpinionPanel.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/pages/QuestionAppealCenterPage.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/appeals/AppealDecisionPanel.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+      "status": "modified",
+      "maintenance": "已核对改动及附近状态/权限/异步边界；必要的非直观展示条件补充或沿用准确注释。"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx",
+      "status": "modified_test",
+      "maintenance": "更新准确措辞断言；新增状态分支检查，保留已有提交、权限和恢复保护。"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/components/InspectorFocus.test.tsx",
+      "status": "modified_test",
+      "maintenance": "更新准确措辞断言；新增状态分支检查，保留已有提交、权限和恢复保护。"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/GradingWorkbench.batch8.test.tsx",
+      "status": "modified_test",
+      "maintenance": "更新准确措辞断言；新增状态分支检查，保留已有提交、权限和恢复保护。"
+    },
+    {
+      "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx",
+      "status": "modified_test",
+      "maintenance": "更新准确措辞断言；新增状态分支检查，保留已有提交、权限和恢复保护。"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.test.tsx",
+      "status": "modified_test",
+      "maintenance": "更新准确措辞断言；新增状态分支检查，保留已有提交、权限和恢复保护。"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.appeal.test.tsx",
+      "status": "modified_test",
+      "maintenance": "更新准确措辞断言；新增状态分支检查，保留已有提交、权限和恢复保护。"
+    },
+    {
+      "file": "apps/web-admin/src/pages/QualityDashboardPage.batch11.test.tsx",
+      "status": "modified_test",
+      "maintenance": "更新准确措辞断言；新增状态分支检查，保留已有提交、权限和恢复保护。"
+    },
+    {
+      "file": "apps/web-admin/src/components/QuestionAppealWorkspace.batch10.test.tsx",
+      "status": "modified_test",
+      "maintenance": "更新准确措辞断言；新增状态分支检查，保留已有提交、权限和恢复保护。"
+    }
+  ],
+  "tests": [
+    {
+      "name": "首轮相关回归",
+      "command": "> vitest run src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx src/features/grading/workbench/components/InspectorFocus.test.tsx src/features/grading/workbench/GradingWorkbench.batch8.test.tsx src/features/grading/workbench/hooks/useAutomaticGradeSubmission.test.tsx src/features/grading/workbench/components/ReviewBookmarkControls.test.tsx src/features/grading/workbench/components/WorkbenchTaskContent.test.tsx src/features/calibration/CalibrationDrawer.test.tsx src/features/score-management/components/ScoreReleaseWorkspace.test.tsx src/features/score-management/components/ScoreWorkflowModals.recovery.test.tsx src/features/score-management/hooks/useScoreReleaseWorkflow.appeal.test.tsx src/features/appeals/AppealDecisionPanel.ux.test.tsx src/pages/QualityDashboardPage.batch11.test.tsx src/components/QuestionAppealWorkspace.batch10.test.tsx",
+      "log": "reports/microcopy-fix-2026-10-28/grading-release-tests.log",
+      "result": "13 files；176 passed / 5 failed（181 tests）；两处旧质量提示断言、三处5秒测试超时。"
+    },
+    {
+      "name": "首次失败文件定向复跑",
+      "command": "npm --workspace apps/web-admin test -- --maxWorkers=2 src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx src/pages/QualityDashboardPage.batch11.test.tsx",
+      "log": "reports/microcopy-fix-2026-10-28/grading-release-retest.log",
+      "result": "质量看板32项全部通过；AI方案5通过、1项仍超5秒。"
+    },
+    {
+      "name": "修改后关键状态回归",
+      "command": "npm --workspace apps/web-admin test -- --maxWorkers=2 --testTimeout=15000 src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx src/features/calibration/CalibrationDrawer.test.tsx src/components/QuestionAppealWorkspace.batch10.test.tsx src/features/grading/workbench/GradingWorkbench.batch8.test.tsx",
+      "log": "reports/microcopy-fix-2026-10-28/grading-release-final-tests.log",
+      "result": "4 files / 99 tests passed，41.70秒；超时参数仅本次命令使用，未修改测试全局配置。"
+    },
+    {
+      "name": "最后AI说明和启动评分复核",
+      "command": "npm --workspace apps/web-admin test -- --maxWorkers=2 --testTimeout=15000 src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx src/features/grading/workbench/components/ExamScoringPanel.batch8.test.tsx",
+      "log": "reports/microcopy-fix-2026-10-28/grading-release-last-check.log",
+      "result": "2 files / 29 tests passed，30.53秒。"
+    },
+    {
+      "name": "展示改动lint",
+      "command": "npx biome lint apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx apps/web-admin/src/features/grading/workbench/components/ScoreEditor.tsx apps/web-admin/src/components/QuestionAppealWorkspace.tsx apps/web-admin/src/components/QuestionAppealReviewOpinionPanel.tsx apps/web-admin/src/features/calibration/CalibrationDrawer.tsx apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx apps/web-admin/src/features/appeals/AppealDecisionPanel.tsx apps/web-admin/src/pages/QualityDashboardViews.tsx",
+      "log": "reports/microcopy-fix-2026-10-28/grading-release-lint.log",
+      "result": "Checked 9 files，0 errors / 1 warning；GradingAIPlanSettings useEffect 的 apply 依赖警告为既有代码，未为消警改变取数或依赖顺序。"
+    },
+    {
+      "name": "G07提交前提收紧后的单文件复跑",
+      "command": "npm --workspace apps/web-admin test -- --maxWorkers=2 --testTimeout=15000 src/features/grading/workbench/components/InspectorFocus.test.tsx",
+      "log": "reports/microcopy-fix-2026-10-28/grading-release-submission-copy-tests.log",
+      "result": "1 file / 18 tests passed，21.60秒。"
+    },
+    {
+      "name": "改动空白检查",
+      "command": "git diff --check -- apps/web-admin/src/features/grading apps/web-admin/src/features/calibration apps/web-admin/src/features/score-management apps/web-admin/src/features/appeals/AppealDecisionPanel.tsx apps/web-admin/src/components/QuestionAppealWorkspace.tsx apps/web-admin/src/components/QuestionAppealReviewOpinionPanel.tsx apps/web-admin/src/pages/QualityDashboardViews.tsx apps/web-admin/src/pages/QuestionAppealCenterPage.tsx",
+      "log": "reports/microcopy-fix-2026-10-28/grading-release-diff-check.log",
+      "result": "exit 0，无空白错误；仅仓库已有换行规范提示。"
+    }
+  ],
+  "residual": [
+    {
+      "kind": "existing_lint_warning",
+      "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+      "summary": "原有 useEffect 引用 apply 未列依赖的 lint warning。此次未改变该effect或apply，仅展示层调整；不为消警修改取数时序。",
+      "blocking": false
+    },
+    {
+      "kind": "not_run",
+      "summary": "未运行浏览器交互与全库typecheck/build；全库门禁由主agent统一执行。",
+      "blocking": false
+    }
+  ]
+}

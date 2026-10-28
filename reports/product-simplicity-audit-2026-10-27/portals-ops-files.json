@@ -1,0 +1,1510 @@
+{
+  "date": "2026-10-27",
+  "audit": "产品繁琐与冗余设计，只读审计",
+  "scope": [
+    "apps/student-portal/src",
+    "apps/desktop-client/src",
+    "apps/web-admin/src/features/platform",
+    "apps/web-admin/src/features/platform-model-config",
+    "apps/web-admin/src/features/members",
+    "apps/web-admin/src/components/model-governance",
+    "apps/teacher-portal/README.md",
+    "apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+    "apps/web-admin/src/pages/StudentManagementPage.tsx",
+    "apps/web-admin/src/pages/SystemStatusPage.tsx",
+    "apps/web-admin/src/pages/AuditLogPage.tsx",
+    "apps/web-admin/src/pages/PlatformSchoolsPage.tsx",
+    "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+    "apps/web-admin/src/pages/PanelModelBindingsSection.tsx"
+  ],
+  "status_legend": {
+    "reviewed": "当前文件完整阅读，不代表端到端验证或维护注释验收",
+    "documentation": "完整阅读说明文档",
+    "pending": "尚未读完；read_coverage 区分部分与未读"
+  },
+  "runtime_verified": false,
+  "summary": {
+    "reviewed": 80,
+    "documentation": 1,
+    "pending": 160,
+    "partial_pending": 8
+  },
+  "files": [
+    {
+      "path": "apps/desktop-client/src/App.batch33.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/App.offlineDescription.batch47.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/App.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/auth.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/captureUploads.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/captureUploads.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/client.batch46.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/client.filename.batch10.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/client.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/client.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/exams.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/files.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/listQueries.batch11.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/papers.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/review.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/review.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/submissions.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/userError.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/api/userError.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/AnswerDocumentViewer.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/AnswerDocumentViewer.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/DesktopStatusViews.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/DesktopStatusViews.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/NativeStoragePanel.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/NativeStoragePanel.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/OfflineWorkbench.batch40.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/offlineWorkbench/draftState.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/offlineWorkbench/taskPackage.ts",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "完整核实冻结任务包映射、只存图像URL与冲突预检；不含图片Blob。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/offlineWorkbench/types.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/offlineWorkbench/useOfflineWorkbench.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/desktop-client/src/experience.css",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/capture/useCaptureScanContext.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/capture/useExamCaptureContext.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/capture/useExamCaptureContext.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/quality/useSubmissionQuality.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/quality/useSubmissionQuality.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/runtime/useLocalLogs.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/runtime/useRuntimeDiagnostics.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/runtime/useRuntimeDiagnostics.ts",
+      "status": "pending",
+      "read_coverage": "partial_source_read",
+      "note": "核实保存服务器地址、连接检测函数片段。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan-queue/scanQueueResources.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan-queue/useScanQueue.recovery.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan-queue/useScanQueue.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan-queue/useScanQueue.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan-queue/useScanQueueRecovery.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan/ScanWorkspace.batch34.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scanner/scannerDraft.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scanner/scannerDraft.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scanner/useScannerController.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scanner/useScannerController.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/session/useDesktopCredentialStore.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/session/useDesktopLoginForm.storage.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/session/useDesktopLoginForm.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/session/useDesktopSession.batch33.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/session/useDesktopSession.batch48.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/session/useDesktopSession.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/session/useDesktopSession.ts",
+      "status": "pending",
+      "read_coverage": "partial_source_read",
+      "note": "核实登录传当前地址的调用及公开返回接口。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/session/useDesktopSessionVerification.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/tasks/useReviewTasks.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/upload/uploadState.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/upload/uploadState.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/upload/useUploadSync.batch35.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/upload/useUploadSync.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/upload/useUploadSync.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/durableStore.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/durableStore.ts",
+      "status": "pending",
+      "read_coverage": "partial_source_read",
+      "note": "按图像和序列化检索；未完整阅读原生存储封装。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/incrementalSha256.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/localRuntime.batch46.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/localRuntime.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/localRuntime.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/offlineReviewCommand.batch35.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/offlineReviewCommand.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/offlineReviewCommand.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/offlineStore.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/offlineStore.ts",
+      "status": "pending",
+      "read_coverage": "partial_source_read",
+      "note": "按图像序列化与JSON存储检索；未完整阅读。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/scanFiles.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/scanQueueWorkflow.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/scanQueueWorkflow.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/scannerProfile.remediation.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/scannerProfile.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/lib/scanningQuality.batch34.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/main.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/desktop-client/src/statusLabels.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/statusLabels.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/styles.css",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/types.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/vite-env.d.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.appealAvailability.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.appealDisplay.batch41.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.appealPresentation.batch29.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.batch8.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.beforeUnload.batch52.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.evidence.batch22.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.output.batch8.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.paperRecovery.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.presentation.batch19.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.productUx.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.questionCohortScope.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.questionConflict.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.reauthentication.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.releaseConsistency.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.resultNotice.batch45.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.studentNextBatch.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.submissionReceipt.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/App.volatileReceipt.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/api.baseUrl.batch49.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/api.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/appealDrafts.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/components/PortalFeedback.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/errors.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/experience.css",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/appeals/AppealStatus.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/appeals/appealPresentation.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/AnswerReview.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/PaperViewer.annotationMapping.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/PaperViewer.batch49.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/PaperViewer.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/QuestionCohortScope.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/QuestionTables.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/StudentText.batch18.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/StudentText.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/annotationGeometry.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/annotationGeometry.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/results/ExamList.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/results/OldAppealDrafts.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/results/ResultDetail.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/results/ResultOverview.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/results/SubjectPerformance.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/features/results/results.batch6.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/session/SessionScreens.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/formatting.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/main.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/student-portal/src/navigation.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/navigation.ts",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/student-portal/src/studentSession.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/student-portal/src/styles.css",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/test/setup.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/test/studentAppBatch8Fixtures.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/student-portal/src/vite-env.d.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/teacher-portal/README.md",
+      "status": "documentation",
+      "read_coverage": "full_source_read",
+      "note": "仅为预留目录，当前教师能力在Web后台与桌面端。"
+    },
+    {
+      "path": "apps/web-admin/src/AppShell.tsx",
+      "status": "pending",
+      "read_coverage": "partial_source_read",
+      "note": "核实全局PendingBusinessCommands实际挂载；其他外壳逻辑未完整审读。"
+    },
+    {
+      "path": "apps/web-admin/src/api/businessCommand.ts",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/components/MathMarkdown.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/components/TOTPManagement.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/components/mathMarkdownRenderers.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.ux.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelApprovalWorkspace.remediation.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelApprovalWorkspace.savingSelect.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelApprovalWorkspace.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.scope.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/PromptVersionWorkspace.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceViews.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.batch11.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.batch46.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.scope.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringSetupChecklist.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringSetupChecklist.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/costUnits.batch49.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/costUnits.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/costUnits.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/eligibilityScope.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/governanceMaterials.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/scoringAssurancePresentation.batch11.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/scoringAssurancePresentation.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/totpManagementPresentation.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/students/studentImport.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/students/studentImport.ts",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/teachers/MemberProfileDialog.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/teachers/TeacherManagementPage.batch10.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/teachers/TeacherManagementPage.batch37.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/teachers/TeacherManagementPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/teachers/TeacherManagementViews.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/AnswerSheetModelForm.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/DocumentModelForm.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/ModelConfigDrawer.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/ModelConfigDrawer.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/ModelConfigForm.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/SchoolModelSelector.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/SchoolModelTable.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/modelConfigColumns.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/hooks/useChatModelAccess.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/hooks/useChatModelAccess.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/hooks/useModelApplications.grading.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/hooks/useModelApplications.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/hooks/useModelConfigDrafts.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/hooks/useModelOperations.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/hooks/useSchoolModelActions.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/lib/modelConfig.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/lib/modelConfigLocation.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/lib/modelConfigNotices.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/lib/modelOperationQueue.test.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/lib/modelOperationQueue.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/CreateSchoolForm.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolActivityTab.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolCreatedReceipt.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolDetailDrawer.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolManagementToolbar.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolMembersTab.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolMembersUx.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolModelsTab.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolModelsTab.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolOverviewTab.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolSummaryTable.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolSummaryTable.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolTabs.batch16.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolUsageTab.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolUsageUx.test.tsx",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/schoolCreatedReceipt.css",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/schoolPresentation.ts",
+      "status": "pending",
+      "read_coverage": "not_read",
+      "note": "本智能体仅盘点，尚未实际审读；不计入完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankConflictDialog.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+      "status": "pending",
+      "read_coverage": "partial_source_read",
+      "note": "核实保存冲突、读取最新、整体采用、备份下载与对应挂载；其他流程未完整审读。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/question-bank-conflict.css",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/features/question-bank/questionBankPageState.ts",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AuditLogPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已补充完整阅读入口、状态编排与展示，并核对productionReady实际路由；未做运行验证。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformSchoolsPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SessionManagementPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "补审：已完整阅读当前TSX，核对界面入口、条件展示/折叠、异步状态和失败恢复；仅报告用户任务负担，无业务修改，不代表真实后端或原生硬件集成验证。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/StudentManagementPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已完整阅读当前源文件；本次仅记录用户界面/状态流证据，未修改代码或补充注释，也不代表相关测试和后端均已审读。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SystemStatusPage.tsx",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "已补充完整阅读入口、状态编排与展示，并核对productionReady实际路由；未做运行验证。"
+    },
+    {
+      "path": "apps/web-admin/src/router/experience.ts",
+      "status": "reviewed",
+      "read_coverage": "full_source_read",
+      "note": "独立质量复核R05/R13/R16–R19：完整阅读界面与相关恢复/角色路径；只提审读纠错，不修改他人报告或业务代码。"
+    },
+    {
+      "path": "apps/web-admin/src/router/pageRendering.tsx",
+      "status": "pending",
+      "read_coverage": "partial_source_read",
+      "note": "阅读学生dashboard进入IdentityLandingPage及前85行；剩余渲染分支未完整审读。"
+    },
+    {
+      "path": "apps/web-admin/src/router/routes.tsx",
+      "status": "pending",
+      "read_coverage": "partial_source_read",
+      "note": "核实模型/成员/系统运维/审计productionReady角色路由，以及权限/设置mock范围；未完整阅读全部路由实现。"
+    }
+  ],
+  "supplemental_review": {
+    "completed_non_test_tsx": 31,
+    "new_findings": [
+      "D10",
+      "O11",
+      "O12",
+      "O13",
+      "O14"
+    ],
+    "student_browser_validation": "主智能体用合成夹具确认S02/S03/S05；本智能体本轮仅源码补审。",
+    "native_hardware_verified": false
+  },
+  "independent_cross_review": {
+    "findings": [
+      "R05",
+      "R13",
+      "R16",
+      "R17",
+      "R18",
+      "R19"
+    ],
+    "complete_source_files": 11,
+    "partial_source_files": 3,
+    "corrections_sent_to_parent": [
+      "R17固定18项+每评分点2项，不能普遍称至少20类",
+      "R13已列审核人与发布人，复制外发非代码强制唯一交接",
+      "R18限定全局待确认提示",
+      "R16链接children不保证是资料标题"
+    ]
+  }
+}

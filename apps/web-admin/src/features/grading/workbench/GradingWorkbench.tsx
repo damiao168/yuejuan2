@@ -436,12 +436,17 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
           editor={{
             draft, setDraft: scoreShortcuts.updateDraft, maxScore, rubricPoints,
             selectedGrade, canEditDraft, canReturn, actioning,
+            bookmarkMarked: bookmarks.state.isSuccess && !bookmarks.busy && !bookmarks.error && !bookmarks.uncertainTask ? bookmarks.state.data?.marked : undefined,
             onAdoptAiScore: () => void adoptAiScore(), canAdoptAiScore, onMarkDispute: markDispute
           }}
         />
         </TaskContentContainer>
       </section> : null}
-      {canWork ? <ReviewBookmarksDrawer scope={queryScope} controller={bookmarks} open={bookmarksOpen} initialExamId={initialExamId} onClose={() => setBookmarksOpen(false)} /> : null}
+      {canWork ? <ReviewBookmarksDrawer scope={queryScope} controller={bookmarks} open={bookmarksOpen} initialExamId={initialExamId} onClose={() => setBookmarksOpen(false)} onResumeTask={!managing ? taskId => changeQueueScope(() => {
+        // 标记只提供导航，任务上下文仍会重读权限、状态和租约，不能沿用只读材料直接交分。
+        if (!isCurrentScope()) return;
+        setBookmarksOpen(false); setTaskDrawerOpen(false); setTaskPreviewOpen(false); setSelectedTaskId(taskId);
+      }) : undefined} /> : null}
       <Drawer className="grading-reference-drawer" title="题目与评分细则" open={Boolean(referenceTab && ctx)} width="min(1100px, 94vw)" onClose={() => setReferenceTab(null)} destroyOnHidden>{referenceTab && ctx ? <FrozenQuestionReference context={ctx} activeTab={referenceTab} onTabChange={setReferenceTab} /> : null}</Drawer>
       {assignmentPreview ? <AssignmentPreview tasks={assignmentPreview} defaultGrader={assignmentUserId} options={graderOptions} unassignedCount={queue.unassignedCount} busy={actioning === "assign-tasks"} onCancel={() => setAssignmentPreview(null)} onConfirm={assignPlannedTasks} /> : null}
       <WorkbenchOverlays
@@ -461,6 +466,8 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         resolvingConflict={resolvingConflict}
         onClearDraftConflict={() => setDraftConflict(null)}
         onApplyDraftConflict={applyDraftConflict}
+        rubricPoints={rubricPoints}
+        calibrationQuestionDefaults={ctx?.question?.id === calibrationQuestionId ? { questionId: ctx.question.id, archetypeCode: ctx.question.assessment_archetype ?? "", maxScore: ctx.question.score } : undefined}
       />
     </div>
   );

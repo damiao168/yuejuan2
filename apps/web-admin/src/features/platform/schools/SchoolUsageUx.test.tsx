@@ -10,7 +10,8 @@ vi.mock("../../../api/platformSchools", () => ({ getPlatformSchoolUsage: api.usa
 vi.mock("../../../components/ResponsiveTable", () => ({ ResponsiveTable: () => null }));
 vi.mock("recharts", () => ({ CartesianGrid: () => null, Line: () => null, LineChart: () => null, ResponsiveContainer: () => null, Tooltip: () => null, XAxis: () => null, YAxis: () => null }));
 vi.mock("antd", () => ({
-  Alert: ({ message }: { message: ReactNode }) => <p>{message}</p>,
+  Alert: ({ message, action }: { message: ReactNode; action?: ReactNode }) => <div>{message}{action}</div>,
+  Button: ({ children, onClick }: { children: ReactNode; onClick: () => void }) => <button onClick={onClick}>{children}</button>,
   Spin: () => <p>加载中</p>,
   Segmented: ({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: { label: string; value: string }[] }) => <select aria-label="统计期间" value={value} onChange={(event) => onChange(event.target.value)}>{options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>,
   DatePicker: { RangePicker: () => <p>日期选择</p> },
@@ -45,6 +46,9 @@ describe("平台学校期间成本", () => {
     fireEvent.change(screen.getByLabelText("统计期间"), { target: { value: "7d" } });
     await screen.findByText("AI 用量加载失败");
     expect(screen.queryByText("US$1.234567")).toBeNull();
+    expect(api.usage).toHaveBeenLastCalledWith("school-b", { window: "7d" });
+    fireEvent.click(screen.getByRole("button", { name: "重试当前内容" }));
+    await screen.findByText("US$1.234567");
     expect(api.usage).toHaveBeenLastCalledWith("school-b", { window: "7d" });
   });
 });

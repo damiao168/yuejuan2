@@ -64,6 +64,16 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("AI 建议后台任务与题目归属", { timeout: 20_000 }, () => {
+  it("主入口一次点击直接登记本题建议任务，回读重绘不重提或自动采用", async () => {
+    mocks.create.mockResolvedValue({ job: job(first, "queued") });
+    const apply = vi.fn(); const props = { question: first, disabled: false, contentDirty: false, hasExistingPoints: false, dirty: false, onDirtyChange: vi.fn(), onApply: apply };
+    const view = render(<PaperRubricJobsProvider context={pageContext}><PaperRubricAssistant {...props} /></PaperRubricJobsProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "生成 AI 采分建议" }));
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
+    expect(mocks.create.mock.calls[0][0].id).toBe(first.id);
+    view.rerender(<PaperRubricJobsProvider context={pageContext}><PaperRubricAssistant {...props} /></PaperRubricJobsProvider>);
+    expect(mocks.create).toHaveBeenCalledTimes(1); expect(apply).not.toHaveBeenCalled();
+  });
   it("第一题提交未完成时仍可换题并提交第二题，两题均保留任务", async () => {
     const pendingFirst = deferred<{ job: RubricDraftJob }>();
     const pendingSecond = deferred<{ job: RubricDraftJob }>();

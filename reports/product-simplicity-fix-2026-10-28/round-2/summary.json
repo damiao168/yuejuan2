@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-28",
+  "observations": 120,
+  "completed": 109,
+  "summary": {
+    "fixed": 101,
+    "already_fixed": 8,
+    "partial": 9,
+    "pending": 2
+  },
+  "P1": {
+    "fixed": 20,
+    "partial": 2
+  },
+  "status_changes": [
+    {
+      "id": "EX-27",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "G03",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "G07",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "G08",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "S01",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "D04",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "D06",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "D10",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "O04",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "O13",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "O14",
+      "before": "pending",
+      "after": "fixed"
+    },
+    {
+      "id": "DP03",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "R13",
+      "before": "partial",
+      "after": "fixed"
+    }
+  ]
+}

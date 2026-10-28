@@ -4,9 +4,9 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 588,
-    "openapi": 345,
-    "registered_gaps": 243
+    "registered": 607,
+    "openapi": 367,
+    "registered_gaps": 240
   },
   "routes": [
     {
@@ -94,6 +94,13 @@
       "source": "services/api-gateway/internal/server/routes_governance.go",
       "coverage": "openapi",
       "operation_id": "getManagedChatModel"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ai-eligibility/decisions",
+      "source": "services/api-gateway/internal/aieligibility/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "listAIEligibilityDecisions"
     },
     {
       "method": "GET",
@@ -531,6 +538,27 @@
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/appeals/{id}/private-draft",
+      "source": "services/api-gateway/internal/server/routes_release.go",
+      "coverage": "openapi",
+      "operation_id": "deleteAppealPrivateDraft"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/appeals/{id}/private-draft",
+      "source": "services/api-gateway/internal/server/routes_release.go",
+      "coverage": "openapi",
+      "operation_id": "getAppealPrivateDraft"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/appeals/{id}/private-draft",
+      "source": "services/api-gateway/internal/server/routes_release.go",
+      "coverage": "openapi",
+      "operation_id": "saveAppealPrivateDraft"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/appeals/{id}/recommendation",
       "source": "services/api-gateway/internal/server/routes_release.go",
@@ -604,6 +632,27 @@
       "operation_id": "assignArbitrationTask"
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/arbitration-tasks/{id}/private-draft",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "deleteArbitrationPrivateDraft"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/arbitration-tasks/{id}/private-draft",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "getArbitrationPrivateDraft"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/arbitration-tasks/{id}/private-draft",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "saveArbitrationPrivateDraft"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/arbitration-tasks/{id}/submit",
       "source": "services/api-gateway/internal/server/routes_grading.go",
@@ -628,27 +677,15 @@
       "method": "GET",
       "path": "/api/v1/audit-logs",
       "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "listAuditLogs"
     },
     {
       "method": "POST",
       "path": "/api/v1/audit-logs/export",
       "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "exportAuditLogs"
     },
     {
       "method": "POST",
@@ -1798,6 +1835,27 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/calibration-templates",
+      "source": "services/api-gateway/internal/calibration/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "listCalibrationSchoolTemplates"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/calibration-templates",
+      "source": "services/api-gateway/internal/calibration/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "approveCalibrationSchoolTemplate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/exams/{examId}/questions/{questionId}/calibration-templates/{templateId}/withdraw",
+      "source": "services/api-gateway/internal/calibration/handlers.go",
+      "coverage": "openapi",
+      "operation_id": "withdrawCalibrationSchoolTemplate"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/exams/{examId}/questions/{questionId}/gold-coverage",
       "source": "services/api-gateway/internal/goldpaper/handlers.go",
       "coverage": "openapi",
@@ -2184,6 +2242,13 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/exams/{examId}/subjective-grading-sources",
+      "source": "services/api-gateway/internal/server/routes_grading.go",
+      "coverage": "openapi",
+      "operation_id": "listSubjectiveGradingSources"
     },
     {
       "method": "GET",
@@ -3851,14 +3916,8 @@
       "method": "PATCH",
       "path": "/api/v1/platform/model-api-configs/{id}",
       "source": "services/api-gateway/internal/server/routes_governance.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "updateManagedModelAPIConfig"
     },
     {
       "method": "POST",
@@ -4032,6 +4091,13 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/public/schools/{code}",
+      "source": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "coverage": "openapi",
+      "operation_id": "getPublicSchoolName"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/question-appeals",
       "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
@@ -4071,6 +4137,27 @@
       "source": "services/api-gateway/internal/server/routes_release.go",
       "coverage": "openapi",
       "operation_id": "listQuestionAppealEvents"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/question-appeals/{id}/private-draft",
+      "source": "services/api-gateway/internal/server/routes_release.go",
+      "coverage": "openapi",
+      "operation_id": "deleteQuestionAppealPrivateDraft"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/question-appeals/{id}/private-draft",
+      "source": "services/api-gateway/internal/server/routes_release.go",
+      "coverage": "openapi",
+      "operation_id": "getQuestionAppealPrivateDraft"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/question-appeals/{id}/private-draft",
+      "source": "services/api-gateway/internal/server/routes_release.go",
+      "coverage": "openapi",
+      "operation_id": "saveQuestionAppealPrivateDraft"
     },
     {
       "method": "POST",
@@ -4183,6 +4270,34 @@
       "source": "services/api-gateway/internal/server/routes_questionbank.go",
       "coverage": "openapi",
       "operation_id": "approveQuestionBankVersion"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/question-bank/versions/{versionId}/claim-publish",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
+      "coverage": "openapi",
+      "operation_id": "claimQuestionBankPublish"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/question-bank/versions/{versionId}/claim-review",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
+      "coverage": "openapi",
+      "operation_id": "claimQuestionBankReview"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/question-bank/versions/{versionId}/handoff",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
+      "coverage": "openapi",
+      "operation_id": "assignQuestionBankHandoff"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/question-bank/versions/{versionId}/handoff-events",
+      "source": "services/api-gateway/internal/server/routes_questionbank.go",
+      "coverage": "openapi",
+      "operation_id": "listQuestionBankHandoffEvents"
     },
     {
       "method": "POST",

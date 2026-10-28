@@ -1,5 +1,6 @@
+import { PrivateOpinionDraft } from "../components/PrivateOpinionDraft";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { App, Button, Space } from "antd";
+import { Alert, App, Button, Space } from "antd";
 import { RefreshCw } from "lucide-react";
 import { ApiClientError, getUserErrorMessage } from "../api/client";
 import { listAuditLogs, type AuditLog } from "../api/audit";
@@ -16,6 +17,7 @@ import {
 import type { SessionUser } from "../auth/session";
 import { hashQueryParam } from "../router/query";
 import { useUnsavedChangesGuard } from "../router/useUnsavedChangesGuard";
+import { loadOpinionDraft, removeOpinionDraft, saveOpinionDraft, useOpinionDraftReloadWarning } from "../auth/reviewOpinionDraft";
 import { GoldCoverageGaps } from "../features/gold-papers";
 import { AnswerGroupingDrawer } from "../features/answer-groups";
 import { ArbitrationTaskRail } from "./ArbitrationTaskRail";
@@ -57,6 +59,7 @@ function createInitialDraft(task?: ArbitrationTask): DecisionDraft {
     studentFeedback: task?.student_feedback ?? ""
   };
 }
+const arbitrationOpinionSource = (task: ArbitrationTask) => `${task.exam_id}:${task.question_id}`;
 
 export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams, currentUser, initialExamId = "", personalScope = false }: Readonly<{ canAssign: boolean; canWork: boolean; canReadAudit: boolean; canReadExams: boolean; currentUser: SessionUser; initialExamId?: string; personalScope?: boolean }>) {
   const { message, modal } = App.useApp();
@@ -83,6 +86,12 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
   const [detailError, setDetailError] = useState<string | null>(null);
   const [draft, setDraft] = useState<DecisionDraft>(() => createInitialDraft());
   const [draftTouched, setDraftTouched] = useState(false);
+  const [draftToReview, setDraftToReview] = useState<DecisionDraft>();
+  const [memorySaved, setMemorySaved] = useState(false);
+  useOpinionDraftReloadWarning(draftTouched && memorySaved);
+  const rememberDraft = () => detail && saveOpinionDraft("arbitration", detail.task.id, arbitrationOpinionSource(detail.task), detail.task.revision, draft);
+  // 详情和选择仍一致才缓存，避免异步换题时把旧裁决挂到新任务。
+  useEffect(() => { if (draftTouched && detail?.task.id === selectedTaskId) setMemorySaved(Boolean(rememberDraft())); });
   const [finalGrade, setFinalGrade] = useState<FinalGrade | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -277,6 +286,10 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
         setDetail({ task: result.arbitration_task, question, warnings });
         setDraft(createInitialDraft(result.arbitration_task));
         setDraftTouched(false);
+        setDraftToReview(undefined); setMemorySaved(false);
+        const saved = loadOpinionDraft<DecisionDraft>("arbitration", task.id, arbitrationOpinionSource(task), task.revision);
+        if (saved?.needsReview) setDraftToReview(saved.values);
+        else if (saved) { setDraft(saved.values); setDraftTouched(true); setMemorySaved(true); }
         await loadAudits(result.arbitration_task);
       } catch (error) {
         if (!isCurrentRequest()) return;
@@ -297,11 +310,11 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
     void loadDetail(selectedTaskId);
   }, [loadDetail, selectedTaskId]);
 
-  useUnsavedChangesGuard({ dirty: draftTouched, busy: Boolean(actioning), description: "最终分、仲裁说明和学生反馈尚未提交，离开后无法恢复这些内容。" });
+  useUnsavedChangesGuard({ dirty: draftTouched && !memorySaved, busy: Boolean(actioning), description: "最终分、仲裁说明和学生反馈尚未提交，离开后无法恢复这些内容。" });
 
   const confirmDraftDiscard = (action: () => void, actionLabel: string) => {
     if (actioning) { message.warning("仲裁操作正在提交，请等待完成后再切换或刷新。"); return; }
-    if (!draftTouched) { action(); return; }
+    if (!draftTouched || rememberDraft()) { action(); return; }
     modal.confirm({
       title: "放弃当前未提交的仲裁内容？",
       content: "最终分、仲裁说明和学生反馈目前只在本页，离开当前任务后无法恢复。",
@@ -405,6 +418,7 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
         expected_revision: expectedRevision
       });
       if (selectedTaskIdRef.current !== taskId || detailRequestRef.current !== detailRequestId) return;
+      removeOpinionDraft("arbitration", taskId, arbitrationOpinionSource(detail.task));
       setDetail((current) => (current ? { ...current, task: result.arbitration_task } : current));
       setDraft(createInitialDraft(result.arbitration_task));
       setDraftTouched(false);
@@ -430,6 +444,8 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
 
   return (
     <div className={tasks.length === 0 && !loadingTasks ? "arbitration-shell empty" : "arbitration-shell"}>
+      {detail && detail.task.status !== "submitted" && detail.task.assigned_to === currentUser.id ? <PrivateOpinionDraft<DecisionDraft> key={`${detail.task.id}:${detail.task.revision}`} kind="arbitration" recordId={detail.task.id} source={arbitrationOpinionSource(detail.task)} sourceRevision={detail.task.revision} dirty={draftTouched} busy={Boolean(actioning)} values={draft} onRestore={(values,needsReview)=>{if(needsReview){setDraftToReview(values);return;}setDraft(values);setDraftTouched(true);}} /> : null}
+      {draftToReview && detail ? <Alert type="warning" message="已有另一版未提交裁决，请核对后恢复" description="核对当前材料后，可恢复旧输入；恢复不会自动提交或跳过当前修订校验。" action={<><Button onClick={() => { setDraft(draftToReview); setDraftTouched(true); setDraftToReview(undefined); }}>已核对，恢复旧输入</Button><Button onClick={() => { removeOpinionDraft("arbitration", detail.task.id, arbitrationOpinionSource(detail.task)); setDraftToReview(undefined); }}>放弃旧输入</Button></>} /> : null}
       <section className="arbitration-topbar">
         <div>
           <Space>
@@ -465,7 +481,7 @@ export function ArbitrationPage({ canAssign, canWork, canReadAudit, canReadExams
           <ArbitrationDecisionPanel selectedTask={selectedTask} detail={detail} draft={draft} draftTouched={draftTouched}
             finalGrade={finalGrade} maxScore={maxScore} actioning={actioning} editingDisabled={editingDisabled}
             canAssign={canAssign} canSubmit={canSubmit && materialsReady} auditLoading={auditLoading} auditError={auditError} auditLogs={auditLogs}
-            setDraft={setDraft} setDraftTouched={setDraftTouched} onAssign={() => { void assignToMe(); }} onSubmit={() => { void submitDecision(); }}
+            setDraft={setDraft} setDraftTouched={setDraftTouched} memorySaved={memorySaved} onAssign={() => { void assignToMe(); }} onSubmit={() => { void submitDecision(); }}
             onAuditRetry={() => { if (detail?.task) void loadAudits(detail.task, finalGrade ?? undefined); }} />
         </section>
       </div>

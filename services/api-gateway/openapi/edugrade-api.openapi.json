@@ -6191,7 +6191,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Saves a question-specific policy using target revision compare-and-swap. Optional school_template_id and school_template_revision must appear together; the server locks and revalidates the approved template, school, subject, archetype and maximum score, then copies authoritative thresholds. Manual policy saves omit template provenance. Neither workflow grants a grader qualification or skips independent calibration."
       }
     },
     "/api/v1/exams/{examId}/questions/{questionId}/calibration-sessions": {
@@ -18606,6 +18607,19 @@
               "default": 0
             },
             "description": "Stable offset"
+          },
+          {
+            "name": "pending_action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "review",
+                "publish"
+              ]
+            },
+            "description": "只列当前账号在授权范围内可处理的审核或发布待办；审核排除版本作者。按现有状态派生，不发送外部通知。"
           }
         ],
         "responses": {
@@ -25032,6 +25046,2524 @@
           }
         }
       }
+    },
+    "/api/v1/platform/model-api-configs/{id}": {
+      "patch": {
+        "operationId": "updateManagedModelAPIConfig",
+        "tags": [
+          "Platform models"
+        ],
+        "summary": "更新学校模型 API 配置或仅轮换密钥",
+        "description": "沿用平台模型管理权限与目标学校授权。连接变化先检测，再按原配置更新时间执行乐观写入。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedModelAPIConfigUpdateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "配置已更新，不返回明文密钥",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagedModelAPIConfigResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入或检测失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "配置不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "配置已变化",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/question-bank/versions/{versionId}/handoff": {
+      "post": {
+        "operationId": "assignQuestionBankHandoff",
+        "tags": [
+          "QuestionBank"
+        ],
+        "description": "Persist assignment or claim within current bank ACL and tenant/school scope. Compare both content and handoff revisions; command replay rechecks current authorization. Assignment is limited to the original author or a bank manager. Claims require the corresponding review or publish duty and current assignment.",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionBankVersionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action or organization access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or private bank not granted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision, command identity or lifecycle conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Durable storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionBankHandoffRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/question-bank/versions/{versionId}/claim-review": {
+      "post": {
+        "operationId": "claimQuestionBankReview",
+        "tags": [
+          "QuestionBank"
+        ],
+        "description": "Persist assignment or claim within current bank ACL and tenant/school scope. Compare both content and handoff revisions; command replay rechecks current authorization. Assignment is limited to the original author or a bank manager. Claims require the corresponding review or publish duty and current assignment.",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionBankVersionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action or organization access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or private bank not granted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision, command identity or lifecycle conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Durable storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionBankClaimRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/question-bank/versions/{versionId}/claim-publish": {
+      "post": {
+        "operationId": "claimQuestionBankPublish",
+        "tags": [
+          "QuestionBank"
+        ],
+        "description": "Persist assignment or claim within current bank ACL and tenant/school scope. Compare both content and handoff revisions; command replay rechecks current authorization. Assignment is limited to the original author or a bank manager. Claims require the corresponding review or publish duty and current assignment.",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionBankVersionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action or organization access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or private bank not granted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision, command identity or lifecycle conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Durable storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionBankClaimRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/question-bank/versions/{versionId}/handoff-events": {
+      "get": {
+        "operationId": "listQuestionBankHandoffEvents",
+        "tags": [
+          "QuestionBank"
+        ],
+        "description": "Read the latest 100 immutable handoff events within current bank read ACL and tenant/school scope, ordered newest first.",
+        "parameters": [
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionBankHandoffEventsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action or organization access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or private bank not granted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision, command identity or lifecycle conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Durable storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai-eligibility/decisions": {
+      "get": {
+        "operationId": "listAIEligibilityDecisions",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AIEligibilityDecisionResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIEligibilityDecisionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Decision not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Search frozen AI eligibility decisions in the existing governance school scope. Summary excludes detailed input snapshots; platform delegation uses the existing tenant_id authorization checks."
+      }
+    },
+    "/api/v1/audit-logs": {
+      "get": {
+        "operationId": "listAuditLogs",
+        "tags": [
+          "Audit"
+        ],
+        "description": "Requires current audit read permission and tenant-wide scope. Keyword search covers visible metadata and actor identity, excluding before/after JSON. Records are redacted and paginated after scope filtering.",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exam_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "created_from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "created_to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action or organization access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or private bank not granted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision, command identity or lifecycle conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Durable storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit-logs/export": {
+      "post": {
+        "operationId": "exportAuditLogs",
+        "tags": [
+          "Audit"
+        ],
+        "description": "Requires audit export permission, tenant-wide scope and recent authentication. Uses the same scoped keyword and metadata filters as list; cursor is ignored. Redacts sensitive fields and records an export audit event. Maximum 200 rows.",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exam_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ip_address",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "created_from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "created_to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Positive requested count, clamped to 200 by the store.",
+              "default": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV with redacted records and watermark. Export is capped at 200 rows.",
+            "headers": {
+              "X-EduGrade-Watermark": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action or organization access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or private bank not granted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision, command identity or lifecycle conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Durable storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/schools/{code}": {
+      "get": {
+        "operationId": "getPublicSchoolName",
+        "tags": [
+          "Public"
+        ],
+        "security": [],
+        "description": "Resolve one explicitly supplied active school code to its public name. Returns no internal identifiers or school directory. Unknown, disabled, deleted and platform tenants return 404.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public school name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSchoolNameResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid school code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "School unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exams/{examId}/subjective-grading-sources": {
+      "get": {
+        "operationId": "listSubjectiveGradingSources",
+        "tags": [
+          "SubjectiveGrading"
+        ],
+        "description": "Requires current grading management duty and authorized exam scope. Lists existing answer segments, including those without review tasks. Anonymous labels contain no student name or answer body. Availability only assists selection; batch creation revalidates all formal gates.",
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "question_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current scope or duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision or source conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Authorized source page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectiveGradingSourcePage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/question-appeals/{id}/private-draft": {
+      "get": {
+        "operationId": "getQuestionAppealPrivateDraft",
+        "tags": [
+          "PrivateOpinionDraft"
+        ],
+        "description": "Private opinion draft owned by the authenticated tenant and actor. Rechecks the original resource duty, assignment, editability and current source on every access. No list/export or delegated access to another actor. Saves use revision compare-and-swap; delete and expiry keep a revision tombstone. Draft expires after seven days. Successful formal submission clears only the matching actor/source revision in the same database transaction. Body is excluded from audit and outbox.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current scope or duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision or source conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveQuestionAppealPrivateDraft",
+        "tags": [
+          "PrivateOpinionDraft"
+        ],
+        "description": "Private opinion draft owned by the authenticated tenant and actor. Rechecks the original resource duty, assignment, editability and current source on every access. No list/export or delegated access to another actor. Saves use revision compare-and-swap; delete and expiry keep a revision tombstone. Draft expires after seven days. Successful formal submission clears only the matching actor/source revision in the same database transaction. Body is excluded from audit and outbox.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current scope or duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision or source conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutPrivateOpinionDraftRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteQuestionAppealPrivateDraft",
+        "tags": [
+          "PrivateOpinionDraft"
+        ],
+        "description": "Private opinion draft owned by the authenticated tenant and actor. Rechecks the original resource duty, assignment, editability and current source on every access. No list/export or delegated access to another actor. Saves use revision compare-and-swap; delete and expiry keep a revision tombstone. Draft expires after seven days. Successful formal submission clears only the matching actor/source revision in the same database transaction. Body is excluded from audit and outbox.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current scope or duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision or source conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePrivateOpinionDraftRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appeals/{id}/private-draft": {
+      "get": {
+        "operationId": "getAppealPrivateDraft",
+        "tags": [
+          "PrivateOpinionDraft"
+        ],
+        "description": "Private opinion draft owned by the authenticated tenant and actor. Rechecks the original resource duty, assignment, editability and current source on every access. No list/export or delegated access to another actor. Saves use revision compare-and-swap; delete and expiry keep a revision tombstone. Draft expires after seven days. Successful formal submission clears only the matching actor/source revision in the same database transaction. Body is excluded from audit and outbox.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current scope or duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision or source conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveAppealPrivateDraft",
+        "tags": [
+          "PrivateOpinionDraft"
+        ],
+        "description": "Private opinion draft owned by the authenticated tenant and actor. Rechecks the original resource duty, assignment, editability and current source on every access. No list/export or delegated access to another actor. Saves use revision compare-and-swap; delete and expiry keep a revision tombstone. Draft expires after seven days. Successful formal submission clears only the matching actor/source revision in the same database transaction. Body is excluded from audit and outbox.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current scope or duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision or source conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutPrivateOpinionDraftRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAppealPrivateDraft",
+        "tags": [
+          "PrivateOpinionDraft"
+        ],
+        "description": "Private opinion draft owned by the authenticated tenant and actor. Rechecks the original resource duty, assignment, editability and current source on every access. No list/export or delegated access to another actor. Saves use revision compare-and-swap; delete and expiry keep a revision tombstone. Draft expires after seven days. Successful formal submission clears only the matching actor/source revision in the same database transaction. Body is excluded from audit and outbox.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current scope or duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision or source conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePrivateOpinionDraftRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/arbitration-tasks/{id}/private-draft": {
+      "get": {
+        "operationId": "getArbitrationPrivateDraft",
+        "tags": [
+          "PrivateOpinionDraft"
+        ],
+        "description": "Private opinion draft owned by the authenticated tenant and actor. Rechecks the original resource duty, assignment, editability and current source on every access. No list/export or delegated access to another actor. Saves use revision compare-and-swap; delete and expiry keep a revision tombstone. Draft expires after seven days. Successful formal submission clears only the matching actor/source revision in the same database transaction. Body is excluded from audit and outbox.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current scope or duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision or source conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveArbitrationPrivateDraft",
+        "tags": [
+          "PrivateOpinionDraft"
+        ],
+        "description": "Private opinion draft owned by the authenticated tenant and actor. Rechecks the original resource duty, assignment, editability and current source on every access. No list/export or delegated access to another actor. Saves use revision compare-and-swap; delete and expiry keep a revision tombstone. Draft expires after seven days. Successful formal submission clears only the matching actor/source revision in the same database transaction. Body is excluded from audit and outbox.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current scope or duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision or source conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutPrivateOpinionDraftRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteArbitrationPrivateDraft",
+        "tags": [
+          "PrivateOpinionDraft"
+        ],
+        "description": "Private opinion draft owned by the authenticated tenant and actor. Rechecks the original resource duty, assignment, editability and current source on every access. No list/export or delegated access to another actor. Saves use revision compare-and-swap; delete and expiry keep a revision tombstone. Draft expires after seven days. Successful formal submission clears only the matching actor/source revision in the same database transaction. Body is excluded from audit and outbox.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current scope or duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision or source conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePrivateOpinionDraftRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exams/{examId}/questions/{questionId}/calibration-templates": {
+      "get": {
+        "operationId": "listCalibrationSchoolTemplates",
+        "tags": [
+          "GraderCalibration"
+        ],
+        "description": "Lists explicitly approved immutable school standards matching the current authorized question school, subject, archetype and maximum score. Returns server-derived capabilities and question facts. No arbitrary school identifier is accepted.",
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current management scope or school approval duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Source unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Source revision, approval state or target policy changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Authoritative question type or score is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current authorized result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationSchoolTemplateDirectory"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "approveCalibrationSchoolTemplate",
+        "tags": [
+          "GraderCalibration"
+        ],
+        "description": "Requires review management and trusted management of the current question school. Explicitly approves a snapshot of its saved policy at the expected source revision. Duplicate approval of the same source revision and name returns the existing fact, including withdrawn state; it does not silently approve again.",
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current management scope or school approval duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Source unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Source revision, approval state or target policy changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Authoritative question type or score is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current authorized result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationSchoolTemplateResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveCalibrationSchoolTemplateRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exams/{examId}/questions/{questionId}/calibration-templates/{templateId}/withdraw": {
+      "post": {
+        "operationId": "withdrawCalibrationSchoolTemplate",
+        "tags": [
+          "GraderCalibration"
+        ],
+        "description": "Withdraws an approved school standard using its revision. Rechecks current school management duty and template ownership. A withdrawal prevents subsequent template applications and does not rewrite policies already saved from that snapshot.",
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current management scope or school approval duty denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Source unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Source revision, approval state or target policy changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Authoritative question type or score is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Operation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Current authorized result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationSchoolTemplateResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawCalibrationSchoolTemplateRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -25327,7 +27859,7 @@
           "aggregation_version",
           "rounding"
         ],
-        "description": "空值不替换为默认阈值；多评确认时两个分差都必须由管理员填写。",
+        "description": "空值不替换为默认阈值；dual 仅要求主评分分差，dual_conditional_arbiter 还要求教师复核分差。",
         "properties": {
           "primary_allowed_diff_points": {
             "anyOf": [
@@ -25340,7 +27872,7 @@
             ],
             "minimum": 0,
             "maximum": 1000,
-            "description": "管理员手填的两个主评分允许分差，单位：分。single 可为 null；多评确认时必须填写，且不得大于 teacher_allowed_diff_points。"
+            "description": "管理员手填的两个主评分允许分差，单位：分。single 可为 null；dual 与 dual_conditional_arbiter 确认时必填。三模型模式下不得大于 teacher_allowed_diff_points。"
           },
           "teacher_allowed_diff_points": {
             "anyOf": [
@@ -25353,7 +27885,7 @@
             ],
             "minimum": 0,
             "maximum": 1000,
-            "description": "管理员手填的教师复核允许分差，单位：分。single 可为 null；多评确认时必须填写。"
+            "description": "管理员手填的第三模型介入后的教师复核允许分差，单位：分。仅 dual_conditional_arbiter 确认时必填；single 与 dual 可为 null。"
           },
           "aggregation_version": {
             "type": "string",
@@ -25390,7 +27922,7 @@
             ],
             "minimum": 0,
             "maximum": 1000,
-            "description": "管理员手填的两个主评分允许分差，单位：分。single 可为 null；多评确认时必须填写，且不得大于 teacher_allowed_diff_points。"
+            "description": "管理员手填的两个主评分允许分差，单位：分。single 可为 null；dual 与 dual_conditional_arbiter 确认时必填。三模型模式下不得大于 teacher_allowed_diff_points。"
           },
           "teacher_allowed_diff_points": {
             "anyOf": [
@@ -25403,7 +27935,7 @@
             ],
             "minimum": 0,
             "maximum": 1000,
-            "description": "管理员手填的教师复核允许分差，单位：分。single 可为 null；多评确认时必须填写。"
+            "description": "管理员手填的第三模型介入后的教师复核允许分差，单位：分。仅 dual_conditional_arbiter 确认时必填；single 与 dual 可为 null。"
           },
           "aggregation_version": {
             "type": "string",
@@ -34046,6 +36578,10 @@
             "items": {
               "$ref": "#/components/schemas/GoldPaperVersion"
             }
+          },
+          "question_no": {
+            "type": "string",
+            "description": "当前账号已有授权范围内的可辨认摘要；历史数据可缺失，不包含原评人或原分。"
           }
         }
       },
@@ -34336,6 +36872,15 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "school_template_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Approved school template used for this policy; omitted for manually configured policies."
+          },
+          "school_template_revision": {
+            "type": "integer",
+            "minimum": 1
           }
         }
       },
@@ -34387,6 +36932,15 @@
           },
           "expected_revision": {
             "type": "integer"
+          },
+          "school_template_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Approved school template used for this policy; omitted for manually configured policies."
+          },
+          "school_template_revision": {
+            "type": "integer",
+            "minimum": 1
           }
         }
       },
@@ -38964,6 +41518,22 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "exam_name": {
+            "type": "string",
+            "description": "当前账号已有授权范围内的可辨认摘要；历史数据可缺失，不包含原评人或原分。"
+          },
+          "subject": {
+            "type": "string",
+            "description": "当前账号已有授权范围内的可辨认摘要；历史数据可缺失，不包含原评人或原分。"
+          },
+          "question_no": {
+            "type": "string",
+            "description": "当前账号已有授权范围内的可辨认摘要；历史数据可缺失，不包含原评人或原分。"
+          },
+          "anonymous_code": {
+            "type": "string",
+            "description": "当前账号已有授权范围内的可辨认摘要；历史数据可缺失，不包含原评人或原分。"
           }
         }
       },
@@ -40309,6 +42879,10 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "eligible_for_resolution": {
+            "type": "boolean",
+            "description": "Administrative projection: current server checks confirm the associated regrade, source release, student paper, question and reviewed facts are eligible to resolve this application. Resolution revalidates these facts; this flag grants no authority."
           }
         }
       },
@@ -41249,6 +43823,22 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "exam_name": {
+            "type": "string",
+            "description": "当前账号已有授权范围内的可辨认摘要；历史数据可缺失，不包含原评人或原分。"
+          },
+          "subject": {
+            "type": "string",
+            "description": "当前账号已有授权范围内的可辨认摘要；历史数据可缺失，不包含原评人或原分。"
+          },
+          "question_no": {
+            "type": "string",
+            "description": "当前账号已有授权范围内的可辨认摘要；历史数据可缺失，不包含原评人或原分。"
+          },
+          "anonymous_code": {
+            "type": "string",
+            "description": "当前账号已有授权范围内的可辨认摘要；历史数据可缺失，不包含原评人或原分。"
           }
         }
       },
@@ -47569,6 +50159,9 @@
           },
           "import_provenance": {
             "$ref": "#/components/schemas/QuestionBankImportProvenance"
+          },
+          "handoff": {
+            "$ref": "#/components/schemas/QuestionBankHandoff"
           }
         },
         "required": [
@@ -47823,6 +50416,10 @@
           "custom_metadata": {
             "type": "object",
             "additionalProperties": true
+          },
+          "scoring": {
+            "$ref": "#/components/schemas/QuestionBankScoring",
+            "description": "可选；提供时题目内容与评分事实在同一修订、同一事务内保存，任一校验失败都不保存。"
           }
         },
         "required": [
@@ -48198,6 +50795,18 @@
           "comment": {
             "type": "string",
             "maxLength": 2000
+          },
+          "expected_handoff_revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reviewer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "publisher_id": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -55695,6 +58304,944 @@
           "size_bytes",
           "pixel_bbox",
           "source"
+        ]
+      },
+      "ManagedModelAPIConfigUpdateInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "adapter_type": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "model_name": {
+            "type": "string"
+          },
+          "model_version": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "api_key": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "expected_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "编辑或轮换开始时的配置更新时间；检测后的写锁再次校验，变化返回冲突。"
+          },
+          "credential_only": {
+            "type": "boolean",
+            "description": "仅轮换密钥；其他配置字段从服务器当前记录补全并忽略客户端值。"
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "display_name",
+              "adapter_type",
+              "base_url",
+              "model_name",
+              "model_version",
+              "region",
+              "status",
+              "is_default"
+            ],
+            "properties": {
+              "credential_only": {
+                "const": false
+              }
+            }
+          },
+          {
+            "required": [
+              "credential_only",
+              "api_key",
+              "expected_updated_at"
+            ],
+            "properties": {
+              "credential_only": {
+                "const": true
+              },
+              "api_key": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        ]
+      },
+      "ManagedModelAPIConfig": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "provider_key": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "adapter_type": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "model_name": {
+            "type": "string"
+          },
+          "model_version": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "capability_profile": {
+            "type": "string"
+          },
+          "health_state": {
+            "type": "string"
+          },
+          "credential_hint": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "last_test_status": {
+            "type": "string"
+          },
+          "last_text_status": {
+            "type": "string"
+          },
+          "last_capability_status": {
+            "type": "string"
+          },
+          "config_source": {
+            "type": "string"
+          },
+          "provider_registry_version": {
+            "type": "string"
+          },
+          "credential_configured": {
+            "type": "boolean"
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modalities": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pricing_policy": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data_policy": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_text_usage": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_text_diagnostic": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_capability_usage": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_capability_diagnostic": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "display_name",
+          "adapter_type",
+          "base_url",
+          "model_name",
+          "model_version",
+          "region",
+          "status",
+          "is_default",
+          "credential_configured",
+          "updated_at"
+        ],
+        "description": "模型API配置的非秘密读模型。不返回 api_key；检测诊断等历史扩展字段保留。"
+      },
+      "ManagedModelAPIConfigResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/ManagedModelAPIConfig"
+          }
+        }
+      },
+      "QuestionBankHandoff": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reviewer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "publisher_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "claimed_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "claimed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "revision",
+          "updated_at"
+        ]
+      },
+      "QuestionBankHandoffRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expected_handoff_revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reviewer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "publisher_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "expected_handoff_revision",
+          "reviewer_id",
+          "publisher_id"
+        ]
+      },
+      "QuestionBankClaimRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expected_handoff_revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "expected_revision",
+          "expected_handoff_revision"
+        ]
+      },
+      "QuestionBankHandoffEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "handoff_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "content_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "assigned",
+              "reassigned",
+              "claimed",
+              "approved",
+              "published",
+              "returned"
+            ]
+          },
+          "actor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipient_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "version_id",
+          "handoff_revision",
+          "content_revision",
+          "kind",
+          "actor_id",
+          "created_at"
+        ]
+      },
+      "QuestionBankHandoffEventsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionBankHandoffEvent"
+            }
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
+      "AIEligibilityDecisionSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "run_item_id": {
+            "type": "string"
+          },
+          "subject_code": {
+            "type": "string"
+          },
+          "education_stage": {
+            "type": "string"
+          },
+          "archetype_code": {
+            "type": "string"
+          },
+          "risk_tier": {
+            "type": "string"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/ScoringMode"
+          },
+          "external_ai_allowed": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "run_item_id",
+          "subject_code",
+          "education_stage",
+          "archetype_code",
+          "risk_tier",
+          "decision",
+          "external_ai_allowed",
+          "created_at"
+        ]
+      },
+      "AIEligibilityDecisionPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AIEligibilityDecisionSummary"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          },
+          "has_more": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "decisions",
+          "next_cursor",
+          "has_more"
+        ]
+      },
+      "AuditLog": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "actor_id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "before_value": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "after_value": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "action",
+          "target_type",
+          "created_at"
+        ]
+      },
+      "AuditLogPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "audit_logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditLog"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          },
+          "has_more": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "audit_logs",
+          "next_cursor",
+          "has_more"
+        ]
+      },
+      "PublicSchoolNameResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "school": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "school"
+        ]
+      },
+      "SubjectiveGradingSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "answer_segment_id": {
+            "type": "string"
+          },
+          "question_id": {
+            "type": "string"
+          },
+          "question_no": {
+            "type": "string"
+          },
+          "submission_label": {
+            "type": "string"
+          },
+          "question_type": {
+            "type": "string"
+          },
+          "unavailable_reason": {
+            "type": "string"
+          },
+          "ready": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "answer_segment_id",
+          "question_id",
+          "question_no",
+          "submission_label",
+          "question_type",
+          "unavailable_reason",
+          "ready"
+        ]
+      },
+      "SubjectiveGradingSourcePage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubjectiveGradingSource"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          },
+          "has_more": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sources",
+          "next_cursor",
+          "has_more"
+        ]
+      },
+      "PrivateOpinionDraft": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "source_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Kind-specific allowlisted opinion fields only, validated by the server; maximum serialized UTF-8 payload 32 KiB. No attachment bytes or arbitrary nested records."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "source",
+          "source_revision",
+          "values",
+          "updated_at",
+          "expires_at"
+        ]
+      },
+      "PrivateOpinionDraftResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "draft": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PrivateOpinionDraft"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "revision",
+          "source",
+          "source_revision",
+          "draft"
+        ]
+      },
+      "PutPrivateOpinionDraftRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "source_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Kind-specific allowlisted opinion fields only, validated by the server; maximum serialized UTF-8 payload 32 KiB. No attachment bytes or arbitrary nested records."
+          }
+        },
+        "required": [
+          "source",
+          "source_revision",
+          "expected_revision",
+          "values"
+        ]
+      },
+      "DeletePrivateOpinionDraftRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "expected_revision"
+        ]
+      },
+      "CalibrationSchoolTemplate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "school_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source_exam_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source_question_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approved_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "withdrawn_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "source_policy_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "policy": {
+            "$ref": "#/components/schemas/CalibrationPolicy"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "withdrawn"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "withdrawn_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "withdraw_reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "id",
+          "school_id",
+          "source_exam_id",
+          "source_question_id",
+          "approved_by",
+          "subject",
+          "name",
+          "source_policy_revision",
+          "policy",
+          "status",
+          "revision",
+          "approved_at"
+        ]
+      },
+      "CalibrationSchoolTemplateDirectory": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "templates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationSchoolTemplate"
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "can_approve": {
+                "type": "boolean"
+              },
+              "can_withdraw": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "can_approve",
+              "can_withdraw"
+            ]
+          },
+          "question": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "school_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "subject": {
+                "type": "string"
+              },
+              "archetype_code": {
+                "type": "string"
+              },
+              "max_score": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "school_id",
+              "subject",
+              "archetype_code",
+              "max_score"
+            ]
+          }
+        },
+        "required": [
+          "templates",
+          "capabilities",
+          "question"
+        ]
+      },
+      "ApproveCalibrationSchoolTemplateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "source_policy_revision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "name",
+          "source_policy_revision"
+        ]
+      },
+      "WithdrawCalibrationSchoolTemplateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "expected_revision",
+          "reason"
+        ]
+      },
+      "CalibrationSchoolTemplateResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "template": {
+            "$ref": "#/components/schemas/CalibrationSchoolTemplate"
+          }
+        },
+        "required": [
+          "template"
         ]
       }
     }

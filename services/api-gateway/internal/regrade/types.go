@@ -157,6 +157,15 @@ type WorkItem struct {
 	MaxScore     float64   `json:"max_score"`
 	Revision     int64     `json:"revision"`
 	CreatedAt    time.Time `json:"created_at"`
+	QueueSummary
+}
+
+// QueueSummary 只供辨认本人独立重评任务，不暴露原分、学生身份或原阅卷教师。
+type QueueSummary struct {
+	ExamName      string `json:"exam_name,omitempty"`
+	Subject       string `json:"subject,omitempty"`
+	QuestionNo    string `json:"question_no,omitempty"`
+	AnonymousCode string `json:"anonymous_code,omitempty"`
 }
 
 // GraderContext 是重评条目的独立工作上下文。

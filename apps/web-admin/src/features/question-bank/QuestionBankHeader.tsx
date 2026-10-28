@@ -14,7 +14,7 @@ export function QuestionBankHeader({ canCreate, loading, banks, bankId, selectBa
 			<section className="question-bank-heading">
 				<div>
 					<h1>题库</h1>
-					<p>维护题目、答案和评分标准。发布后供授权教师选入考试；已开展考试使用的版本不随题库更新改变。</p>
+					<p>维护题目、答案和评分标准。</p>
 				</div>
 				<Space>
 					<Button icon={<RefreshCw size={15} />} onClick={() => onRefresh()}>
@@ -39,8 +39,8 @@ export function QuestionBankHeader({ canCreate, loading, banks, bankId, selectBa
 					}))}
 				/>
 				<Input.Search
-					aria-label="搜索题目编号"
-					placeholder="搜索题目编号"
+					aria-label="搜索题干或题目编号"
+					placeholder={kind === "rubric_template" ? "搜索模板编号" : "搜索题干或题目编号"}
 					onSearch={onSearch}
 					allowClear
 					disabled={!bankId}

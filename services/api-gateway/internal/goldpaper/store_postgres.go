@@ -250,7 +250,7 @@ func loadSource(ctx context.Context, db sqlQueryer, tenantID, examID, questionID
 	var rubricJSON []byte
 	err := db.QueryRowContext(ctx, `
 SELECT sub.exam_id::text,q.id::text,sub.id::text,seg.id::text,eqs.id::text,
-       COALESCE(eqs.profile_snapshot_json->>'subject_code',''),eqs.archetype_code,eqs.risk_tier,
+       COALESCE(eqs.profile_snapshot_json->>'subject_code',''),eqs.archetype_code,eqs.risk_tier,COALESCE(q.question_no,''),
        q.score::float8,eqs.rubric_snapshot_json,
        asset.id::text,asset.hash_sha256,asset.owner_type,asset.owner_id::text
 FROM submission sub
@@ -365,6 +365,7 @@ SELECT gp.id::text,gp.exam_id::text,gp.question_id::text,gp.submission_id::text,
 FROM grading_gold_paper gp
 JOIN grading_gold_paper_version v ON v.tenant_id=gp.tenant_id AND v.gold_paper_id=gp.id
 JOIN exam_question_snapshot eqs ON eqs.tenant_id=v.tenant_id AND eqs.id=v.exam_question_snapshot_id
+LEFT JOIN question q ON q.tenant_id=gp.tenant_id AND q.exam_id=gp.exam_id AND q.id=gp.question_id
 WHERE gp.tenant_id=$1::uuid` + condition + `
 ORDER BY gp.created_at,gp.id,v.version`
 	args := append([]any{tenantID}, filterArgs...)
@@ -381,7 +382,7 @@ ORDER BY gp.created_at,gp.id,v.version`
 		var approvedBy sql.NullString
 		var rubricJSON, traitsJSON, tagsJSON, gradesJSON []byte
 		if err := rows.Scan(&item.ID, &item.ExamID, &item.QuestionID, &item.SubmissionID, &item.ActiveVersion, &item.Status, &item.NominatedBy, &retiredAt, &item.RetirementReason, &item.CreatedAt, &item.UpdatedAt,
-			&item.SubjectCode, &item.ArchetypeCode, &item.RiskTier, &version.ID, &version.Version, &version.ExamQuestionSnapshotID, &version.ReferenceScore, &version.MaxScore,
+			&item.SubjectCode, &item.ArchetypeCode, &item.RiskTier, &item.QuestionNo, &version.ID, &version.Version, &version.ExamQuestionSnapshotID, &version.ReferenceScore, &version.MaxScore,
 			&rubricJSON, &version.Explanation, &traitsJSON, &tagsJSON, &gradesJSON, &version.NominatedBy, &approvedBy, &approvedAt, &version.CreatedAt,
 			&version.ImageBinding.SegmentID, &version.ImageBinding.AssetID, &version.ImageBinding.SHA256, &version.ImageBinding.OwnerType, &version.ImageBinding.OwnerID, &imageInvalidatedAt); err != nil {
 			return nil, err

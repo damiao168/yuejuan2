@@ -25,6 +25,18 @@ func main() {
 	}
 
 	logg := logger.New(os.Stdout, cfg.Service.LogLevel)
+	if len(os.Args) > 1 && os.Args[1] == "provision-local-workers" {
+		if err := runProvisionLocalWorkers(context.Background(), cfg); err != nil {
+			details := map[string]any{}
+			if errors.Is(err, auth.ErrLocalWorkerProvision) {
+				details["reason"] = err.Error()
+			}
+			logg.Error(context.Background(), "local worker provisioning failed; existing accounts were preserved", details)
+			os.Exit(1)
+		}
+		logg.Info(context.Background(), "restricted local worker accounts verified", nil)
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "bootstrap-admin" {
 		if err := runBootstrapAdmin(context.Background(), cfg, logg); err != nil {
 			logg.Error(context.Background(), "bootstrap admin failed", map[string]any{"error": err.Error()})

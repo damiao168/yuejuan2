@@ -72,9 +72,13 @@ func TestGradingAIPlanReadinessRequiresConfirmationOnlyForLargeImageQuestions(t 
 	if check := gradingAIPlanReadinessCheck(plan, true); check == nil || check.Passed || check.Code != "grading_ai_threshold_required" {
 		t.Fatalf("dual plan without manual differences passed: %+v", check)
 	}
-	plan.DecisionConfig.PrimaryAllowedDiffPoints, plan.DecisionConfig.TeacherAllowedDiffPoints = pointDifference(0), pointDifference(0)
+	plan.DecisionConfig.PrimaryAllowedDiffPoints, plan.DecisionConfig.TeacherAllowedDiffPoints = pointDifference(0), nil
 	if check := gradingAIPlanReadinessCheck(plan, true); check == nil || !check.Passed {
-		t.Fatal("manually configured zero difference was rejected")
+		t.Fatal("dual plan with zero primary difference required an unused third threshold")
+	}
+	plan.EffectiveMode = "dual_conditional_arbiter"
+	if check := gradingAIPlanReadinessCheck(plan, true); check == nil || check.Passed {
+		t.Fatal("three-model plan without third threshold was accepted")
 	}
 	plan.EffectiveMode = "unconfigured"
 	if check := gradingAIPlanReadinessCheck(plan, true); check == nil || check.Passed || check.Code != "grading_model_required" {

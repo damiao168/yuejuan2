@@ -23,6 +23,7 @@ func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage f
 	mux.Handle("GET /api/v1/ai-eligibility/policy", requireRead(h.GetPolicy))
 	mux.Handle("PUT /api/v1/ai-eligibility/policy", requireManage(h.PutPolicy))
 	mux.Handle("GET /api/v1/ai-eligibility/decisions/{runItemId}", requireRead(h.GetDecision))
+	mux.Handle("GET /api/v1/ai-eligibility/decisions", requireRead(h.ListDecisions))
 }
 func (h *Handler) PutPolicy(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.UserFromContext(r.Context())

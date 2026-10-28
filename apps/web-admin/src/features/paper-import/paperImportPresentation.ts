@@ -67,7 +67,7 @@ export function importReviewDescription(job: PaperImportJob) {
 
 export function importRetainedDraftDescription(status: PaperImportJob["status"]) {
   if (status === "processing") return "本次补充资料正在单独处理；完成后会按题号合并，以下历史结果暂时只读。";
-  if (status === "cancelled") return "本次补充识别已停止，不影响以下历史结果。可选择“仅解析本次补充”继续。";
+  if (status === "cancelled") return "本次补充识别已停止，不影响以下历史结果。可选择“继续处理本次资料”。";
   return "本次补充资料处理失败，不影响以下历史结果。";
 }
 

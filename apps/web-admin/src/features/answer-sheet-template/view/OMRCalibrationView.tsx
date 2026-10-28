@@ -82,7 +82,7 @@ function calibrationStatusNotice(status: OMRCalibrationStatus) {
 		return {
 			type: "success" as const,
 			description:
-				"校准已生效：整套模板中识别把握不低于 98% 且符合自动确认条件的结果可自动确认，其余仍转人工复核。"
+				"校准已生效：识别把握≥98%且满足自动确认条件的结果可自动确认，其余转人工复核。"
 		};
 	if (status === "revoked")
 		return {
@@ -91,7 +91,7 @@ function calibrationStatusNotice(status: OMRCalibrationStatus) {
 		};
 	return {
 		type: "info" as const,
-		description: "请只依据答题图片盲标；提交后才显示机器结果，且标注不可修改。"
+		description: "只按答题图片标注；提交后才显示机器结果，标注不能修改。"
 	};
 }
 
@@ -170,7 +170,7 @@ export function OMRProfilePanel({ view }: Readonly<{ view: TemplateOMRView }>) {
 			/>
 			{(layout.omr_profile?.mode ?? "manual_only") === "template_difference" ? (
 				<p>
-					该方式用同一版空白答题卡作对照，排除印刷文字干扰。校准通过前，识别结果仅供参考，不会计入成绩。
+					用同版空白卡对照识别；校准通过前，结果仅供参考，不计入成绩。
 				</p>
 			) : null}
 			<OMRReferenceNotice view={view} />

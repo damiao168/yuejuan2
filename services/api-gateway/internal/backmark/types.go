@@ -116,6 +116,15 @@ type GraderItem struct {
 	MaxScore     float64   `json:"max_score"`
 	Revision     int64     `json:"revision"`
 	CreatedAt    time.Time `json:"created_at"`
+	QueueSummary
+}
+
+// QueueSummary 只供辨认本人盲评任务，不包含学生身份、原分或原阅卷教师。
+type QueueSummary struct {
+	ExamName      string `json:"exam_name,omitempty"`
+	Subject       string `json:"subject,omitempty"`
+	QuestionNo    string `json:"question_no,omitempty"`
+	AnonymousCode string `json:"anonymous_code,omitempty"`
 }
 
 // GraderContext 是回评条目的盲评工作上下文。来源复核任务仅作为内部查询键，其分数、复核者、提交身份及标识均不在此序列化。

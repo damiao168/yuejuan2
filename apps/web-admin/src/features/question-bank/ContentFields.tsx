@@ -13,6 +13,7 @@ export function ContentFields({ schema }: Readonly<{ schema?: QuestionBankMetada
 	const form = Form.useFormInstance();
 	const stage = Form.useWatch(["metadata", "education_stage"], form) as "junior" | "senior" | undefined;
 	const grade = Form.useWatch(["metadata", "grade_scope"], form) as string | undefined;
+  const questionType = Form.useWatch("question_type", form);
 	const grades = stage ? gradeOptions[stage] ?? [] : [];
 	const knowledgePointTaxonomy = schema?.taxonomies.find(
 		(taxonomy) => taxonomy.id === "knowledge_points",
@@ -86,6 +87,7 @@ export function ContentFields({ schema }: Readonly<{ schema?: QuestionBankMetada
 			</Form.Item>
 			<Form.Item
 				name="options"
+				hidden={!["single_choice", "multiple_choice"].includes(questionType)}
 				label="选项（每行一个，按题目顺序）"
 				getValueProps={(value: string[] = []) => ({ value: value.join("\n") })}
 				getValueFromEvent={(event: { target: { value: string } }) =>
@@ -117,6 +119,7 @@ export function ContentFields({ schema }: Readonly<{ schema?: QuestionBankMetada
 					disabled={!knowledgePointTaxonomy}
 				/>
 			</Form.Item>
+      <details><summary>补充信息（可选）</summary>
 			<div className="question-bank-form-pair">
 				<Form.Item name={["metadata", "difficulty_band"]} label="难度标签">
 					<Select
@@ -174,6 +177,7 @@ export function ContentFields({ schema }: Readonly<{ schema?: QuestionBankMetada
 			<Form.Item name={["metadata", "source_year"]} label="来源年份">
 				<InputNumber min={1900} max={2200} />
 			</Form.Item>
+      </details>
 			{schema?.fields.length ? <section className="question-bank-custom-fields">
 				<h3>题目补充信息 · 分类规则第 {schema.version} 版</h3>
 				<div className="question-bank-form-pair">

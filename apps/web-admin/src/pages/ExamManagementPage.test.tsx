@@ -24,7 +24,7 @@ vi.mock("antd", () => {
     Dropdown: ({ children, menu }: { children: ReactNode; menu: { items: { key: string; label: string; disabled?: boolean }[]; onClick: (item: { key: string; domEvent: { stopPropagation: () => void } }) => void } }) => <div>{children}<div role="menu">{menu.items.map((item) => <button key={item.key} role="menuitem" disabled={item.disabled} onClick={(domEvent) => menu.onClick({ key: item.key, domEvent })}>{item.label}</button>)}</div></div>,
     Drawer: ({ children, open, onClose }: { children: ReactNode; open: boolean; onClose: () => void }) => open ? <div role="dialog"><button onClick={onClose}>关闭详情</button>{children}</div> : null,
     Table: ({ columns, dataSource, onRow }: { columns: TableColumnsType<ManagementExam>; dataSource: ManagementExam[]; onRow?: TableProps<ManagementExam>["onRow"] }) => <div>{dataSource.map((exam, index) => <div {...onRow?.(exam, index)} data-exam-id={exam.id} key={exam.id}>{columns.map((column, columnIndex) => "render" in column && column.render ? <div {...column.onCell?.(exam, index)} key={columnIndex}>{column.render("dataIndex" in column && column.dataIndex === "name" ? exam.name : undefined, exam, index) as ReactNode}</div> : null)}</div>)}</div>,
-    Space: pass, Tooltip: pass, Spin: () => null, Empty: () => null, Alert: () => null
+    Space: pass, Tooltip: pass, Spin: () => null, Empty: () => null, Alert: ({ message }: { message: ReactNode }) => <p role="alert">{message}</p>
   };
 });
 
@@ -63,6 +63,23 @@ async function click(text: string) {
 }
 
 describe("考试列表整场操作", () => {
+  it("考试准备深链定位已授权学科所属整场并展开参考班级编辑", async () => {
+    window.location.hash = "#/admin/exams?edit_exam=math&target=scope";
+    const open = await mount();
+    expect(mocks.get).toHaveBeenCalledWith("session", "session-1");
+    expect(mocks.edit.mock.lastCall?.[0]).toMatchObject({ exam: { id: "session-1" }, focusTarget: "scope" });
+    expect(open).not.toHaveBeenCalled();
+    const props = mocks.edit.mock.lastCall![0]; await act(async () => { props.onClose(); await props.onSaved(); });
+    expect(mocks.edit.mock.lastCall?.[0].exam).toBeNull(); expect(mocks.get).toHaveBeenCalledOnce();
+  });
+  it("精确入口不接受未授权考试标识，最新状态拒绝编辑时交接管理员", async () => {
+    window.location.hash = "#/admin/exams?edit_exam=unlisted"; await mount();
+    expect(mocks.get).not.toHaveBeenCalled(); expect(container.textContent).toContain("当前授权范围内未找到该考试");
+    window.location.hash = "#/admin/exams?edit_exam=math&target=scope";
+    mocks.get.mockResolvedValue({ exam: { ...exam(), can_edit: false } }); await mount();
+    expect(mocks.edit.mock.lastCall?.[0].exam).toBeNull(); expect(container.textContent).toContain("请联系学校考试管理员核对年级与参考班级");
+    expect(mocks.details.mock.lastCall?.[0].exam.id).toBe("session-1");
+  });
   it("点击整行或考试名称都打开完整整场对象，名称点击只跳转一次", async () => {
     const open = await mount();
     expect(container.textContent).toContain("查看考试详情");

@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RegradeSummary } from "../../../api/scoreReleases";
 import { useRegradeWorkflow } from "./useRegradeWorkflow";
+import { setBusinessCommandScope } from "../../../api/businessCommand";
 
 const mocks = vi.hoisted(() => ({
   approve: vi.fn(), create: vi.fn(), createRelease: vi.fn(), finalize: vi.fn(),
@@ -163,6 +164,49 @@ describe("regrade review batch36 decision boundaries", () => {
     expect(setActioning.mock.calls).toEqual([["regrade-load-review"], [null]]);
   });
 
+  it("接受一条候选并刷新后，保留另一条尚未提交的改分和说明", async () => {
+    const second = { ...item, id: "item-2", candidate_score: 6 };
+    mocks.get.mockResolvedValueOnce({ regrade: { ...summary, items: [item, second] } });
+    await mount();
+    await act(async () => { await current.openRegradeReview(summary.job); });
+    await act(async () => {
+      current.markEvidenceReviewed(item.id, item.revision);
+      current.setRegradeReviewScores({ "item-1": 8, "item-2": 0 });
+      current.setRegradeReviewNotes({ "item-2": "已核对，第二份本次应为零分" });
+    });
+    mocks.get.mockResolvedValueOnce({ regrade: { ...summary, items: [{ ...item, status: "resolved", revision: 8 }, second] } });
+    await act(async () => { current.decideRegradeItem(item, "accept"); await runAction.mock.results[0].value; });
+    expect(mocks.review).toHaveBeenCalledWith(item.id, { decision: "accept", reviewed_score: 8, expected_revision: 7 });
+    expect(current.regradeReviewScores[second.id]).toBe(0);
+    expect(current.regradeReviewNotes[second.id]).toBe("已核对，第二份本次应为零分");
+  });
+
+  it.each([true, false])("其他候选修订变化时保留输入，重新核对后显式选择保留=%s", async keepLocal => {
+    const second = { ...item, id: "item-2", candidate_score: 6 };
+    mocks.get.mockResolvedValueOnce({ regrade: { ...summary, items: [item, second] } });
+    await mount();
+    await act(async () => { await current.openRegradeReview(summary.job); });
+    await act(async () => {
+      current.markEvidenceReviewed(item.id, item.revision); current.markEvidenceReviewed(second.id, second.revision);
+      current.setRegradeReviewScores({ "item-1": 5, "item-2": 0 });
+      current.setRegradeReviewNotes({ "item-2": "保留未提交的说明" });
+    });
+    const updated = { ...second, candidate_score: 9, revision: 8 };
+    mocks.get.mockResolvedValueOnce({ regrade: { ...summary, items: [{ ...item, status: "resolved" }, updated] } });
+    await act(async () => { current.decideRegradeItem(item, "accept"); await runAction.mock.results[0].value; });
+    expect(current.regradeReviewScores[second.id]).toBe(0);
+    expect(current.regradeReviewConflicts[second.id]).toBe(8);
+    expect(current.reviewedEvidence[second.id]).toBeUndefined();
+    await act(async () => { current.resolveReviewConflict(second.id, keepLocal); current.decideRegradeItem(updated, "accept"); });
+    expect(current.regradeReviewConflicts[second.id]).toBe(8);
+    expect(mocks.review).toHaveBeenCalledTimes(1);
+    await act(async () => { current.markEvidenceReviewed(second.id, 8); });
+    await act(async () => { current.resolveReviewConflict(second.id, keepLocal); });
+    expect(current.regradeReviewConflicts[second.id]).toBeUndefined();
+    expect(current.regradeReviewScores[second.id]).toBe(keepLocal ? 0 : 9);
+    expect(current.regradeReviewNotes[second.id]).toBe(keepLocal ? "保留未提交的说明" : "");
+  });
+
   it.each(["accept", "reject"] as const)("异常重新复核必须核对当前修订并填写说明：%s", async (decision) => {
     await mount();
     const exception = { ...item, status: "exception", revision: 8 };
@@ -191,5 +235,23 @@ describe("regrade review batch36 decision boundaries", () => {
     expect(current.regradeReviewNotes[item.id]).toBe("保留这份处理说明");
     expect(current.regradeReview).toBe(exceptionSummary);
     expect(mocks.get).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])("生成复评草稿后直接打开对应预览，会话变化=%s 时不打开迟到回执", async changed => {
+    setBusinessCommandScope("tenant-1", "manager");
+    const onReleaseCreated = vi.fn();
+    const waiting = deferred<{ score_release: { id: string } }>();
+    mocks.createRelease.mockReturnValue(waiting.promise);
+    function Probe() { current = useRegradeWorkflow({ canManage: true, selectedExamId: "exam-1", grades: [], runAction, setActioning, onReleaseCreated }); return null; }
+    await act(async () => root.render(<Probe />));
+    await act(async () => current.materializeRegradeRelease(summary.job));
+    const confirmation = mocks.confirm.mock.calls[0][0] as { onOk: () => Promise<void> };
+    let running: Promise<void>;
+    await act(async () => { running = confirmation.onOk(); });
+    if (changed) setBusinessCommandScope("tenant-1", "other-manager");
+    await act(async () => { waiting.resolve({ score_release: { id: "created-release" } }); await running; });
+    expect(mocks.createRelease).toHaveBeenCalledWith("job-1", expect.objectContaining({ reason: "题目复评完成：recheck" }));
+    if (changed) expect(onReleaseCreated).not.toHaveBeenCalled();
+    else expect(onReleaseCreated).toHaveBeenCalledWith({ id: "created-release" });
   });
 });

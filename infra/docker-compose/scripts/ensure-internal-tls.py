@@ -1,4 +1,4 @@
-"""首次准备本地短期TLS；每次启动前校验实际挂载文件，已有密钥不覆盖。"""
+"""首次按指定有效期准备本地开发 TLS；启动前校验实际挂载文件，已有密钥不覆盖。"""
 
 import argparse
 import importlib.util
@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 import shutil
 import ssl
 import subprocess
+import time
 from urllib.parse import urlsplit
 
 
@@ -67,7 +68,7 @@ def url_hostname(value):
     return url.hostname
 
 
-def prepare_tls(env_file, compose_directory, executable, generate_local=False):
+def prepare_tls(env_file, compose_directory, executable, generate_local=False, valid_days=2):
     settings = read_settings(env_file)
     root = compose_directory / "certs"
     ca_directory = host_directory(compose_directory, settings.get("EDUGRADE_INTERNAL_CA_DIR") or "./certs/internal-ca")
@@ -89,8 +90,8 @@ def prepare_tls(env_file, compose_directory, executable, generate_local=False):
             spec = importlib.util.spec_from_file_location("disposable_internal_tls", source)
             generator = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(generator)
-            generator.generate_certificates(root, executable)
-            print(f"Created disposable two-day local certificates: {root}")
+            generator.generate_certificates(root, executable, valid_days)
+            print(f"Created local development certificates ({valid_days} days): {root}")
         else:
             missing = ", ".join(str(path) for path in files if not path.is_file())
             raise ValueError(f"TLS files missing: {missing}. Existing/custom certificate directories are preserved; prepare a new directory and update the three *_DIR values in .env")
@@ -100,6 +101,11 @@ def prepare_tls(env_file, compose_directory, executable, generate_local=False):
         # load_cert_chain 校验证书与私钥配对；OpenSSL同时验证有效期、签发链和实际调用DNS/IP。
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(str(certificate), str(key))
+        expiry = ssl.cert_time_to_seconds(ssl._ssl._test_decode_cert(str(certificate))["notAfter"])
+        days_left = max(0, int((expiry - time.time()) / 86400))
+        print(f"{service}: certificate expires {time.strftime('%Y-%m-%d', time.gmtime(expiry))} UTC ({days_left} full days remaining).")
+        if days_left < 7:
+            print("Certificate expires soon. Prepare a new certificate directory and update the three *_DIR settings; existing keys are preserved. See infra/docker-compose/README.md#本地内部-tls")
         openssl_command(executable, "x509", "-in", certificate, "-checkend", "0", "-noout")
         for hostname in sorted(hostnames):
             try:
@@ -117,9 +123,10 @@ def main():
     parser.add_argument("--compose-directory", type=Path, required=True)
     parser.add_argument("--openssl", default="")
     parser.add_argument("--generate-local-if-missing", action="store_true")
+    parser.add_argument("--local-valid-days", type=int, default=2, choices=range(1, 3651), metavar="1..3650")
     arguments = parser.parse_args()
     try:
-        prepare_tls(arguments.env_file.resolve(strict=True), arguments.compose_directory.resolve(strict=True), openssl_executable(arguments.openssl), arguments.generate_local_if_missing)
+        prepare_tls(arguments.env_file.resolve(strict=True), arguments.compose_directory.resolve(strict=True), openssl_executable(arguments.openssl), arguments.generate_local_if_missing, arguments.local_valid_days)
     except (ValueError, OSError, ssl.SSLError, subprocess.CalledProcessError) as error:
         parser.exit(1, f"Internal TLS preparation failed: {error}\n")
 

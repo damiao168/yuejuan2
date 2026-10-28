@@ -4,7 +4,6 @@ import {
   App,
   Button,
   Card,
-  Descriptions,
   Divider,
   Drawer,
   Empty,
@@ -19,7 +18,7 @@ import {
   type TableColumnsType
 } from "antd";
 import { FlaskConical, RefreshCw, ShieldAlert } from "lucide-react";
-import { ApiClientError, getSafeUserText, getUserErrorMessage } from "../../api/client";
+import { ApiClientError, getUserErrorMessage } from "../../api/client";
 import {
   addGradingEvaluationObservation,
   addModelCalibrationEvidence,
@@ -29,7 +28,6 @@ import {
   completeModelCalibration,
   createGradingEvaluation,
   createModelCalibration,
-  getAIEligibilityDecision,
   getAIEligibilityPolicy,
   getGradingEvaluationQualitySummary,
   invalidateGradingEvaluation,
@@ -45,7 +43,6 @@ import {
   setScoringAssuranceSchool,
   type AddGradingEvaluationObservationRequest,
   type AddModelCalibrationEvidenceRequest,
-  type AIEligibilityDecision,
   type AIEligibilityPolicy,
   type AIHumanDisagreement,
   type AIHumanDisagreementTaxonomy,
@@ -61,6 +58,8 @@ import {
   type PutAIEligibilityPolicyRequest
 } from "../../api/scoringAssurance";
 import { CalibrationDetail, DisagreementQueue, EligibilityPolicyPanel, EvaluationDetail } from "./ScoringAssuranceViews";
+import { DisagreementTaskSelector } from "./DisagreementTaskSelector";
+import type { ReviewTask } from "@edugrade/sdk";
 import { downloadGovernanceMaterial, observationExample } from "./governanceMaterials";
 import {
   assuranceCalibrationStatusColor, assuranceCalibrationStatusLabel, assuranceCalibrationTransitionMessage,
@@ -71,10 +70,8 @@ import {
   eligibilityScopeLabel, isCompleteEligibilitySelection, type EligibilitySelection
 } from "./eligibilityScope";
 
-const scoringModeOptions = [
-  ["RULE_AUTO", "规则自动"], ["AI_ASSIST", "AI 建议"], ["AI_FAST_CONFIRM", "AI 快速确认"],
-  ["HUMAN_PRIMARY", "人工主评"], ["DUAL_HUMAN", "双人阅卷"], ["MANUAL_ONLY", "仅人工"]
-].map(([value, label]) => ({ value, label }));
+import { scoringModeOptions } from "./assuranceOptions";
+import { DecisionLookup } from "./DecisionLookup";
 
 const taxonomyOptions: Array<{ value: AIHumanDisagreementTaxonomy; label: string }> = [
   ["ai_scoring_error", "AI 评分错误"], ["human_scoring_error", "人工评分错误"], ["ocr_error", "文字识别错误"],
@@ -101,19 +98,8 @@ function isNotFound(error: unknown) {
   return error instanceof ApiClientError && error.status === 404;
 }
 
-function validateObservationRow(row: unknown, acceptedKeys: ReadonlySet<string>): AddGradingEvaluationObservationRequest {
-  // 一行有多处错误时按原顺序报告首错；只校验并返回原对象，不登记键或写入观察。
-  if (!row || typeof row !== "object") throw new Error("观察记录须为对象");
-  const item = row as AddGradingEvaluationObservationRequest;
-  if (!/^[a-z0-9][a-z0-9._-]{0,127}$/.test(item.response_key ?? "") || acceptedKeys.has(item.response_key) || !/^[a-f0-9]{64}$/.test(item.response_fingerprint ?? "")) throw new Error("答卷键须唯一，指纹须为真实64位SHA256");
-  if (![item.reference_score, item.model_score, item.max_score].every((value) => typeof value === "number" && Number.isFinite(value)) || item.max_score <= 0 || item.reference_score < 0 || item.model_score < 0 || item.reference_score > item.max_score || item.model_score > item.max_score) throw new Error("请核对参考分、模型分和满分");
-  if (![item.subject, item.archetype].every((value) => typeof value === "string" && /^[a-z0-9][a-z0-9._-]{0,127}$/.test(value))) throw new Error("学科和题型须填写报告中的规范标识");
-  if (!["gold", "human_adjudicated"].includes(item.reference_kind) || !["high", "medium", "low", "unknown"].includes(item.ocr_quality) || !["short", "medium", "long", "unknown"].includes(item.answer_length) || !["low", "medium", "high", "unknown"].includes(item.rubric_complexity)) throw new Error("请核对真值来源与切片标签");
-  const reviewerCount = item.reference_reviewer_count;
-  if (typeof item.needs_human_review !== "boolean" || typeof item.reference_adjudicated !== "boolean" || typeof reviewerCount !== "number" || !Number.isInteger(reviewerCount) || reviewerCount < 1 || (item.reference_kind === "human_adjudicated" && (reviewerCount < 2 || !item.reference_adjudicated))) throw new Error("人工裁决真值须记录至少两位复核者及已裁决事实");
-  if ([item.crop_iou, item.transcription_cer, item.rubric_criterion_agreement].some((value) => value !== undefined && (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1))) throw new Error("可选质量比率须在0—1之间");
-  return item;
-}
+import { validateObservationRow } from "./observationMaterial";
+import { scoringMaterialMatchesReport, type MaterialDelivery, type ScoringMaterial } from "./materialIntake";
 
 type PolicyForm = PutAIEligibilityPolicyRequest;
 type EvaluationForm = CreateGradingEvaluationRequest;
@@ -131,6 +117,8 @@ type ScoringAssuranceProps = Readonly<{
   canManageDisagreements: boolean;
   onDirtyChange?: (dirty: boolean) => void;
   onSavingChange?: (saving: boolean) => void;
+  materialDelivery?: MaterialDelivery<ScoringMaterial>;
+  onMaterialReceived?: () => void;
 }>;
 
 export function ScoringAssuranceWorkspace(props: ScoringAssuranceProps) {
@@ -147,7 +135,9 @@ function ScoringAssuranceContent({
   canReadDisagreements,
   canManageDisagreements,
   onDirtyChange,
-  onSavingChange
+  onSavingChange,
+  materialDelivery,
+  onMaterialReceived
 }: ScoringAssuranceProps) {
   setScoringAssuranceSchool(tenantID);
   useEffect(() => { setScoringAssuranceSchool(tenantID); return () => setScoringAssuranceSchool(""); }, [tenantID]);
@@ -240,6 +230,16 @@ function ScoringAssuranceContent({
   const [importOpen, setImportOpen] = useState(false);
   const [importError, setImportError] = useState("");
   const importBusyRef = useRef(false);
+  const [sourceMaterial, setSourceMaterial] = useState<ScoringMaterial>();
+  const receivedMaterial = useRef(0);
+  useEffect(() => {
+    if (!materialDelivery || materialDelivery.sequence === receivedMaterial.current || materialDelivery.tenantID !== tenantID || !canManageEvaluations) return;
+    receivedMaterial.current = materialDelivery.sequence;
+    setSourceMaterial(materialDelivery.material);
+    evaluationForm.resetFields(); evaluationForm.setFieldsValue(materialDelivery.material.evaluation);
+    draftScopes.current.evaluation = ++draftVersion.current;
+    setEvaluationDrawerOpen(true); onMaterialReceived?.();
+  }, [materialDelivery, tenantID, canManageEvaluations, evaluationForm, onMaterialReceived]);
   // 部分导入成功后保留原输入与已确认游标；切校确认不能在保存中绕过。
   useEffect(() => { onSavingChange?.(actioning || policySaving); return () => onSavingChange?.(false); }, [actioning, policySaving, onSavingChange]);
 
@@ -274,6 +274,7 @@ function ScoringAssuranceContent({
   const [selectedDisagreement, setSelectedDisagreement] = useState<AIHumanDisagreement>();
   const [classificationDrawerOpen, setClassificationDrawerOpen] = useState(false);
   const [routeDrawerOpen, setRouteDrawerOpen] = useState(false);
+  const [routeTask, setRouteTask] = useState<ReviewTask>();
   const [classificationForm] = Form.useForm<{ taxonomy: AIHumanDisagreementTaxonomy; notes?: string }>();
   const [routeForm] = Form.useForm<{ review_task_id: string }>();
   useEffect(() => { onDirtyChange?.(policyDrawerOpen || evaluationDrawerOpen || observationDrawerOpen || calibrationDrawerOpen || importOpen || classificationDrawerOpen || routeDrawerOpen); return () => onDirtyChange?.(false); }, [policyDrawerOpen, evaluationDrawerOpen, observationDrawerOpen, calibrationDrawerOpen, importOpen, classificationDrawerOpen, routeDrawerOpen, onDirtyChange]);
@@ -445,6 +446,9 @@ function ScoringAssuranceContent({
     try {
       const values = await evaluationForm.validateFields();
       if (!isCurrentDraft(operation)) return;
+      if (sourceMaterial && !scoringMaterialMatchesReport(sourceMaterial, values)) {
+        message.error("材料的来源或版本已改变，请清除原材料后重新登记。"); return;
+      }
       submitted = true;
       const response = await createGradingEvaluation(values);
       if (!isCurrentDraft(operation)) { if (mounted.current && hasDraftAccess(operation.kind)) await loadAssurance(); return; }
@@ -453,6 +457,11 @@ function ScoringAssuranceContent({
       // 列表刷新会先保留或回退选择，之后再明确选中新建评测。
       await loadAssurance();
       setSelectedEvaluationID(response.evaluation_run.id);
+      if (sourceMaterial && isCurrentDraft(operation)) {
+        // 逐卷证据只绑定刚登记且来源/版本完全一致的新报告，不能落到列表刷新后回退选中的旧报告。
+        setImportRunID(response.evaluation_run.id); setImportText(JSON.stringify(sourceMaterial.observations, null, 2));
+        setImportRows(sourceMaterial.observations); setImportCompleted(0); setImportError(""); setImportOpen(true); setSourceMaterial(undefined);
+      }
       message.success("评分验证报告已登记；请录入或导入对齐观察，核对后再冻结。");
     } catch (error) {
       if (submitted && isCurrentDraft(operation)) message.error(asErrorMessage(error));
@@ -596,6 +605,10 @@ function ScoringAssuranceContent({
     try {
       const values = await routeForm.validateFields();
       if (!isCurrentDraft(operation)) return;
+      if (!routeTask || values.review_task_id !== routeTask.id || routeTask.tenant_id !== tenantID || routeTask.exam_id !== selectedDisagreement.exam_id || routeTask.question_id !== selectedDisagreement.question_id || routeTask.submission_id !== selectedDisagreement.submission_id || routeTask.answer_segment_id !== selectedDisagreement.answer_segment_id) {
+        message.error("请从当前学校同题同答卷的授权任务中选择并核对后再关联");
+        return;
+      }
       submitted = true;
       await routeAIHumanDisagreement(selectedDisagreement.id, { ...values, expected_revision: selectedDisagreement.revision });
       if (!isCurrentDraft(operation)) { if (mounted.current && hasDraftAccess(operation.kind)) await loadDisagreements(); return; }
@@ -645,7 +658,7 @@ function ScoringAssuranceContent({
       {canReadEligibility ? <EligibilityPolicyPanel axis={axis} onAxisChange={changeAxis} policy={policy} policyLoading={policyLoading}
         selectionLocked={policyDrawerOpen || policySaving} selectionComplete={isCompleteEligibilitySelection(axis)} canEditPolicy={["loaded", "missing"].includes(policyReadState)}
         policyError={policyError} canManageEligibility={canManageEligibility} subjectOptions={subjectOptions} archetypeOptions={archetypeOptions}
-        loadPolicy={loadPolicy} openPolicyEditor={openPolicyEditor}><DecisionLookup canRead={canReadEligibility} /></EligibilityPolicyPanel> : null}
+        loadPolicy={loadPolicy} openPolicyEditor={openPolicyEditor}><DecisionLookup canRead={canReadEligibility} tenantID={tenantID} /></EligibilityPolicyPanel> : null}
 
       {canManageEvaluations ? <Card size="small" title={<Space><FlaskConical size={17} />已有评分报告与置信度校准</Space>} extra={<Space><Button icon={<RefreshCw size={15} />} loading={assuranceLoading} onClick={() => void loadAssurance()}>刷新</Button><Button type="primary" onClick={() => openDraft("evaluation", setEvaluationDrawerOpen)}>登记评分验证报告</Button></Space>}>
         <p>评测负责人先完成离线评分及人工真值核验，再登记版本轴和对齐记录。此处不运行模型；冻结证据与配置准入是后续步骤。</p>
@@ -675,7 +688,7 @@ function ScoringAssuranceContent({
         disagreementError={disagreementError} canManageDisagreements={canManageDisagreements} taxonomyOptions={taxonomyOptions}
         loadDisagreements={loadDisagreements} onClassify={(item) => {
           setSelectedDisagreement(item); classificationForm.setFieldsValue({ taxonomy: item.taxonomy ?? "ai_scoring_error", notes: item.notes }); openDraft("classification", setClassificationDrawerOpen);
-        }} onRoute={(item) => { setSelectedDisagreement(item); routeForm.resetFields(); openDraft("route", setRouteDrawerOpen); }} /> : null}
+        }} onRoute={(item) => { setSelectedDisagreement(item); setRouteTask(undefined); routeForm.resetFields(); openDraft("route", setRouteDrawerOpen); }} /> : null}
 
       <Drawer title="维护题型准入策略" width={560} open={policyDrawerOpen} closable={!policySaving} maskClosable={!policySaving} keyboard={!policySaving} onClose={() => { if (!policySavingRef.current) setPolicyDrawerOpen(false); }} extra={<Button type="primary" loading={policySaving} onClick={() => void savePolicy()}>保存新版本</Button>}>
         <p>当前维护范围：{eligibilityScopeLabel(axis)}。需要维护其他范围时，请先关闭并在页面重新选择和查询。</p>
@@ -693,6 +706,7 @@ function ScoringAssuranceContent({
 
       <Drawer title="登记已有评分验证报告" width={620} open={evaluationDrawerOpen} onClose={() => closeDraft(setEvaluationDrawerOpen)} extra={<Button type="primary" loading={actioning} onClick={() => void createEvaluation()}>登记报告</Button>}>
         <Alert type="info" showIcon message="仅登记已授权的脱敏数据集引用和版本轴" description="评测不会在浏览器中调用模型，也不接收学生答案、原图或标准卷解析。" />
+        {sourceMaterial ? <p>已带入 {sourceMaterial.observations.length} 条逐卷记录。<Button disabled={actioning} onClick={() => setSourceMaterial(undefined)}>清除原材料</Button></p> : null}
         <Form form={evaluationForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="key" label="评测键" rules={[{ required: true, pattern: /^[a-z0-9][a-z0-9._-]{0,127}$/ }]}><Input placeholder="math-r2-v1" /></Form.Item>
           <Form.Item name="display_name" label="名称" rules={[{ required: true }]}><Input /></Form.Item>
@@ -743,33 +757,11 @@ function ScoringAssuranceContent({
         <Form form={classificationForm} layout="vertical" style={{ marginTop: 16 }}><Form.Item name="taxonomy" label="根因分类" rules={[{ required: true }]}><Select options={taxonomyOptions} /></Form.Item><Form.Item name="notes" label="内部说明（可选）"><Input.TextArea rows={5} maxLength={2000} /></Form.Item></Form>
       </Drawer>
 
-      <Drawer title="关联人工阅卷任务" width={520} open={routeDrawerOpen} onClose={() => closeDraft(setRouteDrawerOpen)} extra={<Button type="primary" loading={actioning} onClick={() => void submitRoute()}>关联任务</Button>}>
+      <Drawer title="关联人工阅卷任务" width={520} open={routeDrawerOpen} onClose={() => closeDraft(setRouteDrawerOpen)} extra={<Button type="primary" loading={actioning} disabled={!routeTask} onClick={() => void submitRoute()}>关联任务</Button>}>
         <Alert showIcon type="warning" message="只能关联现有人工任务" description="该操作不会新建任务、不会直接重评，也不会修改最终成绩。需要更正时请进入正式重评流程。" />
-        <Form form={routeForm} layout="vertical" style={{ marginTop: 16 }}><Form.Item name="review_task_id" label="人工阅卷任务编号" rules={[{ required: true }]}><Input /></Form.Item></Form>
+        <Form form={routeForm} layout="vertical" style={{ marginTop: 16 }}><Form.Item name="review_task_id" hidden rules={[{ required: true }]}><Input /></Form.Item></Form>
+        {routeDrawerOpen && selectedDisagreement ? <DisagreementTaskSelector key={`${tenantID}:${selectedDisagreement.id}`} tenantID={tenantID} disagreement={selectedDisagreement} disabled={actioning} onSelect={task => { setRouteTask(task); routeForm.setFieldsValue({ review_task_id: task?.id }); }} /> : null}
       </Drawer>
     </div>
   );
-}
-
-function DecisionLookup({ canRead }: Readonly<{ canRead: boolean }>) {
-  const { message } = App.useApp();
-  const [runItemID, setRunItemID] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [decision, setDecision] = useState<AIEligibilityDecision>();
-
-  const load = async () => {
-    if (!canRead || !runItemID.trim()) return;
-    setLoading(true);
-    try {
-      const response = await getAIEligibilityDecision(runItemID.trim());
-      setDecision(response.decision);
-    } catch (error) {
-      setDecision(undefined);
-      message.error(asErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return <section className="model-assurance-decision"><Divider orientation="left">运行准入审计</Divider><Space.Compact style={{ maxWidth: 560, width: "100%" }}><Input value={runItemID} onChange={(event) => setRunItemID(event.target.value)} placeholder="输入 AI 评分运行项编号" /><Button loading={loading} onClick={() => void load()} disabled={!runItemID.trim()}>查看决策</Button></Space.Compact>{decision ? <Descriptions size="small" column={2} style={{ marginTop: 12 }} items={[{ key: "decision", label: "评分方式", children: scoringModeOptions.find((option) => option.value === decision.decision)?.label ?? "未知方式" }, { key: "external", label: "外部调用", children: decision.external_ai_allowed ? <Tag color="success">允许</Tag> : <Tag color="warning">禁止</Tag> }, { key: "reason", label: "原因", span: 2, children: decision.reasons.map((item) => getSafeUserText(item.message, "运行条件未满足")).join("；") || "无额外阻断原因" }]} /> : null}</section>;
 }

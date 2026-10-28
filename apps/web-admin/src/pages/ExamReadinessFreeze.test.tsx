@@ -2,16 +2,16 @@
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ExamReadinessPage } from "./ExamPreparationPage";
+import { ExamReadinessPage, ExamStudentScopePage } from "./ExamPreparationPage";
 import { ApiClientError } from "../api/client";
 
-const mocks = vi.hoisted(() => ({ exam: vi.fn(), readiness: vi.fn(), refresh: vi.fn(), confirm: vi.fn(), roster: vi.fn(), questions: vi.fn(), profile: vi.fn(), error: vi.fn(), success: vi.fn(), navigate: vi.fn(), changed: vi.fn(), modalConfirm: vi.fn(), modalCancel: vi.fn() }));
+const mocks = vi.hoisted(() => ({ exam: vi.fn(), readiness: vi.fn(), refresh: vi.fn(), confirm: vi.fn(), roster: vi.fn(), questions: vi.fn(), classes: vi.fn(), grades: vi.fn(), profile: vi.fn(), error: vi.fn(), success: vi.fn(), navigate: vi.fn(), changed: vi.fn(), modalConfirm: vi.fn(), modalCancel: vi.fn() }));
 vi.mock("../api/exams", () => ({ getExam: mocks.exam, refreshExamCandidates: mocks.refresh, updateExam: vi.fn() }));
 vi.mock("../api/configuration", () => ({ getExamReadiness: mocks.readiness, confirmExamReadiness: mocks.confirm }));
 vi.mock("../api/scores", () => ({ listExamRoster: mocks.roster }));
 vi.mock("../api/papers", () => ({ listQuestions: mocks.questions }));
 vi.mock("../api/assessment", () => ({ getQuestionAssessmentProfile: mocks.profile }));
-vi.mock("../api/org", () => ({ listClasses: vi.fn(), listGrades: vi.fn() }));
+vi.mock("../api/org", () => ({ listClasses: mocks.classes, listGrades: mocks.grades }));
 vi.mock("../components/features/assessment/ExamScoringPreparation", () => ({ ExamScoringPreparation: () => <p>逐题评分方式（单独覆盖配置与保存回归）</p> }));
 vi.mock("../components/PageState", () => ({ LoadingState: ({ label }: { label: string }) => <p>{label}</p>, ErrorState: ({ message }: { message: string }) => <p>{message}</p> }));
 vi.mock("antd", () => ({
@@ -36,6 +36,7 @@ describe("考试准备冻结复核", () => {
     vi.resetAllMocks(); Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.exam.mockImplementation(async (id: string) => ({ exam: { id, name: id, status: "configured", class_ids: ["class-1"] } }));
     mocks.readiness.mockResolvedValue({ readiness }); mocks.refresh.mockResolvedValue({});
+    mocks.classes.mockResolvedValue({ classes: [] }); mocks.grades.mockResolvedValue({ grades: [] });
     mocks.roster.mockResolvedValue({ roster: { summary: { expected: 2 }, entries: [{ key: "a", student_id: "a", student_name: "学生甲", student_no: "1001", class_name: "一班" }, { key: "b", student_id: "b", student_name: "学生乙", student_no: "1002", class_name: "一班" }] } });
     mocks.questions.mockResolvedValue({ questions: [{ id: "q1", question_no: "1" }] });
     mocks.profile.mockResolvedValue({ assessment_profile: { scoring_policy: { mode: "AI_ASSIST" } } });
@@ -45,6 +46,17 @@ describe("考试准备冻结复核", () => {
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
   const render = async (examId = "exam-1", canManage = true) => { await act(async () => root.render(<ExamReadinessPage examId={examId} canManage={canManage} onNavigate={mocks.navigate} onExamChanged={mocks.changed} />)); };
   const click = async (label: string) => { await act(async () => { const button = [...host.querySelectorAll("button")].find((item) => item.textContent === label); expect(button).toBeDefined(); button!.click(); }); };
+
+  it.each(["draft", "configured", "ready", "collecting"])("学生范围在 %s 阶段仅显示对应的一条名单说明", async status => {
+    mocks.exam.mockResolvedValue({ exam: { id: "exam-1", name: "Exam", status, class_ids: [] } });
+    await act(async () => root.render(<ExamStudentScopePage examId="exam-1" canManage={false} />));
+    const heading = host.querySelector(".preparation-heading")!;
+    const frozen = !["draft", "configured"].includes(status);
+    expect(heading.querySelectorAll("p")).toHaveLength(1);
+    expect(heading.textContent).toContain(frozen ? "名单已冻结，不能再改范围或同步" : "选择参考班级；确认准备时");
+    expect(heading.textContent).not.toContain(frozen ? "选择参考班级" : "名单已冻结");
+    expect([...heading.querySelectorAll("button")].every(button => button.disabled)).toBe(true);
+  });
 
   it("顶部常驻确认按钮，未通过检查时显示待处理数量和实际任务入口", async () => {
     mocks.readiness.mockResolvedValue({ readiness: { ...readiness, ready: false, checks: [
@@ -85,7 +97,8 @@ describe("考试准备冻结复核", () => {
     mocks.readiness.mockResolvedValue({ readiness: { ...readiness, confirmed: false, snapshot_id: "snapshot-1", confirmed_at: "2026-10-12T12:00:00Z" } });
     await render();
     expect(host.textContent).toContain("考试准备已完成");
-    expect(host.textContent).toContain("匹配的确认记录");
+    expect(host.querySelector(".readiness-state-note")?.textContent).toBe(status === "collecting" ? "正在导入答卷；准备配置已冻结。" : "准备已确认，名单与配置已冻结。");
+    expect(host.querySelectorAll(".readiness-state-note")).toHaveLength(1);
     expect([...host.querySelectorAll("button")].some((button) => button.textContent === "确认准备完成")).toBe(false);
     expect(mocks.refresh).not.toHaveBeenCalled();
     expect(mocks.confirm).not.toHaveBeenCalled();
@@ -181,6 +194,9 @@ describe("考试准备冻结复核", () => {
     await render();
     expect([...host.querySelectorAll("button")].find((button) => button.textContent === "确认准备完成")?.disabled).toBe(true);
     expect(host.textContent).toContain("准备配置只读");
+    expect(host.querySelectorAll(".readiness-state-note")).toHaveLength(1);
+    expect(host.querySelector(".readiness-state-note")?.textContent).toContain("准备确认记录与当前配置不匹配");
+    expect(host.textContent).not.toContain("正在导入答卷；准备配置已冻结");
     expect(mocks.refresh).not.toHaveBeenCalled(); expect(mocks.confirm).not.toHaveBeenCalled();
   });
 
@@ -189,7 +205,7 @@ describe("考试准备冻结复核", () => {
     await render(); await click("确认准备完成");
     expect(mocks.confirm).not.toHaveBeenCalled(); expect(mocks.refresh).not.toHaveBeenCalled();
     expect(mocks.roster).not.toHaveBeenCalled(); expect(mocks.questions).not.toHaveBeenCalled(); expect(mocks.profile).not.toHaveBeenCalled();
-    expect(host.querySelector('[role="dialog"]')?.textContent).toContain("确认后将冻结本场考试准备");
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain("确认后将冻结本场准备");
     expect(host.querySelector('[role="dialog"]')?.querySelector("table")).toBeNull(); expect(host.textContent).not.toContain("学生甲"); expect(host.textContent).toContain("不能直接修改");
     await click("确认冻结并完成准备"); expect(mocks.confirm).toHaveBeenCalledWith("exam-1", "reviewed-hash");
     expect(host.querySelector('[role="dialog"]')).toBeNull();
@@ -199,7 +215,7 @@ describe("考试准备冻结复核", () => {
     mocks.exam.mockResolvedValue({ exam: { id: "exam/1", name: "Exam", status, class_ids: ["class-1"] } });
     mocks.readiness.mockResolvedValue({ readiness: { ...readiness, confirmed: true } });
     await render("exam/1");
-    expect(host.textContent).toContain(status === "ready" ? "准备已确认" : "考试已进入答卷导入阶段");
+    expect(host.textContent).toContain(status === "ready" ? "准备已确认" : "正在导入答卷");
     expect(host.textContent).not.toContain("已满足准备确认条件");
     expect([...host.querySelectorAll("button")].some((button) => button.textContent === "确认准备完成")).toBe(false);
     await click("前往答卷导入");
@@ -230,13 +246,13 @@ describe("考试准备冻结复核", () => {
     mocks.readiness.mockResolvedValueOnce({ readiness: { ...readiness, configuration_hash: "changed-hash" } });
     await click("确认冻结并完成准备");
     expect(mocks.confirm).not.toHaveBeenCalled(); expect(host.textContent).toContain("考试准备内容已变化");
-    expect(host.querySelector('[role="dialog"]')).not.toBeNull(); expect(host.textContent).toContain("确认后将冻结本场考试准备");
+    expect(host.querySelector('[role="dialog"]')).not.toBeNull(); expect(host.textContent).toContain("确认后将冻结本场准备");
   });
 
   it("冻结请求失败时保留窗口供重试", async () => {
     mocks.confirm.mockRejectedValueOnce(new Error("服务暂时不可用"));
     await render(); await click("确认准备完成"); await click("确认冻结并完成准备");
-    expect(host.textContent).toContain("冻结未完成，可重新检查或重试"); expect(host.textContent).toContain("确认后将冻结本场考试准备");
+    expect(host.textContent).toContain("冻结未完成，可重新检查或重试"); expect(host.textContent).toContain("确认后将冻结本场准备");
     expect(host.textContent).not.toContain("暂时无法完成冻结核对");
     await click("确认冻结并完成准备"); expect(mocks.confirm).toHaveBeenCalledTimes(2);
     expect(host.querySelector('[role="dialog"]')).toBeNull();
@@ -285,7 +301,7 @@ describe("考试准备冻结复核", () => {
     await render();
     mocks.readiness.mockResolvedValue({ readiness: { ...readiness, configuration_hash: "new-hash" } });
     await click("确认准备完成");
-    expect(host.textContent).toContain("确认后将冻结本场考试准备");
+    expect(host.textContent).toContain("确认后将冻结本场准备");
     await click("确认冻结并完成准备"); expect(mocks.confirm).toHaveBeenCalledWith("exam-1", "new-hash");
   });
 

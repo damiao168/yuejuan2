@@ -17,6 +17,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/goldpaper"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
+	"edugrade-enterprise/services/api-gateway/internal/opiniondraft"
 	"edugrade-enterprise/services/api-gateway/internal/pagination"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/seedquality"
@@ -51,6 +52,7 @@ type AIFailureReader interface {
 }
 
 type Handler struct {
+	privateDrafts      opiniondraft.Store
 	referenceMaterials *paper.ReferenceMaterialsService
 	store              Store
 	audit              auth.Store
@@ -927,6 +929,9 @@ func (h *Handler) SubmitArbitration(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeStoreError(w, r, err)
 		return
+	}
+	if h.privateDrafts != nil {
+		_ = h.privateDrafts.Commit(r.Context(), user.TenantID, user.ID, "arbitration", r.PathValue("id"), input.ExpectedRevision)
 	}
 	h.auditAction(r, "arbitration.submitted", "arbitration_task", task.ID, "submit arbitration final score")
 	h.auditAction(r, "final_grade.created", "final_grade", finalGrade.ID, "create final grade from arbitration")

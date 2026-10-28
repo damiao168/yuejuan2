@@ -158,11 +158,29 @@ describe("paper import workspace", () => {
     expect(button("粘贴文本").disabled).toBe(true);
   });
 
+  it("在选择资料前直接说明发送范围，仅公式格式帮助默认折叠", async () => {
+    await mount();
+    expect(container.textContent).toContain("图片资料发送本次新增图片页面");
+    expect(container.querySelector("details")).toBeNull();
+    await click("粘贴文本");
+    const dialog = container.querySelector('[role="dialog"]')!;
+    const help = dialog.querySelector("details")!;
+    expect(help.open).toBe(false);
+    expect(help.querySelector("summary")?.textContent).toBe("公式格式帮助");
+    expect(help.textContent).toContain("\\(...\\)");
+    const notice = [...dialog.querySelectorAll("p")].find(item => item.textContent?.includes("相关新增原文会送入模型解析"));
+    expect(notice).toBeDefined();
+    expect(notice?.closest("details")).toBeNull();
+    expect(dialog.textContent).toContain("不会重发已识别的历史资料");
+    expect(button("添加并识别").disabled).toBe(true);
+  });
+
   it("retains drafts as read-only while processing and exposes native indeterminate progress", async () => {
     workflow.reviewDrafts = [{ question_no: "1", score: 2 }] as PaperImportDraftQuestion[];
     const active = job("processing", { structured_issues: [issue("MISSING_ANSWER")], questions: workflow.reviewDrafts });
     await mount(active);
-    expect(container.querySelector("[data-review-readonly]")?.getAttribute("data-review-readonly")).toBe("true");
+    expect(container.querySelector("[data-review-readonly]")).toBeNull();
+    expect(container.querySelector("article")).not.toBeNull();
     expect(container.textContent).toContain("上一轮已识别的 1 道题目仍然保留");
     expect(container.textContent).not.toContain("MISSING_ANSWER");
     expect(container.querySelector("progress")?.hasAttribute("value")).toBe(false);
@@ -183,8 +201,8 @@ describe("paper import workspace", () => {
   });
 
   it.each([
-    ["failed", "ai_parse_failed", "仅重新解析"],
-    ["cancelled", "", "仅解析本次补充"]
+    ["failed", "ai_parse_failed", "继续处理本次资料"],
+    ["cancelled", "", "继续处理本次资料"]
   ] as const)("preserves the retry-parse and retry-all actions for %s", async (status, errorCode, label) => {
     const active = job(status, { error_code: errorCode });
     await mount(active);
@@ -204,7 +222,8 @@ describe("paper import workspace", () => {
     expect(onNavigate).toHaveBeenCalledWith("/exams/exam%20%2F1/questions");
     expect(showEditor).not.toHaveBeenCalled();
     await mount({ ...active, generation: 8 });
-    expect(container.querySelector("[data-review-readonly]")?.getAttribute("data-review-readonly")).toBe("false");
+    expect(container.querySelector("[data-review-readonly]")).toBeNull();
+    expect(container.textContent).toContain("逐题核对");
     expect(container.textContent).toContain("确认导入");
   });
 
@@ -212,9 +231,12 @@ describe("paper import workspace", () => {
     const active = job("review_required", { sources: [source({ detected_role: "question" }), source({ id: "source-2", file_asset_id: "file-2", document_index: 1 })] });
     await mount(active);
     expect(container.textContent).not.toContain("确认导入");
+    await click("调整资料");
     const upButtons = container.querySelectorAll<HTMLButtonElement>("button[aria-label='上移资料']");
     expect(upButtons[0].disabled).toBe(true);
     await act(async () => { upButtons[1].click(); });
+    expect(workflow.replaceImportSources).not.toHaveBeenCalled();
+    await click("保存资料调整并匹配");
     expect(workflow.replaceImportSources).toHaveBeenCalledWith(active, [
       { ...active.sources[1], document_index: 0 }, { ...active.sources[0], document_index: 1 }
     ]);
@@ -224,19 +246,24 @@ describe("paper import workspace", () => {
   it("preserves role changes and removal arguments without changing the displayed source", async () => {
     const active = job("review_required");
     await mount(active);
+    await click("调整资料");
     await act(async () => {
       const select = container.querySelector<HTMLSelectElement>("select[aria-label='资料类型']")!;
       select.value = "solution";
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
+    expect(workflow.replaceImportSources).not.toHaveBeenCalled();
+    await click("保存资料调整并匹配");
     expect(workflow.replaceImportSources).toHaveBeenCalledWith(active, [{ ...active.sources[0], role_hint: "solution" }]);
     expect(active.sources[0].role_hint).toBe("auto");
     await act(async () => { container.querySelector<HTMLButtonElement>("button[aria-label='删除资料']")!.click(); });
-    expect(workflow.removeImportSource).toHaveBeenCalledWith(active, "source-1");
+    expect(workflow.replaceImportSources).toHaveBeenCalledTimes(1);
+    await click("保存资料调整并匹配");
+    expect(workflow.replaceImportSources).toHaveBeenLastCalledWith(active, []);
     workflow.updatingImportSources = true;
     await mount(active);
-    expect(container.querySelector<HTMLSelectElement>("select[aria-label='资料类型']")?.disabled).toBe(true);
-    expect(container.querySelector<HTMLButtonElement>("button[aria-label='删除资料']")?.disabled).toBe(true);
+    expect(container.querySelector("select[aria-label='资料类型']")).toBeNull();
+    expect(container.querySelector("button[aria-label='删除资料']")).toBeNull();
   });
 
   it("routes no-content and non-parse failures to their existing actions", async () => {
@@ -261,14 +288,15 @@ describe("paper import workspace", () => {
     expect(button("确认导入").disabled).toBe(true);
     workflow.invalidReviewScore = false;
     await mount(active);
-    await click("保存草稿");
+    expect(container.textContent).not.toContain("保存草稿");
     await click("确认导入");
-    expect(workflow.saveImportReview).toHaveBeenCalledWith(active);
+    expect(workflow.saveImportReview).not.toHaveBeenCalled();
     expect(workflow.confirmPaperImport).toHaveBeenCalledWith(active);
     await mount(job("applied"));
     expect(container.textContent).toContain("已确认并写入当前考试");
-    expect(container.querySelector<HTMLSelectElement>("select[aria-label='资料类型']")?.disabled).toBe(true);
-    expect(container.querySelector<HTMLButtonElement>("button[aria-label='删除资料']")?.disabled).toBe(true);
+    expect(container.querySelector("select[aria-label='资料类型']")).toBeNull();
+    expect(container.querySelector("button[aria-label='删除资料']")).toBeNull();
+    expect(container.textContent).not.toContain("调整资料");
     expect(container.querySelector("[data-review-readonly]")).toBeNull();
   });
 });

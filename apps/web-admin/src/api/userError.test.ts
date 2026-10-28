@@ -13,6 +13,15 @@ function response(body: unknown, status: number, statusText = "") {
 
 describe("user-facing API errors", () => {
   it.each([
+    ["score_release_gate_blocked", "发布前仍有待处理事项，请查看本场成绩的发布检查并完成处理后再发布。"],
+    ["score_release_stale_source", "当前正式成绩已更新，请以最新正式版本重新建立复评和发布草稿。"],
+    ["regrade_source_release_invalid", "复评来源不再是本场可用的正式成绩版本，请核对最新正式版本后重新预览。"],
+    ["regrade_no_affected_items", "当前范围没有匹配的已发布答卷，请核对题目、学生范围和来源版本。"],
+    ["calibration_gold_set_incomplete", "已批准标准卷不足，请在标准卷管理中补足本题试评样本后重试。"],
+    ["calibration_template_forbidden", "请有本校管理权限的阅卷管理员批准或撤回学校试评标准。"],
+    ["calibration_template_unavailable", "所选学校试评标准已撤回、更新或不再适合本题，请重新选择，当前输入已保留。"],
+    ["calibration_template_context_missing", "尚未确定本题作答类型或满分，请先核对题目配置后再使用学校标准。"],
+    ["calibration_conflict", "本题试评标准已更新，请保留当前输入，重新读取后核对再保存。"],
     ["ai_output_incomplete", "AI 建议未完成，请人工评分。"],
     ["template_vision_model_required", "尚未配置可用的答题卡多模态模型，请平台管理员在学校模型库分配答题卡识别用途。"],
     ["answer_sheet_model_required", "请选择已启用且已配置密钥的模型，用于答题卡多模态识别。"],

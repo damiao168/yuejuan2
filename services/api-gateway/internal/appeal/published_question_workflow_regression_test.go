@@ -143,11 +143,36 @@ func TestPublishedQuestionAppealResolutionRejectsBareVersionAndStaleRevision(t *
 	now := store.now()
 	store.SeedRegradeJobState("regrade-1", "ready_for_release", &now)
 	store.SeedPublishedResolutionRelease(item.TenantID, item.ExamID, "release-2", 2)
+	summary, err := service.Context(t.Context(), item.TenantID, item.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, version := range summary.ReleaseHistory {
+		if version.EligibleForResolution {
+			t.Fatal("bare version cannot be suggested for resolution")
+		}
+	}
 	input := ResolveQuestionAppealInput{NewReleaseID: "release-2", ExpectedRevision: item.Revision}
 	if _, err := service.Resolve(context.Background(), item.TenantID, item.ID, "manager-1", input); !errors.Is(err, ErrResolutionRelease) {
 		t.Fatalf("bare published version allowed resolution: %v", err)
 	}
 	store.SeedSource(publishedQuestionWorkflowResolution(now.Add(time.Minute)))
+	summary, err = service.Context(t.Context(), item.TenantID, item.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eligible := 0
+	for _, version := range summary.ReleaseHistory {
+		if version.EligibleForResolution {
+			eligible++
+			if version.ID != "release-2" {
+				t.Fatal("unrelated release suggested")
+			}
+		}
+	}
+	if eligible != 1 {
+		t.Fatalf("expected one fact-checked successor, got %d", eligible)
+	}
 	input.ExpectedRevision++
 	if _, err := service.Resolve(context.Background(), item.TenantID, item.ID, "manager-1", input); !errors.Is(err, ErrRevisionConflict) {
 		t.Fatalf("stale resolution error: %v", err)

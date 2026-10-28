@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { App, Button, Dropdown, Form, Input, Modal, Segmented, Select, Space, Upload, type MenuProps, type TableColumnsType } from "antd";
 import { Download, Plus, RefreshCw, Search, Upload as UploadIcon } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
@@ -21,7 +21,8 @@ import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import { isStepUpCancelledError, useStepUp } from "../auth/stepUpContext";
-import { prepareStudentImport, remapStudentImportError } from "../features/members/students/studentImport";
+import { prepareStudentImport, remapStudentImportError, studentImportColumns, type StudentImportMapping } from "../features/members/students/studentImport";
+import { readStudentImportWorkbook, type StudentImportSheet } from "../features/members/students/studentImportWorkbook";
 
 interface StudentFormValues {
   class_id: string;
@@ -93,6 +94,48 @@ export function StudentManagementPage() {
   const [transferClassId, setTransferClassId] = useState<string>();
   const [importOpen, setImportOpen] = useState(false);
   const [csv, setCSV] = useState("");
+  const [importReading, setImportReading] = useState(false);
+  const [importSheets, setImportSheets] = useState<StudentImportSheet[]>([]);
+  const [importSheetIndex, setImportSheetIndex] = useState(0);
+  const importRead = useRef<AbortController | null>(null);
+  const importMutation = useRef(false);
+  const importGeneration = useRef(0);
+  useEffect(() => () => { importGeneration.current += 1; importRead.current?.abort(); }, []);
+  function resetImportFile() {
+    if (importMutation.current) return false;
+    importGeneration.current += 1;
+    importRead.current?.abort(); importRead.current = null;
+    setImportReading(false); setImportSheets([]); setImportSheetIndex(0); setCSV(""); setImportResult(null);
+    return true;
+  }
+  function applyImportSheet(sheet: StudentImportSheet, index: number) {
+    if (importMutation.current) return;
+    importGeneration.current += 1;
+    setCSV(sheet.csv); setImportMapping(studentImportColumns(sheet.csv).mapping);
+    setImportSheetIndex(index); setImportClassID(""); setImportResult(null);
+  }
+  async function readImportFile(file: File) {
+    if (!resetImportFile()) return false;
+    const controller = new AbortController(); importRead.current = controller; setImportReading(true);
+    try {
+      if (/\.xlsx$/i.test(file.name)) {
+        const sheets = await readStudentImportWorkbook(file, controller.signal);
+        if (controller.signal.aborted) return false;
+        if (!sheets.length) throw new Error("Excel文件中没有可读取的工作表");
+        setImportSheets(sheets); applyImportSheet(sheets[0], 0);
+      } else {
+        if (!/\.csv$/i.test(file.name)) throw new Error("请选择 .xlsx 或 CSV 文件；旧版 .xls 请另存为 .xlsx");
+        const text = await file.text();
+        if (!controller.signal.aborted) applyImportSheet({ name: file.name, csv: text }, 0);
+      }
+    } catch (cause) {
+      if (!controller.signal.aborted) message.error(getUserErrorMessage(cause, "名单读取失败，请检查文件后重试"));
+    } finally { if (importRead.current === controller) setImportReading(false); }
+    return false;
+  }
+  const [importMapping, setImportMapping] = useState<StudentImportMapping>({ studentNo: "", name: "", classCode: "", schoolID: "", classID: "" });
+  const [importClassID, setImportClassID] = useState("");
+  const importHeaders = useMemo(() => csv.trim() ? studentImportColumns(csv).headers : [], [csv]);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [importResult, setImportResult] = useState<{ created: number; errors: StudentImportError[] } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -124,7 +167,7 @@ export function StudentManagementPage() {
   const academicYears = useMemo(() => [...new Set(grades.map((item) => item.academic_year))].sort((left, right) => right.localeCompare(left)), [grades]);
   const visibleGrades = useMemo(() => grades.filter((item) => academicYear === "all" || item.academic_year === academicYear), [academicYear, grades]);
   const visibleClasses = useMemo(() => classes.filter((item) => gradeId === "all" || item.grade_id === gradeId), [classes, gradeId]);
-  const importPreview = useMemo(() => csv.trim() ? prepareStudentImport(csv, classes) : null, [csv, classes]);
+  const importPreview = useMemo(() => csv.trim() ? prepareStudentImport(csv, classes, importMapping, importClassID) : null, [csv, classes, importMapping, importClassID]);
   const filtered = useMemo(() => students.filter((student) => {
     const schoolClass = classById.get(student.class_id);
     const grade = gradeById.get(schoolClass?.grade_id ?? "");
@@ -250,16 +293,20 @@ export function StudentManagementPage() {
   };
 
   const submitImport = async () => {
-    if (!csv.trim()) return;
-    const prepared = importPreview ?? prepareStudentImport(csv, classes);
+    if (!csv.trim() || importReading || saving || importMutation.current) return;
+    const prepared = importPreview ?? prepareStudentImport(csv, classes, importMapping, importClassID);
     if (!prepared.csv) {
       setImportResult({ created: 0, errors: prepared.errors });
       message.warning("没有可导入的学生，请查看导入结果。 ");
       return;
     }
+    const generation = importGeneration.current;
+    // 在React更新按钮前同步上锁；导入回包只属于本次已核对的文件和工作表。
+    importMutation.current = true;
     setSaving(true);
     try {
       const result = await importStudentsCSV(prepared.csv);
+      if (generation !== importGeneration.current) return;
       // 本地过滤会改变提交行号；把服务端错误映射回原 CSV 后再合并，便于用户定位原文件。
       const errors = [
         ...prepared.errors,
@@ -273,9 +320,10 @@ export function StudentManagementPage() {
       }
       await load();
     } catch (error_) {
-      message.error(errorText(error_));
+      if (generation === importGeneration.current) message.error(errorText(error_));
     } finally {
-      setSaving(false);
+      importMutation.current = false;
+      if (generation === importGeneration.current) setSaving(false);
     }
   };
 
@@ -344,10 +392,16 @@ export function StudentManagementPage() {
         <label>目标班级<Select aria-label="目标班级" style={{ width: "100%", marginTop: 8 }} disabled={saving} value={transferClassId} showSearch optionFilterProp="label" onChange={setTransferClassId} options={classes.filter((item) => item.school_id === transferringStudent?.school_id && item.status === "active").map((item) => ({ value: item.id, label: `${gradeBusinessLabel(gradeById.get(item.grade_id))} · ${item.name}` }))} /></label>
       </Modal>
 
-      <Modal title="批量导入学生" open={importOpen} okText={importResult ? "完成" : "开始导入"} cancelText="取消" okButtonProps={{ disabled: !csv.trim() && !importResult }} confirmLoading={saving} onOk={() => { if (importResult) { setImportOpen(false); setCSV(""); setImportResult(null); } else void submitImport(); }} onCancel={() => { setImportOpen(false); setCSV(""); setImportResult(null); }}>
-        <div className="student-import-copy"><p>使用 CSV 模板填写学号、姓名和班级代码；班级代码需唯一。导入不会修改已有学生。</p><Button size="small" icon={<Download size={15} />} onClick={downloadTemplate}>下载模板</Button></div>
-        <Upload.Dragger accept=".csv,text/csv" maxCount={1} beforeUpload={async (file) => { setCSV(await file.text()); setImportResult(null); return false; }} onRemove={() => { setCSV(""); setImportResult(null); return true; }}><UploadIcon size={22} /><p>选择或拖入 CSV 文件</p></Upload.Dragger>
-        {importPreview && !importResult ? <div className="student-import-preview" aria-live="polite">预检：{importPreview.sourceRows.length} 行可提交，{importPreview.errors.length} 行有问题。导入前请确认目标班级代码与学校范围。</div> : null}
+      <Modal title="批量导入学生" open={importOpen} okText={importResult ? "完成" : "开始导入"} cancelText="取消" okButtonProps={{ disabled: importReading || !csv.trim() && !importResult }} maskClosable={!saving} closable={!saving} cancelButtonProps={{ disabled: saving }} keyboard={!saving} confirmLoading={saving} onOk={() => { if (importResult) { setImportOpen(false); resetImportFile(); } else void submitImport(); }} onCancel={() => { if (!saving && !importMutation.current) { setImportOpen(false); resetImportFile(); } }}>
+        <div className="student-import-copy"><p>支持 Excel（.xlsx）和 CSV，可在下方核对列映射。学号列请设为文本以保留前导0。整班导入可直接选择目标班级。导入不会修改已有学生。</p><Button size="small" icon={<Download size={15} />} onClick={downloadTemplate}>下载模板</Button></div>
+        <Upload.Dragger accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={saving} maxCount={1} beforeUpload={readImportFile} onRemove={() => resetImportFile()}><UploadIcon size={22} /><p>{importReading ? "正在读取名单…" : "选择或拖入 Excel、CSV 名单"}</p></Upload.Dragger>
+        {importSheets.length > 1 ? <label>选择工作表<Select aria-label="导入工作表" disabled={saving || importReading} value={importSheetIndex} options={importSheets.map((sheet, index) => ({ value: index, label: sheet.name }))} onChange={index => applyImportSheet(importSheets[index], index)} /></label> : null}
+        {csv && !importResult ? <section className="student-import-mapping" aria-label="导入列映射">
+          {([['studentNo', '学号列'], ['name', '姓名列'], ['classCode', '班级代码列']] as const).map(([key, label]) => <label key={key}>{label}<Select aria-label={label} disabled={saving} allowClear value={importMapping[key] || undefined} options={importHeaders.map(value => ({ value, label: value }))} onChange={value => setImportMapping(current => ({ ...current, [key]: value ?? "" }))} /></label>)}
+          <label>目标班级（可选）<Select aria-label="导入目标班级" disabled={saving} allowClear showSearch optionFilterProp="label" value={importClassID || undefined} onChange={value => setImportClassID(value ?? "")} options={classes.filter(item => item.status === "active").map(item => ({ value: item.id, label: `${gradeBusinessLabel(gradeById.get(item.grade_id))} · ${item.name} · ${item.code}` }))} /></label>
+          <p>指定目标班级后，每行必须属于该班；未指定时，班级代码须在可访问范围内唯一。</p>
+        </section> : null}
+        {importPreview && !importResult ? <div className="student-import-preview" aria-live="polite">预检：{importPreview.sourceRows.length} 行可提交，{importPreview.errors.length} 行有问题。导入前请确认目标班级代码与学校范围。{importPreview.errors.length ? <ul>{importPreview.errors.slice(0, 5).map((entry, index) => <li key={`${entry.row}:${index}`}>第 {entry.row} 行：{entry.message}</li>)}</ul> : null}</div> : null}
         {importResult ? <section className="student-import-result" aria-live="polite">
           <strong>本次已创建 {importResult.created} 名；未导入 {importResult.errors.length} 行</strong>
           {importResult.errors.length ? <><Button icon={<Download size={15} />} onClick={() => downloadImportErrors(importResult.errors)}>下载完整错误表</Button><ol>{importResult.errors.map((entry, index) => <li key={`${entry.row}-${index}`}>第 {entry.row} 行：{entry.message}</li>)}</ol></> : <p>所有提交的有效记录已导入。</p>}

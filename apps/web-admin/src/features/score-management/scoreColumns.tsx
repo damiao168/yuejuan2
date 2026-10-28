@@ -86,13 +86,13 @@ export function createScoreColumns({ canReadStudentNames, identities }: Readonly
     {
       title: "各题分", dataIndex: "items",
       render: (_value: unknown, record) => (
-        <div className="score-item-strip">
+        <details><summary>查看 {(record.items ?? []).length} 题得分</summary><div className="score-item-strip">
           {(record.items ?? []).length > 0 ? (record.items ?? []).map((item) => (
             <span key={item.id} title={`${sourceLabels[item.source] ?? "其他来源"} · ${statusLabels[item.status] ?? "未知状态"}`}>
               {item.question_no}: {formatScore(item.score)}/{formatScore(item.max_score)}
             </span>
           )) : <span>无题目分</span>}
-        </div>
+        </div></details>
       )
     },
     {

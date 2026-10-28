@@ -73,6 +73,10 @@ describe("TOTP flow presentation", () => {
     const verified = renderToStaticMarkup(<TOTPFlowContent {...flowProps({ phase: "verified", challenge, method: "totp", expiresAt: 10_000, busy: false })} />);
     const closed = renderToStaticMarkup(<TOTPFlowContent {...flowProps({ phase: "closed", busy: false })} />);
     expect(enrolling).toContain(enrollment.secret);
+    expect(enrolling).toContain("<details><summary>手动设置</summary>");
+    expect(enrolling).not.toContain("<details open");
+    expect(enrolling).toContain("请勿截图、分享二维码或密钥");
+    expect(enrolling).toContain("SHA-1 · 6 位 · 30 秒");
     expect(enrolling).not.toContain(recovery.codes[0]);
     expect(recovering).toContain(recovery.codes[0]);
     expect(recovering).not.toContain(enrollment.secret);
@@ -88,6 +92,13 @@ describe("TOTP flow presentation", () => {
     expect(unsaved).toMatch(/<button[^>]*disabled[^>]*><span>完成并隐藏恢复码<\/span>/);
     expect(saved).not.toMatch(/<button[^>]*disabled[^>]*><span>完成并隐藏恢复码<\/span>/);
     expect(renderToStaticMarkup(<TOTPSubmitActions flow={recovery} canSubmit onClose={vi.fn()} />)).toBe("");
+    expect(unsaved).toContain("验证器已启用");
+    expect(unsaved).toContain("无需等待勾选才生效");
+    expect(unsaved).toContain("仅用于本试点关闭验证器");
+    expect(unsaved).toContain("关闭、离页或 1 分 2 秒 后不再显示");
+    const rotated = renderToStaticMarkup(<TOTPFlowContent {...flowProps({ ...recovery, reason: "rotated" })} />);
+    expect(rotated).toContain("旧码已全部失效");
+    expect(rotated).not.toContain("验证器已启用");
   });
 
   it("keeps cancel and submit disabled while a request is busy", () => {
@@ -102,7 +113,7 @@ describe("TOTP flow presentation", () => {
     const allowed = renderToStaticMarkup(<TOTPFlowContent {...flowProps({ phase: "challenge", challenge, expiresAt: 10_000, busy: false })} method="recovery_code" />);
     const totpOnly = renderToStaticMarkup(<TOTPFlowContent {...flowProps({ phase: "challenge", challenge: { ...challenge, operation: "mfa.recovery.rotate", methods: ["totp"] }, expiresAt: 10_000, busy: false })} />);
     expect(allowed).toContain("手机丢失，使用恢复码");
-    expect(allowed).toContain("即使随后取消关闭操作，也不能再次使用");
+    expect(allowed).toContain("随后取消关闭也不能再用");
     expect(totpOnly).not.toContain("手机丢失，使用恢复码");
   });
 

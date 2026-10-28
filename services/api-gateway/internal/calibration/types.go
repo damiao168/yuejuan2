@@ -52,6 +52,8 @@ type Policy struct {
 	Revision                  int64     `json:"revision"`
 	CreatedAt                 time.Time `json:"created_at"`
 	UpdatedAt                 time.Time `json:"updated_at"`
+	SchoolTemplateID          string    `json:"school_template_id,omitempty"`
+	SchoolTemplateRevision    int64     `json:"school_template_revision,omitempty"`
 }
 
 type PutPolicyInput struct {
@@ -66,6 +68,8 @@ type PutPolicyInput struct {
 	SevereErrorThreshold      float64  `json:"severe_error_threshold"`
 	QualificationValidityDays int      `json:"qualification_validity_days"`
 	ExpectedRevision          int64    `json:"expected_revision"`
+	SchoolTemplateID          string   `json:"school_template_id,omitempty"`
+	SchoolTemplateRevision    int64    `json:"school_template_revision,omitempty"`
 }
 
 type GoldSample struct {

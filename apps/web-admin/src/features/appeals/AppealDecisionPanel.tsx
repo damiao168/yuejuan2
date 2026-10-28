@@ -36,7 +36,7 @@ function TeacherDecision(props: TeacherProps) {
   const { actioning, canSubmit, recommendation, score, maxScore, reason } = props;
   return <>
     <h3>提交独立复核</h3>
-    <p className="muted">学生姓名、班级和原阅卷教师已隐藏。复核建议仅供管理员终审，不会直接修改成绩或关闭申诉；请只依据答卷和评分标准判断。</p>
+    <p className="muted">请独立核对答卷和评分标准。学生身份及原阅卷人已隐藏；意见由管理员终审，不直接改分或结案。</p>
     <Select value={recommendation} options={recommendationOptions} onChange={props.onRecommendationChange} disabled={!canSubmit || Boolean(actioning)} />
     {recommendation === "adjust_score" ? <InputNumber disabled={Boolean(actioning)} min={0} max={maxScore} precision={2} value={score} onChange={props.onScoreChange} placeholder="建议分数" /> : null}
     <Input.TextArea disabled={Boolean(actioning)} rows={5} value={reason} onChange={(event) => props.onReasonChange(event.target.value)} maxLength={500} placeholder="写明对应评分点、答卷证据和结论（不少于10字）" />
@@ -72,11 +72,11 @@ function AdminDecision(props: AdminProps) {
   </>;
 }
 
-type Props = TeacherProps & AdminProps & Readonly<{ mode: ProductExperience; draftTouched: boolean }>;
+type Props = TeacherProps & AdminProps & Readonly<{ mode: ProductExperience; draftTouched: boolean; memorySaved?: boolean }>;
 
 export function AppealDecisionPanel(props: Props) {
   return <aside className="appeal-decision-panel">
-    {!props.terminal ? <output className="appeal-draft-note">{props.draftTouched ? "未提交内容仅在本页，切换申请或刷新会丢失。" : "复核意见和终审结论只有提交后才写入服务端。"}</output> : null}
     {props.mode === "teacher" ? <TeacherDecision {...props} /> : <AdminDecision {...props} />}
+    {!props.terminal && (props.mode === "teacher" ? props.canSubmit : props.canManage) ? <output className="appeal-draft-note" role="status" title="自动暂存只在本次会话；服务端私有草稿需单独保存，7天后不可恢复。">{props.draftTouched ? props.memorySaved ? "未提交；本次会话已暂存，保存私有草稿后可刷新恢复。" : "有未提交内容；离开后无法恢复。" : "提交后才会正式保存。"}</output> : null}
   </aside>;
 }

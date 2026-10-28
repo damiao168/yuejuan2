@@ -127,7 +127,11 @@ func GradingAIPlanAppliesToQuestion(questionType string) bool {
 }
 
 func gradingAIPlanThresholdRequirement(plan GradingAIPlan) error {
-	if (plan.EffectiveMode == "dual" || plan.EffectiveMode == "dual_conditional_arbiter") && (plan.DecisionConfig.PrimaryAllowedDiffPoints == nil || plan.DecisionConfig.TeacherAllowedDiffPoints == nil) {
+	// 双模型超差直接转人工，不经过第三评分；只有实际启用第三模型才要求其分差。
+	if (plan.EffectiveMode == "dual" || plan.EffectiveMode == "dual_conditional_arbiter") && plan.DecisionConfig.PrimaryAllowedDiffPoints == nil {
+		return ErrGradingAIThresholdRequired
+	}
+	if plan.EffectiveMode == "dual_conditional_arbiter" && plan.DecisionConfig.TeacherAllowedDiffPoints == nil {
 		return ErrGradingAIThresholdRequired
 	}
 	return nil

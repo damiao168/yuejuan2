@@ -1,4 +1,4 @@
-import { Button, Drawer, Input, Select, Tooltip } from "antd";
+import { Button, Drawer, Input, Select } from "antd";
 import { ArrowUp, Bot, FileText, Menu, Paperclip, Square, X } from "lucide-react";
 import { ConversationFlow, ConversationHistory } from "./SchoolConversationDisplay";
 import { ConversationImage, canPreviewConversationImage } from "./ConversationImage";
@@ -22,9 +22,9 @@ export function AccountConversationView({ model: conversation }: Readonly<{ mode
     <section className="school-chat-main" aria-label="AI 对话内容">
       <header className="school-chat-topbar">
         <div className="school-chat-topbar-title"><Button className="school-chat-mobile-menu" type="text" icon={<Menu size={18} />} aria-label="打开对话历史" onClick={() => setHistoryOpen(true)} /><Bot size={21} /><span>学校 AI 助手</span></div>
-        <div className="school-chat-model-status"><i className={model?.available ? "is-online" : ""} />{chatModels.length ? <Select aria-label="切换对话模型" size="small" style={{ width: "min(300px, 40vw)" }} value={activePending?.modelConfigID ?? selectedModelID} disabled={modelLoading || Boolean(activePending)}
+        <div className="school-chat-model-status"><i className={model?.available ? "is-online" : ""} />{chatModels.length > 1 ? <Select aria-label="切换对话模型" size="small" style={{ width: "min(300px, 40vw)" }} value={activePending?.modelConfigID ?? selectedModelID} disabled={modelLoading || Boolean(activePending)}
           options={chatModels.map(item => ({ value: item.id, label: `${item.display_name} · ${item.model_name}${item.available ? "" : "（不可用）"}`, disabled: !item.available }))}
-          onChange={selectModel} /> : conversationModelStatus(model, modelLoading)}{activeCount > 0 ? ` · ${activeCount}/${MAX_ACTIVE_CHATS} 个对话进行中` : ""}</div>
+          onChange={selectModel} /> : chatModels.length === 1 ? <span title={chatModels[0].model_name}>{chatModels[0].display_name}{chatModels[0].available ? "" : "（不可用）"}</span> : conversationModelStatus(model, modelLoading)}{activeCount > 0 ? ` · ${activeCount}/${MAX_ACTIVE_CHATS} 个对话进行中` : ""}</div>
       </header>
       {activeContext?.exam_id ? <div className="school-conversation-context"><span>当前考试<strong>{activeContext.exam_name || activeContext.exam_id}</strong></span><Button type="text" size="small" icon={<X size={13} />} aria-label="移除当前考试上下文" disabled={Boolean(activePending)} onClick={clearContext}>移除</Button></div> : null}
 
@@ -46,11 +46,11 @@ export function AccountConversationView({ model: conversation }: Readonly<{ mode
           />
           <div className="school-chat-composer-bottom">
             <input ref={fileInputRef} className="school-chat-file-input" type="file" multiple accept=".png,.jpg,.jpeg,image/png,image/jpeg,.pdf,.txt,.md,.csv,.json,.xml,.html,.css,.js,.jsx,.ts,.tsx,.py,.java,.go,.sql,.yaml,.yml,.log,.ini,.conf,text/*,application/pdf,application/json" onChange={selectFiles} />
-            <Tooltip title="可直接粘贴 PNG、JPEG 图片，每张不超过 3 MB；支持 PDF 和文本，共最多 3 个附件"><Button type="text" size="small" icon={<Paperclip size={17} />} loading={attaching} disabled={Boolean(activePending) || activeCount >= MAX_ACTIVE_CHATS || draftAttachments.length >= MAX_ATTACHMENTS} onClick={() => fileInputRef.current?.click()}>上传文件</Button></Tooltip>
+            <div><Button type="text" size="small" icon={<Paperclip size={17} />} loading={attaching} disabled={Boolean(activePending) || activeCount >= MAX_ACTIVE_CHATS || draftAttachments.length >= MAX_ATTACHMENTS} onClick={() => fileInputRef.current?.click()}>上传文件</Button><details><summary>附件格式与限制</summary><p>支持图片、PDF和文本，最多3个附件。PNG/JPEG图片每张不超过3MB，可直接粘贴；PDF每个不超过10MB，文本每个不超过512KB。</p></details></div>
             {activePending ? <Button type="primary" shape="circle" icon={<Square size={15} fill="currentColor" />} aria-label="中断当前对话" onClick={stop} /> : <Button type="primary" shape="circle" htmlType="submit" icon={<ArrowUp size={19} />} aria-label="发送消息" disabled={(!draft.trim() && draftAttachments.length === 0) || !model?.available || activeCount >= MAX_ACTIVE_CHATS || attaching} />}
           </div>
         </form>
-        <p className="school-chat-disclaimer">业务回答以本轮来源为依据；正式操作请进入业务页面核实。</p>
+        <p className="school-chat-disclaimer">业务信息请核对来源，正式操作请进入对应页面。</p>
       </div>
     </section>
   </div>;

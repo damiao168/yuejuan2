@@ -1,4 +1,5 @@
 import { primitiveDisplayValue } from "../../utils/displayValue";
+import { typicalErrorLabel, typicalErrorOptions } from "../../constants/assessmentLabels";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, App, Button, Descriptions, Drawer, Empty, Input, InputNumber, List, Modal, Popconfirm, Select, Space, Tag } from "antd";
 import type { GoldPaper, GoldPaperVersion } from "@edugrade/sdk";
@@ -8,6 +9,7 @@ import { MathMarkdown } from "../../components/MathMarkdown";
 import { goldCoverageGapLabel, rubricPointsFromSnapshot } from "./goldPaperPresentation";
 
 const statusLabels = { pending_approval: "待审批", active: "已启用", retired: "已退役" } as const;
+const riskLabels: Record<string, string> = { R1: "课堂与形成性评价", R2: "校内总结性考试", R3: "高风险考试" };
 interface CoverageState { scope: string; phase: "loading" | "ready" | "error"; gaps: string[]; ready: boolean }
 
 function GoldPaperDetails({ selected, latest, coverage, onRetryCoverage, acting, onApprove, onCreateVersion, onRetire }: Readonly<{
@@ -33,14 +35,14 @@ function GoldPaperDetails({ selected, latest, coverage, onRetryCoverage, acting,
       {answerImageURL ? <img className="gold-paper-answer" src={apiClient.url(answerImageURL)} alt="标准卷冻结答题区域" /> : <Alert type="warning" message="此版本缺少可验证的冻结答题图" description="历史审批记录仍保留，请创建新版本并重新审批后使用。" />}
       <Descriptions size="small" bordered column={2}>
         <Descriptions.Item label="状态"><Tag>{statusLabels[selected.status]}</Tag></Descriptions.Item>
-        <Descriptions.Item label="风险级别">{selected.risk_tier}</Descriptions.Item>
+        <Descriptions.Item label="考试风险"><span title={selected.risk_tier}>{riskLabels[selected.risk_tier] ?? "其他风险"}</span></Descriptions.Item>
         <Descriptions.Item label="版本">v{latest.version}{latest.approved_at ? " · 已批准" : latest.image_invalidated_at ? " · 图像身份已失效" : " · 待批准"}</Descriptions.Item>
         <Descriptions.Item label="拟定分">{latest.reference_score} / {latest.max_score}</Descriptions.Item>
         <Descriptions.Item label="解释" span={2}><MathMarkdown promoteInlineMath={false}>{latest.explanation}</MathMarkdown></Descriptions.Item>
       </Descriptions>
       <section>
-        <h3>冻结 Rubric 与采分点证据</h3>
-        <List size="small" bordered dataSource={rubricPoints} locale={{ emptyText: "冻结 Rubric 未定义采分点" }} renderItem={(point) => <List.Item extra={<Tag>{primitiveDisplayValue(latest.trait_scores[point.id], "未标注")} / {point.score}</Tag>}><MathMarkdown promoteInlineMath={false}>{point.description}</MathMarkdown></List.Item>} />
+        <h3>冻结评分细则与采分点证据</h3>
+        <List size="small" bordered dataSource={rubricPoints} locale={{ emptyText: "冻结评分细则未定义采分点" }} renderItem={(point) => <List.Item extra={<Tag>{primitiveDisplayValue(latest.trait_scores[point.id], "未标注")} / {point.score}</Tag>}><MathMarkdown promoteInlineMath={false}>{point.description}</MathMarkdown></List.Item>} />
       </section>
       <Space wrap>
         {!latest.approved_at && !latest.image_invalidated_at && selected.status !== "retired" ? <Popconfirm title={`批准 v${latest.version} 并设为活动版本？`} description="批准后版本内容不可原地修改。" onConfirm={() => onApprove(selected, latest)}><Button type="primary" loading={acting}>批准版本</Button></Popconfirm> : null}
@@ -66,6 +68,13 @@ export function GoldPaperManagerDrawer({ open, examId, questionId, onClose }: Re
   const [retirementReason, setRetirementReason] = useState("");
   const [coverage, setCoverage] = useState<CoverageState>();
   const [coverageAttempt, setCoverageAttempt] = useState(0);
+  const [filterQuestion, setFilterQuestion] = useState("");
+  const [scoreBand, setScoreBand] = useState("all");
+  const visibleItems = items.filter(item => {
+    const version = item.versions[item.versions.length - 1];
+    const ratio = version && version.max_score > 0 ? version.reference_score / version.max_score : null;
+    return (!filterQuestion || item.question_no === filterQuestion) && (scoreBand === "all" || (scoreBand === "zero" ? ratio === 0 : scoreBand === "full" ? ratio === 1 : ratio !== null && ratio > 0 && ratio < 1));
+  });
   const selected = useMemo(() => items.find((item) => item.id === selectedId) ?? items[0], [items, selectedId]);
   const latest = selected?.versions[selected.versions.length - 1];
 
@@ -132,13 +141,15 @@ export function GoldPaperManagerDrawer({ open, examId, questionId, onClose }: Re
       <Drawer title="标准卷管理" width={920} open={open} onClose={() => { if (!acting) onClose(); }} closable={!acting} maskClosable={!acting} keyboard={!acting} extra={<Button disabled={acting} loading={loading} onClick={() => void load()}>刷新</Button>}>
         <div className="gold-paper-manager">
           <aside>
+            <label>题目 <select aria-label="筛选标准卷题目" value={filterQuestion} onChange={event => setFilterQuestion(event.target.value)}><option value="">全部题目</option>{[...new Set(items.flatMap(item => item.question_no ? [item.question_no] : []))].map(no => <option key={no} value={no}>第 {no} 题</option>)}</select></label>
+            <label>分档 <select aria-label="筛选标准卷分档" value={scoreBand} onChange={event => setScoreBand(event.target.value)}><option value="all">全部分档</option><option value="zero">零分</option><option value="partial">部分得分</option><option value="full">满分</option></select></label>
             <List
               loading={loading}
-              dataSource={items}
+              dataSource={visibleItems}
               locale={{ emptyText: <Empty description="暂无标准卷提名" /> }}
               renderItem={(item) => (
                 <List.Item className={item.id === selected?.id ? "selected" : ""} onClick={() => { if (!acting) setSelectedId(item.id); }}>
-                  <List.Item.Meta title={`题目 ${item.question_id.slice(0, 8)}`} description={<Space><Tag>{statusLabels[item.status]}</Tag><span>v{item.versions.length}</span></Space>} />
+                  <List.Item.Meta title={`${item.question_no ? `第 ${item.question_no} 题` : "题号尚未提供"} · ${item.versions[item.versions.length - 1]?.reference_score ?? "—"}/${item.versions[item.versions.length - 1]?.max_score ?? "—"} 分`} description={<><Space><Tag>{statusLabels[item.status]}</Tag><span>v{item.versions.length}</span></Space><p>{item.versions[item.versions.length - 1]?.error_tags.map(typicalErrorLabel).join("、") || "未标注典型错误"}</p><details><summary>记录编号与原始标签</summary>{item.id} · 题目 {item.question_id}<p>{item.versions[item.versions.length - 1]?.error_tags.join("、")}</p></details></>} />
                 </List.Item>
               )}
             />
@@ -154,7 +165,7 @@ export function GoldPaperManagerDrawer({ open, examId, questionId, onClose }: Re
         <Space direction="vertical" style={{ width: "100%" }}>
           <InputNumber disabled={acting} min={0} max={latest?.max_score} value={score} onChange={(value) => setScore(value === null ? null : Number(value))} suffix={`/ ${latest?.max_score ?? "-"}`} />
           <Input.TextArea disabled={acting} rows={4} value={explanation} onChange={(event) => setExplanation(event.target.value)} placeholder="说明相对上一版本调整了哪些评分边界或证据" />
-          <Select disabled={acting} mode="tags" value={errorTags} onChange={setErrorTags} tokenSeparators={[","]} placeholder="典型错误标签" />
+          <Select disabled={acting} mode="tags" value={errorTags} onChange={setErrorTags} options={typicalErrorOptions} tokenSeparators={[","]} placeholder="选择或填写典型错误" />
         </Space>
       </Modal>
       <Modal title="退役标准卷" open={retireOpen} confirmLoading={acting} closable={!acting} maskClosable={!acting} keyboard={!acting} okButtonProps={{ danger: true }} onOk={() => !acting && selected && retirementReason.trim() && void run(() => retireGoldPaper(selected.id, retirementReason.trim()), "标准卷已退役").then(saved => { if (saved) { setRetireOpen(false); setRetirementReason(""); } })} onCancel={() => { if (!acting) setRetireOpen(false); }}>

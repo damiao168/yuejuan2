@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { App } from "antd";
 import { getUserErrorMessage } from "../../../api/client";
 import {
@@ -20,6 +20,7 @@ import {
 import type { SubmissionGrade } from "../../../api/scores";
 import { listReviewActors, type WorkflowActor } from "../../../api/workflowActors";
 import { closedWorkflowModal, workflowModalReducer } from "./workflowModal";
+import { getBusinessCommandSession, isBusinessCommandSessionCurrent } from "../../../api/businessCommand";
 
 type RunAction = (key: string, action: () => Promise<void>, successText: string) => Promise<void>;
 
@@ -44,7 +45,8 @@ export function useRegradeWorkflow({
   publishedRelease,
   grades,
   runAction,
-  setActioning
+  setActioning,
+  onReleaseCreated
 }: {
   canManage: boolean;
   selectedExamId: string;
@@ -52,6 +54,7 @@ export function useRegradeWorkflow({
   grades: SubmissionGrade[];
   runAction: RunAction;
   setActioning: (key: string | null) => void;
+  onReleaseCreated?: (release: ScoreRelease) => void;
 }) {
   const { message, modal } = App.useApp();
   const [regradeModal, dispatchRegradeModal] = useReducer(workflowModalReducer, closedWorkflowModal);
@@ -69,7 +72,12 @@ export function useRegradeWorkflow({
   const [regradeReviewScores, setRegradeReviewScores] = useState<Record<string, number | null>>({});
   const [regradeReviewNotes, setRegradeReviewNotes] = useState<Record<string, string>>({});
   const [reviewedEvidence, setReviewedEvidence] = useState<Record<string, number>>({});
+  const [regradeReviewConflicts, setRegradeReviewConflicts] = useState<Record<string, number>>({});
   const [previewingRegrade, setPreviewingRegrade] = useState(false);
+  const reviewRequest = useRef(0);
+  const reviewState = useRef({ summary: regradeReview, scores: regradeReviewScores, notes: regradeReviewNotes });
+  reviewState.current = { summary: regradeReview, scores: regradeReviewScores, notes: regradeReviewNotes };
+  const reviewExam = useRef(selectedExamId); reviewExam.current = selectedExamId;
 
   const regradeQuestionOptions = useMemo(() => {
     const byQuestion = new Map<string, { label: string; value: string }>();
@@ -161,15 +169,21 @@ export function useRegradeWorkflow({
   };
 
   const materializeRegradeRelease = (job: RegradeJob) => {
+    const session = getBusinessCommandSession();
+    const examId = selectedExamId;
     modal.confirm({
-      title: "生成复评后的新成绩版本",
-      content: "此操作只创建一个新的草稿版本，不会改写当前已发布成绩。新版本仍需通过发布门禁后才能对学生生效。",
-      okText: "生成新版本",
+      title: "继续本次复评的成绩版本",
+      content: "尚无结果时创建草稿；已有结果时继续原版本。草稿须通过发布检查并正式发布后才会对学生生效。",
+      okText: "生成或继续结果版本",
       cancelText: "取消",
       onOk: () => runAction(
         "regrade-release",
-        async () => { await createRegradeScoreRelease(job.id, { reason: `题目复评完成：${job.reason_text}`, idempotency_key: crypto.randomUUID() }); },
-        "已生成复评后的成绩版本草稿"
+        async () => {
+          const response = await createRegradeScoreRelease(job.id, { reason: `题目复评完成：${job.reason_text}`, idempotency_key: crypto.randomUUID() });
+          // 服务端按复评任务复用草稿；回执只在当前会话和考试打开，不能把迟到结果带入另一场考试。
+          if (isBusinessCommandSessionCurrent(session) && reviewExam.current === examId) onReleaseCreated?.(response.score_release);
+        },
+        "已定位本次复评的成绩版本"
       )
     });
   };
@@ -187,28 +201,35 @@ export function useRegradeWorkflow({
   };
 
   const openRegradeReview = async (job: RegradeJob) => {
+    const request = ++reviewRequest.current;
+    const examId = selectedExamId;
     setActioning("regrade-load-review");
     try {
       const response = await getRegradeJob(job.id);
+      if (request !== reviewRequest.current || examId !== reviewExam.current) return;
       setRegradeReview(response.regrade);
+      setRegradeReviewConflicts({});
       setReviewedEvidence({});
       setRegradeReviewNotes({});
       setRegradeReviewScores(Object.fromEntries(response.regrade.items.map((item) => [item.id, item.candidate_score ?? null])));
       setRegradeReviewOpen(true);
     } catch (error) {
-      message.error(formatError(error));
+      if (request === reviewRequest.current && examId === reviewExam.current) message.error(formatError(error));
     } finally {
-      setActioning(null);
+      if (request === reviewRequest.current && examId === reviewExam.current) setActioning(null);
     }
   };
 
   const decideRegradeItem = (item: RegradeSummary["items"][number], decision: "accept" | "reject" | "exception") => {
+    if (regradeReviewConflicts[item.id]) { message.error("候选已更新，请核对新材料并选择保留或重置本页修改"); return; }
     if (reviewedEvidence[item.id] !== item.revision) { message.error("请先核对本条候选的答卷与冻结标准"); return; }
     const note = regradeReviewNotes[item.id]?.trim() ?? "";
     if (item.status === "exception" && (!note || decision === "exception")) {
       message.error("请填写异常处理说明，再接受或驳回候选"); return;
     }
     const score = regradeReviewScores[item.id];
+    const request = reviewRequest.current;
+    const examId = selectedExamId;
     if (decision === "accept" && (score === null || score === undefined)) {
       message.error("接受候选前请填写最终得分");
       return;
@@ -222,10 +243,27 @@ export function useRegradeWorkflow({
           ...(decision === "accept" && score !== item.candidate_score ? { reviewed_score: score } : {}),
           expected_revision: item.revision
         });
-        if (regradeReview) {
+        if (regradeReview && request === reviewRequest.current && examId === reviewExam.current) {
           const refreshed = await getRegradeJob(regradeReview.job.id);
+          if (request !== reviewRequest.current || examId !== reviewExam.current) return;
+          const current = reviewState.current;
+          const previousItems = new Map(current.summary?.items.map(value => [value.id, value]) ?? []);
+          const conflicts: Record<string, number> = {};
+          // 只接收本次提交项的结果；其他候选的本页改分和说明必须保留，0 分也是主动修改。
+          const scores = Object.fromEntries(refreshed.regrade.items.map(value => {
+            const previous = previousItems.get(value.id);
+            const edited = value.id !== item.id && previous && (
+              (Object.prototype.hasOwnProperty.call(current.scores, value.id) && current.scores[value.id] !== (previous.candidate_score ?? null)) || Boolean(current.notes[value.id])
+            );
+            if (edited && previous.revision !== value.revision) conflicts[value.id] = value.revision;
+            return [value.id, edited && Object.prototype.hasOwnProperty.call(current.scores, value.id) ? current.scores[value.id] : value.candidate_score ?? null];
+          }));
           setRegradeReview(refreshed.regrade);
-          setRegradeReviewScores(Object.fromEntries(refreshed.regrade.items.map((value) => [value.id, value.candidate_score ?? null])));
+          setRegradeReviewScores(scores);
+          setRegradeReviewNotes(currentNotes => Object.fromEntries(refreshed.regrade.items.filter(value => value.id !== item.id && Object.prototype.hasOwnProperty.call(currentNotes, value.id)).map(value => [value.id, currentNotes[value.id]])));
+          setRegradeReviewConflicts(previous => ({ ...previous, ...conflicts }));
+          // 修订变化后必须重新读取证据；保留旧输入不代表旧核对仍可用于新候选。
+          setReviewedEvidence(previous => Object.fromEntries(refreshed.regrade.items.filter(value => previous[value.id] === value.revision).map(value => [value.id, value.revision])));
         }
       },
       regradeReviewSuccessText[decision]
@@ -252,9 +290,19 @@ export function useRegradeWorkflow({
     clearRegradePreview: () => setRegradePreview(null),
     regradeReview,
     regradeReviewOpen,
-    closeRegradeReview: () => setRegradeReviewOpen(false),
+    closeRegradeReview: () => { reviewRequest.current++; setRegradeReviewOpen(false); },
     regradeReviewScores,
     regradeReviewNotes,
+    regradeReviewConflicts,
+    resolveReviewConflict: (id: string, keepLocal: boolean) => {
+      const candidate = regradeReview?.items.find(value => value.id === id);
+      if (!candidate || reviewedEvidence[id] !== candidate.revision) return;
+      if (!keepLocal) {
+        setRegradeReviewScores(previous => ({ ...previous, [id]: candidate.candidate_score ?? null }));
+        setRegradeReviewNotes(previous => ({ ...previous, [id]: "" }));
+      }
+      setRegradeReviewConflicts(previous => { const next = { ...previous }; delete next[id]; return next; });
+    },
     setRegradeReviewNotes,
     reviewedEvidence,
     markEvidenceReviewed: (id: string, revision: number) => setReviewedEvidence(current => ({ ...current, [id]: revision })),

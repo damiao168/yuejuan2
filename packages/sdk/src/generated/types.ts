@@ -454,7 +454,7 @@ export type GoldPaperStatus = "pending_approval" | "active" | "retired";
 
 export type GoldPaperVersion = { "id": string; "version": number; "exam_question_snapshot_id": string; "reference_score": number; "max_score": number; "rubric_snapshot": Record<string, unknown>; "explanation": string; "trait_scores": Record<string, unknown>; "error_tags": Array<string>; "source_grade_ids": Array<string>; "nominated_by": string; "approved_by"?: string; "approved_at"?: string; "created_at": string; "answer_image_url"?: string; "image_invalidated_at"?: string; };
 
-export type GoldPaper = { "id": string; "exam_id": string; "question_id": string; "submission_id": string; "answer_image_url"?: string; "active_version"?: number; "status": GoldPaperStatus; "subject_code": string; "archetype_code": string; "risk_tier": string; "nominated_by": string; "retired_at"?: string; "retirement_reason"?: string; "created_at": string; "updated_at": string; "versions": Array<GoldPaperVersion>; };
+export type GoldPaper = { "id": string; "exam_id": string; "question_id": string; "submission_id": string; "answer_image_url"?: string; "active_version"?: number; "status": GoldPaperStatus; "subject_code": string; "archetype_code": string; "risk_tier": string; "nominated_by": string; "retired_at"?: string; "retirement_reason"?: string; "created_at": string; "updated_at": string; "versions": Array<GoldPaperVersion>; "question_no"?: string; };
 
 export type GoldPaperResponse = { "gold_paper": GoldPaper; };
 
@@ -472,9 +472,9 @@ export type GoldCoverage = { "exam_id": string; "question_id": string; "subject_
 
 export type GoldCoverageResponse = { "coverage": GoldCoverage; };
 
-export type CalibrationPolicy = { "id": string; "exam_id": string; "question_id": string; "archetype_code": string; "max_score": number; "minimum_samples": number; "maximum_mae": number; "minimum_exact_agreement": number; "minimum_within_one_agreement": number; "minimum_criterion_agreement"?: number; "maximum_severe_rate": number; "severe_error_threshold": number; "qualification_validity_days": number; "revision": number; "created_at": string; "updated_at": string; };
+export type CalibrationPolicy = { "id": string; "exam_id": string; "question_id": string; "archetype_code": string; "max_score": number; "minimum_samples": number; "maximum_mae": number; "minimum_exact_agreement": number; "minimum_within_one_agreement": number; "minimum_criterion_agreement"?: number; "maximum_severe_rate": number; "severe_error_threshold": number; "qualification_validity_days": number; "revision": number; "created_at": string; "updated_at": string; "school_template_id"?: string; "school_template_revision"?: number; };
 
-export type PutCalibrationPolicyRequest = { "archetype_code": string; "max_score": number; "minimum_samples": number; "maximum_mae": number; "minimum_exact_agreement": number; "minimum_within_one_agreement": number; "minimum_criterion_agreement"?: number; "maximum_severe_rate": number; "severe_error_threshold": number; "qualification_validity_days": number; "expected_revision": number; };
+export type PutCalibrationPolicyRequest = { "archetype_code": string; "max_score": number; "minimum_samples": number; "maximum_mae": number; "minimum_exact_agreement": number; "minimum_within_one_agreement": number; "minimum_criterion_agreement"?: number; "maximum_severe_rate": number; "severe_error_threshold": number; "qualification_validity_days": number; "expected_revision": number; "school_template_id"?: string; "school_template_revision"?: number; };
 
 export type CalibrationPolicyResponse = { "policy": CalibrationPolicy; };
 
@@ -752,7 +752,7 @@ export type RegradeJob = { "id": string; "tenant_id": string; "exam_id": string;
 
 export type RegradeItem = { "id": string; "job_id": string; "submission_id": string; "old_final_grade_id": string; "old_score": number; "max_score": number; "candidate_grade_id"?: string; "candidate_score"?: number | null; "candidate_rubric_selections"?: Array<RegradeRubricSelection>; "candidate_comment"?: string; "reviewed_grade_id"?: string; "reviewed_score"?: number | null; "delta"?: number | null; "status": string; "assigned_to"?: string; "claimed_by"?: string; "reviewed_by"?: string; "review_note"?: string; "revision": number; "created_at": string; "updated_at": string; };
 
-export type RegradeWorkItem = { "id": string; "job_id": string; "status": string; "max_score": number; "revision": number; "created_at": string; };
+export type RegradeWorkItem = { "id": string; "job_id": string; "status": string; "max_score": number; "revision": number; "created_at": string; "exam_name"?: string; "subject"?: string; "question_no"?: string; "anonymous_code"?: string; };
 
 export type RegradeGraderQuestion = { "id": string; "question_no": string; "question_type": string; "score": number; "stem"?: string; "knowledge_points"?: Array<string>; "options"?: Array<string>; "answer_key"?: ReviewFrozenAnswerKey; "solution"?: ReviewFrozenSolution; };
 
@@ -850,7 +850,7 @@ export type StudentPublishedQuestionAppealListResponse = { "appeals": Array<Stud
 
 export type PublishedQuestionAppealEventsResponse = { "events": Array<PublishedQuestionAppealEvent>; };
 
-export type QuestionAppealReleaseVersion = { "id": string; "version": number; "source": string; "status": string; "reason": string; "published_at"?: string | null; };
+export type QuestionAppealReleaseVersion = { "id": string; "version": number; "source": string; "status": string; "reason": string; "published_at"?: string | null; "eligible_for_resolution"?: boolean; };
 
 export type PublishedQuestionAppealContext = { "appeal": PublishedQuestionAppeal; "source_type": string; "rubric_snapshot"?: Record<string, unknown>; "release_history": Array<QuestionAppealReleaseVersion>; "answer_image_ready": boolean; };
 
@@ -912,7 +912,7 @@ export type BackmarkRegradeInput = { "source_release_id": string; "assignee_id":
 
 export type BackmarkBatchListResponse = { "backmark_batches": Array<BackmarkBatch>; "next_cursor": string; "has_more": boolean; };
 
-export type BackmarkGraderItem = { "id": string; "status": "pending" | "in_progress"; "max_score": number; "revision": number; "created_at": string; };
+export type BackmarkGraderItem = { "id": string; "status": "pending" | "in_progress"; "max_score": number; "revision": number; "created_at": string; "exam_name"?: string; "subject"?: string; "question_no"?: string; "anonymous_code"?: string; };
 
 export type BackmarkGraderItemResponse = { "backmark_item": BackmarkGraderItem; };
 
@@ -1188,7 +1188,7 @@ export type QuestionBank = { "id": string; "tenant_id": string; "school_id": str
 
 export type QuestionBankItem = { "id": string; "tenant_id": string; "bank_id": string; "item_code": string; "subject_code": SubjectCode; "grade_scope": string; "current_published_version_id": string | null; "status": "active" | "retired" | "archived"; "created_by": string; "created_at": string; "kind": "question" | "rubric_template"; "revision": number; };
 
-export type QuestionBankVersion = { "id": string; "tenant_id": string; "item_id": string; "version_no": number; "schema_version": number; "revision": number; "workflow_status": "draft" | "reviewing" | "approved" | "published"; "source_version_id": string | null; "author_id": string; "content_hash": string; "hash_scope": "draft_content_v1"; "question_type": "single_choice" | "multiple_choice" | "true_false" | "fill_blank" | "numeric" | "formula" | "short_answer" | "calculation" | "essay" | "discussion" | "coding"; "assessment_archetype": "selected_response" | "exact_text" | "numeric_expression" | "structured_steps" | "short_constructed" | "extended_response" | "diagram_graph" | "table_experiment"; "stem": string; "options": Array<string>; "default_score": number; "knowledge_points": Array<string>; "metadata": QuestionBankMetadata; "created_at": string; "updated_at": string; "scoring": QuestionBankScoring; "bundle_hash": string; "answer_version_id": string | null; "rubric_version_id": string | null; "bundle_schema_version": 2; "custom_metadata"?: Record<string, unknown>; "import_provenance"?: QuestionBankImportProvenance; };
+export type QuestionBankVersion = { "id": string; "tenant_id": string; "item_id": string; "version_no": number; "schema_version": number; "revision": number; "workflow_status": "draft" | "reviewing" | "approved" | "published"; "source_version_id": string | null; "author_id": string; "content_hash": string; "hash_scope": "draft_content_v1"; "question_type": "single_choice" | "multiple_choice" | "true_false" | "fill_blank" | "numeric" | "formula" | "short_answer" | "calculation" | "essay" | "discussion" | "coding"; "assessment_archetype": "selected_response" | "exact_text" | "numeric_expression" | "structured_steps" | "short_constructed" | "extended_response" | "diagram_graph" | "table_experiment"; "stem": string; "options": Array<string>; "default_score": number; "knowledge_points": Array<string>; "metadata": QuestionBankMetadata; "created_at": string; "updated_at": string; "scoring": QuestionBankScoring; "bundle_hash": string; "answer_version_id": string | null; "rubric_version_id": string | null; "bundle_schema_version": 2; "custom_metadata"?: Record<string, unknown>; "import_provenance"?: QuestionBankImportProvenance; "handoff"?: QuestionBankHandoff; };
 
 export type CreateQuestionBankRequest = { "school_id": string; "name": string; "description"?: string; };
 
@@ -1198,7 +1198,7 @@ export type CreateQuestionBankItemRequest = { "item_code": string; "question_typ
 
 export type CreateQuestionBankVersionRequest = { "source_version_id": string; };
 
-export type UpdateQuestionBankVersionRequest = { "expected_revision": number; "question_type": "single_choice" | "multiple_choice" | "true_false" | "fill_blank" | "numeric" | "formula" | "short_answer" | "calculation" | "essay" | "discussion" | "coding"; "assessment_archetype": "selected_response" | "exact_text" | "numeric_expression" | "structured_steps" | "short_constructed" | "extended_response" | "diagram_graph" | "table_experiment"; "stem": string; "options"?: Array<string>; "default_score": number; "knowledge_points"?: Array<string>; "metadata": QuestionBankMetadataInput; "custom_metadata"?: Record<string, unknown>; };
+export type UpdateQuestionBankVersionRequest = { "expected_revision": number; "question_type": "single_choice" | "multiple_choice" | "true_false" | "fill_blank" | "numeric" | "formula" | "short_answer" | "calculation" | "essay" | "discussion" | "coding"; "assessment_archetype": "selected_response" | "exact_text" | "numeric_expression" | "structured_steps" | "short_constructed" | "extended_response" | "diagram_graph" | "table_experiment"; "stem": string; "options"?: Array<string>; "default_score": number; "knowledge_points"?: Array<string>; "metadata": QuestionBankMetadataInput; "custom_metadata"?: Record<string, unknown>; "scoring"?: QuestionBankScoring; };
 
 export type QuestionBankResponse = { "bank": QuestionBank; };
 
@@ -1224,7 +1224,7 @@ export type QuestionBankSolution = { "raw_text": string; "steps": Array<{ "step_
 
 export type RubricInput = { "status": "approved"; "max_score": number; "points": Array<QuestionBankRubricPoint>; "deductions": Array<unknown>; "examples": Array<unknown>; };
 
-export type QuestionBankReviewRequest = { "expected_revision": number; "bundle_hash": string; "comment": string; };
+export type QuestionBankReviewRequest = { "expected_revision": number; "bundle_hash": string; "comment": string; "expected_handoff_revision"?: number; "reviewer_id"?: string; "publisher_id"?: string; };
 
 export type UpdateQuestionBankScoringRequest = { "expected_revision": number; "scoring": QuestionBankScoring; };
 
@@ -1621,6 +1621,54 @@ export type ExcludeCaptureFileRequest = { "reason": string; "replacement_file_id
 export type QuestionBankReferenceMaterials = { "source_exam_id": string; "source_question_id": string; "manifest_id": string; "mode": "reference_images"; "revision": number; "content_hash": string; "image_count": number; "items": Array<QuestionBankReferenceMaterialItem>; };
 
 export type QuestionBankReferenceMaterialItem = { "id": string; "crop_ref": string; "role": "question_diagram" | "reference_solution"; "ordinal": number; "required": true; "sha256": string; "width": number; "height": number; "size_bytes": number; "pixel_bbox": ReferencePixelBox; "source": ReferenceMaterialSource; };
+
+export type ManagedModelAPIConfigUpdateInput = ({ "display_name"?: string; "adapter_type"?: string; "base_url"?: string; "model_name"?: string; "model_version"?: string; "region"?: string; "api_key"?: string; "status"?: string; "is_default"?: boolean; "expected_updated_at"?: string; "credential_only"?: boolean; }) & ({ "credential_only"?: false; "display_name": string; "adapter_type": string; "base_url": string; "model_name": string; "model_version": string; "region": string; "status": string; "is_default": boolean; } | { "credential_only": true; "api_key": string; "expected_updated_at": string; });
+
+export type ManagedModelAPIConfig = ({ "id": string; "tenant_id": string; "provider_key"?: string; "display_name": string; "adapter_type": string; "base_url": string; "model_name": string; "model_version": string; "region": string; "capability_profile"?: string; "health_state"?: string; "credential_hint"?: string; "status": string; "last_test_status"?: string; "last_text_status"?: string; "last_capability_status"?: string; "config_source"?: string; "provider_registry_version"?: string; "credential_configured": boolean; "is_default": boolean; "created_at"?: string; "updated_at": string; "modalities"?: Array<string> | null; "pricing_policy"?: Record<string, unknown> | null; "data_policy"?: Record<string, unknown> | null; "last_text_usage"?: Record<string, unknown> | null; "last_text_diagnostic"?: Record<string, unknown> | null; "last_capability_usage"?: Record<string, unknown> | null; "last_capability_diagnostic"?: Record<string, unknown> | null; } & Record<string, unknown>);
+
+export type ManagedModelAPIConfigResponse = { "config": ManagedModelAPIConfig; };
+
+export type QuestionBankHandoff = { "revision": number; "reviewer_id"?: string; "publisher_id"?: string; "claimed_by"?: string; "claimed_at"?: string; "updated_at": string; };
+
+export type QuestionBankHandoffRequest = { "expected_revision": number; "expected_handoff_revision": number; "reviewer_id": string; "publisher_id": string; };
+
+export type QuestionBankClaimRequest = { "expected_revision": number; "expected_handoff_revision": number; };
+
+export type QuestionBankHandoffEvent = { "id": string; "version_id": string; "handoff_revision": number; "content_revision": number; "kind": "assigned" | "reassigned" | "claimed" | "approved" | "published" | "returned"; "actor_id": string; "recipient_id"?: string; "created_at": string; };
+
+export type QuestionBankHandoffEventsResponse = { "events": Array<QuestionBankHandoffEvent>; };
+
+export type AIEligibilityDecisionSummary = { "id": string; "tenant_id": string; "run_item_id": string; "subject_code": string; "education_stage": string; "archetype_code": string; "risk_tier": string; "decision": ScoringMode; "external_ai_allowed": boolean; "created_at": string; };
+
+export type AIEligibilityDecisionPage = { "decisions": Array<AIEligibilityDecisionSummary>; "next_cursor": string; "has_more": boolean; };
+
+export type AuditLog = { "id": string; "tenant_id": string; "actor_id"?: string; "action": string; "target_type": string; "target_id"?: string; "reason"?: string; "ip_address"?: string; "user_agent"?: string; "request_id"?: string; "before_value"?: Record<string, unknown>; "after_value"?: Record<string, unknown>; "created_at": string; };
+
+export type AuditLogPage = { "audit_logs": Array<AuditLog>; "next_cursor": string; "has_more": boolean; };
+
+export type PublicSchoolNameResponse = { "school": { "code": string; "name": string; }; };
+
+export type SubjectiveGradingSource = { "answer_segment_id": string; "question_id": string; "question_no": string; "submission_label": string; "question_type": string; "unavailable_reason": string; "ready": boolean; };
+
+export type SubjectiveGradingSourcePage = { "sources": Array<SubjectiveGradingSource>; "next_cursor": string; "has_more": boolean; };
+
+export type PrivateOpinionDraft = { "source": string; "source_revision": number; "values": Record<string, unknown>; "updated_at": string; "expires_at": string; };
+
+export type PrivateOpinionDraftResponse = { "revision": number; "source": string; "source_revision": number; "draft": PrivateOpinionDraft | null; };
+
+export type PutPrivateOpinionDraftRequest = { "source": string; "source_revision": number; "expected_revision": number; "values": Record<string, unknown>; };
+
+export type DeletePrivateOpinionDraftRequest = { "expected_revision": number; };
+
+export type CalibrationSchoolTemplate = { "id": string; "school_id": string; "source_exam_id": string; "source_question_id": string; "approved_by": string; "withdrawn_by"?: string; "subject": string; "name": string; "source_policy_revision": number; "policy": CalibrationPolicy; "status": "approved" | "withdrawn"; "revision": number; "approved_at": string; "withdrawn_at"?: string; "withdraw_reason"?: string; };
+
+export type CalibrationSchoolTemplateDirectory = { "templates": Array<CalibrationSchoolTemplate>; "capabilities": { "can_approve": boolean; "can_withdraw": boolean; }; "question": { "school_id": string; "subject": string; "archetype_code": string; "max_score": number; }; };
+
+export type ApproveCalibrationSchoolTemplateRequest = { "name": string; "source_policy_revision": number; };
+
+export type WithdrawCalibrationSchoolTemplateRequest = { "expected_revision": number; "reason": string; };
+
+export type CalibrationSchoolTemplateResponse = { "template": CalibrationSchoolTemplate; };
 
 export interface components {
   schemas: {
@@ -2435,5 +2483,29 @@ export interface components {
     "ExcludeCaptureFileRequest": ExcludeCaptureFileRequest;
     "QuestionBankReferenceMaterials": QuestionBankReferenceMaterials;
     "QuestionBankReferenceMaterialItem": QuestionBankReferenceMaterialItem;
+    "ManagedModelAPIConfigUpdateInput": ManagedModelAPIConfigUpdateInput;
+    "ManagedModelAPIConfig": ManagedModelAPIConfig;
+    "ManagedModelAPIConfigResponse": ManagedModelAPIConfigResponse;
+    "QuestionBankHandoff": QuestionBankHandoff;
+    "QuestionBankHandoffRequest": QuestionBankHandoffRequest;
+    "QuestionBankClaimRequest": QuestionBankClaimRequest;
+    "QuestionBankHandoffEvent": QuestionBankHandoffEvent;
+    "QuestionBankHandoffEventsResponse": QuestionBankHandoffEventsResponse;
+    "AIEligibilityDecisionSummary": AIEligibilityDecisionSummary;
+    "AIEligibilityDecisionPage": AIEligibilityDecisionPage;
+    "AuditLog": AuditLog;
+    "AuditLogPage": AuditLogPage;
+    "PublicSchoolNameResponse": PublicSchoolNameResponse;
+    "SubjectiveGradingSource": SubjectiveGradingSource;
+    "SubjectiveGradingSourcePage": SubjectiveGradingSourcePage;
+    "PrivateOpinionDraft": PrivateOpinionDraft;
+    "PrivateOpinionDraftResponse": PrivateOpinionDraftResponse;
+    "PutPrivateOpinionDraftRequest": PutPrivateOpinionDraftRequest;
+    "DeletePrivateOpinionDraftRequest": DeletePrivateOpinionDraftRequest;
+    "CalibrationSchoolTemplate": CalibrationSchoolTemplate;
+    "CalibrationSchoolTemplateDirectory": CalibrationSchoolTemplateDirectory;
+    "ApproveCalibrationSchoolTemplateRequest": ApproveCalibrationSchoolTemplateRequest;
+    "WithdrawCalibrationSchoolTemplateRequest": WithdrawCalibrationSchoolTemplateRequest;
+    "CalibrationSchoolTemplateResponse": CalibrationSchoolTemplateResponse;
   };
 }

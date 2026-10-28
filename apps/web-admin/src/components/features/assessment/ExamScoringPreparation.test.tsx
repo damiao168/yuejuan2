@@ -54,7 +54,7 @@ describe("开考评分方案摘要", () => {
     await render([preview("AI_ASSIST", "default", { question_no: "3(2)", blocking_reason: "本题评分方式需要核对", blocking_section: "questions" })]);
     expect(host.textContent).toContain("待处理 1 项"); expect(host.textContent).toContain("第 3(2) 题"); expect(host.textContent).toContain("本题评分方式需要核对");
     expect(host.textContent).not.toContain("系统建议分数，教师逐题确认 1 题");
-    await click("去处理"); expect(api.navigate).toHaveBeenCalledWith("/exams/exam%2F1/questions");
+    await click("去处理"); expect(api.navigate).toHaveBeenCalledWith("/exams/exam%2F1/questions?question=q1&target=rubric");
   });
   it("整区填空只有共用作答区域时按实际处理方式显示人工，保留原评分策略", async () => {
     const shared = preview("RULE_AUTO", "default", { processing_mode: "MANUAL_ONLY", reason: "整区填空没有单题作答区域，转人工评分" });
@@ -73,7 +73,7 @@ describe("开考评分方案摘要", () => {
     expect(issues.querySelectorAll("li")).toHaveLength(2); expect(issues.textContent).toContain("第 3(2) 题");
     expect(host.querySelector(".scoring-verification-count")?.textContent).toContain("待处理 2 项");
     expect([...issues.querySelectorAll("button")].filter((button) => button.textContent === "核对考试信息")).toHaveLength(1);
-    await click("核对考试信息"); expect(api.navigate).toHaveBeenCalledWith("/exams");
+    await click("核对考试信息"); expect(api.navigate).toHaveBeenCalledWith("/exams?edit_exam=exam%2F1&target=scope");
   });
   it("缺少预览时提供共用重试入口，不把加载失败显示为未保存", async () => {
     await render(); expect(host.querySelector("aside")?.textContent).toContain("重新检查"); expect(host.textContent).not.toContain("未保存");

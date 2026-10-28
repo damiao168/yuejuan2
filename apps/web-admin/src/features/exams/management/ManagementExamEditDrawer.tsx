@@ -9,11 +9,12 @@ import { examTypeOptions } from "../../../constants/examCatalog";
 import { canEditManagementDefaultClasses, canEditManagementScope, managementDefaultClassesHelp, managementEditPayload, type ManagementEditValues } from "./managementPresentation";
 import { isManagementCommandUncertain } from "./managementCommand";
 
-export function ManagementExamEditDrawer({ exam, classes, schoolName, gradeName, onClose, onSaved }: Readonly<{
+export function ManagementExamEditDrawer({ exam, classes, schoolName, gradeName, focusTarget, onClose, onSaved }: Readonly<{
   exam: ManagementExam | null;
   classes: SchoolClass[];
   schoolName?: string;
   gradeName?: string;
+  focusTarget?: "scope";
   onClose: () => void;
   onSaved: () => Promise<void>;
 }>) {
@@ -65,8 +66,10 @@ export function ManagementExamEditDrawer({ exam, classes, schoolName, gradeName,
   const classesEditable = exam ? canEditManagementDefaultClasses(exam) : false;
   const allowedClasses = classes.filter((item) => item.school_id === exam?.school_id && (!exam.grade_id || item.grade_id === exam.grade_id));
   return <Drawer title="编辑考试" open={Boolean(exam)} onClose={() => { if (!saving) onClose(); }} width={680} destroyOnHidden
+    afterOpenChange={(opened) => { if (opened && focusTarget === "scope") form.scrollToField("class_ids", { focus: true }); }}
     extra={<Button type="primary" icon={<Save size={16} />} loading={saving} disabled={!exam?.can_edit} onClick={() => void save()}>{uncertain ? "重试保存" : "保存"}</Button>}>
     {exam ? <>
+      {focusTarget === "scope" ? <Alert type="info" showIcon message="已定位本场考试的参考班级" description="核对关联年级与参考班级后，返回准备检查重新匹配评分方案；年级基础资料有误时，请联系学校考试管理员处理。" /> : null}
       {saveError ? <Alert className="drawer-alert" type="error" showIcon message={saveError} /> : null}
       <Descriptions column={1} size="small"><Descriptions.Item label="学校">{schoolName || "本校"}</Descriptions.Item><Descriptions.Item label="年级">{gradeName || "未关联年级"}</Descriptions.Item></Descriptions>
       <Form form={form} layout="vertical" disabled={!exam.can_edit || saving || uncertain} preserve={false}>

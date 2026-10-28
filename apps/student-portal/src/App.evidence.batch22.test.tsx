@@ -26,7 +26,7 @@ describe("题目与批注的发布版本核对", () => {
       return resultRoute(call, result);
     });
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("学校已更新当前成绩。原版本草稿已保留，请查看当前成绩并重新核对题目后再申请复核。");
     expect(screen.queryByRole("textbox", { name: "具体说明" })).toBeNull();
     expect(screen.queryByRole("button", { name: "重新登录" })).toBeNull();
@@ -41,7 +41,7 @@ describe("题目与批注的发布版本核对", () => {
       return resultRoute(call, result);
     });
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("暂时无法连接服务，请稍后重试。");
     expect(screen.queryByText("不应显示的另一题题干")).toBeNull();
     expect(screen.queryByRole("textbox", { name: "具体说明" })).toBeNull();

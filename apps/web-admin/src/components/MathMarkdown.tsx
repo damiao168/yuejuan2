@@ -8,6 +8,7 @@ import remarkMath from "remark-math";
 import "katex/dist/katex.min.css";
 import { MarkdownFootnoteContext, mathMarkdownComponents } from "./mathMarkdownRenderers";
 import { mathTablePipeToken, normalizeMathMarkdown, type MathMarkdownOptions } from "./mathMarkdownNormalization";
+import { rehypeCollectReferences } from "./markdownReferences";
 import "./math-markdown.css";
 
 export { normalizeMathMarkdown, requiresDisplayMath } from "./mathMarkdownNormalization";
@@ -36,7 +37,7 @@ export const MathMarkdown = memo(function MathMarkdown({ children, className = "
         skipHtml
         remarkRehypeOptions={{ clobberPrefix: footnotePrefix, footnoteLabel: "注释", footnoteBackLabel: "返回引用" }}
         remarkPlugins={[[remarkGfm, { singleTilde: false }], [remarkMath, { singleDollarTextMath: true }]]}
-        rehypePlugins={[rehypeRestoreMathPipes, [rehypeKatex, {
+        rehypePlugins={[rehypeRestoreMathPipes, [rehypeCollectReferences, { prefix: footnotePrefix }], [rehypeKatex, {
           strict: "warn",
           throwOnError: false,
           trust: false,

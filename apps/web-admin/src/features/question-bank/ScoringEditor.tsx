@@ -23,6 +23,7 @@ import { uploadFile } from "../../api/files";
 import { createScoringExample, StructuredAnswerEditor, StructuredListEditor } from "../../components/StructuredTeacherFields";
 import { newRubricPointId, rubricPointIdentityError } from "../paper-rubric/rubricPointIdentity";
 import { QuestionBankReferenceImages } from "./QuestionBankReferenceImages";
+import type { ScoringDraftSnapshot } from "./questionBankDraftMerge";
 
 const initial: QuestionBankScoring = {
 	answer: null,
@@ -80,6 +81,11 @@ export function ScoringEditor({
 	canManageFiles,
 	actorId,
 	onDraftSnapshot,
+	onSaveCombined,
+	registerSubmit,
+	draftScore,
+  draftContent,
+  restoredDraft,
 }: Readonly<{
 	version: QuestionBankVersion;
 	disabled: boolean;
@@ -88,6 +94,11 @@ export function ScoringEditor({
 	canManageFiles: boolean;
 	actorId: string;
 	onDraftSnapshot?: (draft: unknown) => void;
+	onSaveCombined?: (scoring: QuestionBankScoring) => Promise<QuestionBankVersion>;
+	registerSubmit?: (submit: (() => void) | null) => void;
+	draftScore?: number;
+  draftContent?: Pick<QuestionBankVersion, "question_type" | "options" | "assessment_archetype">;
+  restoredDraft?: ScoringDraftSnapshot;
 }>) {
 	const { message } = App.useApp();
 	const [form] = Form.useForm<Values>();
@@ -108,7 +119,15 @@ export function ScoringEditor({
 	);
 	const fileInput = useRef<HTMLInputElement>(null);
 	const rubricEnabled = Form.useWatch("rubricEnabled", form);
+	const absolute = Form.useWatch("absolute", { form, preserve: true });
+	const relative = Form.useWatch("relative", { form, preserve: true });
+	const numericScoring = (draftContent?.assessment_archetype ?? version.assessment_archetype) === "numeric_expression";
+	const hasTolerance = absolute != null || relative != null;
 	const template = Form.useWatch("template", form);
+  useEffect(() => {
+    registerSubmit?.(() => form.submit());
+    return () => registerSubmit?.(null);
+  }, [form, registerSubmit]);
 	const templates = useQuery({
 		queryKey: [
 			"question-bank",
@@ -135,7 +154,7 @@ export function ScoringEditor({
 		loaded.current = `${version.id}:${version.revision}`;
 		revision.current = version.revision;
 		const s = version.scoring ?? initial;
-		setAssets(s.assets);
+		setAssets(restoredDraft?.assets ?? s.assets);
 		form.setFieldsValue({
 			answer: answerText(s.answer?.standard_answer),
 			equivalent: json(s.answer?.equivalent_answers ?? []),
@@ -153,9 +172,10 @@ export function ScoringEditor({
 			examples: json(s.rubric?.examples ?? []),
 			template: s.template_version_id ?? undefined,
 			use_policy: s.use_policy,
+			...restoredDraft?.fields,
 		});
-	}, [version, form]);
-	useEffect(() => { onDraftSnapshot?.({ fields: form.getFieldsValue(true), assets }); }, [assets, form, onDraftSnapshot]);
+	}, [version, form, restoredDraft]);
+	useEffect(() => { onDraftSnapshot?.({ fields: form.getFieldsValue(true), assets, answerBaseline: restoredDraft?.answerBaseline ?? version.scoring.answer?.standard_answer }); }, [assets, form, onDraftSnapshot, restoredDraft?.answerBaseline, version.scoring.answer?.standard_answer]);
 	async function save(values: Values) {
 		if (disabled || savingRef.current) return;
     const requestVersionId = version.id;
@@ -172,7 +192,7 @@ export function ScoringEditor({
 			const rubric: RubricInput | null = values.rubricEnabled
 				? {
 						status: "approved",
-						max_score: version.default_score,
+						max_score: draftScore ?? version.default_score,
 						points: (values.points ?? []).map((p) => ({
 							id: p.id,
 							description: p.description,
@@ -189,10 +209,11 @@ export function ScoringEditor({
       // 点编号是评分证据的身份；手工编号也必须唯一，不能等到服务端拒绝后才发现冲突。
       const identityError = rubric && rubricPointIdentityError(rubric.points);
       if (identityError) throw new Error(identityError);
+			const answerBaseline = restoredDraft && Object.prototype.hasOwnProperty.call(restoredDraft, "answerBaseline") ? restoredDraft.answerBaseline : version.scoring.answer?.standard_answer;
 			const scoring: QuestionBankScoring = {
 				answer: values.answer.trim()
 					? {
-							standard_answer: values.answer === answerText(version.scoring.answer?.standard_answer) ? version.scoring.answer?.standard_answer : answerValue(values.answer),
+							standard_answer: values.answer === answerText(answerBaseline) ? answerBaseline : answerValue(values.answer),
 							equivalent_answers: arrayValue(values.equivalent),
 							tolerance,
 						}
@@ -214,7 +235,7 @@ export function ScoringEditor({
 			const fingerprint = json(body);
 			if (pending.current?.fingerprint !== fingerprint)
 				pending.current = { fingerprint, key: crypto.randomUUID() };
-			const result = await questionBankApi.updateQuestionBankScoring({
+			const result = onSaveCombined ? { version: await onSaveCombined(scoring) } : await questionBankApi.updateQuestionBankScoring({
 				path: { versionId: version.id },
 				body,
 				headers: { "Idempotency-Key": pending.current.key },
@@ -224,7 +245,7 @@ export function ScoringEditor({
 			pending.current = null;
 			onDirty(false);
 			onSaved(result.version);
-			message.success("评分标准已保存");
+			message.success(onSaveCombined ? "本题草稿已保存" : "评分标准已保存");
 		} catch (error) {
       if (!isCurrent()) return;
 			message.error(
@@ -243,7 +264,7 @@ export function ScoringEditor({
 			form={form}
 			layout="vertical"
 			onFinish={save}
-			onValuesChange={() => { onDirty(true); onDraftSnapshot?.({ fields: form.getFieldsValue(true), assets }); }}
+			onValuesChange={() => { onDirty(true); onDraftSnapshot?.({ fields: form.getFieldsValue(true), assets, answerBaseline: restoredDraft?.answerBaseline ?? version.scoring.answer?.standard_answer }); }}
 			disabled={disabled || saving}
 			className="question-bank-scoring"
 		>
@@ -251,21 +272,31 @@ export function ScoringEditor({
 			<Form.Item
 				name="answer"
 				label="标准答案"
-				extra="按题型选择或逐项填写；系统会保留结构化答案。"
 			>
-				<StructuredAnswerEditor questionType={version.question_type} options={version.options} disabled={disabled || saving} />
+				<StructuredAnswerEditor questionType={draftContent?.question_type ?? version.question_type} options={draftContent?.options ?? version.options} disabled={disabled || saving} />
 			</Form.Item>
 			<Form.Item name="equivalent" label="等价答案列表">
 				<StructuredListEditor itemLabel="等价答案" disabled={disabled || saving} />
 			</Form.Item>
+			{numericScoring || hasTolerance ? <details open={hasTolerance}>
+        <summary>误差设置（数值答案）</summary>
+        {/* 历史误差仍须可见、可清除；只隐藏非数值题字段会让发布校验持续失败。 */}
+        {!numericScoring ? <p>此判分方式不支持误差，请清除已有误差后发布。</p> : null}
 			<Space wrap>
 			<Form.Item name="absolute" label="允许绝对误差" extra="例如答案为10，填写0.1可接受9.9至10.1。">
 					<InputNumber min={0} />
 				</Form.Item>
-			<Form.Item name="relative" label="允许相对误差（比例）" extra="0.01表示允许1%的误差。">
-					<InputNumber min={0} />
+			<Form.Item name="relative" label="允许相对误差（%）" extra="允许与标准答案相差的百分比，例如1表示1%。">
+					{/* 表单快照和接口仍用比例，只换算控件显示；历史值和冲突比较不重复转换。 */}
+					<InputNumber<number> min={0} step={0.001} formatter={value => value == null ? "" : String(Number((Number(value) * 100).toPrecision(12)))} parser={value => Number(value?.replace(/%/g, "") || 0) / 100} />
 				</Form.Item>
 			</Space>
+        {hasTolerance ? <Button disabled={disabled || saving} onClick={() => {
+          form.setFieldsValue({ absolute: undefined, relative: undefined });
+          onDirty(true);
+          onDraftSnapshot?.({ fields: form.getFieldsValue(true), assets, answerBaseline: restoredDraft?.answerBaseline ?? version.scoring.answer?.standard_answer });
+        }}>清除误差</Button> : null}
+      </details> : null}
 			<Form.Item name="solution" label="解析">
 				<Input.TextArea autoSize={{ minRows: 3, maxRows: 10 }} />
 			</Form.Item>
@@ -276,7 +307,6 @@ export function ScoringEditor({
 			<Form.Item
 				name="template"
 				label="选用已发布的模板版本"
-				extra="保存时复制评分点。模板后续更新不会更改本题。"
 			>
 				<Select
 					allowClear
@@ -292,7 +322,7 @@ export function ScoringEditor({
 			{template ? (
 				<Alert
 					type="info"
-					message="选用模板将以该版本的评分点替换当前评分点；分值需一致。"
+					message="保存时用此模板替换本题评分细则（评分点、扣分规则和样例答案）；满分须一致。模板后续更新不影响本题。"
 				/>
 			) : null}
 			<Form.Item
@@ -454,7 +484,7 @@ export function ScoringEditor({
 				/>
 			</Form.Item>
 			<Button type="primary" htmlType="submit" loading={saving}>
-				保存评分标准
+				{onSaveCombined ? "保存本题草稿" : "保存评分标准"}
 			</Button>
 		</Form>
 	);

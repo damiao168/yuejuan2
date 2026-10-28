@@ -822,9 +822,6 @@ func (s *PostgresStore) ListAudits(ctx context.Context, tenantID string, filter 
 	if filter.ScopeMode != "" && filter.ScopeMode != "tenant" && filter.ScopeMode != "platform" {
 		return []AuditRecord{}, nil
 	}
-	if filter.ScopeMode != "" && filter.ScopeMode != "tenant" && filter.ScopeMode != "platform" {
-		return []AuditRecord{}, nil
-	}
 	rows, err := s.db.QueryContext(ctx, `
 SELECT
   id::text,
@@ -851,9 +848,11 @@ WHERE tenant_id = $1
   AND ($8::timestamptz IS NULL OR created_at >= $8::timestamptz)
   AND ($9::timestamptz IS NULL OR created_at <= $9::timestamptz)
   AND ($11 = '' OR created_at < $10 OR (created_at = $10 AND id::text < $11))
+  AND ($13 = '' OR strpos(lower(concat_ws(' ', action, target_type, target_id::text, actor_id::text, reason, ip_address, user_agent, request_id,
+    (SELECT concat_ws(' ', u.username, u.display_name) FROM app_user u WHERE u.tenant_id=audit_log.tenant_id AND u.id=audit_log.actor_id))), lower($13)) > 0)
 ORDER BY created_at DESC, id::text DESC
 LIMIT $12
-`, tenantID, stringsTrim(filter.Action), stringsTrim(filter.ActorID), stringsTrim(filter.TargetType), stringsTrim(filter.TargetID), stringsTrim(filter.ExamID), stringsTrim(filter.IPAddress), nullableTime(filter.CreatedFrom), nullableTime(filter.CreatedTo), nullableTime(filter.CursorCreatedAt), stringsTrim(filter.CursorID), auditQueryLimit(filter))
+`, tenantID, stringsTrim(filter.Action), stringsTrim(filter.ActorID), stringsTrim(filter.TargetType), stringsTrim(filter.TargetID), stringsTrim(filter.ExamID), stringsTrim(filter.IPAddress), nullableTime(filter.CreatedFrom), nullableTime(filter.CreatedTo), nullableTime(filter.CursorCreatedAt), stringsTrim(filter.CursorID), auditQueryLimit(filter), stringsTrim(filter.Query))
 	if err != nil {
 		return nil, err
 	}

@@ -115,9 +115,9 @@ func TestWorkerQuestionAppealContextDoesNotExposeInternalOrStudentIdentifiers(t 
 			StudentID: "student-1", SubmissionID: "submission-1", RegradeJobID: "regrade-1", NewReleaseID: "release-2",
 			CreatedBy: "student-user-1", DecidedBy: "manager-1",
 		},
-		ReleaseHistory: []QuestionAppealReleaseVersion{{ID: "release-1", Version: 1}},
+		ReleaseHistory: []QuestionAppealReleaseVersion{{ID: "release-1", Version: 1, EligibleForResolution: true}},
 	})
-	if context.Appeal.StudentID != "" || context.Appeal.SubmissionID != "" || context.Appeal.RegradeJobID != "" || context.Appeal.NewReleaseID != "" || context.Appeal.CreatedBy != "" || context.Appeal.DecidedBy != "" || context.ReleaseHistory[0].ID != "" {
+	if context.Appeal.StudentID != "" || context.Appeal.SubmissionID != "" || context.Appeal.RegradeJobID != "" || context.Appeal.NewReleaseID != "" || context.Appeal.CreatedBy != "" || context.Appeal.DecidedBy != "" || context.ReleaseHistory[0].ID != "" || context.ReleaseHistory[0].EligibleForResolution {
 		t.Fatalf("worker context leaked protected identifiers: %#v", context)
 	}
 }

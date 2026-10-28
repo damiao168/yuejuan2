@@ -31,6 +31,7 @@ interface DecisionPanelProps {
   detail: ArbitrationDetailState | null;
   draft: Readonly<ArbitrationDecisionDraft>;
   draftTouched: boolean;
+  memorySaved?: boolean;
   finalGrade: FinalGrade | null;
   maxScore: number;
   actioning: string | null;
@@ -52,7 +53,7 @@ export function ArbitrationDecisionPanel(props: Readonly<DecisionPanelProps>) {
     <div className="panel-head"><div><h2>仲裁裁决</h2><p>{props.selectedTask ? `${props.selectedTask.anonymous_code} · ${props.selectedTask.question_no}` : "未选择任务"}</p></div><ClipboardCheck size={18} /></div>
     {props.detail && props.detail.task.status !== "submitted" ? <p className="arbitration-draft-note">
       {/* 状态只包含纯文本，保留原段落样式；不再给父级另加 live 区域。 */}
-      <output>{props.draftTouched ? "未提交内容仅在本页；切换任务或刷新会丢失。" : "最终分和说明在提交仲裁后才写入服务端。"}</output>
+      <output title="自动暂存只在本次会话；服务端私有草稿需单独保存，7天后不可恢复。">{props.draftTouched ? props.memorySaved ? "未提交；本次会话已暂存，保存私有草稿后可刷新恢复。" : "未提交内容仅在本页；离开后无法恢复。" : "最终分和说明在提交仲裁后才写入服务端。"}</output>
     </p> : null}
     <div className="score-input-row">
       <InputNumber min={0} max={props.maxScore || undefined} precision={1} value={props.draft.finalScore} placeholder="最终分" disabled={props.editingDisabled}

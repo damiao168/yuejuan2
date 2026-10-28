@@ -1,0 +1,111 @@
+{
+  "date": "2026-10-28",
+  "scope": "第三轮 G01、G05、G17、G18；接续已落盘的本轮增量，保留全部既有未提交修改",
+  "baseline": "round-3/source-baseline.json",
+  "findings": [
+    {
+      "id": "G01",
+      "status": "fixed",
+      "prior_status": "partial",
+      "changes": [
+        "新增按考试分页的匿名评分材料目录，不再依赖 review_task 已创建；片段有可登记作答、评分标准和冻结题目依据时可选。",
+        "同租户、当前操作者、考试范围均核验；只允许租户级或可信学校管理范围，SQL再按实际管理学校过滤。外校任务投影不能扩成整场材料目录。",
+        "只返回片段身份、题号、匿名材料标识和准备情况，不返回答案正文、学生姓名或评分内容。创建与入队仍沿用原正式完整门禁。",
+        "界面按考试和题目筛选、跨页选择真实片段，尚未齐全的材料保留原因并禁选；换考试或清空选择后拒绝迟到目录。"
+      ],
+      "remaining": "",
+      "files": [
+        "services/api-gateway/internal/subjective/source_directory.go",
+        "services/api-gateway/internal/server/routes_grading.go",
+        "apps/web-admin/src/api/subjectiveGrading.ts",
+        "apps/web-admin/src/features/grading/SubjectiveBatchSourcePicker.tsx"
+      ],
+      "boundary": "只覆盖现有答题片段材料，不建立任意文件导入通道；目录ready仅为选择提示，正式创建仍重验完整上下文和模型准入。"
+    },
+    {
+      "id": "G05",
+      "status": "fixed",
+      "prior_status": "partial",
+      "changes": [
+        "所选模型增加一次批量图片能力检测入口，默认跳过已通过项，逐个显示结果。",
+        "冻结点击时的配置和绑定修订后串行执行，同配置失败重试复用原请求身份，避免把未知回执当作新的付费请求。",
+        "失败时可只重试失败项；批量进行时锁定选择与保存，切考试、退出或重登后不继续后续调用。",
+        "检测后只刷新能力状态，不重填管理员尚未保存的模型与分差设置；逐个检测收在详情，保留可能调用模型的提示。"
+      ],
+      "remaining": "",
+      "files": ["apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx"]
+    },
+    {
+      "id": "G17",
+      "status": "partial",
+      "prior_status": "partial",
+      "changes": [
+        "新增“复用本场已保存标准”，按需读取同场题目目录，只匹配相同作答类型和满分的正式已保存通过标准。",
+        "未知本题类型和满分可从同场题目事实补齐；请求返回后重新读取当前表单，避免覆盖管理员等待期间已填入的值。",
+        "带入时再次核对当前类型、满分，保留目标expected_revision，不复制来源ID、来源修订或其他教师已通过资格。",
+        "读取不自动保存；管理员明确带入、核对后，继续原保存与校准门禁。未把已有配置称为学校审批模板。"
+      ],
+      "remaining": "本场同类题目已保存标准可复用，但仓库没有学校审批模板的独立生命周期与权威来源，本轮未虚构这类目录。不同题型、分值或没有可用来源时仍须管理员核对阈值；来源读取限于本场前100道同分值题目。",
+      "files": [
+        "apps/web-admin/src/features/calibration/CalibrationPolicyReuse.tsx",
+        "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx"
+      ]
+    },
+    {
+      "id": "G18",
+      "status": "fixed",
+      "prior_status": "partial",
+      "changes": [
+        "质量看板的高级盲测和回评题目选择使用统一中文作答类型词表。",
+        "标准卷典型错误选择、显示和覆盖缺口使用统一中文标签，未知机器值显示其他类型，原值仍可在诊断详情核对。",
+        "答案组参考材料的典型错误中文化由考试代理在其独占文件完成，存储标签不变；未通过更换接口枚举来改变业务。"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/constants/assessmentLabels.ts",
+        "apps/web-admin/src/pages/QualityDashboardPage.tsx",
+        "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+        "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx",
+        "apps/web-admin/src/features/gold-papers/GoldPaperNominationDrawer.tsx",
+        "apps/web-admin/src/features/gold-papers/goldPaperPresentation.ts",
+        "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx"
+      ]
+    }
+  ],
+  "read_scope": [
+    {"path":"services/api-gateway/internal/subjective/source_directory.go","status":"annotated","read_scope":"full","note":"完整审读新增目录、明确管理范围、匿名投影、分页和创建重新校验边界。"},
+    {"path":"services/api-gateway/internal/subjective/source_directory_test.go","status":"self_explanatory","read_scope":"full","note":"租户/考试/作答准备状态、未分派材料和处理器身份边界。"},
+    {"path":"services/api-gateway/internal/subjective/source_directory_postgres_test.go","status":"annotated","read_scope":"full","note":"隔离随机schema的真实SQL关联、游标与学校范围，不声称生产完整触发器验证。"},
+    {"path":"services/api-gateway/internal/server/routes_grading.go","status":"pending","read_scope":"changed_route_and_guard_callers","note":"核对本轮新增路由和requireGradingManage、实际资源边界。未重审其他所有路由。"},
+    {"path":"apps/web-admin/src/api/subjectiveGrading.ts","status":"existing_sufficient","read_scope":"full","note":"目录使用正式生成的SDK类型和方法，其他批次恢复接口保留。"},
+    {"path":"apps/web-admin/src/features/grading/SubjectiveBatchSourcePicker.tsx","status":"annotated","read_scope":"full","note":"目录去重、选择上限、准备状态、会话/考试世代与清空选择。"},
+    {"path":"apps/web-admin/src/features/grading/SubjectiveBatchSourcePicker.test.tsx","status":"self_explanatory","read_scope":"full"},
+    {"path":"apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx","status":"annotated","read_scope":"full","note":"保留前代理已落盘的批量检测，核对配置冻结、请求身份、只重试失败、能力刷新不重置表单和会话废弃。"},
+    {"path":"apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx","status":"self_explanatory","read_scope":"full"},
+    {"path":"apps/web-admin/src/features/calibration/CalibrationPolicyReuse.tsx","status":"annotated","read_scope":"full","note":"匹配真实来源，区分已保存标准与学校审批模板，保留目标修订，异步后重读表单避免覆盖。"},
+    {"path":"apps/web-admin/src/features/calibration/CalibrationPolicyReuse.test.tsx","status":"self_explanatory","read_scope":"full"},
+    {"path":"apps/web-admin/src/features/calibration/CalibrationDrawer.tsx","status":"annotated","read_scope":"full","note":"本轮完整审读加载、正式保存/试评、盲评参考揭示边界与新复用入口。"},
+    {"path":"apps/web-admin/src/constants/assessmentLabels.ts","status":"annotated","read_scope":"full","note":"中文词表与未知机器标签回退，接口值不改。"},
+    {"path":"apps/web-admin/src/features/gold-papers/goldPaperPresentation.ts","status":"existing_sufficient","read_scope":"full"},
+    {"path":"apps/web-admin/src/features/gold-papers/goldPaperPresentation.test.ts","status":"self_explanatory","read_scope":"full"},
+    {"path":"apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx","status":"existing_sufficient","read_scope":"full","note":"完整审读标准卷版本、审批、覆盖、标签显示；本轮只改变显示词表。"},
+    {"path":"apps/web-admin/src/features/gold-papers/GoldPaperNominationDrawer.tsx","status":"existing_sufficient","read_scope":"full","note":"完整审读提名冻结事实及标签输入；本轮不改变提名/批准语义。"},
+    {"path":"apps/web-admin/src/pages/QualityDashboardPage.tsx","status":"pending","read_scope":"changed_selectors_and_calibration_callers","note":"核对两个高级题目选择和校准默认调用，未重新全文审读整个大页面。"},
+    {"path":"apps/web-admin/src/pages/QualityDashboardViews.tsx","status":"pending","read_scope":"changed_label_column_and_imports","note":"仅核对中央词表和题型显示列。"}
+  ],
+  "verification": [
+    {"log":"grading-ui-initial.log","result":"passed","files":3,"tests":22,"note":"初组，后续最终组覆盖同用例，不重复累加。"},
+    {"log":"grading-ui-final.log","result":"initial_failure_fixed","files":7,"tests":71,"passed":69,"note":"旧gold典型标签断言需要中文；新增AI批量探测场景在资源紧张时超过15秒，未发生断言失败。"},
+    {"log":"grading-ui-retry.log","result":"passed","files":2,"tests":9,"note":"只重跑两个受影响文件。gold断言更新为中文及未知标签回退；仅AI新增场景允许30秒，最终全过。与首组合并覆盖7文件71条，不合计运行次数。"},
+    {"log":"grading-go-delivery.log","result":"passed","scope":"subjective源目录与模型probe相关Go用例；真实PG目录用例需独立DSN，交由根集成运行。"},
+    {"log":"grading-typecheck.log","result":"passed","note":"本组中途web-admin类型检查已过；最终源码由根统一类型检查/构建复核。"},
+    {"log":"grading-lint-final.log","result":"passed","files":5,"warnings":0,"errors":0}
+  ],
+  "limits": [
+    "未运行全仓全部测试；没有真实学校业务写入、模型付费调用、迁移或部署。",
+    "G01目录ready不是评分执行许可，完整模型准入和来源门禁仍由原创建/入队流程验证。",
+    "G17没有学校审批模板的权威来源，明确保持partial。",
+    "真实PostgreSQL目录测试只证明最小结构中的SQL关联/分页/范围；不能替代真实学校集成验收。",
+    "SDK与OpenAPI由根正式生成，本组未手改生成产物、锁文件或历史迁移。"
+  ]
+}

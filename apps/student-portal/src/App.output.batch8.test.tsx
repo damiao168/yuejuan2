@@ -46,7 +46,7 @@ describe("Batch8 intentional native output semantics", () => {
     installApi((call) => call.url.pathname.endsWith("/questions/question-1") ? pending.promise : resultRoute(call, result));
     render(<App />);
     await screen.findByLabelText("总分");
-    fireEvent.click(screen.getByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const status = screen.getByText("正在加载本题…");
     expect(status.tagName).toBe("OUTPUT");
     expect(screen.getAllByRole("status")).toContain(status);
@@ -66,13 +66,13 @@ describe("Batch8 intentional native output semantics", () => {
       allowedReasonCodes={["recognition_error"]}
       onSubmitted={vi.fn()}
     />);
-    const message = await screen.findByText("本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。");
+    const message = await screen.findByText(/已收到第 \d+ 版的本题申请，不可重复提交。/);
     const status = message.closest("output");
     expect(status).not.toBeNull();
     expect(screen.getByRole("status")).toBe(status);
     expect(status?.classList.contains("question-appeal-confirmation")).toBe(true);
     expect(screen.getByText("学校复核中")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "确认提交（仅一次）" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "提交复核申请" })).toBeNull();
   });
 
   it("uses native output for the first corner and keeps normalized two-point selection", async () => {
@@ -86,6 +86,7 @@ describe("Batch8 intentional native output semantics", () => {
       allowedReasonCodes={["recognition_error"]}
       onSubmitted={vi.fn()}
     />);
+    if (!screen.queryByAltText("本题答题区域")) fireEvent.click(screen.getByRole("button", { name: "标记争议位置（可选）" }));
     fireEvent.load(screen.getByAltText("本题答题区域"));
     fireEvent.click(screen.getByRole("checkbox", { name: "使用两点点击框选" }));
     const canvas = screen.getByRole("application", { name: "在答题图上框选争议区域" });

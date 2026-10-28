@@ -14,7 +14,7 @@ import { BankQuestionPicker } from "./BankQuestionPicker";
 const mocks = vi.hoisted(() => ({
   banks: vi.fn(), items: vi.fn(), versions: vi.fn(), item: vi.fn(), bank: vi.fn(), templates: vi.fn(),
   search: vi.fn(), preview: vi.fn(), confirm: vi.fn(), scoring: vi.fn(), materialize: vi.fn(), readiness: vi.fn(), exam: vi.fn(),
-  success: vi.fn(), warning: vi.fn(), error: vi.fn(), upload: vi.fn(), identity: 0,
+  success: vi.fn(), warning: vi.fn(), error: vi.fn(), upload: vi.fn(), handoffEvents: vi.fn(), identity: 0,
   forms: [] as { values: Record<string, unknown>; setFieldsValue: ReturnType<typeof vi.fn> }[],
   clickHandlers: new Map<string, (event?: unknown) => unknown>(),
   submit: {} as Record<string, unknown>,
@@ -24,6 +24,7 @@ vi.mock("../../api/questionBank", () => ({ questionBankApi: {
   getQuestionBankItem: mocks.item, getQuestionBank: mocks.bank, listQuestionBankRubricTemplates: mocks.templates,
   previewQuestionBankImports: mocks.preview, confirmQuestionBankImportBatch: mocks.confirm,
   updateQuestionBankScoring: mocks.scoring, materializeQuestionBankVersions: mocks.materialize,
+  listQuestionBankHandoffEvents: mocks.handoffEvents,
 } }));
 vi.mock("../../api/configuration", () => ({ getExamReadiness: mocks.readiness }));
 vi.mock("../../api/exams", () => ({ getExam: mocks.exam }));
@@ -61,7 +62,7 @@ vi.mock("antd", async () => {
     }
     return [ref.current];
   };
-  Form.useWatch = (key: string, form: (typeof mocks.forms)[number]) => form.values[key];
+  Form.useWatch = (key: string, target: (typeof mocks.forms)[number] | { form: (typeof mocks.forms)[number]; preserve?: boolean }) => ("form" in target ? target.form : target).values?.[key];
   function List<T>({ dataSource, renderItem }: Readonly<{ dataSource: T[]; renderItem: (value: T) => ReactNode }>) { return <div>{dataSource.map((value, index) => <div key={index}>{renderItem(value)}</div>)}</div>; }
   List.Item = ({ children }: Readonly<{ children: ReactNode }>) => <div>{children}</div>;
   return {
@@ -198,18 +199,18 @@ describe("question bank batch7 preserved component boundaries", () => {
     expect(actions.loadLatest).toHaveBeenLastCalledWith(); expect(actions.derive).toHaveBeenLastCalledWith(); expect(actions.retireItem).toHaveBeenLastCalledWith(); expect(actions.transition).toHaveBeenLastCalledWith("submit-review");
   });
   it("does not reopen mobile details on a same-item background update and remounts scoring for a different version", async () => {
-    const props = workspaceProps(); await render(<QuestionBankWorkspace {...props} />); await click("返回题目列表");
+    const props = workspaceProps(); await render(<QuestionBankWorkspace {...props} />); await click("编辑本题"); await click("返回题目列表");
     const identity = host.querySelector("[data-scoring-instance]")!.getAttribute("data-scoring-instance");
     await render(<QuestionBankWorkspace {...props} item={{ ...item, revision: 12 }} />); expect(host.querySelector(".is-list")).not.toBeNull();
     const next = { ...version, id: "second-version" };
-    await render(<QuestionBankWorkspace {...props} selected={next} editorVersion={next} />);
+    await render(<QuestionBankWorkspace {...props} selected={next} editorVersion={next} />); await click("编辑本题");
     expect(host.querySelector("[data-scoring-instance]")!.getAttribute("data-scoring-instance")).not.toBe(identity);
   });
   it.each(["scoringDirty", "conflict", "saving"] as const)("locks content when %s is set", async (field) => {
-    const props = { ...workspaceProps(), [field]: true }; await render(<QuestionBankWorkspace {...props} />); expect(host.querySelector("fieldset")?.disabled).toBe(true); expect(button("提交审核").disabled).toBe(true);
+    const props = { ...workspaceProps(), [field]: true }; await render(<QuestionBankWorkspace {...props} />); if (field !== "scoringDirty") await act(async () => mocks.clickHandlers.get("编辑本题")!({})); expect(host.querySelector("fieldset")?.disabled).toBe(true); expect(button("提交审核").disabled).toBe(true);
   });
   it("locks scoring while content is dirty and preserves file capability and editor identity", async () => {
-    const props = workspaceProps(); await render(<QuestionBankWorkspace {...props} />); const identity = host.querySelector("[data-scoring-instance]")?.getAttribute("data-scoring-instance"); await render(<QuestionBankWorkspace {...props} contentDirty />); expect(button("编辑评分").disabled).toBe(true); expect(host.querySelector("[data-scoring-instance]")?.getAttribute("data-scoring-instance")).toBe(identity); expect(host.querySelector("[data-files=true]")?.getAttribute("data-actor")).toBe(user.id);
+    const props = workspaceProps(); await render(<QuestionBankWorkspace {...props} />); await click("编辑本题"); const identity = host.querySelector("[data-scoring-instance]")?.getAttribute("data-scoring-instance"); await render(<QuestionBankWorkspace {...props} contentDirty />); expect(button("编辑评分").disabled).toBe(true); expect(host.querySelector("[data-scoring-instance]")?.getAttribute("data-scoring-instance")).toBe(identity); expect(host.querySelector("[data-files=true]")?.getAttribute("data-actor")).toBe(user.id);
     await render(<QuestionBankWorkspace {...props} editorVersion={{ ...version, id: "other" }} />); expect(host.querySelector("[data-scoring-instance]")).toBeNull();
   });
   it("preserves author/reviewer/publisher visibility without broadening return-to-draft checks", async () => {
@@ -217,26 +218,54 @@ describe("question bank batch7 preserved component boundaries", () => {
     await render(<QuestionBankWorkspace {...props} user={{ ...user, permissions: [] }} selected={{ ...version, workflow_status: "reviewing" }} />); expect(host.textContent).not.toContain("批准版本"); expect(button("退回草稿").disabled).toBe(false);
   });
   it("locks archived or non-draft editors without removing published preview", async () => {
-    const props = workspaceProps(); await render(<QuestionBankWorkspace {...props} bank={{ ...bank, status: "archived" }} />); expect(host.querySelector("fieldset")?.disabled).toBe(true); expect(button("创建新版本").disabled).toBe(true); await render(<QuestionBankWorkspace {...props} selected={{ ...version, workflow_status: "published" }} />); expect(host.querySelector("fieldset")?.disabled).toBe(true); expect(host.textContent).toContain("冻结题干"); expect(host.textContent).not.toContain("提交审核");
+    const props = workspaceProps(); await render(<QuestionBankWorkspace {...props} bank={{ ...bank, status: "archived" }} />); await click("编辑本题"); expect(host.querySelector("fieldset")?.disabled).toBe(true); expect(button("创建新版本").disabled).toBe(true); await render(<QuestionBankWorkspace {...props} selected={{ ...version, workflow_status: "published" }} />); expect(host.querySelector("fieldset")).toBeNull(); expect(host.textContent).toContain("冻结题干"); expect(host.textContent).not.toContain("提交审核");
   });
   it("blocks review submission until an independent authorized reviewer is available", async () => {
     const props = workspaceProps();
     const members = query({ members: [{ user_id: version.author_id, display_name: "出题教师", actions: ["read", "review"] }] });
     await render(<QuestionBankWorkspace {...props} members={members} />);
     expect(button("提交审核").disabled).toBe(true);
-    expect(host.textContent).toContain("授权独立审核教师");
-    await render(<QuestionBankWorkspace {...props} members={{ ...members, data: { members: [{ user_id: user.id, display_name: "李老师", actions: ["read", "review"] }] } }} />);
+    expect(host.textContent).toContain("配置独立审核教师和发布教师");
+    await render(<QuestionBankWorkspace {...props} members={{ ...members, data: { members: [{ user_id: user.id, display_name: "李老师", actions: ["read", "review", "publish"] }] } }} />);
+    expect(button("提交审核").disabled).toBe(true);
+    await change(host.querySelector('select[aria-label="指定审核教师"]')!, user.id);
+    await change(host.querySelector('select[aria-label="指定发布教师"]')!, user.id);
     expect(button("提交审核").disabled).toBe(false);
-    expect(host.textContent).toContain("请联系审核教师：李老师");
-    await click("提交审核"); expect(props.transition).toHaveBeenCalledWith("submit-review");
+    await click("提交审核"); expect(props.transition).toHaveBeenCalledWith("submit-review", { reviewer_id: user.id, publisher_id: user.id });
+    await render(<QuestionBankWorkspace {...props} members={{ ...members, data: { members: [{ user_id: "new-reviewer", display_name: "新审核教师", actions: ["read", "review"] }, { user_id: user.id, display_name: "李老师", actions: ["read", "publish"] }] } }} />);
+    expect(button("提交审核").disabled).toBe(true);
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="指定审核教师"]')!.value).toBe("");
+    await click("提交审核"); expect(props.transition).toHaveBeenCalledTimes(1);
   });
   it("keeps the draft editable when reviewer lookup fails and offers a local retry", async () => {
     const props = workspaceProps(); const members = { ...query({ members: [] }), isError: true, error: new Error("lookup unavailable") };
-    await render(<QuestionBankWorkspace {...props} members={members} />);
+    await render(<QuestionBankWorkspace {...props} members={members} />); await click("编辑本题");
     expect(button("提交审核").disabled).toBe(true);
     expect(button("保存草稿").disabled).toBe(false);
     await click("重试人员列表"); expect(members.refetch).toHaveBeenCalledOnce();
     expect(props.transition).not.toHaveBeenCalled();
+  });
+  it("领取限于指定人员，交接记录折叠时不读取；领取后取消重复按钮", async () => {
+    const props = workspaceProps();
+    const handoff = vi.fn();
+    const selected: QuestionBankVersion = { ...version, workflow_status: "reviewing", handoff: { revision: 3, reviewer_id: user.id, publisher_id: "publisher", updated_at: "2026-10-28T00:00:00Z" } };
+    const members = query({ members: [{ user_id: user.id, display_name: "李老师", actions: ["read", "review"] }, { user_id: "publisher", display_name: "王老师", actions: ["read", "publish"] }] });
+    mocks.handoffEvents.mockResolvedValue({ events: [{ id: "event", kind: "assigned", actor_id: "author", recipient_id: user.id, created_at: "2026-10-28T00:00:00Z" }] });
+    await render(<QuestionBankWorkspace {...props} handoff={handoff} selected={selected} members={members} />);
+    expect(mocks.handoffEvents).not.toHaveBeenCalled();
+    await click("领取本题待办"); expect(handoff).toHaveBeenCalledWith("review");
+    const history = [...host.querySelectorAll("details")].find(details => details.querySelector("summary")?.textContent === "交接记录")!;
+    await act(async () => { history.open = true; history.dispatchEvent(new Event("toggle")); });
+    await flush();
+    expect(mocks.handoffEvents).toHaveBeenCalledWith(expect.objectContaining({ path: { versionId: version.id }, signal: expect.any(AbortSignal) }));
+    await render(<QuestionBankWorkspace {...props} handoff={handoff} selected={{ ...selected, handoff: { ...selected.handoff!, revision: 4, claimed_by: user.id } }} members={members} />);
+    expect(host.textContent).not.toContain("领取本题待办"); expect(host.textContent).toContain("我已领取");
+  });
+  it("已指派给其他教师时，即使拥有审核职责也不显示批准操作", async () => {
+    const props = workspaceProps();
+    const selected: QuestionBankVersion = { ...version, workflow_status: "reviewing", handoff: { revision: 2, reviewer_id: "other", publisher_id: "publisher", updated_at: "2026-10-28T00:00:00Z" } };
+    await render(<QuestionBankWorkspace {...props} selected={selected} members={query({ members: [{ user_id: user.id, display_name: "李老师", actions: ["read", "review"] }] })} />);
+    expect(host.textContent).not.toContain("批准版本"); expect(host.textContent).not.toContain("退回草稿");
   });
   it("limits review actions to actual bank members and provides the exact review link", async () => {
     const props = workspaceProps(); const selected = { ...version, workflow_status: "reviewing" as const };
@@ -248,7 +277,7 @@ describe("question bank batch7 preserved component boundaries", () => {
     const writeText = vi.fn().mockRejectedValueOnce(new Error("clipboard denied"));
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     await click("复制本题审核链接"); expect(writeText).toHaveBeenCalledWith(link.value);
-    expect(mocks.warning).toHaveBeenCalledWith("暂不能自动复制，请选择下方审核链接后复制，并联系审核教师。");
+    expect(mocks.warning).toHaveBeenCalledWith("复制失败，请手动复制下方链接，并联系审核教师。");
   });
   it("preserves all review labels and retries both failed version queries", async () => {
     const props = workspaceProps(); props.reviews.data = { reviews: ["approve", "publish", "submit-review", "return-to-draft"].map((decision, index) => ({ id: `review-${index}`, version_id: version.id, reviewer_id: user.id, decision: decision as "approve" | "publish" | "submit-review" | "return-to-draft", comment: "", content_revision: index, bundle_hash: "bundle", created_at: "2026-01-01" })) }; await render(<QuestionBankWorkspace {...props} />); expect(host.querySelector("ol")?.textContent).toContain("批准"); expect(host.querySelector("ol")?.textContent).toContain("发布"); expect(host.querySelector("ol")?.textContent).toContain("提交审核"); expect(host.querySelector("ol")?.textContent).toContain("退回草稿");

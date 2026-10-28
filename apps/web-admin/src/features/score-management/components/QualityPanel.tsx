@@ -25,8 +25,8 @@ export function QualityPanel({ quality, publishedOrLocked, actionFor }: Readonly
     return <div className="score-quality-pass">
       <ShieldCheck size={22} />
       <div>
-        <strong>{publishedOrLocked ? "成绩已发布，质量校验通过" : "发布前质量检查通过"}</strong>
-        <span>{publishedOrLocked ? "成绩已发布并锁定，所有检查项均已处理。" : "所有检查项均已通过，可以发布成绩。"}</span>
+        <strong>基础成绩检查通过</strong>
+        <span>{publishedOrLocked ? "基础成绩已锁定；本项检查通过。门户发布状态见版本区域。" : "本项检查通过；请继续核对门户发布检查。"}</span>
       </div>
     </div>;
   }
@@ -37,7 +37,7 @@ export function QualityPanel({ quality, publishedOrLocked, actionFor }: Readonly
     renderItem={(issue: QualityIssue) => <List.Item>
       <div className="score-quality-issue" title={getSafeUserText(issue.message, "成绩质量检查未通过")}>
         <StatusTag tone={issue.blocking ? "danger" : "warning"}>{issue.blocking ? "须处理后才能发布" : "提醒"}</StatusTag>
-        <strong>{qualityLabels[issue.code] ?? issue.code}</strong>
+        <strong>{qualityLabels[issue.code] ?? "其他发布检查问题"}</strong>
         <span>{issue.count} 项</span>
         {actionFor?.(issue.code) ? <Button size="small" onClick={actionFor(issue.code)!.run}>{actionFor(issue.code)!.label}</Button> : null}
       </div>

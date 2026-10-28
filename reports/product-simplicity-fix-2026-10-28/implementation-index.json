@@ -1,0 +1,1991 @@
+{
+  "date": "2026-10-28",
+  "summary": {
+    "fixed": 112,
+    "already_fixed": 8
+  },
+  "by_priority": {
+    "P1": {
+      "fixed": 22
+    },
+    "P2": {
+      "fixed": 83,
+      "already_fixed": 7
+    },
+    "P3": {
+      "fixed": 7,
+      "already_fixed": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "EX-01",
+      "priority": "P2",
+      "title": "创建之前先选择两种实际很接近的创建方式",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "默认直接进入创建表单，仅保留套用考试方案为可选入口；保留已有 creation_mode 载荷与命令恢复语义。",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-02",
+      "priority": "P3",
+      "title": "创建表单里的“第 4 步”没有任何可执行动作",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "移除创建前无动作的资料分节，上传说明留在创建操作附近。",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-03",
+      "priority": "P3",
+      "title": "成绩发布下拉框只有一个选项",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "唯一发布策略显示为文字，提交策略保持原值。",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-04",
+      "priority": "P2",
+      "title": "同一个阅卷方式被拆成两组单选",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "五种阅卷组织方式在同一组单选，区分本题判分方式。",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-05",
+      "priority": "P3",
+      "title": "“考试时间”实际要求填写时长",
+      "report": "exam-preparation.md",
+      "status": "already_fixed",
+      "note": "考试时长与分钟单位已在前轮文案整理中明确。",
+      "files": [
+        "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-06",
+      "priority": "P2",
+      "title": "保存之后仍需手工触发另一套“检查”界面",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "题目配置回读完成后自动GET检查一次，未保存或处理中暂停；旧版本响应不能回填。查看结果复用当前事实，读取失败保留重试；未自动确认或冻结整场考试。",
+      "files": [
+        "apps/web-admin/src/features/paper-rubric/PaperQuestionConfirmation.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-07",
+      "priority": "P1",
+      "title": "“保存本题全部修改”没有涵盖同一页的全部设置",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "整题保存纳入判分方式与参考图清单。全部参与区先校验并冻结输入，再顺序保存；成功修订保留，后区失败只重试未完成区。未核对裁图阻断保存；切题拒绝旧动作，离页提示包含参与区。此实现为顺序保存与半成功恢复，未宣称跨接口事务。",
+      "files": [
+        "apps/web-admin/src/pages/PaperRubricPage.tsx",
+        "apps/web-admin/src/features/paper-rubric/PaperScoringConfiguration.tsx",
+        "apps/web-admin/src/features/paper-rubric/questionSaveParticipant.ts",
+        "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+        "apps/web-admin/src/features/paper-rubric/ReferenceMaterialEditor.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-08",
+      "priority": "P1",
+      "title": "数值题误差设置重复，且相对误差单位不同",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "答案历史容差保留载荷但隐藏编辑，数值误差集中到固定规则，按百分比展示并换算为原比例单位；尚无规则时继承历史答案容差，发布仍需明确确认。",
+      "files": [
+        "apps/web-admin/src/features/paper-rubric/PaperQuestionForm.tsx",
+        "apps/web-admin/src/features/paper-rubric/PaperScoringConfiguration.tsx",
+        "apps/web-admin/src/features/paper-import/useScoringRules.ts"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-09",
+      "priority": "P2",
+      "title": "点击“来源”后主要看到的是来源计数和另一页入口",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "来源抽屉直接列出原文件页入口，调用现有授权文件读取与页码定位，无需跳资料页重新找来源。",
+      "files": [],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-10",
+      "priority": "P2",
+      "title": "AI 配分有多层草稿和相近“分段/分值”路径",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "默认围绕当前采分点草稿编辑，主入口一次点击直接生成AI建议，省去先选AI再生成。手工步骤配分、解答拆合及仅采用分段收入工具详情；显式采用后更新同一采分点草稿，保存与锁定仍为独立事实。生成意图绑定题目与来源，恢复页面或回读不自动调用模型。",
+      "files": [],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-11",
+      "priority": "P2",
+      "title": "题目问题分散在筛选、待处理抽屉和检查抽屉",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "题目检查与逐题待办共用一个抽屉；顶部保留考试级完整性/总分检查，下方按题呈现答案、分值、细则待办并提供下一项直接定位。左侧筛选作为列表视图保留，不另立待办流程。",
+      "files": [
+        "apps/web-admin/src/features/paper-rubric/PaperQuestionIssues.tsx",
+        "apps/web-admin/src/features/paper-rubric/PaperQuestionConfirmation.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-12",
+      "priority": "P2",
+      "title": "资料页和小题页都可逐题编辑识别候选",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "资料页只显示已读取的识别快照、摘要与逐题核对主入口；逐题编辑和确认集中小题页，未保存草稿仍由原工作流与离页保护管理。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportResults.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-13",
+      "priority": "P2",
+      "title": "粘贴文本弹窗把解析实现细节放在主要任务前面",
+      "report": "exam-preparation.md",
+      "status": "already_fixed",
+      "note": "标题与输入提示已精简，公式帮助折叠；资料发送范围继续在输入前告知，沿用已确认的小字方案。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-14",
+      "priority": "P2",
+      "title": "排资料顺序时每点一下就触发一次后端更新和重新匹配",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "资料排序、类型和删除先在本地调整，一次保存并重新匹配；取消恢复原列表，仍沿用代次与未保存人工核对保护。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportSourceList.tsx",
+        "apps/web-admin/src/features/paper-import/usePaperImportMaterials.ts"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-15",
+      "priority": "P2",
+      "title": "恢复失败时让教师选择“解析”还是“识别全部”",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "失败或停止后的主操作统一为继续处理本次资料，说明保留历史结果；全部重新识别收入其他恢复方式，沿用原代次和失败恢复调用。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportResults.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-17",
+      "priority": "P1",
+      "title": "答题卡的核心完成按钮被埋在高级设置中",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "最终确认置于工具栏；原区域覆盖、异常、锁定与考试绑定门禁复用同一规则。设置面板保留配置事实。",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateBindingView.tsx",
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx",
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateSettingsView.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-18",
+      "priority": "P3",
+      "title": "同一题目选择同时提供下拉、列表和“创建或定位”",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "移除重复题目下拉与创建/定位按钮，列表支持题号或题干搜索，未配置题直接添加区域，已配置题点击定位。",
+      "files": [
+        "apps/web-admin/src/features/answer-sheet-template/view/TemplateQuestionPane.tsx",
+        "apps/web-admin/src/features/answer-sheet-template/editor/useRegionEditor.ts"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-19",
+      "priority": "P2",
+      "title": "参考图添加暴露像素坐标和多级暂存",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "精确像素默认折叠；拖框结束后自动生成一次实际裁图预览，教师看见图片并核对后一次添加并保存。相同选区失败不自动新建命令，保留原命令恢复；整题保存不自动采纳未核对选区。",
+      "files": [
+        "apps/web-admin/src/features/paper-rubric/ReferenceMaterialEditor.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-20",
+      "priority": "P1",
+      "title": "“导入答卷”实际先要求创建一个有名字的技术批次",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "主入口先选择文件，再核对页序；系统预填网页来源与记录名称。取消选择不创建空批次，名称折叠可改；补传原因与幂等恢复保留。",
+      "files": [
+        "apps/web-admin/src/pages/CaptureBatchPage.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-21",
+      "priority": "P1",
+      "title": "上传成功后还有一个容易漏掉的“开始处理”",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "一次选择完整登记后自动排队；替代时先完整登记再退出旧组。排队失败仅重试排队，不重传、不重登记、不再次替代；手工处理作为历史记录/失败兜底保留。",
+      "files": [
+        "apps/web-admin/src/features/capture/useCaptureUpload.ts"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-24",
+      "priority": "P2",
+      "title": "单科考试也要经过一页只有一行学科的总览",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "真实独立单科按当前阶段直达；多科场次只授权一科时仍保留整场总览，不扩张授权。",
+      "files": [
+        "apps/web-admin/src/features/exams/management/managementPresentation.ts",
+        "apps/web-admin/src/router/pageRendering.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-22",
+      "priority": "P1",
+      "title": "要求用户保证页序，却缺少提交前的分组确认",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "计数与像素预览分开：classic和BigTIFF沿完整主页面链计数，最多10000页；超过100页的classic仍显示真实总页数与分组，不再把预览资源限制显示成未知页数。；常规BigTIFF在校验64位目录、字段长度、inline/out-of-line值与像素范围后，把主页面标签适配给现有UTIF像素解码；支持双端序真实灰阶预览及改序。原件仅重连文件头和主页面链指针，不重编码像素，也不转存为classic TIFF。；子IFD、非常规编码/色彩、分通道、超页数/像素/字节预算等情况不再静默通过普通预检：说明哪些原件不能完整显示，用户核对原件页序和每人页数后必须显式确认，才允许按原文件提交服务端核对。用户也可取消并换常规文件。；原件确认只属于当前文件对象、文件顺序、每人页数和失败原因；重新选文件、改序、改分组或出现新的预览失败都会作废确认。已知缺页始终阻止提交，不能由原件确认绕过。；展开预览期间阻止外层提交；收起会取消解码并释放等待，迟到页面仍被拒绝；解码失败通知外层进入原件确认。未应用页序仍阻止提交，应用失败保留原件和当前页序。大批分组只绘制前100份，保留完整计数与连续分组规则。；补充256MiB本地TIFF输入预算，超限不先调用arrayBuffer整读；这是本地预览边界，不改变服务端上传限制。",
+      "files": [
+        "apps/web-admin/src/features/capture/captureTiffDirectories.ts",
+        "apps/web-admin/src/features/capture/captureTiffPreview.ts",
+        "apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx",
+        "apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx"
+      ],
+      "implementation_report": "round-4/capture.json",
+      "implementation": "选择文件后先在本地读取PDF/TIFF真实页数，按整次选择连续分组，展示每份来源文件与原页范围；子页预览显示学生分组边界。已知缺页阻止确认；换文件废弃旧计数，排序未应用仍阻止提交。支持八种TIFF方向的正确缩略图，保留原方向标签与原像素。BigTIFF可安全读取64位主目录页数供分组核对。",
+      "remaining": "",
+      "prior_status": "partial",
+      "changes": [
+        "计数与像素预览分开：classic和BigTIFF沿完整主页面链计数，最多10000页；超过100页的classic仍显示真实总页数与分组，不再把预览资源限制显示成未知页数。",
+        "常规BigTIFF在校验64位目录、字段长度、inline/out-of-line值与像素范围后，把主页面标签适配给现有UTIF像素解码；支持双端序真实灰阶预览及改序。原件仅重连文件头和主页面链指针，不重编码像素，也不转存为classic TIFF。",
+        "子IFD、非常规编码/色彩、分通道、超页数/像素/字节预算等情况不再静默通过普通预检：说明哪些原件不能完整显示，用户核对原件页序和每人页数后必须显式确认，才允许按原文件提交服务端核对。用户也可取消并换常规文件。",
+        "原件确认只属于当前文件对象、文件顺序、每人页数和失败原因；重新选文件、改序、改分组或出现新的预览失败都会作废确认。已知缺页始终阻止提交，不能由原件确认绕过。",
+        "展开预览期间阻止外层提交；收起会取消解码并释放等待，迟到页面仍被拒绝；解码失败通知外层进入原件确认。未应用页序仍阻止提交，应用失败保留原件和当前页序。大批分组只绘制前100份，保留完整计数与连续分组规则。",
+        "补充256MiB本地TIFF输入预算，超限不先调用arrayBuffer整读；这是本地预览边界，不改变服务端上传限制。"
+      ],
+      "completion_boundary": "完成原观察要求的提交前预检与可见确认流程，不等于浏览器可以解码全部TIFF变体。常规文件可预览和调整；无法本地预览的原件有明确原因、显式确认和服务端继续核对的完整路径，没有将不支持格式冒充本地已验证。"
+    },
+    {
+      "id": "EX-23",
+      "priority": "P2",
+      "title": "正常导入页常驻大段边界说明",
+      "report": "exam-preparation.md",
+      "status": "already_fixed",
+      "note": "日常显示每人页数和连续排列规则，详细分组边界折叠；异常仍就地提示。",
+      "files": [
+        "apps/web-admin/src/features/capture/CaptureBatchPanels.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-25",
+      "priority": "P2",
+      "title": "已指出具体问题的“去处理”仍把用户送回通用入口",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "评分方案的单题问题携带 question/target 定位题目与评分区，并在已读取的当前考试题目中匹配；考试级问题仍跳考试列表，对应编辑定位尚未补齐。",
+      "files": [
+        "apps/web-admin/src/components/features/assessment/ExamScoringPreparation.tsx",
+        "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+        "apps/web-admin/src/pages/ExamManagementPage.tsx",
+        "apps/web-admin/src/features/exams/management/ManagementExamEditDrawer.tsx"
+      ],
+      "implementation_report": "round-3/exam-capture.json",
+      "implementation": "考试级准备待办携带当前学科的edit_exam和target=scope；在已授权考试列表中解析该学科所属整场，重新读取最新整场权限和归属后打开对应编辑抽屉，并定位参考班级字段。保存后的列表刷新不会重新弹出抽屉。只读、冻结或授权不完整时展示已定位考试详情和学校考试管理员交接提示；不存在于当前授权列表的标识不用于读取任意整场。",
+      "remaining": [],
+      "boundaries": [
+        "使用现有考试编辑字段与版本/幂等规则；场次年级基础资料不在此抽屉直接改写，有问题明确交接学校考试管理员",
+        "原单题question/target定位保留；没有新增修改年级或扩大管理范围的接口"
+      ]
+    },
+    {
+      "id": "EX-26",
+      "priority": "P2",
+      "title": "图像质检把完整算法诊断当作默认阅读内容",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "算法、七项指标、历史记录和处理条件收入检测详情，结论与问题继续直接显示。",
+      "files": [
+        "apps/web-admin/src/features/capture/ImageQualityWorkspace.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-27",
+      "priority": "P2",
+      "title": "异常处理仍要求学校用户理解工程级别和资源标识",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "答卷/页面内部标识已收入排障信息；P0–P3 仍保留原等级，尚未建立经后端核实的业务影响标签。",
+      "files": [
+        "apps/web-admin/src/components/ProcessingOperationsPanel.tsx"
+      ],
+      "implementation_report": "round-2/capture-desktop.json",
+      "implementation": "异常表格及筛选以立即处理、优先处理、常规处理、稍后处理展示既有等级。核对服务端severityFor及SQL CASE后保留原P0-P3筛选枚举和排序，未把等级标签伪装为质量通过；blocking与真实问题原因继续独立使用。",
+      "remaining": []
+    },
+    {
+      "id": "EX-28",
+      "priority": "P2",
+      "title": "版面对齐默认露出八个 0–1 坐标输入",
+      "report": "exam-preparation.md",
+      "status": "already_fixed",
+      "note": "精确坐标默认折叠，保留拖点/键盘操作、0–1坐标说明与预览门禁。",
+      "files": [
+        "apps/web-admin/src/components/RegistrationCorrectionWorkspace.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-29",
+      "priority": "P2",
+      "title": "已识别的答案对教师显示成 JSON",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "识别答案按多选、逐空和已知答案对象展示可读文字；未知字段仅在原始答案详情中展示，输入与保存数据结构不变。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/PaperImportRecognitionPreview.tsx",
+        "apps/web-admin/src/features/paper-import/recognizedAnswerPresentation.ts"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-30",
+      "priority": "P2",
+      "title": "同一题有两个必须相等的“满分”编辑框",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "细则满分由题目分值派生，修改分值保留原采分点并继续检查合计差额，不自动按比例改点。",
+      "files": [
+        "apps/web-admin/src/features/paper-import/RubricReviewEditor.tsx",
+        "apps/web-admin/src/features/paper-import/usePaperImportWorkflow.ts"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "EX-31",
+      "priority": "P2",
+      "title": "识别处理页把内部状态转换做成用户按钮",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "旧答卷处理页面仍包含纯状态转换动作，服务端受控编排未实施。",
+      "files": [
+        "apps/web-admin/src/pages/SubmissionCapturePage.tsx",
+        "apps/web-admin/src/pages/SubmissionCaptureViews.tsx",
+        "apps/web-admin/src/features/capture/submissionColumns.tsx"
+      ],
+      "implementation_report": "round-3/exam-capture.json",
+      "implementation": "旧答卷入口明确为历史答卷：保留材料、原图和识别记录查看及既有受控单页修复，去掉旧入口的新建上传链与纯状态转换、OCR创建、旧直接切题主操作；正常导入和后续处理引导到当前已读取且授权考试的采集批次页。只读用户展示权限交接，未选到有效考试时不导航任意批次。旧服务端API保持兼容，主界面不再拼接弱边界处理链。",
+      "remaining": [],
+      "boundaries": [
+        "原观察允许历史入口明确定位并引导当前流程；本轮采用这一方案，没有新增服务端Continue端点或在前端连续调用原始状态接口",
+        "采集批次原有完整性、图像质量、身份、模板和处理门禁继续执行；历史旧记录不自动迁移或重建"
+      ]
+    },
+    {
+      "id": "EX-32",
+      "priority": "P2",
+      "title": "相似答案抽检先反复“打开”，再反复阅读同题评分依据",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "相似答案逐份审阅与共用冻结评分依据尚未实施。",
+      "files": [
+        "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx",
+        "apps/web-admin/src/features/answer-groups/AnswerGroupSampleEvidence.tsx",
+        "apps/web-admin/src/features/answer-groups/AnswerGroupReviewWorkspace.tsx"
+      ],
+      "implementation_report": "round-3/exam-capture.json",
+      "implementation": "改为单份样本审阅：当前样本自动读取，显示真实文字或图像后才启用接受/拒绝并下一份；仅在保存成功后移动到下一未抽检样本，失败留在当前样本。按完整冻结材料正文核对并集中展示一次评分依据，不只比较版本号；正文不一致则拒绝复用与抽检提交。保留代表/边界/异常标记、手动前后切换、拒绝样本的真实单份人工交接；统计指标与样本相似度诊断折叠。",
+      "remaining": [],
+      "boundaries": [
+        "只展示接口实际返回的样本，不声称members就是整组全部学生；没有自动接受或批量标记已读",
+        "minimum_sample、全部异常样本、representation_hash、can_confirm与候选修订号沿用；服务端确认时重验所有成员源事实和冻结快照的规则未修改",
+        "G18协作：教师参考案例错误标签复用typicalErrorLabel中文展示，原始值留在折叠诊断，原存储和筛选值未改"
+      ]
+    },
+    {
+      "id": "EX-33",
+      "priority": "P2",
+      "title": "上传队列常驻完成记录，却把较早失败藏在第九项以后",
+      "report": "exam-preparation.md",
+      "status": "fixed",
+      "note": "失败和进行中队列全部可见，完成记录按需展开，较早失败不会被八项截断隐藏；保留服务端事实。",
+      "files": [
+        "apps/web-admin/src/pages/SubmissionCaptureViews.tsx"
+      ],
+      "implementation_report": "exam-preparation.json"
+    },
+    {
+      "id": "G01",
+      "priority": "P2",
+      "title": "进入独立“主观题批次”深链接后，需要理解“受治理的影子评分批次”、编辑“幂等键”，从别处找出答题片段 ID 并粘贴最多 1000 个；先创建，再点击“入队评分”。该路由是生产可达但 `navigation:false` 的高级页面，搜索当前前端没有找到指向它的普通业务按钮，不能声称日常教师必经。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "新增按考试分页的匿名评分材料目录，不再依赖 review_task 已创建；片段有可登记作答、评分标准和冻结题目依据时可选。",
+        "同租户、当前操作者、考试范围均核验；只允许租户级或可信学校管理范围，SQL再按实际管理学校过滤。外校任务投影不能扩成整场材料目录。",
+        "只返回片段身份、题号、匿名材料标识和准备情况，不返回答案正文、学生姓名或评分内容。创建与入队仍沿用原正式完整门禁。",
+        "界面按考试和题目筛选、跨页选择真实片段，尚未齐全的材料保留原因并禁选；换考试或清空选择后拒绝迟到目录。"
+      ],
+      "remaining": "",
+      "files": [
+        "services/api-gateway/internal/subjective/source_directory.go",
+        "services/api-gateway/internal/server/routes_grading.go",
+        "apps/web-admin/src/api/subjectiveGrading.ts",
+        "apps/web-admin/src/features/grading/SubjectiveBatchSourcePicker.tsx"
+      ],
+      "implementation_report": "round-3/grading.json",
+      "prior_status": "partial",
+      "note": "新增按考试分页的匿名评分材料目录，不再依赖 review_task 已创建；片段有可登记作答、评分标准和冻结题目依据时可选。；同租户、当前操作者、考试范围均核验；只允许租户级或可信学校管理范围，SQL再按实际管理学校过滤。外校任务投影不能扩成整场材料目录。；只返回片段身份、题号、匿名材料标识和准备情况，不返回答案正文、学生姓名或评分内容。创建与入队仍沿用原正式完整门禁。；界面按考试和题目筛选、跨页选择真实片段，尚未齐全的材料保留原因并禁选；换考试或清空选择后拒绝迟到目录。",
+      "boundary": "只覆盖现有答题片段材料，不建立任意文件导入通道；目录ready仅为选择提示，正式创建仍重验完整上下文和模型准入。"
+    },
+    {
+      "id": "G02",
+      "priority": "P1",
+      "title": "复核支持改分后，要选重评教师、手动预览单份范围、创建任务，再到另一区点击“关联题目级复评”；随后跳成绩工作台批准、启动、复核候选、完成、生成新版本、发布，最后回申请手选结果版本、核对说明并公布。申请、任务、版本的关联主要靠人完成。已有学生回复会回填，此处不算重复填写。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "打开申请后核对当前账号创建、同考试、同题、同发布来源、同一份答卷的人工复评草稿；读取失败时阻止重复创建，并提供重新核对。",
+        "只有唯一匹配且详情仍含本份答卷和受派阅卷员时才自动恢复；多个候选必须明确选择。空白回复可从所恢复任务带回，已有输入不由恢复覆盖。",
+        "创建与关联分别保留成功事实；关联失败后继续关联已创建任务，重试沿用原命令身份，不再创建第二份任务。切换账号或离开组件后不继续关联。",
+        "新稳定任务键可回认历史随机键创建的成绩版本，按整个冻结快照和正式复核来源ID精确比较；考试锁覆盖回认和新建。多个历史匹配返回冲突，保留旧键原有重试行为。"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/components/QuestionAppealRegradeLaunch.tsx",
+        "apps/web-admin/src/components/questionAppealRegradeRecovery.ts",
+        "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+        "services/api-gateway/internal/scorerelease/regrade_recovery.go",
+        "services/api-gateway/internal/scorerelease/store_memory.go",
+        "services/api-gateway/internal/scorerelease/store_postgres.go"
+      ],
+      "implementation_report": "round-3/appeals-drafts.json",
+      "prior_status": "partial",
+      "note": "打开申请后核对当前账号创建、同考试、同题、同发布来源、同一份答卷的人工复评草稿；读取失败时阻止重复创建，并提供重新核对。；只有唯一匹配且详情仍含本份答卷和受派阅卷员时才自动恢复；多个候选必须明确选择。空白回复可从所恢复任务带回，已有输入不由恢复覆盖。；创建与关联分别保留成功事实；关联失败后继续关联已创建任务，重试沿用原命令身份，不再创建第二份任务。切换账号或离开组件后不继续关联。；新稳定任务键可回认历史随机键创建的成绩版本，按整个冻结快照和正式复核来源ID精确比较；考试锁覆盖回认和新建。多个历史匹配返回冲突，保留旧键原有重试行为。",
+      "boundary": "恢复候选仅用于续接人工复评；不会批准、启动任务或直接改分。正式关联和后续成绩发布继续使用原服务端状态及修订检查；有歧义时要求核对，未自动猜测。"
+    },
+    {
+      "id": "G03",
+      "priority": "P1",
+      "title": "教师标记一份答卷准备稍后处理；标记列表有“待处理”筛选，但所有记录均只打开只读弹窗，只有查看、取消标记和返回列表，缺少回到可编辑任务的动作。需要重新打开任务列表并找回原卷。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "跨考试的可处理标记提供继续阅卷正式路由",
+        "同考试沿用现有草稿切换保护；跨考试经过路由未保存拦截，新工作台重读权限、任务状态和租约",
+        "已提交/归档标记保持只读，过期会话按钮不能导航"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/ReviewBookmarks.tsx",
+        "apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx"
+      ],
+      "implementation_report": "round-2/grading-release.json",
+      "prior_status": "partial",
+      "note": "跨考试的可处理标记提供继续阅卷正式路由；同考试沿用现有草稿切换保护；跨考试经过路由未保存拦截，新工作台重读权限、任务状态和租约；已提交/归档标记保持只读，过期会话按钮不能导航"
+    },
+    {
+      "id": "G04",
+      "priority": "P2",
+      "title": "只选 A、B 两个独立模型，没有第三模型，仍必须填写“三评后允许分差”才能确认。界面同时说明没有第三模型时直接转教师处理，用户却仍需配置三评参数。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "双模型仅要求前两模型允许分差；第三分差仅独立第三模型生效时出现",
+        "保存、启动校验及图像评分执行/结算同步允许 dual 的第三阈值为 null",
+        "三模型仍要求第三阈值且保留分差顺序约束"
+      ],
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+        "services/api-gateway/internal/grading/exam_ai_plan.go",
+        "services/api-gateway/internal/subjective/image_panel_execution.go"
+      ],
+      "contract_note": "OpenAPI 对应字段描述由主智能体同步；协议原已允许 null。",
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G05",
+      "priority": "P2",
+      "title": "AI 方案设置页把“已保存摘要”、可编辑模型选择、每模型图片检测、默认展开的分差算法、举例、保存按钮和冻结说明同时铺开；启动评分时又重复展示完整摘要。“单模型评分·非三智能体”还引入用户未选择的架构术语。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "所选模型增加一次批量图片能力检测入口，默认跳过已通过项，逐个显示结果。",
+        "冻结点击时的配置和绑定修订后串行执行，同配置失败重试复用原请求身份，避免把未知回执当作新的付费请求。",
+        "失败时可只重试失败项；批量进行时锁定选择与保存，切考试、退出或重登后不继续后续调用。",
+        "检测后只刷新能力状态，不重填管理员尚未保存的模型与分差设置；逐个检测收在详情，保留可能调用模型的提示。"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx"
+      ],
+      "implementation_report": "round-3/grading.json",
+      "prior_status": "partial",
+      "note": "所选模型增加一次批量图片能力检测入口，默认跳过已通过项，逐个显示结果。；冻结点击时的配置和绑定修订后串行执行，同配置失败重试复用原请求身份，避免把未知回执当作新的付费请求。；失败时可只重试失败项；批量进行时锁定选择与保存，切考试、退出或重登后不继续后续调用。；检测后只刷新能力状态，不重填管理员尚未保存的模型与分差设置；逐个检测收在详情，保留可能调用模型的提示。"
+    },
+    {
+      "id": "G06",
+      "priority": "P2",
+      "title": "创建门户草稿时，12 项公开策略全部以同级复选框出现。关闭逐题得分后，教师反馈、评分要点、题目统计、题干、知识点和答案等选项仍能勾选，但实际不生效，用户要自行理解依赖。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "学生可见内容按成绩与排名、逐题内容分组",
+        "关闭逐题得分时全部依赖项禁用并显示实际不公开的说明",
+        "复核依赖逐题得分及匿名范例卷约束保留",
+        "新增基础公开/逐题公开快捷模板，继续支持逐项自定义；两种模板均不自动公开具体排名与匿名范例卷，复核考试保留逐题得分依赖"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+        "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G07",
+      "priority": "P2",
+      "title": "成绩页顶部长期并列“考试成绩查询”和“学生门户”两种公开状态；主体又有门户版本区域，右侧另有汇总、确认及旧入口公开。普通发布负责人需要先学习基础成绩和门户版本的区别。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "成绩准备、统一待办和门户版本放进同一个成绩发布任务区",
+        "移除并排双发布状态栏；主状态为门户当前版本",
+        "学校原查询入口及其独立状态收进可选详情，继续保留独立权限、发布确认与服务端门禁"
+      ],
+      "remaining": "保留学校原查询入口的兼容发布能力；其独立事务是业务边界，不自动联动门户发布。",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx"
+      ],
+      "implementation_report": "round-2/grading-release.json",
+      "prior_status": "partial",
+      "note": "成绩准备、统一待办和门户版本放进同一个成绩发布任务区；移除并排双发布状态栏；主状态为门户当前版本；学校原查询入口及其独立状态收进可选详情，继续保留独立权限、发布确认与服务端门禁"
+    },
+    {
+      "id": "G08",
+      "priority": "P2",
+      "title": "同一成绩页展示名册对账状态、7 项摘要、质量检查、发布门禁标签和通过/阻断提示；同一未完成事实容易出现多次，读者要在两个检查区域对账。门禁通过时也同时有标签和完整成功提示。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "名册、基础成绩和门户检查相同规则合为一条待办，使用较大读数而非相加",
+        "每条保留来源与原读数，提醒不会吞掉阻断，未知规则不按文案误合并",
+        "名册与基础检查明细默认折叠，教师只读视图维持明细可见",
+        "任一检查缺失、未通过或名册未解决，都不能显示全部通过或启用门户发布"
+      ],
+      "remaining": "检查数量是规则项或记录数，来源明细保留各自口径，不宣称为去重后的学生总人数。",
+      "files": [
+        "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+        "apps/web-admin/src/features/score-management/components/QualityPanel.tsx"
+      ],
+      "implementation_report": "round-2/grading-release.json",
+      "prior_status": "partial",
+      "note": "名册、基础成绩和门户检查相同规则合为一条待办，使用较大读数而非相加；每条保留来源与原读数，提醒不会吞掉阻断，未知规则不按文案误合并；名册与基础检查明细默认折叠，教师只读视图维持明细可见；任一检查缺失、未通过或名册未解决，都不能显示全部通过或启用门户发布"
+    },
+    {
+      "id": "G09",
+      "priority": "P2",
+      "title": "正常成绩确认需要填写“确认原因”，创建正式草稿又必填“发布说明”；旧入口额外要求“发布原因”。示例基本是“复核无误/同意发布/首次发布”等常规话，容易变成机械抄模板。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "常规成绩确认、首次门户发布及旧入口发布可选择明确中文依据",
+        "其他情况仍填写说明；已有正式版本后的更正草稿继续要求文字更正说明",
+        "提交原审计接口的原因字符串，正式发布确认和关键操作验证保留"
+      ],
+      "files": [
+        "apps/web-admin/src/components/BusinessReasonField.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G10",
+      "priority": "P2",
+      "title": "成绩列表既有本地每页 8 条分页，又在分页表下放“加载更多成绩”。要看后续数据，用户先操作表格页码，再理解何时需要额外加载。显示“已加载/筛选总量/全场总量”进一步暴露存储和拉取层次。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "移除成绩表内层本地分页，只保留连续加载更多",
+        "显示当前显示数量和服务端匹配总量，服务端搜索保持原行为"
+      ],
+      "files": [
+        "apps/web-admin/src/pages/ScoreManagementPage.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G11",
+      "priority": "P2",
+      "title": "导出成绩、导出学情报告都弹固定确认窗。没有新的范围或格式选择，只重复 CSV、审计和水印说明，每次批量查分都增加一次确认。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "成绩与学情报告按钮明确导出本场 CSV，直接执行导出",
+        "原导出接口、文件水印和审计流程保留，正式成绩发布确认保留"
+      ],
+      "files": [
+        "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+        "apps/web-admin/src/pages/LearningReportsPage.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G12",
+      "priority": "P2",
+      "title": "当前“学生门户申请”队列没有状态筛选、搜索或待我处理视图。所有申请逐条列出，管理员需要在全部记录里找待分派、待终审或重评中的申请；旧历史入口反而有考试、状态和搜索。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "当前授权申请队列默认待处理，可选待分派/复核中/复评中/已完成/全部",
+        "按题号、已授权学生姓名和考试上下文搜索，教师视角不搜索学生身份目录",
+        "计数仅针对同一已授权队列"
+      ],
+      "files": [
+        "apps/web-admin/src/components/QuestionAppealViews.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G13",
+      "priority": "P2",
+      "title": "进入当前门户申请页面，列表返回后自动选择第一条，随即打开宽 760 的材料抽屉。用户还没选择要做的事，就先被一条申请的材料覆盖主列表。刷新后无选中项时也会重新选择首条。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "初次进入仅显示队列，不自动选择或读取首条材料",
+        "选中申请刷新后保留；被移出队列时关闭材料而非擅自切到首条"
+      ],
+      "files": [
+        "apps/web-admin/src/components/QuestionAppealWorkspace.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G14",
+      "priority": "P2",
+      "title": "当前复核、历史申诉和仲裁长文本均只保存在本页；切换记录、筛选或刷新时用“放弃未提交”弹窗处理，用户必须在丢掉工作和继续停留之间选择。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "题目复核、旧申诉和仲裁增加显式保存本人私有草稿。服务端以租户、本人、记录类型和记录ID隔离；自动暂存仍只在内存，正文不写浏览器持久存储。",
+        "九条读写删除接口逐次经过身份、资源范围、业务权限和当前分派/状态检查。专用guard不进入通用响应幂等缓存，即使客户端携带幂等键也不能持久化或重放私有正文。",
+        "服务端返回当前来源和资源修订，保存限制固定字段和正文大小，并使用独立草稿CAS修订；删除保留修订墓碑，防止旧页面覆盖或复活已清理意见。",
+        "PostgreSQL保存先锁父资源，再锁草稿，并重新检查来源、资源修订、有效账号和处理权限。正式成功事实在原事务中清理本人的旧草稿；失败事务不提前清理，他人的草稿不受影响。",
+        "读取与保存隔离记录、来源、请求世代和会话；切记录解除旧等待，迟到结果不能覆盖新记录。材料修订变化或当前已有编辑时，恢复前明确核对；读取失败保留本页输入。"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/components/PrivateOpinionDraft.tsx",
+        "apps/web-admin/src/auth/reviewOpinionDraft.ts",
+        "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+        "apps/web-admin/src/pages/AppealCenterPage.tsx",
+        "apps/web-admin/src/pages/ArbitrationPage.tsx",
+        "services/api-gateway/internal/opiniondraft/draft.go",
+        "services/api-gateway/internal/appeal/private_drafts.go",
+        "services/api-gateway/internal/review/opinion_draft.go",
+        "services/api-gateway/internal/server/router_guards.go",
+        "services/api-gateway/internal/server/routes_release.go",
+        "services/api-gateway/internal/server/routes_grading.go",
+        "services/api-gateway/migrations/000218_private_opinion_drafts.sql"
+      ],
+      "implementation_report": "round-3/appeals-drafts.json",
+      "prior_status": "partial",
+      "note": "题目复核、旧申诉和仲裁增加显式保存本人私有草稿。服务端以租户、本人、记录类型和记录ID隔离；自动暂存仍只在内存，正文不写浏览器持久存储。；九条读写删除接口逐次经过身份、资源范围、业务权限和当前分派/状态检查。专用guard不进入通用响应幂等缓存，即使客户端携带幂等键也不能持久化或重放私有正文。；服务端返回当前来源和资源修订，保存限制固定字段和正文大小，并使用独立草稿CAS修订；删除保留修订墓碑，防止旧页面覆盖或复活已清理意见。；PostgreSQL保存先锁父资源，再锁草稿，并重新检查来源、资源修订、有效账号和处理权限。正式成功事实在原事务中清理本人的旧草稿；失败事务不提前清理，他人的草稿不受影响。；读取与保存隔离记录、来源、请求世代和会话；切记录解除旧等待，迟到结果不能覆盖新记录。材料修订变化或当前已有编辑时，恢复前明确核对；读取失败保留本页输入。",
+      "boundary": "私有草稿不是正式意见，恢复后仍须显式提交。草稿到期时间为保存后7天，接口到期隐藏正文，未承诺物理删除或后台清扫。数据库只按本人记录读取，不提供草稿列表、导出或管理员读取他人正文的入口。"
+    },
+    {
+      "id": "G15",
+      "priority": "P2",
+      "title": "当前门户教师提交独立意见后仍停在同一材料抽屉；管理员答复、公布后也刷新同条记录。连续处理时每一份都要关闭抽屉、回队列、再开下一份。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "门户复核成功反馈后可明确选择下一条待办",
+        "教师下一条排除已有独立意见的记录，未成功提交不自动前进",
+        "独立回标、新版细则重评成功回执后提供继续下一份，已经提交的本条先从队列剔除；失败不清输入，不自动提交后续任务"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+        "apps/web-admin/src/components/BackmarkQueue.tsx",
+        "apps/web-admin/src/components/RegradeQueue.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G16",
+      "priority": "P2",
+      "title": "标准卷管理列表用题目 UUID 的前 8 位命名，例如“题目 ab12cd34”，没有正常题号和典型分数摘要；教师得逐个打开才能辨认。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "标准卷接口在原授权范围内补充题号，不增加学生身份",
+        "列表以题号、参考分/满分、典型错误摘要命名，内部编号折叠",
+        "提供题目和零分/部分得分/满分分档筛选；缺摘要保持未知"
+      ],
+      "remaining": "",
+      "files": [
+        "services/api-gateway/internal/goldpaper/types.go",
+        "services/api-gateway/internal/goldpaper/store_postgres.go",
+        "services/api-gateway/internal/goldpaper/store_memory.go",
+        "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G17",
+      "priority": "P2",
+      "title": "试评管理员配置一次列出作答类型、满分和 8 项样本/统计/有效期规则；题目已存在，却仍要核对它与标准卷一致，未读到策略时默认填“开放论述/10分”。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "新增真实学校试评标准：从当前题目已经保存的策略明确批准，保存来源策略ID/修订、学校、学科、批准人与时间及不可改阈值快照。没有把任意既有策略标成学校审批模板。",
+        "目录按服务器读取的同学校、同学科、同作答类型和满分筛选，仅返回当前approved模板。学校与题型事实来自所属考试、冻结快照优先的题目配置；请求不能指定school_id。",
+        "审批和撤回能力由当前可信学校管理范围或租户管理范围及review:manage决定；本题策略管理权限不自动取得全校审批权。普通读取后目标事实发生改变时，事务内重读并逐字段比对服务器预期目标，拒绝跨变化审批、应用或撤回。",
+        "批准以租户、来源策略ID/修订和名称唯一回认，未知网络结果的新请求键也不会重复创建。撤回保留历史，旧批准重试不会把撤回记录重新激活；新名称或新策略修订须再次明确批准。",
+        "采用时只从仍获批准的快照提取阈值，不信任客户端复制值；锁定目标考试/题目及模板直到本题策略CAS提交，撤回与应用不能穿过核对和保存之间的间隙。",
+        "本题Policy持久化school_template_id和school_template_revision说明采用来源；手动保存清空来源。撤回影响后续采用，不改写已经保存的本题策略，不传递其他教师的试评资格。"
+      ],
+      "remaining": "",
+      "files": [
+        "services/api-gateway/internal/calibration/school_templates.go",
+        "services/api-gateway/internal/calibration/school_templates_postgres.go",
+        "services/api-gateway/internal/calibration/school_templates_handlers.go",
+        "services/api-gateway/internal/calibration/types.go",
+        "services/api-gateway/internal/calibration/service.go",
+        "services/api-gateway/internal/calibration/store_memory.go",
+        "services/api-gateway/internal/calibration/store_postgres.go",
+        "services/api-gateway/internal/calibration/handlers.go",
+        "services/api-gateway/migrations/000219_school_calibration_templates.sql"
+      ],
+      "implementation_report": "round-4/calibration-backend.json",
+      "prior_status": "partial",
+      "note": "新增真实学校试评标准：从当前题目已经保存的策略明确批准，保存来源策略ID/修订、学校、学科、批准人与时间及不可改阈值快照。没有把任意既有策略标成学校审批模板。；目录按服务器读取的同学校、同学科、同作答类型和满分筛选，仅返回当前approved模板。学校与题型事实来自所属考试、冻结快照优先的题目配置；请求不能指定school_id。；审批和撤回能力由当前可信学校管理范围或租户管理范围及review:manage决定；本题策略管理权限不自动取得全校审批权。普通读取后目标事实发生改变时，事务内重读并逐字段比对服务器预期目标，拒绝跨变化审批、应用或撤回。；批准以租户、来源策略ID/修订和名称唯一回认，未知网络结果的新请求键也不会重复创建。撤回保留历史，旧批准重试不会把撤回记录重新激活；新名称或新策略修订须再次明确批准。；采用时只从仍获批准的快照提取阈值，不信任客户端复制值；锁定目标考试/题目及模板直到本题策略CAS提交，撤回与应用不能穿过核对和保存之间的间隙。；本题Policy持久化school_template_id和school_template_revision说明采用来源；手动保存清空来源。撤回影响后续采用，不改写已经保存的本题策略，不传递其他教师的试评资格。",
+      "boundary": "本报告完成服务端来源与生命周期，G17整体界面交付由校准UI报告和根最终验证共同核对。学校管理员一次明确批准已经保存的标准，不额外增加用户没有要求的提名或双人审批平台。现有独立试评、标准卷和资格门禁不放宽。"
+    },
+    {
+      "id": "G18",
+      "priority": "P2",
+      "title": "多处普通教师/教务界面直接显示实现术语：质量表题型为 `archetype_code`、风险为原值；标准卷出现“冻结 Rubric”；错误标签示例为 `unit_error`、`missing_key_step`；成绩检查直接显示 `issue.code`、“门禁”“阻断”。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "质量看板的高级盲测和回评题目选择使用统一中文作答类型词表。",
+        "标准卷典型错误选择、显示和覆盖缺口使用统一中文标签，未知机器值显示其他类型，原值仍可在诊断详情核对。",
+        "答案组参考材料的典型错误中文化由考试代理在其独占文件完成，存储标签不变；未通过更换接口枚举来改变业务。"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/constants/assessmentLabels.ts",
+        "apps/web-admin/src/pages/QualityDashboardPage.tsx",
+        "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+        "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx",
+        "apps/web-admin/src/features/gold-papers/GoldPaperNominationDrawer.tsx",
+        "apps/web-admin/src/features/gold-papers/goldPaperPresentation.ts",
+        "apps/web-admin/src/features/answer-groups/AnswerGroupingDrawer.tsx"
+      ],
+      "implementation_report": "round-3/grading.json",
+      "prior_status": "partial",
+      "note": "质量看板的高级盲测和回评题目选择使用统一中文作答类型词表。；标准卷典型错误选择、显示和覆盖缺口使用统一中文标签，未知机器值显示其他类型，原值仍可在诊断详情核对。；答案组参考材料的典型错误中文化由考试代理在其独占文件完成，存储标签不变；未通过更换接口枚举来改变业务。"
+    },
+    {
+      "id": "G19",
+      "priority": "P2",
+      "title": "盲测“抽样比例”要求输入 0.001～1 的小数，没有百分号或换算帮助；同产品试评一致率已用 0～100% 显示。同为比例，管理员要记两套单位。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "盲测抽样比例以 0.1%-100% 输入，显示约每十份的解释",
+        "仅显示层乘除100，表单值、服务端提交、上下限和历史协议单位保持原义"
+      ],
+      "files": [
+        "apps/web-admin/src/pages/QualityDashboardPage.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G20",
+      "priority": "P3",
+      "title": "已进入固定考试阅卷时，任务抽屉仍显示禁用的“学科”“考试”选择器；无法操作的字段占据筛选首行。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "固定考试任务抽屉用范围文字代替不可操作的学科/考试选择器",
+        "跨考试工作区仍保留两个筛选"
+      ],
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/TaskRail.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G21",
+      "priority": "P2",
+      "title": "发布被质量检查阻断、复评来源版本已过期、没有匹配答卷、试评标准卷不足等业务失败，都缺少对应中文错误映射；最终退化为“数据状态变化，请刷新”或“检查设置后重试”。刷新不能解决这些问题，用户被迫反复尝试。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "发布检查未过、过期发布源、无匹配答卷、标准卷不足和试评标准缺失等受控错误码均有中文下一步指引",
+        "不透传底层英文/内部错误，不自动刷新重发输入"
+      ],
+      "files": [
+        "apps/web-admin/src/api/userError.ts"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G22",
+      "priority": "P2",
+      "title": "教师收到多场或多题独立回标/新版细则重评时，任务清单每条只有“独立任务·满分”和创建时间，没有考试、学科、题号或可识别的答卷上下文，也没有搜索筛选。相同满分的记录看起来几乎一样，只能逐条打开辨认。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "本人待处理回标/独立重评列表补考试、学科、题号及匿名码，可按考试/题号/匿名码搜索",
+        "摘要查询再次限定租户、本人分派、可处理状态和当前页ID；不返回原分、原评人或学生身份",
+        "独立重评使用自身任务派生匿名码，不连接原评分工作流"
+      ],
+      "remaining": "",
+      "files": [
+        "services/api-gateway/internal/backmark/queue_summary_postgres.go",
+        "services/api-gateway/internal/backmark/service.go",
+        "services/api-gateway/internal/backmark/types.go",
+        "services/api-gateway/internal/regrade/queue_summary_postgres.go",
+        "services/api-gateway/internal/regrade/service.go",
+        "services/api-gateway/internal/regrade/types.go",
+        "apps/web-admin/src/components/BackmarkQueue.tsx",
+        "apps/web-admin/src/components/RegradeQueue.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G23",
+      "priority": "P2",
+      "title": "独立回标/重评打开材料后，题干、参考答案、解析、评分点、扣分规则、例子及各项“未提供”提示全部展开排在答题图前；评分侧又再次渲染同一组可打分的评分点。长题材料下，核心答题图需要先滚动经过整份参考资料。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "独立回标/重评优先显示答题图与作答文字",
+        "完整题目、解答和评分依据移入可展开参考区，评分点仍保留录分侧",
+        "冻结材料完整保留且不展示原分或原评人"
+      ],
+      "files": [
+        "apps/web-admin/src/components/BackmarkQueue.tsx",
+        "apps/web-admin/src/components/RegradeQueue.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G24",
+      "priority": "P2",
+      "title": "少见的草稿冲突恢复把“采分点”和“图像查看位置”原样转换为 JSON，让教师在点 ID、缩放/偏移等技术值中选择本机或服务端。业务得分冲突与无关阅读位置冲突同级展示，增加故障恢复负担。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "草稿冲突用当前题评分点名称和逐点分数展示",
+        "图像阅读位置以缩放/旋转/位置描述，默认折叠并默认保留本机",
+        "按原字段合并和重新保存，评分点身份和服务端修订不变"
+      ],
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/DraftConflictModal.tsx",
+        "apps/web-admin/src/features/grading/workbench/components/WorkbenchOverlays.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G25",
+      "priority": "P2",
+      "title": "成绩列表每位学生行内展开全部题目得分，考试题目越多，每一行都重复长串“题号:得分/满分”，难以快速比较总分和异常状态。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "学生成绩行默认收起全部逐题得分，按人展开查看"
+      ],
+      "files": [
+        "apps/web-admin/src/features/score-management/scoreColumns.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G26",
+      "priority": "P2",
+      "title": "质量看板顶部有阻断/需关注计数，但不是定位动作；真正处理路径藏在每题的表格展开行里，又分为“质量证据”和“待处理事项”两层折叠。处理多题问题时需逐题展开后再找内层按钮。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "阻断/关注计数可定位发布前待办",
+        "待办直接列题号、问题、负责人和处理按钮，无须先展开两层质量证据",
+        "原每题证据表保留"
+      ],
+      "files": [
+        "apps/web-admin/src/pages/QualityDashboardViews.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G27",
+      "priority": "P3",
+      "title": "答题图只有一段、适合整图显示时仍常驻“智能分段/整图查看”两档切换；`plan.tiles.length <= 1` 时两种选择都走整图分支，用户操作只切换内部模式并重置位置，视觉能力没有区别。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "只有实际可分多段时才显示智能分段/整图选择，单段仍可缩放和重置"
+      ],
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/AdaptiveAnswerImage.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "G28",
+      "priority": "P3",
+      "title": "管理员只读检查、原图或识别文本模式仍挂着完整批注工具栏，打勾、打叉、框选、删除等按钮均不可执行。用户要从一组灰掉的工具中分辨旋转和平移等仍可用动作。",
+      "report": "grading-release.md",
+      "status": "fixed",
+      "changes": [
+        "只读或当前模式不能绘制时仅显示选择和阅读工具",
+        "单题坐标仍不套用到原图/整区，返回可编辑单题时恢复绘图工具"
+      ],
+      "files": [
+        "apps/web-admin/src/components/features/review-annotation/ReviewAnnotationWorkspace.tsx"
+      ],
+      "implementation_report": "grading-release.json"
+    },
+    {
+      "id": "S01",
+      "priority": "P2",
+      "title": "每次查分都要求理解并输入学校代码",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "学校分享链接按已知school代码核对服务端公开名称，首屏显示名称并折叠学校码。切校时清除密码，仅确认学校后查一次名称；旧学校响应隔离，名称失败保留原代码且仍走原登录核实。公开单校响应仅code/name；活动学校、平台/停用/未知过滤及独立每来源60次/分钟限流。",
+      "files": [
+        "apps/student-portal/src/features/session/SessionScreens.tsx",
+        "apps/student-portal/src/features/session/SessionScreens.school.test.tsx",
+        "apps/student-portal/src/api.ts",
+        "services/api-gateway/internal/platformschools/public_school.go",
+        "services/api-gateway/internal/platformschools/public_school_limit.go",
+        "services/api-gateway/internal/platformschools/public_school_test.go",
+        "services/api-gateway/internal/server/routes_platform_schools.go",
+        "services/api-gateway/internal/server/public_school_route_test.go"
+      ],
+      "verification": [
+        "portals-student-tests.log",
+        "portals-go-final.log",
+        "portals-route-tests.log"
+      ],
+      "implementation_report": "round-2/portals-ops.json",
+      "remaining": []
+    },
+    {
+      "id": "S02",
+      "priority": "P2",
+      "title": "最近一场考试在首页展示两遍",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "最近考试不再重复列入其他考试，统一查看成绩入口。",
+      "files": [
+        "apps/student-portal/src/features/results/ExamList.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "S03",
+      "priority": "P1",
+      "title": "只是查看答案，也会自动展开整张复核申请表",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "普通作答阅读不挂复核表；明确申请后才读取申请和显示表单，保留原版草稿、会话和回执保护。",
+      "files": [
+        "apps/student-portal/src/features/questions/QuestionTables.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "S04",
+      "priority": "P2",
+      "title": "申请复核重复显示答卷，并暴露几何编辑器",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "圈选主动开启才挂载，复用原卷画布，同一时刻只显示一张图；收起保留区域。",
+      "files": [
+        "apps/student-portal/src/features/questions/AnswerReview.tsx",
+        "apps/student-portal/src/features/questions/QuestionTables.tsx",
+        "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "S05",
+      "priority": "P2",
+      "title": "逐题列表把统计分析放得和个人得分一样重",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "逐题默认题号/我的得分/失分；比较数据按需打开，范围不再重复两列。",
+      "files": [
+        "apps/student-portal/src/features/questions/QuestionTables.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "S06",
+      "priority": "P2",
+      "title": "成绩与复核记录各自刷新，学生需要区分两套新旧状态",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "页面统一更新成绩与复核进度，复核记录共享当前发布核验，不额外GET成绩或要求第二刷新。",
+      "files": [
+        "apps/student-portal/src/features/results/ResultDetail.tsx",
+        "apps/student-portal/src/features/appeals/AppealStatus.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "S07",
+      "priority": "P2",
+      "title": "一张复核记录反复解释同一处理状态",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "首屏保留状态、历史分数变化、学校回复；时间/版本/关联事实进处理详情，相同当前分数不重复。",
+      "files": [
+        "apps/student-portal/src/features/appeals/AppealStatus.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "D01",
+      "priority": "P2",
+      "title": "连接与登录拆成多项管理动作",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "地址与学校账号在同一连接页表单区，填写后直接登录；单独地址保存和连接检查进入可选区，认证边界保持。",
+      "files": [
+        "apps/desktop-client/src/App.tsx"
+      ],
+      "verification": "desktop-tests.log/desktop-entry-tests.log/desktop-task-entry-verified-tests.log按最新涉及文件定向回归通过；未验证原生硬件。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "D02",
+      "priority": "P2",
+      "title": "同一任务列表在两页重复，打开任务又分成三个动作",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "工作台紧凑任务选择配开始/继续，优先读取本机评分草稿，无原稿才下载；重复目录与重新下载放恢复工具，下一份沿用同一路径。",
+      "files": [
+        "apps/desktop-client/src/App.tsx",
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+        "apps/desktop-client/src/components/offlineWorkbench/useOfflineWorkbench.tsx"
+      ],
+      "verification": "desktop-tests.log/desktop-entry-tests.log/desktop-task-entry-verified-tests.log按最新涉及文件定向回归通过；未验证原生硬件。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "D03",
+      "priority": "P1",
+      "title": "扫描工作流的视觉顺序与依赖顺序相反",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "考试批次先于模板参数与设备；选批次后自动读模板及进度。",
+      "files": [
+        "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+        "apps/desktop-client/src/features/capture/useExamCaptureContext.ts"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "D04",
+      "priority": "P1",
+      "title": "用户承担多套刷新和检查的编排工作",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "上传成功后自动刷新同一账号、考试与批次的处理结果和锁定模板；后台仍在拆页或匹配时每2秒有限读取，最多30次。服务端形成真实答卷关联后，扫描页自动读取图像质量并检查页数。检查失败保留显式重试，不重复发送已成功上传文件。",
+      "files": [
+        "apps/desktop-client/src/features/upload/useUploadSync.ts",
+        "apps/desktop-client/src/features/capture/useExamCaptureContext.ts",
+        "apps/desktop-client/src/features/quality/useSubmissionQuality.ts",
+        "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+        "apps/desktop-client/src/App.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。",
+      "implementation_report": "round-2/capture-desktop.json",
+      "remaining": [
+        "超过约60秒仍处理中的批次明确提示稍后刷新，不无限轮询",
+        "后台需人工修复的问题仍在学校管理端处理；上传成功不等于质量通过"
+      ]
+    },
+    {
+      "id": "D05",
+      "priority": "P2",
+      "title": "未启用直接采集，却把设备档案设置放在导入主流程",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "现有文件导入为默认，设备设置进设备诊断可选区。",
+      "files": [
+        "apps/desktop-client/src/features/scan/ScanWorkspace.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "D06",
+      "priority": "P1",
+      "title": "离线保存不包含答卷图片，重启后核心任务又依赖联网",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "受控任务接口下载的完整PNG/JPEG/WebP/GIF/PDF原件可随现有草稿正文一同加密保存；恢复时核对任务、修订、题目、答卷段、长度及SHA-256，再生成当前会话Blob。浏览器或PDF逐页实际显示成功前不作为可核对材料。旧草稿兼容，超限与不支持格式明确提示不能离线准备，原评分仍可保存。",
+      "files": [
+        "apps/desktop-client/src/lib/offlineAnswerMaterial.ts",
+        "apps/desktop-client/src/lib/offlineStore.ts",
+        "apps/desktop-client/src/components/offlineWorkbench/useOfflineWorkbench.tsx",
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+        "apps/desktop-client/src/types.ts"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。",
+      "implementation_report": "round-2/capture-desktop.json",
+      "remaining": [
+        "单份原件2MiB；含base64的任务包按UTF-8实际字节核算并预留512KiB，完整草稿正文沿用原生4MiB限制，绝不截断原件",
+        "超过容量的完整材料仍需联网读取；本轮没有新增大文件原生存储接口",
+        "没有验证真实Windows凭据库、Tauri发行包跨重启或真实硬件；复用既有原生加密正文路径"
+      ]
+    },
+    {
+      "id": "D07",
+      "priority": "P1",
+      "title": "评分点不联动总分，按点评分后仍要人工汇总",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "主动改评分点自动汇总；调整总分显式开启，历史恢复不重算，差异原因保护保留。",
+      "files": [
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx"
+      ],
+      "verification": "desktop-tests.log/desktop-entry-tests.log/desktop-task-entry-verified-tests.log按最新涉及文件定向回归通过；未验证原生硬件。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "D08",
+      "priority": "P2",
+      "title": "多种评语输入常驻，用户难分内容该写在哪里",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "默认学生反馈，内部两字段折叠；差异总分或已有原因时才展示原因。",
+      "files": [
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx"
+      ],
+      "verification": "desktop-tests.log/desktop-entry-tests.log/desktop-task-entry-verified-tests.log按最新涉及文件定向回归通过；未验证原生硬件。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "D09",
+      "priority": "P2",
+      "title": "生产端仍用开发模式的“已输入离线密钥”状态",
+      "report": "portals-ops.md",
+      "status": "already_fixed",
+      "implementation": "原生加密存储与开发密钥文案已按运行环境区分。",
+      "files": [
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "D10",
+      "priority": "P2",
+      "title": "PDF能进入预览，纯PDF材料却不能完成阅卷",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "PDF由本机PDF.js逐页转为PNG展示；所有页完成渲染且每张图片实际解码成功后才放行纯PDF答卷评分。任一页失败、换文档或取消均撤回可读状态。只读取当前任务已下载的Blob，不嵌入PDF脚本、表单或外部页面。",
+      "files": [
+        "apps/desktop-client/src/lib/pdfAnswerPages.ts",
+        "apps/desktop-client/src/components/PdfAnswerPages.tsx",
+        "apps/desktop-client/src/components/AnswerDocumentViewer.tsx",
+        "apps/desktop-client/src-tauri/tauri.conf.json",
+        "apps/desktop-client/scripts/check-security-config.mjs"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。",
+      "implementation_report": "round-2/capture-desktop.json",
+      "remaining": [
+        "最多50页、单页至多约800万像素、总计6400万像素与64MiB页面数据；超限保留原件并提示按题拆分",
+        "真实Tauri WebView与发行包仍未验证"
+      ]
+    },
+    {
+      "id": "O01",
+      "priority": "P2",
+      "title": "创建年级要填互相派生的名称和序号",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "日常与初始化都选择初一至高三业务年级，自动派生学段、序号与默认名称，自定义显示名可选。",
+      "files": [
+        "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+        "apps/web-admin/src/pages/OrganizationSetupPage.tsx"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O02",
+      "priority": "P2",
+      "title": "年级选择器与整列年级按钮重复",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "宽屏左侧年级导航，窄屏下拉互斥显示。",
+      "files": [
+        "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+        "apps/web-admin/src/styles/features/member-management.css"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O03",
+      "priority": "P1",
+      "title": "日常名单导入比首次初始化更难用",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "根智能体正式增加read-excel-file依赖与Worker解析xlsx，支持多工作表、文本学号与数字原字符串；复用中文列识别、人工映射、整班范围、原始行号预检。页面关闭/换文件取消旧读取，POST期间同步ref锁与输入冻结，回包属于冻结名单代次。",
+      "files": [
+        "apps/web-admin/src/features/members/students/studentImport.ts",
+        "apps/web-admin/src/pages/StudentManagementPage.tsx",
+        "apps/web-admin/src/features/members/students/studentImportWorkbook.ts",
+        "apps/web-admin/src/features/members/students/studentImportWorkbook.worker.ts",
+        "apps/web-admin/src/features/members/students/studentImportSheet.ts",
+        "apps/web-admin/src/pages/StudentManagementPage.import.test.tsx"
+      ],
+      "verification": "student-import-verified.log 解析与预检11项通过；student-import-page-tests.log真实页面5项通过，覆盖旧Promise不回填、多sheet、POST重复提交/取消/换文件和冻结控件。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O04",
+      "priority": "P1",
+      "title": "操作记录有三层找数据方式和两层翻页",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "q在授权租户和ScopeMode过滤下服务端检索账号/姓名、操作/对象标识、说明和网络/请求字段，再分页；不检索before/after。Postgres使用字面包含匹配，%和_不作通配。关键词进入已应用筛选，与导出共用；输入未应用时不在客户端隐藏已加载记录，导出上限仍200。",
+      "files": [
+        "apps/web-admin/src/api/audit.ts",
+        "apps/web-admin/src/pages/AuditLogPage.tsx",
+        "apps/web-admin/src/pages/AuditLogPage.batch20.test.tsx",
+        "services/api-gateway/internal/auth/audit.go",
+        "services/api-gateway/internal/auth/handlers_audit.go",
+        "services/api-gateway/internal/auth/types.go",
+        "services/api-gateway/internal/auth/store_memory.go",
+        "services/api-gateway/internal/auth/store_postgres.go",
+        "services/api-gateway/internal/auth/audit_keyword_test.go"
+      ],
+      "verification": [
+        "portals-go-tests.log",
+        "portals-go-final.log",
+        "portals-web-recheck.log"
+      ],
+      "implementation_report": "round-2/portals-ops.json",
+      "remaining": []
+    },
+    {
+      "id": "O05",
+      "priority": "P2",
+      "title": "人员列表读取失败后，界面要求管理员手填内部ID",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "人员加载失败保持姓名选择器并给专用重试，不要求内部ID。",
+      "files": [
+        "apps/web-admin/src/pages/AuditLogPage.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O06",
+      "priority": "P2",
+      "title": "模型列表每行近似一张控制面板",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "列表精简为模型、可用性、已配置用途和设置；三种技术检测及用途操作进按行设置诊断。",
+      "files": [
+        "apps/web-admin/src/features/platform-model-config/components/SchoolModelTable.tsx",
+        "apps/web-admin/src/pages/PlatformModelConfigPage.tsx"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O07",
+      "priority": "P2",
+      "title": "配置阅卷用途与检测图片能力必须两步串行操作",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "设置并验证串行保存用途再探测；保存事实与检测失败分开呈现，支持重试。",
+      "files": [
+        "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.tsx",
+        "apps/web-admin/src/features/platform-model-config/hooks/useModelApplications.ts"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O08",
+      "priority": "P2",
+      "title": "同供应商多个模型共用密钥，却要逐个轮换",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "同学校/供应商/HTTPS同源显式批选轮换；逐项反馈，服务端只改密钥并在探测前后校验版本，切校停止后续。",
+      "files": [
+        "apps/web-admin/src/features/platform-model-config/components/CredentialRotation.tsx",
+        "apps/web-admin/src/api/modelApiConfig.ts",
+        "services/api-gateway/internal/modelgovernance/managed_config.go",
+        "services/api-gateway/internal/modelgovernance/managed_config_handlers.go"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O09",
+      "priority": "P2",
+      "title": "多模型角色重复选择规则版本和逐项保存",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "统一保存全部更改，整批预检、逐角色修订、失败停止保留其他草稿；强度等级只高级显示。",
+      "files": [
+        "apps/web-admin/src/pages/PanelModelBindingsSection.tsx"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O10",
+      "priority": "P1",
+      "title": "评测管理主要是在手抄机器报告",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "导入JSON预填批次与候选全部指标；哈希、授权、样本和重复范围校验，相同证据范围才可复用当前学校已验证模型，仍人工保存/冻结/批准。",
+      "files": [
+        "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+        "apps/web-admin/src/components/model-governance/evaluationReportImport.ts"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O11",
+      "priority": "P2",
+      "title": "账户安全的第一块是尚不保护登录的验证器试点",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "TOTP可选试点在已生效安全功能后折叠展示，边界说明与恢复码保护保留。",
+      "files": [
+        "apps/web-admin/src/pages/SessionManagementPage.tsx",
+        "apps/web-admin/src/components/TOTPManagement.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O12",
+      "priority": "P2",
+      "title": "学校详情加载失败没有就地恢复入口",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "活动/成员/模型/用量各失败区就地重试，原范围继续请求，迟到旧校请求丢弃。",
+      "files": [
+        "apps/web-admin/src/features/platform/schools/SchoolActivityTab.tsx",
+        "apps/web-admin/src/features/platform/schools/SchoolMembersTab.tsx",
+        "apps/web-admin/src/features/platform/schools/SchoolModelsTab.tsx",
+        "apps/web-admin/src/features/platform/schools/SchoolUsageTab.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。",
+      "implementation_report": "portals-ops.json"
+    },
+    {
+      "id": "O13",
+      "priority": "P1",
+      "title": "排查评分与关联人工处理仍依赖用户寻找内部编号",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "新增现有model:read与withGovernanceSchoolScope下的冻结准入决策目录，目录仅维度/方式/时间，服务端关键词与稳定游标分页；支持中文学科/题型标签搜索。用户按中文学科、学段、题型、风险、时间选运行后直接读取原详情，原编号查询折叠保留。关闭/重查/切校淘汰旧响应，并核对目录/详情租户和运行ID。",
+      "files": [
+        "apps/web-admin/src/api/scoringAssurance.ts",
+        "apps/web-admin/src/components/model-governance/DecisionLookup.tsx",
+        "apps/web-admin/src/components/model-governance/DecisionLookup.test.tsx",
+        "apps/web-admin/src/components/model-governance/assuranceOptions.ts",
+        "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx",
+        "services/api-gateway/internal/aieligibility/types.go",
+        "services/api-gateway/internal/aieligibility/handlers.go",
+        "services/api-gateway/internal/aieligibility/decision_directory.go",
+        "services/api-gateway/internal/aieligibility/decision_directory_test.go"
+      ],
+      "verification": [
+        "portals-go-final.log",
+        "portals-eligibility-final.log",
+        "portals-web-tests.log",
+        "portals-label-final.log"
+      ],
+      "implementation_report": "round-2/portals-ops.json",
+      "remaining": []
+    },
+    {
+      "id": "O14",
+      "priority": "P2",
+      "title": "同一治理工作区有两套相似的报告登记，用户要重新理解版本轴",
+      "report": "portals-ops.md",
+      "status": "fixed",
+      "implementation": "治理工作区统一导入评测材料入口，自动识别候选模型汇总或包含evaluation/observations的逐卷材料；预览来源、数据集哈希和版本后带入相应原登记流程。候选保留既有来源一致性校验；逐卷材料登记后只绑定刚创建的新报告并直接预览导入，来源/模型/提示词/细则变化阻止沿用旧记录。报告名称和新报告标识可调整，避免无关限制。文件不能指定学校/状态/批准事实，逐卷仅复制脱敏白名单；部分成功重试仍沿用已确认游标，冻结/批准仍走原流程。",
+      "files": [
+        "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx",
+        "apps/web-admin/src/components/model-governance/GovernanceMaterialIntake.tsx",
+        "apps/web-admin/src/components/model-governance/GovernanceMaterialIntake.test.tsx",
+        "apps/web-admin/src/components/model-governance/materialIntake.ts",
+        "apps/web-admin/src/components/model-governance/materialIntake.test.ts",
+        "apps/web-admin/src/components/model-governance/observationMaterial.ts",
+        "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+        "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.test.tsx",
+        "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx",
+        "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.batch46.test.tsx"
+      ],
+      "verification": [
+        "portals-web-recheck.log",
+        "portals-intake-tests.log",
+        "portals-material-final.log",
+        "portals-label-final.log"
+      ],
+      "implementation_report": "round-2/portals-ops.json",
+      "remaining": []
+    },
+    {
+      "id": "DP01",
+      "priority": "P1",
+      "title": "普通一键启动默认先准备、下载并启动固定 Qwen3-4B 本地模型，再启动产品。使用人工阅卷或已有外部模型配置的安装者，也要承担约 2.4 GiB 下载和宿主机模型运行；虽然存在 `-SkipLocalModel`，README 常用参数段未介绍它，也未提供明显的首次模式选择。",
+      "report": "deployment.md",
+      "status": "fixed",
+      "note": "首次选择并保存人工/外部/本地模式，仅本地模式下载模型；人工模式本次关闭智能评分调度并在脚本退出后恢复宿主变量，不改外部连接。",
+      "files": [
+        "scripts/launch-local.ps1",
+        "README.md"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "DP02",
+      "priority": "P1",
+      "title": "已存在的部署 `.env` 在一般配置上被保留，但默认模型启动随后仍调用同步脚本；同步脚本不检查模型 URL 或适配器，直接重写 `EDUGRADE_GRADING_MODEL_API_KEY`。若管理员已为该环境键配置外部模型密钥，默认启动会用本地密钥替换它。此项属于条件成立时的配置恢复风险。",
+      "report": "deployment.md",
+      "status": "fixed",
+      "note": "仅显式受管本地模式且有效URL/适配器均匹配时同步本地密钥，外部连接原值保留。",
+      "files": [
+        "infra/docker-compose/scripts/sync-local-grading-model-key.ps1",
+        "scripts/ci/local-model-key-ownership.test.mjs"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "DP03",
+      "priority": "P1",
+      "title": "推荐的一键安装自动生成两天证书，README 又建议以后每天执行同一条启动命令；证书到期后会中止。恢复要阅读更深层文档，另找新目录生成证书、修改三个目录配置、重建相关服务并验证调用。长期使用者的日常路径实际隐藏了证书生命周期任务。",
+      "report": "deployment.md",
+      "status": "fixed",
+      "note": "主启动器提供 -RotateLocalCertificate -LocalCertificateDays，轮换工具默认仅说明步骤，显式 --apply 才执行。；新证书写入已忽略的 certs/rotations/唯一目录；先检查证书、私钥、CA、主机名和 Compose 配置，再原子切换三个目录。；只重建此前正在运行的受管理 CA 使用者；包含普通 OCR、数学识别、试卷公式、图像质量、页面处理和主观评分 Worker，等待 Compose 健康检查。；新证书健康失败恢复旧目录并重建旧服务；旧证书与私钥不删除。恢复也失败时保留不含秘密配置的恢复日志，--recover --apply 可继续。；系统文件锁避免同时轮换；生成或核验期间发现配置被修改时拒绝覆盖。；正式环境、TLS 目录进程覆盖和自定义 API HTTPS 拒绝自动生成轮换，避免更换 CA 后破坏另一个未签发端点。",
+      "remaining": "默认本地两端点证书生命周期已有受控实现。组织 PKI、自定义 API HTTPS 仍按组织签发和协调流程处理；没有执行真实 Docker/TLS 切换验收。",
+      "files": [
+        "scripts/launch-local.ps1",
+        "infra/docker-compose/scripts/rotate-local-tls.py",
+        "infra/docker-compose/scripts/test_local_tls_rotation.py",
+        "infra/docker-compose/README.md",
+        "README.md"
+      ],
+      "implementation_report": "round-2/deployment.json",
+      "changes": [
+        "主启动器提供 -RotateLocalCertificate -LocalCertificateDays，轮换工具默认仅说明步骤，显式 --apply 才执行。",
+        "新证书写入已忽略的 certs/rotations/唯一目录；先检查证书、私钥、CA、主机名和 Compose 配置，再原子切换三个目录。",
+        "只重建此前正在运行的受管理 CA 使用者；包含普通 OCR、数学识别、试卷公式、图像质量、页面处理和主观评分 Worker，等待 Compose 健康检查。",
+        "新证书健康失败恢复旧目录并重建旧服务；旧证书与私钥不删除。恢复也失败时保留不含秘密配置的恢复日志，--recover --apply 可继续。",
+        "系统文件锁避免同时轮换；生成或核验期间发现配置被修改时拒绝覆盖。",
+        "正式环境、TLS 目录进程覆盖和自定义 API HTTPS 拒绝自动生成轮换，避免更换 CA 后破坏另一个未签发端点。"
+      ]
+    },
+    {
+      "id": "DP04",
+      "priority": "P2",
+      "title": "证书校验只用 `-checkend 0` 判断此刻是否已到期，没有提前展示剩余天数。安装者正常工作到临界日才在启动阶段得到 OpenSSL/英文包装错误，缺少可提前完成的维护入口。",
+      "report": "deployment.md",
+      "status": "fixed",
+      "note": "证书检查展示剩余天数和到期时间，7天内给维护入口；过期及信任链/主机名错误仍拒绝。",
+      "files": [
+        "infra/docker-compose/scripts/ensure-internal-tls.py"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "DP05",
+      "priority": "P2",
+      "title": "默认一键启动完成的是可登录管理核心，答卷 OCR、图像质量和页面处理 Worker 仍需另外建立匹配服务账号、写环境配置并显式启用。脚本结束只输出“EduGrade is ready”和登录入口，首次用户可能直到上传答卷才知道关键处理能力未就绪。",
+      "report": "deployment.md",
+      "status": "fixed",
+      "note": "新增 local/dev/development/test 专用 provision-local-workers 命令，仅允许明确选中的 OCR、图像质量、页面处理能力和 platform 租户。；一个事务中校验既有 service 角色仅含 file:manage / ocr:manage，创建不同服务用户名并写审计；既有账号必须活动、无学校绑定、仅有相同服务职责且密码匹配，才复用。；不重置密码、不复活禁用账号、不接管人类身份、不给管理员角色；多能力中任一不匹配，整批回滚。；init 仅在显式 Enable* 时自动建立本地受限账号。凭据通过进程环境传入，命令行和审计不含密码或哈希，操作结束恢复原进程环境。；开启目标 Worker 前先检查 service 登录与注销。账号已建立但连接检查失败时保留受限身份、停止 Worker 启动，下次凭据匹配后可继续。；启用 Worker 时没有已验证来源记录的旧核心镜像会重新构建，避免旧二进制不识别新账号配置命令。",
+      "remaining": "",
+      "files": [
+        "scripts/local-processing-mode.ps1",
+        "scripts/launch-local.ps1",
+        "scripts/ci/local-processing-mode.test.mjs",
+        "README.md",
+        "infra/docker-compose/README.md"
+      ],
+      "implementation_report": "round-3/root-findings.json",
+      "changes": [
+        "新增 local/dev/development/test 专用 provision-local-workers 命令，仅允许明确选中的 OCR、图像质量、页面处理能力和 platform 租户。",
+        "一个事务中校验既有 service 角色仅含 file:manage / ocr:manage，创建不同服务用户名并写审计；既有账号必须活动、无学校绑定、仅有相同服务职责且密码匹配，才复用。",
+        "不重置密码、不复活禁用账号、不接管人类身份、不给管理员角色；多能力中任一不匹配，整批回滚。",
+        "init 仅在显式 Enable* 时自动建立本地受限账号。凭据通过进程环境传入，命令行和审计不含密码或哈希，操作结束恢复原进程环境。",
+        "开启目标 Worker 前先检查 service 登录与注销。账号已建立但连接检查失败时保留受限身份、停止 Worker 启动，下次凭据匹配后可继续。",
+        "启用 Worker 时没有已验证来源记录的旧核心镜像会重新构建，避免旧二进制不识别新账号配置命令。"
+      ],
+      "implementation": "本地首次启动直接选择完整答卷处理或仅管理核心并保存模式，以后复用；完整模式自动进入已有受限账号建立、服务登录验证和Worker健康检查，首次用户不再另查三个开关。显式单项Enable参数保持精确范围，Disabled与显式启用冲突时在写配置前拒绝，切回Disabled会停止上次处理Worker，失败不报告禁用已生效。",
+      "boundaries": [
+        "新安装凭据由原启动器随机生成；既有凭据、禁用账号和人类身份不重置或接管，旧配置缺项仍需核对。",
+        "本轮解决本地安装入口和能力状态；正式环境账号由管理员管理。现有服务职责覆盖多个处理队列，未借精简入口扩大权限。",
+        "隔离测试验证选择、继承凭据、登录、启动顺序、停止和失败恢复，不等于真实首份答卷处理或硬件验收。"
+      ]
+    },
+    {
+      "id": "DP06",
+      "priority": "P2",
+      "title": "文档同时推荐两种日常启动方式：根 README 用 `start-edugrade.cmd`，Compose README 又推荐 `scripts/start-local.ps1`。前者选择性启用服务、有 TLS/初始化/健康流程；后者直接 `--profile '*' up -d`，启用所有配置 profile，行为明显不同。用户需要记住哪个入口适用于自己的环境。",
+      "report": "deployment.md",
+      "status": "fixed",
+      "note": "普通start-local统一调用日常启动器，全部profile仅在显式AllProfiles开发模式启用，文档同步。",
+      "files": [
+        "scripts/start-local.ps1",
+        "infra/docker-compose/README.md"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "DP07",
+      "priority": "P2",
+      "title": "一键启动只检查三个本地镜像是否存在，正常日常模式就跳过构建；没有比较源码提交、配置版本和运行镜像版本。用户拉取新代码后若沿用最显眼的日常命令，会继续运行旧镜像，必须自行判断要不要加 `-Build`。",
+      "report": "deployment.md",
+      "status": "fixed",
+      "note": "展示源码提交/指纹与本地构建记录；源码或镜像变化要求显式Build。构建后再次校验源码，旧安装无记录明确显示未知。运行提示词纳入指纹。",
+      "files": [
+        "scripts/application-source-version.ps1",
+        "scripts/launch-local.ps1",
+        "scripts/ci/application-source-version.test.mjs"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "DP08",
+      "priority": "P2",
+      "title": "为首次启用一个 Worker 传 `-EnableOcr/-EnableQuality/-EnableProcessing` 时，`workerBuildRequested` 使跳过构建条件失效；`init.ps1` 随后会对三个核心应用也执行 `up --build`，并构建所选 Worker。只加一种能力可能连带重建整套核心。",
+      "report": "deployment.md",
+      "status": "fixed",
+      "note": "核心镜像可复用时仅构建请求的Worker；版本比对仍在，不因启用一个Worker重建核心。",
+      "files": [
+        "scripts/launch-local.ps1",
+        "infra/docker-compose/scripts/init.ps1"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "DP09",
+      "priority": "P2",
+      "title": "首次管理员密码在模型下载、启动、初始化和构建之后才询问；长度或常见密码检查也发生在这一阶段。用户前期等待很久后才发现还需交互或输入不符合要求，重开入口又重新经过日常初始化步骤。",
+      "report": "deployment.md",
+      "status": "fixed",
+      "note": "首次管理员密码在Docker准备、模型下载和构建前完成输入及规则校验，仅存进程内。",
+      "files": [
+        "scripts/launch-local.ps1"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "DP10",
+      "priority": "P2",
+      "title": "既有部署升级依赖手工对照 `.env.example` 和长清单，逐项添加 CA 路径、内部 HTTPS、RLS、独立账号、模型提示词版本等设置；旧配置被预检拒绝后，需要用户自行判断哪些值可迁移、哪些必须人工提供。",
+      "report": "deployment.md",
+      "status": "fixed",
+      "note": "新增只读升级差异工具，只列键名/能力/处理建议；可生成独立的缺失非秘密默认补丁，不改现有值，仍须正式预检。",
+      "files": [
+        "infra/docker-compose/scripts/check-upgrade-config.py",
+        "infra/docker-compose/scripts/test_upgrade_config.py",
+        "infra/docker-compose/README.md"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R01",
+      "priority": "P2",
+      "title": "“这是我的常用电脑”和“这是学校公共电脑”是两个复选框，实际勾选一个会取消另一个；两个都不选又代表第三种策略。用户看到的是多选，实际做的是三选一。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "登录设备改为普通/常用/公共三选一，仍映射原两个会话字段；密码与微信表单按方式独立挂载。",
+      "files": [
+        "apps/web-admin/src/pages/LoginPage.tsx",
+        "apps/web-admin/src/pages/LoginPage.test.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R02",
+      "priority": "P2",
+      "title": "点击“微信扫码”后还没有二维码，要先理解学校代码、设备策略，再点“生成微信登录二维码”。从已带学校信息的入口进入时，这个额外启动动作仍存在。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "明确学校入口切换微信即生成普通会话二维码；更改设备先废弃挑战再显式重建，生成中锁定策略。",
+      "files": [
+        "apps/web-admin/src/pages/LoginPage.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R03",
+      "priority": "P2",
+      "title": "教师首页反复出现“已加载待阅卷、已加载已提交、当前没有已加载的待办、数量以当前已加载任务为准”。内部取数范围压过了教师的待办语言。",
+      "report": "navigation-question-bank.md",
+      "status": "already_fixed",
+      "note": "前轮已简化任务语言，汇总范围集中说明，本轮保留已读取任务的事实边界。",
+      "files": [
+        "apps/web-admin/src/pages/TeacherDashboardPage.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R04",
+      "priority": "P2",
+      "title": "教师首页的“学生反馈”和侧栏“成绩复核”进入同一个 `/appeals` 页面，名字暗示两个功能，用户要靠试点辨认。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "教师首页与导航统一称成绩复核。",
+      "files": [
+        "apps/web-admin/src/pages/TeacherDashboardPage.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R05",
+      "priority": "P2",
+      "title": "学生若误入主 Web 入口并完成登录，只看到“前往学校学生端”与另一个按钮；未配置网址时直接让学生再联系管理员找入口。已经认证却仍未到查分任务。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "已配置的学生端继续入口补学校上下文并限制HTTP(S)地址；不复制认证凭据、不承诺跨站自动登录。",
+      "files": [
+        "apps/web-admin/src/pages/IdentityLandingPage.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R06",
+      "priority": "P2",
+      "title": "新建题目的第一个必填项是空白“题目编号”，只接受字母/数字等机器格式。老师还没写题干就必须先发明和维护编码。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "新题使用随机唯一默认编码，自定义编号收起，后台唯一性约束保留。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R07",
+      "priority": "P2",
+      "title": "普通题库列表只有编号、学科、年级、发布状态，没有题干。知道题意但记不住编号时，要逐题打开才能辨认。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "列表使用授权检索返回的题干摘要作主列，编号为辅助信息并打开对应版本。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R08",
+      "priority": "P2",
+      "title": "普通搜索只搜编号，按题干查找要另开“组合检索”弹窗，结果又在另一张表里。常用检索被做成高级功能。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "普通题干/编号搜索复用授权检索，高级条件在列表上方展开，结果复用同一列表。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankHeader.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R09",
+      "priority": "P2",
+      "title": "创建一个普通题目也常驻难度、版权、认知层级、语言、建议用途、建议时间、来源年份等字段；有默认值的选项仍占满弹窗。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "次要元数据移入补充信息，学校自定义必填字段继续直接显示。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/ContentFields.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R10",
+      "priority": "P2",
+      "title": "选择“简答题”仍常驻“选项（每行一个）”输入框，非选择题用户也要判断能否留空。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "仅选择题显示选项输入；隐藏时保留已有选项，未静默删除。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/ContentFields.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R11",
+      "priority": "P1",
+      "title": "同一题的内容与评分标准拆成两次保存，编辑题干后下面的答案和评分表立即禁用，要求先“保存当前编辑区域”。修改一道题的题干和答案被迫拆成串行动作。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "内容和评分单个命令、同一修订原子更新；校验/冲突失败不半保存。重试沿用幂等键，切题代次防A→B→A旧回包覆盖新草稿。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+        "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+        "services/api-gateway/internal/questionbank/store_memory.go",
+        "services/api-gateway/internal/questionbank/store_postgres.go",
+        "services/api-gateway/internal/questionbank/publication_postgres.go",
+        "services/api-gateway/internal/questionbank/combined_draft_test.go"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R12",
+      "priority": "P2",
+      "title": "评分编辑器无条件展示绝对误差与小数比例的相对误差，非数值题也能看到；与考试题目页面使用百分比的习惯不一致。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "数值方式才显示误差；历史误差可核对和清除；相对误差按百分比编辑，表单快照和接口仍保留原比例单位。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/ScoringEditor.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R13",
+      "priority": "P1",
+      "title": "题库提交审核后没有产品内指派或通知，老师需自行联系页面已列出的有权限审核人，通常借助复制本题链接等方式交接；审核通过后又由有发布权限的人接手。产品完成状态转换，却仍把交接工作交给人。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "提交审核时选择独立审核教师与发布教师；教师待办只显示本人指派和可领取历史任务池。领取、改派、审核、发布、退回均写持久交接记录。内容修订与交接修订分离，冻结内容保持原锁定规则。",
+      "remaining": "",
+      "files": [
+        "services/api-gateway/migrations/000217_question_bank_handoff.sql",
+        "services/api-gateway/internal/questionbank/handoff.go",
+        "services/api-gateway/internal/questionbank/handoff_memory.go",
+        "services/api-gateway/internal/questionbank/handoff_postgres.go",
+        "services/api-gateway/internal/questionbank/handoff_handlers.go",
+        "apps/web-admin/src/features/question-bank/QuestionBankHandoffPanel.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx"
+      ],
+      "implementation_report": "round-2/root-findings.json",
+      "prior_status": "partial",
+      "changes": [
+        "新增正式迁移217，独立交接状态和不可修改事件表，沿用租户RLS。",
+        "接收人同时校验启用账号、全局职责与题库读取及对应动作ACL；管理者读取整题仍需内容授权。",
+        "父行锁后另语句重读交接状态，再比较独立修订；并发领取只有一个成功，旧指派不能执行新审核。",
+        "原作者可退回及恢复交接；无指派历史版本保留可领取池，已指派任务不扩散给同职责其他人员。",
+        "指派与领取回执沿用业务幂等；交接、审核、审计、outbox和回执一起提交。分享链接及交接记录按需展开。",
+        "独立交叉复核后补齐同内容交接投影与命令的一致性；旧查询不降级人员表单，领取回执不重填题干和评分；已增加3条父组件回归。"
+      ],
+      "boundary": "产品内交接状态、事件和待办；不包含邮件、短信或外部消息。数据库验证使用本轮新建的隔离PostgreSQL集群与合成账号，未连接学校部署。"
+    },
+    {
+      "id": "R14",
+      "priority": "P2",
+      "title": "题目详情先渲染预览，再渲染完整内容和评分编辑器；已发布版本也只是禁用表单。仅查看题目时仍要穿过全部编辑字段与审核说明。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "默认阅读展示，草稿显式编辑后显示表单并取消重复预览；已发布版本直接显示只读答案与细则。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R15",
+      "priority": "P3",
+      "title": "助手只要有一条模型记录也渲染模型选择器，标签又同时显示配置名和原始模型名；普通管理员回答业务问题前先看到技术身份。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "单一可用助手模型显示名称，多模型才显示选择器。",
+      "files": [
+        "apps/web-admin/src/features/school-assistant/AccountConversationView.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R16",
+      "priority": "P2",
+      "title": "阅读助手回复中的每个网页引用时，正文同时出现引用文字、“复制参考地址”按钮和完整 URL；核对多份资料就要反复复制、切浏览器、粘贴。完整网址和重复按钮打断阅读。",
+      "report": "navigation-question-bank.md",
+      "status": "already_fixed",
+      "note": "前轮已把引用集中为参考资料，完整地址和复制按需展开，本轮未解除模型链接导航保护。",
+      "files": [
+        "apps/web-admin/src/components/mathMarkdownRenderers.tsx",
+        "apps/web-admin/src/components/markdownReferences.ts"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R17",
+      "priority": "P2",
+      "title": "比较本地题目与最新版本时，18个固定项逐一并排展开，每个评分点再增加2项；连两边都“未配置”的相同项也要滚过，只改一句题干也会得到很长的对比页。",
+      "report": "navigation-question-bank.md",
+      "status": "already_fixed",
+      "note": "前轮已默认展示差异并折叠相同内容，语义等价空解析不误报。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R18",
+      "priority": "P2",
+      "title": "网络中断后回到全局“待确认操作”提示，每条都要先手点“查看操作结果”，组件才查询已经存在的回执。多条评分/导出待核实时，用户逐条替系统确认哪些已成功。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "当前会话恢复后自动逐条GET回执，处理/未知状态最多三轮间隔15秒；续发仍要求点击冻结原内容。名称GET独立读取，不阻塞队列。",
+      "files": [
+        "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+        "apps/web-admin/src/components/PendingBusinessCommands.test.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    },
+    {
+      "id": "R19",
+      "priority": "P2",
+      "title": "题库冲突恢复只有“保留本地”或“整体采用最新版本”；备份下载成 JSON，但当前页面没有导入或逐项采纳入口。采用最新后，要从备份中人工找回并重做自己的修改。",
+      "report": "navigation-question-bank.md",
+      "status": "fixed",
+      "note": "可按关联字段组选取本地或最新生成待保存草稿；评分细则整组采纳以保留评分点身份，后续保存仍核对最新修订，保留备份下载。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/questionBankDraftMerge.ts",
+        "apps/web-admin/src/features/question-bank/QuestionBankConflictDialog.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankPage.tsx"
+      ],
+      "implementation_report": "root-findings.json"
+    }
+  ],
+  "functional_findings": [
+    {
+      "id": "D01",
+      "status": "fixed",
+      "changes": [
+        "试改入口重新连接到现有 onOpenTrial；与独立教师试评保持各自事实"
+      ],
+      "files": [
+        "apps/web-admin/src/features/grading/workbench/components/ExamScoringOverview.tsx"
+      ]
+    },
+    {
+      "id": "D02",
+      "status": "fixed",
+      "changes": [
+        "成绩确认待办直接定位确认控件，不再查询首个高级折叠区"
+      ],
+      "files": [
+        "apps/web-admin/src/pages/ScoreManagementPage.tsx"
+      ]
+    },
+    {
+      "id": "D03",
+      "status": "fixed",
+      "changes": [
+        "学情四项报告独立接收成功结果，单项失败保留其他成功数据",
+        "失败区域可单独重试且旧考试迟到请求不能覆盖当前考试"
+      ],
+      "files": [
+        "apps/web-admin/src/pages/LearningReportsPage.tsx"
+      ]
+    },
+    {
+      "id": "D04",
+      "status": "fixed",
+      "changes": [
+        "标准卷查询失败明确为不可判断，与已知缺少冻结快照区分",
+        "提供区域重试，成功后才展示已满足覆盖事实"
+      ],
+      "files": [
+        "apps/web-admin/src/features/gold-papers/GoldCoverageGaps.tsx",
+        "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx"
+      ]
+    },
+    {
+      "id": "D05",
+      "status": "fixed",
+      "changes": [
+        "接受一项复评后只合并该条结果，保留其他未提交改分及说明，显式零分不丢失",
+        "其他候选修订变化时保留输入并显示冲突；核对新修订证据后显式保留或重置",
+        "关闭/切换考试后的旧响应不覆盖新复评状态"
+      ],
+      "files": [
+        "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx",
+        "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx"
+      ],
+      "evidence": [
+        "grading-D05-red.log",
+        "grading-D05-green.log"
+      ]
+    },
+    {
+      "id": "F01",
+      "status": "already_fixed",
+      "note": "前轮语义空值归一化已保留，并有冲突比较回归。"
+    }
+  ]
+}

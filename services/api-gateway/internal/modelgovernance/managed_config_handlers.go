@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
@@ -258,6 +259,26 @@ func (h *Handler) UpdateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 	if !managedSchoolTenant(w, r, tenantID) {
 		return
 	}
+	if input.CredentialOnly {
+		if strings.TrimSpace(input.APIKey) == "" || strings.TrimSpace(input.ClientExpectedUpdatedAt) == "" {
+			h.writeManagedAPIError(w, r, ErrInvalidManagedConfig)
+			return
+		}
+		items, err := store.ListManagedAPIConfigs(r.Context(), tenantID)
+		if err != nil {
+			h.writeManagedAPIError(w, r, err)
+			return
+		}
+		current := managedAPIConfigByID(items, r.PathValue("id"))
+		if current == nil {
+			h.writeManagedAPIError(w, r, ErrNotFound)
+			return
+		}
+		// 只轮换显式输入的密钥；名称、地址、模型、启停和默认用途都沿用此刻的服务端记录。
+		input.DisplayName, input.AdapterType, input.BaseURL = current.DisplayName, current.AdapterType, current.BaseURL
+		input.ModelName, input.ModelVersion, input.Region = current.ModelName, current.ModelVersion, current.Region
+		input.Status, input.IsDefault = current.Status, current.IsDefault
+	}
 	normalized, err := normalizeManagedAPIUpdate(input)
 	if err != nil {
 		h.writeManagedAPIError(w, r, err)
@@ -269,6 +290,18 @@ func (h *Handler) UpdateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 		h.writeManagedAPIError(w, r, err)
 		return
 	}
+	if input.ClientExpectedUpdatedAt != "" {
+		expected, err := time.Parse(time.RFC3339Nano, input.ClientExpectedUpdatedAt)
+		if err != nil {
+			h.writeManagedAPIError(w, r, ErrInvalidManagedConfig)
+			return
+		}
+		if !current.UpdatedAt.Equal(expected) {
+			h.writeManagedAPIError(w, r, ErrManagedProbeStale)
+			return
+		}
+	}
+	// 存储层在探测后的写锁内再次比对；预先通过版本核对不代表轮换期间没有其他管理员修改。
 	input.ExpectedUpdatedAt = current.UpdatedAt
 	if connectionChanged {
 		connection, result, connectionErr := h.probeManagedAPIUpdate(r, store, tenantID, current, input)

@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   createRubric: vi.fn(), generateQuestionRubricDraft: vi.fn(), createQuestionRubricDraftJob: vi.fn(), listQuestionRubricDraftJobs: vi.fn(), getQuestionRubricDraftJob: vi.fn(), cancelQuestionRubricDraftJob: vi.fn(), listScoringRules: vi.fn(), fillRecognizedContent: vi.fn(), confirm: vi.fn(),
   warning: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn(),
   createScoringRule: vi.fn(), updateScoringRule: vi.fn(), publishScoringRule: vi.fn(), listQuestions: vi.fn(),
+  readiness: vi.fn(),
   context: null as PaperRubricViewContext | null
 }));
 
@@ -29,6 +30,7 @@ vi.mock("../api/papers", () => ({
   getQuestionRubricDraftJob: mocks.getQuestionRubricDraftJob, cancelQuestionRubricDraftJob: mocks.cancelQuestionRubricDraftJob,
   createScoringRule: mocks.createScoringRule, publishScoringRule: mocks.publishScoringRule, updateScoringRule: mocks.updateScoringRule
 }));
+vi.mock("../api/configuration", () => ({ getExamReadiness: mocks.readiness }));
 vi.mock("../features/paper-import/usePaperConfigData", () => ({
   usePaperConfigData: () => {
     const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>("question-1");
@@ -80,8 +82,9 @@ describe("paper rubric page state and draft boundaries", { timeout: testTimeout 
       error: null, configError: null, validation: null, setValidation: vi.fn(), loadConfig: mocks.loadConfig, loadExams: mocks.loadExams
     };
     mocks.importState = { reviewDrafts: [], reviewDirty: false, fillingImportContent: false, contentFillResult: null,
-      fillRecognizedContent: mocks.fillRecognizedContent, savingImportReview: false };
+      fillRecognizedContent: mocks.fillRecognizedContent, savingImportReview: false, openImportSource: vi.fn() };
     mocks.loadConfig.mockResolvedValue(undefined);
+    mocks.readiness.mockResolvedValue({ readiness: { checks: [], ready: false, confirmed: false, configuration_hash: "synthetic-readiness" } });
     mocks.updateQuestion.mockResolvedValue({});
     mocks.createRubric.mockResolvedValue({});
     mocks.generateQuestionRubricDraft.mockReset();
@@ -213,6 +216,25 @@ describe("paper rubric page state and draft boundaries", { timeout: testTimeout 
     mocks.config.configLoading = false; await render();
     expect(aiSelected()).toBe(true);
     expect(mocks.generateQuestionRubricDraft).not.toHaveBeenCalled();
+  });
+
+  it("题目来源抽屉可直接打开记录的原文件页，无需先跳资料页重新查找", async () => {
+    mocks.config.questions = [{ ...question("question-1"), paper_import_id: "import-1", paper_import_source_refs: [{ source_id: "source-1", file_asset_id: "file-1", document_index: 0, page_no: 2 }] }];
+    await render(); await click("来源与答题区域"); await click("打开来源第 2 页");
+    expect(mocks.importState.openImportSource).toHaveBeenCalledExactlyOnceWith("file-1", 2);
+    expect(mocks.updateQuestion).not.toHaveBeenCalled();
+  });
+
+  it("题目检查与逐题待办共用入口，并直接定位下一项缺失内容", async () => {
+    mocks.config.questions = [{ ...question("question-1"), rubric: { ...question("question-1").rubric!, status: "locked" } }, { ...question("question-2"), answer_key: undefined }];
+    await render();
+    expect([...host.querySelectorAll("button")].some(button => button.textContent === "待处理题目")).toBe(false);
+    await click("题目检查与待办");
+    expect(document.body.textContent).toContain("逐题待办");
+    await click("处理下一项待办");
+    expect(mocks.context!.selectedQuestion?.id).toBe("question-2");
+    expect(mocks.context!.state.detailTab).toBe("content");
+    expect(mocks.context!.state.formDirty).toBe(false);
   });
 
   it("AI 预览必须先采用；采用并保存后保留建议采分点和 AI 方式", async () => {
@@ -384,6 +406,37 @@ describe("paper rubric page state and draft boundaries", { timeout: testTimeout 
     expect(host.textContent).toContain("全部保存"); expect(host.textContent).toContain("保存完成，下一题");
     await click("保存完成，下一题"); expect(host.querySelector<HTMLTextAreaElement>("textarea#stem")?.value).toBe("synthetic stem question-2");
     expect(mocks.confirm).not.toHaveBeenCalled(); expect(mocks.updateQuestion).toHaveBeenCalledTimes(1);
+  });
+
+  it("整题保存先校验判分方式和参考图，未核对裁图时不写任何区域", async () => {
+    await render(); await editStem("尚不能整体保存的题干");
+    const persist = vi.fn();
+    await act(async () => mocks.context!.actions.registerSaveParticipant!("references", {
+      owner: "exam-1:question-1", dirty: true, busy: false,
+      prepare: async () => { throw new Error("参考图尚有未核对的实际裁图"); }, discard: vi.fn()
+    }));
+    await click("保存本题全部修改");
+    expect(mocks.updateQuestion).not.toHaveBeenCalled(); expect(mocks.createRubric).not.toHaveBeenCalled(); expect(persist).not.toHaveBeenCalled();
+    expect(host.textContent).toContain("未核对的实际裁图"); expect(mocks.context!.state.unsavedWork).toBe(true);
+  });
+
+  it("后区保存失败后重试仅保存剩余参考图，保留题目、细则和判分方式的成功回执", async () => {
+    await render(); await editStem("已保存的共同题干"); await click("评分配置");
+    await editInput(".paper-rubric-description textarea", "本次共同评分细则");
+    const register = mocks.context!.actions.registerSaveParticipant!;
+    const assessment = { owner: "exam-1:question-1", dirty: true, busy: false, prepare: vi.fn(), discard: vi.fn() };
+    const saveAssessment = vi.fn(async () => register("assessment", { ...assessment, dirty: false }));
+    assessment.prepare.mockResolvedValue(saveAssessment);
+    const saveReferences = vi.fn().mockRejectedValueOnce(new Error("参考图清单保存失败")).mockResolvedValue(undefined);
+    await act(async () => {
+      register("assessment", assessment);
+      register("references", { owner: "exam-1:question-1", dirty: true, busy: false, prepare: async () => saveReferences, discard: vi.fn() });
+    });
+    await click("保存本题全部修改");
+    expect(mocks.updateQuestion).toHaveBeenCalledTimes(1); expect(mocks.createRubric).toHaveBeenCalledTimes(1); expect(saveAssessment).toHaveBeenCalledTimes(1);
+    expect(mocks.loadConfig).not.toHaveBeenCalled(); expect(host.textContent).toContain("参考图清单保存失败");
+    await click("保存本题全部修改");
+    expect(mocks.updateQuestion).toHaveBeenCalledTimes(1); expect(mocks.createRubric).toHaveBeenCalledTimes(1); expect(saveAssessment).toHaveBeenCalledTimes(1); expect(saveReferences).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the unsaved scoring region and retries without writing the already saved content twice", async () => {

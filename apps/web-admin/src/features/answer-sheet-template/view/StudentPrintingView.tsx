@@ -104,7 +104,7 @@ export function StudentPrintPanel({ view }: Readonly<{ view: TemplatePrintingVie
 				) : null}
 			</div>
 			<p>
-				按班级生成带学生身份条码的受控 PDF。系统不会把姓名或学号印在答题卡上。
+				按班级生成带学生身份条码的PDF，不打印姓名或学号。
 			</p>
 			{printContextLoading ? <Spin size="small" /> : null}
 			{printContextError ? (
@@ -218,7 +218,7 @@ export function StudentPrintModal({ view }: Readonly<{ view: TemplatePrintingVie
 					type="warning"
 					showIcon
 					message="签发后请只打印所下载的这一份文件"
-					description="每名学生、每一页都有唯一条码。重复复印或打乱页面会进入人工核验；补打必须使用作废与重印流程。"
+					description="每人每页的条码唯一，请勿重复复印或打乱页面；补打请使用“作废旧卡并补打”。"
 				/>
 				<div className="print-class-heading">
 					<strong>选择班级</strong>
@@ -257,12 +257,12 @@ export function StudentPrintModal({ view }: Readonly<{ view: TemplatePrintingVie
 					))}
 				</div>
 				<p className="muted">
-					已排除缺考学生和已有有效答题卡的学生，避免重复签发。
+					仅为应考且没有有效答题卡的学生生成。
 				</p>
 			</div>
 		</Modal>
 		<Modal open={Boolean(view.printing.reprintCandidate)} title="作废旧卡并补打" okText={view.printing.reprintReasonFrozen ? "重试本次补打" : "作废旧卡并生成新卡"} cancelText="返回打印记录" confirmLoading={printBusy} cancelButtonProps={{ disabled: printBusy }} closable={!printBusy} maskClosable={false} onCancel={view.printing.closeReprint} onOk={() => void view.printing.reprint()}>
-			<Alert type="warning" showIcon message="确认后旧卡不可再使用" description="系统会同时作废旧条码并生成该学生的新卡。已扫描的旧卡会进入核验，请收回纸质旧卡。" />
+			<Alert type="warning" showIcon message="确认后旧卡不可再使用" description="确认后旧条码作废并生成新卡；请收回旧卡。已扫描的旧卡将进入核验。" />
 			<p>{view.printing.reprintCandidate?.class_name} · {view.printing.reprintCandidate?.student_name} · {view.printing.reprintCandidate?.student_no}</p>
 			<label htmlFor="student-reprint-reason">补打原因</label>
 			<Input.TextArea id="student-reprint-reason" value={view.printing.reprintReason} disabled={printBusy || view.printing.reprintReasonFrozen} maxLength={500} showCount onChange={event => view.printing.setReprintReason(event.target.value)} placeholder="例如：原卡遗失、打印破损" />

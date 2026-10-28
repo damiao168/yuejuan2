@@ -21,6 +21,11 @@ import { questionAppealRubricPoints } from "./questionAppealPresentation";
 import { QuestionAppealRegradeLaunch } from "./QuestionAppealRegradeLaunch";
 import { useUnsavedChangesGuard } from "../router/useUnsavedChangesGuard";
 import { QuestionAppealReviewOpinionPanel, type ReviewOpinionChoice } from "./QuestionAppealReviewOpinionPanel";
+import { loadOpinionDraft, removeOpinionDraft, saveOpinionDraft, useOpinionDraftReloadWarning } from "../auth/reviewOpinionDraft";
+import { PrivateOpinionDraft } from "./PrivateOpinionDraft";
+import { routeQueryParam } from "../router/query";
+
+type LocalOpinion = { publicResponse: string; reviewOpinion: ReviewOpinionChoice | ""; suggestedScore?: number; reviewExplanation: string; regradeJobID: string; resolutionID: string };
 
 function messageFor(error: unknown) {
   return getUserErrorMessage(error, "操作失败，请稍后重试");
@@ -68,7 +73,7 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
   const [context, setContext] = useState<PublishedQuestionAppealContext | null>(null);
   const [contextError, setContextError] = useState("");
   const pageVisible = usePageVisible();
-  // 列表会自动打开首条申请；先等其依据或失败说明，不能把空队列和详情占位当作就绪。
+  // 初次只读取队列；用户选中记录后，再等待该申请的依据或失败说明。
   usePageLoading(canRead && (loading || Boolean(selectedId && !context && !contextError)));
   const [actioning, setActioning] = useState(false);
   const [assignedTo, setAssignedTo] = useState("");
@@ -85,6 +90,8 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
   const [regradeRevision, setRegradeRevision] = useState(0);
   const [regradeError, setRegradeError] = useState("");
   const [draftTouched, setDraftTouched] = useState(false);
+  const [draftConflict, setDraftConflict] = useState<LocalOpinion>();
+  const [memorySaved, setMemorySaved] = useState(false);
   const [studentLabels, setStudentLabels] = useState<Record<string, string>>({});
   const [identityError, setIdentityError] = useState("");
   const [reviewersError, setReviewersError] = useState("");
@@ -94,7 +101,13 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
   selectedIdRef.current = selectedId;
   const busyRef = useRef(false);
   const refreshRequestRef = useRef(0);
-  useUnsavedChangesGuard({ dirty: draftTouched, busy: actioning, description: "复核意见、给学生的回复或本题复评选择尚未提交，离开后无法恢复。" });
+  useUnsavedChangesGuard({ dirty: draftTouched && !memorySaved, busy: actioning, description: "当前意见尚未保存，离开后无法恢复。" });
+  useOpinionDraftReloadWarning(draftTouched && memorySaved);
+  const rememberOpinion = () => context && saveOpinionDraft("question-appeal", context.appeal.id, context.appeal.source_release_id, context.appeal.revision, { publicResponse, reviewOpinion, suggestedScore, reviewExplanation, regradeJobID, resolutionID });
+  // 仅缓存当前已载入申请的主动输入；读取新申请时不携带上一条意见。
+  useEffect(() => {
+    if (draftTouched && context?.appeal.id === selectedId) setMemorySaved(Boolean(rememberOpinion()));
+  });
   useEffect(() => { onEditorStateChange?.({ dirty: draftTouched, busy: actioning }); }, [draftTouched, actioning, onEditorStateChange]);
   useEffect(() => () => { refreshRequestRef.current += 1; summaryRequestRef.current++; }, []);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 切申诉使旧汇总读取失效，不能让上一条申请的迟到结果结束本条加载。
@@ -102,8 +115,8 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
 
   const changeSelection = (next: () => void) => {
     if (busyRef.current) return;
-    if (!draftTouched) { next(); return; }
-    modal.confirm({ title: "放弃未提交的复核内容？", content: "当前意见、回复和复评选择只保存在本页，离开后无法恢复。", okText: "放弃并继续", cancelText: "继续编辑", onOk: () => { setDraftTouched(false); next(); } });
+    if (!draftTouched || rememberOpinion()) { setDraftTouched(false); next(); return; }
+    modal.confirm({ title: "放弃未提交内容？", content: "当前意见、回复和复评选择尚未提交，离开后无法恢复。", okText: "放弃并继续", cancelText: "继续编辑", onOk: () => { setDraftTouched(false); next(); } });
   };
 
   const refresh = useCallback(async () => {
@@ -116,7 +129,9 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
       // 双角色账号的服务端读权限可能覆盖全校；教师视角仍只呈现分派给当前账号的任务。
       const scopedAppeals = personalScope ? response.appeals.filter((appeal) => appeal.assigned_to === currentUserId) : response.appeals;
       setAppeals(scopedAppeals);
-      setSelectedId((current) => scopedAppeals.some((appeal) => appeal.id === current) ? current : scopedAppeals[0]?.id ?? "");
+      // 返回链接只预选已获授权队列中的申请，不能据地址参数直接读取任意材料。
+      const linkedAppeal = routeQueryParam("appeal");
+      setSelectedId((current) => scopedAppeals.some((appeal) => appeal.id === current) ? current : scopedAppeals.some(appeal => appeal.id === linkedAppeal) ? linkedAppeal : "");
       if (canManage) {
         setReviewersError("");
         try {
@@ -148,11 +163,19 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
     // 选择或刷新版本变化后，上一轮详情不能覆盖当前申诉和分派选择。
     // contextRevision 用于重读同一申诉，不能因 effect 内未读取它而删除依赖。
     let active = true;
-    setContext(null); setContextError(""); setPublicResponse(""); setRegradeJobID(""); setResolutionID(""); setDraftTouched(false);
+    setContext(null); setContextError(""); setPublicResponse(""); setRegradeJobID(""); setResolutionID(""); setDraftTouched(false); setDraftConflict(undefined); setMemorySaved(false);
     setReviewOpinion(""); setSuggestedScore(undefined); setReviewExplanation("");
     void getQuestionAppealContext(selectedId).then((response) => { if (active) {
       setContext(response.context); setAssignedTo(response.context.appeal.assigned_to ?? ""); setPublicResponse(response.context.appeal.public_response ?? "");
       setReviewOpinion(response.context.appeal.review_opinion?.opinion ?? ""); setSuggestedScore(response.context.appeal.review_opinion?.suggested_score); setReviewExplanation(response.context.appeal.review_opinion?.explanation ?? "");
+      const appeal = response.context.appeal;
+      const eligibleReleases = response.context.release_history.filter(release => release.eligible_for_resolution);
+      if (eligibleReleases.length === 1) setResolutionID(eligibleReleases[0].id);
+      const saved = loadOpinionDraft<LocalOpinion>("question-appeal", appeal.id, appeal.source_release_id, appeal.revision);
+      if (saved?.needsReview) setDraftConflict(saved.values);
+      else if (saved) {
+        setPublicResponse(saved.values.publicResponse); setReviewOpinion(saved.values.reviewOpinion); setSuggestedScore(saved.values.suggestedScore); setReviewExplanation(saved.values.reviewExplanation); setRegradeJobID(saved.values.regradeJobID); setResolutionID(eligibleReleases.some(release => release.id === saved.values.resolutionID) ? saved.values.resolutionID : eligibleReleases.length === 1 ? eligibleReleases[0].id : ""); setDraftTouched(true); setMemorySaved(true);
+      }
     } }).catch((error_) => { if (active) setContextError(messageFor(error_)); });
     return () => { active = false; };
   }, [selectedId, contextRevision]);
@@ -191,11 +214,12 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
   }, [canManageScores, context, regradeRevision]);
 
   const selected = useMemo(() => appeals.find((appeal) => appeal.id === selectedId), [appeals, selectedId]);
+  const nextPending = appeals.find(appeal => appeal.id !== selectedId && ["submitted", "under_review", "upheld_pending_regrade"].includes(appeal.status) && (canManage || !appeal.review_opinion));
   const points = questionAppealRubricPoints(context?.rubric_snapshot);
   // 结论仅由管理员提交；教师通过独立意见入口移交，不以工作权限直接结案。
   const canDecide = canManage;
   const canSubmitOpinion = canSubmitTeacherOpinion(context?.appeal, canManage, canWork, currentUserId);
-  const resolutionOptions = context?.release_history.filter((release) => release.id && release.source === "regrade" && release.status === "published" && release.version > context.appeal.source_release_version).map((release) => ({ value: release.id, label: `第 ${release.version} 版 · ${release.reason}` })) ?? [];
+  const resolutionOptions = context?.release_history.filter((release) => release.id && release.eligible_for_resolution).map((release) => ({ value: release.id, label: `第 ${release.version} 版 · ${release.reason}` })) ?? [];
   const refreshSelected = async () => {
     // 先等列表和管理端人员刷新，再触发详情重读并通知父页面；此处不等待详情请求完成。
     await refresh(); setContextRevision((value) => value + 1); onChanged?.();
@@ -244,6 +268,7 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
         expected_revision: context.appeal.revision
       });
       if (selectedIdRef.current !== appealID) return;
+      removeOpinionDraft("question-appeal", appealID, context.appeal.source_release_id);
       setDraftTouched(false); setNotice(decision === "reject" ? "已答复学生，原成绩保持不变。" : "已关联受治理的题目级复评任务。"); await refreshSelected();
     } catch (error_) { setContextError(messageFor(error_)); }
     finally { busyRef.current = false; setActioning(false); }
@@ -259,6 +284,7 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
       // 按教师实际核对的详情修订提交；冲突或当前成绩换版时保留输入，不自动改用新版重发意见。
       const response = await submitQuestionAppealReviewOpinion(appealID, { opinion: reviewOpinion, ...(suggestedScore === undefined ? {} : { suggested_score: suggestedScore }), explanation: reviewExplanation.trim(), expected_revision: context.appeal.revision });
       if (selectedIdRef.current !== appealID) return;
+      removeOpinionDraft("question-appeal", appealID, context.appeal.source_release_id);
       setContext((current) => current?.appeal.id === appealID ? { ...current, appeal: response.appeal } : current);
       setAppeals((current) => current.map((item) => item.id === appealID ? response.appeal : item));
       setDraftTouched(false); setNotice(`${questionAppealBusinessSummary(response.appeal, examLabels)}：复核意见已保存并移交学校管理员。成绩尚未改变，请等待管理员继续处理。`); onChanged?.();
@@ -271,6 +297,7 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
     busyRef.current = true; setActioning(true);
     try {
       await resolveQuestionAppeal(context.appeal.id, { new_release_id: resolutionID, public_response: publicResponse.trim(), expected_revision: context.appeal.revision });
+      removeOpinionDraft("question-appeal", context.appeal.id, context.appeal.source_release_id);
       setDraftTouched(false); setNotice("结果已公布，学生可以在我的复核申请中查看回复和成绩版本。"); await refreshSelected();
     } catch (cause) { setContextError(messageFor(cause)); }
     finally { busyRef.current = false; setActioning(false); }
@@ -285,18 +312,22 @@ export function QuestionAppealWorkspace({ examId = "", canManage, canWork, canRe
       {contextError ? <Alert type="error" showIcon message="无法处理此申诉" description={contextError} /> : null}
       {!context && !contextError ? <Typography.Text type="secondary">正在加载发布版本依据…</Typography.Text> : null}
       {context ? <div className="question-appeal-context">
+        {draftConflict ? <Alert type="warning" showIcon message="已有另一版未提交意见，请核对后恢复" description="请核对当前材料后决定是否继续使用旧输入；恢复后仍需显式提交，服务端继续校验当前修订。" action={<><Button disabled={actioning} onClick={() => { setPublicResponse(draftConflict.publicResponse); setReviewOpinion(draftConflict.reviewOpinion); setSuggestedScore(draftConflict.suggestedScore); setReviewExplanation(draftConflict.reviewExplanation); setRegradeJobID(draftConflict.regradeJobID); setResolutionID(draftConflict.resolutionID); setDraftTouched(true); setDraftConflict(undefined); }}>已核对，恢复旧输入</Button><Button disabled={actioning} onClick={() => { removeOpinionDraft("question-appeal", context.appeal.id, context.appeal.source_release_id); setDraftConflict(undefined); }}>放弃旧输入</Button></>} /> : null}
+        {notice && nextPending ? <Button disabled={actioning} onClick={() => changeSelection(() => { setNotice(""); setSelectedId(nextPending.id); })}>下一条待办</Button> : null}
         <QuestionAppealIdentityHeader appeal={context.appeal} examLabels={examLabels} studentLabels={studentLabels} personalScope={personalScope} summaryLoading={summaryLoading} onReloadSummary={() => void rereadSelectedSummary()} />
         <QuestionAppealEvidence context={context} answerImageURL={answerImageURL} points={points} />
         <QuestionAppealFeedback notice={notice} reviewersError={reviewersError} publicResponse={context.appeal.public_response} />
+        {canSubmitOpinion || (canManage && ["under_review", "upheld_pending_regrade"].includes(context.appeal.status)) ? <output className="question-appeal-draft-note" role="status"><Typography.Text type={draftTouched ? "warning" : "secondary"}>{draftTouched ? memorySaved ? "未提交；本次会话已暂存，需保存私有草稿才能在刷新后恢复。" : "有未提交内容；离开后无法恢复。" : "提交后才会正式保存。"}</Typography.Text></output> : null}
+        {canSubmitOpinion || (canManage && ["under_review", "upheld_pending_regrade"].includes(context.appeal.status)) ? <PrivateOpinionDraft<LocalOpinion> key={`${context.appeal.id}:${context.appeal.revision}`} kind="question-appeal" recordId={context.appeal.id} source={context.appeal.source_release_id} sourceRevision={context.appeal.revision} dirty={draftTouched} busy={actioning} values={{publicResponse,reviewOpinion,suggestedScore,reviewExplanation,regradeJobID,resolutionID}} onRestore={(values,needsReview)=>{if(needsReview){setDraftConflict(values);return;}setPublicResponse(values.publicResponse);setReviewOpinion(values.reviewOpinion);setSuggestedScore(values.suggestedScore);setReviewExplanation(values.reviewExplanation);setRegradeJobID(values.regradeJobID);setResolutionID(values.resolutionID);setDraftTouched(true);}} /> : null}
         <QuestionAppealReviewOpinionPanel saved={context.appeal.review_opinion} pending={context.appeal.status === "under_review"} canSubmit={canSubmitOpinion} opinion={reviewOpinion} suggestedScore={suggestedScore} explanation={reviewExplanation} maxScore={context.appeal.source_max_score} busy={actioning}
           onOpinionChange={(value) => { setReviewOpinion(value); setDraftTouched(true); }} onScoreChange={(value) => { setSuggestedScore(value); setDraftTouched(true); }} onExplanationChange={(value) => { setReviewExplanation(value); setDraftTouched(true); }} onSubmit={() => void submitOpinion()} />
         <QuestionAppealActions status={context.appeal.status} canManage={canManage} assignedTo={assignedTo} reviewers={reviewers}
           canDecide={canDecide} canManageScores={canManageScores} publicResponse={publicResponse} onPublicResponseChange={(value) => { setPublicResponse(value); setDraftTouched(true); }} onReloadRegrades={() => setRegradeRevision((value) => value + 1)} regradeOptions={regradeJobs.map((job) => ({ value: job.id, label: `${job.reason_text} · ${job.affected_count} 份答卷` }))} regradeError={regradeError}
           actioning={actioning} regradeJobID={regradeJobID} onAssignedToChange={setAssignedTo} onRegradeJobIDChange={(id) => { setRegradeJobID(id); setDraftTouched(true); }}
           onAssign={() => { void assign(); }} onDecide={(decision) => { void decide(decision); }} />
-        {canManage && canManageScores && context.appeal.status === "under_review" ? <QuestionAppealRegradeLaunch key={context.appeal.id} appeal={context.appeal} reviewers={reviewers} response={publicResponse} busy={actioning} onWorkingChange={(working) => { busyRef.current = working; setActioning(working); }} onCreated={(id) => { setRegradeJobID(id); setRegradeRevision((value) => value + 1); setDraftTouched(true); setNotice("复评任务已创建，请填写回复并关联任务，再到考试成绩工作台完成复评和发布。"); }} /> : null}
+        {canManage && canManageScores && context.appeal.status === "under_review" ? <QuestionAppealRegradeLaunch onRecoveredResponse={setPublicResponse} currentUserId={currentUserId} key={context.appeal.id} appeal={context.appeal} reviewers={reviewers} response={publicResponse} busy={actioning} onWorkingChange={(working) => { busyRef.current = working; setActioning(working); }} onCreated={(id) => { setRegradeJobID(id); setRegradeRevision((value) => value + 1); setDraftTouched(true); }} onLinked={() => { removeOpinionDraft("question-appeal", context.appeal.id, context.appeal.source_release_id); setDraftTouched(false); setNotice("已创建并关联本次复评，请到考试成绩工作台继续处理。"); void refreshSelected(); }} /> : null}
         {canManage && context.appeal.status === "upheld_pending_regrade" ? <QuestionAppealResolution options={resolutionOptions} resolutionID={resolutionID} publicResponse={publicResponse} actioning={actioning} onResolutionChange={(value) => { setResolutionID(value); setDraftTouched(true); }} onPublicResponseChange={(value) => { setPublicResponse(value); setDraftTouched(true); }} onResolve={() => void resolve()} /> : null}
-        {canManageScores && onNavigate && ["under_review", "upheld_pending_regrade"].includes(context.appeal.status) ? <Button onClick={() => onNavigate(`/exams/${encodeURIComponent(context.appeal.exam_id)}/scores`)}>前往本考试成绩工作台完成复评与发布</Button> : null}
+        {canManageScores && onNavigate && ["under_review", "upheld_pending_regrade"].includes(context.appeal.status) ? <Button disabled={actioning} onClick={() => changeSelection(() => onNavigate(`/exams/${encodeURIComponent(context.appeal.exam_id)}/scores?appeal=${encodeURIComponent(context.appeal.id)}${context.appeal.regrade_job_id ? `&regrade=${encodeURIComponent(context.appeal.regrade_job_id)}` : ""}`))}>继续本次复评与发布</Button> : null}
       </div> : null}
     </Drawer>
   </section>;

@@ -37,6 +37,8 @@ export function ResultDetail({ examID, onBack }: Readonly<{ examID: string; onBa
   const [loginRequired, setLoginRequired] = useState(false);
   const [pendingResult, setPendingResult] = useState<StudentResult>();
   const [checking, setChecking] = useState(false);
+  const [verifiedCurrent, setVerifiedCurrent] = useState<StudentResult>();
+  const [currentVerified, setCurrentVerified] = useState(false);
   const [checkedAt, setCheckedAt] = useState<string>();
   const [changeNotice, setChangeNotice] = useState("");
   const [appealSelecting, setAppealSelecting] = useState(false);
@@ -52,12 +54,15 @@ export function ResultDetail({ examID, onBack }: Readonly<{ examID: string; onBa
     const requestID = ++detailRequestRef.current;
     if (!resultRef.current) setLoading(true);
     setChecking(true);
+    setCurrentVerified(false);
+    setAppealRevision(value => value + 1);
     setError("");
     setLoginRequired(false);
     try {
       const response = await getResult(examID);
       if (requestID !== detailRequestRef.current) return;
       setCheckedAt(new Date().toISOString());
+      setVerifiedCurrent(response.result); setCurrentVerified(true);
       const current = resultRef.current;
       if (!current || (apply && !isSubmitting?.())) {
         const notice = updatedResultNotice(current, response.result);
@@ -86,10 +91,10 @@ export function ResultDetail({ examID, onBack }: Readonly<{ examID: string; onBa
       <button type="button" className="back-button" disabled={submitting} onClick={onBack}>← 返回我的考试</button>
       <div className="result-heading">
         <div><span className="release-state">已发布成绩 · 第 {result.release_version} 版</span><p className="eyebrow">成绩与逐题复盘</p><h1 id="result-title">{examName}</h1></div>
-        <div><p>最近核对：{checkedAt ? formatDateTime(checkedAt) : "尚未核实"}</p><button type="button" className="secondary-button" disabled={submitting || checking} onClick={() => void load()}>{checking ? "正在核对…" : "检查最新成绩"}</button></div>
+        <div><p>最近核对：{checkedAt ? formatDateTime(checkedAt) : "尚未核实"}</p><button type="button" className="secondary-button" disabled={submitting || checking} onClick={() => void load()}>{checking ? "正在核对…" : "更新成绩与复核进度"}</button></div>
       </div>
-      {error ? <p role="alert">最新成绩核对失败，当前显示此前读取的第 {result.release_version} 版。{error}{loginRequired ? <button type="button" disabled={submitting} onClick={reauthenticate}>重新登录</button> : null}</p> : null}
-      {pendingResult ? <section className="appeal-notice"><p>学校已更新成绩，第 {pendingResult.release_version} 版可查看。旧版草稿仍可复制，新版需重新核对。</p><button type="button" disabled={submitting || checking} onClick={() => viewCurrent()}>查看新版成绩</button></section> : null}
+      {error ? <p role="alert">未能核对最新成绩，现显示此前读取的第 {result.release_version} 版。{error}{loginRequired ? <button type="button" disabled={submitting} onClick={reauthenticate}>重新登录</button> : null}</p> : null}
+      {pendingResult ? <section className="appeal-notice"><p>第 {pendingResult.release_version} 版成绩已发布。旧草稿可复制；新版需重新核对后申请。</p><button type="button" disabled={submitting || checking} onClick={() => viewCurrent()}>查看新版成绩</button></section> : null}
       {changeNotice ? <p><output aria-live="polite" aria-atomic="true">{changeNotice}</output></p> : null}
       <OldAppealDrafts examID={examID} releaseID={result.release_id} />
       <AppealWindow result={result} onStart={() => {setAppealSelecting(true);document.getElementById("question-review")?.scrollIntoView({behavior:"smooth"});document.querySelector<HTMLButtonElement>("[data-question-id]")?.focus({preventScroll:true});}} />
@@ -104,7 +109,7 @@ export function ResultDetail({ examID, onBack }: Readonly<{ examID: string; onBa
         questionReviewRef.current?.scrollIntoView({ behavior: "smooth" });
         questionReviewRef.current?.focus({ preventScroll: true });
       }} />
-      <AppealStatus examID={examID} revision={appealRevision} result={result} onViewCurrent={viewCurrent} />
+      <AppealStatus examID={examID} revision={appealRevision} result={result} verifiedCurrentResult={verifiedCurrent} currentVerification={currentVerified ? "verified" : "unknown"} onViewCurrent={viewCurrent} />
     </section>
   );
 }

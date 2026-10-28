@@ -5,6 +5,7 @@ import { listExams } from '../../api/exams';
 import { downloadReviewTaskImage, getReviewTask, getReviewTaskContext, listReviewTasks } from '../../api/review';
 import { loadOfflineDraft, listOfflineDraftEnvelopes, purgeExpiredOfflineDrafts, readOfflineDraftEnvelopes, saveOfflineDraft, updateOfflineDraftStatus, type OfflineDraftEnvelope } from '../../lib/offlineStore';
 import { hasDurableDesktopStore } from '../../lib/durableStore';
+import { prepareOfflineAnswerMaterial, restoreOfflineAnswerMaterial } from '../../lib/offlineAnswerMaterial';
 import { assertOfflineGradeCommandIdentity, syncOfflineGradeCommand } from '../../lib/offlineReviewCommand';
 import { reviewTaskState } from '../../statusLabels';
 import type { OfflineDraftRecord, OfflineGradeDraft, OfflineGradeCommand, OfflineTaskPackage, ReviewTask, RubricSelection } from '../../types';
@@ -44,6 +45,7 @@ export function useOfflineWorkbench({ durableScopeKey, client, token, user, isOn
   const packageRequestRef = useRef(0);
   // ref 同步阻止连续点击；state 负责按钮显示，不能替代尚未重新渲染时的互斥检查。
   const packageBusy = useRef(false);
+  const openingTask = useRef<object | null>(null);
   const syncInFlight = useRef(false);
   const draftSaveInFlight = useRef(false);
   // 即使本地回执写入失败，也要保留服务端已确认的结果。
@@ -122,11 +124,21 @@ export function useOfflineWorkbench({ durableScopeKey, client, token, user, isOn
     }
   };
 
+  const applyDownloadedImage = async (nextPackage: OfflineTaskPackageWithAnswer, image: { blob: Blob; contentType: string; filename?: string }, requestId: number) => {
+    let answerMaterial: OfflineTaskPackage["answerMaterial"];
+    let preparationWarning: string | undefined;
+    try { answerMaterial = await prepareOfflineAnswerMaterial(nextPackage, image.blob, image.contentType, image.filename); }
+    catch (error) { preparationWarning = formatError(error); }
+    if (requestId !== packageRequestRef.current) return;
+    setPkg({ ...nextPackage, answerMaterial, warnings: preparationWarning ? [...nextPackage.warnings, preparationWarning] : nextPackage.warnings });
+    setImagePreview({ url: URL.createObjectURL(image.blob), contentType: image.contentType, filename: image.filename, taskId: nextPackage.task.id, requestId });
+  };
+
   const downloadPackageImage = async (imagePath: string, nextPackage: OfflineTaskPackageWithAnswer, requestId: number) => {
     try {
       const blob = await downloadReviewTaskImage(client, imagePath, nextPackage.task.id);
       if (requestId !== packageRequestRef.current) return;
-      setImagePreview({ url: URL.createObjectURL(blob.blob), contentType: blob.contentType, filename: blob.filename, taskId: nextPackage.task.id, requestId });
+      await applyDownloadedImage(nextPackage, blob, requestId);
     } catch (error) {
       if (requestId !== packageRequestRef.current) return;
       nextPackage.warnings.push(`答案图片下载失败：${formatError(error)}`);
@@ -223,7 +235,7 @@ export function useOfflineWorkbench({ durableScopeKey, client, token, user, isOn
       if (!imagePath) throw new Error("当前任务没有可用答卷图片入口，请重新读取任务材料或联系管理员。");
       const image = await downloadReviewTaskImage(client, imagePath, pkg.task.id);
       if (requestId !== packageRequestRef.current) return;
-      setImagePreview({ url: URL.createObjectURL(image.blob), contentType: image.contentType, filename: image.filename, taskId: pkg.task.id, requestId });
+      await applyDownloadedImage(pkg, image, requestId);
     } catch (error) {
       if (requestId === packageRequestRef.current) setPackageError(`答卷图片恢复失败，原评分未改变：${formatError(error)}`);
     } finally {
@@ -339,12 +351,17 @@ export function useOfflineWorkbench({ durableScopeKey, client, token, user, isOn
     return () => registerLeaveGuard?.(null);
   }, [registerLeaveGuard]);
 
-  const applyLoadedDraft = (taskId: string, record: OfflineDraftRecord, latestEnvelopes: OfflineDraftEnvelope[]) => {
+  const applyLoadedDraft = async (taskId: string, record: OfflineDraftRecord, latestEnvelopes: OfflineDraftEnvelope[], requestId: number) => {
+    let restored: Awaited<ReturnType<typeof restoreOfflineAnswerMaterial>> = null;
+    let materialError: string | undefined;
+    try { restored = await restoreOfflineAnswerMaterial(record.packageSnapshot); }
+    catch (error) { materialError = formatError(error); }
+    if (requestId !== packageRequestRef.current) return;
     setEnvelopes(latestEnvelopes);
     const metadata = latestEnvelopes.find((item) => item.taskId === taskId);
     const confirmed = confirmedTaskIds.current.has(taskId);
-    // Blob 地址只属于本次 WebView 会话；解密草稿不包含图片，不能沿用上一任务的图像。
-    setImagePreview(null);
+    // 旧 Blob 地址不能跨 WebView 使用；解密后的原件须通过身份、修订和摘要校验，再由查看器实际解码确认可读。
+    setImagePreview(restored ? { url: URL.createObjectURL(restored.blob), contentType: restored.contentType, filename: restored.filename, taskId, requestId } : null);
     setPkg(record.packageSnapshot);
     setDraft(record.draft);
     setSavedSnapshot({ package: JSON.stringify(record.packageSnapshot), draft: JSON.stringify(record.draft) });
@@ -353,7 +370,7 @@ export function useOfflineWorkbench({ durableScopeKey, client, token, user, isOn
     setPendingCommand(Boolean(record.submissionCommand));
     setSelectedTaskId(taskId);
     setSyncStatus(confirmed ? "synced" : metadata?.syncStatus ?? record.syncStatus);
-    setSyncMessage(confirmed ? "同步成功，服务端已接收人工评分。" : metadata?.syncMessage ?? record.syncMessage ?? "本地加密草稿已加载。");
+    setSyncMessage(materialError ? `评分草稿已加载。${materialError}` : confirmed ? "同步成功，服务端已接收人工评分。" : metadata?.syncMessage ?? record.syncMessage ?? "本地加密草稿已加载。");
   };
 
   const loadDraft = async (taskId: string) => {
@@ -378,7 +395,8 @@ export function useOfflineWorkbench({ durableScopeKey, client, token, user, isOn
         setSyncMessage("未找到本地草稿。");
         return;
       }
-      applyLoadedDraft(taskId, record, latestEnvelopes);
+      await applyLoadedDraft(taskId, record, latestEnvelopes, requestId);
+      if (requestId !== packageRequestRef.current) return;
       await onLog("info", "offline draft decrypted and loaded", taskId);
     } catch (error) {
       if (requestId !== packageRequestRef.current) return;
@@ -392,6 +410,27 @@ export function useOfflineWorkbench({ durableScopeKey, client, token, user, isOn
         packageBusy.current = false;
         setPackageLoading(false);
       }
+    }
+  };
+
+  const openTask = async (taskId = selectedTaskId) => {
+    const owner = activeRequestScope.current;
+    if (!owner || !taskId || openingTask.current === owner || syncInFlight.current || draftSaveInFlight.current || packageBusy.current) return;
+    if (editorRef.current.pkg?.task.id === taskId) { setSelectedTaskId(taskId); return; }
+    openingTask.current = owner; setPackageLoading(true); setPackageError(null);
+    try {
+      // 开始和继续都优先恢复已保存评分；本机没有原稿时才下载，不能用空草稿覆盖原评分。
+      const record = await loadOfflineDraft(taskId, offlineKey, durableScopeKey);
+      if (owner !== activeRequestScope.current) return;
+      setSelectedTaskId(taskId);
+      if (record) await loadDraft(taskId);
+      else if (token) await downloadPackage(taskId);
+      else setPackageError("该任务尚无本机草稿，请在线登录后获取任务材料。");
+    } catch (cause) {
+      if (owner === activeRequestScope.current) setPackageError(`任务打开失败：${formatError(cause)}`);
+    } finally {
+      if (openingTask.current === owner) openingTask.current = null;
+      if (owner === activeRequestScope.current && !packageBusy.current) setPackageLoading(false);
     }
   };
 
@@ -612,6 +651,7 @@ export function useOfflineWorkbench({ durableScopeKey, client, token, user, isOn
     taskError,
     setSelectedTaskId,
     downloadPackage,
+    openTask,
     packageLoading,
     tasks,
     selectedTaskId,

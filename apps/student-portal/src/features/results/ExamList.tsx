@@ -56,12 +56,12 @@ export function ExamList({ userName, onOpen }: Readonly<{ userName: string; onOp
       {!loading && !error && latest ? <section className="latest-release" aria-labelledby="latest-release-title">
         <div><p>最近发布 · {displaySubject(latest.subject)}</p><h2 id="latest-release-title">{latest.name}</h2><span>{formatDate(latest.published_at)} · 第 {latest.release_version} 版</span></div>
         {latest.total_score !== undefined && latest.max_score ? <div className="latest-score"><strong>{formatScore(latest.total_score)}<small> / {formatScore(latest.max_score)}</small></strong><span>得分率 {latestRate}%</span></div> : null}
-        <button type="button" className="primary-action" onClick={() => onOpen(latest.exam_id)}>查看考试分析 <span>→</span></button>
+        <button type="button" className="primary-action" onClick={() => onOpen(latest.exam_id)}>查看成绩与分析 <span>→</span></button>
       </section> : null}
-      {!loading && !error && items.length > 0 ? <section className="published-exams"><div className="section-heading"><div><p className="section-kicker">我的考试</p><h2>已发布成绩</h2></div><span>{items.length} 场考试</span></div><div className="exam-list">
-        {items.map((exam) => <button className="exam-row" type="button" key={exam.exam_id} onClick={() => onOpen(exam.exam_id)}>
+      {!loading && !error && items.length > 1 ? <section className="published-exams"><div className="section-heading"><div><p className="section-kicker">我的考试</p><h2>其他考试</h2></div><span>{items.length - 1} 场考试</span></div><div className="exam-list">
+        {items.slice(1).map((exam) => <button className="exam-row" type="button" key={exam.exam_id} onClick={() => onOpen(exam.exam_id)}>
           <div><strong>{exam.name}</strong><span>{displaySubject(exam.subject)} · 已发布 {formatDate(exam.published_at)}</span></div>
-          <div className="exam-row-action"><small>第 {exam.release_version} 版</small><span>查看成绩 →</span></div>
+          <div className="exam-row-action"><small>第 {exam.release_version} 版</small><span>查看成绩与分析 →</span></div>
         </button>)}
       </div></section> : null}
     </section>

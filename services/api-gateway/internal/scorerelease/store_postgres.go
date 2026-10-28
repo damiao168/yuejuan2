@@ -167,6 +167,47 @@ func (s *PostgresStore) CreateFromRegrade(ctx context.Context, tenantID, examID,
 	if len(facts) == 0 || !applyRegradeChanges(facts, input) {
 		return Release{}, ErrInvalidInput
 	}
+	if strings.HasPrefix(input.IdempotencyKey, "regrade-job:") {
+		// 考试锁覆盖旧随机键草稿回认与新建；保留旧键，不破坏历史客户端的幂等重试。
+		rows, lookupErr := tx.QueryContext(ctx, releaseColumns+` FROM score_release WHERE tenant_id=$1 AND exam_id=$2 AND source=$3 AND source_release_id=$4 AND status IN ('draft','published') ORDER BY version`, tenantID, examID, SourceRegrade, source.ID)
+		if lookupErr != nil {
+			return Release{}, lookupErr
+		}
+		candidates := []Release{}
+		for rows.Next() {
+			candidate, scanErr := scanRelease(rows)
+			if scanErr != nil {
+				rows.Close()
+				return Release{}, scanErr
+			}
+			candidates = append(candidates, candidate)
+		}
+		lookupErr = rows.Err()
+		rows.Close()
+		if lookupErr != nil {
+			return Release{}, lookupErr
+		}
+		var recovered *Release
+		for _, candidate := range candidates {
+			actual, readErr := s.releaseFactsTx(ctx, tx, tenantID, candidate.ID)
+			if readErr != nil {
+				return Release{}, readErr
+			}
+			if sameRegradeFacts(facts, actual) {
+				if recovered != nil {
+					return Release{}, ErrInvalidTransition
+				}
+				copy := candidate
+				recovered = &copy
+			}
+		}
+		if recovered != nil {
+			if err := tx.Commit(); err != nil {
+				return Release{}, err
+			}
+			return *recovered, nil
+		}
+	}
 	version, err := s.nextVersionTx(ctx, tx, tenantID, examID)
 	if err != nil {
 		return Release{}, err

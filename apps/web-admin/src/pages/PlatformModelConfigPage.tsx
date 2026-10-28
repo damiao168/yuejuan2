@@ -24,6 +24,7 @@ import { onboardingQueryKey } from "../features/onboarding/queries";
 import { SchoolModelSelector } from "../features/platform-model-config/components/SchoolModelSelector";
 import { ModelConfigForm } from "../features/platform-model-config/components/ModelConfigForm";
 import { ModelConfigDrawer } from "../features/platform-model-config/components/ModelConfigDrawer";
+import { CredentialRotation } from "../features/platform-model-config/components/CredentialRotation";
 import { SchoolModelTable } from "../features/platform-model-config/components/SchoolModelTable";
 import { modelConfigColumns } from "../features/platform-model-config/components/modelConfigColumns";
 import { useModelConfigDrafts } from "../features/platform-model-config/hooks/useModelConfigDrafts";
@@ -92,6 +93,9 @@ export function PlatformModelConfigPage() {
   const [editing, setEditing] = useState<ManagedModelAPIConfig | null>(null);
   const [credentialSource, setCredentialSource] = useState<ManagedModelAPIConfig | null>(null);
   const [saving, setSaving] = useState(false);
+  const [rotationState, setRotationState] = useState({ open: false, busy: false });
+  const rotationBusyRef = useRef(false);
+  const handleRotationState = useCallback((open: boolean, busy: boolean) => { rotationBusyRef.current = busy; setRotationState({ open, busy }); }, []);
   const { queue, operations } = useModelOperations();
   const applications = useModelApplications(selectedTenantID, queue);
   const [applicationTarget, setApplicationTarget] = useState<{ config: ManagedModelAPIConfig; type: "grading" | "document" | "answer_sheet" } | null>(null);
@@ -177,9 +181,10 @@ export function PlatformModelConfigPage() {
     configsRef.current = next;
     setConfigs(next);
   }, []);
-  useUnsavedChangesGuard({ dirty: (activeTab === "bindings" && bindingsDirty) || governanceDirty || applicationDirty, busy: bindingsSaving || governanceSaving || saving || applicationSaving || applications.saving, description: "模型角色或学校使用策略尚未保存，离开后将重新读取服务端版本。" });
+  useUnsavedChangesGuard({ dirty: (activeTab === "bindings" && bindingsDirty) || governanceDirty || applicationDirty || rotationState.open, busy: bindingsSaving || governanceSaving || saving || applicationSaving || applications.saving || rotationState.busy, description: "模型角色或学校使用策略尚未保存，离开后将重新读取服务端版本。" });
   // 三智能体角色配置只在点击各自保存按钮后写入服务端；离开当前学校或标签前先处理未保存输入。
   const changeBindingContext = (action: () => void) => {
+    if (rotationBusyRef.current) return;
     // 子组件开始保存即同步通知；排队的学校切换和先前打开的确认不能在保存中卸载它。
     if (bindingsSavingRef.current || governanceSavingRef.current) return;
     const proceed = () => { if (!bindingsSavingRef.current && !governanceSavingRef.current) action(); };
@@ -552,7 +557,7 @@ export function PlatformModelConfigPage() {
         selectedTenantID={selectedTenantID}
         currentConfig={currentConfig}
         loading={schoolLoading}
-        disabled={drawerOpen || Boolean(applicationTarget) || bindingsSaving || governanceSaving || saving || applications.saving}
+        disabled={drawerOpen || Boolean(applicationTarget) || bindingsSaving || governanceSaving || saving || applications.saving || rotationState.open}
         activeCount={activeCount}
         healthyCount={healthyCount}
         textCount={textCount}
@@ -578,19 +583,19 @@ export function PlatformModelConfigPage() {
         className="platform-model-security-note"
         type="info"
         showIcon
-        message="模型用途与配置说明"
-        description={<div className="platform-model-usage-guide">
+        message="按用途独立配置学校模型；连接通过不代表已通过各用途检测。"
+        description={<details className="platform-model-usage-guide"><summary>用途与检测说明</summary>
           <p><strong>日常对话：</strong>普通回复检测通过后，可勾选多个供应商的模型。学校管理员在聊天页顶部切换。</p>
           <p><strong>试卷解析：</strong>通过结构化输出检测后，可独立指定模型或跟随默认配置；学校管理员切换聊天模型不会改变试卷解析。</p>
           <p><strong>答题卡识别：</strong>在“应用用途”中独立分配多模态模型，直接分析答题卡图像；识别结果需人工核对后发布。</p>
           <p><strong>自动阅卷与评分：</strong>点击“阅卷配置”指定本校自动阅卷 API 模型并检测图片能力，系统不会回退本地模型。多模型评审角色可按需展开；模型准入与最终确认继续按已配置策略执行。</p>
           <small>连接检查只验证接口、密钥和模型访问权限。同一学校可为同一供应商和模型配置多个 API Key，密钥分别加密保存。</small>
-        </div>}
+        </details>}
       />
 
       <Segmented
         value={activeTab}
-        disabled={bindingsSaving}
+        disabled={bindingsSaving || rotationState.open}
         options={[{ value: "models", label: "学校模型" }, { value: "bindings", label: "三智能体配置" }, { value: "governance", label: "治理与评测" }]}
         onChange={(value) => {
           const next = value as "models" | "bindings" | "governance";
@@ -603,7 +608,7 @@ export function PlatformModelConfigPage() {
 
       {activeTab === "models" ? <><div className="platform-model-library-heading">
         <h2 className="platform-model-section-title">学校模型库</h2>
-        <Space><Tooltip title="检测当前学校所有厂商的模型配置（含已停用配置），只检查连接，不发送模型生成请求">
+        <Space><CredentialRotation tenantID={selectedTenantID} configs={configs} disabled={saving || configLoading || drawerOpen || Boolean(applicationTarget)} queue={queue} onConfigSaved={(owner, config) => { commitConfig(owner, config, config.id, true); probeDetailsRef.current.delete(modelOperationKey(owner, config.id)); }} onStateChange={handleRotationState} /><Tooltip title="检测当前学校所有厂商的模型配置（含已停用配置），只检查连接，不发送模型生成请求">
           <Button icon={<Zap size={16} />} loading={Boolean(batchProbeProgress)}
             disabled={!selectedTenantID || configLoading || configs.length === 0 || Boolean(batchProbeProgress)}
             onClick={() => void probeAll()}>
@@ -613,7 +618,7 @@ export function PlatformModelConfigPage() {
       </div>
       {savedAccess?.tenantID === selectedTenantID ? <Alert type="success" showIcon message={`${savedAccess.config.display_name}：密钥及模型访问权限检查通过`} description={savedModelAccessDescription(configs.find((item) => item.id === savedAccess.config.id))} action={<Space><Button disabled={queue.isBusy(selectedTenantID, savedAccess.config.id)} onClick={() => void probe(savedAccess.config, "text")}>检测普通回复</Button><Button disabled={queue.isBusy(selectedTenantID, savedAccess.config.id)} onClick={() => void probe(savedAccess.config, "structured")}>检测结构化输出</Button></Space>} /> : null}
       <Space><span>{({ all: "全部配置", enabled: "已启用配置", connection: "已启用且访问检查通过", text: "已启用且普通回复已验证", capability: "已启用且结构化能力已验证" })[modelFilter]} · {visibleConfigs.length} 个</span>{modelFilter !== "all" ? <Button onClick={() => setModelFilter("all")}>显示全部</Button> : null}</Space>
-      <SchoolModelTable tenantID={selectedTenantID} loading={configLoading && configs.length === 0} columns={columns} configs={visibleConfigs} />
+      <SchoolModelTable tenantID={selectedTenantID} loading={configLoading && configs.length === 0} columns={columns} configs={visibleConfigs} usageLabels={Object.fromEntries(visibleConfigs.map(config => [config.id, [chatAccess.ids?.includes(config.id) ? "学校对话" : "", gradingModelIDs.has(config.id) ? "自动阅卷" : "", documentModelID === config.id ? "试卷解析" : "", applications.data?.answer_sheet_selection?.mode === "model" && applications.data.answer_sheet_selection.model_config_id === config.id ? "答题卡识别" : ""].filter(Boolean)]))} />
       {applications.error && !applicationTarget ? <Alert type="warning" showIcon message={`用途配置暂不可用：${applications.error}`} action={<Button loading={applications.loading} onClick={() => void refreshApplications()}>刷新用途</Button>} /> : null}
       </> : null}
       {activeTab === "bindings" ? <PanelModelBindingsSection tenantID={selectedTenantID} configs={configs} loadingConfigs={configLoading} onSaved={() => void refreshApplications()} onDirtyChange={setBindingsDirty} onSavingChange={handleBindingsSaving} onOpenGovernance={(view, scope) => changeBindingContext(() => {
@@ -631,7 +636,7 @@ export function PlatformModelConfigPage() {
       <ModelConfigDrawer title={applicationTarget ? `${applicationTarget.config.model_name}：${applicationTarget.type === "grading" ? "阅卷配置" : applicationTarget.type === "answer_sheet" ? "答题卡识别" : "试卷解析"}` : "应用用途"}
         width={applicationTarget?.type === "grading" ? 1120 : 560} open={Boolean(applicationTarget)} destroyOnHidden
         closable={!applicationSaving && !applications.saving} maskClosable={!applicationSaving && !applications.saving} keyboard={!applicationSaving && !applications.saving} onClose={closeApplication}>
-        {applicationTarget?.type === "grading" ? <><ImageGradingModelForm tenantID={selectedTenantID} config={configs.find(config => config.id === applicationTarget.config.id) ?? applicationTarget.config} selection={applications.data?.grading_selection} loading={applications.loading} busy={applications.saving} error={applications.error} onRefresh={() => void refreshApplications()} onDirtyChange={setApplicationDirty} onSave={mode => { void applications.saveGrading(mode, applicationTarget.config.id).then(saved => { if (saved) { setApplicationDirty(false); message.success(mode === "model" ? "自动阅卷 API 模型已设置，请检测图片能力" : "已取消自动阅卷用途"); void refreshApplications(); } }); }} /><details><summary>多模型评审角色（可选）</summary><PanelModelBindingsSection key={`${selectedTenantID}:${applicationTarget.config.id}`} tenantID={selectedTenantID} configs={configs} loadingConfigs={configLoading}
+        {applicationTarget?.type === "grading" ? <><ImageGradingModelForm tenantID={selectedTenantID} config={configs.find(config => config.id === applicationTarget.config.id) ?? applicationTarget.config} selection={applications.data?.grading_selection} loading={applications.loading} busy={applications.saving} error={applications.error} onRefresh={() => void refreshApplications()} onDirtyChange={setApplicationDirty} onSave={mode => applications.saveGrading(mode, applicationTarget.config.id).then(saved => { if (saved) { setApplicationDirty(false); message.success(mode === "model" ? "自动阅卷 API 模型已保存，正在验证图片能力" : "已取消自动阅卷用途"); void refreshApplications(); } return saved; })} /><details><summary>多模型评审角色（可选；单模型可直接测试）</summary><PanelModelBindingsSection key={`${selectedTenantID}:${applicationTarget.config.id}`} tenantID={selectedTenantID} configs={configs} loadingConfigs={configLoading}
           suggestedModelID={applicationTarget.config.id} savedUses={applications.data?.grading_uses?.filter(use => use.model_config_id === applicationTarget.config.id)} onSaved={() => void refreshApplications()} onDirtyChange={setApplicationBindingsDirty} onSavingChange={handleApplicationSaving} /></details></> : null}
         {applicationTarget?.type === "document" ? <DocumentModelForm key={`${selectedTenantID}:${applicationTarget.config.id}`} config={configs.find(config => config.id === applicationTarget.config.id) ?? applicationTarget.config}
           selection={applications.data?.document_selection} loading={applications.loading} busy={applications.saving} error={applications.error} onRefresh={() => void refreshApplications()} onDirtyChange={setApplicationDirty}

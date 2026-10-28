@@ -37,10 +37,10 @@ describe("student appeal presentation boundaries", () => {
     const pending = deferredResponse();
     installApi((call) => call.init.method === "POST" ? pending.promise : resultRoute(call, makeResult()));
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: "请核对原卷第二步已经写出的计算过程。" } });
-    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" }).disabled).toBe(false));
-    fireEvent.click(screen.getByRole("button", { name: "确认提交（仅一次）" }));
+    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(false));
+    fireEvent.click(screen.getByRole("button", { name: "提交复核申请" }));
     // 先让提交保持未决，再返回 401，覆盖忙提示与重登提示的两次显示边界。
     expectNativeStatus(await screen.findByText("正在提交复核申请，请等待回执后再切换题目或离开。"), "submission-notice");
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "退出登录" }).disabled).toBe(true);
@@ -58,15 +58,15 @@ describe("student appeal presentation boundaries", () => {
     renderOwnedAppealForm();
     expectNativeStatus(screen.getByText("正在核对已有复核申请…"));
     fireEvent.change(screen.getByRole("textbox", { name: "具体说明" }), { target: { value: "请核对原卷第二步已经写出的计算过程。" } });
-    expect(screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(true);
     await act(async () => pending.resolve(jsonResponse({ appeals: [] })));
     expect(screen.queryByText("正在核对已有复核申请…")).toBeNull();
-    expect(screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" }).disabled).toBe(false);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(false);
   });
 
   it.each([
-    { stored: true, expected: "草稿已保存在当前标签页会话，切题、返回或重新登录后可恢复；退出登录将清除。", className: "muted" },
-    { stored: false, expected: "浏览器未允许保存草稿，当前输入仅在本页保留。刷新或关闭前请先复制说明。", className: "detail-error" },
+    { stored: true, expected: "草稿仅存于当前标签页会话，切题、返回或重新登录可恢复；退出登录会清除。", className: "muted" },
+    { stored: false, expected: "草稿未能保存，仅在本页保留。刷新或关闭前，请先复制说明。", className: "detail-error" },
   ])("keeps the draft status, input and region-only condition when stored=$stored", async ({ stored, expected, className }) => {
     installApi();
     const storageKey = renderOwnedAppealForm();
@@ -81,20 +81,21 @@ describe("student appeal presentation boundaries", () => {
     expect(readAppealDraft(storageKey)?.reason).toBe(value);
     fireEvent.change(reason, { target: { value: "" } });
     expect(screen.queryByText(expected)).toBeNull();
+    if (!screen.queryByAltText("本题答题区域")) fireEvent.click(screen.getByRole("button", { name: "标记争议位置（可选）" }));
     fireEvent.load(screen.getByAltText("本题答题区域"));
     fireEvent.click(screen.getByRole("button", { name: "选择整个答题区域" }));
     expectNativeStatus(screen.getByText(expected), className);
     expect(reason.value).toBe("");
-    expect(screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(true);
   });
 
   it.each([
-    { decision: "reject", status: "resolved", expected: "处理结论：本次申请未被支持。" },
-    { decision: "refer_regrade", status: "rejected", expected: "处理结论：本次申请未被支持。" },
-    { decision: "refer_regrade", status: "submitted", expected: "处理结论：已支持复核，转入重评。" },
-    { decision: undefined, status: "upheld_pending_regrade", expected: "处理结论：已支持复核，转入重评。" },
-    { decision: undefined, status: "resolved", expected: "处理结论：已支持复核，转入重评。" },
-    { decision: undefined, status: "submitted", expected: "处理结论：等待学校复核。" },
+    { decision: "reject", status: "resolved", expected: "学校决定：未支持本次申请。" },
+    { decision: "refer_regrade", status: "rejected", expected: "学校决定：未支持本次申请。" },
+    { decision: "refer_regrade", status: "submitted", expected: "学校决定：支持复核，交由重新评分。" },
+    { decision: undefined, status: "upheld_pending_regrade", expected: "学校决定：支持复核，交由重新评分。" },
+    { decision: undefined, status: "resolved", expected: "学校决定：支持复核，交由重新评分。" },
+    { decision: undefined, status: "submitted", expected: "学校复核中" },
   ] as const)("keeps the rendered conclusion for decision=$decision and status=$status", async ({ decision, status, expected }) => {
     const appeal = makeAppeal({ decision, status });
     installApi((call) => call.url.pathname === "/api/v1/student/question-appeals" ? jsonResponse({ appeals: [appeal] }) : resultRoute(call, makeResult()));
@@ -109,6 +110,6 @@ describe("student appeal presentation boundaries", () => {
   ])("keeps the full matching-release text with $name", ({ questions, suffix }) => {
     const appeal = makeAppeal({ status: "resolved", new_release_id: "release-9", new_release_version: 9 });
     const current = makeResult(questions, { release_id: "release-9", release_version: 9 });
-    expect(appealReleaseState(appeal, current)).toBe(`本次处理关联的第 9 版已是当前生效成绩${suffix}。`);
+    expect(appealReleaseState(appeal, current)).toBe(`本次复核关联的第 9 版已是当前生效成绩${suffix}。`);
   });
 });

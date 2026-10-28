@@ -8,6 +8,7 @@ import type { useQuestionEditor } from "./hooks/useQuestionEditor";
 import type { useRubricEditor } from "./hooks/useRubricEditor";
 import type { useGroupedQuestionScores } from "./hooks/useGroupedQuestionScores";
 import type { QuestionFilter, QuestionIssueTarget, questionEditingAccess } from "./paperQuestionPresentation";
+import type { RegisterQuestionSaveParticipant } from "./questionSaveParticipant";
 
 export interface PaperRubricPageProps {
   canManage: boolean;
@@ -16,6 +17,8 @@ export interface PaperRubricPageProps {
   canImportQuestionBank?: boolean;
   questionBankScope?: string;
   initialExamId?: string;
+  initialQuestionId?: string;
+  initialQuestionTarget?: QuestionIssueTarget;
   fixedExamId?: string;
   mode?: "standalone" | "embedded";
   initialView?: "materials" | "questions";
@@ -59,8 +62,10 @@ export interface PaperRubricViewContext {
     visibleQuestions: Question[];
     selectedQuestionIndex: number;
     watchedQuestionType: string | undefined;
+    auxiliaryDirty?: boolean;
   };
   actions: {
+    registerSaveParticipant?: RegisterQuestionSaveParticipant;
     setDetailTab: Dispatch<SetStateAction<string>>;
     setQuestionFilter: Dispatch<SetStateAction<QuestionFilter>>;
     setQuestionSearch: Dispatch<SetStateAction<string>>;

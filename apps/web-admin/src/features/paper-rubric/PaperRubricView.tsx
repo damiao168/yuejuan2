@@ -139,20 +139,21 @@ function PaperQuestionTools({ context }: ViewProps) {
   const tools = <>
     <PaperRubricJobsButton />
     <PaperGroupedQuestionScores key={selectedExam?.id} context={context} />
-    <PaperQuestionIssues key={`issues:${selectedExam?.id}`} context={context} />
+    {options.initialView !== "questions" && <PaperQuestionIssues key={`issues:${selectedExam?.id}`} context={context} />}
     <PaperBankActions context={context} />
     {options.initialView === "materials" && <Button onClick={() => questionWorkflow.setShowQuestionEditor(current => !current)}>
       {questionEditorToggleLabel(questionWorkflow.showQuestionEditor, config.questions.length)}
     </Button>}
   </>;
   return <section id="paper-question-tools" className="paper-question-tools" aria-label="题目工具">
-    {options.initialView === "questions" && selectedExam ? <PaperQuestionConfirmation compact
+    {options.initialView === "questions" && selectedExam ? <PaperQuestionConfirmation compact autoCheck
       examId={selectedExam.id}
       configurationKey={JSON.stringify([selectedExam.revision, selectedExam.total_score, config.questions, latestPaperImport?.id, latestPaperImport?.generation, structureConfirmed])}
       canManage={options.canManage && (selectedExam.status === "draft" || selectedExam.status === "configured")}
       disabled={state.unsavedWork || groupedScores.dirty || state.saveBusy || state.saveRefreshPending || importWorkflow.reviewDirty || importWorkflow.parsing || importWorkflow.fillingImportContent || importWorkflow.savingImportReview || importWorkflow.updatingImportSources}
       disabledReason={state.saveRefreshPending ? "请先重新读取保存结果，再检查题目配置。" : groupedScores.dirty ? "请先保存或恢复批量分值修改，再检查题目配置。" : state.unsavedWork || importWorkflow.reviewDirty ? "请先保存当前修改，再检查题目配置。" : "请等待保存和资料处理完成。"}
-      actions={tools} onOpenCheck={check => openIssue(check.code)} onChecked={() => options.onExamChanged?.()} />
+      actions={tools} onOpenCheck={check => openIssue(check.code)} onChecked={() => options.onExamChanged?.()}
+      questionIssues={close => <PaperQuestionIssues key={`issues:${selectedExam?.id}`} context={context} inline onHandled={close} />} />
       : <div className="paper-step-toolbar">{tools}</div>}
   </section>;
 }
@@ -163,6 +164,7 @@ function PaperSourceDrawer({ context }: ViewProps) {
     <div className="paper-source-context"><h3>题目来源</h3>
       <p>{selectedQuestion?.paper_import_id ? "本题由考试资料识别导入" : "本题暂无已关联的识别来源"}</p>
       {Boolean(selectedQuestion?.paper_import_source_refs?.length) && <p>已记录 {selectedQuestion?.paper_import_source_refs?.length} 处题目来源；教师解析来源 {selectedQuestion?.solution?.source_refs.length ?? 0} 处。</p>}
+      {[...(selectedQuestion?.paper_import_source_refs ?? []), ...(selectedQuestion?.solution?.source_refs ?? [])].map((ref, index) => <Button key={`${ref.file_asset_id}:${ref.page_no}:${index}`} onClick={() => void context.importWorkflow.openImportSource(ref.file_asset_id, ref.page_no)}>打开来源{ref.page_no ? `第 ${ref.page_no} 页` : ` ${index + 1}`}</Button>)}
       <h3>答题区域</h3><p>答题卡上的作答区域应在模板中可视化框选，不在题目配置中填写坐标。</p>
       {options.onNavigate && selectedExam && <Button onClick={actions.openTemplate}>打开答题卡模板</Button>}
     </div>

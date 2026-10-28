@@ -384,7 +384,23 @@ import type {
   CaptureFileResponse,
   CaptureCollectionResponse,
   CompleteCaptureCollectionRequest,
-  ExcludeCaptureFileRequest
+  ExcludeCaptureFileRequest,
+  ManagedModelAPIConfigUpdateInput,
+  ManagedModelAPIConfigResponse,
+  QuestionBankHandoffRequest,
+  QuestionBankClaimRequest,
+  QuestionBankHandoffEventsResponse,
+  AIEligibilityDecisionPage,
+  AuditLogPage,
+  PublicSchoolNameResponse,
+  SubjectiveGradingSourcePage,
+  PrivateOpinionDraftResponse,
+  PutPrivateOpinionDraftRequest,
+  DeletePrivateOpinionDraftRequest,
+  CalibrationSchoolTemplateDirectory,
+  ApproveCalibrationSchoolTemplateRequest,
+  WithdrawCalibrationSchoolTemplateRequest,
+  CalibrationSchoolTemplateResponse
 } from "./types";
 
 export interface operations {
@@ -669,7 +685,7 @@ export interface operations {
   "listQuestionBankMembers": { args: { path: { "bankId": string; }; signal?: AbortSignal; }; response: QuestionBankMembersResponse; };
   "getQuestionBankACL": { args: { path: { "bankId": string; }; signal?: AbortSignal; }; response: QuestionBankACLResponse; };
   "updateQuestionBankACL": { args: { path: { "bankId": string; }; headers: { "Idempotency-Key": string; }; body: UpdateQuestionBankACLRequest; signal?: AbortSignal; }; response: QuestionBankACLResponse; };
-  "searchQuestionBankItems": { args: { query?: { "q"?: string; "bank_id"?: string; "subject_code"?: SubjectCode; "knowledge_point"?: string; "question_type"?: string; "archetype"?: string; "workflow_status"?: "draft" | "reviewing" | "approved" | "published"; "difficulty_band"?: string; "cognitive_level"?: string; "copyright"?: string; "intended_use"?: string; "use_policy"?: "practice_only" | "exam_allowed"; "metadata_key"?: string; "metadata_value"?: string; "statistics_available"?: boolean; "mode"?: "default" | "published" | "my_drafts" | "all"; "sort"?: "updated_desc" | "created_desc" | "item_code_asc"; "limit"?: number; "offset"?: number; }; signal?: AbortSignal; }; response: QuestionBankSearchPage; };
+  "searchQuestionBankItems": { args: { query?: { "q"?: string; "bank_id"?: string; "subject_code"?: SubjectCode; "knowledge_point"?: string; "question_type"?: string; "archetype"?: string; "workflow_status"?: "draft" | "reviewing" | "approved" | "published"; "difficulty_band"?: string; "cognitive_level"?: string; "copyright"?: string; "intended_use"?: string; "use_policy"?: "practice_only" | "exam_allowed"; "metadata_key"?: string; "metadata_value"?: string; "statistics_available"?: boolean; "mode"?: "default" | "published" | "my_drafts" | "all"; "sort"?: "updated_desc" | "created_desc" | "item_code_asc"; "limit"?: number; "offset"?: number; "pending_action"?: "review" | "publish"; }; signal?: AbortSignal; }; response: QuestionBankSearchPage; };
   "retireQuestionBankItem": { args: { path: { "itemId": string; }; headers: { "Idempotency-Key": string; }; body: RetireQuestionBankItemRequest; signal?: AbortSignal; }; response: QuestionBankItemResponse; };
   "previewQuestionBankImports": { args: { body: QuestionBankImportPreviewRequest; signal?: AbortSignal; }; response: QuestionBankImportPreviewBatch; };
   "confirmQuestionBankImportBatch": { args: { body: QuestionBankBatchImportRequest; signal?: AbortSignal; }; response: QuestionBankBatchImportResult; };
@@ -745,6 +761,28 @@ export interface operations {
   "getQuestionBankReferenceMaterialImage": { args: { path: { "versionId": string; "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
   "getGoldPaperVersionImage": { args: { path: { "id": string; "version": number; }; signal?: AbortSignal; }; response: unknown; };
   "getCalibrationSampleImage": { args: { path: { "id": string; "goldId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "updateManagedModelAPIConfig": { args: { path: { "id": string; }; query: { "tenant_id": string; }; body: ManagedModelAPIConfigUpdateInput; signal?: AbortSignal; }; response: ManagedModelAPIConfigResponse; };
+  "assignQuestionBankHandoff": { args: { path: { "versionId": string; }; headers: { "Idempotency-Key": string; }; body: QuestionBankHandoffRequest; signal?: AbortSignal; }; response: QuestionBankVersionResponse; };
+  "claimQuestionBankReview": { args: { path: { "versionId": string; }; headers: { "Idempotency-Key": string; }; body: QuestionBankClaimRequest; signal?: AbortSignal; }; response: QuestionBankVersionResponse; };
+  "claimQuestionBankPublish": { args: { path: { "versionId": string; }; headers: { "Idempotency-Key": string; }; body: QuestionBankClaimRequest; signal?: AbortSignal; }; response: QuestionBankVersionResponse; };
+  "listQuestionBankHandoffEvents": { args: { path: { "versionId": string; }; signal?: AbortSignal; }; response: QuestionBankHandoffEventsResponse; };
+  "listAIEligibilityDecisions": { args: { query?: { "tenant_id"?: string; "q"?: string; "cursor"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: AIEligibilityDecisionPage; };
+  "listAuditLogs": { args: { query?: { "action"?: string; "actor_id"?: string; "target_type"?: string; "target_id"?: string; "exam_id"?: string; "ip_address"?: string; "created_from"?: string; "created_to"?: string; "q"?: string; "cursor"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: AuditLogPage; };
+  "exportAuditLogs": { args: { query?: { "action"?: string; "actor_id"?: string; "target_type"?: string; "target_id"?: string; "exam_id"?: string; "ip_address"?: string; "created_from"?: string; "created_to"?: string; "q"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: unknown; };
+  "getPublicSchoolName": { args: { path: { "code": string; }; signal?: AbortSignal; }; response: PublicSchoolNameResponse; };
+  "listSubjectiveGradingSources": { args: { path: { "examId": string; }; query?: { "question_id"?: string; "cursor"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: SubjectiveGradingSourcePage; };
+  "getQuestionAppealPrivateDraft": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: PrivateOpinionDraftResponse; };
+  "saveQuestionAppealPrivateDraft": { args: { path: { "id": string; }; body: PutPrivateOpinionDraftRequest; signal?: AbortSignal; }; response: PrivateOpinionDraftResponse; };
+  "deleteQuestionAppealPrivateDraft": { args: { path: { "id": string; }; body: DeletePrivateOpinionDraftRequest; signal?: AbortSignal; }; response: PrivateOpinionDraftResponse; };
+  "getAppealPrivateDraft": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: PrivateOpinionDraftResponse; };
+  "saveAppealPrivateDraft": { args: { path: { "id": string; }; body: PutPrivateOpinionDraftRequest; signal?: AbortSignal; }; response: PrivateOpinionDraftResponse; };
+  "deleteAppealPrivateDraft": { args: { path: { "id": string; }; body: DeletePrivateOpinionDraftRequest; signal?: AbortSignal; }; response: PrivateOpinionDraftResponse; };
+  "getArbitrationPrivateDraft": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: PrivateOpinionDraftResponse; };
+  "saveArbitrationPrivateDraft": { args: { path: { "id": string; }; body: PutPrivateOpinionDraftRequest; signal?: AbortSignal; }; response: PrivateOpinionDraftResponse; };
+  "deleteArbitrationPrivateDraft": { args: { path: { "id": string; }; body: DeletePrivateOpinionDraftRequest; signal?: AbortSignal; }; response: PrivateOpinionDraftResponse; };
+  "listCalibrationSchoolTemplates": { args: { path: { "examId": string; "questionId": string; }; signal?: AbortSignal; }; response: CalibrationSchoolTemplateDirectory; };
+  "approveCalibrationSchoolTemplate": { args: { path: { "examId": string; "questionId": string; }; body: ApproveCalibrationSchoolTemplateRequest; signal?: AbortSignal; }; response: CalibrationSchoolTemplateResponse; };
+  "withdrawCalibrationSchoolTemplate": { args: { path: { "examId": string; "questionId": string; "templateId": string; }; body: WithdrawCalibrationSchoolTemplateRequest; signal?: AbortSignal; }; response: CalibrationSchoolTemplateResponse; };
 }
 
 export class EduGradeApi {
@@ -2533,5 +2571,115 @@ export class EduGradeApi {
   getCalibrationSampleImage(args: operations["getCalibrationSampleImage"]["args"]): Promise<operations["getCalibrationSampleImage"]["response"]> {
     const requestPath = fillPath("/api/v1/calibration-sessions/{id}/samples/{goldId}/image", args.path);
     return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  updateManagedModelAPIConfig(args: operations["updateManagedModelAPIConfig"]["args"]): Promise<operations["updateManagedModelAPIConfig"]["response"]> {
+    const requestPath = appendQuery(fillPath("/api/v1/platform/model-api-configs/{id}", args.path), args.query);
+    return this.transport.request(requestPath, { method: "PATCH", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  assignQuestionBankHandoff(args: operations["assignQuestionBankHandoff"]["args"]): Promise<operations["assignQuestionBankHandoff"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-bank/versions/{versionId}/handoff", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  claimQuestionBankReview(args: operations["claimQuestionBankReview"]["args"]): Promise<operations["claimQuestionBankReview"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-bank/versions/{versionId}/claim-review", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  claimQuestionBankPublish(args: operations["claimQuestionBankPublish"]["args"]): Promise<operations["claimQuestionBankPublish"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-bank/versions/{versionId}/claim-publish", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  listQuestionBankHandoffEvents(args: operations["listQuestionBankHandoffEvents"]["args"]): Promise<operations["listQuestionBankHandoffEvents"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-bank/versions/{versionId}/handoff-events", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listAIEligibilityDecisions(args: operations["listAIEligibilityDecisions"]["args"] = {}): Promise<operations["listAIEligibilityDecisions"]["response"]> {
+    const requestPath = appendQuery("/api/v1/ai-eligibility/decisions", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listAuditLogs(args: operations["listAuditLogs"]["args"] = {}): Promise<operations["listAuditLogs"]["response"]> {
+    const requestPath = appendQuery("/api/v1/audit-logs", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  exportAuditLogs(args: operations["exportAuditLogs"]["args"] = {}): Promise<operations["exportAuditLogs"]["response"]> {
+    const requestPath = appendQuery("/api/v1/audit-logs/export", args.query);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+  }
+
+  getPublicSchoolName(args: operations["getPublicSchoolName"]["args"]): Promise<operations["getPublicSchoolName"]["response"]> {
+    const requestPath = fillPath("/api/v1/public/schools/{code}", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  listSubjectiveGradingSources(args: operations["listSubjectiveGradingSources"]["args"]): Promise<operations["listSubjectiveGradingSources"]["response"]> {
+    const requestPath = appendQuery(fillPath("/api/v1/exams/{examId}/subjective-grading-sources", args.path), args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getQuestionAppealPrivateDraft(args: operations["getQuestionAppealPrivateDraft"]["args"]): Promise<operations["getQuestionAppealPrivateDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-appeals/{id}/private-draft", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  saveQuestionAppealPrivateDraft(args: operations["saveQuestionAppealPrivateDraft"]["args"]): Promise<operations["saveQuestionAppealPrivateDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-appeals/{id}/private-draft", args.path);
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  deleteQuestionAppealPrivateDraft(args: operations["deleteQuestionAppealPrivateDraft"]["args"]): Promise<operations["deleteQuestionAppealPrivateDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-appeals/{id}/private-draft", args.path);
+    return this.transport.request(requestPath, { method: "DELETE", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getAppealPrivateDraft(args: operations["getAppealPrivateDraft"]["args"]): Promise<operations["getAppealPrivateDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/appeals/{id}/private-draft", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  saveAppealPrivateDraft(args: operations["saveAppealPrivateDraft"]["args"]): Promise<operations["saveAppealPrivateDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/appeals/{id}/private-draft", args.path);
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  deleteAppealPrivateDraft(args: operations["deleteAppealPrivateDraft"]["args"]): Promise<operations["deleteAppealPrivateDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/appeals/{id}/private-draft", args.path);
+    return this.transport.request(requestPath, { method: "DELETE", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getArbitrationPrivateDraft(args: operations["getArbitrationPrivateDraft"]["args"]): Promise<operations["getArbitrationPrivateDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/arbitration-tasks/{id}/private-draft", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  saveArbitrationPrivateDraft(args: operations["saveArbitrationPrivateDraft"]["args"]): Promise<operations["saveArbitrationPrivateDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/arbitration-tasks/{id}/private-draft", args.path);
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  deleteArbitrationPrivateDraft(args: operations["deleteArbitrationPrivateDraft"]["args"]): Promise<operations["deleteArbitrationPrivateDraft"]["response"]> {
+    const requestPath = fillPath("/api/v1/arbitration-tasks/{id}/private-draft", args.path);
+    return this.transport.request(requestPath, { method: "DELETE", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  listCalibrationSchoolTemplates(args: operations["listCalibrationSchoolTemplates"]["args"]): Promise<operations["listCalibrationSchoolTemplates"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/calibration-templates", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  approveCalibrationSchoolTemplate(args: operations["approveCalibrationSchoolTemplate"]["args"]): Promise<operations["approveCalibrationSchoolTemplate"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/calibration-templates", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  withdrawCalibrationSchoolTemplate(args: operations["withdrawCalibrationSchoolTemplate"]["args"]): Promise<operations["withdrawCalibrationSchoolTemplate"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/calibration-templates/{templateId}/withdraw", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 }

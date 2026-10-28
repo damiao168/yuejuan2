@@ -1,0 +1,821 @@
+{
+  "date": "2026-10-28",
+  "scope": "学生端、桌面、成员与平台管理31项",
+  "status": "in_progress",
+  "findings": [
+    {
+      "id": "S01",
+      "priority": "P2",
+      "status": "partial",
+      "implementation": "学校链接可用school参数预填；尚未读取学校名称并折叠切换学校。",
+      "files": [
+        "apps/student-portal/src/features/session/SessionScreens.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。"
+    },
+    {
+      "id": "S02",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "最近考试不再重复列入其他考试，统一查看成绩入口。",
+      "files": [
+        "apps/student-portal/src/features/results/ExamList.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。"
+    },
+    {
+      "id": "S03",
+      "priority": "P1",
+      "status": "fixed",
+      "implementation": "普通作答阅读不挂复核表；明确申请后才读取申请和显示表单，保留原版草稿、会话和回执保护。",
+      "files": [
+        "apps/student-portal/src/features/questions/QuestionTables.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。"
+    },
+    {
+      "id": "S04",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "圈选主动开启才挂载，复用原卷画布，同一时刻只显示一张图；收起保留区域。",
+      "files": [
+        "apps/student-portal/src/features/questions/AnswerReview.tsx",
+        "apps/student-portal/src/features/questions/QuestionTables.tsx",
+        "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。"
+    },
+    {
+      "id": "S05",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "逐题默认题号/我的得分/失分；比较数据按需打开，范围不再重复两列。",
+      "files": [
+        "apps/student-portal/src/features/questions/QuestionTables.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。"
+    },
+    {
+      "id": "S06",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "页面统一更新成绩与复核进度，复核记录共享当前发布核验，不额外GET成绩或要求第二刷新。",
+      "files": [
+        "apps/student-portal/src/features/results/ResultDetail.tsx",
+        "apps/student-portal/src/features/appeals/AppealStatus.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。"
+    },
+    {
+      "id": "S07",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "首屏保留状态、历史分数变化、学校回复；时间/版本/关联事实进处理详情，相同当前分数不重复。",
+      "files": [
+        "apps/student-portal/src/features/appeals/AppealStatus.tsx"
+      ],
+      "verification": "student-final-tests.log + student-verified-tests.log：覆盖学生全部26文件，最后失败文件按最新源码重跑5文件59项均通过；未验证真实生产账号。"
+    },
+    {
+      "id": "D01",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "地址与学校账号在同一连接页表单区，填写后直接登录；单独地址保存和连接检查进入可选区，认证边界保持。",
+      "files": [
+        "apps/desktop-client/src/App.tsx"
+      ],
+      "verification": "desktop-tests.log/desktop-entry-tests.log/desktop-task-entry-verified-tests.log按最新涉及文件定向回归通过；未验证原生硬件。"
+    },
+    {
+      "id": "D02",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "工作台紧凑任务选择配开始/继续，优先读取本机评分草稿，无原稿才下载；重复目录与重新下载放恢复工具，下一份沿用同一路径。",
+      "files": [
+        "apps/desktop-client/src/App.tsx",
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+        "apps/desktop-client/src/components/offlineWorkbench/useOfflineWorkbench.tsx"
+      ],
+      "verification": "desktop-tests.log/desktop-entry-tests.log/desktop-task-entry-verified-tests.log按最新涉及文件定向回归通过；未验证原生硬件。"
+    },
+    {
+      "id": "D03",
+      "priority": "P1",
+      "status": "fixed",
+      "implementation": "考试批次先于模板参数与设备；选批次后自动读模板及进度。",
+      "files": [
+        "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+        "apps/desktop-client/src/features/capture/useExamCaptureContext.ts"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "D04",
+      "priority": "P1",
+      "status": "partial",
+      "implementation": "批次选择自动读进度、图像质量，收起重复名称刷新；尚未统一上传后所有检查与页数检查。",
+      "files": [
+        "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+        "apps/desktop-client/src/features/capture/useExamCaptureContext.ts"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "D05",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "现有文件导入为默认，设备设置进设备诊断可选区。",
+      "files": [
+        "apps/desktop-client/src/features/scan/ScanWorkspace.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "D06",
+      "priority": "P1",
+      "status": "partial",
+      "implementation": "能力明确为离线评分草稿，保留图片需联网限制；完整加密图片离线准备尚未实现。",
+      "files": [
+        "apps/desktop-client/src/App.tsx",
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "D07",
+      "priority": "P1",
+      "status": "fixed",
+      "implementation": "主动改评分点自动汇总；调整总分显式开启，历史恢复不重算，差异原因保护保留。",
+      "files": [
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx"
+      ],
+      "verification": "desktop-tests.log/desktop-entry-tests.log/desktop-task-entry-verified-tests.log按最新涉及文件定向回归通过；未验证原生硬件。"
+    },
+    {
+      "id": "D08",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "默认学生反馈，内部两字段折叠；差异总分或已有原因时才展示原因。",
+      "files": [
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx"
+      ],
+      "verification": "desktop-tests.log/desktop-entry-tests.log/desktop-task-entry-verified-tests.log按最新涉及文件定向回归通过；未验证原生硬件。"
+    },
+    {
+      "id": "D09",
+      "priority": "P2",
+      "status": "already_fixed",
+      "implementation": "原生加密存储与开发密钥文案已按运行环境区分。",
+      "files": [
+        "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "D10",
+      "priority": "P2",
+      "status": "partial",
+      "implementation": "提前明确PDF不可作为可解码材料并提供下一步；受控逐页图像转换尚未实现。",
+      "files": [
+        "apps/desktop-client/src/components/AnswerDocumentViewer.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "O01",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "日常与初始化都选择初一至高三业务年级，自动派生学段、序号与默认名称，自定义显示名可选。",
+      "files": [
+        "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+        "apps/web-admin/src/pages/OrganizationSetupPage.tsx"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。"
+    },
+    {
+      "id": "O02",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "宽屏左侧年级导航，窄屏下拉互斥显示。",
+      "files": [
+        "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+        "apps/web-admin/src/styles/features/member-management.css"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "O03",
+      "priority": "P1",
+      "status": "fixed",
+      "implementation": "根智能体正式增加read-excel-file依赖与Worker解析xlsx，支持多工作表、文本学号与数字原字符串；复用中文列识别、人工映射、整班范围、原始行号预检。页面关闭/换文件取消旧读取，POST期间同步ref锁与输入冻结，回包属于冻结名单代次。",
+      "files": [
+        "apps/web-admin/src/features/members/students/studentImport.ts",
+        "apps/web-admin/src/pages/StudentManagementPage.tsx",
+        "apps/web-admin/src/features/members/students/studentImportWorkbook.ts",
+        "apps/web-admin/src/features/members/students/studentImportWorkbook.worker.ts",
+        "apps/web-admin/src/features/members/students/studentImportSheet.ts",
+        "apps/web-admin/src/pages/StudentManagementPage.import.test.tsx"
+      ],
+      "verification": "student-import-verified.log 解析与预检11项通过；student-import-page-tests.log真实页面5项通过，覆盖旧Promise不回填、多sheet、POST重复提交/取消/换文件和冻结控件。"
+    },
+    {
+      "id": "O04",
+      "priority": "P1",
+      "status": "partial",
+      "implementation": "去掉内部分页，服务端条件与加载更多保留；本地关键词明确只搜已加载，尚无全量关键词接口。",
+      "files": [
+        "apps/web-admin/src/pages/AuditLogPage.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "O05",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "人员加载失败保持姓名选择器并给专用重试，不要求内部ID。",
+      "files": [
+        "apps/web-admin/src/pages/AuditLogPage.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "O06",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "列表精简为模型、可用性、已配置用途和设置；三种技术检测及用途操作进按行设置诊断。",
+      "files": [
+        "apps/web-admin/src/features/platform-model-config/components/SchoolModelTable.tsx",
+        "apps/web-admin/src/pages/PlatformModelConfigPage.tsx"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。"
+    },
+    {
+      "id": "O07",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "设置并验证串行保存用途再探测；保存事实与检测失败分开呈现，支持重试。",
+      "files": [
+        "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.tsx",
+        "apps/web-admin/src/features/platform-model-config/hooks/useModelApplications.ts"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。"
+    },
+    {
+      "id": "O08",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "同学校/供应商/HTTPS同源显式批选轮换；逐项反馈，服务端只改密钥并在探测前后校验版本，切校停止后续。",
+      "files": [
+        "apps/web-admin/src/features/platform-model-config/components/CredentialRotation.tsx",
+        "apps/web-admin/src/api/modelApiConfig.ts",
+        "services/api-gateway/internal/modelgovernance/managed_config.go",
+        "services/api-gateway/internal/modelgovernance/managed_config_handlers.go"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。"
+    },
+    {
+      "id": "O09",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "统一保存全部更改，整批预检、逐角色修订、失败停止保留其他草稿；强度等级只高级显示。",
+      "files": [
+        "apps/web-admin/src/pages/PanelModelBindingsSection.tsx"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。"
+    },
+    {
+      "id": "O10",
+      "priority": "P1",
+      "status": "fixed",
+      "implementation": "导入JSON预填批次与候选全部指标；哈希、授权、样本和重复范围校验，相同证据范围才可复用当前学校已验证模型，仍人工保存/冻结/批准。",
+      "files": [
+        "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+        "apps/web-admin/src/components/model-governance/evaluationReportImport.ts"
+      ],
+      "verification": "ops-verified-tests.log中O08/O09/O10模块通过；ops-layout-tests.log全部3文件95项通过；O08后端model-go-tests.log整包通过。"
+    },
+    {
+      "id": "O11",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "TOTP可选试点在已生效安全功能后折叠展示，边界说明与恢复码保护保留。",
+      "files": [
+        "apps/web-admin/src/pages/SessionManagementPage.tsx",
+        "apps/web-admin/src/components/TOTPManagement.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "O12",
+      "priority": "P2",
+      "status": "fixed",
+      "implementation": "活动/成员/模型/用量各失败区就地重试，原范围继续请求，迟到旧校请求丢弃。",
+      "files": [
+        "apps/web-admin/src/features/platform/schools/SchoolActivityTab.tsx",
+        "apps/web-admin/src/features/platform/schools/SchoolMembersTab.tsx",
+        "apps/web-admin/src/features/platform/schools/SchoolModelsTab.tsx",
+        "apps/web-admin/src/features/platform/schools/SchoolUsageTab.tsx"
+      ],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    },
+    {
+      "id": "O13",
+      "priority": "P1",
+      "status": "partial",
+      "implementation": "人工任务改授权选择器，同学校/考试/题目/答卷段核对；权限失败不扩大查询。平台review列表不具备自动代管权限，需学校授权。AI运行项列表和直接准入跳转尚未实现。",
+      "files": [
+        "apps/web-admin/src/api/scoringAssurance.ts",
+        "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx",
+        "apps/web-admin/src/components/model-governance/DisagreementTaskSelector.tsx"
+      ],
+      "verification": "assurance-task-verified-tests.log 25项、assurance-selector-final-tests.log 24项通过，模拟接口不代表平台获得学校阅卷权限。"
+    },
+    {
+      "id": "O14",
+      "priority": "P2",
+      "status": "pending",
+      "implementation": "候选汇总与逐答卷证据统一材料入口尚未实现。",
+      "files": [],
+      "verification": "当前回归收拢中，见verification_runs；未把通过静态审读等同真实硬件或生产集成。"
+    }
+  ],
+  "verification_runs": [
+    {
+      "log": "desktop-tests.log",
+      "result": "4 files / 114 tests passed; before D01/D02 entry changes, latest entry tests running"
+    },
+    {
+      "log": "model-go-tests.log",
+      "result": "Go modelgovernance package passed 9.451s, includes rotation before/during probe conflicts"
+    },
+    {
+      "log": "ops-verified-tests.log",
+      "result": "O08/O09/O10 modules passed; PlatformModelPage 18 old layout expectations failed and corrected"
+    },
+    {
+      "log": "ops-layout-tests.log",
+      "result": "3 files / 95 tests passed: PlatformModelPage82, OrganizationSetup10, CredentialRotation3"
+    },
+    {
+      "log": "student-verified-tests.log",
+      "result": "5 files / 59 tests passed, includes all previously failing student recovery files and new single-image behavior"
+    },
+    {
+      "log": "student-final-tests.log",
+      "result": "24 files / 233 tests passed before remaining 8 test updates; failed files now all passed in student-verified-tests.log"
+    },
+    {
+      "log": "assurance-task-tests.log",
+      "result": "28 passed, 2 old tests bypassing task selector updated; rerun pending"
+    },
+    {
+      "log": "desktop-entry-tests.log",
+      "result": "2 files / 87 tests passed after D01/D02; desktop-task-entry-verified-tests.log 1 file / 83 tests passed including new start/continue recovery without download"
+    },
+    {
+      "log": "assurance-task-verified-tests.log",
+      "result": "3 files / 25 tests passed after selector integration and API scope tests"
+    },
+    {
+      "log": "assurance-selector-final-tests.log",
+      "result": "3 files / 24 tests passed including real selector retry/late-account behavior and parent stale receipt protection"
+    },
+    {
+      "log": "student-import-verified.log",
+      "result": "11 parser/preflight tests passed (root implementation)"
+    },
+    {
+      "log": "student-import-page-tests.log",
+      "result": "1 file / 5 page-level tests passed"
+    }
+  ],
+  "files": [
+    {
+      "path": "apps/desktop-client/src/App.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/AnswerDocumentViewer.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/OfflineWorkbench.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "本次修改/相关状态维护点已核对，未计全文审读。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/components/offlineWorkbench/useOfflineWorkbench.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/capture/useExamCaptureContext.ts",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.productUx.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.reauthentication.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.releaseConsistency.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.submissionReceipt.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/App.volatileReceipt.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/appeals/AppealStatus.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/AnswerReview.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/questions/QuestionTables.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/results/ExamList.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/results/ResultDetail.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/student-portal/src/features/session/SessionScreens.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/api/modelApiConfig.ts",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/api/scoringAssurance.tasks.test.ts",
+      "status": "annotated",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/api/scoringAssurance.ts",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "本次修改/相关状态维护点已核对，未计全文审读。"
+    },
+    {
+      "path": "apps/web-admin/src/components/TOTPManagement.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/DisagreementTaskSelector.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "新建回归完整审读，测试名说明学校切换、重试和不扩大权限边界。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/DisagreementTaskSelector.tsx",
+      "status": "annotated",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ModelEvaluationWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.batch11.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "本次修改/相关状态维护点已核对，未计全文审读。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.scope.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "本次修改/相关状态维护点已核对，未计全文审读。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/ScoringAssuranceWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/evaluationReportImport.test.ts",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/model-governance/evaluationReportImport.ts",
+      "status": "annotated",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/students/studentImport.ts",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/students/studentImportSheet.ts",
+      "status": "existing_sufficient",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "已全文核对Worker终止、数字字符串、原始行号保留；页面回归为独立审阅者新增，业务文件由根智能体维护。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/students/studentImportWorkbook.ts",
+      "status": "existing_sufficient",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "已全文核对Worker终止、数字字符串、原始行号保留；页面回归为独立审阅者新增，业务文件由根智能体维护。"
+    },
+    {
+      "path": "apps/web-admin/src/features/members/students/studentImportWorkbook.worker.ts",
+      "status": "existing_sufficient",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "已全文核对Worker终止、数字字符串、原始行号保留；页面回归为独立审阅者新增，业务文件由根智能体维护。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/CredentialRotation.test.tsx",
+      "status": "annotated",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/CredentialRotation.tsx",
+      "status": "annotated",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/components/SchoolModelTable.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform-model-config/hooks/useModelApplications.ts",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolActivityTab.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolMembersTab.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolModelsTab.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/platform/schools/SchoolUsageTab.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AuditLogPage.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PanelModelBindingsSection.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformModelConfigPage.test.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SessionManagementPage.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/StudentManagementPage.import.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "已全文核对Worker终止、数字字符串、原始行号保留；页面回归为独立审阅者新增，业务文件由根智能体维护。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/StudentManagementPage.tsx",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/member-management.css",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/styles/features/model-config.css",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "本次修改/相关状态维护点已核对，未计全文审读。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config.go",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_config_handlers.go",
+      "status": "pending",
+      "read_scope": "modified_maintenance_points_and_related_calls_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/modelgovernance/managed_credential_rotation_test.go",
+      "status": "annotated",
+      "read_scope": "full_source_read",
+      "maintenance_checked": true,
+      "notes": "已核对本次状态、账号、并发与恢复维护点；非full_source_read文件不计全文审读完成。"
+    }
+  ],
+  "summary": {
+    "partial": 6,
+    "fixed": 23,
+    "already_fixed": 1,
+    "pending": 1
+  },
+  "implementation_boundary": "当前已实现项代码与定向回归收拢；剩余项如实标partial/pending，不承诺全部120项已修复。"
+}

@@ -32,10 +32,10 @@ export function ExamScoringPreparation({ exam, preview, canManage, onNavigate }:
     <p className="readiness-state-note">系统匹配评分流程，已有单题设置优先保留。本卷答案与评分细则在“小题与分值”中维护。</p>
     {issues.length ? <ul className="exam-setup-inline-issues exam-readiness-issues" aria-label="待处理评分方案">{examIssues.map((row) => <li key={`exam:${row.blocking_reason}`}>
       <div><strong>考试信息</strong><span>{getSafeUserText(row.blocking_reason, "考试信息需要核对")}</span></div>
-      <Button type="link" onClick={() => onNavigate("/exams")}>核对考试信息</Button>
+      <Button type="link" onClick={() => onNavigate(`/exams?edit_exam=${encodeURIComponent(exam.id)}&target=scope`)}>核对考试信息</Button>
     </li>)}{questionIssues.map((row) => <li key={row.question_id}>
       <div><strong>第 {row.question_no} 题</strong><span>{getSafeUserText(row.blocking_reason, "评分方案需要核对")}</span></div>
-      <Button type="link" onClick={() => onNavigate(questionsPath)}>去处理</Button>
+      <Button type="link" onClick={() => onNavigate(`${questionsPath}?question=${encodeURIComponent(row.question_id)}&target=rubric`)}>去处理</Button>
     </li>)}</ul> : null}
     {expanded ? <>
       <Table<ReadinessScoringPreview> rowKey="question_id" dataSource={rows} size="small" pagination={{ pageSize: 10 }} columns={[

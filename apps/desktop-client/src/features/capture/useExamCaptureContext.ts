@@ -35,6 +35,7 @@ export function useExamCaptureContext({
     [durableScopeKey, token, selectedExamId, captureBatchId, client]);
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
+  const [uploadWatch, setUploadWatch] = useState<{ owner: typeof selection; attempt: number } | null>(null);
   const { scanContext, scanContextError, loadingScanContext, handleRefreshScanContext } = useCaptureScanContext(selection, selectionRef, workspace);
   const [processingSnapshot, setProcessingSnapshot] = useState<{ owner: typeof selection; detail: CaptureBatchProcessingDetail } | null>(null);
   // 同一账号也可能切换考试或批次；渲染直接核对归属，不等待 effect 才隐藏旧答卷。
@@ -154,13 +155,34 @@ export function useExamCaptureContext({
     } catch (error) { if (isCurrent()) setProcessingError(getUserErrorMessage(error, "服务端批次处理状态读取失败，请重试。")); }
     finally { if (isCurrent()) setLoadingProcessing(false); }
   };
-  // 只在队列入口或会话选择变化时读取；响应回填不能再次触发同一请求。
+  const handleUploadCompleted = async ({ examId, captureBatchId: batchId }: { examId: string; captureBatchId: string }) => {
+    const owner = selectionRef.current;
+    // 历史队列可上传到原批次，但只能刷新当前正在查看的批次；不能借完成回调切换教师的检查目标。
+    if (owner.examId !== examId || owner.batchId !== batchId) return;
+    setUploadWatch({ owner, attempt: 0 });
+    await Promise.all([handleRefreshProcessing(), handleRefreshScanContext()]);
+  };
+  const processingPending = Boolean(processingDetail && (["matching", "processing"].includes(processingDetail.batch.status)
+    || processingDetail.files.some(file => ["uploaded", "queued", "processing"].includes(file.status))));
+  // 上传确认与后台拆页可能先后完成；有限轮询等待真实关联，不把上传成功直接视为页数或图像通过。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 定时回调读取当前 selection ref；刷新函数变化不能不断重设等待时间。
+  useEffect(() => {
+    if (!uploadWatch || uploadWatch.owner !== selection || !processingPending || loadingProcessing) return;
+    if (uploadWatch.attempt >= 30) { setUploadWatch(null); setProcessingError("文件仍在后台处理，请稍后刷新当前批次继续检查。"); return; }
+    const timer = window.setTimeout(() => {
+      if (selectionRef.current !== uploadWatch.owner) return;
+      setUploadWatch({ owner: uploadWatch.owner, attempt: uploadWatch.attempt + 1 });
+      void handleRefreshProcessing();
+    }, 2000);
+    return () => window.clearTimeout(timer);
+  }, [selection, uploadWatch, processingPending, loadingProcessing]);
+  // 进入扫描或选择批次后读取当前进度；响应回填不改变 selection，避免循环查询。
   // biome-ignore lint/correctness/useExhaustiveDependencies: 请求使用本次 selection 快照，非稳定刷新函数不能作为自动读取触发器。
   useEffect(() => {
-    if (queueFocus?.examId === selection.examId && queueFocus.batchId === selection.batchId && selection.token) {
+    if (workspace === "scan" && selection.examId && selection.batchId && selection.token) {
       void handleRefreshProcessing();
     }
-  }, [queueFocus, selection]);
+  }, [workspace, selection]);
 
   useEffect(() => {
     if (workspace === "scan" && token && selectedExamId) { void handleLoadCaptureBatches(selectedExamId); return; }
@@ -173,7 +195,7 @@ export function useExamCaptureContext({
     exams, selectedExamId, setSelectedExamId: selectExam, examError, isLoadingExams,
     scanSubmissionId, setScanSubmissionId, captureBatchId, setCaptureBatchId: selectCaptureBatch,
     captureBatches, setCaptureBatches, isLoadingCaptureBatches, scanStartPage, setScanStartPage,
-    handleLoadExams, handleLoadCaptureBatches, handleOpenQueueContext, processingDetail, linkedSubmissionIds, processingError, loadingProcessing, handleRefreshProcessing,
+    handleLoadExams, handleLoadCaptureBatches, handleOpenQueueContext, processingDetail, linkedSubmissionIds, processingError, loadingProcessing, processingPending, handleRefreshProcessing, handleUploadCompleted,
     scanContext, scanContextError, loadingScanContext, handleRefreshScanContext
   };
 }

@@ -1,0 +1,164 @@
+{
+  "date": "2026-10-28",
+  "scope": "第四轮集成、独立复核、契约和浏览器原件验证",
+  "findings": [],
+  "changes": [
+    "独立复核修复刷新校准设置时隐藏模板来源残留的问题，阈值、目标修订与来源同次恢复；无已保存策略时清空来源。增加带入后刷新手工策略、重开后原样保存两条合并式表单回归。",
+    "TIFF预检失败通过统一中文错误转换，不直接透传原生错误；超过8份答卷时折叠分组明细，保留真实总数。删除同一异常重复的原件核对说明，只保留具体原因和显式确认。",
+    "按权威OpenAPI新增3条学校模板接口和策略来源字段，正式生成SDK、路由覆盖并同步schema219；没有手改生成产物或历史迁移。",
+    "使用Pillow独立生成小端BigTIFF与101页classic TIFF，按官方规范独立构造大端BigTIFF。真实浏览器解码、无损改序后导出，Pillow核对小端输出逐像素与原PNG完全一致；双端输出所有非主链指针字节一致。"
+  ],
+  "read_scope": [
+    {
+      "path": "apps/web-admin/src/features/capture/captureTiffDirectories.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "独立复核计数、inline/offset数据边界、BigTIFF整数、标签预算、指针别名与原件指针改写。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureTiffPreview.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "独立复核像素预算、双端序标签适配、原件保留；预检错误改用统一文案转换。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "独立复核跨文件计数、确认失效、已知缺页与未知原件确认；大批明细收起并删重复说明。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "核对真实读取、收起取消、晚到结果和未应用改序阻断。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureFileOrderPreview.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "本轮全部预检回归及大批明细默认收起断言。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+      "status": "pending",
+      "read_scope": "load_save_template_fields_and_current_form_integration",
+      "note": "根只审读加载/保存/模板集成；UI代理已另列全文审读。根修复来源与阈值同次恢复。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "完整核对16条异步、盲评、策略来源和刷新回归；根新增两条真实合并式表单情景。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationSchoolTemplates.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "独立核对服务器能力、批准快照、等待输入快照与切账号失效。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/school_templates.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "核对服务端目标上下文、学校能力、不可改来源与内存操作原子边界。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/school_templates_postgres.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "核对q/e锁、模板共享锁、唯一来源、目标CAS和撤回事务。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/school_templates_handlers.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "核对三条操作当前角色、学校范围和来源读取，不以请求学校授权。"
+    },
+    {
+      "path": "services/api-gateway/migrations/000219_school_calibration_templates.sql",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "新迁移只增加真实模板和策略来源；RLS、不可变触发器和正式218前置结构核对，已在新隔离库应用。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/school_templates_postgres_test.go",
+      "status": "pending",
+      "read_scope": "fixture_lifecycle_and_two_lock_orders",
+      "note": "核对真实迁移与两种事务锁顺序，未由根重新全文审读新增目标变化测试；后端代理另列全文。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/school_calibration_template_route_test.go",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "真实注册路由从匿名拒绝到批准/采用/撤回后拒绝，保留门禁。"
+    },
+    {
+      "path": "apps/web-admin/src/api/userError.ts",
+      "status": "pending",
+      "read_scope": "calibration_error_map_and_common_conversion",
+      "note": "核对4个校准错误中文及转换函数；未重审全部其他业务错误。"
+    },
+    {
+      "path": "apps/web-admin/src/api/userError.test.ts",
+      "status": "pending",
+      "read_scope": "calibration_error_cases_and_common_fallbacks",
+      "note": "新增4个语义对应断言；其他场景未由根全文重审。"
+    },
+    {
+      "path": "services/api-gateway/openapi/edugrade-api.openapi.json",
+      "status": "pending",
+      "read_scope": "calibration_school_template_operations_and_policy_schemas",
+      "note": "修改权威接口源；其他接口未全文审读。"
+    }
+  ],
+  "verification": [
+    {
+      "log": "web-delivery.log",
+      "result": "passed",
+      "files": 9,
+      "tests": 105,
+      "note": "随后来源修复新增2条并单独完整跑Drawer16条，覆盖总计107个独立用例。"
+    },
+    {
+      "log": "calibration-source-final.log",
+      "result": "passed",
+      "files": 1,
+      "tests": 16
+    },
+    {
+      "log": "capture-file-order-delivery.log",
+      "result": "passed",
+      "files": 1,
+      "tests": 6
+    },
+    {
+      "log": "root-lint-final.log",
+      "result": "passed",
+      "files": 5,
+      "errors": 0,
+      "warnings": 0
+    },
+    {
+      "log": "browser-output-verification.log",
+      "result": "passed",
+      "note": "独立Pillow读取浏览器导出小端TIFF逐像素匹配；双端所有非主链指针字节不变。"
+    },
+    {
+      "log": "migration-219-final.log",
+      "result": "passed",
+      "note": "新独立PostgreSQL完整218迁移后正式应用219，不接触真实学校部署。"
+    },
+    {
+      "log": "postgres-status.log",
+      "result": "stopped_verified",
+      "note": "集成结束核实本轮精确数据目录无服务器运行，不停止其他已有PostgreSQL。"
+    }
+  ],
+  "limits": [
+    "浏览器只连接本机合成组件页；未进行真实学校登录流程、答卷上传、部署或生产迁移。",
+    "Pillow11.3本机版本的BigTIFF头检测不支持规范大端序；大端使用规范构造、浏览器与小端同像素对照及所有非指针字节比较，不冒称独立Pillow大端解码通过。",
+    "SubIFD、特殊codec、超过本地预算的文件需显式确认原件，由服务端继续核对，不能通过确认绕过已知缺页。",
+    "原120项观察完成不等于全仓无缺陷或任意TIFF变体都可本地解码；没有把局部阅读记为全仓重新审读。"
+  ]
+}

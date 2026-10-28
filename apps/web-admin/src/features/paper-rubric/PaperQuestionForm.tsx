@@ -26,10 +26,8 @@ export function PaperQuestionForm({ context }: ViewProps) {
     <PaperReferenceSolution context={context} />
     <details className="paper-advanced-settings"><summary>高级答案设置</summary>
       <Form.Item label="等价答案（选填）" name="equivalent_answers" help={structuredEquivalents ? "此题含结构化等价答案，当前入口只读；保存其他题目设置会保留原值。" : undefined}><Select mode="tags" disabled={access.questionDisabled || structuredEquivalents} placeholder="添加允许的其他正确写法，回车确认" /></Form.Item>
-      {access.showTolerance && <Form.Item label="答案误差范围（选填）"><div className="form-grid">
-        <Form.Item label="允许绝对误差" name="tolerance_absolute"><InputNumber min={0} className="full-width-control" /></Form.Item>
-        <Form.Item label="允许相对误差（%）" name="tolerance_relative"><InputNumber min={0} className="full-width-control" /></Form.Item>
-      </div></Form.Item>}
+      {/* 历史答案容差保留在表单载荷中；数值误差只在固定规则里编辑，避免维护两份相同参数。 */}
+      {access.showTolerance && <><Form.Item name="tolerance_absolute" hidden><InputNumber /></Form.Item><Form.Item name="tolerance_relative" hidden><InputNumber /></Form.Item><Button type="link" onClick={() => context.actions.setDetailTab("scoring")}>设置数值判分误差</Button></>}
     </details>
   </>;
 }

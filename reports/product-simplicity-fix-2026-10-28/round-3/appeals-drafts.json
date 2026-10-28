@@ -1,0 +1,270 @@
+{
+  "date": "2026-10-28",
+  "scope": "第三轮 G02 复评恢复与 G14 本人私有草稿；保留此前全部未提交修改",
+  "baseline": "round-3/source-baseline.json",
+  "findings": [
+    {
+      "id": "G02",
+      "prior_status": "partial",
+      "status": "fixed",
+      "changes": [
+        "打开申请后核对当前账号创建、同考试、同题、同发布来源、同一份答卷的人工复评草稿；读取失败时阻止重复创建，并提供重新核对。",
+        "只有唯一匹配且详情仍含本份答卷和受派阅卷员时才自动恢复；多个候选必须明确选择。空白回复可从所恢复任务带回，已有输入不由恢复覆盖。",
+        "创建与关联分别保留成功事实；关联失败后继续关联已创建任务，重试沿用原命令身份，不再创建第二份任务。切换账号或离开组件后不继续关联。",
+        "新稳定任务键可回认历史随机键创建的成绩版本，按整个冻结快照和正式复核来源ID精确比较；考试锁覆盖回认和新建。多个历史匹配返回冲突，保留旧键原有重试行为。"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/components/QuestionAppealRegradeLaunch.tsx",
+        "apps/web-admin/src/components/questionAppealRegradeRecovery.ts",
+        "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+        "services/api-gateway/internal/scorerelease/regrade_recovery.go",
+        "services/api-gateway/internal/scorerelease/store_memory.go",
+        "services/api-gateway/internal/scorerelease/store_postgres.go"
+      ],
+      "boundary": "恢复候选仅用于续接人工复评；不会批准、启动任务或直接改分。正式关联和后续成绩发布继续使用原服务端状态及修订检查；有歧义时要求核对，未自动猜测。"
+    },
+    {
+      "id": "G14",
+      "prior_status": "partial",
+      "status": "fixed",
+      "changes": [
+        "题目复核、旧申诉和仲裁增加显式保存本人私有草稿。服务端以租户、本人、记录类型和记录ID隔离；自动暂存仍只在内存，正文不写浏览器持久存储。",
+        "九条读写删除接口逐次经过身份、资源范围、业务权限和当前分派/状态检查。专用guard不进入通用响应幂等缓存，即使客户端携带幂等键也不能持久化或重放私有正文。",
+        "服务端返回当前来源和资源修订，保存限制固定字段和正文大小，并使用独立草稿CAS修订；删除保留修订墓碑，防止旧页面覆盖或复活已清理意见。",
+        "PostgreSQL保存先锁父资源，再锁草稿，并重新检查来源、资源修订、有效账号和处理权限。正式成功事实在原事务中清理本人的旧草稿；失败事务不提前清理，他人的草稿不受影响。",
+        "读取与保存隔离记录、来源、请求世代和会话；切记录解除旧等待，迟到结果不能覆盖新记录。材料修订变化或当前已有编辑时，恢复前明确核对；读取失败保留本页输入。"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/components/PrivateOpinionDraft.tsx",
+        "apps/web-admin/src/auth/reviewOpinionDraft.ts",
+        "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+        "apps/web-admin/src/pages/AppealCenterPage.tsx",
+        "apps/web-admin/src/pages/ArbitrationPage.tsx",
+        "services/api-gateway/internal/opiniondraft/draft.go",
+        "services/api-gateway/internal/appeal/private_drafts.go",
+        "services/api-gateway/internal/review/opinion_draft.go",
+        "services/api-gateway/internal/server/router_guards.go",
+        "services/api-gateway/internal/server/routes_release.go",
+        "services/api-gateway/internal/server/routes_grading.go",
+        "services/api-gateway/migrations/000218_private_opinion_drafts.sql"
+      ],
+      "boundary": "私有草稿不是正式意见，恢复后仍须显式提交。草稿到期时间为保存后7天，接口到期隐藏正文，未承诺物理删除或后台清扫。数据库只按本人记录读取，不提供草稿列表、导出或管理员读取他人正文的入口。"
+    }
+  ],
+  "read_scope": [
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealRegradeLaunch.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "核对候选恢复、创建与关联分步回执、重试和会话失效。"
+    },
+    {
+      "path": "apps/web-admin/src/components/questionAppealRegradeRecovery.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "仅匹配本人同来源单份人工复评，排除扩大范围和新评分规则。"
+    },
+    {
+      "path": "apps/web-admin/src/components/questionAppealRegradeRecovery.test.ts",
+      "status": "self_explanatory",
+      "read_scope": "full"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/regrade_recovery.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "按整份冻结事实与评分来源ID比较，不按同分或相似说明回认。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/regrade_recovery_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "旧随机键重试、不同正式复核来源和多个历史候选。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_memory.go",
+      "status": "pending",
+      "read_scope": "CreateFromRegrade_and_nearby_idempotency",
+      "note": "仅核对本轮回认、新建与锁范围，未重新全文审读其他发布方法。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres.go",
+      "status": "pending",
+      "read_scope": "CreateFromRegrade_and_nearby_idempotency",
+      "note": "核对考试锁、事务内历史快照回认、无歧义返回及新建。"
+    },
+    {
+      "path": "apps/web-admin/src/components/PrivateOpinionDraft.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "保存快照、CAS、当前来源核对、会话失效与迟到结果隔离。"
+    },
+    {
+      "path": "apps/web-admin/src/components/PrivateOpinionDraft.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "跨记录、冲突、会话变化和不写浏览器存储。"
+    },
+    {
+      "path": "apps/web-admin/src/auth/reviewOpinionDraft.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "自动内存暂存与显式服务端私稿的边界，按账号会话代际隔离。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+      "status": "pending",
+      "read_scope": "draft_restore_submit_and_regrade_integration",
+      "note": "只核对本轮草稿与复评集成块及正式成功后的本地清理，未计整份工作台重新全文审读。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AppealCenterPage.tsx",
+      "status": "pending",
+      "read_scope": "draft_restore_submit_and_private_draft_integration",
+      "note": "只核对旧申诉输入、恢复和正式提交清理。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPage.tsx",
+      "status": "pending",
+      "read_scope": "draft_restore_submit_and_private_draft_integration",
+      "note": "只核对本人仲裁恢复、修订核对和正式提交清理。"
+    },
+    {
+      "path": "services/api-gateway/internal/opiniondraft/draft.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "固定字段、期限、本人隔离、来源修订、CAS墓碑和存储错误。"
+    },
+    {
+      "path": "services/api-gateway/internal/opiniondraft/draft_test.go",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "身份隔离、墓碑、来源伪造、非允许字段和终态读取拒绝。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/private_drafts.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "旧申诉和题目复核的当前人员分派及可编辑状态。"
+    },
+    {
+      "path": "services/api-gateway/internal/review/opinion_draft.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "只能保存本人受派且未提交的仲裁。"
+    },
+    {
+      "path": "services/api-gateway/migrations/000218_private_opinion_drafts.sql",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "新迁移表约束、租户RLS、父记录先锁及正式成功事务中的本人清理；未改历史迁移。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/router_guards.go",
+      "status": "pending",
+      "read_scope": "requirePrivateOpinionDraft_and_requireAuth",
+      "note": "核对专用guard绕过响应缓存，保留身份与资源检查；其他guard未全文重审。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_release.go",
+      "status": "pending",
+      "read_scope": "private_draft_routes_and_nearby_formal_operations",
+      "note": "六条申诉草稿路由使用专用guard。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/routes_grading.go",
+      "status": "pending",
+      "read_scope": "arbitration_private_draft_routes",
+      "note": "三条仲裁草稿路由使用专用guard。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/handlers.go",
+      "status": "pending",
+      "read_scope": "formal_success_private_draft_cleanup_calls",
+      "note": "只核对提交成功后清理调用；数据库原子清理由新迁移触发器承担。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "status": "pending",
+      "read_scope": "formal_success_private_draft_cleanup_calls",
+      "note": "只核对独立意见、决定和结案成功后的清理调用。"
+    },
+    {
+      "path": "services/api-gateway/internal/review/handlers.go",
+      "status": "pending",
+      "read_scope": "arbitration_submit_private_draft_cleanup",
+      "note": "只核对仲裁正式成功后的清理调用。"
+    },
+    {
+      "path": "services/api-gateway/internal/server/private_opinion_draft_route_test.go",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "本轮新增完整路由与回执存储、改派权限回归。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealRegradeLaunch.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "根完整核对原回归并补异步回调最新值验证。"
+    }
+  ],
+  "verification": [
+    {
+      "log": "appeals-web-final.log",
+      "result": "initial_failure_fixed",
+      "files": 8,
+      "tests": 86,
+      "passed": 85,
+      "note": "旧恢复提示的文案断言已与本轮统一提示同步；最终组单独完整重跑。"
+    },
+    {
+      "log": "appeals-web-delivery.log",
+      "result": "passed",
+      "files": 8,
+      "tests": 86,
+      "note": "完整覆盖本组最终前端用例，不与前次重复累加。"
+    },
+    {
+      "log": "appeals-go-full.log",
+      "result": "passed",
+      "scope": "opiniondraft、appeal、review、scorerelease、regraderelease 包；不是整仓全部Go测试。"
+    },
+    {
+      "log": "appeals-typecheck-initial.log",
+      "result": "passed",
+      "note": "本组中途web-admin类型检查；根另行验收最终全工作区。"
+    },
+    {
+      "log": "private-draft-routes-delivery.log",
+      "result": "passed",
+      "note": "真实注册路由验证九接口匿名拒绝；已授权保存带重复键仍不进入通用回执，旧CAS冲突，改派后GET/PUT/DELETE逐次拒绝。初次夹具误用teacher学校作用域，修为正式class范围后通过。",
+      "tests": 2
+    },
+    {
+      "log": "postgres-regression.log",
+      "result": "passed_for_private_drafts",
+      "note": "三种私稿及两种正式提交/保存并发顺序通过；根将以最终数据库日志统一收尾。"
+    },
+    {
+      "log": "appeals-web-delivery-final.log",
+      "result": "passed",
+      "files": 8,
+      "tests": 88,
+      "note": "最终组覆盖先前86条，并新增读取失败显式重试和异步期间父组件更换回调两条；不与早期运行相加。"
+    },
+    {
+      "log": "postgres-delivery-retry.log",
+      "result": "passed",
+      "note": "最终218迁移的真实隔离数据库验证；初次复验时测试服务已退出，重新启动后全部通过。"
+    }
+  ],
+  "limits": [
+    "尚未写入真实学校数据、部署或迁移；真实PostgreSQL验证使用独立合成集群与随机schema。",
+    "真实数据库并发测试证明本轮父锁、清理和CAS边界，不能替代真实学校完整集成验收。",
+    "G14自动内存暂存仍会随刷新消失；跨刷新恢复需先明确保存本人私有草稿。",
+    "7天后隐藏正文不等于物理删除；本轮不提供管理员草稿检索或导出。",
+    "只按实际审读范围记账，较大页面、路由和既有存储文件保留pending，不宣称全仓重新全文审读。"
+  ]
+}

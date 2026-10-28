@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-28",
+  "items": 109,
+  "counts": {
+    "implemented": 108,
+    "retained": 1
+  },
+  "sourceFiles": 73,
+  "modifiedOrNewTestFiles": 47,
+  "relatedTestCoverage": {
+    "files": 76,
+    "scenarios": 1164,
+    "root": 237,
+    "exam": 312,
+    "grading": 206,
+    "portals": 409,
+    "note": "按各分区不同文件/场景集合汇总；失败日志由通过复跑覆盖，不累加重跑数量。"
+  },
+  "gates": {
+    "build": "passed; 包含三端tsc和Vite",
+    "webTypecheckAfterFinalTest": "passed",
+    "studentTypecheck": "passed",
+    "copy": "passed",
+    "diffWhitespace": "passed",
+    "lint": "passed; 全仓41 warning无error，修改文件2个既有effect依赖warning"
+  },
+  "baselineEntriesRemoved": [],
+  "failures": [],
+  "limits": [
+    "没有部署或操作真实数据",
+    "真实浏览器只验证合成题库的比较交互，其他分支为组件/Hook回归",
+    "没有完成原生扫描硬件和所有真实离线场景验收",
+    "原方案其余文件仍pending，不能宣称清理了所有动态小字"
+  ]
+}

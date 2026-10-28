@@ -47,6 +47,7 @@ import { useCaptureUpload } from "../features/capture/useCaptureUpload";
 import { captureFileColumns, capturePageColumns } from "../features/capture/captureColumns";
 
 import { CaptureBatchListPanel, CaptureBatchWorkspace } from "../features/capture/CaptureBatchPanels";
+import { CaptureFileOrderPreview, captureSelectionError } from "../features/capture/CaptureFileOrderPreview";
 
 function formatError(error: unknown) {
   return getUserErrorMessage(error, "操作失败，请重试");
@@ -77,6 +78,12 @@ export function CaptureBatchPage({
   } = useCaptureBatchList(examId);
   const [modalOpen, setModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const newFilesInput = useRef<HTMLInputElement>(null);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [newPdfPending, setNewPdfPending] = useState(false);
+  const [appendPdfPending, setAppendPdfPending] = useState(false);
+  const [newUpload, setNewUpload] = useState<{ examId: string; batchId: string; files: File[]; pages: number }>();
+  const [appendPreview, setAppendPreview] = useState<{ batchId: string; examId: string; files: File[]; pages: number; original?: typeof replacement }>();
   const creationBusy = useRef(false);
   const creationCommandKey = batchCreateCommandKey(user.tenant, user.id, examId);
   const [pendingCreation, setPendingCreation] = useState(() => {
@@ -135,6 +142,7 @@ export function CaptureBatchPage({
     previewRequestRef.current += 1;
     setSelectedId("");
     setPreview(undefined);
+    setNewFiles([]); setNewUpload(undefined); setAppendPreview(undefined); setModalOpen(false);
     setReplacement(undefined);
   }, [examId, resetDetail, setSelectedId]);
   useEffect(() => () => { locationRequest.current += 1; }, []);
@@ -198,11 +206,17 @@ export function CaptureBatchPage({
   async function submitBatch() {
     if (creationBusy.current || !canCreateBatch) return;
     creationBusy.current = true;
+    const isCurrent = () => currentExam.current === examId;
     try {
       const pending = loadBatchCreateCommand(localStorage, creationCommandKey);
+      if (!pending) {
+        const error = captureSelectionError(newFiles, pagesPerStudent);
+        if (error || newPdfPending) throw new Error(error || "请先应用或恢复PDF页序");
+      }
       const values: Omit<CreateCaptureBatchInput, "idempotency_key"> = pending?.payload ?? {
         ...await form.validateFields(), ...(supplement ? { purpose: "supplement" as const } : {}),
       };
+      if (!isCurrent()) return;
       setCreating(true);
       const command = acceptBatchCreateCommand(localStorage, creationCommandKey, values);
       setPendingCreation(true);
@@ -211,24 +225,38 @@ export function CaptureBatchPage({
         ? { batch: recovered.command.batch }
         : await createCaptureBatch(examId, command.payload);
       try { localStorage.removeItem(creationCommandKey); } catch { /* 恢复仍返回同一个批次。 */ }
+      // 创建回执属于原考试；切换后的页面不能接收旧文件选择或被旧结果改选批次。
+      if (!isCurrent()) return;
       setPendingCreation(false);
       setModalOpen(false);
       setRecordsExpanded(true);
       form.resetFields();
       await loadBatches();
+      if (!isCurrent()) return;
       setSelectedId(result.batch.id);
+      if (newFiles.length && pagesPerStudent) {
+        setNewUpload({ examId, batchId: result.batch.id, files: newFiles, pages: pagesPerStudent });
+        setNewFiles([]);
+      }
       await collection.load();
       message.success(supplement ? "补传批次已创建，当前阅卷阶段保持不变" : "采集批次已创建");
     } catch (currentError) {
       if (currentError instanceof ApiClientError && currentError.code === "capture_invalid_input") {
         try { localStorage.removeItem(creationCommandKey); setPendingCreation(false); } catch { /* 保留恢复数据。 */ }
       }
-      message.error(formatError(currentError));
+      if (isCurrent()) message.error(formatError(currentError));
     } finally {
       creationBusy.current = false;
       setCreating(false);
     }
   }
+
+  useEffect(() => {
+    if (!newUpload || newUpload.examId !== examId || detail?.batch.id !== newUpload.batchId || selectedId !== newUpload.batchId || !batchCanManage) return;
+    // 创建回执与当前批次详情都到达后才上传；先取走待办，重绘不能重复发出同次选择。
+    setNewUpload(undefined);
+    void uploadSources(newUpload.files, newUpload.pages);
+  }, [newUpload, examId, detail?.batch.id, selectedId, batchCanManage, uploadSources]);
 
   const uploadProps: UploadProps = {
     multiple: true,
@@ -236,11 +264,22 @@ export function CaptureBatchPage({
     accept: ".pdf,.png,.jpg,.jpeg,.tif,.tiff",
     disabled: !batchCanManage || !pagesPerStudent || Boolean(pendingUpload),
     beforeUpload: (file, files) => {
-      // antd 为每个文件调用一次；只用首个回调提交完整选择，避免同一选择被拆成多个学生组。
+      // antd 为每个文件调用一次；首个回调只建立本地预检，同一次选择不能被拆成多个学生组。
       if (file === files[0] && batchCanManage && pagesPerStudent && !pendingUpload) {
         const original = replacement?.batchId === selectedId ? replacement : undefined;
-        if (!original) { void uploadSources(files, pagesPerStudent); return false; }
-        void uploadSources(files, pagesPerStudent, async fileIds => {
+        setAppendPreview({ batchId: selectedId, examId, files: [...files], pages: pagesPerStudent, original });
+      }
+      return false;
+    },
+  };
+
+  function confirmAppendPreview() {
+    const selection = appendPreview;
+    if (!selection || appendPdfPending || !batchCanManage || selection.batchId !== selectedId || selection.examId !== examId || captureSelectionError(selection.files, selection.pages)) return;
+    setAppendPreview(undefined);
+    const original = selection.original;
+    if (!original) { void uploadSources(selection.files, selection.pages); return; }
+    void uploadSources(selection.files, selection.pages, async fileIds => {
           if (!fileIds[0]) throw new Error("尚未收到替代文件登记结果，请重试本次上传");
           await excludeCaptureFile(original.fileId, original.reason, fileIds[0]);
           if (currentExam.current === examId) {
@@ -249,10 +288,7 @@ export function CaptureBatchPage({
             message.success("替代答卷已登记，原选择的全部材料已退出有效输入；请等待新答卷处理完成");
           }
         });
-      }
-      return false;
-    },
-  };
+  }
 
   async function startProcessing() {
     if (!detail || !batchCanManage) return;
@@ -438,11 +474,17 @@ export function CaptureBatchPage({
           <Button
             type="primary"
             icon={<Plus size={16} />}
-            onClick={() => setModalOpen(true)}
+            onClick={() => {
+              if (!pendingCreation) {
+                form.setFieldsValue({ name: `答卷导入 ${new Date().toLocaleString("zh-CN", { hour12: false })}`, source_type: "web_upload" });
+                newFilesInput.current?.click();
+              } else setModalOpen(true);
+            }}
             disabled={!canCreateBatch}
           >
             {supplement ? "补传答卷" : "导入答卷"}
           </Button>
+          <input ref={newFilesInput} aria-label="选择新批次答卷文件" type="file" hidden multiple accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff" onChange={event => { const files = Array.from(event.target.files ?? []); if (files.length) { setNewFiles(files); setModalOpen(true); } event.target.value = ""; }} />
         </Space>
       </section>
       <CaptureCollectionPanel key={`${user.tenant}:${user.id}:${examId}`} examId={examId} actorKey={`${user.tenant}:${user.id}`} summary={collection.summary} loading={collection.loading} error={collection.error}
@@ -493,6 +535,11 @@ export function CaptureBatchPage({
         </div>
       </section>
       <Modal
+        title="核对本次答卷页序" open={Boolean(appendPreview)} okText="确认导入并处理" onCancel={() => setAppendPreview(undefined)} onOk={confirmAppendPreview}
+        okButtonProps={{ disabled: appendPdfPending || !appendPreview || !batchCanManage || appendPreview.examId !== examId || appendPreview.batchId !== selectedId || Boolean(captureSelectionError(appendPreview.files, appendPreview.pages)) }}>
+        {appendPreview && <CaptureFileOrderPreview files={appendPreview.files} pages={appendPreview.pages} onPendingChange={setAppendPdfPending} onChange={files => setAppendPreview(current => current ? { ...current, files } : current)} />}
+      </Modal>
+      <Modal
         title="人工放行质量误判"
         open={Boolean(qualityOverridePage)}
         okText="确认放行并继续处理"
@@ -527,19 +574,27 @@ export function CaptureBatchPage({
         <Input.TextArea value={reopenReason} rows={3} maxLength={300} placeholder="填写重开原因" onChange={(event) => setReopenReason(event.target.value)} />
       </Modal>
       <Modal
-        title={pendingCreation ? "恢复上次采集批次创建" : supplement ? "新建补传批次" : "新建采集批次"}
-        okText={pendingCreation ? "继续确认原操作" : "创建"}
+        title={pendingCreation ? "恢复上次采集批次创建" : supplement ? "导入补传答卷" : "导入答卷"}
+        okText={pendingCreation ? "继续确认原操作" : newFiles.length ? "确认导入并处理" : "创建"}
         open={modalOpen}
-        onCancel={() => setModalOpen(false)}
+        closable={!creating} maskClosable={!creating}
+        onCancel={() => { if (!creating) { setModalOpen(false); setNewFiles([]); } }}
         onOk={() => void submitBatch()}
         confirmLoading={creating}
+        okButtonProps={{ disabled: !pendingCreation && (newPdfPending || Boolean(captureSelectionError(newFiles, pagesPerStudent))) }}
       >
+        {!pendingCreation ? <>
+          <Button disabled={creating} onClick={() => newFilesInput.current?.click()}>选择答卷文件</Button>
+          <label>每人页数<Select disabled={creating} aria-label="新批次每人页数" value={pagesPerStudent} onChange={setPagesPerStudent} options={Array.from({ length: 20 }, (_, i) => ({ value: i + 1, label: `${i + 1} 页` }))} /></label>
+          <CaptureFileOrderPreview files={newFiles} pages={pagesPerStudent} onPendingChange={setNewPdfPending} onChange={files => { if (!creating) setNewFiles(files); }} disabled={creating} />
+        </> : null}
         <Form
           form={form}
+          disabled={creating}
           layout="vertical"
           initialValues={{ source_type: "web_upload" }}
         >
-          <Form.Item
+          <details><summary>导入记录名称（选填）</summary><Form.Item
             name="name"
             label="批次名称"
             rules={[
@@ -548,19 +603,15 @@ export function CaptureBatchPage({
             ]}
           >
             <Input placeholder="例如：期末考试第一扫描批次" />
-          </Form.Item>
+          </Form.Item></details>
           <Form.Item
             name="source_type"
+            hidden
             label="采集方式"
             rules={[{ required: true }]}
           >
             <Select
-              options={[
-                { value: "web_upload", label: "网页文件导入" },
-                { value: "scanner_upload", label: "扫描工作站" },
-                { value: "folder_import", label: "文件夹导入" },
-                { value: "desktop_sync", label: "离线工作站同步" },
-              ]}
+              options={[{ value: "web_upload", label: "网页文件导入" }]}
             />
           </Form.Item>
           {supplement ? <Form.Item name="reason" label="补传原因" rules={[{ required: true, whitespace: true, message: "请填写补传原因" }, { max: 300 }]}><Input.TextArea rows={3} maxLength={300} placeholder="例如：补交缺考学生答卷或补扫遗漏页面" /></Form.Item> : null}

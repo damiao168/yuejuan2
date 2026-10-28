@@ -1,0 +1,155 @@
+{
+  "date": "2026-10-28",
+  "scope": "G17学校已批准试评标准的界面、API封装和按题高级设置；服务端实现与真实数据库验收由根与后端分区汇总。",
+  "baseline": "round-4/source-baseline.json",
+  "finding_ids": [
+    "G17"
+  ],
+  "implementation_state": "complete_with_backend_and_root_acceptance",
+  "changes": [
+    "本题管理入口优先选择学校已批准标准，八项统计/样本/资格规则收在“按题调整通过标准”；原同场复用保留在高级设置中，不把已有策略冒充学校审批模板。",
+    "目录从当前考试题目取得权威学校、学科、作答类型和满分，只补表单仍未知的题目事实；不再依赖操作员填开放题/10分默认值。",
+    "带入前重新读取目录，核对模板仍批准、版本未变且匹配当前类型和满分；等待期间本题有新输入则保留输入并拒绝覆盖。复制保留目标expected_revision并携带学校模板ID/修订，由正式保存事务重验来源。",
+    "人工调整规则或使用同场复用后清除学校模板来源，按本题人工标准保存；不会让修改后的阈值继续挂在学校批准版本名下。",
+    "模板管理只依据服务端can_approve/can_withdraw能力显示。学校管理员明确命名并批准本题已保存策略，未保存修改时不能批准；撤回需要明确原因与当前模板修订。",
+    "目录、带入、批准和撤回与本题保存串行；切题和会话变化使旧请求失效。没有自动开始试评、自动保存题目或复制教师通过资格。",
+    "根交叉复核补齐刷新时模板来源和阈值同次恢复；无策略清空来源。两条合并式表单回归防止旧隐藏身份影响保存或重开丢失来源。"
+  ],
+  "files_changed": [
+    "apps/web-admin/src/api/calibration.ts",
+    "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+    "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx",
+    "apps/web-admin/src/features/calibration/CalibrationSchoolTemplates.tsx",
+    "apps/web-admin/src/features/calibration/CalibrationSchoolTemplates.test.tsx"
+  ],
+  "read_scope": [
+    {
+      "path": "apps/web-admin/src/api/calibration.ts",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "原试评与新学校模板均用权威OpenAPI生成SDK，无手拼新端点或请求school_id。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "完整核对原盲评、资格和异步边界；新增模板来源清除、表单编辑代次及与模板操作串行，保持原正式试评门禁。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "保留原同题刷新、切题、关闭重开、未提交前隐藏参考分及正式提交回归；新增模板来源清除和操作串行测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationSchoolTemplates.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "目录与管理能力、重新核验批准版本、避免覆盖新输入、当前账号/题目世代和明确批准/撤回。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationSchoolTemplates.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "11条覆盖来源与目标修订、撤回/改版/不匹配、等待中新输入、自动补事实、能力显示、批准、撤回、切题/会话及读取重试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationPolicyReuse.tsx",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "复用纯策略数值复制函数，原同场复用改为高级备用入口；未修改该文件。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationPolicyReuse.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "完整核对已有两条保留目标修订与匹配范围测试，未改断言降低要求。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/calibrationPresentation.ts",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "现有统计阈值判断与缺失数据展示保留。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/calibrationPresentation.test.ts",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "边界相等、缺失采分点、零值与比例格式测试保留。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/calibration.css",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "现有响应式表单和折叠布局足以承载新入口，本组未增加样式覆盖。"
+    },
+    {
+      "path": "apps/web-admin/src/api/papers.ts",
+      "status": "pending",
+      "read_scope": "listQuestions_and_SDK_transport",
+      "note": "只核对既有同场复用调用与SDK传输；未重新全文审读整个试卷接口模块。"
+    },
+    {
+      "path": "packages/sdk/src/generated/types.ts",
+      "status": "protected",
+      "read_scope": "new_calibration_school_template_types",
+      "note": "根按OpenAPI正常生成；本组仅核对新增类型/字段，不编辑生成结果。"
+    },
+    {
+      "path": "packages/sdk/src/generated/client.ts",
+      "status": "protected",
+      "read_scope": "three_new_calibration_school_template_operations",
+      "note": "核对生成方法参数和响应，未修改生成结果。"
+    }
+  ],
+  "verification": [
+    {
+      "log": "calibration-ui-tests-initial.log",
+      "result": "passed_for_4_files_with_collection_followup",
+      "files": 4,
+      "tests": 62,
+      "note": "Drawer、同场复用、统计展示和根负责的userError用例均通过；新学校模板文件最初因测试client mock缺apiClient导出而收集失败。"
+    },
+    {
+      "log": "calibration-school-template-tests.log",
+      "result": "passed",
+      "files": 1,
+      "tests": 11,
+      "note": "仅补测试mock后完整学校模板文件11/11通过；合并覆盖5文件73条，不累加重跑。"
+    },
+    {
+      "log": "calibration-ui-lint-final.log",
+      "result": "passed",
+      "files": 5,
+      "errors": 0,
+      "warnings": 0
+    },
+    {
+      "log": "calibration-ui-typecheck-initial.log",
+      "result": "passed",
+      "note": "新组件、API和生产集成初始web-admin类型检查通过；最终测试源码纳入根统一类型检查。"
+    },
+    {
+      "log": "calibration-ui-typecheck-final.log",
+      "result": "initial_test_types_fixed",
+      "note": "最初3处测试Mock泛型过宽已修复；calibration-ui-typecheck-delivery.log及根全工作区检查通过。"
+    },
+    {
+      "log": "calibration-source-final.log",
+      "result": "passed",
+      "tests": 16,
+      "note": "最终Drawer完整文件含2条根新增来源回归，替代之前14条；校准与错误映射共5文件75条，不累加重跑。"
+    },
+    {
+      "log": "build-final.log",
+      "result": "passed",
+      "note": "最终源码web tsc与生产构建。"
+    }
+  ],
+  "limits": [
+    "此分区只记录UI实现完成，不替代服务端学校范围、批准快照事务、权限和真实数据库验收；G17最终状态由根统一判定。",
+    "没有浏览器完整学校登录流程或真实学校写入，交互测试使用明确的合成API/控件；SDK契约与服务端规则交由根集成核对。",
+    "模板只带入本题设置，正式保存后仍须独立完成全部试评样本并通过资格门禁。",
+    "未提交、推送或部署；保留全部既有未提交修改。"
+  ]
+}

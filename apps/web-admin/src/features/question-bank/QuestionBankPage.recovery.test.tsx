@@ -6,14 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionUser } from "../../auth/session";
 import type { QuestionBankWorkspaceProps } from "./questionBankWorkspaceTypes";
 import { QuestionBankPage } from "./QuestionBankPage";
+import { ApiClientError } from "../../api/client";
 
-const api = vi.hoisted(() => ({ version: vi.fn(), linkedItem:vi.fn(), linkedBank:vi.fn(), confirm: vi.fn(), success: vi.fn(), error: vi.fn(), form: { values: {} as Record<string, unknown>, setFieldsValue: vi.fn(), getFieldValue: vi.fn(), getFieldsValue: vi.fn() }, workspace: null as QuestionBankWorkspaceProps | null }));
+const api = vi.hoisted(() => ({ version: vi.fn(), update: vi.fn(), linkedItem:vi.fn(), linkedBank:vi.fn(), confirm: vi.fn(), success: vi.fn(), error: vi.fn(), form: { values: {} as Record<string, unknown>, setFieldsValue: vi.fn(), getFieldValue: vi.fn(), getFieldsValue: vi.fn(), validateFields: vi.fn() }, workspace: null as QuestionBankWorkspaceProps | null }));
 const bank = { id: "bank", name: "学校题库", status: "active" };
 const item = { id: "item", bank_id: "bank", item_code: "Q1", current_published_version_id: null };
 const version = { id: "version", item_id: "item", revision: 1, workflow_status: "draft", stem: "原题干", default_score: 5, scoring: { answer: { standard_answer: "A" }, rubric: null, assets: [] } };
 vi.mock("../../api/questionBank", () => ({ questionBankApi: {
-  listQuestionBanks: async () => ({ banks: [bank], total: 1 }), listQuestionBankItems: async () => ({ items: [item], total: 1 }),
+  listQuestionBanks: async () => ({ banks: [bank], total: 1 }), listQuestionBankItems: async () => ({ items: [item], total: 1 }), searchQuestionBankItems: async () => ({ items: [{ item, version }], total: 1 }),
   listQuestionBankVersions: async () => ({ versions: [version], total: 1 }), getQuestionBankVersion: api.version,
+  updateQuestionBankVersion: api.update,
   getQuestionBankItem:api.linkedItem, getQuestionBank:api.linkedBank, listQuestionBankMembers:async()=>({members:[]}),
   getQuestionBankMetadataSchema: async () => ({ schema: { fields: [], taxonomies: [] } }), listQuestionBankReviews: async () => ({ reviews: [] })
 } }));
@@ -40,6 +42,8 @@ describe("题库冲突恢复保留本地草稿", () => {
     vi.clearAllMocks(); Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true }); api.form.values = {}; api.workspace=null; window.location.hash="";
     api.form.setFieldsValue.mockImplementation((values) => Object.assign(api.form.values, values));
     api.form.getFieldValue.mockImplementation((key) => api.form.values[key]); api.form.getFieldsValue.mockImplementation(() => api.form.values);
+    api.form.validateFields.mockImplementation(async () => api.form.values);
+    api.update.mockImplementation(async ({ body }) => ({ version: { ...version, ...body, id: version.id, revision: 2 } }));
     api.version.mockResolvedValue({ version }); api.linkedItem.mockResolvedValue({item}); api.linkedBank.mockResolvedValue({bank}); host = document.createElement("div"); document.body.append(host); root = createRoot(host);
     client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   });
@@ -54,6 +58,56 @@ describe("题库冲突恢复保留本地草稿", () => {
     await click("编辑本地草稿");
     api.version.mockResolvedValue({ version: { ...version, revision: 2, stem: "他人保存的新题干" } }); await click("查看最新版本");
   }
+  it("题干与答案修改在一次命令中保存，并一起推进修订和清除脏标记", async () => {
+    await open();
+    const scoring = { ...version.scoring, answer: { standard_answer: "新答案" } };
+    await act(async () => { await api.workspace!.saveCombinedScoring!(scoring as never); });
+    expect(api.update).toHaveBeenCalledOnce();
+    expect(api.update.mock.calls[0][0]).toMatchObject({ path: { versionId: version.id }, body: { expected_revision: 1, stem: "本地未保存题干", default_score: 8, scoring } });
+    expect(api.workspace!.editorVersion!.revision).toBe(2);
+    expect(api.workspace!.contentDirty).toBe(false); expect(api.workspace!.scoringDirty).toBe(false);
+  });
+  it("整题校验失败不发送任何写入；断网重试沿用同一个冻结输入与幂等键", async () => {
+    await open();
+    api.form.validateFields.mockRejectedValueOnce(new Error("题干校验失败"));
+    await act(async () => { await expect(api.workspace!.saveCombinedScoring!(version.scoring as never)).rejects.toThrow("题干校验失败"); });
+    expect(api.update).not.toHaveBeenCalled(); expect(api.workspace!.contentDirty).toBe(true);
+    api.update.mockRejectedValueOnce(new Error("网络中断"));
+    await act(async () => { await expect(api.workspace!.saveCombinedScoring!(version.scoring as never)).rejects.toThrow("网络中断"); });
+    const original = api.update.mock.calls[0][0];
+    await act(async () => { await api.workspace!.saveCombinedScoring!(version.scoring as never); });
+    expect(api.update.mock.calls[1][0]).toEqual(original);
+  });
+  it("修订冲突保留两区草稿，按选择合并后基于最新修订继续保存", async () => {
+    await open();
+    api.update.mockRejectedValueOnce(new ApiClientError(409, "revision_conflict", "修订已变化"));
+    await act(async () => { await expect(api.workspace!.saveCombinedScoring!(version.scoring as never)).rejects.toThrow(); });
+    expect(api.workspace!.contentDirty).toBe(true); expect(api.workspace!.scoringDirty).toBe(true); expect(api.workspace!.conflict).toBe(true);
+    const stem = [...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].find(input => input.parentElement?.textContent === "题干")!;
+    await act(async () => stem.click()); await click("生成合并草稿");
+    expect(api.form.values.stem).toBe("本地未保存题干"); expect(api.form.values.expected_revision).toBe(2);
+    expect(api.workspace!.restoredScoringDraft?.fields.answer).toBe("A"); expect(api.workspace!.conflict).toBe(false);
+    await act(async () => { await api.workspace!.saveCombinedScoring!(version.scoring as never); });
+    expect(api.update.mock.calls[1][0].body.expected_revision).toBe(2);
+  });
+  it("保存A后切换B再回A，旧回包和旧评分回调不能覆盖新的A草稿", async () => {
+    await open();
+    let complete!: (result: unknown) => void;
+    api.update.mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+    const oldScoringSaved = api.workspace!.scoringSaved;
+    let pending!: Promise<unknown>;
+    await act(async () => { pending = api.workspace!.saveCombinedScoring!(version.scoring as never); });
+    await act(async () => api.workspace!.selectItem({ ...item, id: "item-B" } as never));
+    await act(async () => api.confirm.mock.calls[api.confirm.mock.calls.length - 1]![0].onOk()); await flush();
+    await act(async () => api.workspace!.selectItem(item as never, version.id));
+    await act(async () => api.confirm.mock.calls[api.confirm.mock.calls.length - 1]![0].onOk()); await flush();
+    const currentRevision = api.workspace!.editorVersion!.revision;
+    await act(async () => { api.form.setFieldsValue({ stem: "回到A后新写的题干" }); api.workspace!.setContentDirty(true); });
+    await act(async () => { complete({ version: { ...version, stem: "旧请求题干", revision: 2 } }); await pending; });
+    await act(async () => oldScoringSaved({ ...version, stem: "旧评分回调", revision: 2 } as never));
+    expect(api.form.values.stem).toBe("回到A后新写的题干");
+    expect(api.workspace!.contentDirty).toBe(true); expect(api.workspace!.editorVersion!.revision).toBe(currentRevision);
+  });
   it("导入回执深链接可打开当前列表页之外的确切题目和草稿版", async()=>{
     const linked={...item,id:"imported-item",bank_id:"outside-page-bank",item_code:"原卷精选题"};
     const draft={...version,id:"imported-draft",item_id:linked.id,revision:6};

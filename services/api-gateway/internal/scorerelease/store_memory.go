@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -143,6 +144,21 @@ func (s *MemoryStore) CreateFromRegrade(_ context.Context, tenantID, examID, act
 	}
 	if matched != len(changes) {
 		return Release{}, ErrInvalidInput
+	}
+	if strings.HasPrefix(input.IdempotencyKey, "regrade-job:") {
+		var recovered *Release
+		for _, candidate := range s.releases {
+			if candidate.TenantID == tenantID && candidate.ExamID == examID && candidate.Source == SourceRegrade && candidate.SourceReleaseID == source.ID && (candidate.Status == StatusDraft || candidate.Status == StatusPublished) && sameRegradeFacts(facts, s.snapshotFactsLocked(candidate.ID)) {
+				if recovered != nil {
+					return Release{}, ErrInvalidTransition
+				}
+				copy := candidate
+				recovered = &copy
+			}
+		}
+		if recovered != nil {
+			return cloneRelease(*recovered), nil
+		}
 	}
 	release := s.newReleaseLocked(tenantID, examID, actorID, CreateInput{
 		Source: SourceRegrade, Reason: input.Reason, IdempotencyKey: input.IdempotencyKey,

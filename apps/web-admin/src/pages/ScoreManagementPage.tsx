@@ -13,7 +13,10 @@ import { usePageLoading } from "../components/pageReadiness";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import type { ProductExperience } from "../router/experience";
+import { routeQueryParam } from "../router/query";
 import { ScoreActionsPanel } from "../features/score-management/components/ScoreActionsPanel";
+import { ScorePublicationChecklist } from "../features/score-management/components/ScorePublicationChecklist";
+import { publicationChecklist } from "../features/score-management/publicationChecklist";
 import { QualityPanel } from "../features/score-management/components/QualityPanel";
 import { ScoreReleaseWorkspace } from "../features/score-management/components/ScoreReleaseWorkspace";
 import { ScoreWorkflowModals } from "../features/score-management/components/ScoreWorkflowModals";
@@ -78,11 +81,12 @@ type ScoreResultsTablesProps = Readonly<{
   publishedOrLocked: boolean;
   qualityActionFor: NonNullable<ComponentProps<typeof QualityPanel>["actionFor"]>;
   statusOptions: Array<{ label: string; value: string }>;
+  compactChecks?: boolean;
 }>;
 
 function ScoreResultsTables({
   data, rosterColumns, columns, rosterBadge, qualityBadge, presentation,
-  selectedExamName, publishedOrLocked, qualityActionFor, statusOptions
+  selectedExamName, publishedOrLocked, qualityActionFor, statusOptions, compactChecks = false
 }: ScoreResultsTablesProps) {
   // 筛选和翻页继续使用父层回调，展示层不保存另一份考试快照。
   const {
@@ -92,7 +96,8 @@ function ScoreResultsTables({
   } = data;
   return (
     <main className="score-main">
-      <section className="score-table-panel score-roster-panel">
+      <details className="score-table-panel score-roster-panel" open={!compactChecks} id="score-roster-details">
+        <summary>名册明细 · {rosterBadge.label}</summary>
         <div className="panel-head">
           <div>
             <h2>名册对账</h2>
@@ -113,9 +118,10 @@ function ScoreResultsTables({
             locale={{ emptyText: <Empty description="本场考试尚未关联有效班级名册。" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
           />
         )}
-      </section>
+      </details>
 
-      <section className="score-quality-panel">
+      <details className="score-quality-panel" open={!compactChecks}>
+        <summary>基础成绩检查明细{qualityBadge ? ` · ${qualityBadge.label}` : ""}</summary>
         <div className="panel-head">
           <div>
             <h2>发布前质量检查</h2>
@@ -124,14 +130,14 @@ function ScoreResultsTables({
           {qualityBadge ? <StatusTag tone={qualityBadge.tone}>{qualityBadge.label}</StatusTag> : null}
         </div>
         {loadingScores ? <LoadingState label="正在读取质量检查" /> : <QualityPanel quality={quality} publishedOrLocked={publishedOrLocked} actionFor={qualityActionFor} />}
-      </section>
+      </details>
 
       <section className="score-table-panel">
         <div className="panel-head">
           <div>
             <h2>成绩列表</h2>
             <p>
-              已加载 {filteredGrades.length} / {filteredGradeTotal} 条
+              当前显示 {filteredGrades.length} 条 · 共 {filteredGradeTotal} 条
               {filteredGradeTotal !== gradeTotal ? `（全场 ${gradeTotal} 条）` : ""}
             </p>
           </div>
@@ -160,7 +166,7 @@ function ScoreResultsTables({
             size="small"
             columns={columns}
             dataSource={filteredGrades}
-            pagination={{ pageSize: 8, showSizeChanger: false }}
+            pagination={false}
             locale={{ emptyText: <Empty description={presentation.emptyGrades} image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
           />
         )}
@@ -233,7 +239,8 @@ export function ScoreManagementPage({
     currentPublishedRelease: publishedRelease, runAction
   });
   const regradeWorkflow = useRegradeWorkflow({
-    canManage, selectedExamId, publishedRelease, grades, runAction, setActioning
+    canManage, selectedExamId, publishedRelease, grades, runAction, setActioning,
+    onReleaseCreated: release => setPreviewRelease({ examId: selectedExamId, release })
   });
   const attendanceWorkflow = useRosterAttendance({ selectedExamId, setRoster, runAction });
   const { openAttendanceEditor } = attendanceWorkflow;
@@ -243,7 +250,16 @@ export function ScoreManagementPage({
     if (["unfinished_review_tasks", "missing_final_grades"].includes(code) && canHandleReview) return { label: "处理阅卷任务", run: () => onNavigate(`${base}/grading`) };
     if (code === "unfinished_arbitration_tasks" && canHandleArbitration) return { label: "处理仲裁任务", run: () => onNavigate(`/arbitration?exam=${encodeURIComponent(selectedExamId)}`) };
     if (["ocr_failed_unhandled", "missing_pages_unresolved", "unidentified_submission", "missing_submission_unresolved", "no_submission_grades"].includes(code) && canHandleCapture) return { label: "核查答卷与匹配", run: () => onNavigate(`${base}/capture`) };
-    if (code === "grades_not_confirmed") return { label: "定位成绩确认", run: () => { const details = document.querySelector<HTMLDetailsElement>(".score-advanced-details"); if (details) { details.open = true; details.scrollIntoView({ block: "nearest" }); } } };
+    if (code === "grades_not_confirmed") return { label: "定位成绩确认", run: () => { const input = document.getElementById("score-confirm-reason"); input?.scrollIntoView({ block: "nearest" }); input?.focus({ preventScroll: true }); } };
+    return undefined;
+  };
+  const publicationActionFor = (code: string, route?: string) => {
+    const knownAction = qualityActionFor(code);
+    if (knownAction) return knownAction;
+    if (route === "regrade") return { label: "查看复评任务", run: () => document.getElementById("score-regrade-tasks")?.scrollIntoView({ block: "start", behavior: "smooth" }) };
+    if (route === "roster") return { label: "核对名册", run: () => { const details = document.getElementById("score-roster-details") as HTMLDetailsElement | null; if (details) { details.open = true; details.scrollIntoView({ block: "start" }); } } };
+    if (onNavigate && selectedExamId && ["quality", "questions"].includes(route ?? "")) return { label: route === "quality" ? "查看质量问题" : "配置题目", run: () => onNavigate(`/exams/${encodeURIComponent(selectedExamId)}/${route}`) };
+    if (["no_submission_grades", "question_coverage_incomplete", "score_integrity_mismatch", "release_snapshot_incomplete"].includes(code)) return { label: "定位成绩汇总", run: () => document.getElementById("score-preparation")?.scrollIntoView({ block: "start" }) };
     return undefined;
   };
 
@@ -313,13 +329,7 @@ export function ScoreManagementPage({
       message.error("请先选择考试");
       return;
     }
-    modal.confirm({
-      title: "导出成绩",
-      content: "将导出该考试的全部成绩（CSV 表格文件）。导出文件带追溯水印，导出操作会被系统记录。确定导出吗？",
-      okText: "导出",
-      cancelText: "取消",
-      onOk: () =>
-        runAction(
+    void runAction(
           "export",
           async () => {
             const result = await exportExamGrades(selectedExamId);
@@ -327,8 +337,7 @@ export function ScoreManagementPage({
             saveBlob(result.blob, result.filename ?? `exam-${selectedExamId}-grades.csv`);
           },
           "成绩已导出"
-        )
-    });
+        );
   };
 
   const rosterColumns = createRosterColumns({ canWrite: Boolean(canWrite), publishedOrLocked, openAttendanceEditor, canOpenSubmission: entry => entry.resolution_code === "grading_incomplete" ? canHandleReview && Boolean(entry.submission_id) : canHandleCapture, openSubmission: onNavigate && (canHandleCapture || canHandleReview) ? entry => {
@@ -345,6 +354,8 @@ export function ScoreManagementPage({
   const qualityBadge = qualityCheckStatus(quality);
   const rosterBadge = rosterReconciliationStatus(roster?.summary.unresolved ?? 0);
   const presentation = scoreWorkspacePresentation(mode);
+  const linkedAppealId = routeQueryParam("appeal");
+  const linkedRegradeId = routeQueryParam("regrade");
 
   const statusOptions = useMemo(() => {
     const statuses = Array.from(new Set(grades.map((grade) => grade.status)));
@@ -378,19 +389,6 @@ export function ScoreManagementPage({
 
       <ScoreWorkspaceNotices identityError={identities.error} error={error} onRetry={() => void refresh()} />
 
-      {mode === "admin" ? <section className="score-publication-status" aria-label="成绩公开状态">
-        <div>
-          <span className="score-publication-eyebrow">考试成绩查询</span>
-          <strong>{basePublicationLabel(publicationState)}</strong>
-          <p>公开并锁定基础成绩后，学校原有的考试成绩查询入口可读取这些记录。</p>
-        </div>
-        <div>
-          <span className="score-publication-eyebrow">学生门户（推荐发布入口）</span>
-          <strong>{portalPublicationLabel(publicationState)}</strong>
-          <p>门户展示当前已发布的成绩版本；草稿与后续更正需要单独发布。</p>
-        </div>
-      </section> : null}
-
       <section className="score-summary-strip">
         <div>
           <span>应考人数</span>
@@ -408,22 +406,35 @@ export function ScoreManagementPage({
           <span>已确认缺考</span>
           <strong>{summary.absentStudents}</strong>
         </div>
-        <div>
+        {mode !== "admin" ? <div>
           <span>名册未解决</span>
           <strong>{summary.unresolvedRoster}</strong>
-        </div>
-        <div>
+        </div> : null}
+        {mode !== "admin" ? <div>
           <span>流程待办</span>
           <strong>{summary.unfinishedReviews + summary.pendingArbitrations + summary.ocrFailures}</strong>
-        </div>
-        <div>
+        </div> : null}
+        {mode !== "admin" ? <div>
           <span>{presentation.summaryTitle}</span>
           <StatusTag tone={summaryBadge.tone}>{summaryBadge.label}</StatusTag>
-        </div>
+        </div> : null}
       </section>
 
       <section className={presentation.workspaceClass}>
-        {mode === "admin" ? <ScoreReleaseWorkspace
+        {mode === "admin" ? <section className="score-publication-task" aria-label="成绩发布任务">
+          <div className="panel-head"><h2>成绩发布</h2><strong>{portalPublicationLabel(publicationState)}</strong></div>
+          <ScorePublicationChecklist quality={quality} gate={releaseGate} roster={roster} actionFor={publicationActionFor} />
+          {linkedAppealId && onNavigate ? <Alert type="info" showIcon message={regradeJobs.some(job => job.id === linkedRegradeId) ? "本次申请的复评已定位，按任务当前状态继续处理。" : "正在处理复核申请，发布完成后返回原申请公布结果。"} action={<Button disabled={Boolean(actioning)} onClick={() => onNavigate(`/exams/${encodeURIComponent(selectedExamId)}/appeals?appeal=${encodeURIComponent(linkedAppealId)}`)}>返回原复核申请</Button>} /> : null}
+          <div id="score-preparation"><ScoreActionsPanel
+            publishedOrLocked={publishedOrLocked} canWrite={Boolean(canWrite)} selectedExamId={selectedExamId}
+            gradeTotal={gradeTotal} quality={quality} actioning={actioning}
+            confirmReason={confirmReason} publishReason={publishReason}
+            setConfirmReason={setConfirmReason} setPublishReason={setPublishReason}
+            finalize={finalize} confirmGrades={confirmGrades} publish={publish} exportGrades={exportGrades}
+            lastWatermark={lastWatermark} canReadAudit={canReadAudit} scoreAuditLogs={scoreAuditLogs}
+            legacyPublicationLabel={basePublicationLabel(publicationState)}
+          /></div>
+          <ScoreReleaseWorkspace
           canWrite={canWrite}
           selectedExamId={selectedExamId}
           gradeTotal={gradeTotal}
@@ -436,7 +447,10 @@ export function ScoreManagementPage({
           regradeWorkflow={regradeWorkflow}
           onPreviewRelease={(release) => setPreviewRelease({ examId: selectedExamId, release })}
           portalUrl={portalUrl}
-        /> : null}
+          showGateDetails={false}
+          canPublish={publicationChecklist(quality, releaseGate, roster).passed}
+          focusedRegradeId={linkedRegradeId}
+        /></section> : null}
         <ScoreResultsTables
           data={workspace}
           rosterColumns={rosterColumns}
@@ -448,16 +462,8 @@ export function ScoreManagementPage({
           publishedOrLocked={publishedOrLocked}
           qualityActionFor={qualityActionFor}
           statusOptions={statusOptions}
+          compactChecks={mode === "admin"}
         />
-
-        {mode === "admin" ? <ScoreActionsPanel
-          publishedOrLocked={publishedOrLocked} canWrite={Boolean(canWrite)} selectedExamId={selectedExamId}
-          gradeTotal={gradeTotal} quality={quality} actioning={actioning}
-          confirmReason={confirmReason} publishReason={publishReason}
-          setConfirmReason={setConfirmReason} setPublishReason={setPublishReason}
-          finalize={finalize} confirmGrades={confirmGrades} publish={publish} exportGrades={exportGrades}
-          lastWatermark={lastWatermark} canReadAudit={canReadAudit} scoreAuditLogs={scoreAuditLogs}
-        /> : null}
       </section>
 
       <ScoreWorkflowModals

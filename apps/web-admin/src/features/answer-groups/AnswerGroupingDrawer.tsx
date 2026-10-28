@@ -31,12 +31,12 @@ import {
   rollbackAnswerGroup,
   saveAnswerGroupDecision
 } from "../../api/answerGroups";
-import { confirmBlockReason, sampleRoleLabels } from "./answerGroupingPresentation";
+import { confirmBlockReason } from "./answerGroupingPresentation";
 import "./answer-grouping.css";
-import { AnswerGroupSampleEvidence } from "./AnswerGroupSampleEvidence";
+import { AnswerGroupReviewWorkspace } from "./AnswerGroupReviewWorkspace";
 import type { AnswerGroupMemberContext } from "../../api/answerGroups";
-import { AnswerGroupManualHandoff } from "./AnswerGroupManualHandoff";
 import { questionTypeOptions } from "../../constants/examCatalog";
+import { typicalErrorLabel } from "../../constants/assessmentLabels";
 
 function errorMessage(error: unknown) {
   if (error instanceof ApiClientError) {
@@ -54,18 +54,6 @@ const statusLabels: Record<string, string> = {
   confirmed: "已生成候选",
   rolled_back: "已回滚"
 };
-
-function sampleRoleColor(label: string) {
-  if (label === "异常样本") return "red";
-  if (label === "边界样本") return "orange";
-  return "blue";
-}
-
-function sampleReviewLabel(status?: string) {
-  if (!status) return "未抽检";
-  if (status === "accepted") return "已接受";
-  return "已拒绝";
-}
 
 export function AnswerGroupingDrawer({ open, examId, initialQuestionId = "", availableQuestions, canManage, canReadReview = false, onNavigate, onClose }: Readonly<{
   open: boolean;
@@ -310,38 +298,15 @@ export function AnswerGroupingDrawer({ open, examId, initialQuestionId = "", ava
             </Space>
             <Progress percent={group.minimum_sample ? Math.min(100, Math.round(group.reviewed_sample_count / group.minimum_sample * 100)) : 100} status={group.can_confirm ? "success" : "active"} />
           </div>
-          <List
-            size="small"
-            bordered
-            header="代表 / 边界 / 异常样本"
-            dataSource={[...group.members].sort((left, right) => Number(right.representative) - Number(left.representative) || Number(right.boundary) - Number(left.boundary) || Number(right.outlier) - Number(left.outlier))}
-            renderItem={(member) => {
-              const sampleStatusLabel = sampleReviewLabel(member.sample_status);
-              return (
-                <List.Item actions={canReview ? [
-                  <Button key="accept" size="small" disabled={acting||sampleMaterials[`${group.id}:${member.segment_id}`]?.member.representation_hash!==member.representation_hash} type={member.sample_status === "accepted" ? "primary" : "default"} onClick={() => void reviewSample(member.segment_id, "accepted")}>接受</Button>,
-                  <Button key="reject" size="small" disabled={acting||sampleMaterials[`${group.id}:${member.segment_id}`]?.member.representation_hash!==member.representation_hash} danger type={member.sample_status === "rejected" ? "primary" : "default"} onClick={() => void reviewSample(member.segment_id, "rejected")}>拒绝</Button>
-                ] : undefined}>
-                  <List.Item.Meta
-                    title={<Space wrap><span>答卷 {member.submission_id.slice(0, 10)}</span>{sampleRoleLabels(member).map((label) => <Tag key={label} color={sampleRoleColor(label)}>{label}</Tag>)}</Space>}
-                    description={`相似度 ${(member.similarity * 100).toFixed(1)}% · 异常度 ${(member.outlier_score * 100).toFixed(1)}% · ${sampleStatusLabel}`}
-                  />
-                  <AnswerGroupSampleEvidence key={`${group.id}:${member.segment_id}:${member.representation_hash}`} groupId={group.id} segmentId={member.segment_id} hash={member.representation_hash} onRead={(value) => {
+          <AnswerGroupReviewWorkspace key={`${group.id}:${group.exam_question_snapshot_id}`} group={group} canReview={canReview} acting={acting} canReadReview={canReadReview} onNavigate={onNavigate} onReview={reviewSample} onRead={(value) => {
                     // 图片显示回调也可能迟到；切题并再次返回同一题后，旧代次材料仍不能登记为已读。
                     if (!contextRef.current.open || contextRef.current.examId !== group.exam_id
                       || contextRef.current.questionId !== group.question_id || questionEpochRef.current !== targetEpoch) return;
-                    if (value.group_id !== group.id || value.member.segment_id !== member.segment_id
-                      || value.member.representation_hash !== member.representation_hash
-                      || value.question.id !== group.question_id || value.question.exam_id !== group.exam_id) return;
-                    const currentMember = contextRef.current.groups.find(current => current.id === group.id)?.members.find(current => current.segment_id === member.segment_id);
+                    if (value.group_id !== group.id || value.question.id !== group.question_id || value.question.exam_id !== group.exam_id) return;
+                    const currentMember = contextRef.current.groups.find(current => current.id === group.id)?.members.find(current => current.segment_id === value.member.segment_id);
                     if (currentMember?.representation_hash !== value.member.representation_hash) return;
-                    setSampleMaterials(current => ({ ...current, [`${group.id}:${member.segment_id}`]: value }));
+                    setSampleMaterials(current => ({ ...current, [`${group.id}:${value.member.segment_id}`]: value }));
                   }}/>
-                  {member.sample_status === "rejected" ? <AnswerGroupManualHandoff material={sampleMaterials[`${group.id}:${member.segment_id}`]} canReadReview={canReadReview} onNavigate={onNavigate} /> : null}
-                </List.Item>
-              );
-            }}
-          />
           {canReview ? (
             <section>
               <Divider orientation="left">组评分候选</Divider>
@@ -392,7 +357,7 @@ export function AnswerGroupingDrawer({ open, examId, initialQuestionId = "", ava
           {canManage ? <Button type="primary" disabled={!questionId} loading={acting} onClick={() => void build()}>构建分组</Button> : null}
         </Space>
         {loadError ? <Alert type="error" showIcon message="答案分组加载失败" description={loadError} style={{ marginBottom: 16 }} /> : null}
-        {metrics ? (
+        {metrics ? <details style={{ marginBottom: 16 }}><summary>分组统计与审计指标</summary>
           <Descriptions size="small" bordered column={5} style={{ marginBottom: 16 }}>
             <Descriptions.Item label="组数">{metrics.group_count}</Descriptions.Item>
             <Descriptions.Item label="组内同质性">{(metrics.group_homogeneity * 100).toFixed(1)}%</Descriptions.Item>
@@ -400,7 +365,7 @@ export function AnswerGroupingDrawer({ open, examId, initialQuestionId = "", ava
             <Descriptions.Item label="节省人工动作">{metrics.human_actions_saved}</Descriptions.Item>
             <Descriptions.Item label="事后审计误差">{metrics.post_audit_error_rate === undefined ? "尚未采集" : `${(metrics.post_audit_error_rate * 100).toFixed(1)}%`}</Descriptions.Item>
           </Descriptions>
-        ) : null}
+        </details> : null}
 
         <Spin spinning={loading}>
           {!groups.length ? <Empty description={questionId ? "暂无答案组，可构建分组候选" : "请先选择题目"} /> : (
@@ -428,7 +393,7 @@ export function AnswerGroupingDrawer({ open, examId, initialQuestionId = "", ava
           bordered
           dataSource={references}
           locale={{ emptyText: "当前题目暂无已批准标准卷参考案例" }}
-          renderItem={(item) => <List.Item><List.Item.Meta title={`${item.reference_score} / ${item.max_score} 分 · 标准卷 v${item.version}`} description={<Space direction="vertical" size={2}><span>{item.explanation}</span>{item.error_tags.length ? <span>{item.error_tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}</span> : null}</Space>} /></List.Item>}
+          renderItem={(item) => <List.Item><List.Item.Meta title={`${item.reference_score} / ${item.max_score} 分 · 标准卷 v${item.version}`} description={<Space direction="vertical" size={2}><span>{item.explanation}</span>{item.error_tags.length ? <><span>{item.error_tags.map((tag) => <Tag key={tag}>{typicalErrorLabel(tag)}</Tag>)}</span><details><summary>错误标签诊断</summary>{item.error_tags.join("、")}</details></> : null}</Space>} /></List.Item>}
         />
       </Drawer>
       <Modal title={`回滚${questionLabel}的 ${currentGroup?.member_count ?? 0} 份候选`} open={rollbackOpen && Boolean(currentGroup)} confirmLoading={acting} okButtonProps={{ danger: true }} onOk={rollback} onCancel={() => { rollbackDialogRef.current += 1; setRollbackOpen(false); }}>

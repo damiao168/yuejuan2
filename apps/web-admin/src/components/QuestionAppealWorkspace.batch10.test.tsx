@@ -7,6 +7,8 @@ import type { ManagedUser } from "../api/users";
 import { QuestionAppealWorkspace } from "./QuestionAppealWorkspace";
 import { ApiClientError } from "../api/client";
 import { PageReadinessContext, PageVisibilityContext } from "./pageReadiness";
+import { setBusinessCommandScope } from "../api/businessCommand";
+import { clearAllReviewDraftFallbacks } from "../auth/reviewDraftFallback";
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(), context: vi.fn(), image: vi.fn(), users: vi.fn(), assign: vi.fn(), decide: vi.fn(), opinion: vi.fn(), resolve: vi.fn(), jobs: vi.fn(), confirm: vi.fn(), changed: vi.fn(),
@@ -57,6 +59,7 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
   let host: HTMLDivElement;
   beforeEach(() => {
     vi.resetAllMocks(); mocks.controls.clear();
+    clearAllReviewDraftFallbacks(); setBusinessCommandScope("", "");
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     vi.stubGlobal("URL", Object.assign(class extends NativeURL {}, { createObjectURL: mocks.createURL, revokeObjectURL: mocks.revokeURL }));
     host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -70,14 +73,23 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
     mocks.createURL.mockReturnValue("blob:answer-A");
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
-  async function render(props: Partial<Parameters<typeof QuestionAppealWorkspace>[0]> = {}) { await act(async () => root.render(<QuestionAppealWorkspace examId="exam" canManage canWork canManageScores onChanged={mocks.changed} {...props} />)); }
+  async function render(props: Partial<Parameters<typeof QuestionAppealWorkspace>[0]> = {}) {
+    await act(async () => root.render(<QuestionAppealWorkspace examId="exam" canManage canWork canManageScores onChanged={mocks.changed} {...props} />));
+    // 业务回归显式选择第一条；产品初次进入只显示队列，不主动打开材料。
+    if (!host.querySelector(".question-appeal-list article button")) {
+      const status = host.querySelector<HTMLSelectElement>('[aria-label="复核处理状态"]');
+      if (status) await act(async () => { status.value = "all"; status.dispatchEvent(new Event("change", { bubbles: true })); });
+    }
+    const button = host.querySelector<HTMLButtonElement>(".question-appeal-list article button");
+    if (button) await act(async () => button.click());
+  }
   function control(label: string) { const value = mocks.controls.get(label); expect(value, label).toBeDefined(); return value!; }
   function click(label: string) { return (control(label).onClick as () => unknown)(); }
   function select(id: string) { const row = [...host.querySelectorAll(".question-appeal-list article")].find((node) => node.querySelector("strong")?.textContent?.startsWith(`${id} ·`)); expect(row).toBeDefined(); row!.querySelector<HTMLButtonElement>("button")!.click(); }
   function job(value: string) { (control("job").onChange as (value: string) => void)(value); }
   function reply(value: string) { (control("reply").onChange as (event: { target: { value: string } }) => void)({ target: { value } }); }
 
-  it("候选页等待列表和首条依据，隐藏时仍取数但不提前打开 body 抽屉", async () => {
+  it("候选页只等待队列，选择申请后才读取依据并打开材料", async () => {
     const list = deferred<{ appeals: PublishedQuestionAppeal[] }>();
     const detail = deferred<{ context: PublishedQuestionAppealContext }>();
     mocks.list.mockReturnValue(list.promise); mocks.context.mockReturnValue(detail.promise);
@@ -90,15 +102,50 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
     expect(blockers.size).toBeGreaterThan(0);
     expect(mocks.list).toHaveBeenCalledOnce();
     await act(async () => list.resolve({ appeals: [appeal("A")] }));
-    expect(mocks.context).toHaveBeenCalledWith("A");
-    expect(blockers.size).toBeGreaterThan(0);
-    expect(control("drawer").open).toBe(false);
-    await act(async () => detail.resolve({ context: context("A") }));
+    expect(mocks.context).not.toHaveBeenCalled();
     expect(blockers.size).toBe(0);
     expect(control("drawer").open).toBe(false);
     await act(async () => root.render(page(true)));
+    expect(control("drawer").open).toBe(false);
+    await act(async () => select("A"));
+    expect(mocks.context).toHaveBeenCalledWith("A");
+    expect(blockers.size).toBeGreaterThan(0);
+    await act(async () => detail.resolve({ context: context("A") }));
+    expect(blockers.size).toBe(0);
     expect(control("drawer").open).toBe(true);
     expect(mocks.list).toHaveBeenCalledOnce(); expect(mocks.context).toHaveBeenCalledOnce();
+  });
+
+  it("默认聚焦待处理，已完成记录可切换并按题号搜索，筛选不会自动打开材料", async () => {
+    mocks.list.mockResolvedValue({ appeals: [appeal("A"), appeal("B", { status: "resolved" })] });
+    await act(async () => root.render(<QuestionAppealWorkspace examId="exam" canManage canWork />));
+    expect(host.querySelectorAll(".question-appeal-list article")).toHaveLength(1);
+    const status = host.querySelector<HTMLSelectElement>('[aria-label="复核处理状态"]')!;
+    await act(async () => { status.value = "all"; status.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(host.querySelectorAll(".question-appeal-list article")).toHaveLength(2);
+    const input = host.querySelector<HTMLInputElement>('[aria-label="搜索复核申请"]')!;
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "B"); input.dispatchEvent(new Event("input", { bubbles: true })); });
+    expect(host.querySelectorAll(".question-appeal-list article")).toHaveLength(1);
+    expect(host.querySelector(".question-appeal-list article strong")?.textContent).toContain("B");
+    expect(mocks.context).not.toHaveBeenCalled(); expect(control("drawer").open).toBe(false);
+  });
+
+  it("本次登录切换申请可恢复未提交回复，来源修订变化后须明确核对再恢复", async () => {
+    setBusinessCommandScope("tenant", "manager");
+    await render();
+    await act(async () => reply("本次登录需要保留的复核回复"));
+    await act(async () => select("B"));
+    expect(mocks.confirm).not.toHaveBeenCalled();
+    await act(async () => select("A"));
+    expect(control("reply").value).toBe("本次登录需要保留的复核回复");
+    await act(async () => select("B"));
+    mocks.context.mockImplementation(async (id: string) => ({ context: context(id, { appeal: appeal(id, { revision: 4 }) }) }));
+    await act(async () => select("A"));
+    expect(control("reply").value).toBe(""); expect(host.textContent).toContain("已有另一版未提交意见，请核对后恢复");
+    await act(async () => click("已核对，恢复旧输入"));
+    expect(control("reply").value).toBe("本次登录需要保留的复核回复");
+    const warning = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(warning); expect(warning.defaultPrevented).toBe(true);
+    expect(mocks.decide).not.toHaveBeenCalled();
   });
 
   it.each(["无读取权限", "列表失败", "依据失败"])("%s 不会让切页一直等待", async (scenario) => {
@@ -109,6 +156,7 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
     await act(async () => root.render(<PageReadinessContext.Provider value={readiness}>
       <QuestionAppealWorkspace examId="exam" canManage canWork canRead={scenario !== "无读取权限"} />
     </PageReadinessContext.Provider>));
+    if (scenario === "依据失败") await act(async () => select("A"));
     expect(blockers.size).toBe(0);
     if (scenario === "无读取权限") expect(mocks.list).not.toHaveBeenCalled();
     else expect(host.textContent).toContain(scenario === "列表失败" ? "列表无法读取" : "依据无法读取");
@@ -121,6 +169,7 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
 
   it("受派教师只提交独立意见，不显示管理员答复分派或关联复评", async () => {
     await render({ canManage: false, canManageScores: false, currentUserId: "teacher" });
+    expect(host.querySelector(".question-appeal-draft-note")?.textContent).toBe("提交后才会正式保存。");
     expect(mocks.list).toHaveBeenCalledWith("exam"); expect(mocks.users).not.toHaveBeenCalled();
     expect(host.textContent).toContain("保存意见并移交学校管理员"); expect(host.textContent).not.toContain("答复并维持原成绩"); expect(host.textContent).not.toContain("关联题目级复评"); expect(host.querySelector(".question-appeal-reviewer")).toBeNull(); expect(mocks.jobs).not.toHaveBeenCalled();
   });
@@ -141,11 +190,15 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
       (control("suggested-score").onChange as (value: number) => void)(0);
       (control("explanation").onChange as (event: { target: { value: string } }) => void)({ target: { value: "  核对原卷后提出独立意见  " } });
     });
+    expect(host.querySelector(".question-appeal-draft-note")?.textContent).toBe("有未提交内容；离开后无法恢复。");
     await act(async () => click("保存意见并移交学校管理员"));
     expect(mocks.opinion).toHaveBeenCalledWith("A", { opinion, suggested_score: 0, explanation: saved.explanation, expected_revision: 7 });
     expect(mocks.decide).not.toHaveBeenCalled(); expect(mocks.resolve).not.toHaveBeenCalled(); expect(mocks.jobs).not.toHaveBeenCalled();
     expect(host.textContent).toContain("待学校管理员处理意见"); expect(host.textContent).toContain("成绩尚未改变");
     expect(host.textContent).toContain("建议本题得分：0 / 10"); expect(mocks.changed).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain("修改后需再次提交；意见和建议分仅供教职工查看。");
+    expect(host.textContent).not.toContain("核对原公布材料后提交独立意见。");
+    expect(host.querySelector(".question-appeal-draft-note")?.textContent).toBe("提交后才会正式保存。");
   });
 
   it("意见提交同步防重复，修订冲突保留意见分值说明且不自动刷新重发", async () => {
@@ -263,12 +316,13 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
     expect(host.querySelector(".question-appeal-reviewer")).toBe(selectElement); expect(document.activeElement).toBe(selectElement); expect(control("开始复核").disabled).toBe(false);
   });
 
-  it("刷新保留现有选择，移除该项后选首项，关闭只清选择", async () => {
+  it("刷新保留现有选择，移除该项后回到队列，关闭只清选择", async () => {
     await render(); await act(async () => select("B"));
     await act(async () => { expect(click("刷新")).toBeUndefined(); });
     expect(control("drawer").title).toContain("第 B 题复核材料");
     mocks.list.mockResolvedValueOnce({ appeals: [appeal("A")] });
-    await act(async () => { click("刷新"); }); expect(control("drawer").title).toContain("第 A 题复核材料");
+    await act(async () => { click("刷新"); }); expect(control("drawer").open).toBe(false);
+    await act(async () => select("A")); expect(control("drawer").title).toContain("第 A 题复核材料");
     await act(async () => { (control("drawer").onClose as () => void)(); });
     expect(control("drawer").open).toBe(false); expect(host.querySelector(".question-appeal-context")).toBeNull();
   });
@@ -296,7 +350,8 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
     mocks.list.mockRejectedValueOnce(new Error("list failed"));
     await render(); expect(control("刷新").loading).toBe(false); expect(host.querySelector('[data-alert="题目申诉暂时无法加载"]')).not.toBeNull();
     await act(async () => { click("刷新"); });
-    expect(mocks.list).toHaveBeenLastCalledWith("exam"); expect(host.querySelector('[data-alert="题目申诉暂时无法加载"]')).toBeNull(); expect(host.querySelector(".question-appeal-facts")).not.toBeNull();
+    expect(mocks.list).toHaveBeenLastCalledWith("exam"); expect(host.querySelector('[data-alert="题目申诉暂时无法加载"]')).toBeNull(); expect(host.querySelector(".question-appeal-facts")).toBeNull();
+    await act(async () => select("A")); expect(host.querySelector(".question-appeal-facts")).not.toBeNull();
   });
 
   it("答复用详情 revision与教师填写的公开回复，不附复评编号", async () => {
@@ -388,13 +443,14 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
   });
 
   it("转入重评后可以选择真实后续已发布版本结案，失败保留输入和revision", async () => {
-    mocks.context.mockResolvedValue({ context: context("A", { appeal: appeal("A", { status: "upheld_pending_regrade", revision: 11, public_response: "正在重新评分" }), release_history: [{ id: "release", version: 2, source: "initial", status: "published", reason: "原版" }, { id: "next", version: 3, source: "regrade", status: "published", reason: "复评完成" }, { id: "draft", version: 4, source: "regrade", status: "draft", reason: "未发布" }] }) });
+    mocks.context.mockResolvedValue({ context: context("A", { appeal: appeal("A", { status: "upheld_pending_regrade", revision: 11, public_response: "正在重新评分" }), release_history: [{ id: "release", version: 2, source: "initial", status: "published", reason: "原版" }, { id: "next", version: 3, source: "regrade", status: "published", reason: "复评完成", eligible_for_resolution: true }, { id: "draft", version: 4, source: "regrade", status: "draft", reason: "未发布" }, { id: "unrelated", version: 5, source: "regrade", status: "published", reason: "另一任务" }] }) });
     await render();
-    expect(control("result").options).toEqual([{ value: "next", label: "第 3 版 · 复评完成" }]);
-    await act(async () => { (control("result").onChange as (value: string) => void)("next"); reply("复核后本题得分已更正，请查看新版成绩。"); });
+    expect(host.textContent).toContain("已匹配本次复评结果：第 3 版 · 复评完成");
+    expect(mocks.controls.has("result")).toBe(false);
+    await act(async () => { reply("复核后本题得分已更正，请查看新版成绩。"); });
     mocks.resolve.mockRejectedValueOnce(new Error("resource_version_conflict"));
     await act(async () => click("公布复核结果"));
-    expect(control("reply").value).toContain("复核后本题得分已更正"); expect(control("result").value).toBe("next");
+    expect(control("reply").value).toContain("复核后本题得分已更正"); expect(host.textContent).toContain("已匹配本次复评结果：第 3 版 · 复评完成");
     await act(async () => click("公布复核结果"));
     expect(mocks.resolve).toHaveBeenLastCalledWith("A", { new_release_id: "next", public_response: "复核后本题得分已更正，请查看新版成绩。", expected_revision: 11 });
     expect(host.textContent).toContain("结果已公布，学生可以在我的复核申请中查看");

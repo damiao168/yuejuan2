@@ -157,3 +157,6 @@
   .readiness-attention-list button { grid-template-columns: 20px minmax(0, 1fr) 18px; }
   .readiness-attention-list button > span:nth-last-child(2) { display: none; }
 }
+
+/* 宽屏用年级导航，窄屏只保留下拉，避免同一范围出现两套控制。 */
+@container class-management (min-width: 900px) { .class-management-scope .class-management-mobile-grade { display: none; } }

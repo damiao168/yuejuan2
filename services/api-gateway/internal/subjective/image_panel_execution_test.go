@@ -231,3 +231,16 @@ func TestImagePanelCallsIndependentModelsAndConditionallySkipsC(t *testing.T) {
 }
 
 func floatPtr(value float64) *float64 { return &value }
+
+func TestImagePanelDualDoesNotRequireUnusedThirdThreshold(t *testing.T) {
+	for _, scores := range []map[string]float64{{"primary_a": 6, "primary_b": 6}, {"primary_a": 6, "primary_b": 12}} {
+		value, policy, output := imagePanelFixture(t, "dual", scores)
+		value.AIPlan.DecisionConfig.TeacherAllowedDiffPoints = nil
+		if err := settleImagePanelOutput(value, policy, &output); err != nil {
+			t.Fatalf("dual plan required unused third threshold: %v", err)
+		}
+		if output.PanelExecution.TeacherThreshold != nil {
+			t.Fatal("dual execution fabricated a third threshold")
+		}
+	}
+}

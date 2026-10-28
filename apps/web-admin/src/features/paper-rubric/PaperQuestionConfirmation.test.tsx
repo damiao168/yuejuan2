@@ -48,6 +48,19 @@ describe("question preparation confirmation", () => {
     expect(screen.getByRole("region", { name: "小题与分值检查" }).getAttribute("data-tone")).toBe("success");
   });
 
+  it("自动检查只在配置回读后执行，未保存时不查，旧请求不能覆盖新配置", async () => {
+    const old = deferred<{ readiness: ExamReadiness }>(); api.getExamReadiness.mockReturnValueOnce(old.promise);
+    const view = mount({ autoCheck: true });
+    expect(api.getExamReadiness).toHaveBeenCalledTimes(1);
+    view.rerender(<PaperQuestionConfirmation examId="exam-1" configurationKey="version-1" canManage disabled autoCheck />);
+    await act(async () => old.resolve({ readiness: readiness() }));
+    expect(screen.queryByText("小题与分值检查已通过")).toBeNull(); expect(api.getExamReadiness).toHaveBeenCalledTimes(1);
+    view.rerender(<PaperQuestionConfirmation examId="exam-1" configurationKey="version-2" canManage disabled={false} autoCheck />);
+    await waitFor(() => expect(screen.getByText("小题与分值检查已通过")).toBeDefined());
+    expect(api.getExamReadiness).toHaveBeenCalledTimes(2);
+    click(); expect(api.getExamReadiness).toHaveBeenCalledTimes(2);
+  });
+
   it("lists specific persisted configuration problems without confirming the step", async () => {
     const result = readiness();
     result.checks[1] = { ...result.checks[1], passed: false, label: "题目总分", message: "当前 90 分，考试满分 150 分" };

@@ -195,10 +195,10 @@ function App() {
   } = scanQueue;
   const uploadSync = useUploadSync({
     client, token, durableScopeKey, isOnline, setIsOnline, queueRef, fileBufferRef,
-    uploadInFlightRef, durablePersistenceRef, updateQueue, logEvent
+    uploadInFlightRef, durablePersistenceRef, updateQueue, logEvent, onUploaded: capture.handleUploadCompleted
   });
   const quality = useSubmissionQuality({ client, token, scanSubmissionId, durableScopeKey, selectedExamId, captureBatchId,
-    linkedSubmissionIds: capture.linkedSubmissionIds ?? [], logEvent });
+    linkedSubmissionIds: capture.linkedSubmissionIds ?? [], logEvent, autoCheck: workspace === "scan" && !capture.loadingProcessing && !capture.processingPending });
   // biome-ignore lint/correctness/useExhaustiveDependencies: 账号作用域变化必须清空旧草稿投影，不能因 effect 不读 key 就取消重置触发。
   useEffect(() => { setOfflineTaskId(""); setOfflineDrafts([]); }, [durableScopeKey]);
   useEffect(() => {
@@ -321,28 +321,25 @@ function App() {
 
   function renderConnect() {
     return (
-      <div className="workspace-grid two">
-        <section className="panel">
-          <SectionHead icon={<ServerCog size={20} />} title="连接学校服务器" description="请向学校教务处或技术老师索取服务器地址和学校代码。地址先检查并保存，再填写账号登录。" />
+      <div className="workspace-grid">
+        <section className="panel full">
+          <SectionHead icon={<ServerCog size={20} />} title="连接学校服务器" description="服务器地址和学校代码由学校提供。填写后即可登录；连接失败时可先检查连接。" />
           <Form layout="vertical">
             <Form.Item label="学校服务器地址">
               <Input value={serverUrl} disabled={Boolean(token) || offlineUnlocked} onChange={(event) => setServerUrl(event.target.value)} placeholder="例如：https://grade.school.edu" />
             </Form.Item>
-            <Space wrap>
+            <details><summary>连接检查与地址保存（可选）</summary><Space wrap>
               <Button type="primary" icon={<Settings size={16} />} disabled={Boolean(token)} onClick={saveServerForSession}>
                 保存服务器地址
               </Button>
               <Button icon={<Wifi size={16} />} loading={isCheckingHealth} disabled={offlineUnlocked || !isOnline} onClick={handleHealthCheck}>
                 检查连接
               </Button>
-            </Space>
+            </Space></details>
           </Form>
           {healthResult && <Alert className="section-alert" showIcon type={healthResult.ok ? "success" : "error"} message={healthResult.message} description={`${healthResult.server} · ${healthResult.elapsedMs} 毫秒`} />}
           {diagnosticError && <Alert className="section-alert" type="warning" message={diagnosticError} showIcon />}
-        </section>
-
-        <section className="panel">
-          <SectionHead icon={<LogIn size={20} />} title="学校账号登录" description="使用学校分配的账号。勾选自动登录后，密码仅保存到当前 Windows 用户的系统凭据库。" />
+          <h3>学校账号</h3>
           <Form layout="vertical">
             <Form.Item label="学校代码">
               <Input value={tenantCode} onChange={(event) => setTenantCode(event.target.value)} />
@@ -351,16 +348,22 @@ function App() {
               <Input value={username} onChange={(event) => setUsername(event.target.value)} />
             </Form.Item>
             <Form.Item label="密码">
-              <Input.Password value={password} onChange={(event) => setPassword(event.target.value)} onPressEnter={() => void leaveThen(handleLogin)} />
+              <Input.Password value={password} onChange={(event) => setPassword(event.target.value)} onPressEnter={() => void leaveThen(async () => { if (await handleLogin()) setWorkspace("tasks"); })} />
             </Form.Item>
             <Form.Item>
               <Checkbox checked={rememberLogin} disabled={!credentialStoreReady} onChange={(event) => setRememberLogin(event.target.checked)}>
                 保存到 Windows 凭据库，下次自动登录
               </Checkbox>
+              {credentialStoreReady && <p className="muted">勾选后，密码仅保存到当前 Windows 用户的系统凭据库。</p>}
             </Form.Item>
-            {hasDurableDesktopStore() && <Form.Item><Checkbox checked={enableOfflineAccess} onChange={(event) => setEnableOfflineAccess(event.target.checked)}>允许当前 Windows 用户在有效期内离线解锁本账号草稿</Checkbox><p className="muted">联网登录后建立授权，有效期不超过这次登录且最多七天。仅解锁本机加密数据；退出登录或清除保存信息会撤销授权。</p></Form.Item>}
+            {hasDurableDesktopStore() && <Form.Item>
+              <Checkbox checked={enableOfflineAccess} onChange={(event) => setEnableOfflineAccess(event.target.checked)}>允许本机离线解锁本账号草稿</Checkbox>
+              <p className="muted">{offlineAccess && offlineAccess.actorId === user?.id && offlineAccess.tenantId === user?.tenant_id && offlineAccess.server === serverUrl && new Date(offlineAccess.expiresAt).getTime() > Date.now()
+                ? <>可离线解锁至 {formatDate(offlineAccess.expiresAt)}；仅限当前 Windows 用户的本机加密数据，获取任务和上传仍需在线登录。退出登录或清除保存信息会撤销。</>
+                : "在线登录后生效，仅当前 Windows 用户可用。有效期不超过本次登录，最长七天；退出登录或清除保存信息会撤销。"}</p>
+            </Form.Item>}
             <Space wrap>
-              <Button type="primary" icon={<LogIn size={16} />} loading={isLoggingIn} onClick={() => void leaveThen(handleLogin)}>
+              <Button type="primary" icon={<LogIn size={16} />} loading={isLoggingIn} onClick={() => void leaveThen(async () => { if (await handleLogin()) setWorkspace("tasks"); })}>
                 登录
               </Button>
               <Button icon={<ShieldAlert size={16} />} disabled={!token} onClick={handleCheckSession}>
@@ -444,7 +447,7 @@ function App() {
       && offlineAccess?.server === serverUrl && new Date(offlineAccess.expiresAt).getTime() > Date.now();
     let offlineRecoveryDescription: string;
     if (canRecoverAfterRestart) {
-      offlineRecoveryDescription = "请先加密保存草稿；重启后可在连接登录页解锁本账号草稿。答卷图片仍需联网恢复，上传和下载任务需在线登录。";
+      offlineRecoveryDescription = "请先加密保存草稿与已准备的答卷原件；重启后可在连接登录页解锁。未保存、超限或不支持的原件需联网恢复，获取新任务和上传仍需在线登录。";
     } else if (offlineAccess && user) {
       offlineRecoveryDescription = "当前未保存评分仍保留。请在本页联网验证同一账号后续期，再加密保存；续期失败也可以留在本页重试。";
     } else {
@@ -501,7 +504,7 @@ function App() {
           <SectionHead
             icon={<Stethoscope size={20} />}
             title="运行时诊断"
-            description="读取 Tauri 运行时信息；浏览器开发模式会明确标注。"
+            description="当前客户端运行环境（原生／浏览器开发模式）。"
             action={
               <Button icon={<RefreshCw size={16} />} onClick={refreshCapabilities}>
                 刷新
@@ -529,7 +532,7 @@ function App() {
           <SectionHead
             icon={<ServerCog size={20} />}
             title="服务端连接"
-            description="调用真实 /api/v1/system/status；依赖未配置会显示未配置/待接入。"
+            description="学校服务器状态（/api/v1/system/status）；未配置的依赖会单独标明。"
             action={
               <Button icon={<RefreshCw size={16} />} loading={isCheckingServiceStatus} disabled={!token || !isOnline} onClick={handleSystemStatusCheck}>
                 检查状态
@@ -617,7 +620,7 @@ function App() {
         </section>
 
         <section className="panel full">
-          <SectionHead icon={<ScrollText size={20} />} title="最近错误日志" description="只展示本客户端本地 error 级别日志；不是后端 audit_log。" />
+          <SectionHead icon={<ScrollText size={20} />} title="最近错误日志" description="客户端错误日志：仅本机记录，级别为 error。" />
           <div className="log-list">
             {recentErrors.length ? (
               recentErrors.map((entry) => (
@@ -643,7 +646,7 @@ function App() {
         <SectionHead
           icon={<ScrollText size={20} />}
           title="本地日志"
-          description="记录客户端侧关键操作；这不是后端 audit_log。"
+          description="本机关键操作记录。学校审计请由有权限的管理员在管理端查看。"
           action={
             <Button
               danger

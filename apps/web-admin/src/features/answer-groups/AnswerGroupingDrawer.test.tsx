@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({ questions: vi.fn(), groups: vi.fn(), metrics: 
   review: vi.fn(), save: vi.fn(), confirm: vi.fn(), success: vi.fn(), error: vi.fn(), warning: vi.fn(),
   reads: new Map<string, (value: AnswerGroupMemberContext) => void>() }));
 vi.mock("../../api/papers", () => ({ listQuestions: mocks.questions }));
+vi.mock("../../components/TaskScoringReference", () => ({ TaskScoringReference: () => <span>本组冻结评分依据</span> }));
 vi.mock("../../api/answerGroups", () => ({ listAnswerGroups: mocks.groups, getAnswerGroupMetrics: mocks.metrics,
   buildAnswerGroups: mocks.build, confirmAnswerGroup: mocks.confirm, reviewAnswerGroupSample: mocks.review, rollbackAnswerGroup: mocks.rollback, saveAnswerGroupDecision: mocks.save }));
 vi.mock("./AnswerGroupSampleEvidence", () => ({
@@ -29,8 +30,8 @@ vi.mock("antd", () => {
     List: Object.assign(({ dataSource, renderItem }: { dataSource: unknown[]; renderItem: (item: unknown) => ReactNode }) => <div>{dataSource.map((item, index) => <div key={index}>{renderItem(item)}</div>)}</div>, { Item }),
     Space: passthrough, Spin: ({ children, spinning }: { children: ReactNode; spinning?: boolean }) => <div data-testid="group-loading" aria-busy={spinning}>{children}</div>, Tag: ({ children, color }: { children: ReactNode; color?: string }) => <span data-color={color}>{children}</span>,
     Alert: ({ message, description }: { message?: ReactNode; description?: ReactNode }) => <div><span>{message}</span><div>{description}</div></div>,
-    Select: ({ value, onChange, options, mode }: { value?: string | string[]; onChange?: (value: string | string[]) => void; options?: { value: string; label: string }[]; mode?: string }) => (
-      <select aria-label={mode === "multiple" ? "选择采分点" : "选择题目"} multiple={mode === "multiple"} value={value ?? (mode === "multiple" ? [] : "")} onChange={(event) => onChange?.(mode === "multiple" ? Array.from(event.target.selectedOptions, (option) => option.value) : event.target.value)}>
+    Select: ({ value, onChange, options, mode, "aria-label": label }: { value?: string | string[]; onChange?: (value: string | string[]) => void; options?: { value: string; label: string }[]; mode?: string; "aria-label"?: string }) => (
+      <select aria-label={label ?? (mode === "multiple" ? "选择采分点" : "选择题目")} multiple={mode === "multiple"} value={value ?? (mode === "multiple" ? [] : "")} onChange={(event) => onChange?.(mode === "multiple" ? Array.from(event.target.selectedOptions, (option) => option.value) : event.target.value)}>
         {options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
     ),
@@ -94,6 +95,15 @@ function loadConfirmedGroups() {
   mocks.metrics.mockResolvedValue({ metrics: undefined });
 }
 describe("答案分组可访问选择", () => {
+  it("参考案例以中文显示错误标签，并将原始机器值保留在诊断详情", async () => {
+    mocks.questions.mockResolvedValue({ questions: [{ id: "question", question_no: "1", question_type: "short_answer" }] });
+    mocks.groups.mockResolvedValue({ answer_groups: [], teacher_reference_cases: [{ ...reference("question"), error_tags: ["unit_error", "unknown_machine_tag"] }] });
+    mocks.metrics.mockResolvedValue({ metrics: undefined });
+    render(<AnswerGroupingDrawer open examId="exam" canManage={false} onClose={vi.fn()} />);
+    expect(await screen.findByText("单位错误")).toBeTruthy(); expect(screen.getByText("其他典型错误")).toBeTruthy();
+    const details = screen.getByText("错误标签诊断").closest("details")!;
+    expect(details.open).toBe(false); expect(details.textContent).toContain("unit_error、unknown_machine_tag");
+  });
   it("通过原生按钮选择另一答案组并同步aria-pressed", async () => {
     mocks.questions.mockResolvedValue({ questions: [{ id: "question", question_no: "1", question_type: "short_answer" }] });
     mocks.groups.mockResolvedValue({ answer_groups: [group("A", 2), group("B", 8)], teacher_reference_cases: [] });
@@ -120,17 +130,18 @@ describe("答案分组可访问选择", () => {
     mocks.groups.mockResolvedValue({ answer_groups: [selected], teacher_reference_cases: [] });
     mocks.metrics.mockResolvedValue({ metrics: undefined });
     render(<AnswerGroupingDrawer open examId="exam" canManage={false} onClose={vi.fn()} />);
-    await screen.findByText("答卷 sample-rep");
-    const samples = screen.getAllByTestId("list-item-meta");
-    expect(samples.map((sample) => within(sample).getByText(/^答卷 /).textContent)).toEqual(["答卷 sample-rep", "答卷 sample-bnd", "答卷 sample-out"]);
-    expect(within(samples[0]).getAllByText(/^(代表样本|边界样本|异常样本)$/).map((tag) => [tag.textContent, tag.getAttribute("data-color")])).toEqual([
+    const workspace = await screen.findByRole("region", { name: "逐份样本审阅" });
+    expect(within(workspace).getAllByRole("option").map(option => (option as HTMLOptionElement).value)).toEqual(["rep", "bnd", "out"]);
+    expect(within(workspace).getAllByText(/^(代表样本|边界样本|异常样本)$/).map((tag) => [tag.textContent, tag.getAttribute("data-color")])).toEqual([
       ["代表样本", "blue"], ["边界样本", "orange"], ["异常样本", "red"]
     ]);
-    expect(within(samples[1]).getByText("边界样本").getAttribute("data-color")).toBe("orange");
-    expect(within(samples[2]).getByText("异常样本").getAttribute("data-color")).toBe("red");
-    expect(within(samples[0]).getByText("相似度 98.7% · 异常度 45.6% · 未抽检")).toBeTruthy();
-    expect(within(samples[1]).getByText("相似度 87.5% · 异常度 12.3% · 已接受")).toBeTruthy();
-    expect(within(samples[2]).getByText("相似度 65.3% · 异常度 92.3% · 已拒绝")).toBeTruthy();
+    expect(within(workspace).getByText("相似度 98.7% · 异常度 45.6%")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("选择抽检样本"), { target: { value: "bnd" } });
+    expect(within(workspace).getByText("边界样本").getAttribute("data-color")).toBe("orange");
+    expect(within(workspace).getByText("已接受")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("选择抽检样本"), { target: { value: "out" } });
+    expect(within(workspace).getByText("异常样本").getAttribute("data-color")).toBe("red");
+    expect(within(workspace).getByText("已拒绝")).toBeTruthy();
     expect(selected.members.map((member) => member.segment_id)).toEqual(["out", "bnd", "rep"]);
   });
 
@@ -147,8 +158,8 @@ describe("答案分组可访问选择", () => {
     mocks.groups.mockResolvedValue({ answer_groups: [selected], teacher_reference_cases: [] });
     mocks.metrics.mockResolvedValue({ metrics: undefined });
     render(<AnswerGroupingDrawer open examId="exam" canManage={canManage} onClose={vi.fn()} />);
-    await screen.findByText("答卷 sample");
-    for (const name of ["接受", "拒绝", "保存候选", "确认组候选"]) {
+    await screen.findByRole("region", { name: "逐份样本审阅" });
+    for (const name of ["接受并下一份", "拒绝并下一份", "保存候选", "确认组候选"]) {
       expect(Boolean(screen.queryByRole("button", { name }))).toBe(canReview);
     }
   });
@@ -364,7 +375,7 @@ describe("答案分组异步上下文隔离", () => {
     mocks.metrics.mockResolvedValue({ metrics: undefined });
     mocks.review.mockResolvedValue({});
     render(<AnswerGroupingDrawer open examId="exam" initialQuestionId="A" availableQuestions={questionChoices} canManage onClose={vi.fn()} />);
-    await screen.findByText("答卷 submission");
+    await screen.findByRole("region", { name: "逐份样本审阅" });
     const oldRead = mocks.reads.get("A-group:segment-A")!;
     fireEvent.change(screen.getByLabelText("选择题目"), { target: { value: "B" } });
     await screen.findByRole("button", { name: /8 份答案/ });
@@ -372,11 +383,11 @@ describe("答案分组异步上下文隔离", () => {
     await screen.findByRole("button", { name: /2 份答案/ });
     // 模拟旧图片显示回调已进入队列；即使题目、组和hash相同，也必须拒绝旧代次登记。
     act(() => oldRead(sampleMaterial(sampleA)));
-    expect((screen.getByRole("button", { name: "接受" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "接受并下一份" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole("option", { name: "A题采分点 · 2分" })).toBeNull();
     act(() => mocks.reads.get("A-group:segment-A")!(sampleMaterial(sampleA)));
-    expect((screen.getByRole("button", { name: "接受" }) as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "接受" }));
+    expect((screen.getByRole("button", { name: "接受并下一份" }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "接受并下一份" }));
     expect(mocks.review).toHaveBeenCalledWith("A-group", "segment-A", "accepted");
     await waitFor(() => expect(mocks.success).toHaveBeenCalledTimes(1));
   });
@@ -392,7 +403,7 @@ describe("答案分组异步上下文隔离", () => {
     const wrongMaterial = sampleMaterial(selected);
     wrongMaterial.question = { ...wrongMaterial.question, ...(wrongScope === "exam" ? { exam_id: "exam-other" } : { id: "B" }) };
     act(() => mocks.reads.get("A-group:segment-A")!(wrongMaterial));
-    expect((screen.getByRole("button", { name: "接受" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "接受并下一份" }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole("button", { name: "保存候选" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole("option", { name: "A题采分点 · 2分" })).toBeNull();
     expect(mocks.review).not.toHaveBeenCalled();

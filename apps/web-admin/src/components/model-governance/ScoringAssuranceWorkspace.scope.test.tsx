@@ -20,6 +20,7 @@ vi.mock("./ScoringAssuranceViews", () => ({
   CalibrationDetail: () => null, EvaluationDetail: () => null, EligibilityPolicyPanel: () => null,
   DisagreementQueue: ({ disagreements, onClassify, onRoute }: { disagreements: AIHumanDisagreement[]; onClassify: (item: AIHumanDisagreement) => void; onRoute: (item: AIHumanDisagreement) => void }) => <div>{disagreements.map((item) => <div key={item.id}><button onClick={() => onClassify(item)}>分类-{item.id}</button><button onClick={() => onRoute(item)}>关联-{item.id}</button></div>)}</div>
 }));
+vi.mock("./DisagreementTaskSelector", () => ({ DisagreementTaskSelector: ({ tenantID, disagreement, onSelect }: { tenantID: string; disagreement: AIHumanDisagreement; onSelect: (task: unknown) => void }) => <button onClick={() => onSelect({ ...disagreement, id: "review-task", tenant_id: tenantID })}>选择匹配任务</button> }));
 vi.mock("antd", () => {
   const Box = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   return {
@@ -76,6 +77,7 @@ it.each([
   const request = deferred<void>(); mock.mockReturnValue(request.promise);
   const input = props(); render(<ScoringAssuranceWorkspace {...input} />);
   fireEvent.click(await screen.findByRole("button", { name: `${open}-A` }));
+  if (open === "关联") fireEvent.click(screen.getByRole("button", { name: "选择匹配任务" }));
   fireEvent.click(screen.getByRole("button", { name: save }));
   await waitFor(() => expect(mock).toHaveBeenCalledOnce());
   fireEvent.click(screen.getByRole("button", { name: `${open}-B` }));

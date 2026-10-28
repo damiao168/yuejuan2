@@ -5,6 +5,7 @@ import { EmptyState } from '../../../components/PageState';
 import { ClearTemplateQuestionRegionsButton } from './ClearTemplateQuestionRegionsButton';
 import type { TemplatePageViewState, TemplateSourceStatusView, TemplateSourceToolbarView } from './templateViewTypes';
 import { isDialogTarget } from './templateViewRules';
+import { TemplateConfirmationAction } from './TemplateBindingView';
 
 export function SourceUploadStatus({ view }: Readonly<{ view: TemplateSourceStatusView }>) {
 	const { sourceUpload, sourceManagement, uploadProps, confirmDiscardTemplate } = view;
@@ -32,7 +33,7 @@ export function SourceUploadStatus({ view }: Readonly<{ view: TemplateSourceStat
 		);
 	if (sourceUpload.uploading)
 		return <div className="template-source-upload-status">
-      {sourceUpload.phase === "ordering" ? <span role="status">多模态识别页序…</span> : null}
+      {sourceUpload.phase === "ordering" ? <span role="status">正在识别页序…</span> : null}
       <Progress percent={sourceUpload.progress} status="active" />
     </div>;
 	return null;
@@ -45,14 +46,14 @@ export function EmptyAnswerSheetSources({ view }: Readonly<{ view: TemplateSourc
 			<section className="page-heading">
 				<div>
 					<h2>答题卡设置</h2>
-					<p>上传后自动匹配模板、识别并对应题目，发现错误可直接修改。空白卡和已填写答题卡均可辅助识别，收录学校库需核对空白来源。</p>
+					<p>上传答题卡，核对识别出的题目与答题区域。</p>
 				</div>
 			</section>
 			{canEditSources ? (
 				<Upload.Dragger {...uploadProps}>
 					<UploadIcon size={32} />
 					<h3>上传答题卡</h3>
-					<p>支持 PDF，或一次选择多张 PNG、JPG 图片；系统自动识别页序与答题区域。</p>
+					<p>支持PDF或多张PNG、JPG图片。</p>
 					<Button type="primary" loading={sourceUpload.uploading}>
 						选择答题卡文件
 					</Button>
@@ -68,6 +69,7 @@ export function EmptyAnswerSheetSources({ view }: Readonly<{ view: TemplateSourc
 				/>
 			)}
 			<SourceUploadStatus view={view} />
+			<details><summary>答题卡来源与复用</summary><p>空白卡和已填写答题卡均可辅助识别；收录学校模板库前须使用不含个人信息的空白来源。</p></details>
 		</div>
 	);
 }
@@ -224,6 +226,7 @@ export function TemplateToolbar({ view }: Readonly<{ view: TemplateSourceToolbar
         {suggestingRegions ? <span role="status" aria-live="polite">{suggestionProgress?.total ? `正在识别：已处理 ${suggestionProgress.completed} / ${suggestionProgress.total} 页` : "正在准备答题卡图片…"}</span> : null}
         {suggestionError ? <Alert type={suggestionTone ?? "warning"} showIcon message={suggestionError} /> : null}
       </div> : null}
+      <TemplateConfirmationAction view={view} />
 		</section>
 	);
 }

@@ -2,7 +2,6 @@ import { Alert, Button, Progress, Space } from "antd";
 import { getPaperImportUserMessage } from "../../api/client";
 import type { PaperImportIssue, PaperImportJob, Question } from "../../api/papers";
 import { hasBlockingImportIssues, hasNoExamContentDetected, paperImportTeacherProgress, paperImportSummary } from "./materials";
-import { PaperImportReviewPanel } from "./PaperImportReviewPanel";
 import { PaperImportRecognitionPreview } from "./PaperImportRecognitionPreview";
 import { importExcludedPageFurniture, importProgressTiming, importRetainedDraftDescription, importReviewDescription, importVisibleIssues, isImportStructureConfirmed } from "./paperImportPresentation";
 import type { usePaperImportWorkflow } from "./usePaperImportWorkflow";
@@ -12,7 +11,7 @@ type ImportActionsProps = Readonly<{ job: PaperImportJob; workflow: ImportWorkfl
 const rubricRequiredArchetypes = new Set(["structured_steps", "short_constructed", "extended_response", "diagram_graph", "table_experiment"]);
 
 function ReviewRequiredActions({ job, workflow, onReview }: ImportActionsProps) {
-  const { updatingImportSources, replaceImportSources, savingImportReview, saveImportReview,
+  const { updatingImportSources, replaceImportSources,
     parsing, invalidReviewRubric, invalidReviewScore, confirmPaperImport } = workflow;
   if (isImportStructureConfirmed(job)) return <Button onClick={onReview}>核对小题与分值</Button>;
   if (hasNoExamContentDetected(job)) return <Space wrap>
@@ -21,18 +20,18 @@ function ReviewRequiredActions({ job, workflow, onReview }: ImportActionsProps) 
   </Space>;
   const hasPaperMaterial = job.sources.some((source) => source.detected_role === "question" || source.detected_role === "mixed");
   return <Space>
-    <Button onClick={onReview}>逐题核对</Button>
-    <Button loading={savingImportReview} onClick={() => void saveImportReview(job)}>保存草稿</Button>
+    <Button type="primary" onClick={onReview}>逐题核对</Button>
     {!hasPaperMaterial ? <Button type="primary" loading={parsing} disabled={hasBlockingImportIssues(job) || invalidReviewRubric || invalidReviewScore || workflow.confirmedReviewCount < workflow.reviewDrafts.length}
       onClick={() => void confirmPaperImport(job)}>确认导入</Button> : null}
   </Space>;
 }
 
 function ParseRetryActions({ job, workflow, cancelled }: Readonly<{ job: PaperImportJob; workflow: ImportWorkflow; cancelled: boolean }>) {
-  return <Space wrap>
-    <Button type="primary" loading={workflow.retryingParse} onClick={() => void workflow.retryImportParse(job)}>{cancelled ? "仅解析本次补充" : "仅重新解析"}</Button>
-    <Button loading={workflow.updatingImportSources} onClick={() => void workflow.replaceImportSources(job, job.sources)}>重新识别全部</Button>
-  </Space>;
+  return <div><Button type="primary" loading={workflow.retryingParse} onClick={() => void workflow.retryImportParse(job)}>继续处理本次资料</Button>
+    <p>{cancelled ? "继续已停止的本次资料处理，保留历史识别结果。" : "使用已识别的文字继续处理，保留历史结果，无需重新上传。"}</p>
+    <details><summary>其他恢复方式</summary><p>仅当原始文字识别有误时使用；将重新识别全部资料并重新匹配，已保存的人工核对仍需重新检查。</p>
+      <Button loading={workflow.updatingImportSources} onClick={() => void workflow.replaceImportSources(job, job.sources)}>重新识别全部</Button></details>
+  </div>;
 }
 
 function PaperImportActions({ job, workflow, onReview }: ImportActionsProps) {
@@ -81,7 +80,7 @@ function RetainedDraftNotice({ job, count }: Readonly<{ job: PaperImportJob; cou
     message={"上一轮已识别的 " + count + " 道题目仍然保留"} description={importRetainedDraftDescription(job.status)} />;
 }
 
-function DraftResults({ job, workflow, existingQuestions }: Readonly<{ job: PaperImportJob; workflow: ImportWorkflow; existingQuestions?: Question[] }>) {
+function DraftResults({ job, workflow }: Readonly<{ job: PaperImportJob; workflow: ImportWorkflow }>) {
   if (job.status === "applied" || isImportStructureConfirmed(job) || !workflow.reviewDrafts.length) return null;
   const summary = paperImportSummary(job);
   return <>
@@ -94,9 +93,8 @@ function DraftResults({ job, workflow, existingQuestions }: Readonly<{ job: Pape
       <span>已逐题确认 <strong>{workflow.confirmedReviewCount ?? 0} / {workflow.reviewDrafts.length}</strong></span>
       <span><strong>{job.questions.reduce((sum, item) => sum + item.score, 0)}</strong> 分</span>
     </div>
-    <PaperImportReviewPanel job={job} drafts={workflow.reviewDrafts} existingQuestions={existingQuestions} readOnly={job.status !== "review_required" || workflow.savingImportReview}
-      onConfirmQuestion={(index) => void workflow.saveImportReview(job, index)}
-      onChange={workflow.updateReviewDraft} onOpenSource={(ref) => void workflow.openImportSource(ref.file_asset_id, ref.page_no)} />
+    {/* 概览只展示已读取的识别快照；未保存草稿与逐题确认只在小题页编辑，避免两个页面争夺同一草稿。 */}
+    <PaperImportRecognitionPreview key={`${job.id}:${job.generation}`} job={job} onOpenSource={(fileAssetID, pageNo) => void workflow.openImportSource(fileAssetID, pageNo)} />
   </>;
 }
 
@@ -153,7 +151,7 @@ function EmptyResultsNotice({ job, workflow }: Readonly<{ job: PaperImportJob; w
     description={job.status === "failed" ? "本次识别未得到可用题目。请查看失败提示和资料来源，再决定是否重试。" : "当前任务没有题目草稿，请查看资料来源并核对题目、答案和解析是否完整。"} />;
 }
 
-export function PaperImportResults({ job, workflow, existingQuestions, onReview }: Readonly<{
+export function PaperImportResults({ job, workflow, onReview }: Readonly<{
   job: PaperImportJob; workflow: ImportWorkflow; existingQuestions?: Question[]; onReview: () => void;
 }>) {
   return <section className="workspace-section paper-import-review">
@@ -163,7 +161,7 @@ export function PaperImportResults({ job, workflow, existingQuestions, onReview 
     </div>
     <PaperImportProgress job={job} />
     <RetainedDraftNotice job={job} count={workflow.reviewDrafts.length} />
-    <DraftResults job={job} workflow={workflow} existingQuestions={existingQuestions} />
+    <DraftResults job={job} workflow={workflow} />
     {job.status === "applied" || isImportStructureConfirmed(job) ? <PaperImportRecognitionPreview key={`${job.id}:${job.generation}`} job={job} onOpenSource={(fileAssetID, pageNo) => void workflow.openImportSource(fileAssetID, pageNo)} /> : null}
     <EmptyResultsNotice job={job} workflow={workflow} />
     <ExcludedFurniture job={job} onOpenSource={workflow.openImportSource} />

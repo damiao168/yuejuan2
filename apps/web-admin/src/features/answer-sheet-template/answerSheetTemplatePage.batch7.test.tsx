@@ -550,8 +550,18 @@ describe("answer sheet page behavior before and after extraction", () => {
 		}
 	);
 
+	it("首次上传保留核对任务，空白来源限制放在可展开的复用帮助中", async () => {
+		mocks.papers.mockResolvedValue({ papers: [] });
+		mocks.templates.mockResolvedValue({ templates: [] });
+		await render();
+		expect(host.textContent).toContain("上传答题卡，核对识别出的题目与答题区域");
+		const help = [...host.querySelectorAll("details")].find(item => item.querySelector("summary")?.textContent === "答题卡来源与复用");
+		expect(help?.open).toBe(false);
+		expect(help?.textContent).toContain("不含个人信息的空白来源");
+	});
+
 	it.each([
-		["bound_auto", "template", "确认答题卡设置", "首张答卷自动识别"],
+		["bound_auto", "template", "确认答题卡设置", "已自动识别为第"],
 		["locked_with_guard", "other", "确认答题卡设置", "已绑定其他模板版本"],
 		["locked_with_guard", "template", undefined, "已用于本场考试"]
 	])("preserves binding states %s / %s", async (mode, id, action, text) => {
@@ -683,7 +693,7 @@ describe("answer sheet page behavior before and after extraction", () => {
 	it.each([
 		["approved", "success", "校准已生效"],
 		["revoked", "error", "撤销已生效"],
-		["draft", "info", "请只依据答题图片盲标"]
+		["draft", "info", "只按答题图片标注"]
 	])("preserves calibration status %s", async (status, type, text) => {
 		calibration({}, status as OMRCalibrationSession["status"]);
 		await render();
@@ -806,7 +816,7 @@ describe("answer sheet page behavior before and after extraction", () => {
       expect(host.querySelector('[aria-label="打开全屏工作台"]')).toBeNull();
       expect(host.querySelector('[aria-label="返回考试管理"]')).toBeNull();
       expect(document.body.style.overflow).toBe("clip");
-      await act(async () => host.querySelector<HTMLSelectElement>('[aria-label="选择要配置的题目"]')!.dispatchEvent(new Event("change", { bubbles: true })));
+      await act(async () => host.querySelectorAll('#template-question-pane strong')[1].parentElement!.parentElement!.click());
       expect(host.querySelector("#template-question-pane")).not.toBeNull();
       expect(host.querySelector(".template-inspector")).toBeNull();
       expect(host.querySelector(".template-settings-content")).toBeNull();
@@ -857,17 +867,18 @@ describe("answer sheet page behavior before and after extraction", () => {
 		mocks.editor.name = "changed";
 		await render();
 		expect(button("确认答题卡设置").disabled).toBe(false);
-		expect(host.querySelector("#template-exam-binding")?.contains(button("确认答题卡设置"))).toBe(true);
+		expect(host.querySelector(".template-toolbar")?.contains(button("确认答题卡设置"))).toBe(true);
 		expect(host.querySelector(".template-toolbar")?.textContent).not.toContain("答题卡区域尚未确认");
 		expect(host.querySelector('[data-alert="答题卡区域尚未确认"]')).toBeNull();
 		await act(async () => button("确认答题卡设置").click());
 		expect(mocks.editor.confirmActivate).toHaveBeenCalledTimes(1);
 	});
 
-	it("只有点击模板设置才显示确认区，选择左侧题目保持画布工作区", async () => {
+	it("最终确认直接显示在工具栏，选择左侧题目保持画布工作区", async () => {
 		await render(true, true, false);
     expect(host.querySelector("#template-exam-binding")).toBeNull();
-    await act(async () => host.querySelector<HTMLSelectElement>('[aria-label="选择要配置的题目"]')!.dispatchEvent(new Event("change", { bubbles: true })));
+    expect(host.querySelector(".template-toolbar")?.contains(button("确认答题卡设置"))).toBe(true);
+    await act(async () => host.querySelectorAll('#template-question-pane strong')[1].parentElement!.parentElement!.click());
     expect(host.querySelector(".template-settings-content")).toBeNull();
     await openSettingsDialog();
     expect(host.querySelector("#template-exam-binding")).not.toBeNull();
@@ -881,7 +892,7 @@ describe("answer sheet page behavior before and after extraction", () => {
 		expect(Array.from(pane.querySelectorAll("strong"), item => item.textContent)).toEqual(["题目", "1", "2"]);
 		await act(async () => pane.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
 		expect(Array.from(pane.querySelectorAll("strong"), item => item.textContent)).toEqual(["题目", "2"]);
-		expect(pane.querySelectorAll('select[aria-label="选择要配置的题目"] option')).toHaveLength(2);
+		expect(pane.querySelector('input[aria-label="搜索要配置的题目"]')).not.toBeNull();
 		await act(async () => pane.querySelectorAll("strong")[1].parentElement!.parentElement!.click());
 		expect(mocks.editor.setSelectedQuestionId).toHaveBeenCalledWith("missing");
 	});
@@ -909,7 +920,7 @@ describe("answer sheet page behavior before and after extraction", () => {
 		}
 		await render();
 		expect(host.textContent).not.toContain("使用设置已确认");
-		expect(host.querySelector(".template-toolbar")?.textContent).not.toContain("还有");
+		if (boundary === "coverage") expect(host.querySelector(".template-toolbar")?.textContent).toContain("还有 1 道题未配置");
 		expect(button("确认答题卡设置").disabled).toBe(boundary === "coverage");
 	});
 

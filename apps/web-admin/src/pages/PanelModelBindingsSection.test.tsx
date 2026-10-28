@@ -112,7 +112,7 @@ function change(select: HTMLSelectElement, value: string) {
 	select.dispatchEvent(new Event("change", { bubbles: true }));
 }
 beforeEach(() => {
-	vi.clearAllMocks();
+	vi.resetAllMocks();
 	Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 	host = document.createElement("div");
 	document.body.append(host);
@@ -255,7 +255,7 @@ it.each([
     }
   });
   await act(async () => button(`保存${title}`).click());
-  expect(m.error).toHaveBeenLastCalledWith("阅卷角色配置暂时无法保存，请稍后重试。");
+  expect(m.error).toHaveBeenLastCalledWith(expect.stringContaining("阅卷角色配置暂时无法保存，请稍后重试"));
   expect(m.success).not.toHaveBeenCalled();
   expect(saved).not.toHaveBeenCalled();
   expect(dirty).toHaveBeenLastCalledWith(true);
@@ -272,7 +272,7 @@ it.each([
   expect(m.save.mock.calls[1][0]).toEqual(m.save.mock.calls[0][0]);
   expect(m.save.mock.calls[1][0]).toMatchObject({ agent_role: role, expected_revision: "absent" });
   expect(saved).toHaveBeenCalledOnce();
-  expect(m.success).toHaveBeenLastCalledWith(`${title} 已保存；不会改变日常对话模型`);
+  expect(m.success).toHaveBeenLastCalledWith(`已保存 ${title}；不会改变日常对话模型。`);
   expect(host.querySelectorAll(".platform-panel-role-dirty")).toHaveLength(2);
 });
 it("相同范围刷新失败保留上次绑定和输入，重新读取成功才能保存", async () => {
@@ -396,7 +396,7 @@ it("并发冲突保留三个角色草稿，显式刷新核对成功后才可使�
   await act(async () => button("保存主评 A").click());
   expect(m.save.mock.calls[0][0]).toMatchObject({ expected_revision: firstRevision, managed_model_api_config_id: "model-a" });
   expect(m.list).toHaveBeenCalledOnce();
-  expect(host.textContent).toContain("三个角色的本页输入均已保留");
+  expect(host.textContent).toContain("已成功项保留，其余输入未提交");
   expect(host.querySelector<HTMLSelectElement>('select[aria-label="主评 A Prompt 版本"]')!.value).toBe("prompt-v1");
   expect(host.querySelector<HTMLSelectElement>('select[aria-label="主评 B评分模型"]')!.value).toBe("model-b");
   expect(host.querySelector<HTMLSelectElement>('select[aria-label="仲裁 C Prompt 版本"]')!.value).toBe("prompt-v1");
@@ -471,4 +471,27 @@ it("表格带入的模型只填入用户选择的角色，保存后通知刷新�
   await act(async () => button("保存主评 B").click());
   expect(m.save).toHaveBeenCalledWith(expect.objectContaining({ tenant_id: "school-a", education_stage: "senior", subject_code: "physics", archetype_code: "short_answer", agent_role: "primary_b", managed_model_api_config_id: config.id, expected_revision: "absent" }));
   expect(saved).toHaveBeenCalledOnce();
+});
+
+it("统一保存逐项保留成功结果，失败后的重试只提交剩余角色及其原修订", async () => {
+  const keys = ["primary_a", "primary_b", "arbiter"] as const;
+  const existing = keys.map((agent_role, index) => ({ id: agent_role, agent_role, managed_model_api_config_id: config.id, prompt_version: "old-version", strength_rank: index === 2 ? 2 : 1, status: "active", revision: `revision-${agent_role}` }));
+  m.list.mockResolvedValue({ bindings: existing });
+  m.save.mockImplementation(async input => {
+    if (input.agent_role === "primary_b") throw new Error("temporary failure");
+    return { binding: { ...input, revision: `saved-${input.agent_role}` } };
+  });
+  const saved = vi.fn();
+  await act(async () => root.render(<PanelModelBindingsSection tenantID="school-a" configs={[config]} onSaved={saved} />));
+  await act(async () => button("为 A/B/C 套用当前部署版本").click());
+  await act(async () => button("保存全部更改").click());
+  expect(m.save.mock.calls.map(call => call[0].agent_role)).toEqual(["primary_a", "primary_b"]);
+  expect(host.textContent).toContain("已保存 主评 A");
+  expect(host.textContent).toContain("其余未保存输入已保留");
+  expect(host.querySelectorAll(".platform-panel-role-dirty")).toHaveLength(2);
+  expect(saved).toHaveBeenCalledOnce();
+  m.save.mockImplementation(async input => ({ binding: { ...input, revision: `saved-${input.agent_role}` } }));
+  await act(async () => button("保存全部更改").click());
+  expect(m.save.mock.calls.slice(2).map(call => [call[0].agent_role, call[0].expected_revision])).toEqual([["primary_b", "revision-primary_b"], ["arbiter", "revision-arbiter"]]);
+  expect(host.querySelectorAll(".platform-panel-role-dirty")).toHaveLength(0);
 });

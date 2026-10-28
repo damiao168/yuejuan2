@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-28",
+  "scope": "EX-22上传前连续分组核对、DP05本地处理能力入口、统一契约与独立数据库验证",
+  "findings": [
+    {
+      "id": "EX-22",
+      "status": "partial",
+      "implementation": "选择文件后先在本地读取PDF/TIFF真实页数，按整次选择连续分组，展示每份来源文件与原页范围；子页预览显示学生分组边界。已知缺页阻止确认；换文件废弃旧计数，排序未应用仍阻止提交。支持八种TIFF方向的正确缩略图，保留原方向标签与原像素。BigTIFF可安全读取64位主目录页数供分组核对。",
+      "remaining": "BigTIFF、子IFD和特殊编码仍不提供本地逐页图像调整；无法核对页数时明确交给服务端解码，不猜测分组。classic TIFF和PDF最多预览调整100页，其中classic TIFF超过100页时本地页数也回退服务端，服务端所有完整性与身份检查保留。",
+      "files": ["apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx", "apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx", "apps/web-admin/src/features/capture/capturePageGrouping.ts", "apps/web-admin/src/features/capture/capturePdfPreview.ts", "apps/web-admin/src/features/capture/captureTiffPreview.ts"]
+    },
+    {
+      "id": "DP05",
+      "status": "fixed",
+      "implementation": "本地首次启动直接选择完整答卷处理或仅管理核心并保存模式，以后复用；完整模式自动进入已有受限账号建立、服务登录验证和Worker健康检查，首次用户不再另查三个开关。显式单项Enable参数保持精确范围，Disabled与显式启用冲突时在写配置前拒绝，切回Disabled会停止上次处理Worker，失败不报告禁用已生效。",
+      "remaining": "",
+      "boundaries": ["新安装凭据由原启动器随机生成；既有凭据、禁用账号和人类身份不重置或接管，旧配置缺项仍需核对。", "本轮解决本地安装入口和能力状态；正式环境账号由管理员管理。现有服务职责覆盖多个处理队列，未借精简入口扩大权限。", "隔离测试验证选择、继承凭据、登录、启动顺序、停止和失败恢复，不等于真实首份答卷处理或硬件验收。"],
+      "files": ["scripts/local-processing-mode.ps1", "scripts/launch-local.ps1", "scripts/ci/local-processing-mode.test.mjs", "README.md", "infra/docker-compose/README.md"]
+    }
+  ],
+  "read_scope": [
+    {"path":"apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx","status":"annotated","read_scope":"full","note":"核对本地计数、跨文件分组、取消/迟到结果与父确认阻断。"},
+    {"path":"apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx","status":"annotated","read_scope":"full","note":"核对原件改序与未应用排序阻断，补逐份答卷位置。"},
+    {"path":"apps/web-admin/src/features/capture/capturePageGrouping.ts","status":"annotated","read_scope":"full","note":"解释同次选择跨文件连续分组，保持原页号来源。"},
+    {"path":"apps/web-admin/src/features/capture/capturePageGrouping.test.ts","status":"self_explanatory","read_scope":"full","note":"跨文件、改序和未知页数不猜测。"},
+    {"path":"apps/web-admin/src/features/capture/captureTiffPreview.ts","status":"annotated","read_scope":"full","note":"真实64位目录范围与循环验证、八方向缩略图、原件保留。"},
+    {"path":"apps/web-admin/src/features/capture/captureTiffPreview.test.ts","status":"annotated","read_scope":"full","note":"双端序原件与BigTIFF页数、方向四角、循环与越界拒绝。"},
+    {"path":"apps/web-admin/src/features/capture/capturePdfPreview.ts","status":"annotated","read_scope":"full","note":"仅取页数时仍取消并销毁PDF任务，不提前登记文件。"},
+    {"path":"apps/web-admin/src/features/capture/CaptureFileOrderPreview.test.tsx","status":"self_explanatory","read_scope":"full","note":"父确认缺页阻断与切文件迟到计数隔离。"},
+    {"path":"apps/web-admin/src/features/capture/ImageQualityWorkspace.tsx","status":"pending","read_scope":"IssueList_and_nearby_labels","note":"只核对未知问题码显示，不计整个质量工作台全文审读。"},
+    {"path":"scripts/local-processing-mode.ps1","status":"annotated","read_scope":"full","note":"单项旧命令不扩范围；禁用必须实际停止已运行处理服务。"},
+    {"path":"scripts/ci/local-processing-mode.test.mjs","status":"self_explanatory","read_scope":"full","note":"合成进程验证模式选择、冲突、停止及失败。"},
+    {"path":"scripts/launch-local.ps1","status":"pending","read_scope":"mode_selection_initial_env_and_init_final_readiness","note":"核对模式、已有账号/密钥保留、启停调用顺序；未重新全文检查Docker启动辅助函数。"},
+    {"path":"services/api-gateway/internal/opiniondraft/draft_postgres_integration_test.go","status":"annotated","read_scope":"full","note":"随机schema真实218迁移触发器与两种提交/保存并发顺序；不宣称完整学校业务种子。"},
+    {"path":"services/api-gateway/migrations/000218_private_opinion_drafts.sql","status":"pending","read_scope":"table_and_resource_validation_cleanup_triggers","note":"独立核对SQL、父锁与清理函数；实际应用于新隔离集群，生产代码归申诉代理。"},
+    {"path":"services/api-gateway/openapi/edugrade-api.openapi.json","status":"pending","read_scope":"new_source_directory_and_private_draft_operations","note":"新增来源目录与9条私稿接口；其他契约未全文重审。"}
+  ],
+  "verification": [
+    {"log":"capture-preflight.log","status":"passed","files":4,"tests":22},
+    {"log":"processing-mode-final.log","status":"passed","tests":2,"note":"各测试包含多种模式组合；不按组合数冒充独立用例。"},
+    {"log":"worker-init-regression.log","status":"passed","boundary":"假Docker与假API，不操作实际部署。"},
+    {"log":"launch-dryrun.log","status":"passed","boundary":"临时合成配置，不改变当前部署.env或服务。"},
+    {"log":"postgres-regression.log","status":"passed_with_test_fixture_followup","note":"私稿三类与两个并发顺序通过；源目录最初仅清理db关闭顺序失败，单独修复后重跑通过。"},
+    {"log":"source-directory-postgres-final.log","status":"passed"}
+  ]
+}

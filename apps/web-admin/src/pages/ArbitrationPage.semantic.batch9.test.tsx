@@ -64,7 +64,7 @@ describe("batch9 native arbitration semantics (mock controls, DOM assertions onl
     expect(output.textContent).toBe("最终分和说明在提交仲裁后才写入服务端。"); expect(output.children).toHaveLength(0);
     await act(async () => root.render(<ArbitrationDecisionPanel {...props} draftTouched />));
     expect(host.querySelectorAll("output")).toHaveLength(1); expect(host.querySelector("output")).toBe(output);
-    expect(output.textContent).toBe("未提交内容仅在本页；切换任务或刷新会丢失。");
+    expect(output.textContent).toBe("未提交内容仅在本页；离开后无法恢复。");
   });
 
   it("does not introduce a status region for absent or submitted detail and still shows zero", async () => {

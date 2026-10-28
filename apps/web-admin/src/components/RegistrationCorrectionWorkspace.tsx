@@ -583,6 +583,7 @@ export function RegistrationCorrectionWorkspace({
           <p className="correction-mode-hint">
             仅当模板本身印刷或位置有偏移时开启；一般只需调整左侧答卷的四个点。
           </p>
+          <details className="correction-exact-coordinates"><summary>精确坐标</summary><p>以页面左上角为原点；横向、纵向均为0–1比例，1表示整页宽或高。</p>
           {labels.map((label, index) => (
             <div className="correction-point-row" key={label}>
               <strong>
@@ -591,6 +592,7 @@ export function RegistrationCorrectionWorkspace({
               </strong>
               <span>答卷</span>
               <InputNumber
+                aria-label={`答卷${label}横向位置`}
                 min={0}
                 max={1}
                 step={0.001}
@@ -600,6 +602,7 @@ export function RegistrationCorrectionWorkspace({
                 onChange={(value) => updatePoint("source", index, "x", value)}
               />
               <InputNumber
+                aria-label={`答卷${label}纵向位置`}
                 min={0}
                 max={1}
                 step={0.001}
@@ -612,6 +615,7 @@ export function RegistrationCorrectionWorkspace({
                 <>
                   <span>模板</span>
                   <InputNumber
+                    aria-label={`模板${label}横向位置`}
                     min={0}
                     max={1}
                     step={0.001}
@@ -623,6 +627,7 @@ export function RegistrationCorrectionWorkspace({
                     }
                   />
                   <InputNumber
+                    aria-label={`模板${label}纵向位置`}
                     min={0}
                     max={1}
                     step={0.001}
@@ -637,6 +642,7 @@ export function RegistrationCorrectionWorkspace({
               ) : null}
             </div>
           ))}
+          </details>
           <div
             className={`correction-validation ${correction?.status ?? "draft"}`}
           >

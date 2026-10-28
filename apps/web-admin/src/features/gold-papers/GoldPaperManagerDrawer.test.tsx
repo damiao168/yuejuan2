@@ -61,6 +61,15 @@ function openDrawer() {
 }
 
 describe("标准卷管理详情入口", () => {
+  it("列表显示题号参考分摘要，可按题目和分档筛选", async () => {
+    mocks.list.mockResolvedValue({ gold_papers: [paper({ id: "zero", question_no: "2", versions: [{ ...version(1), reference_score: 0 }] }), paper({ id: "full", question_no: "3", versions: [{ ...version(1), reference_score: 10 }] })] });
+    openDrawer();
+    expect(await screen.findByText("第 2 题 · 0/10 分")).toBeTruthy(); expect(screen.getByText("第 3 题 · 10/10 分")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("筛选标准卷分档"), { target: { value: "full" } });
+    expect(screen.queryByText("第 2 题 · 0/10 分")).toBeNull(); expect(screen.getByText("第 3 题 · 10/10 分")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("筛选标准卷题目"), { target: { value: "2" } });
+    expect(screen.queryByText("第 3 题 · 10/10 分")).toBeNull();
+  });
   it.each(["network", "null"])("覆盖%s异常保持未知，显式重试成功后才显示规则满足", async kind => {
     mocks.list.mockResolvedValue({ gold_papers: [paper()] });
     if (kind === "network") mocks.coverage.mockRejectedValueOnce(new Error("unavailable"));

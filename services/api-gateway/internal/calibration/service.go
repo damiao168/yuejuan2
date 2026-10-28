@@ -37,6 +37,20 @@ func NewService(store Store, gold goldpaper.ActiveApprovedReader) *Service {
 }
 
 func (s *Service) PutPolicy(ctx context.Context, tenantID, examID, questionID string, input PutPolicyInput) (Policy, error) {
+	if input.SchoolTemplateID != "" {
+		if _, err := uuid.Parse(input.SchoolTemplateID); err != nil {
+			return Policy{}, ErrInvalidInput
+		}
+		templates, ok := s.store.(SchoolTemplateRepository)
+		if !ok || input.SchoolTemplateRevision < 1 || input.ExpectedRevision < 0 {
+			return Policy{}, ErrInvalidInput
+		}
+		// 带来源的保存只认仍获批准的冻结标准；客户端复制出的阈值不作为批准依据。
+		return templates.ApplySchoolTemplate(ctx, tenantID, examID, questionID, input)
+	}
+	if input.SchoolTemplateRevision != 0 {
+		return Policy{}, ErrInvalidInput
+	}
 	if tenantID == "" || examID == "" || questionID == "" || !validPolicyInput(input) {
 		return Policy{}, ErrInvalidInput
 	}

@@ -10,7 +10,7 @@ export function QuestionBankReferenceImages({ materials, versionId }: Readonly<{
   if (!materials) return null;
   return <section aria-label="题目冻结参考图">
     <h3>冻结参考图</h3>
-    <p>{versionId ? "图片随本题版本保留，原材料授权撤回或图片不可用时将停止使用。" : "导入将把这份图片清单的使用权绑定到目标草稿版本；原材料撤回后仍会停止使用。"}</p>
+    <p>{versionId ? "本版本引用这些图片；原材料授权撤回或图片不可用时，将停止使用。" : "导入后本草稿将引用这些图片；原材料授权撤回后，将停止使用。"}</p>
     {materials.items.map((item) => <figure key={item.id}>
       <figcaption>{referenceRoleLabel(item.role)} {item.ordinal}</figcaption>
       <ProtectedReferenceImage identity={`${versionId ?? materials.source_exam_id}:${materials.manifest_id}:${item.id}`} alt={`${referenceRoleLabel(item.role)} ${item.ordinal}`}

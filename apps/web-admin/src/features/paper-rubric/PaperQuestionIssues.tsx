@@ -3,7 +3,7 @@ import { Button, Drawer } from "antd";
 import { isUnmatchedPlaceholder, questionNeedsAnswer, questionNeedsRubric, type QuestionIssueTarget } from "./paperQuestionPresentation";
 import type { PaperRubricViewContext } from "./paperRubricViewTypes";
 
-export function PaperQuestionIssues({ context }: Readonly<{ context: PaperRubricViewContext }>) {
+export function PaperQuestionIssues({ context, inline = false, onHandled }: Readonly<{ context: PaperRubricViewContext; inline?: boolean; onHandled?: () => void }>) {
   const [open, setOpen] = useState(false);
   const questions = context.config.questions.filter(question => !isUnmatchedPlaceholder(question, context.latestPaperImport, context.structureConfirmed));
   const issues = questions.flatMap(question => {
@@ -14,15 +14,18 @@ export function PaperQuestionIssues({ context }: Readonly<{ context: PaperRubric
     return targets.length ? [{ question, targets }] : [];
   });
   if (!issues.length) return null;
+  const list = <ul className="paper-question-issue-list">{issues.map(({ question, targets }) => <li key={question.id}>
+        <strong>第 {question.question_no} 题</strong><div>{targets.map(({ target, label }) => <Button key={target} type="link"
+          aria-label={`第 ${question.question_no} 题：${label}`} disabled={context.state.saveBusy} onClick={() => {
+            context.actions.openQuestionIssue(question, target); setOpen(false); onHandled?.();
+          }}>{label}</Button>)}</div>
+      </li>)}</ul>;
+  if (inline) return <section aria-label="逐题待办"><h3>逐题待办</h3>
+    <Button disabled={context.state.saveBusy} onClick={() => { context.actions.openQuestionIssue(issues[0].question, issues[0].targets[0].target); onHandled?.(); }}>处理下一项待办</Button>{list}</section>;
   return <>
     <Button type="text" onClick={() => setOpen(true)}>待处理题目</Button>
     <Drawer title="待处理题目" width="min(440px, 100vw)" open={open} onClose={() => setOpen(false)}>
-      <ul className="paper-question-issue-list">{issues.map(({ question, targets }) => <li key={question.id}>
-        <strong>第 {question.question_no} 题</strong><div>{targets.map(({ target, label }) => <Button key={target} type="link"
-          aria-label={`第 ${question.question_no} 题：${label}`} disabled={context.state.saveBusy} onClick={() => {
-            context.actions.openQuestionIssue(question, target); setOpen(false);
-          }}>{label}</Button>)}</div>
-      </li>)}</ul>
+      {list}
     </Drawer>
   </>;
 }

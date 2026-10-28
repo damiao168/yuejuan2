@@ -24,9 +24,12 @@ export function ModelConfigForm({
   fetchAvailableModels: () => Promise<void>;
   onConnectionChange?: () => void;
 }>) {
+  const baseURL = Form.useWatch("base_url", form);
+  const originChanged = Boolean(editing && presetForConfig(editing) === "custom" &&
+    !isSameModelAPIOrigin(editing.base_url, String(baseURL ?? editing.base_url)));
   const renderCredentialField = () => {
     if (credentialSource) {
-      return <Alert type="info" showIcon message={`沿用已保存的密钥（${credentialSource.credential_hint || "已加密"}）`} description="新模型会单独验证并加密保存；后续更换密钥需逐个更新模型配置。" />;
+      return <Alert type="info" showIcon message={`沿用已保存的密钥（${credentialSource.credential_hint || "已加密"}）`} description="此配置将单独验证并加密保存；轮换时可在学校模型库中批量更换同一供应商连接的密钥。" />;
     }
     return <Form.Item
       name="api_key"
@@ -44,7 +47,7 @@ export function ModelConfigForm({
           }
         })
       ] : [{ required: true, message: "请输入 API Key" }, { min: 16, message: "密钥至少 16 个字符" }]}
-      extra={editing ? "原密钥不会回显；留空则继续使用。同域名、同端口修改路径无需重填；更换域名或端口时需重新输入，可以使用原密钥。" : "密钥将加密保存；保存只做零生成 Token 连接检测。"}
+      extra={editing ? originChanged ? "API 域名或端口已变，请重新输入密钥；可以使用原密钥。" : "已保存的密钥不回显；留空继续使用。" : "密钥将加密保存。保存时检查连接，不生成回复。"}
     >
       <Input.Password
         prefix={<KeyRound size={15} />}
@@ -95,7 +98,7 @@ export function ModelConfigForm({
         name="model_name"
         label="模型名称"
         rules={[{ required: true, message: "请输入模型名称" }]}
-        extra={<span className="platform-model-field-help"><span>{discoveryDisabledReason ?? "零 Token 获取模型列表，也可手工输入模型名称。"}</span><Button type="link" size="small" loading={modelsLoading} disabled={Boolean(discoveryDisabledReason)} onClick={() => {
+        extra={<span className="platform-model-field-help"><span>{discoveryDisabledReason ?? "可获取模型列表，也可直接输入模型名称；获取列表不生成回复。"}</span><Button type="link" size="small" loading={modelsLoading} disabled={Boolean(discoveryDisabledReason)} onClick={() => {
           if (availableModels.length > 0) {
             setFilterAvailableModels(false);
             setModelOptionsOpen(true);

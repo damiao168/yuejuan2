@@ -37,6 +37,7 @@ vi.mock("../../api/modelGovernance", () => ({
 vi.mock("./ModelEvaluationWorkspace", () => ({ ModelEvaluationWorkspace: () => null }));
 vi.mock("./ModelApprovalWorkspace", () => ({ ModelApprovalWorkspace: () => null }));
 vi.mock("./PromptVersionWorkspace", () => ({ PromptVersionWorkspace: () => null }));
+vi.mock("./DisagreementTaskSelector", () => ({ DisagreementTaskSelector: ({ tenantID, disagreement, onSelect }: { tenantID: string; disagreement: AIHumanDisagreement; onSelect: (task: unknown) => void }) => <button onClick={() => onSelect({ ...disagreement, id: "review", tenant_id: tenantID })}>选择匹配任务</button> }));
 vi.mock("antd", async () => {
   const React = await vi.importActual<typeof import("react")>("react");
   const Box = ({ children }: { children?: ReactNode }) => React.createElement("div", null, children);
@@ -304,7 +305,8 @@ describe("评分保障共同旧新回归：模拟 API 和表单", () => {
     const pending = deferred<{ disagreements: AIHumanDisagreement[] }>(); mocks.api.listAIHumanDisagreements.mockReturnValueOnce(pending.promise);
     await act(async () => button("保存分类").click()); expect(mocks.api.classifyAIHumanDisagreement).toHaveBeenCalledWith("D", { taxonomy: "rubric_ambiguity", notes: "note", expected_revision: 7 }); expect(mocks.success).not.toHaveBeenCalled();
     await act(async () => pending.resolve({ disagreements: [disagreement({ revision: 8 })] })); expect(mocks.success).toHaveBeenLastCalledWith("已记录人工分类；它不会自动更改分数或认定责任。");
-    await act(async () => button("关联人工任务").click()); expect(form(7).resetFields).toHaveBeenCalledTimes(1); form(7).values = { review_task_id: "review" };
+    await act(async () => button("关联人工任务").click()); expect(form(7).resetFields).toHaveBeenCalledTimes(1);
+    await act(async () => button("选择匹配任务").click());
     await act(async () => button("关联任务").click()); expect(mocks.api.routeAIHumanDisagreement).toHaveBeenCalledWith("D", { review_task_id: "review", expected_revision: 8 }); expect(mocks.success).toHaveBeenLastCalledWith("分歧已关联人工阅卷任务；不会创建或直接修改最终成绩。");
   });
 

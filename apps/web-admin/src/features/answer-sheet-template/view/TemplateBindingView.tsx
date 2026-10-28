@@ -4,10 +4,9 @@ import { StatusTag } from '../../../components/StatusTag';
 import type { TemplateBindingView } from './templateViewTypes';
 import { templateConfirmationState, bindingDescription } from './templateViewRules';
 
-export function TemplateBindingPanel({ view }: Readonly<{ view: TemplateBindingView }>) {
+export function TemplateBindingPanel({ view, showAction = true }: Readonly<{ view: TemplateBindingView; showAction?: boolean }>) {
 	const { canManage, canEditSources, sourceUpload, selectedTemplate } = view;
-	const { saving, confirmActivate } = view.editor;
-	const { examBinding, bindingBusy, releaseExamBinding, bindTemplateForExam } = view.binding;
+	const { examBinding, bindingBusy, releaseExamBinding } = view.binding;
 	const confirmation = templateConfirmationState(view);
 	return (
 		<section id="template-exam-binding" tabIndex={-1} className="template-option-editor template-binding-confirmation" aria-label="本场考试模板设置">
@@ -18,18 +17,7 @@ export function TemplateBindingPanel({ view }: Readonly<{ view: TemplateBindingV
 				</StatusTag>
 			</div>
 			<p className="template-binding-version">选中版本 v{selectedTemplate?.version_no} · {selectedTemplate?.status === "locked" ? "已锁定" : "草稿"}</p>
-			{!confirmation.usageConfirmed ? <>
-				{confirmation.disabledReason ? <p className="template-confirmation-reason">{confirmation.disabledReason}</p> : null}
-				<Button type="primary" block icon={<CheckCircle2 size={16} />} disabled={confirmation.disabled} loading={saving || bindingBusy}
-					onClick={() => {
-            if (confirmation.disabled || !selectedTemplate) {
-              return;
-            }
-						if (confirmation.draft) confirmActivate();
-						else bindTemplateForExam(selectedTemplate);
-					}}>确认答题卡设置</Button>
-				{confirmation.draft ? <p>确认将保存并锁定当前版本；修改已锁定区域须克隆新版本。</p> : null}
-			</> : null}
+      {showAction ? <TemplateConfirmationAction view={view} /> : null}
 			{examBinding ? (
 				<>
 					<p>{bindingDescription(view)}</p>
@@ -50,8 +38,25 @@ export function TemplateBindingPanel({ view }: Readonly<{ view: TemplateBindingV
 					) : null}
 				</>
 			) : (
-				<p>当前版本尚未明确用于本场考试。区域检查与本场模板使用设置分别确认。</p>
+				<p>此版本尚未用于本场考试，请确认答题卡设置。</p>
 			)}
 		</section>
 	);
+}
+
+// 主完成入口使用与设置面板相同的完整门禁；移动位置不能绕过区域覆盖、版本与本场绑定校验。
+export function TemplateConfirmationAction({ view }: Readonly<{ view: TemplateBindingView }>) {
+  const confirmation = templateConfirmationState(view);
+  if (!view.selectedTemplate) return null;
+  if (confirmation.usageConfirmed) return <StatusTag tone="success">答题卡设置已确认</StatusTag>;
+  return <div className="template-primary-confirmation">
+    <Button type="primary" icon={<CheckCircle2 size={16} />} disabled={confirmation.disabled}
+      loading={view.editor.saving || view.binding.bindingBusy} onClick={() => {
+        if (confirmation.disabled || !view.selectedTemplate) return;
+        if (confirmation.draft) view.editor.confirmActivate();
+        else void view.binding.bindTemplateForExam(view.selectedTemplate);
+      }}>确认答题卡设置</Button>
+    <p className="template-confirmation-reason">{confirmation.disabledReason || (confirmation.draft
+      ? "确认后保存并锁定当前版本；修改区域需另建版本。" : "核对后将此版本用于本场考试。")}</p>
+  </div>;
 }

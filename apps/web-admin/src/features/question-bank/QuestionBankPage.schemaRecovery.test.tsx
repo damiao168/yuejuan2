@@ -35,7 +35,7 @@ vi.mock("./QuestionBankDialogs", async (importOriginal) => {
 });
 vi.mock("./questionBankMembers", async (importOriginal) => ({ ...await importOriginal<typeof import("./questionBankMembers")>(), listQuestionBankMembers: async () => ({ members: [] }) }));
 vi.mock("../../api/questionBank", () => ({ questionBankApi: {
-  listQuestionBanks: async () => ({ banks, total: banks.length }), listQuestionBankItems: async () => ({ items: [], total: 0 }),
+  listQuestionBanks: async () => ({ banks, total: banks.length }), listQuestionBankItems: async () => ({ items: [], total: 0 }), searchQuestionBankItems: async () => ({ items: [], total: 0 }),
   getQuestionBankMetadataSchema: mocks.schema, updateQuestionBankMetadataSchema: mocks.updateSchema,
   createQuestionBankItem: mocks.createItem,
 } }));
@@ -153,7 +153,7 @@ describe("题库分类规则读取与空规则保存", { timeout: 20_000 }, () =
     await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(code, "MATH-1"); code.dispatchEvent(new Event("input", { bubbles: true })); });
     expect(code.value).toBe("MATH-1");
     await switchBank(); await waitFor(() => mocks.props?.bankId === "other-bank" && mocks.props.schemaReadable);
-    expect(document.querySelector<HTMLInputElement>("#item_code")!.value).toBe("");
+    expect(document.querySelector<HTMLInputElement>("#item_code")!.value).toMatch(/^Q-[a-f0-9]{16}$/);
     await act(async () => previousCreate({ ...mocks.props!.defaults } as CreateQuestionBankItemRequest)); expect(mocks.createItem).not.toHaveBeenCalled();
   });
 });

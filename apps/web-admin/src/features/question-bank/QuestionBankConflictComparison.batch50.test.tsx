@@ -82,4 +82,23 @@ describe("题库冲突比较的内容和列表身份", () => {
     expect(area().textContent).toContain("未选用评分模板");
     expect(area().querySelector("code")).toBeNull();
   });
+
+  it("未配置的空解析不制造假差异，相同内容默认收起但仍可展开", () => {
+    const latest = version();
+    const view = render(<QuestionBankConflictComparison original={latest} latest={latest} localContent={{}} scoringDraft={{ fields: { solution: "" } }} />);
+    expect(view.container.querySelector('[aria-label="解析 · 有差异"]')).toBeNull();
+    const same = view.container.querySelector<HTMLDetailsElement>(".question-bank-conflict-comparison > details")!;
+    expect(same.open).toBe(false);
+    same.open = true;
+    expect(same.querySelector('[aria-label="解析 · 相同"]')).not.toBeNull();
+  });
+
+  it("显式删除原有解析仍作为差异直接展示", () => {
+    const latest = version();
+    latest.scoring.solution = { raw_text: "原解析", steps: [], source_refs: [] };
+    const view = render(<QuestionBankConflictComparison original={latest} latest={latest} localContent={{}} scoringDraft={{ fields: { solution: "" } }} />);
+    const row = view.container.querySelector('[aria-label="解析 · 有差异"]')!;
+    expect(row.closest("details")).toBeNull();
+    expect(row.textContent).toContain("原解析");
+  });
 });

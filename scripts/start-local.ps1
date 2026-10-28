@@ -1,10 +1,17 @@
-param(
+﻿param(
     [switch]$Build,
     [switch]$BuildWorkers,
+    [switch]$AllProfiles,
     [string[]]$BuildService = @()
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $AllProfiles) {
+    if ($BuildWorkers -or $BuildService.Count) { throw 'Advanced worker/service builds require -AllProfiles. Use start-edugrade.cmd for the normal daily workflow.' }
+    # 普通启动统一复用已保存模式；全部profile只作为显式开发工具保留。
+    & (Join-Path $PSScriptRoot 'launch-local.ps1') -Build:$Build
+    return
+}
 $repositoryRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $composeDirectory = Join-Path $repositoryRoot "infra\docker-compose"
 $composeFile = Join-Path $composeDirectory "docker-compose.yml"

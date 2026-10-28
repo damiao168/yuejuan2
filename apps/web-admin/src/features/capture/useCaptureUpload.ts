@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { App } from "antd";
-import { registerCaptureFile, type CaptureBatchDetail } from "../../api/capture";
+import { processCaptureBatch, registerCaptureFile, type CaptureBatchDetail } from "../../api/capture";
 import { getUserErrorMessage } from "../../api/client";
 import { uploadFile } from "../../api/files";
 
@@ -13,6 +13,7 @@ interface UploadGroup {
   nextIndex: number;
   error?: string;
   onRegistered?: (fileIds: string[]) => Promise<void>;
+  registrationApplied?: boolean;
 }
 
 export interface PendingCaptureUpload {
@@ -69,9 +70,15 @@ export function useCaptureUpload(detail: CaptureBatchDetail | undefined, examId:
       const fileIds = group.files.map(item => item.registeredId!);
       if (!isCurrent()) return [];
       // 替代材料先完整登记，再退出旧组；后续绑定失败时保留原组和新文件标识，重试不再重传。
-      if (group.onRegistered) await group.onRegistered(fileIds);
+      if (group.onRegistered && !group.registrationApplied) {
+        await group.onRegistered(fileIds);
+        group.registrationApplied = true;
+      }
+      // 整次选择完整登记（替代时先退出旧组）后才排队。排队失败保留登记回执，重试不能重传或重复替代。
+      await processCaptureBatch(group.batchId);
+      if (!isCurrent()) return [];
       pendingGroups.current.delete(groupScope);
-      if (isCurrent()) message.success(`${group.files.length} 个文件已加入批次，每 ${group.pagesPerStudent} 页组成一份学生答卷，等待拆页校验`);
+      if (isCurrent()) message.success(`${group.files.length} 个文件已登记并进入处理队列，每 ${group.pagesPerStudent} 页组成一份学生答卷`);
       return fileIds;
     } catch (currentError) {
       group.error = getUserErrorMessage(currentError, "上传失败，请重试本次上传");

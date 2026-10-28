@@ -63,8 +63,12 @@ export function PaperRubricAssistant(props: Readonly<AssistantProps>) {
   const [boundaryDirty, setBoundaryDirty] = useState(Boolean(draft.boundarySuggestion?.length));
   const [splitId, setSplitId] = useState<string | null>(null);
   const [showUnits, setShowUnits] = useState(false);
+  const [generationRequest, setGenerationRequest] = useState({ number: 0, scope: "" });
   const segmentationDirty = JSON.stringify(lines) !== JSON.stringify(initialLines);
   const lineScope = JSON.stringify(lines);
+  // 来源变化后作废主入口的生成意图；A→B→A不能因旧点击自动再次生成。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 题目和拆分的值范围由两个快照限定，引用变化本身不应清除意图。
+  useEffect(() => { const expected = JSON.stringify([question, lines]); setGenerationRequest(current => current.scope && current.scope !== expected ? { ...current, scope: "" } : current); }, [scope, lineScope]);
   useEffect(() => { draft.segments = lines; draft.segmentHistory = history; }, [draft, lines, history]);
   useEffect(() => { onDirtyChange(manualDirty || aiDirty || boundaryDirty || segmentationDirty); }, [onDirtyChange, manualDirty, aiDirty, boundaryDirty, segmentationDirty]);
   const blocked = disabled || contentDirty || question.score <= 0;
@@ -106,7 +110,7 @@ export function PaperRubricAssistant(props: Readonly<AssistantProps>) {
     </Space>;
   }
 
-  function changeMethod(value: string | number) {
+  function changeMethod(value: string | number, generate = false) {
     const next = value as "steps" | "ai";
     if (next === method) return;
     const change = () => {
@@ -114,6 +118,8 @@ export function PaperRubricAssistant(props: Readonly<AssistantProps>) {
       if (!mounted.current || latest.current.blocked) return;
       draft.method = next; draft.manual.current = null; draft.ai = { points: [], issues: [] }; draft.boundarySuggestion = undefined;
       setManualDirty(false); setAiDirty(false); setBoundaryDirty(false); setMethodVersion((version) => version + 1); setMethod(next);
+      if (generate) setGenerationRequest(current => ({ number: current.number + 1, scope: JSON.stringify([question, lines]) }));
+      else setGenerationRequest(current => ({ ...current, scope: "" }));
     };
     if (!manualDirty && !aiDirty && !boundaryDirty) { change(); return; }
     modal.confirm({ title: "放弃尚未应用的分值划分？", content: "切换方式将清空当前分段或 AI 建议，已应用的采分点草稿会保留。",
@@ -122,6 +128,8 @@ export function PaperRubricAssistant(props: Readonly<AssistantProps>) {
 
   return <section className="paper-rubric-assistant" aria-label="快捷设置评分细则">
     {sourceChanged && <Alert type="warning" showIcon message="题目或参考解答已更新，原划分已失效，请按最新内容重新划分" />}
+    {method === "steps" ? <Button disabled={blocked || !lines.length} onClick={() => changeMethod("ai", true)}>生成 AI 采分建议</Button> : <Button type="text" disabled={blocked} onClick={() => changeMethod("steps")}>返回采分点草稿</Button>}
+    <details><summary>按步骤配分与其他工具</summary>
     <Segmented aria-label="选择分值划分方式" value={method} onChange={changeMethod} disabled={disabled}
       options={[{ label: "按解答步骤配分", value: "steps" }, { label: "AI 建议分值划分", value: "ai" }]} />
     {method === "steps" && job && <Space><span>本题 AI {rubricJobLabel[job.status]}</span><Button type="link" size="small" disabled={blocked} onClick={() => changeMethod("ai")}>查看分值建议</Button></Space>}
@@ -132,10 +140,14 @@ export function PaperRubricAssistant(props: Readonly<AssistantProps>) {
     </div>}
     {method === "steps" ? <PaperRubricStepAllocator key={methodVersion} lines={lines} maxScore={question.score}
       disabled={blocked} onApply={apply} onDirtyChange={setManualDirty} draftStore={draft.manual} renderLineActions={lineActions} />
-      : tasks ? <PaperRubricJobSuggestion key={`${methodVersion}:${scope}:${lineScope}`} question={question} lines={lines} disabled={blocked} onApply={apply} onDirtyChange={setAiDirty} draft={draft} />
-        : <PaperRubricAISuggestion key={`${methodVersion}:${scope}:${lineScope}`} question={question} lines={lines} disabled={blocked} onApply={apply} onDirtyChange={setAiDirty} draft={draft} />}
+      : null}
     {method === "steps" && lines.length > 1 && (tasks ? <PaperRubricJobBoundary key={lineScope} question={question} lines={lines} sources={sources} disabled={blocked} onApply={changeLines} onDirtyChange={setBoundaryDirty} draft={draft} />
       : <PaperRubricBoundarySuggestion key={lineScope} question={question} lines={lines} sources={sources} disabled={blocked} onApply={changeLines} onDirtyChange={setBoundaryDirty} draft={draft} />)}
+    </details>
+    {method === "ai" ? tasks ? <PaperRubricJobSuggestion key={`${methodVersion}:${scope}:${lineScope}`} question={question} lines={lines} disabled={blocked} onApply={apply} onDirtyChange={setAiDirty} draft={draft}
+      generateRequest={generationRequest.scope === JSON.stringify([question, lines]) ? generationRequest.number : 0} />
+      : <PaperRubricAISuggestion key={`${methodVersion}:${scope}:${lineScope}`} question={question} lines={lines} disabled={blocked} onApply={apply} onDirtyChange={setAiDirty} draft={draft}
+        generateRequest={generationRequest.scope === JSON.stringify([question, lines]) ? generationRequest.number : 0} /> : null}
     {splitId && lines.find((line) => line.id === splitId) && <PaperRubricSplitDialog key={splitId} line={lines.find((line) => line.id === splitId) as RubricSolutionLine}
       sources={sources} disabled={blocked} onClose={() => setSplitId(null)} onSplit={(parts) => {
         const index = lines.findIndex((line) => line.id === splitId); if (index >= 0) changeLines([...lines.slice(0, index), ...parts, ...lines.slice(index + 1)]);
@@ -192,8 +204,8 @@ function PaperRubricBoundarySuggestion({ question, lines, sources, disabled, onA
   </div></details>;
 }
 
-function PaperRubricAISuggestion({ question, lines, disabled, onApply, onDirtyChange, draft }: Readonly<{
-  question: Question; lines: RubricSolutionLine[]; disabled: boolean; onApply: (points: RubricPoint[]) => void; onDirtyChange: (dirty: boolean) => void; draft: RubricAssistantDraft;
+function PaperRubricAISuggestion({ question, lines, disabled, onApply, onDirtyChange, draft, generateRequest = 0 }: Readonly<{
+  question: Question; lines: RubricSolutionLine[]; disabled: boolean; onApply: (points: RubricPoint[]) => void; onDirtyChange: (dirty: boolean) => void; draft: RubricAssistantDraft; generateRequest?: number;
 }>) {
   const { modal } = App.useApp();
   const [loading, setLoading] = useState(false);
@@ -251,6 +263,11 @@ function PaperRubricAISuggestion({ question, lines, disabled, onApply, onDirtyCh
         setPoints([]); setIssues([]); onDirtyChange(false); void generate();
       } });
   }
+
+  const lastRequestedGeneration = useRef(0);
+  // 仅响应教师在主入口的明确生成动作；恢复页面、保存回读或换来源不会自动调用模型。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 请求号由主入口递增，同一请求不能随生成回调变化重发。
+  useEffect(() => { if (generateRequest && lastRequestedGeneration.current !== generateRequest) { lastRequestedGeneration.current = generateRequest; void generate(); } }, [generateRequest]);
 
   const total = points.reduce((sum, point) => sum + (point.score ?? 0), 0);
   const complete = resultScope.current === scope && points.length > 0 && points.every((point) => point.description.trim() && point.score !== null && Number.isFinite(point.score) && point.score >= 0)

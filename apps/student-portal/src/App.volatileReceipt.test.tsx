@@ -60,7 +60,7 @@ function installReceiptScenario(failure: Failure = "service") {
 }
 
 async function startWithAnnotationRetry(storageAllowed: boolean) {
-  fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+  fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
   const input = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
   if (!storageAllowed) {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
@@ -68,9 +68,10 @@ async function startWithAnnotationRetry(storageAllowed: boolean) {
     });
   }
   fireEvent.change(input, { target: { value: explanation } });
+  fireEvent.click(screen.getByRole("button", { name: "标记争议位置（可选）" }));
   fireEvent.load(screen.getByAltText("本题答题区域"));
   fireEvent.click(screen.getByRole("button", { name: "选择整个答题区域" }));
-  const submit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
+  const submit = screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" });
   await waitFor(() => expect(submit.disabled).toBe(false));
   // 批注重试先发出，POST提交后才返回换版；旧证据关闭以后仍需取回原说明。
   fireEvent.click(screen.getByRole("button", { name: "重试批注" }));
@@ -88,7 +89,7 @@ function assertOriginalReasonCanBeSelected() {
   expect(document.activeElement).toBe(input);
   expect(input.selectionStart).toBe(0);
   expect(input.selectionEnd).toBe(500);
-  expect(within(region).queryByRole("button", { name: "确认提交（仅一次）" })).toBeNull();
+  expect(within(region).queryByRole("button", { name: "提交复核申请" })).toBeNull();
   expect(screen.queryByRole("textbox", { name: "具体说明" })).toBeNull();
   expect(screen.queryByAltText("本题答题区域")).toBeNull();
   return region;
@@ -116,8 +117,8 @@ describe("原版复核回执的说明取回", () => {
     expect(within(region).getByRole("alert").textContent).toContain(failure === "session" ? "登录状态已失效" : "暂时无法连接服务");
     expect(readAppealDraft(draftKey)).toEqual(originalDraft);
     expect(originalDraft?.selectedRegion?.width).toBe(1);
-    if (!stored) expect(within(region).getByText(/浏览器未允许保存草稿/)).toBeTruthy();
-    else expect(within(region).getByText(/草稿已保存在当前标签页会话/)).toBeTruthy();
+    if (!stored) expect(within(region).getByText(/草稿未能保存/)).toBeTruthy();
+    else expect(within(region).getByText(/草稿仅存于当前标签页会话/)).toBeTruthy();
     expect(posts(scenario)).toHaveLength(1);
     expect(JSON.parse(posts(scenario)[0].init.body as string)).toMatchObject({ source_release_id: "release-7", question_id: "question-1", reason: explanation.trim(), selected_region: originalDraft?.selectedRegion });
 
@@ -127,7 +128,7 @@ describe("原版复核回执的说明取回", () => {
     }
     scenario.publishNext();
     fireEvent.click(screen.getByRole("button", { name: recovery }));
-    fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，18/ }));
+    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，18/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("第八版当前评分依据");
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" }).value).toBe("");
     expect(screen.queryByRole("region", { name: receiptName })).toBeNull();
@@ -157,12 +158,12 @@ describe("原版复核回执的说明取回", () => {
     assertOriginalReasonCanBeSelected();
     scenario.setRecordsUnavailable();
     await act(async () => scenario.receipt.resolve(jsonResponse({ appeal: makeAppeal({ reason: explanation.trim() }) })));
-    await screen.findByText("本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。");
+    await screen.findByText(/已收到第 \d+ 版的本题申请，不可重复提交。/);
     await screen.findByText(/申请记录暂时无法加载/);
     expect(readAppealDraft(draftKey)).toBeUndefined();
     expect(screen.queryByRole("textbox", { name: originalReasonName })).toBeNull();
     expect(screen.queryByRole("button", { name: "选中原说明" })).toBeNull();
-    expect(screen.queryByText(/浏览器未允许保存草稿/)).toBeNull();
+    expect(screen.queryByText(/草稿未能保存/)).toBeNull();
     expect(posts(scenario)).toHaveLength(1);
   });
 });

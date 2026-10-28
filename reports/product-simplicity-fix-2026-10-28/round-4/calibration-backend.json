@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-28",
+  "scope": "G17学校通过标准的权威批准来源、撤回与事务内采用；保留本轮开始前全部未提交修改",
+  "findings": [
+    {
+      "id": "G17",
+      "status": "fixed",
+      "changes": [
+        "新增真实学校试评标准：从当前题目已经保存的策略明确批准，保存来源策略ID/修订、学校、学科、批准人与时间及不可改阈值快照。没有把任意既有策略标成学校审批模板。",
+        "目录按服务器读取的同学校、同学科、同作答类型和满分筛选，仅返回当前approved模板。学校与题型事实来自所属考试、冻结快照优先的题目配置；请求不能指定school_id。",
+        "审批和撤回能力由当前可信学校管理范围或租户管理范围及review:manage决定；本题策略管理权限不自动取得全校审批权。普通读取后目标事实发生改变时，事务内重读并逐字段比对服务器预期目标，拒绝跨变化审批、应用或撤回。",
+        "批准以租户、来源策略ID/修订和名称唯一回认，未知网络结果的新请求键也不会重复创建。撤回保留历史，旧批准重试不会把撤回记录重新激活；新名称或新策略修订须再次明确批准。",
+        "采用时只从仍获批准的快照提取阈值，不信任客户端复制值；锁定目标考试/题目及模板直到本题策略CAS提交，撤回与应用不能穿过核对和保存之间的间隙。",
+        "本题Policy持久化school_template_id和school_template_revision说明采用来源；手动保存清空来源。撤回影响后续采用，不改写已经保存的本题策略，不传递其他教师的试评资格。"
+      ],
+      "remaining": "",
+      "files": [
+        "services/api-gateway/internal/calibration/school_templates.go",
+        "services/api-gateway/internal/calibration/school_templates_postgres.go",
+        "services/api-gateway/internal/calibration/school_templates_handlers.go",
+        "services/api-gateway/internal/calibration/types.go",
+        "services/api-gateway/internal/calibration/service.go",
+        "services/api-gateway/internal/calibration/store_memory.go",
+        "services/api-gateway/internal/calibration/store_postgres.go",
+        "services/api-gateway/internal/calibration/handlers.go",
+        "services/api-gateway/migrations/000219_school_calibration_templates.sql"
+      ],
+      "boundary": "本报告完成服务端来源与生命周期，G17整体界面交付由校准UI报告和根最终验证共同核对。学校管理员一次明确批准已经保存的标准，不额外增加用户没有要求的提名或双人审批平台。现有独立试评、标准卷和资格门禁不放宽。"
+    }
+  ],
+  "read_scope": [
+    {"path":"services/api-gateway/internal/calibration/school_templates.go","status":"annotated","read_scope":"full","note":"不可改快照、去重回认、当前资源范围重验、内存原子采用与撤回。"},
+    {"path":"services/api-gateway/internal/calibration/school_templates_postgres.go","status":"annotated","read_scope":"full","note":"权威目标来源、冻结类型优先、模板共享锁与撤回更新锁、目标CAS及唯一来源回认。"},
+    {"path":"services/api-gateway/internal/calibration/school_templates_handlers.go","status":"annotated","read_scope":"full","note":"管理能力、scope来源、服务端预期目标绑定、三条目录/批准/撤回操作。"},
+    {"path":"services/api-gateway/internal/calibration/school_templates_test.go","status":"annotated","read_scope":"full","note":"冻结快照、重复批准、伪造阈值、目标CAS、撤回不改既有事实、管理范围与目标变化。"},
+    {"path":"services/api-gateway/internal/calibration/school_templates_postgres_test.go","status":"annotated","read_scope":"full","note":"真实219触发器、来源与CAS、两种撤回/应用顺序，以及授权读取后学科变化拒绝。"},
+    {"path":"services/api-gateway/internal/server/school_calibration_template_route_test.go","status":"self_explanatory","read_scope":"full","note":"真实注册路由认证、目录能力、批准、本题保存与撤回后新应用拒绝。"},
+    {"path":"services/api-gateway/migrations/000219_school_calibration_templates.sql","status":"annotated","read_scope":"full","note":"仅新增迁移；保留历史，RLS、不可改模板、采用来源与空值一致性。"},
+    {"path":"services/api-gateway/internal/calibration/types.go","status":"pending","read_scope":"Policy_PutPolicyInput_and_Store_interfaces","note":"核对采用来源字段与原Store边界；未重新全文审读所有会话数据类型。"},
+    {"path":"services/api-gateway/internal/calibration/service.go","status":"pending","read_scope":"PutPolicy_validPolicyInput_and_session_entrypoints","note":"新增模板来源路径先验证再由仓储取权威阈值；未重审全部统计计算与会话完成逻辑。"},
+    {"path":"services/api-gateway/internal/calibration/store_memory.go","status":"pending","read_scope":"constructor_PutPolicy_and_clonePolicy_callers","note":"提取同锁内保存，保留目标CAS和手动清空来源；其他会话/资格方法未全文重审。"},
+    {"path":"services/api-gateway/internal/calibration/store_postgres.go","status":"pending","read_scope":"PutPolicy_GetPolicy_scanPolicy_and_policyQueryer","note":"事务内复用原CAS SQL；新增两列采用来源，未重审全部试评会话SQL。"},
+    {"path":"services/api-gateway/internal/calibration/handlers.go","status":"pending","read_scope":"RegisterRoutes_PutPolicy_GetPolicy_decodeBody_errors_and_audit","note":"只核对本次三条路由、来源绑定和错误/审计；其余试评作答处理器未全文重审。"},
+    {"path":"services/api-gateway/internal/auth/access_scope.go","status":"pending","read_scope":"ResolveDeclaredAccessScope_and_school_management_accessors","note":"使用可信学校管理范围，未修改权限解析。"},
+    {"path":"services/api-gateway/internal/server/module_grading.go","status":"pending","read_scope":"calibration_store_service_handler_wiring","note":"原存储自动实现扩展repository，无需增加全局替身或旁路注入。"}
+  ],
+  "verification": [
+    {"log":"calibration-go-initial.log","result":"passed","scope":"原calibration整个包回归；未计可选PG。"},
+    {"log":"calibration-go-postgres-delivery.log","result":"passed","scope":"最终整个calibration包，含4条真实隔离PG回归，9.544秒。"},
+    {"log":"calibration-postgres-initial.log","result":"passed","tests":3,"note":"生命周期与两种锁顺序的初轮真实PG验证，最终包新增目标变化用例后覆盖，不重复累加。"},
+    {"log":"calibration-routes-final.log","result":"passed","tests":1,"scope":"真实server注册路由，通过认证/能力/批准/采用/撤回拒绝链；4.839秒。"},
+    {"command":"git diff --check -- services/api-gateway/internal/calibration services/api-gateway/internal/server/school_calibration_template_route_test.go services/api-gateway/migrations/000219_school_calibration_templates.sql","result":"passed"}
+  ],
+  "limits": [
+    "未写入真实学校数据或部署；真实PostgreSQL使用根创建的独立集群和本组随机schema。",
+    "随机schema应用正式079策略表与219迁移并运行真实查询/事务；不宣称完整生产部署验收，根另行应用完整公共schema迁移。",
+    "学校标准批准是已保存配置的明确管理动作，不代替单个阅卷员完成独立试评。",
+    "未改历史迁移或手改SDK/OpenAPI；权威契约和生成交由根代理。",
+    "较大旧文件保持局部审读pending；新增文件按真实全文审读记录。"
+  ]
+}

@@ -31,7 +31,7 @@ export function TemplateLibraryPanel({ library, canManage, canEditSources, canCo
         setBlankConfirmed(false); setLayoutConfirmed(false); setReviewOpen(true);
       }}>核对并收录模板库</Button> : null}
     </Space>
-    <p className="muted">选择学校已收录的答题卡，或将当前空白答题卡收录供下次复用。</p>
+    <p className="muted">复用学校模板，或收录当前空白答题卡供以后使用。</p>
     </details>
     {/* 复用入口默认收起；加载失败、匹配冲突和操作结果仍须直接可见，不能随折叠隐藏。 */}
     {library.listError ? <Alert type="warning" showIcon message={library.listError} /> : null}
@@ -42,15 +42,15 @@ export function TemplateLibraryPanel({ library, canManage, canEditSources, canCo
       description={<Space wrap>{library.resolution.candidates.map(item => <Button key={item.id} disabled={blocked || !canEditSources}
         onClick={() => confirmDiscard(() => void library.instantiate(item.id))}>核对后使用：{item.name}</Button>)}</Space>} /> : null}
     {library.published ? <Alert type="success" showIcon message={`已收录：${library.published.name} · 第 ${library.published.version_no} 版`}
-      description="学校模板库已保存。本场考试是否启用仍需在“确认答题卡设置”中完成。" /> : null}
+      description="已收录到学校库；本场仍需“确认答题卡设置”。" /> : null}
     {reviewOpen ? <Modal title="核对并收录学校模板库" open onCancel={() => { if (!library.busy) setReviewOpen(false); }}
       okText="确认收录" cancelText="继续核对" confirmLoading={library.busy}
       okButtonProps={{ disabled: !canCollect || !blankConfirmed || !layoutConfirmed || blocked }}
       onOk={() => { if (!blankConfirmed || !layoutConfirmed || !canCollect || blocked) return; setReviewOpen(false); void library.publish(); }}>
-      <p>收录会保存并锁定当前版本；已收录布局供学校后续考试复用。本场启用另行确认。</p>
-      <p><Checkbox checked={blankConfirmed} onChange={event => setBlankConfirmed(event.target.checked)}>确认底图为空白答题卡，且无学生姓名、学号、条码或手写答案等个人信息</Checkbox></p>
-      <p><Checkbox checked={layoutConfirmed} onChange={event => setLayoutConfirmed(event.target.checked)}>已逐页核对题号和完整作答区域，区域适用于同版式答题卡</Checkbox></p>
-      <Alert type="info" showIcon message="已填写的学生答题卡可辅助识别；请换成经过核对的空白来源后再收录学校模板库。" />
+      <p>收录会保存并锁定当前版本，供学校同版式考试复用；本场启用另行确认。</p>
+      <p><Checkbox checked={blankConfirmed} onChange={event => setBlankConfirmed(event.target.checked)}>底图为空白答题卡，不含学生姓名、学号、条码、手写答案等个人信息。</Checkbox></p>
+      <p><Checkbox checked={layoutConfirmed} onChange={event => setLayoutConfirmed(event.target.checked)}>已逐页核对题号与完整作答区域，适用于同版式答题卡。</Checkbox></p>
+      <p className="muted">如使用已填写的答题卡，请先更换为核对过的空白来源。</p>
     </Modal> : null}
   </section>;
 }

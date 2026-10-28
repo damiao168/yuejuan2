@@ -11,7 +11,7 @@ import { QuestionBankPage } from "./QuestionBankPage";
 type Confirmation = { content: ReactNode; onOk: () => Promise<void> };
 const mocks = vi.hoisted(() => ({
   submitReview: vi.fn(), approve: vi.fn(), returnToDraft: vi.fn(), publish: vi.fn(), updateACL: vi.fn(),
-  confirm: vi.fn(), success: vi.fn(), error: vi.fn(), warning: vi.fn(), createVersion: vi.fn(),
+  confirm: vi.fn(), success: vi.fn(), error: vi.fn(), warning: vi.fn(), createVersion: vi.fn(), claimReview: vi.fn(), assignHandoff: vi.fn(),
   workspace: null as QuestionBankWorkspaceProps | null,
   dialogs: null as ComponentProps<typeof QuestionBankDialogs> | null,
 }));
@@ -29,7 +29,7 @@ const duplicateACL = {
 
 vi.mock("../../api/questionBank", () => ({ questionBankApi: {
   listQuestionBanks: async () => ({ banks: [bank], total: 1 }),
-  listQuestionBankItems: async () => ({ items: [item], total: 1 }),
+  listQuestionBankItems: async () => ({ items: [item], total: 1 }), searchQuestionBankItems: async () => ({ items: [{ item, version }], total: 1 }),
   listQuestionBankVersions: async () => ({ versions: [version], total: 1 }),
   getQuestionBankVersion: async () => ({ version }),
   getQuestionBankMetadataSchema: async () => ({ schema: { fields: [], taxonomies: [] } }),
@@ -40,6 +40,7 @@ vi.mock("../../api/questionBank", () => ({ questionBankApi: {
   returnQuestionBankVersionToDraft: mocks.returnToDraft, publishQuestionBankVersion: mocks.publish,
   updateQuestionBankACL: mocks.updateACL,
   createQuestionBankVersion: mocks.createVersion,
+  claimQuestionBankReview: mocks.claimReview, assignQuestionBankHandoff: mocks.assignHandoff,
 } }));
 vi.mock("../../router/useUnsavedChangesGuard", () => ({ useUnsavedChangesGuard: () => undefined }));
 vi.mock("./QuestionBankWorkspace", () => ({ QuestionBankWorkspace: (props: QuestionBankWorkspaceProps) => {
@@ -102,18 +103,56 @@ describe("题库第45批入口行为", () => {
   }
 
   it.each([
-    ["submit-review", "submitReview", "已提交审核，请通知本题库的审核教师在题库中处理。"],
-    ["approve", "approve", "审核已通过，下一步由有发布权限的教师发布到题库。"],
+    ["submit-review", "submitReview", "已提交审核，已进入审核教师的题库待办。"],
+    ["approve", "approve", "审核已通过，已进入发布教师的题库待办。"],
     ["return-to-draft", "returnToDraft", "已退回草稿，可修改后重新提交审核。"],
-    ["publish", "publish", "已发布到学校题库。请在考试的题目页选择此版本；已有考试不受影响。"],
+    ["publish", "publish", "已发布到学校题库。"],
   ] as const)("%s 成功后保留原操作与教师提示", async (decision, method, expectedMessage) => {
     await open(); await click("选择题目"); await waitFor(() => Boolean(mocks.workspace?.editorVersion));
     await click(decision); await waitFor(() => mocks.success.mock.calls.length > 0);
     expect(mocks[method]).toHaveBeenCalledWith(expect.objectContaining({
-      path: { versionId: version.id }, body: { expected_revision: 3, bundle_hash: "bundle", comment: "" },
+      path: { versionId: version.id }, body: { expected_revision: 3, expected_handoff_revision: 0, bundle_hash: "bundle", comment: "" },
       headers: { "Idempotency-Key": expect.any(String) },
     }));
     expect(mocks.success).toHaveBeenLastCalledWith(expectedMessage);
+  });
+
+  it("同内容后台交接刷新用于新命令，不推进本地内容修订", async () => {
+    await open(); await click("选择题目"); await waitFor(() => Boolean(mocks.workspace?.editorVersion));
+    await act(async () => client.setQueryData(["question-bank", user.tenant, user.id, "version", version.id], { version: { ...version, handoff: { revision: 7, reviewer_id: "reviewer", publisher_id: "publisher", updated_at: "2026-10-28T00:00:00Z" } } }));
+    await waitFor(() => mocks.workspace?.selected?.handoff?.revision === 7);
+    expect(mocks.workspace!.editorVersion!.handoff).toBeUndefined();
+    await click("submit-review");
+    expect(mocks.submitReview).toHaveBeenLastCalledWith(expect.objectContaining({ body: expect.objectContaining({ expected_revision: 3, expected_handoff_revision: 7 }) }));
+  });
+
+  it("领取仅更新交接；本地修改保留，迟到旧人员投影不降级显示或后续命令", async () => {
+    await open(); await click("选择题目"); await waitFor(() => Boolean(mocks.workspace?.editorVersion));
+    const handoff = { revision: 7, reviewer_id: "reviewer", publisher_id: "publisher", updated_at: "2026-10-28T00:00:00Z" };
+    await act(async () => {
+      mocks.workspace!.setContentDirty(true);
+      client.setQueryData(["question-bank", user.tenant, user.id, "version", version.id], { version: { ...version, workflow_status: "reviewing", handoff } });
+    });
+    const fields = mocks.workspace!.editor.setFieldsValue as ReturnType<typeof vi.fn>;
+    const writes = fields.mock.calls.length;
+    mocks.claimReview.mockResolvedValueOnce({ version: { ...version, workflow_status: "reviewing", handoff: { ...handoff, revision: 8, reviewer_id: "new-reviewer", claimed_by: "new-reviewer" } } });
+    await act(async () => mocks.workspace!.handoff!("review"));
+    await waitFor(() => mocks.claimReview.mock.calls.length > 0 && !mocks.workspace?.saving);
+    expect(fields.mock.calls.length).toBe(writes); expect(mocks.workspace!.contentDirty).toBe(true);
+    await act(async () => client.setQueryData(["question-bank", user.tenant, user.id, "version", version.id], { version: { ...version, workflow_status: "reviewing", handoff } }));
+    expect(mocks.workspace!.selected!.handoff!.reviewer_id).toBe("new-reviewer");
+    expect(mocks.workspace!.selected!.handoff!.revision).toBe(8);
+    mocks.assignHandoff.mockResolvedValueOnce({ version: { ...version, workflow_status: "reviewing", handoff: { ...handoff, revision: 9 } } });
+    await act(async () => mocks.workspace!.handoff!("assign", { reviewer_id: "reviewer", publisher_id: "publisher" }));
+    expect(mocks.assignHandoff).toHaveBeenLastCalledWith(expect.objectContaining({ body: expect.objectContaining({ expected_revision: 3, expected_handoff_revision: 8 }) }));
+  });
+
+  it("内容本身已变化时，不采用新内容的交接修订掩盖草稿冲突", async () => {
+    await open(); await click("选择题目"); await waitFor(() => Boolean(mocks.workspace?.editorVersion));
+    await act(async () => client.setQueryData(["question-bank", user.tenant, user.id, "version", version.id], { version: { ...version, revision: 4, bundle_hash: "new-content", handoff: { revision: 7, updated_at: "2026-10-28T00:00:00Z" } } }));
+    await waitFor(() => mocks.workspace?.selected?.revision === 4);
+    await click("submit-review");
+    expect(mocks.submitReview).toHaveBeenLastCalledWith(expect.objectContaining({ body: expect.objectContaining({ expected_revision: 3, expected_handoff_revision: 0 }) }));
   });
 
   it.each(["content", "scoring"] as const)("deriving requires explicit discard of an unsaved %s draft", async (kind) => {

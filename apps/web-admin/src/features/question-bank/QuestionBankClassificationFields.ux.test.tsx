@@ -37,7 +37,7 @@ describe("teacher classification fields retain historical identities", () => {
     expect(values.fields[0].options[1]).toMatchObject({ value: expect.stringMatching(/^option_[a-f0-9]{32}$/), active: true });
     expect(values.taxonomies[0].terms[2]).toMatchObject({ id: expect.stringMatching(/^term_[a-f0-9]{32}$/), active: true });
     expect(values.taxonomies[1].id).toMatch(/^catalog_[a-f0-9]{32}$/);
-    expect(host.textContent).toContain("系统生成内部编号");
+    expect(host.textContent).toContain("设置字段名称和内容类型");
     expect(host.textContent).not.toContain("英文"); expect(host.textContent).not.toContain("legacy_field");
     expect(values.taxonomies[0].terms[0]).toEqual(original.taxonomies[0].terms[0]);
   });

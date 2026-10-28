@@ -38,8 +38,11 @@ if (!security?.csp || !security.devCsp) {
   requireSources(security.csp, "object-src", ["'none'"]);
   requireSources(security.csp, "base-uri", ["'none'"]);
   requireSources(security.csp, "frame-ancestors", ["'none'"]);
-  // 答卷 PDF 只从下载后的本机 Blob 显示，不能开放远程网站作为内嵌阅卷内容。
-  if (JSON.stringify(sources(security.csp, "frame-src")) !== JSON.stringify(["blob:"])) fail("frame-src must allow only local blob PDF previews");
+  // 答卷 PDF 由打包的同源 worker 逐页转为像素，不再嵌入文档阅读器；生产与开发均禁用 iframe 和外部 worker。
+  for (const policy of [security.csp, security.devCsp]) {
+    if (JSON.stringify(sources(policy, "frame-src")) !== JSON.stringify(["'none'"])) fail("frame-src must deny embedded documents");
+    if (JSON.stringify(sources(policy, "worker-src")) !== JSON.stringify(["'self'"])) fail("worker-src must allow only the bundled PDF decoder");
+  }
   requireSources(security.csp, "script-src-attr", ["'none'"]);
   if (sources(security.csp, "script-src").some((source) => source.includes("unsafe-"))) {
     fail("production script-src must not allow unsafe-inline or unsafe-eval");

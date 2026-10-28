@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-28",
+  "tool": "Playwright CLI (playwright skill)",
+  "status": "passed",
+  "mode": "本机Vite5187，当前源码组件与独立合成TIFF；不连接业务API",
+  "observed": {
+    "cases": {
+      "常规BigTIFF": {
+        "pending": false,
+        "files": [
+          "big-le.tiff"
+        ]
+      },
+      "超出本地预览范围": {
+        "pending": false,
+        "files": [
+          "many-classic.tiff"
+        ]
+      }
+    },
+    "decoded": [
+      {
+        "name": "big-le.tiff",
+        "pages": 2,
+        "reorderedPages": 2,
+        "previews": 2
+      },
+      {
+        "name": "big-be.tiff",
+        "pages": 2,
+        "reorderedPages": 2,
+        "previews": 2
+      }
+    ],
+    "errors": [],
+    "previews": [
+      {
+        "alt": "big-le.tiff改序后第一张：Synthetic page 2",
+        "complete": true,
+        "width": 128,
+        "height": 96
+      },
+      {
+        "alt": "big-be.tiff改序后第一张：Synthetic page 2",
+        "complete": true,
+        "width": 128,
+        "height": 96
+      }
+    ],
+    "groups": [
+      {
+        "listed": 2,
+        "expanded": true
+      },
+      {
+        "listed": 100,
+        "expanded": false
+      }
+    ]
+  },
+  "checks": [
+    "常规BigTIFF真实页面显示，移动页序后确认导入禁用，应用成功后生成新文件与新分组并解除等待。",
+    "101页classic文件真实计数，明细默认折叠；未确认原件时禁止导入，勾选后解除；已知缺页不可绕过另有单测覆盖。",
+    "双端序BigTIFF的实际解码页面一致，重排后顺序为2、1；导出原件所有非主链指针字节不变。",
+    "Pillow独立读取浏览器导出的little-endian原件，每页像素与独立原PNG倒序完全一致。"
+  ],
+  "screenshot": "../../../output/playwright/round4-tiff/verified.png",
+  "logs": [
+    "browser-fixtures-final.log",
+    "browser-collect-final.log",
+    "browser-output-verification.log"
+  ],
+  "boundaries": [
+    "Pillow11.3的BigTIFF头检测只识别小端，未把规范大端格式伪称Pillow独立解码通过。大端按官方布局构造，与独立验证小端比较像素并核对字节保持。",
+    "合成页没有生产CSS全量载入或真实学校登录/上传；截图证明组件和真实Canvas解码，不能替代部署验收。",
+    "初次夹具生成、CLI引号/运行沙箱失败已修复并保留过程日志；favicon404和合成页未加载React19 AntD兼容patch的开发提示不作为产品缺陷。"
+  ],
+  "cleanup": {
+    "browser": "round4-tiff已关闭，见browser-close.log",
+    "vite": "自建5187已停止，见browser-server-stop.log"
+  }
+}

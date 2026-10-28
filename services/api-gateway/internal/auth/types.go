@@ -284,6 +284,7 @@ type AuditRecord struct {
 }
 
 type AuditFilter struct {
+	Query       string
 	Action      string
 	ActorID     string
 	TargetType  string

@@ -34,6 +34,9 @@ func (h *Handler) WithImageReader(reader goldpaper.VersionImageReader) *Handler 
 
 // RegisterRoutes 将权限定义留给组装入口：策略管理属于管理操作，会话和作答操作属于阅卷者工作，资格读取供管理员和领取门禁共同使用。
 func RegisterRoutes(mux *http.ServeMux, h *Handler, requireRead, requireManage, requireGrade func(http.HandlerFunc) http.Handler) {
+	mux.Handle("GET /api/v1/exams/{examId}/questions/{questionId}/calibration-templates", requireManage(h.ListSchoolTemplates))
+	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/calibration-templates", requireManage(h.ApproveSchoolTemplate))
+	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/calibration-templates/{templateId}/withdraw", requireManage(h.WithdrawSchoolTemplate))
 	mux.Handle("GET /api/v1/exams/{examId}/questions/{questionId}/calibration-policy", requireRead(h.GetPolicy))
 	mux.Handle("PUT /api/v1/exams/{examId}/questions/{questionId}/calibration-policy", requireManage(h.PutPolicy))
 	mux.Handle("POST /api/v1/exams/{examId}/questions/{questionId}/calibration-sessions", requireGrade(h.CreateSession))
@@ -52,6 +55,13 @@ func (h *Handler) PutPolicy(w http.ResponseWriter, r *http.Request) {
 	var input PutPolicyInput
 	if !decodeBody(w, r, &input) {
 		return
+	}
+	if input.SchoolTemplateID != "" {
+		_, _, target, ok := h.schoolTemplateContext(w, r)
+		if !ok {
+			return
+		}
+		r = r.WithContext(withExpectedTemplateTarget(r.Context(), r.PathValue("examId"), r.PathValue("questionId"), target))
 	}
 	policy, err := h.service.PutPolicy(r.Context(), user.TenantID, r.PathValue("examId"), r.PathValue("questionId"), input)
 	if err != nil {
@@ -196,6 +206,12 @@ func writeHandlerError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "calibration_not_found", "calibration resource was not found")
+	case errors.Is(err, ErrTemplateUnavailable):
+		httpx.Error(w, r, http.StatusConflict, "calibration_template_unavailable", "school calibration template is withdrawn, changed or incompatible")
+	case errors.Is(err, ErrTemplateForbidden):
+		httpx.Error(w, r, http.StatusForbidden, "calibration_template_forbidden", "school management approval permission is required")
+	case errors.Is(err, ErrTemplateContextMissing):
+		httpx.Error(w, r, http.StatusUnprocessableEntity, "calibration_template_context_missing", "the question type and full score must be confirmed first")
 	case errors.Is(err, ErrPolicyMissing):
 		httpx.Error(w, r, http.StatusUnprocessableEntity, "calibration_policy_missing", "configure a question-specific calibration policy first")
 	case errors.Is(err, ErrGoldSetIncomplete):

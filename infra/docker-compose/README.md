@@ -47,13 +47,29 @@ python .\scripts\generate-internal-test-certificates.py --environment local --da
 
 上述 OpenSSL 路径只是当前 Windows 开发机示例，其他主机使用自己的安装路径；Ubuntu CI 自动寻找已安装的 `openssl`。输出目录必须不存在，脚本拒绝覆盖现有证书。已有 `certs` 的部署应在另一个新目录生成，并在未提交的 `.env` 中同步三个 `*_DIR` 路径，不要删除或覆盖正在使用的密钥。
 
-更换 CA 时，所有挂载内部 CA 的 API 和 Worker 都需要重建以加载新信任，两个 TLS 服务端也需重建以加载新证书。保留运行中的镜像版本，先用新的目录值执行证书预检；切换两个服务端后尽快切换客户端，并检查实际 TLS 连接和健康状态。该顺序有短暂调用失败窗口；失败时恢复旧目录并重建本次已切换的服务。延长有效期不等于建立自动续期。
+已运行的默认本地开发环境可以从仓库根目录执行 `.\start-edugrade.cmd -RotateLocalCertificate -LocalCertificateDays 365`。轮换工具在 `certs/rotations/` 的新目录生成证书，先验证证书、私钥、主机名和 Compose 配置，再只切换三个证书目录，重建原先正在运行的 CA 使用者并等待健康检查；失败会恢复旧目录并重新检查。旧证书及私钥始终保留，切换期间可能短暂中断内部调用。
+
+工具只允许 local/dev/development/test；自定义 API HTTPS、组织 PKI 和正式环境须按原有组织证书流程协调轮换。不得以跳过 TLS 验证解决失败。若恢复服务也失败，工具保留仅含目录、服务名和配置摘要的 `.env.tls-rotation.json`；在本目录执行 `python .\scripts\rotate-local-tls.py --env-file .env --compose-directory . --recover --apply` 重试恢复。配置在轮换后被其他人修改时会拒绝自动覆盖，需先核对差异。轮换命令不加 `--apply` 只说明步骤，不写配置或启动服务。
 
 只把 `internal-ca/ca.crt` 和各服务的 `server.crt` / `server.key` 挂载给对应服务；`private-ca` 包含签发私钥，绝不能挂载或作为 CI artifact。测试服务私钥在 POSIX 上是只读、可供不同非 root UID 读取，Windows 还需按本机 ACL 与 Docker 文件共享权限核实可读性。生产使用组织 PKI、受限密钥权限和轮换流程，不使用此脚本生成的测试 CA。
 
 `.env.example` 已配置容器内证书路径、HTTPS URL 与 CA。健康探针使用证书 SAN 中的 Docker DNS 名 `grading-agent` / `math-verification-worker`，并验证 CA 和主机名；不使用跳过校验选项。
 
+本地入口首次选择答卷处理模式后保存选择；也可用 `start-edugrade.cmd -ProcessingMode Enabled` 一次启用 OCR、图像质量、页面处理，或 `-ProcessingMode Disabled` 只启动管理核心。`-EnableOcr`、`-EnableQuality`、`-EnableProcessing` 继续精确启用指定能力，不会因旧模式额外启动其他 Worker。
+
+本地启用这些能力时，初始化会为配置中的不同用户名建立或复用 platform 租户的受限服务账号，并先验证 service 登录和注销。现有账号必须仅持有 `page_processing_worker` 服务职责、密码匹配；工具不会重置密码、复活禁用账号或接管人类账号。三类 Worker 使用现有 `file:manage`、`ocr:manage` 权限，尚未细分到单个处理队列。已有部署需先配置非空用户名、platform 租户和至少15字符的独立密码；新安装已生成随机凭据。自动建立账号只用于本地开发，正式环境仍由管理员配置服务身份。凭据通过进程环境交付，不写命令行或日志。服务登录通过不代表首份业务任务已验收。
+
 ### 从既有部署升级
+
+先运行只读差异检查，报告仅列键名和受影响能力，不输出配置值：
+
+```powershell
+python .\scripts\check-upgrade-config.py
+# 可选：生成独立的安全缺失项补丁，审阅后手工合并；不覆盖 .env 或已有补丁
+python .\scripts\check-upgrade-config.py --patch-file .env.upgrade-defaults
+```
+
+该检查不会创建账号、密钥、证书或替换现有值；完成调整后仍运行 `preflight.ps1` 校验实际连接和部署约束。
 
 `.env` 不随仓库更新，升级后需要手工补齐以下新增项，否则 `preflight.ps1` 会直接拒绝启动。预检还会核对 `EDUGRADE_AI_PROMPT_VERSION` 与受治理提示词清单的版本，避免旧配置让评分服务反复重启：
 
@@ -127,7 +143,7 @@ EDUGRADE_AI_PROMPT_VERSION=subjective-governed-cn-subject-routing-v6
 `EDUGRADE_OCR_MODEL_CACHE_DIR` 改到其他磁盘；相对路径从
 `infra/docker-compose` 解析。
 
-日常从仓库根目录启动时使用：
+日常统一从仓库根目录使用 `start-edugrade.cmd`，或等价的 PowerShell 入口（复用已保存的模型模式）：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1
@@ -139,16 +155,16 @@ powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1
 powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -Build
 ```
 
-`-Build` 只重建日常修改的 `api-gateway`、`grading-agent` 和
-`web-admin`，不会重建或重新下载体积较大的 PaddleOCR 镜像。只有修改
-Worker 时才显式执行：
+普通入口的 `-Build` 更新核心应用。首次启用 Worker 使用 `start-edugrade.cmd -EnableOcr` 等能力参数；核心镜像存在时只构建所选 Worker。
+
+下列全部 profile 命令仅用于已配置所有服务账号和能力的开发/验收环境；不会替代日常启动预检：
 
 ```powershell
 # 重建全部 Worker（包括 OCR）
-powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -Build -BuildWorkers
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -AllProfiles -Build -BuildWorkers
 
 # 只重建一个指定服务
-powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -Build -BuildService ocr-worker
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1 -AllProfiles -Build -BuildService ocr-worker
 ```
 
 等价手工命令：

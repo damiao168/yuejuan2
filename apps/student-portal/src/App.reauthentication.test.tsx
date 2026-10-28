@@ -18,7 +18,7 @@ vi.mock("./studentSession", async (importOriginal) => {
 const expired = () => jsonResponse({ error: { code: "unauthenticated" } }, 401);
 const failed = () => jsonResponse({ error: { code: "temporary_failure" } }, 503);
 const explanation = "请核对第二步已经写出的完整计算过程。";
-const confirmation = "本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。";
+const confirmation = /已收到第 \d+ 版的本题申请，不可重复提交。/;
 const draftKey = appealDraftKey(studentDraftOwner(studentUser), "exam-1", "release-7", "question-1");
 const isAnnotation = (path: string) => path.endsWith("/questions/question-1/annotations");
 const isAppeal = (path: string) => path.endsWith("/question-appeals");
@@ -32,9 +32,9 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 async function prepareAppeal() {
-  fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+  fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
   fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
-  const submit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
+  const submit = screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" });
   await waitFor(() => expect(submit.disabled).toBe(false));
   return submit;
 }
@@ -45,7 +45,7 @@ async function loginAgain() {
   fireEvent.change(screen.getByRole("textbox", { name: "账号" }), { target: { value: "student-001" } });
   fireEvent.change(screen.getByLabelText("密码"), { target: { value: "testing" } });
   fireEvent.click(screen.getByRole("button", { name: "登录" }));
-  fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+  fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
 }
 
 describe("复核回执与重新登录的顺序保护", () => {
@@ -81,7 +81,7 @@ describe("复核回执与重新登录的顺序保护", () => {
     fireEvent.click(reauthenticate);
     await loginAgain();
     await screen.findByText(confirmation);
-    expect(screen.queryByRole("button", { name: "确认提交（仅一次）" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "提交复核申请" })).toBeNull();
     expect(calls.filter((call) => isAppeal(call.url.pathname) && call.init.method === "POST")).toHaveLength(1);
   });
 
@@ -158,23 +158,26 @@ describe("复核回执与重新登录的顺序保护", () => {
     expect(screen.queryByText("正在提交复核申请，请等待回执后再切换题目或离开。")).toBeNull();
   });
 
-  it("申请列表核对当前成绩迟到401时，保留列表但提交中禁用重登，失败后恢复", async () => {
+  it("统一核对成绩迟到401时保留申请列表，提交中禁用重登，失败后恢复", async () => {
     const current = deferredResponse();
     const receipt = deferredResponse();
-    let recordReads = 0;
     let resultReads = 0;
     installApi((call) => {
       if (isAppeal(call.url.pathname) && call.init.method === "POST") return receipt.promise;
-      if (isAppeal(call.url.pathname)) return jsonResponse({ appeals: ++recordReads === 1 ? [makeAppeal({ id: "appeal-2", question_id: "question-2", question_no: "2" })] : [] });
+      if (isAppeal(call.url.pathname)) return jsonResponse({ appeals: [makeAppeal({ id: "appeal-2", question_id: "question-2", question_no: "2" })] });
       if (call.url.pathname.endsWith("/result") && ++resultReads === 2) return current.promise;
       return resultRoute(call, makeResult());
     });
     render(<App />);
-    fireEvent.click(await prepareAppeal());
+    const submit = await prepareAppeal();
+    expect(resultReads).toBe(1);
+    fireEvent.click(screen.getByRole("button", { name: "更新成绩与复核进度" }));
+    await screen.findByText("第 2 题 · 答题内容识别不完整");
+    fireEvent.click(submit);
     await act(async () => current.resolve(expired()));
     const status = document.querySelector(".appeal-status");
     expect(status?.textContent).toContain("第 2 题");
-    const reauthenticate = within(status as HTMLElement).getByRole<HTMLButtonElement>("button", { name: "重新登录" });
+    const reauthenticate = screen.getByRole<HTMLButtonElement>("button", { name: "重新登录" });
     expect(reauthenticate.disabled).toBe(true);
     await act(async () => receipt.resolve(failed()));
     await waitFor(() => expect(reauthenticate.disabled).toBe(false));

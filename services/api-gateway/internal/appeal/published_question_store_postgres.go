@@ -145,6 +145,23 @@ ORDER BY version DESC
 	if err := rows.Err(); err != nil {
 		return PublishedQuestionAppealContext{}, err
 	}
+	// 先释放历史列表连接，再用结案共用规则核对候选。列表展示的旧检查结果不能替代提交时的事务校验。
+	if err := rows.Close(); err != nil {
+		return PublishedQuestionAppealContext{}, err
+	}
+	if appeal.Status == QuestionAppealUpheldPendingRegrade && appeal.RegradeJobID != "" {
+		for index := range context.ReleaseHistory {
+			version := &context.ReleaseHistory[index]
+			if version.Status != "published" || version.Source != "regrade" || version.Version <= appeal.SourceReleaseVersion {
+				continue
+			}
+			eligible, err := successorPublishedReleaseExists(ctx, s.db, tenantID, appeal, version.ID)
+			if err != nil {
+				return PublishedQuestionAppealContext{}, err
+			}
+			version.EligibleForResolution = eligible
+		}
+	}
 	return context, nil
 }
 
@@ -441,9 +458,11 @@ SELECT EXISTS (
 
 // 结案必须等关联任务完成；新版从原发布派生，且包含同学生答卷题目的已复核结果。
 // 发布表没有 job 外键，这里用来源版本、复核分数和评分来源核对已有的持久化事实。
-func successorPublishedReleaseExists(ctx context.Context, tx *sql.Tx, tenantID string, item PublishedQuestionAppeal, releaseID string) (bool, error) {
+func successorPublishedReleaseExists(ctx context.Context, query interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}, tenantID string, item PublishedQuestionAppeal, releaseID string) (bool, error) {
 	var exists bool
-	err := tx.QueryRowContext(ctx, `
+	err := query.QueryRowContext(ctx, `
 SELECT EXISTS (
   SELECT 1 FROM score_release successor
   JOIN score_release_item successor_item

@@ -71,7 +71,7 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
   const [bindingConflict, setBindingConflict] = useState("");
   const conflictRef = useRef(false);
   const [loadedScope, setLoadedScope] = useState("");
-  const [savingRole, setSavingRole] = useState<PanelAgentRole | null>(null);
+  const [savingRole, setSavingRole] = useState<PanelAgentRole | "all" | null>(null);
   const [runtimePrompt, setRuntimePrompt] = useState<RuntimePrompt | null>(null);
   const [promptLoading, setPromptLoading] = useState(true);
   const [promptError, setPromptError] = useState(false);
@@ -81,6 +81,9 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
   const loadingRef = useRef(false);
   const loadedScopeRef = useRef("");
   const scopeKey = JSON.stringify([tenantID, stage, subject, archetype]);
+  const currentScopeRef = useRef(scopeKey);
+  currentScopeRef.current = scopeKey;
+  const [saveSummary, setSaveSummary] = useState("");
   // 成功读取空绑定与读取失败是不同事实；只有当前范围完整读取成功才允许修改。
   const bindingReady = loadedScope === scopeKey && !loading && !loadError && !bindingConflict;
 
@@ -146,55 +149,63 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
   }, [load]);
 
   const setRoleDraft = (role: PanelAgentRole, patch: Partial<RoleDraft>) => {
+    if (savingRef.current || loadingRef.current) return;
     setDrafts((current) => ({ ...current, [role]: { ...current[role], ...patch } }));
   };
 
-  const save = async (role: PanelAgentRole) => {
-    // 刷新刚发起时 state 尚未重绘，同步标记也要拒绝排队的保存动作。
-    if (savingRef.current || loadingRef.current || conflictRef.current || !bindingReady || loadingConfigs || !tenantID) return;
+  const saveRoles = async (roleKeys: PanelAgentRole[]) => {
+    if (savingRef.current || loadingRef.current || conflictRef.current || !bindingReady || loadingConfigs || !tenantID || !roleKeys.length) return;
     const requestID = requestRef.current;
-    const draft = drafts[role];
-    const config = configs.find((item) => item.id === draft.managed_model_api_config_id);
-    const existing = bindings.find((item) => item.agent_role === role);
-    // 已移除的模型仍允许停用原绑定，不能因为模型库缺项而让失效绑定无法关闭。
-    const canDisableMissing = draft.status === "disabled" && existing?.managed_model_api_config_id === draft.managed_model_api_config_id;
-    if ((!config && !canDisableMissing) || !draft.prompt_version.trim() || !draft.strength_rank ||
-      (draft.status === "active" && (!config || !capabilityVerified(config)))) {
-      message.error("请选择本校已通过结构化输出检测的模型，并填写实际部署的 Prompt 版本");
-      return;
+    const owner = scopeKey;
+    const inputs = roleKeys.map(role => ({ role, draft: { ...drafts[role] }, existing: bindings.find(item => item.agent_role === role) }));
+    for (const { role, draft, existing } of inputs) {
+      const config = configs.find(item => item.id === draft.managed_model_api_config_id);
+      // 已移除模型仍可停用原绑定；先核对整批输入，避免第一项保存后才发现另一项缺字段。
+      const canDisableMissing = draft.status === "disabled" && existing?.managed_model_api_config_id === draft.managed_model_api_config_id;
+      if ((!config && !canDisableMissing) || !draft.prompt_version.trim() || !draft.strength_rank || (draft.status === "active" && (!config || !capabilityVerified(config)))) {
+        message.error(`${roles.find(item => item.key === role)?.title}：请选择本校已通过结构化输出检测的模型，并填写实际部署的规则版本`);
+        return;
+      }
     }
     savingRef.current = true;
-    setSavingRole(role);
+    setSavingRole(inputs.length > 1 ? "all" : inputs[0].role);
+    setSaveSummary("");
     onSavingChange?.(true);
+    const completed: string[] = [];
+    let failed = "";
+    const current = () => requestID === requestRef.current && currentScopeRef.current === owner;
     try {
-      const response = await savePanelModelRoleBinding({
-        tenant_id: tenantID, education_stage: stage, subject_code: subject,
-        archetype_code: archetype, agent_role: role,
-        managed_model_api_config_id: draft.managed_model_api_config_id,
-        prompt_version: draft.prompt_version.trim(), strength_rank: draft.strength_rank,
-        status: draft.status, expected_revision: existing?.revision ?? "absent"
-      });
-      if (requestID === requestRef.current) {
-        setBindings((current) => [...current.filter((item) => item.agent_role !== role), response.binding]);
-        // 服务端会规范化版本和角色字段；仅同步刚保存的角色，不覆盖另外两项未保存输入。
-        setDrafts((current) => ({ ...current, [role]: {
-          managed_model_api_config_id: response.binding.managed_model_api_config_id,
-          prompt_version: response.binding.prompt_version,
-          strength_rank: response.binding.strength_rank,
-          status: response.binding.status
-        } }));
-        message.success(`${roles.find((item) => item.key === role)?.title} 已保存；不会改变日常对话模型`);
-        onSaved?.();
+      // 服务端仍逐角色校验修订；一项失败就停下，已成功项保留，剩余草稿等待核对后再保存。
+      for (const { role, draft, existing } of inputs) {
+        if (!current()) break;
+        try {
+          const response = await savePanelModelRoleBinding({
+            tenant_id: tenantID, education_stage: stage, subject_code: subject, archetype_code: archetype, agent_role: role,
+            managed_model_api_config_id: draft.managed_model_api_config_id, prompt_version: draft.prompt_version.trim(),
+            strength_rank: draft.strength_rank, status: draft.status, expected_revision: existing?.revision ?? "absent"
+          });
+          if (!current()) break;
+          setBindings(previous => [...previous.filter(item => item.agent_role !== role), response.binding]);
+          setDrafts(previous => ({ ...previous, [role]: {
+            managed_model_api_config_id: response.binding.managed_model_api_config_id, prompt_version: response.binding.prompt_version,
+            strength_rank: response.binding.strength_rank, status: response.binding.status
+          } }));
+          completed.push(roles.find(item => item.key === role)!.title);
+        } catch (error) {
+          if (!current()) break;
+          failed = `${roles.find(item => item.key === role)!.title}：${getUserErrorMessage(error, "保存失败").replace(/[。；;\s]+$/, "")}`;
+          if (error instanceof ApiClientError && error.code === "panel_model_binding_changed") {
+            conflictRef.current = true;
+            setBindingConflict("角色配置已被其他管理员更新。已成功项保留，其余输入未提交；请刷新绑定并核对后继续。");
+          }
+          break;
+        }
       }
-    } catch (error) {
-      if (requestID === requestRef.current) {
-        if (error instanceof ApiClientError && error.code === "panel_model_binding_changed") {
-          // 服务端拒绝旧修订时保留三个角色的输入，等待管理员刷新核对，不自动覆盖或合并。
-          conflictRef.current = true;
-          setBindingConflict("该角色配置已被其他管理员更新。三个角色的本页输入均已保留，请刷新绑定、核对新配置后重新操作。");
-          message.error("角色配置已变化，请刷新核对后重新操作");
-        } else message.error(getUserErrorMessage(error, "角色模型保存失败"));
-      }
+      if (!current()) return;
+      const summary = `${completed.length ? `已保存 ${completed.join("、")}` : "尚未保存任何角色"}${failed ? `；${failed}。其余未保存输入已保留。` : "；不会改变日常对话模型。"}`;
+      setSaveSummary(summary);
+      if (failed) message.error(summary); else message.success(summary);
+      if (completed.length) onSaved?.();
     } finally {
       savingRef.current = false;
       setSavingRole(null);
@@ -275,7 +286,7 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
       {promptError ? <Alert type="warning" showIcon message="当前部署版本暂时无法读取，可在高级设置填写已核实的版本；保存仍由服务器校验。" /> : <p className="platform-panel-bindings-hint">{promptLoading ? "正在读取评分服务部署版本…" : `评分服务当前部署：${runtimePrompt?.prompt_version ?? "暂未配置"}`}</p>}
       <Button disabled={!runtimePrompt || !tenantID || !bindingReady || savingRole !== null} onClick={() => {
         if (!runtimePrompt) return;
-        // 套用只更新未保存草稿；三个角色仍逐项保存，不能将部分成功显示成全部已部署。
+        // 套用只更新草稿；统一保存仍逐角色校验修订，并分别记录成功结果。
         setDrafts((current) => Object.fromEntries(roles.map(({ key }) => [key, { ...current[key], prompt_version: runtimePrompt.prompt_version }])) as RoleDrafts);
       }}>为 A/B/C 套用当前部署版本</Button>
       <p className="platform-panel-bindings-hint">当前范围：{stage === "senior" ? "高中" : "初中"} / {subjects.find((item) => item.value === subject)?.label} / {archetype === "*" ? "全部题型（默认）" : archetype}。特定题型优先于默认绑定。</p>
@@ -294,13 +305,15 @@ export function PanelModelBindingsSection({ tenantID, configs, loadingConfigs = 
             <label>评分规则版本<Select aria-label={`${role.title} Prompt 版本`} value={draft.prompt_version || undefined} options={[...promptOptions, ...(!promptOptions.some((item) => item.value === draft.prompt_version) && draft.prompt_version ? [{ value: draft.prompt_version, label: `${draft.prompt_version} · 自定义` }] : [])]} placeholder="选择评分服务部署版本" disabled={!tenantID || !bindingReady || savingRole !== null} onChange={(value) => setRoleDraft(role.key, { prompt_version: value })} /></label>
             {advanced ? <label>自定义 Prompt 版本<Input aria-label={`${role.title}自定义 Prompt 版本`} value={draft.prompt_version} maxLength={128} placeholder="填写已核实的部署版本" disabled={!tenantID || !bindingReady || savingRole !== null} onChange={(event) => setRoleDraft(role.key, { prompt_version: event.target.value })} /></label> : null}
             <div className="platform-panel-role-footer">
-              {advanced ? <label>路由强度等级<InputNumber aria-label={`${role.title}强度等级`} min={1} max={100} value={draft.strength_rank} disabled={!tenantID || !bindingReady || savingRole !== null} onChange={(value) => setRoleDraft(role.key, { strength_rank: value ?? role.rank })} /></label> : <span>路由强度等级：{draft.strength_rank}（默认 {role.rank}）</span>}
+              {advanced ? <label>路由强度等级<InputNumber aria-label={`${role.title}强度等级`} min={1} max={100} value={draft.strength_rank} disabled={!tenantID || !bindingReady || savingRole !== null} onChange={(value) => setRoleDraft(role.key, { strength_rank: value ?? role.rank })} /></label> : null}
               <label>启用<Switch aria-label={`${role.title}启用`} checked={draft.status === "active"} disabled={!hasExisting || !bindingReady || savingRole !== null} onChange={(checked) => setRoleDraft(role.key, { status: checked ? "active" : "disabled" })} /></label>
             </div>
-            <Button type="primary" loading={savingRole === role.key} disabled={!tenantID || !bindingReady || loadingConfigs || savingRole !== null} onClick={() => void save(role.key)}>保存{role.title}</Button>
+            <span hidden={!advanced}><Button loading={savingRole === role.key} disabled={!tenantID || !bindingReady || loadingConfigs || savingRole !== null} onClick={() => void saveRoles([role.key])}>保存{role.title}</Button></span>
           </div>;
         })}
       </div>
+      <Button type="primary" loading={savingRole !== null} disabled={!tenantID || !bindingReady || loadingConfigs || savingRole !== null || !hasDraftChanges} onClick={() => void saveRoles(dirtyRoles)}>保存全部更改</Button>
+      {saveSummary ? <p role="status">{saveSummary}</p> : null}
       <p className="platform-panel-bindings-hint">模型需先在上方模型库完成结构化能力检测。A/B 独立盲评；C 必须是不同模型且强度等级高于 A/B。强度等级只是配置门槛，不代替真实评测。</p>
       {tenantID && onOpenGovernance ? <ScoringSetupChecklist tenantID={tenantID} modelIDs={bindings.map((binding) => binding.managed_model_api_config_id)} capabilityReady={roleModelsVerified && active} bindingReady={rankValid} subject={subjects.find((item) => item.value === subject)?.label ?? subject} onOpen={(view) => onOpenGovernance(view, { stage, subject, archetype })} /> : null}
     </section>

@@ -101,10 +101,12 @@ export function ReviewAnnotationWorkspace({ reviewTaskId, disabled = false, draw
     <div className="review-annotation-layout">
       <aside className="review-annotation-rail" role="toolbar" aria-label="批注工具" aria-orientation="vertical">
         {icon("select", "选择批注", <MousePointer2 size={18} />)}
-        {icon("correct", "打勾", <Check size={18} />)}
-        {icon("incorrect", "打叉", <X size={18} />)}
-        {icon("rectangle", "框选批注", <Square size={18} />)}
-        <Tooltip title="删除选中批注" placement="right"><Button type="text" icon={<Trash2 size={18} />} aria-label="删除选中批注" disabled={disabled || saving || !drawingAvailable || !selected} onClick={() => void removeSelected()} /></Tooltip>
+        {!disabled && drawingAvailable ? <>
+          {icon("correct", "打勾", <Check size={18} />)}
+          {icon("incorrect", "打叉", <X size={18} />)}
+          {icon("rectangle", "框选批注", <Square size={18} />)}
+          <Tooltip title="删除选中批注" placement="right"><Button type="text" icon={<Trash2 size={18} />} aria-label="删除选中批注" disabled={saving || !selected} onClick={() => void removeSelected()} /></Tooltip>
+        </> : null}
         {viewTools ? <div className="review-annotation-view-tools">{viewTools}</div> : null}
       </aside>
       <div className="review-annotation-custom-canvas">{renderCanvas({

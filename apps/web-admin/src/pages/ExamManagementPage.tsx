@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { App, Button, Drawer, Dropdown, Input, Select, Space, Table, Tooltip, type MenuProps, type TableColumnsType } from "antd";
+import { Alert, App, Button, Drawer, Dropdown, Input, Select, Space, Table, Tooltip, type MenuProps, type TableColumnsType } from "antd";
 import { Archive, Eye, MoreHorizontal, Pencil, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
 import { getManagementExam, listAllManagementExams, type ManagementExam } from "../api/exams";
@@ -42,6 +42,11 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
   const detailSequence = useRef(0);
   const editSequence = useRef(0);
   const teacherMode = mode === "teacher";
+  const editSubjectId = hashQueryParam("edit_exam");
+  const editTarget = hashQueryParam("target") === "scope" ? "scope" : undefined;
+  const [focusedEditNotice, setFocusedEditNotice] = useState("");
+  const focusedEditAttempt = useRef("");
+  const focusedEditKey = `${currentUser.tenant}:${currentUser.id}:${canManage}:${editSubjectId}`;
 
   const loadData = useCallback(async () => {
     const request = ++loadSequence.current;
@@ -105,6 +110,31 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
     }
   };
 
+  useEffect(() => {
+    if (!editSubjectId) { focusedEditAttempt.current = ""; setFocusedEditNotice(""); return; }
+    if (loading || error || focusedEditAttempt.current === focusedEditKey) return;
+    // 保存后的列表刷新不应再次弹出刚关闭的编辑器；只有新入口或明确刷新才重试定位。
+    focusedEditAttempt.current = focusedEditKey;
+    let active = true;
+    // 深链只在本次已授权列表中解析学科归属；不能把任意 URL 标识当作整场管理权限。
+    const target = exams.find(exam => exam.exams.some(subject => subject.id === editSubjectId));
+    setFocusedEditNotice("");
+    if (!target) { setFocusedEditNotice("当前授权范围内未找到该考试，请联系学校考试管理员核对入口与授权。"); return; }
+    const request = ++editSequence.current;
+    setActioningId(managementExamKey(target));
+    void getManagementExam(target.kind, target.id).then(({ exam }) => {
+      if (!active || request !== editSequence.current) return;
+      if (!exam.exams.some(subject => subject.id === editSubjectId)) throw new Error("考试归属已变化，请重新检查准备状态。");
+      if (!canManage || !exam.can_edit || !exam.can_manage || !exam.scope_complete) {
+        setEditExam(null);
+        setDetail({ exam, loading: false, error: null });
+        setFocusedEditNotice(`已定位“${exam.name}”。当前状态或授权不允许修改，请联系学校考试管理员核对年级与参考班级。`);
+      } else setEditExam(exam);
+    }).catch(cause => { if (active && request === editSequence.current) setFocusedEditNotice(getUserErrorMessage(cause, "指定考试设置读取失败，请刷新重试。")); })
+      .finally(() => { if (active && request === editSequence.current) setActioningId(null); });
+    return () => { active = false; };
+  }, [editSubjectId, focusedEditKey, exams, loading, error, canManage]);
+
   const columns: TableColumnsType<ManagementExam> = [
     { title: "考试名称", dataIndex: "name", width: 220, ellipsis: true, render: (value: string, exam) => <Tooltip title={value}><button className="exam-name-link" type="button" onClick={(event) => { event.stopPropagation(); onOpenWorkspace(exam); }}>{value}</button></Tooltip> },
     { title: "考试类型", dataIndex: "exam_type", width: 105, render: (value: string) => examTypeOptions.find((item) => item.value === value)?.label ?? "其他类型" },
@@ -149,7 +179,7 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
   };
 
   return <div className="page-stack exam-management-page">
-    <section className="page-heading"><div><h1>{teacherMode ? "我的考试" : "考试管理"}</h1><p>{teacherMode ? "查看已授权考试及学科，进入对应工作区。" : "管理整场考试，进入考试工作区后选择学科配置。"}</p></div><Space wrap><Button icon={<RefreshCw size={16} />} onClick={() => void loadData()} loading={loading}>刷新</Button>{canManage ? <Button type="primary" onClick={onCreateExam}>新建考试</Button> : null}</Space></section>
+    <section className="page-heading"><div><h1>{teacherMode ? "我的考试" : "考试管理"}</h1><p>{teacherMode ? "查看已授权考试及学科，进入对应工作区。" : "管理整场考试，进入考试工作区后选择学科配置。"}</p></div><Space wrap><Button icon={<RefreshCw size={16} />} onClick={() => { focusedEditAttempt.current = ""; void loadData(); }} loading={loading}>刷新</Button>{canManage ? <Button type="primary" onClick={onCreateExam}>新建考试</Button> : null}</Space></section>
     <section className="workspace-section filter-panel"><div className="filter-grid exam-filter-primary">
       <Input prefix={<Search size={16} />} placeholder="搜索考试名称" value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} />
       <Select aria-label="考试进度筛选" placeholder="考试进度" allowClear value={filters.status || undefined} options={[{ label: "进行中", value: "active" }, ...managementStatusOptions]} onChange={(value) => setFilters((current) => ({ ...current, status: value ?? "" }))} />
@@ -159,11 +189,12 @@ export function ExamManagementPage({ mode, canManage, currentUser, onOpenWorkspa
       <Select placeholder="年级" allowClear value={filters.gradeId || undefined} options={grades.map((grade) => ({ label: grade.name, value: grade.id }))} onChange={(value) => setFilters((current) => ({ ...current, gradeId: value ?? "" }))} />
       <Select placeholder="考试类型" allowClear value={filters.examType || undefined} options={examTypeOptions} onChange={(value) => setFilters((current) => ({ ...current, examType: value ?? "" }))} />
     </div></details> : null}</section>
+    {focusedEditNotice ? <Alert type="warning" showIcon message={focusedEditNotice} /> : null}
     {renderExamList()}
     <Drawer title="考试详情" open={Boolean(detail)} onClose={() => { detailSequence.current += 1; setDetail(null); }} width={820}>
       {renderDetail()}
     </Drawer>
-    <ManagementExamEditDrawer exam={editExam} classes={classes} schoolName={editExam ? schoolById.get(editExam.school_id)?.name : undefined} gradeName={editExam ? gradeName(editExam) : undefined} onClose={() => setEditExam(null)} onSaved={loadData} />
+    <ManagementExamEditDrawer exam={editExam} classes={classes} focusTarget={editTarget} schoolName={editExam ? schoolById.get(editExam.school_id)?.name : undefined} gradeName={editExam ? gradeName(editExam) : undefined} onClose={() => setEditExam(null)} onSaved={loadData} />
     <ManagementExamArchiveDialog selection={archiveSelection} actorScope={`${currentUser.tenant}:${currentUser.id}`} onClose={() => setArchiveSelection(null)} onSaved={loadData} />
   </div>;
 }

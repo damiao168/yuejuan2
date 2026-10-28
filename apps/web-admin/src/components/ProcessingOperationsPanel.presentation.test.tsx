@@ -24,6 +24,12 @@ beforeEach(() => { vi.resetAllMocks(); mocks.focus = ""; mocks.summary.mockResol
 const exception: ProcessingException = { id: "exception", exam_id: "exam", page_id: "raw-page-uuid", source_type: "quality", source_id: "quality", code: "BLOCKED_LOW_IMAGE_QUALITY", severity: "P1", blocking: true, status: "assigned", assigned_to: "raw-user-uuid", details: {}, created_at: "2026-10-09", updated_at: "2026-10-09" };
 
 describe("异常列表使用受限业务摘要", () => {
+  it("用处理优先级替代工程分级，接口仍沿用原枚举", async () => {
+    mocks.list.mockResolvedValue({ exceptions: [exception, { ...exception, id: "p0", severity: "P0" }, { ...exception, id: "p2", severity: "P2" }, { ...exception, id: "p3", severity: "P3" }] });
+    render(<ProcessingOperationsPanel examId="exam" canManage={false} />);
+    expect(await screen.findByText("立即处理")).toBeTruthy(); expect(screen.getByText("优先处理")).toBeTruthy(); expect(screen.getByText("常规处理")).toBeTruthy(); expect(screen.getByText("稍后处理")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/P[0-3]/);
+  });
   it("游标后页可继续读取并保留首屏记录", async () => {
     mocks.list.mockImplementation(({ cursor }: { cursor?: string }) => Promise.resolve(cursor ? { exceptions: [{ ...exception, id: "older", candidate_no: "OLD", page_no: 2 }], has_more: false, next_cursor: "" } : { exceptions: [{ ...exception, candidate_no: "FIRST", page_no: 1 }], has_more: true, next_cursor: "next" }));
     render(<ProcessingOperationsPanel examId="exam" canManage={false} />);

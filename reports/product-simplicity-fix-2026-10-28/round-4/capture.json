@@ -1,0 +1,203 @@
+{
+  "date": "2026-10-28",
+  "scope": "EX-22 原观察：上传前可见页序与学生分组确认；保留全部既有未提交修改",
+  "baseline": "round-4/source-baseline.json",
+  "findings": [
+    {
+      "id": "EX-22",
+      "prior_status": "partial",
+      "status": "fixed",
+      "changes": [
+        "计数与像素预览分开：classic和BigTIFF沿完整主页面链计数，最多10000页；超过100页的classic仍显示真实总页数与分组，不再把预览资源限制显示成未知页数。",
+        "常规BigTIFF在校验64位目录、字段长度、inline/out-of-line值与像素范围后，把主页面标签适配给现有UTIF像素解码；支持双端序真实灰阶预览及改序。原件仅重连文件头和主页面链指针，不重编码像素，也不转存为classic TIFF。",
+        "子IFD、非常规编码/色彩、分通道、超页数/像素/字节预算等情况不再静默通过普通预检：说明哪些原件不能完整显示，用户核对原件页序和每人页数后必须显式确认，才允许按原文件提交服务端核对。用户也可取消并换常规文件。",
+        "原件确认只属于当前文件对象、文件顺序、每人页数和失败原因；重新选文件、改序、改分组或出现新的预览失败都会作废确认。已知缺页始终阻止提交，不能由原件确认绕过。",
+        "展开预览期间阻止外层提交；收起会取消解码并释放等待，迟到页面仍被拒绝；解码失败通知外层进入原件确认。未应用页序仍阻止提交，应用失败保留原件和当前页序。大批分组只绘制前100份，保留完整计数与连续分组规则。",
+        "补充256MiB本地TIFF输入预算，超限不先调用arrayBuffer整读；这是本地预览边界，不改变服务端上传限制。"
+      ],
+      "remaining": "",
+      "files": [
+        "apps/web-admin/src/features/capture/captureTiffDirectories.ts",
+        "apps/web-admin/src/features/capture/captureTiffPreview.ts",
+        "apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx",
+        "apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx"
+      ],
+      "completion_boundary": "完成原观察要求的提交前预检与可见确认流程，不等于浏览器可以解码全部TIFF变体。常规文件可预览和调整；无法本地预览的原件有明确原因、显式确认和服务端继续核对的完整路径，没有将不支持格式冒充本地已验证。"
+    }
+  ],
+  "read_scope": [
+    {
+      "path": "AGENTS.md",
+      "status": "documentation",
+      "read_scope": "full",
+      "note": "全文遵循本轮代码、注释与保留工作区要求。"
+    },
+    {
+      "path": "docs/engineering/commenting-standard.md",
+      "status": "documentation",
+      "read_scope": "full",
+      "note": "全文核对非直观格式、资源、异步与确认边界说明。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureTiffDirectories.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "新增完整主目录读取、64位精确范围、字段长度、内外置值、循环/目录重叠、元数据预算及指针别名拒绝。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureTiffPreview.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "计数与预览分离，BigTIFF标签适配、色彩/位深、像素范围、原件指针改序及本地输入预算。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CapturePdfOrderPreview.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "实际预览状态、迟到页面、未应用页序、失败回传与外层阻断。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureFileOrderPreview.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "同次跨文件计数、连续分组、元数据不支持原因、显式原件确认和确认失效。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/captureTiffPreview.test.ts",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "真实双端序BigTIFF像素、所有非指针字节不变、原件不变、>100页计数、整数/越界/重叠与输入预算。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CapturePdfOrderPreview.test.tsx",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "预览失败与外层原件确认、读取中阻断，保留已有页序应用/失败回归。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/CaptureFileOrderPreview.test.tsx",
+      "status": "annotated",
+      "read_scope": "full",
+      "note": "原件确认、改分组/文件失效、晚到失败、已知缺页与大批分组显示上限。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/capturePageGrouping.ts",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "全文复核同次跨文件连续分组；本轮未修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/capturePageGrouping.test.ts",
+      "status": "self_explanatory",
+      "read_scope": "full",
+      "note": "全文复核真实来源范围与未知页数不猜测；本轮未修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/capturePdfPreview.ts",
+      "status": "existing_sufficient",
+      "read_scope": "full",
+      "note": "全文复核PDF计数、100页预览限制和原PDF页复制；本轮未修改。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "status": "pending",
+      "read_scope": "selection_submit_and_preview_callers",
+      "note": "只核对创建/补传确认入口如何沿用onPendingChange阻止提交；未全文重审整个采集页。"
+    },
+    {
+      "path": "apps/web-admin/src/features/capture/useCaptureUpload.ts",
+      "status": "pending",
+      "read_scope": "first_105_lines_and_uploadSource_group_boundary",
+      "note": "只复核上传组完整登记、幂等与切范围边界；未全文重审，未修改。"
+    },
+    {
+      "path": "node_modules/utif/UTIF.js",
+      "status": "protected",
+      "read_scope": "decodeImage_readIFD_toRGBA8_and_relevant_codecs",
+      "note": "读取本机锁定版本的像素解码和主目录解析，确认适配器可传入标签且不能误用UTIF.decode解析BigTIFF；第三方代码未修改。"
+    }
+  ],
+  "verification": [
+    {
+      "log": "capture-tests.log",
+      "result": "passed",
+      "files": 4,
+      "tests": 30,
+      "note": "第一组包含真实UTIF像素解码；jsdom的Canvas为替身，只核对写入RGBA与边界，不冒充真实浏览器截图。"
+    },
+    {
+      "log": "capture-tiff-final.log",
+      "result": "passed",
+      "files": 1,
+      "tests": 19,
+      "note": "本地256MiB预算新增后重跑TIFF文件，合并前组其余3文件共4文件31条独立用例；不将30与19相加。"
+    },
+    {
+      "log": "capture-preview-final.log",
+      "result": "passed",
+      "files": 1,
+      "tests": 5,
+      "note": "补齐读取中收起取消并释放外层等待后重跑。最终合并覆盖4文件32条独立用例，不将多轮运行次数相加。"
+    },
+    {
+      "log": "capture-lint.log",
+      "result": "passed",
+      "files": 7,
+      "errors": 0,
+      "warnings": 0,
+      "note": "首组本模块7个新增或修改源码/测试。"
+    },
+    {
+      "log": "capture-lint-final.log",
+      "result": "passed",
+      "files": 7,
+      "errors": 0,
+      "warnings": 0,
+      "note": "输入预算后的最终定向lint，0错误0警告。"
+    },
+    {
+      "log": "capture-preview-lint-final.log",
+      "result": "passed",
+      "files": 2,
+      "note": "读取日志核对2文件0诊断。",
+      "errors": 0,
+      "warnings": 0
+    },
+    {
+      "command": "git diff --check -- 本组3份已跟踪生产组件",
+      "result": "passed",
+      "note": "新增未跟踪文件与最终全工作区类型/构建由根统一核验。"
+    },
+    {
+      "log": "web-delivery.log",
+      "result": "passed",
+      "tests": 32,
+      "note": "最终统一9文件组包含本组4文件32条，不另累计初轮与定向重跑。"
+    },
+    {
+      "log": "capture-file-order-delivery.log",
+      "result": "passed",
+      "tests": 6,
+      "note": "根补大批分组默认折叠断言、删除重复原件说明后重跑同一文件。"
+    },
+    {
+      "report": "browser.json",
+      "result": "passed",
+      "note": "真实浏览器双端序BigTIFF解码、改序应用和明确原件确认；Pillow独立复验导出小端像素。"
+    }
+  ],
+  "references": [
+    {
+      "title": "LibTIFF BigTIFF Design",
+      "url": "https://libtiff.gitlab.io/libtiff/specification/bigtiff.html",
+      "used_for": "核对8字节目录计数/偏移、20字节条目和8字节以内inline值，以及LONG8/SLONG8/IFD8类型。"
+    }
+  ],
+  "limits": [
+    "本地预览/调整保留100页、每页3200万像素、累计1.28亿像素、256MiB输入缓冲预算；主页面计数最多10000页。",
+    "SubIFD、分通道、未支持codec、非常规色彩/浮点样本等走显式核对原件路径，没有本地逐页调整承诺。",
+    "本轮没有增加依赖、修改锁文件、SDK、接口或历史迁移；没有真实学校数据、上传、模型调用或部署。",
+    "服务端完整性/身份/模板检查、同次选择独立分组与实际处理权限均保留。",
+    "真实浏览器和独立Pillow夹具由根集成验证后另附证据，本文件未预先计为通过。"
+  ]
+}

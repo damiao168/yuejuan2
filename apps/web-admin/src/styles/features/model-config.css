@@ -133,3 +133,6 @@
   to { transform: translateX(395%); }
 }
 
+.platform-model-settings summary { cursor: pointer; white-space: nowrap; }
+.platform-model-setting-sections { min-width: 280px; display: grid; gap: 14px; padding-top: 12px; }
+.platform-model-setting-sections h4 { margin: 0 0 6px; font-size: 13px; }

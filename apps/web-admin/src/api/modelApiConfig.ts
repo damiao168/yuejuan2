@@ -276,6 +276,13 @@ export function updateManagedModelAPIConfig(id: string, tenantId: string, input:
   });
 }
 
+export function rotateManagedModelAPIConfigCredential(id: string, tenantId: string, apiKey: string, expectedUpdatedAt: string) {
+  return apiClient.request<{ config: ManagedModelAPIConfig }>(`/api/v1/platform/model-api-configs/${encodeURIComponent(id)}${tenantQuery(tenantId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ credential_only: true, api_key: apiKey, expected_updated_at: expectedUpdatedAt })
+  });
+}
+
 export function probeManagedModelAPIConfig(id: string, tenantId: string, mode: ManagedAPIProbeMode = "quick", force = false) {
   const query = `${tenantQuery(tenantId)}&mode=${encodeURIComponent(mode)}${force ? "&force=true" : ""}`;
   return apiClient.request<{ result: ManagedAPIProbeResult; config: ManagedModelAPIConfig }>(`/api/v1/platform/model-api-configs/${encodeURIComponent(id)}/probe${query}`, {

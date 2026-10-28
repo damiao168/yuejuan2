@@ -116,8 +116,10 @@ func (h *Handler) ProbeGradingAIPlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
-		ModelConfigID string `json:"model_config_id"`
-		RequestID     string `json:"request_id"`
+		ModelConfigID           string `json:"model_config_id"`
+		RequestID               string `json:"request_id"`
+		ExpectedConfigRevision  string `json:"expected_config_revision"`
+		ExpectedBindingRevision string `json:"expected_binding_revision"`
 	}
 	if !decodeJSON(w, r, &input) {
 		return
@@ -135,6 +137,11 @@ func (h *Handler) ProbeGradingAIPlan(w http.ResponseWriter, r *http.Request) {
 	for _, model := range detail.AvailableModels {
 		if model.ModelConfigID != input.ModelConfigID {
 			continue
+		}
+		// 批量入口冻结每个连接的配置和学校绑定；排队期间换版不能悄悄探测另一份付费配置。
+		if input.ExpectedConfigRevision != "" && input.ExpectedConfigRevision != model.ConfigRevision || input.ExpectedBindingRevision != "" && input.ExpectedBindingRevision != model.BindingRevision {
+			httpx.Error(w, r, http.StatusConflict, "grading_ai_model_changed", "模型配置已变化，请重新核对所选模型")
+			return
 		}
 		result, err := h.gradingAIProbe(r.Context(), user.TenantID, model, input.RequestID, false)
 		if err != nil {

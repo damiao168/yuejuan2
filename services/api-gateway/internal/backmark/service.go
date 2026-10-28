@@ -219,8 +219,24 @@ func (s *Service) ListAssignedPage(ctx context.Context, tenantID, graderID strin
 		return nil, err
 	}
 	out := make([]GraderItem, 0, len(items))
+	var summaries map[string]QueueSummary
+	if provider, ok := s.store.(interface {
+		AssignedQueueSummaries(context.Context, string, string, []string) (map[string]QueueSummary, error)
+	}); ok && len(items) > 0 {
+		ids := make([]string, 0, len(items))
+		for _, item := range items {
+			ids = append(ids, item.ID)
+		}
+		summaries, err = provider.AssignedQueueSummaries(ctx, tenantID, graderID, ids)
+		if err != nil {
+			// 辅助名称不可读时保留已授权任务，前端明确缺摘要；不能因此挡住独立评分。
+			summaries = nil
+		}
+	}
 	for _, item := range items {
-		out = append(out, graderView(item))
+		view := graderView(item)
+		view.QueueSummary = summaries[item.ID]
+		out = append(out, view)
 	}
 	return out, nil
 }

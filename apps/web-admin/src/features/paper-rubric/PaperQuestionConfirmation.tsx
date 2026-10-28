@@ -32,7 +32,7 @@ function questionCheckDisplay(canManage: boolean, disabled: boolean, disabledRea
 }
 
 /** 此处只检查已经保存的正式配置；题目与分值通过不代表答题卡或整场准备也已确认。 */
-export function PaperQuestionConfirmation({ examId, configurationKey, canManage, disabled, disabledReason, onChecked, onConfirmed, heading, children, onOpenCheck, compact = false, actions }: Readonly<{
+export function PaperQuestionConfirmation({ examId, configurationKey, canManage, disabled, disabledReason, onChecked, onConfirmed, heading, children, onOpenCheck, compact = false, actions, autoCheck = false, questionIssues }: Readonly<{
   examId: string;
   configurationKey: string;
   canManage: boolean;
@@ -45,6 +45,8 @@ export function PaperQuestionConfirmation({ examId, configurationKey, canManage,
   onOpenCheck?: (check: ReadinessCheck) => void;
   compact?: boolean;
   actions?: ReactNode;
+  autoCheck?: boolean;
+  questionIssues?: (close: () => void) => ReactNode;
 }>) {
   const key = JSON.stringify([examId, configurationKey, canManage, disabled]);
   const scope = useRef({ key, version: 0 });
@@ -88,22 +90,28 @@ export function PaperQuestionConfirmation({ examId, configurationKey, canManage,
     }
   }
 
+  // 保存结果回读完成或配置版本变化后只读检查一次；未保存、处理中或权限不足时不读取旧配置充当新结果。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: version同时包含考试、配置、权限和未保存状态；渲染生成的check回调不能触发重复读取。
+  useEffect(() => { if (autoCheck && !disabled && canManage) void check(); }, [autoCheck, version]);
+
   const { title, type, description } = questionCheckDisplay(canManage, disabled, disabledReason, state, step, failedChecks, onOpenCheck ? check => {
     if (compact) setCheckOpen(false);
     onOpenCheck(check);
   } : undefined);
   const needsExplanation = !canManage || disabled || Boolean(state.error) || Boolean(state.readiness && step?.state !== "complete");
+  const compactLabel = !autoCheck ? "检查题目配置" : state.busy ? "正在检查题目配置" : state.error ? "检查失败，点击重试" : questionIssues ? "题目检查与待办" : failedChecks.length ? `查看 ${failedChecks.length} 项题目问题` : "查看题目检查结果";
   return <section className={`paper-question-confirmation${compact ? " is-compact" : ""}`} aria-label="小题与分值检查" data-tone={type}>
     <div className="paper-step-toolbar">
       <div className="paper-step-heading">{!compact && (heading ?? <h2>小题与分值</h2>)}{actions}</div>
       <div className="paper-step-check-action">{!compact && <span className="paper-check-status" data-tone={type} role="status">{title}</span>}
-        <Button type="primary" disabled={!examId || !canManage || disabled || state.busy} loading={state.busy}
-          onClick={() => { if (compact) setCheckOpen(true); void check(); }}>{compact ? "检查题目配置" : "检查并确认小题与分值"}</Button></div>
+        <Button type="primary" disabled={!examId || (!canManage && !compact) || disabled || state.busy} loading={state.busy}
+          onClick={() => { if (compact) setCheckOpen(true); if (!autoCheck || !state.readiness || state.error) void check(); }}>{compact ? compactLabel : "检查并确认小题与分值"}</Button></div>
     </div>
     {children}
     {!compact && needsExplanation && <div className="paper-check-explanation" role={state.error ? "alert" : undefined}>{description}</div>}
-    {compact && <Drawer title="题目配置检查" width="min(560px, 100vw)" open={checkOpen} onClose={() => setCheckOpen(false)}>
+    {compact && <Drawer title={questionIssues ? "题目检查与待办" : "题目配置检查"} width="min(560px, 100vw)" open={checkOpen} onClose={() => setCheckOpen(false)}>
       <h3 role="status">{title}</h3><div className="paper-check-explanation" role={state.error ? "alert" : undefined}>{description}</div>
+      {questionIssues?.(() => setCheckOpen(false))}
       <Button disabled={!examId || !canManage || disabled || state.busy} loading={state.busy} onClick={() => void check()}>重新检查</Button>
     </Drawer>}
   </section>;

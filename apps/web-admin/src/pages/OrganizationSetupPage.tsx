@@ -331,16 +331,16 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
         );
       case 1:
         return (
-          <Form key="grade" layout="vertical" preserve={false} onFinish={(values) => void runSave(() => createGrade(values), "学年与年级已保存")} initialValues={{ academic_year: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`, education_stage: "senior", level_no: 10 }}>
+          <Form key="grade" layout="vertical" preserve={false} onFinish={(values) => void runSave(() => createGrade({ ...values, education_stage: values.level_no < 10 ? "junior" : "senior", name: values.name?.trim() || ({ 7: "初一", 8: "初二", 9: "初三", 10: "高一", 11: "高二", 12: "高三" } as Record<number, string>)[values.level_no] }), "学年与年级已保存")} initialValues={{ academic_year: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`, education_stage: "senior", level_no: 10 }}>
             <h2>学年与年级</h2>
             <p className="section-copy">年级会用于班级和考试学生范围。</p>
             {data.grades.length ? <Alert type="success" showIcon message={`已有 ${data.grades.length} 个年级`} /> : null}
             <div className="form-grid compact-form-grid">
               <Form.Item name="school_id" label="所属机构" rules={[{ required: true }]}><Select options={data.schools.map((item) => ({ value: item.id, label: item.name }))} /></Form.Item>
-              <Form.Item name="education_stage" label="学段" rules={[{ required: true }]}><Select options={[{ value: "junior", label: "初中" }, { value: "senior", label: "高中" }]} /></Form.Item>
+              <Form.Item name="education_stage" hidden><Input /></Form.Item>
               <Form.Item name="academic_year" label="学年" rules={[{ required: true }]}><Input /></Form.Item>
-              <Form.Item name="name" label="年级名称" rules={[{ required: true }]}><Input placeholder="高一年级" /></Form.Item>
-              <Form.Item name="level_no" label="年级序号" rules={[{ required: true }]}><InputNumber min={1} max={20} /></Form.Item>
+              <Form.Item name="level_no" label="年级" rules={[{ required: true }]}><Select options={[{ value: 7, label: "初一" }, { value: 8, label: "初二" }, { value: 9, label: "初三" }, { value: 10, label: "高一" }, { value: 11, label: "高二" }, { value: 12, label: "高三" }]} /></Form.Item>
+              <Form.Item name="name" label="自定义显示名（可选）"><Input placeholder="留空使用所选年级名称" /></Form.Item>
             </div>
             <Button type="primary" htmlType="submit" loading={saving}>保存并继续</Button>
           </Form>

@@ -787,8 +787,17 @@ func (s *MemoryStore) ListAudits(_ context.Context, tenantID string, filter Audi
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := []AuditRecord{}
+	actors := map[string]User{}
+	for _, actor := range s.users {
+		if actor.TenantID == tenantID {
+			actors[actor.ID] = actor.User
+		}
+	}
 	for _, record := range s.audits {
 		if !matchesAuditIdentity(record, tenantID, filter) || !matchesAuditContext(record, filter) {
+			continue
+		}
+		if !matchesAuditKeyword(record, actors[record.ActorID], filter.Query) {
 			continue
 		}
 		out = append(out, record)

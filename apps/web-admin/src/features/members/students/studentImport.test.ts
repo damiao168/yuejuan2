@@ -43,6 +43,21 @@ describe("student CSV import preparation", () => {
     });
   });
 
+  it("识别学校中文表头，并允许显式映射其他列名", () => {
+    expect(prepareStudentImport("学号,姓名,班级\n001,张三,G10-01", classes).csv).toContain("001,张三,school-1,class-1");
+    const mapped = prepareStudentImport("编号,学生,教学班\n002,李四,G10-01", classes, { studentNo: "编号", name: "学生", classCode: "教学班", schoolID: "", classID: "" });
+    expect(mapped.errors).toEqual([]);
+    expect(mapped.csv).toContain("002,李四,school-1,class-1");
+  });
+
+  it("整班导入可省略班级列，显式班级范围不接受其他班或文件中的冲突编号", () => {
+    const mapped = { studentNo: "学号", name: "姓名", classCode: "", schoolID: "", classID: "" };
+    expect(prepareStudentImport("学号,姓名\n001,张三", classes, mapped, "class-1").csv).toContain("001,张三,school-1,class-1");
+    const conflict = prepareStudentImport("student_no,name,school_id,class_id\n001,张三,school-2,class-2", classes, undefined, "class-1");
+    expect(conflict.csv).toBe("");
+    expect(conflict.errors[0].message).toContain("目标班级不一致");
+  });
+
   it("does not submit malformed CSV rows", () => {
     const prepared = prepareStudentImport(
       "student_no,name,class_code\nS001,张三,G10-01,unexpected\nS002,李四,G10-01\n",
@@ -53,5 +68,10 @@ describe("student CSV import preparation", () => {
     expect(prepared.sourceRows).toEqual([3]);
     expect(prepared.csv).not.toContain("S001");
     expect(prepared.csv).toContain("S002,李四,school-1,class-1");
+  });
+  it("跳过空白行但保留原表行号，服务端错误仍能定位原行", () => {
+    const prepared = prepareStudentImport("学号,姓名,班级\n001,合成甲,G10-01\n,,\n002,合成乙,G10-01\n", classes);
+    expect(prepared.errors).toEqual([]); expect(prepared.sourceRows).toEqual([2, 4]);
+    expect(remapStudentImportError({ row: 3, message: "重复学号" }, prepared.sourceRows).row).toBe(4);
   });
 });

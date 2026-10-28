@@ -20,7 +20,7 @@ interface ControllerProps { scoring: ExamScoringController; }
 export function ExamScoringPlanDialog({ scoring, examId, onConfigureAI }: Readonly<ControllerProps & { examId?: string; onConfigureAI?: () => void }>) {
   return <Modal title="确认本次评分路线" open={scoring.planOpen} onCancel={() => scoring.setPlanOpen(false)} onOk={() => void scoring.start()} okText="按此路线启动" okButtonProps={{ loading: scoring.actioning === "start-scoring" }} cancelText="返回核对" width={760}>
     {scoring.plan ? <div className="grading-plan">
-      <p>系统将自动完成作答识别、规则判分和 AI 建议生成。AI 建议由教师确认最终分数，处理过程中可关闭页面。</p>
+      <p>将按以下路线处理作答。AI 建议分仍需教师确认；启动后可关闭页面。</p>
       {scoring.planOpen && examId ? <GradingAIPlanSummary examId={examId} onConfigure={onConfigureAI} /> : null}
       <div className="grading-plan-counts"><span>预计规则自动 <strong>{scoring.plan.counts.rule}</strong></span><span>AI 建议 <strong>{scoring.plan.counts.ai}</strong></span><span>其他人工 <strong>{scoring.plan.counts.human}</strong></span></div>
       {scoring.plan.snapshotFailures ? <Alert type="warning" showIcon message={`${scoring.plan.snapshotFailures} 道题的冻结策略暂不可读，按人工路线处理`} /> : null}

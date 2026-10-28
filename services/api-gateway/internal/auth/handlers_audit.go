@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"edugrade-enterprise/services/api-gateway/internal/csvsafe"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
@@ -42,9 +44,6 @@ func (h *Handler) ListAudits(w http.ResponseWriter, r *http.Request) {
 	if scope, ok := AccessScopeFromContext(r.Context()); ok {
 		filter.ScopeMode = scope.QueryMode()
 	}
-	if scope, ok := AccessScopeFromContext(r.Context()); ok {
-		filter.ScopeMode = scope.QueryMode()
-	}
 	records, err := h.store.ListAudits(r.Context(), user.TenantID, filter)
 	if err != nil {
 		httpx.Error(w, r, http.StatusInternalServerError, "audit_lookup_failed", "failed to list audit logs")
@@ -72,9 +71,6 @@ func (h *Handler) ExportAudits(w http.ResponseWriter, r *http.Request) {
 	filter, ok := h.auditFilterFromRequest(w, r, 200)
 	if !ok {
 		return
-	}
-	if scope, ok := AccessScopeFromContext(r.Context()); ok {
-		filter.ScopeMode = scope.QueryMode()
 	}
 	if scope, ok := AccessScopeFromContext(r.Context()); ok {
 		filter.ScopeMode = scope.QueryMode()
@@ -132,6 +128,11 @@ func (h *Handler) ExportAudits(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) auditFilterFromRequest(w http.ResponseWriter, r *http.Request, defaultLimit int) (AuditFilter, bool) {
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if utf8.RuneCountInString(query) > 128 || strings.ContainsRune(query, '\x00') {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_audit_query", "audit keyword must be at most 128 characters")
+		return AuditFilter{}, false
+	}
 	limit := defaultLimit
 	if raw := r.URL.Query().Get("limit"); raw != "" {
 		parsed, err := strconv.Atoi(raw)
@@ -150,6 +151,7 @@ func (h *Handler) auditFilterFromRequest(w http.ResponseWriter, r *http.Request,
 		return AuditFilter{}, false
 	}
 	return AuditFilter{
+		Query:       query,
 		Action:      r.URL.Query().Get("action"),
 		ActorID:     r.URL.Query().Get("actor_id"),
 		TargetType:  r.URL.Query().Get("target_type"),

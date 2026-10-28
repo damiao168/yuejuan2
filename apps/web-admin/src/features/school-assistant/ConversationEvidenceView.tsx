@@ -25,10 +25,18 @@ export function ConversationEvidenceView({ evidence, user, onNavigate, allowActi
   evidence?: ConversationEvidence; user: SessionUser; onNavigate?: (path: string) => void; allowActions?: boolean;
 }>) {
   if (!evidence || (!evidence.tools.length && !evidence.sources.length)) return null;
+  const running = evidence.tools.some(tool => tool.status === "running");
+  const failed = evidence.tools.filter(tool => tool.status === "failed");
+  const sourceIncomplete = evidence.sources.some(source => ["partial", "unavailable", "forbidden"].includes(source.status));
   return <div className="school-conversation-evidence">
-    {evidence.tools.length ? <ul className="school-conversation-tools" aria-label="业务查询进度">{evidence.tools.map((tool) => <ConversationToolItem key={tool.call_id} tool={tool} />)}</ul> : null}
+    {running ? <ul className="school-conversation-tools" aria-label="业务查询进度">{evidence.tools.map((tool) => <ConversationToolItem key={tool.call_id} tool={tool} />)}</ul> : <>
+      {evidence.tools.length ? <span>已查询{evidence.tools.length - failed.length}项资料</span> : null}
+      {failed.length ? <ul className="school-conversation-tools" aria-label="查询失败">{failed.map(tool => <ConversationToolItem key={tool.call_id} tool={tool} />)}</ul> : null}
+    </>}
+    {/* 完成后只收拢成功过程；缺失来源仍直接提醒，不能靠折叠来源区掩盖回答范围。 */}
+    {failed.length || sourceIncomplete ? <p role="status">部分资料未能完整读取，请核对回答范围。</p> : null}
     {evidence.sources.length ? <Collapse ghost size="small" className="school-conversation-sources" items={[{
-      key: "sources", label: <span><Database size={13} />本轮数据来源（{evidence.sources.length}）</span>,
+      key: "sources", label: <span><Database size={13} />数据来源（{evidence.sources.length}）</span>,
       children: <div>{evidence.sources.map((source) => {
         const date = new Date(source.read_at);
         return <section key={source.id}><strong>{source.label}</strong><span>{statusLabel[source.status] ?? source.status}</span>

@@ -6,6 +6,15 @@ func stringsTrim(value string) string {
 	return strings.TrimSpace(value)
 }
 
+func matchesAuditKeyword(record AuditRecord, actor User, query string) bool {
+	if strings.TrimSpace(query) == "" {
+		return true
+	}
+	// 只检索审计列表可读字段；隐藏的before/after值不能通过关键词命中暴露存在性。
+	text := strings.Join([]string{record.Action, record.TargetType, record.TargetID, record.ActorID, actor.Username, actor.DisplayName, record.Reason, record.IPAddress, record.UserAgent, record.RequestID}, " ")
+	return strings.Contains(strings.ToLower(text), strings.ToLower(strings.TrimSpace(query)))
+}
+
 func normalizedAuditLimit(limit int) int {
 	if limit <= 0 {
 		return 50

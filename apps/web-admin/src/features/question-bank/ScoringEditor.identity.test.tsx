@@ -58,3 +58,43 @@ it("手工修改新增点为已有身份时保留草稿并在发送前拒绝重�
   expect(mocks.update).not.toHaveBeenCalled(); expect(mocks.error).toHaveBeenCalledWith(expect.stringContaining("标识重复"));
   expect(host.querySelector<HTMLInputElement>("#points_2_id")!.value).toBe("P3"); expect(mocks.success).not.toHaveBeenCalled();
 });
+
+it("非数值判分的历史误差初次打开可见，显式清除后才从保存内容移除", async () => {
+  const historical = { ...version, assessment_archetype: "short_constructed", scoring: { ...scoring,
+    answer: { standard_answer: "10", equivalent_answers: [], tolerance: { absolute: 0.1, relative: 0.01 } }
+  } } as QuestionBankVersion;
+  const dirty = vi.fn();
+  await act(async () => root.render(<QueryClientProvider client={client}><ScoringEditor version={historical} disabled={false} onSaved={() => {}} onDirty={dirty} canManageFiles={false} actorId="actor" /></QueryClientProvider>));
+  await flush();
+  expect(host.textContent).toContain("此判分方式不支持误差");
+  expect(host.querySelector<HTMLInputElement>("#absolute")?.value).toBe("0.1");
+  expect(host.querySelector<HTMLInputElement>("#relative")?.value).toBe("1");
+  expect(host.querySelector<HTMLDetailsElement>("details")?.open).toBe(true);
+  await click("清除误差");
+  expect(dirty).toHaveBeenCalledWith(true);
+  await click("保存评分标准");
+  await vi.waitFor(() => expect(mocks.update).toHaveBeenCalledOnce());
+  expect(mocks.update.mock.calls[0][0].body.scoring.answer.tolerance).toEqual({});
+});
+
+it("整题保存从真实评分表单读取答案与评分点，使用当前题目满分且不另发评分命令", async () => {
+  const saveCombined = vi.fn(async (next: QuestionBankScoring) => ({ ...version, revision: 2, default_score: 6, scoring: next }));
+  await act(async () => root.render(<QueryClientProvider client={client}><ScoringEditor version={version} disabled={false} draftScore={6} onSaveCombined={saveCombined} onSaved={() => {}} onDirty={() => {}} canManageFiles={false} actorId="actor" /></QueryClientProvider>));
+  await flush(); await edit('[aria-label="标准答案"]', "新的答案"); await edit("#points_2_score", "4"); await click("保存本题草稿");
+  await vi.waitFor(() => expect(saveCombined).toHaveBeenCalledOnce());
+  expect(saveCombined.mock.calls[0][0].answer?.standard_answer).toBe("新的答案");
+  expect(saveCombined.mock.calls[0][0].rubric?.max_score).toBe(6);
+  expect(saveCombined.mock.calls[0][0].rubric?.points.map(point => point.id)).toEqual(["P1", "P2", "P3"]);
+  expect(mocks.update).not.toHaveBeenCalled();
+});
+
+it("相对误差按百分比显示和编辑，提交仍保留比例单位", async () => {
+  const numeric = { ...version, assessment_archetype: "numeric_expression", scoring: { ...scoring,
+    answer: { standard_answer: "10", equivalent_answers: [], tolerance: { relative: 0.01 } }
+  } } as QuestionBankVersion;
+  await act(async () => root.render(<QueryClientProvider client={client}><ScoringEditor version={numeric} disabled={false} onSaved={() => {}} onDirty={() => {}} canManageFiles={false} actorId="actor" /></QueryClientProvider>));
+  await flush(); expect(host.querySelector<HTMLInputElement>("#relative")?.value).toBe("1");
+  await edit("#relative", "2"); await click("保存评分标准");
+  await vi.waitFor(() => expect(mocks.update).toHaveBeenCalledOnce());
+  expect(mocks.update.mock.calls[0][0].body.scoring.answer.tolerance.relative).toBe(0.02);
+});

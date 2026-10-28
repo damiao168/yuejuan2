@@ -1,18 +1,13 @@
 import { Button, Dropdown, Space, Tooltip, Upload, type TableColumnsType } from "antd";
 import { Eye, FileSearch, Image as ImageIcon, MoreHorizontal, RotateCcw } from "lucide-react";
 import { getSafeUserText } from "../../api/client";
-import { runImageQualityCheck } from "../../api/capture";
-import { createOcrTask, generateAnswerSegments, runQualityCheck, updateSubmissionStatus, type OcrTask, type Submission, type SubmissionPage } from "../../api/submissions";
+import type { OcrTask, Submission, SubmissionPage } from "../../api/submissions";
 import { StatusTag } from "../../components/StatusTag";
 import type { SubmissionView } from "./captureQueries";
-import { latestTask, summaryString, summaryNumber, processingState, statusTone, derivedIssues, issueTone, pageStatusTone, pageStatusLabels, ocrTone, ocrLabel, formatTime } from "./submissionPresentation";
+import { latestTask, summaryString, processingState, statusTone, derivedIssues, issueTone, pageStatusTone, pageStatusLabels, ocrTone, ocrLabel, formatTime } from "./submissionPresentation";
 
 interface SubmissionColumnOptions {
   studentName: (submission: Submission) => string;
-  canWrite: boolean;
-  actioning: string | null;
-  runAction: (key: string, action: () => Promise<void>, successText: string, reload?: () => Promise<void>) => Promise<void>;
-  refreshSingle: (submissionId: string) => Promise<void>;
   openPages: (row: SubmissionView) => Promise<void>;
   openOcrDrawer: (row: SubmissionView) => Promise<void>;
 }
@@ -25,22 +20,7 @@ interface PageColumnOptions {
   actioning: string | null;
 }
 
-function primaryActionLabel({ qualityPending, needsReady, needsOcr, ocrFailed, needsSegments }: Readonly<{
-  qualityPending: boolean;
-  needsReady: boolean;
-  needsOcr: boolean;
-  ocrFailed: boolean;
-  needsSegments: boolean;
-}>) {
-  // 按钮文字按 runNext 的分支顺序选择；质量与待识别状态优先于后续识别、切分操作。
-  if (qualityPending) return "检查图片质量";
-  if (needsReady) return "转入待识别";
-  if (needsOcr) return ocrFailed ? "重试识别" : "开始识别";
-  if (needsSegments) return "生成题目区域";
-  return "查看答题卡";
-}
-
-export function captureSubmissionColumns({ studentName, canWrite, actioning, runAction, refreshSingle, openPages, openOcrDrawer }: SubmissionColumnOptions): TableColumnsType<SubmissionView> {
+export function captureSubmissionColumns({ studentName, openPages, openOcrDrawer }: SubmissionColumnOptions): TableColumnsType<SubmissionView> {
   return [
     {
       title: (
@@ -72,8 +52,8 @@ export function captureSubmissionColumns({ studentName, canWrite, actioning, run
         if (state === "failed") return <StatusTag tone="danger">{taskStatus === "failed" ? "文字识别失败" : "图片质量未通过"}</StatusTag>;
         if (state === "completed") return <StatusTag tone="success">处理完成</StatusTag>;
         if (state === "processing") return <StatusTag tone="processing">{taskStatus === "processing" ? "正在识别" : "识别排队中"}</StatusTag>;
-        if (taskStatus === "completed") return <StatusTag tone="warning">等待生成题目区域</StatusTag>;
-        return <StatusTag tone={statusTone(row.submission.status)}>等待自动处理</StatusTag>;
+        if (taskStatus === "completed") return <StatusTag tone="warning">题目区域尚未形成</StatusTag>;
+        return <StatusTag tone={statusTone(row.submission.status)}>待核对</StatusTag>;
       }
     },
     {
@@ -96,60 +76,18 @@ export function captureSubmissionColumns({ studentName, canWrite, actioning, run
       }
     },
     {
-      title: "下一步",
+      title: "查看",
       fixed: "right",
       width: 220,
       render: (_, row) => {
-        const id = row.submission.id;
-        const task = latestTask(row.ocrTasks);
-        const taskStatus = task?.status ?? summaryString(row, "latest_ocr_status");
-        const segmentCount = row.segments.length || summaryNumber(row, "segment_count");
-        const qualityPending = row.submission.quality_status !== "passed";
-        const needsReady = !qualityPending && row.submission.status !== "ready_for_ocr";
-        const ocrFailed = taskStatus === "failed";
-        const needsOcr = !qualityPending && !needsReady && (!taskStatus || ocrFailed);
-        const needsSegments = taskStatus === "completed" && segmentCount === 0;
-
-        const runNext = () => {
-          if (qualityPending) {
-            return runAction(`quality-${id}`, async () => {
-              // 先确认页面完整，再排图像质量任务；完整性失败时不能继续下游识别。
-              const integrity = await runQualityCheck(id);
-              if (!integrity.result.valid) {
-                throw new Error("答卷完整性未通过，请先补齐或更正页面");
-              }
-              await runImageQualityCheck(id);
-            }, "图像质量检测已进入队列", () => refreshSingle(id));
-          }
-          if (needsReady) {
-            return runAction(`ready-${id}`, async () => {
-              await updateSubmissionStatus(id, "ready_for_ocr", row.submission.revision);
-            }, "答题卡已转入待识别，可点击『开始识别』继续", () => refreshSingle(id));
-          }
-          if (needsOcr) {
-            return runAction(`ocr-${id}`, async () => {
-              await createOcrTask(id);
-            }, "文字识别已开始", () => refreshSingle(id));
-          }
-          if (needsSegments) {
-            return runAction(`segment-${id}`, async () => {
-              await generateAnswerSegments(id);
-            }, "题目区域已生成", () => refreshSingle(id));
-          }
-          void openPages(row);
-          return Promise.resolve();
-        };
-
-        const primaryLabel = primaryActionLabel({ qualityPending, needsReady, needsOcr, ocrFailed, needsSegments });
+        // 旧答卷仅供材料核对；状态推进统一留在批次流水线，不能由旧页面拼接质检、OCR和直接切题接口。
         return (
           <Space className="table-actions" size={6}>
             <Button
               type="primary"
-              disabled={!canWrite && primaryLabel !== "查看答题卡"}
-              loading={Boolean(actioning?.endsWith(id))}
-              onClick={() => void runNext()}
+              onClick={() => void openPages(row)}
             >
-              {primaryLabel}
+              查看答题卡
             </Button>
             <Dropdown
               menu={{

@@ -1,0 +1,2127 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-27",
+  "scope": "阅卷、成绩发布、复评、申诉、学情及相关后端边界；全仓并行审计的一个分区",
+  "status_definition": {
+    "pending": "未完整阅读；含仅盘点、搜索命中或片段审读。",
+    "reviewed": "完整阅读当前文件；此状态仅说明体验审计，不代表代码注释整理或端到端运行验证。"
+  },
+  "source_modified": false,
+  "findings": 28,
+  "separate_functional_issues": 5,
+  "validation": {
+    "duration_seconds": 57.75,
+    "error_copy_probe": "直接调用现有 getApiErrorMessage：4个业务错误代码均落入 HTTP 泛化消息。",
+    "targeted_test_files": 4,
+    "failed_tests": 0,
+    "passed_tests": 15
+  },
+  "total_files": 347,
+  "reviewed_files": 109,
+  "pending_files": 238,
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/api/backmark.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/api/graderDrift.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/api/qualityOperations.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/api/regrade.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/api/reviewAnnotations.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/api/scoreReleases.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/api/userError.test.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/api/userError.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/components/BackmarkQueue.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/geometry.test.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/geometry.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/index.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/reviewAnnotations.css",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/ReviewAnnotationWorkspace.keyboard.test.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/ReviewAnnotationWorkspace.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/StudentAnnotationOverlay.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/useReviewAnnotations.test.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/features/review-annotation/useReviewAnnotations.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/questionAppealPresentation.batch10.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/questionAppealPresentation.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealRegradeLaunch.test.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealRegradeLaunch.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealReviewOpinionPanel.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealViews.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealWorkspace.batch10.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/components/RegradeQueue.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/ScoringPaperMonitor.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/components/TaskScoringReference.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/appeals/AppealDecisionPanel.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/appeals/AppealDecisionPanel.ux.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/appeals/AppealEvidence.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/appeals/appealPresentation.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/appeals/AppealTaskList.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/calibration.css",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationDrawer.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/calibrationPresentation.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/calibrationPresentation.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/calibration/index.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/GoldCoverageGaps.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/GoldPaperManagerDrawer.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/GoldPaperNominationDrawer.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/goldPaperPresentation.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/goldPaperPresentation.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/gold-papers/index.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/ai-execution-diagnostics.css",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/aiExecutionDiagnostics.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/aiExecutionDiagnostics.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/AIExecutionFailureSummary.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/SharedScoreControl.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/subjectiveBatchCommand.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/subjectiveBatchCommand.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/aiAdoption.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/aiAdoption.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/AIContextPanel.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/assignmentPlan.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/assignmentPlan.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/AdaptiveAnswerImage.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/AdaptiveAnswerImage.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/answer-image-reading.css",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/AnswerEvidencePane.batch13.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/AnswerEvidencePane.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/AnswerImageAnnotationLayer.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/AnswerImageAnnotationLayer.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/AssignmentPreview.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/AssignmentPreview.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/DraftConflictModal.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/EvidenceInspector.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ExamScoringDialogs.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ExamScoringOverview.reviewCategories.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ExamScoringOverview.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ExamScoringPanel.batch8.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ExamScoringPanel.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/FrozenQuestionReference.batch18.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/FrozenQuestionReference.navigation.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/FrozenQuestionReference.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/FrozenQuestionReference.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/gradingAI.css",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.test.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingAssignmentTable.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingManagementNav.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingManagementNav.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingMathMarkdown.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingMathMarkdown.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/gradingMathText.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingSettingsView.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/GradingViews.batch17.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ImageGradingRecord.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ImageGradingRecord.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/InspectorFocus.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/MathRubricMatrix.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/PersonalReviewBookmarkCleanup.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/RegionScoreEditor.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/RegionScoreEditor.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ReviewBookmarkControls.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ReviewBookmarks.test.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ReviewBookmarks.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ReviewerProgressView.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/ScoreEditor.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/TaskRail.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/TrialScoringDrawer.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/TrialScoringDrawer.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/WorkbenchContainers.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/WorkbenchHeader.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/WorkbenchHeader.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/WorkbenchManagement.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/WorkbenchOverlays.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/WorkbenchTaskContent.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/WorkbenchTaskContent.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/components/WorkbenchTaskQueue.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/displayValues.batch51.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/draftConflict.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/draftConflict.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/grading-management.css",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/grading-workbench.css",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/gradingTaskContext.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/gradingUtilities.batch28.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/GradingWorkbench.batch8.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/gradingWorkbench.model.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/gradingWorkbench.model.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/gradingWorkbench.types.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/gradingHooks.batch30.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/gradingReviewActions.types.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/scoringCommand.defaultTransport.batch31.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/scoringCommand.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/scoringCommand.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/taskDraftSaveQueue.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/taskDraftSaveQueue.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.gradingGroup.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.submitted.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useAnswerViewer.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useAutomaticGradeSubmission.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useAutomaticGradeSubmission.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useExamScoring.trial.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useExamScoring.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingDraftConflict.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.batch52.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.session.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingMathActions.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingPrefetch.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueue.productUx.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueue.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.session.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueueActions.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingQueuePages.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.scope.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingReviewActions.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingScoreShortcuts.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useGradingScoreShortcuts.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useIndependentReviewGuard.ts",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useMathWorkbenchEvidence.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useMathWorkbenchEvidence.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/usePersonalReviewBookmarks.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/usePersonalReviewBookmarks.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useScoringAIBatchProgress.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useScoringResults.navigation.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useScoringResults.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useScoringTrials.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useScoringTrials.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useWorkbenchTaskSession.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/hooks/useWorkbenchTaskState.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/imageReadingLayout.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/imageReadingLayout.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/keyboardShortcuts.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/keyboardShortcuts.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/mathEffectiveEvidence.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/MathEvidenceInspector.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/mathEvidenceSubjects.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/mathWorkbenchEvidence.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/mathWorkbenchEvidence.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/productUx.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/reviewContext.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/reviewContext.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/ReviewContextInspector.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/scoringAIBatches.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/scoringAIBatches.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/scoringPlan.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/scoringPlan.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/scoringProgress.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/scoringProgress.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/scoringReviewCategories.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/scoringReviewCategories.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/shortcutPreference.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/taskPaging.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/taskPaging.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/teacher-product-ux.css",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/trial-scoring.css",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/trialScoring.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/trialScoring.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.batch8.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.gradingGroups.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/workbenchDraftLifecycle.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/workbenchPresentation.batch30.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/workbenchReviewState.batch8.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/grading/workbench/workbenchReviewState.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/AuditPanel.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/QualityPanel.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/RegradeCandidateEvidence.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.test.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.recovery.test.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/student-score-preview.css",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/StudentScorePreviewDialog.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/components/StudentScorePreviewDialog.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/scoreReleaseVisibility.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/scoreWorkspaceState.batch36.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/scoreWorkspaceState.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/scoreWorkspaceState.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.batch36.test.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useRosterAttendance.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useScoreAction.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useScoreAction.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.appeal.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/workflowModal.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/hooks/workflowModal.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/scoreColumns.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/scoreColumns.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/scorePresentation.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/features/score-management/scorePresentation.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AdminGradingOperationsPage.batch22.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AdminGradingOperationsPage.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AdminGradingOperationsPage.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AppealCenterPage.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/AppealCenterPage.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationDecisionPanel.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPage.batch9.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPage.semantic.batch9.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPage.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPage.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPage.ui.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPanels.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationPanels.ux.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/arbitrationPresentation.model.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/arbitrationQueue.batch9.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/arbitrationQueue.model.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationTaskRail.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ArbitrationWorkspaceMain.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/GradingWorkbenchPage.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/learningReports.model.batch48.test.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/learningReports.model.ts",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/LearningReportsPage.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/LearningReportsPage.ux.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/QualityDashboardPage.batch11.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/QualityDashboardPage.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "补审完整阅读当前文件，核对可见条件、相邻调用和相关业务/失败恢复边界；未修改业务，未运行此阶段测试。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/QuestionAppealCenterPage.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/QuestionAppealCenterPage.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ScoreManagementPage.batch53.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubjectiveGradingBatchPage.storage.test.tsx",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "apps/web-admin/src/pages/SubjectiveGradingBatchPage.tsx",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "apps/web-admin/src/router/pageRendering.tsx",
+      "status": "pending",
+      "method": "partial_read_or_search",
+      "note": "仅核实成绩、报告、主观题批次等渲染入口；未完整审读。"
+    },
+    {
+      "path": "apps/web-admin/src/router/routes.tsx",
+      "status": "pending",
+      "method": "partial_read_or_search",
+      "note": "仅核实主观题批次等相关路由；未完整审读。"
+    },
+    {
+      "path": "docs/engineering/commenting-standard.md",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/handlers_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/handlers.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_handlers.go",
+      "status": "pending",
+      "method": "partial_read_or_search",
+      "note": "仅搜索权限与错误代码；未完整审读。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_opinion_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_opinion.go",
+      "status": "pending",
+      "method": "partial_read_or_search",
+      "note": "审读 1-75，核实教师私有意见与分值约束；其余未读。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_service_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_service.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_store_memory.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_store_postgres_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_store_postgres.go",
+      "status": "pending",
+      "method": "partial_read_or_search",
+      "note": "审读 177-307、427-479，核实独立参与、申请关联及结案约束；其余未读。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_summary_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_types.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/published_question_workflow_regression_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/scoped_collection_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/store_memory_batch27_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/store_memory.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/store_postgres.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/store_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/types.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/appeal/unicode_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/completion_recovery_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/handlers.go",
+      "status": "pending",
+      "method": "partial_read_or_search",
+      "note": "仅搜索标准卷不足的错误代码；未完整审读。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/images.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/service_batch25_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/service_batch41_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/service_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/service.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/store_memory.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/store_postgres.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/calibration/types.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/grading/exam_ai_plan.go",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/claim_assignment_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/collection_scope.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/grader_context_postgres.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/grader_context_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/handlers_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/handlers.go",
+      "status": "pending",
+      "method": "partial_read_or_search",
+      "note": "审读权限路由、候选/复核 Handler、状态动作与错误代码段；其他请求处理未读。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/recovery_postgres_remediation_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/recovery_remediation_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/release_blockers.go",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/service_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/service.go",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/store_memory.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/store_postgres_batch48_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/store_postgres.go",
+      "status": "pending",
+      "method": "partial_read_or_search",
+      "note": "审读 112-183、250-257、447-539，核实冻结、批准启动、候选复核和收尾；其余未读。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/types.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regrade/unicode_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regraderelease/handlers.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regraderelease/service_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/regraderelease/service.go",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/anonymous_paper_postgres.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/anonymous_paper_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/anonymous_paper.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/handlers.go",
+      "status": "pending",
+      "method": "partial_read_or_search",
+      "note": "审读新建草稿和错误代码段；其余仅搜索。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/publish_guard.go",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/reason_length_remediation_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/service_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/service.go",
+      "status": "reviewed",
+      "method": "full_file_static_review",
+      "note": "完整阅读当前文件，核对与体验审计相关的展示、调用或业务边界；无修改。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/stale_source_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_memory.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres_batch48_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres_batch50_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres_dashboard_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/store_postgres.go",
+      "status": "pending",
+      "method": "partial_read_or_search",
+      "note": "审读 267-353，核实锁内发布检查与过期来源拒绝；其余未读。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_analytics_batch27_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_analytics.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_detail_postgres.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_preview_batch17_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_preview_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_preview.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_release_version_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_release_version.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_session_integration_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_session_postgres.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/student_ux_test.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    },
+    {
+      "path": "services/api-gateway/internal/scorerelease/types.go",
+      "status": "pending",
+      "method": "inventory_only",
+      "note": "已盘点但未完整审读，不能计入审读完成。"
+    }
+  ],
+  "supplemental_ui_review": {
+    "date": "2026-10-27",
+    "previously_pending_target_tsx": 35,
+    "annotation_remaining_files": 7,
+    "related_full_files": 9,
+    "files_completed": 51,
+    "new_findings": [
+      "G22",
+      "G23",
+      "G24",
+      "G25",
+      "G26",
+      "G27",
+      "G28"
+    ],
+    "new_functional_issues": [
+      "D04",
+      "D05"
+    ],
+    "tests_rerun": false
+  }
+}

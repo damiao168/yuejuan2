@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-28",
+  "tool": "Playwright CLI (playwright skill)",
+  "mode": "本机Vite 5186组件验证页，仅合成答卷，不读取真实业务数据",
+  "status": "passed",
+  "observed_result": {
+    "pdfReadable": true,
+    "tiff": { "previews": 2, "counts": [2, 2], "pixels": [[255, 255, 255, 255], [0, 0, 0, 255]] },
+    "errors": []
+  },
+  "visual_review": "已读取完整截图；PDF第1页与第2页分别显示Synthetic answer page ONE/TWO，页码1/2、2/2正确，底部TIFF结果为2页且改序后白、黑像素顺序正确。",
+  "screenshot": "output/playwright/round2-capture-desktop/verified.png",
+  "fixtures": "output/playwright/round2-capture-desktop/",
+  "csp": "验证页保持script-src self、worker-src self、frame-src none；@fs HTML没有Vite自动React preamble，补同源外部模块preamble后再验证，未为验证放宽产品CSP。初次验证页preamble错误与favicon404不是产品缺陷。",
+  "boundaries": ["没有验证Tauri发行包或真实Windows解锁重启", "没有验证真实扫描设备或学校业务数据", "文件原件、hash、权限和页面失败门禁另有定向单测覆盖；浏览器截图不能替代这些检查"],
+  "cleanup": { "browser_session": "round2-capture-desktop已关闭", "vite_5186": "自建服务已通过原exec会话Ctrl+C结束" }
+}

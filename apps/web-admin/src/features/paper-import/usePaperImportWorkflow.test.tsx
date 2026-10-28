@@ -147,6 +147,17 @@ describe("paper import review confirmation", () => {
     expect(mocks.error).toHaveBeenCalled();
   });
 
+  it("满分派生于题目分值，修改分值保留原采分点并提示尚有差额", async () => {
+    const review = twoQuestionReview(); await mount(review);
+    await act(async () => current.updateReviewDraft(0, "score", { score: 8 }));
+    expect(current.reviewDrafts[0].score).toBe(8);
+    expect(current.reviewDrafts[0].rubric?.max_score).toBe(8);
+    expect(current.reviewDrafts[0].rubric?.points).toEqual(review.questions[0].rubric!.points);
+    expect(current.invalidReviewRubric).toBe(true);
+    await act(async () => current.saveImportReview(review, 0));
+    expect(mocks.savePaperImportReview).not.toHaveBeenCalled();
+  });
+
   it("confirms a fill-in-the-blank question by answer and removes legacy rubric input", async () => {
     const review = { ...job("review_required"), questions: [{
       question_no: "8", question_type: "fill_blank", score: 2, stem: "填空",

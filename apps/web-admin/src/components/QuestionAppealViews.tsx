@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Alert, Button, Empty, Input, List, Select, Space, Tag, Typography } from "antd";
 import { Eye, FileCheck2, RotateCcw } from "lucide-react";
 import type { PublishedQuestionAppeal, PublishedQuestionAppealContext, QuestionAppealReleaseVersion } from "../api/questionAppeals";
@@ -73,15 +74,24 @@ export function QuestionAppealResolution({ options, resolutionID, publicResponse
   options: Array<{ value: string; label: string }>; resolutionID: string; publicResponse: string; actioning: boolean;
   onResolutionChange: (value: string) => void; onPublicResponseChange: (value: string) => void; onResolve: () => void;
 }>) {
-  return <section className="question-appeal-actions"><h3>公布已发布的复核结果</h3><p>先完成关联题目复评并正式发布新成绩，再选择结果版本。服务端会核对已完成的复评与本学生、本题的成绩事实。</p><Select aria-label="选择复核结果成绩版本" value={resolutionID || undefined} options={options} placeholder="选择后续已正式发布的成绩版本" onChange={onResolutionChange} disabled={actioning} /><label htmlFor="question-appeal-final-response">给学生的结果说明（必填）</label><Input.TextArea id="question-appeal-final-response" rows={4} maxLength={2000} value={publicResponse} onChange={(event) => onPublicResponseChange(event.target.value)} disabled={actioning} /><Button type="primary" disabled={!resolutionID || !publicResponse.trim()} loading={actioning} onClick={onResolve}>公布复核结果</Button>{!options.length ? <Alert type="info" showIcon message="尚无可选择的后续正式成绩版本" description="请先在考试成绩工作台完成复评并发布新成绩，再刷新此申请。" /> : null}</section>;
+  return <section className="question-appeal-actions"><h3>公布复核结果</h3>{options.length === 1 && options[0].value === resolutionID ? <p>已匹配本次复评结果：{options[0].label}</p> : options.length > 1 ? <Select aria-label="选择复核结果成绩版本" value={resolutionID || undefined} options={options} placeholder="选择已核验的本次复评结果" onChange={onResolutionChange} disabled={actioning} /> : null}<label htmlFor="question-appeal-final-response">给学生的结果说明（必填）</label><Input.TextArea id="question-appeal-final-response" rows={4} maxLength={2000} value={publicResponse} onChange={(event) => onPublicResponseChange(event.target.value)} disabled={actioning} /><Button type="primary" disabled={!options.some(option => option.value === resolutionID) || !publicResponse.trim()} loading={actioning} onClick={onResolve}>公布复核结果</Button>{!options.length ? <Alert type="info" showIcon message="本次复评尚无已核验的正式成绩版本" description="完成关联复评并发布新成绩后，返回此申请即可匹配结果。" /> : null}</section>;
 }
 
 export function QuestionAppealQueue({ appeals, selectedId, onSelect, examLabels = {}, studentLabels = {}, personalScope = false }: Readonly<{ appeals: PublishedQuestionAppeal[]; selectedId: string; onSelect: (id: string) => void; examLabels?: Readonly<Record<string, string>>; studentLabels?: Readonly<Record<string, string>>; personalScope?: boolean }>) {
+  const [status, setStatus] = useState("pending");
+  const [keyword, setKeyword] = useState("");
   if (appeals.length === 0) return null;
-  return <List size="small" className="question-appeal-list" dataSource={appeals} renderItem={(appeal) => <List.Item className={appeal.id === selectedId ? "is-selected" : ""} actions={[<Button key="open" size="small" onClick={() => onSelect(appeal.id)}>查看第 {appeal.question_no} 题复核材料</Button>]}>
+  const matches = appeals.filter(appeal => {
+    const pending = ["submitted", "under_review", "upheld_pending_regrade"].includes(appeal.status);
+    const phaseMatches = status === "all" || (status === "pending" ? pending : status === "completed" ? !pending : appeal.status === status);
+    const query = keyword.trim().toLocaleLowerCase();
+    return phaseMatches && (!query || `${appeal.question_no} ${questionAppealBusinessSummary(appeal, examLabels)} ${personalScope ? "" : studentLabels[appeal.student_id ?? ""] ?? ""}`.toLocaleLowerCase().includes(query));
+  });
+  return <><div className="toolbar question-appeal-filters"><label>处理状态 <select aria-label="复核处理状态" value={status} onChange={event => setStatus(event.target.value)}><option value="pending">待处理</option><option value="submitted">待分派</option><option value="under_review">复核中</option><option value="upheld_pending_regrade">复评中</option><option value="completed">已完成</option><option value="all">全部</option></select></label><input aria-label="搜索复核申请" placeholder={personalScope ? "搜索考试或题号" : "搜索学生、考试或题号"} value={keyword} onChange={event => setKeyword(event.target.value)} /><span>当前 {matches.length} 条 / 共 {appeals.length} 条</span></div>
+  <List size="small" className="question-appeal-list" dataSource={matches} locale={{ emptyText: "当前筛选下没有申请" }} renderItem={(appeal) => <List.Item className={appeal.id === selectedId ? "is-selected" : ""} actions={[<Button key="open" size="small" onClick={() => onSelect(appeal.id)}>查看第 {appeal.question_no} 题复核材料</Button>]}>
     <div><strong>{appeal.question_no} · {questionAppealReasonLabels[appeal.reason_code] ?? "其他原因"}</strong><span>{questionAppealBusinessSummary(appeal, examLabels)}{!personalScope && appeal.student_id ? " · " + (studentLabels[appeal.student_id] ?? `学生记录 ${appeal.student_id}`) : ""}</span><span>原分 {formatQuestionAppealScore(appeal.source_score)} / {formatQuestionAppealScore(appeal.source_max_score)} · 原公布第 {appeal.source_release_version} 版</span></div>
     <Tag color={questionAppealStatusColor(appeal.status)}>{questionAppealQueueStatusLabel(appeal)}</Tag>
-  </List.Item>} />;
+  </List.Item>} /></>;
 }
 
 function RegionOverlay({ region }: Readonly<{ region: Record<string, unknown> }>) {

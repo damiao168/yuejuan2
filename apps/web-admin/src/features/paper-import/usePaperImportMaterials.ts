@@ -131,9 +131,9 @@ export function usePaperImportMaterials({ canManage, selectedExam, papers, paper
   };
 
   const replaceImportSources = async (job: PaperImportJob, sources: PaperImportJob["sources"]) => {
-    if (!isCurrent()) return;
-    if (!["processing", "review_required", "failed", "cancelled"].includes(job.status)) return;
-    if (reviewDirty) { message.warning("请先保存人工核对，再调整资料，避免重新识别覆盖未保存修改"); return; }
+    if (!isCurrent()) return false;
+    if (!["processing", "review_required", "failed", "cancelled"].includes(job.status)) return false;
+    if (reviewDirty) { message.warning("请先保存人工核对，再调整资料，避免重新识别覆盖未保存修改"); return false; }
     setUpdatingImportSources(true);
     try {
       await replacePaperImportSources(job.id, job.generation, sources.map((source, documentIndex) => ({
@@ -141,11 +141,13 @@ export function usePaperImportMaterials({ canManage, selectedExam, papers, paper
         document_index: documentIndex,
         role_hint: source.role_hint
       })), crypto.randomUUID());
-      if (!isCurrent()) return;
+      if (!isCurrent()) return false;
       message.success(sources.length ? "资料顺序或类型已更新，系统正在重新匹配" : "已删除全部考试资料，请重新上传正确的资料");
       if (selectedExam) await loadConfig(selectedExam.id, { silent: true });
+      return true;
     } catch (error) {
       if (isCurrent()) message.error(formatError(error));
+      return false;
     } finally {
       if (isCurrent()) setUpdatingImportSources(false);
     }

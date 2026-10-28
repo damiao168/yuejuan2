@@ -8,7 +8,7 @@ import { deferredResponse, installApi, jsonResponse, makeAppeal, makeQuestion, m
 const changed = () => jsonResponse({ error: { code: "student_release_changed" } }, 409);
 const failed = () => jsonResponse({ error: { code: "temporary_failure" } }, 503);
 const explanation = "请核对第二步已经写出的完整计算过程。";
-const confirmation = "本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。";
+const confirmation = /已收到第 \d+ 版的本题申请，不可重复提交。/;
 const recovery = "查看当前成绩并重新核对";
 const draftKey = appealDraftKey(studentDraftOwner(studentUser), "exam-1", "release-7", "question-1");
 const isAppeal = (path: string) => path.endsWith("/question-appeals");
@@ -48,13 +48,14 @@ function installReceiptScenario() {
 }
 
 async function prepareAppeal(selectRegion = false) {
-  fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+  fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
   fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
   if (selectRegion) {
+    if (!screen.queryByAltText("本题答题区域")) fireEvent.click(screen.getByRole("button", { name: "标记争议位置（可选）" }));
     fireEvent.load(screen.getByAltText("本题答题区域"));
     fireEvent.click(screen.getByRole("button", { name: "选择整个答题区域" }));
   }
-  const submit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
+  const submit = screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" });
   await waitFor(() => expect(submit.disabled).toBe(false));
   return submit;
 }
@@ -70,7 +71,7 @@ function assertEvidenceHidden() {
   expect(screen.queryByText("第一题公开评分依据")).toBeNull();
   expect(screen.queryByRole("textbox", { name: "具体说明" })).toBeNull();
   expect(screen.queryByAltText("本题答题区域")).toBeNull();
-  expect(screen.queryByRole("button", { name: "确认提交（仅一次）" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "提交复核申请" })).toBeNull();
 }
 
 function receiptRegion() {
@@ -130,7 +131,7 @@ describe("换版后的原版复核回执", () => {
     assertEvidenceHidden();
     scenario.setResult(makeResult([makeQuestion({ feedback: "第八版当前评分依据", score: 18 })], { release_id: "release-8", release_version: 8 }));
     fireEvent.click(screen.getByRole("button", { name: recovery }));
-    fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，18/ }));
+    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，18/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("第八版当前评分依据");
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" }).value).toBe("");
     expect(screen.queryByRole("region", { name: "第 1 题复核申请回执" })).toBeNull();
@@ -179,9 +180,8 @@ describe("换版后的原版复核回执", () => {
     });
     render(<App />);
     fireEvent.click(await prepareAppeal());
-    // 两个图片入口共用一次核对。核对409不能抹掉此前已经发出的POST及其失败结果。
+    // 复核表与阅读区复用一张原卷；核对409不能抹掉此前已经发出的POST及其失败结果。
     fireEvent.error(screen.getByAltText("第 1 题答题区域"));
-    fireEvent.error(screen.getByAltText("本题答题区域"));
     expect(questionReads).toBe(2);
     await act(async () => verification.resolve(changed()));
     assertEvidenceHidden();
@@ -228,7 +228,7 @@ describe("换版后的原版复核回执", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "账号" }), { target: { value: identity === "same" ? "student-001" : "student-002" } });
     fireEvent.change(screen.getByLabelText("密码"), { target: { value: "testing" } });
     fireEvent.click(screen.getByRole("button", { name: "登录" }));
-    fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const reason = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
     expect(reason.value).toBe(identity === "same" ? explanation : "");
     expect(readAppealDraft(draftKey)?.reason).toBe(identity === "same" ? explanation : undefined);
@@ -287,7 +287,7 @@ describe("换版后的原版复核回执", () => {
     await act(async () => scenario.resolveReceipt(jsonResponse({ appeal: makeAppeal() })));
     await screen.findByText(confirmation);
     if (action === "switch") {
-      fireEvent.click(screen.getByRole("button", { name: /^第 2 题，/ }));
+      fireEvent.click((screen.getByRole("button", { name: /^第 2 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
       await screen.findByText("第二题当前评分依据");
     } else fireEvent.click(screen.getByRole("button", { name: "返回题目列表" }));
     await act(async () => scenario.annotation.resolve(changed()));
@@ -330,11 +330,11 @@ describe("换版后的原版复核回执", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "账号" }), { target: { value: "student-001" } });
     fireEvent.change(screen.getByLabelText("密码"), { target: { value: "testing" } });
     fireEvent.click(screen.getByRole("button", { name: "登录" }));
-    fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const reason = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
     expect(reason.value).toBe("");
     fireEvent.change(reason, { target: { value: explanation } });
-    const newSubmit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
+    const newSubmit = screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" });
     await waitFor(() => expect(newSubmit.disabled).toBe(false));
     fireEvent.click(newSubmit);
     await act(async () => receipt.resolve(jsonResponse({ appeal: makeAppeal() })));
@@ -417,7 +417,7 @@ describe("StrictMode会话恢复响应隔离", () => {
     const nextQuestion = await screen.findByRole<HTMLButtonElement>("button", { name: /^第 1 题，/ });
     // 新账户可先显示题目列表，旧提交收尾仍可能短暂保持禁用；等待真实可操作状态再验证身份隔离。
     await waitFor(() => expect(nextQuestion.disabled).toBe(false));
-    fireEvent.click(nextQuestion);
+    fireEvent.click(nextQuestion.closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const reason = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
     expect(reason.value).toBe("");
     fireEvent.change(reason, { target: { value: "请核对新账户本题的第二步计算过程。" } });

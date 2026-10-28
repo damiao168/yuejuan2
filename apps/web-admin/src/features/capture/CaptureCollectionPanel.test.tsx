@@ -94,6 +94,15 @@ describe("考试级答卷导入核对", () => {
     expect(localStorage.length).toBe(0);
   });
 
+  it.each(["collecting", "grading"] as const)("%s 结束确认保留人数、封存和对应阶段后果", async exam_status => {
+    await render({ summary: collectionSummary({ can_complete: true, blockers: [], pending_count: 0, exam_status }) });
+    await openFinish();
+    const confirmation = mocks.confirm.mock.lastCall![0] as { content: string };
+    expect(confirmation.content).toContain("应收3人，成功导入1人，缺考1人");
+    expect(confirmation.content).toContain("封存已处理批次");
+    expect(confirmation.content).toContain(exam_status === "collecting" ? "确认后进入阅卷" : "当前阅卷阶段保持不变");
+  });
+
   it("确认框打开后修订变化，不能拿旧核对结果结束导入", async () => {
     await render({ summary: collectionSummary({ can_complete: true, blockers: [] }) });
     const confirmation = await openFinish();
@@ -148,7 +157,7 @@ describe("考试级答卷导入核对", () => {
     const issue = { id: "file-a", kind: "file" as const, code: "file_failed", name: "错误扫描.pdf", batch_id: "batch-a", file_id: "file-a" };
     await render({ summary: collectionSummary({ issues: [issue] }) });
     await click("上传替代答卷");
-    expect(host.querySelector('[role="dialog"]')?.textContent).toContain("本次选择的全部文件及其答卷将退出有效输入");
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain("原选择的全部文件及答卷退出有效输入");
     await fillReason("重新选择完整答卷");
     await click("继续选择完整答卷");
     expect(props.onReplace).toHaveBeenCalledWith(issue, "重新选择完整答卷");
@@ -163,7 +172,7 @@ describe("考试级答卷导入核对", () => {
     await click("不计入"); await fillReason("重新按完整答卷上传"); await click("确认并重新核对");
     expect(mocks.exclude).toHaveBeenCalledWith("first-file", "重新按完整答卷上传");
     await click("取消该批次");
-    expect(host.querySelector('[role="dialog"]')?.textContent).toContain("该批次的全部材料和未完成上传不再计入");
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain("本批全部材料和未完成上传不再计入");
     await fillReason("放弃尚未开始的上传"); await click("确认并重新核对");
     expect(mocks.cancel).toHaveBeenCalledWith("batch-b", "放弃尚未开始的上传");
   });

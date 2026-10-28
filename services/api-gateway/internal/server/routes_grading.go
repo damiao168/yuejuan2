@@ -42,6 +42,7 @@ func registerGradingRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/answer-segments/{id}/reprocess-score", ctx.guards.requireGradingManage(ctx.modules.Grading.GradingHandler.ReprocessSegmentScore))
 	mux.Handle("POST /api/v1/answer-segments/{id}/subjective-ai-grade", ctx.guards.requireGradingManage(ctx.modules.Grading.SubjectiveHandler.Grade))
 	mux.Handle("POST /api/v1/subjective-grading-batches", ctx.guards.requireGradingManage(ctx.modules.Grading.SubjectiveHandler.CreateBatch))
+	mux.Handle("GET /api/v1/exams/{examId}/subjective-grading-sources", ctx.guards.requireGradingManage(ctx.guards.withScopedExam(ctx.modules.Grading.SubjectiveHandler.ListGradingSources)))
 	mux.Handle("GET /api/v1/subjective-grading-batch-commands/{commandId}", ctx.guards.requireGradingManage(ctx.modules.Grading.SubjectiveHandler.RecoverBatchCommand))
 	mux.Handle("GET /api/v1/subjective-grading-batches/{batchId}", ctx.guards.requireGradingManage(ctx.modules.Grading.SubjectiveHandler.GetBatch))
 	mux.Handle("GET /api/v1/subjective-grading-batches/{batchId}/failed-segments", ctx.guards.requireGradingManage(ctx.modules.Grading.SubjectiveHandler.GetFailedBatchSegments))
@@ -57,6 +58,9 @@ func registerGradingRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/arbitration-tasks", ctx.guards.requireArbitrationManage(ctx.modules.Grading.ReviewHandler.CreateArbitrationTask))
 	mux.Handle("GET /api/v1/arbitration-tasks", ctx.guards.requireArbitrationWork(ctx.modules.Grading.ReviewHandler.ListArbitrationTasks))
 	mux.Handle("GET /api/v1/arbitration-tasks/{id}", ctx.guards.requireArbitrationWork(ctx.modules.Grading.ReviewHandler.GetArbitrationTask))
+	mux.Handle("GET /api/v1/arbitration-tasks/{id}/private-draft", ctx.guards.requirePrivateOpinionDraft(ctx.modules.Grading.ReviewHandler.PrivateOpinionDraft, "arbitration:work", "arbitration:manage"))
+	mux.Handle("PUT /api/v1/arbitration-tasks/{id}/private-draft", ctx.guards.requirePrivateOpinionDraft(ctx.modules.Grading.ReviewHandler.PrivateOpinionDraft, "arbitration:work", "arbitration:manage"))
+	mux.Handle("DELETE /api/v1/arbitration-tasks/{id}/private-draft", ctx.guards.requirePrivateOpinionDraft(ctx.modules.Grading.ReviewHandler.PrivateOpinionDraft, "arbitration:work", "arbitration:manage"))
 	mux.Handle("POST /api/v1/arbitration-tasks/{id}/assign", ctx.guards.requireArbitrationManage(ctx.modules.Grading.ReviewHandler.AssignArbitrationTask))
 	mux.Handle("POST /api/v1/arbitration-tasks/{id}/submit", ctx.guards.requireArbitrationWork(ctx.modules.Grading.ReviewHandler.SubmitArbitration))
 }

@@ -10,7 +10,7 @@ import { preparationSteps } from "../features/exams/preparation/preparationSteps
 import { ExamScoringPreparation } from "../components/features/assessment/ExamScoringPreparation";
 
 export function readinessCheckRoute(examId: string, section: string) {
-  if (section === "exam") return "/exams";
+  if (section === "exam") return `/exams?edit_exam=${encodeURIComponent(examId)}&target=scope`;
   const routeSection = preparationSteps.find((step) => step.key === section)?.route ?? "settings";
   return `/exams/${encodeURIComponent(examId)}/${routeSection}`;
 }
@@ -133,8 +133,7 @@ export function ExamStudentScopePage({ examId, canManage, onExamChanged }: Reado
 
   return (
     <div className="preparation-page">
-      <section className="preparation-heading"><div><h2>学生范围</h2><p>选择参加本场考试的班级；确认准备完成时，系统将按当前在读学籍生成最终冻结名单。</p></div><Space><Button icon={<RefreshCw size={16} />} disabled={!canEditScope || changed} loading={syncing} onClick={() => void syncCandidates()}>同步学生名单</Button><Button type="primary" icon={<Save size={16} />} disabled={!canEditScope || !changed || !selected.length} loading={saving} onClick={() => void save()}>保存范围</Button></Space></section>
-      {!canEditScope && exam && !["draft", "configured"].includes(exam.status) ? <Alert type="info" showIcon message="本场学生名单已冻结" description="学生范围和名单同步已关闭。若发现漏选或名单错误，请联系考试负责人核对处理方案，不能通过修改学校学籍直接改变本场冻结名单。" /> : null}
+      <section className="preparation-heading"><div><h2>学生范围</h2><p>{exam && !["draft", "configured"].includes(exam.status) ? "名单已冻结，不能再改范围或同步。名单有误请联系考试负责人；修改学籍不会改变本场名单。" : "选择参考班级；确认准备时，按当前在读学籍冻结本场名单。"}</p></div><Space><Button icon={<RefreshCw size={16} />} disabled={!canEditScope || changed} loading={syncing} onClick={() => void syncCandidates()}>同步学生名单</Button><Button type="primary" icon={<Save size={16} />} disabled={!canEditScope || !changed || !selected.length} loading={saving} onClick={() => void save()}>保存范围</Button></Space></section>
       {!classes.length ? <Alert type="warning" showIcon message="当前学校还没有班级" description="请先在组织与用户中创建年级、班级并导入学生。" /> : (
         <div className="class-scope-list">
           {grades.map((grade) => {
@@ -186,15 +185,18 @@ function buildReadinessDisplay({ readiness, exam, examId, canManage, loading, wo
   const editable = ["draft", "configured"].includes(exam.status);
   const status = readinessStatusDisplay(confirmed, editable, failedCount, readiness.ready);
   const actionHint = readinessActionHint(canManage, editable, loading, failedCount, readiness.ready);
+  // 只读与导入阶段按匹配的确认记录说明当前事实，不能用历史成功提示盖过记录不匹配。
+  const stateNotice = confirmed
+    ? exam.status === "collecting" ? "正在导入答卷；准备配置已冻结。" : "准备已确认，名单与配置已冻结。"
+    : editable ? "确认后将冻结学生名单、题目、答案、评分配置和答题区域，不能直接修改。"
+      : "当前阶段只读，准备确认记录与当前配置不匹配；请联系考试负责人核对。";
   return {
     status: <span className={`readiness-status ${status.className}`} role="status">{status.label}</span>,
     actionHint: !confirmed ? actionHint : "",
     freezeAction: !confirmed ? <Button type="primary" icon={<ClipboardCheck size={16} />} disabled={!canManage || loading || working || !readiness.ready || failedCount > 0 || scoringBlocked || !editable} loading={reviewLoading} onClick={() => void reviewBeforeFreeze()}>确认准备完成</Button> : null,
     reviewFailure: freezeError && !freezeReview ? <Alert type="error" showIcon message={confirmed ? "准备已确认，状态刷新未完成" : "暂时无法完成冻结核对"} description={freezeError} /> : null,
     captureAction: confirmed && ["ready", "collecting"].includes(exam.status) ? <div className="exam-setup-actions"><Button type="primary" icon={<ArrowRight size={16} />} onClick={() => onNavigate(`/exams/${encodeURIComponent(examId)}/capture`)}>前往答卷导入</Button></div> : null,
-    confirmedNotice: confirmed ? <p className="readiness-state-note">准备已确认，当前配置有匹配的确认记录；准备配置只读。</p> : null,
-    frozenNotice: !confirmed && !editable ? <p className="readiness-state-note">当前没有匹配的准备确认记录，请联系考试负责人核对。</p> : null,
-    collectingNotice: exam.status === "collecting" ? <p className="readiness-state-note">考试已进入答卷导入阶段，后续处理请前往答卷导入工作区。</p> : null
+    stateNotice
   };
 }
 
@@ -329,11 +331,9 @@ export function ExamReadinessPage({ examId, canManage, canManageAssessment = fal
   return (
     <div className="preparation-page readiness-page exam-setup-form-page">
       <section className="preparation-heading readiness-heading">
-        <div><div className="readiness-heading-title"><h2>确认准备完成</h2>{display.status}</div><p>确认后冻结学生名单、题目、答案、评分配置和答题区域，之后不能直接修改。</p></div>
+        <div><div className="readiness-heading-title"><h2>确认准备完成</h2>{display.status}</div><p className="readiness-state-note">{display.stateNotice}</p></div>
         <div className="readiness-heading-actions"><Space wrap>{display.freezeAction}<Button icon={<RefreshCw size={16} />} disabled={working || reviewLoading} loading={loading} onClick={() => void load()}>重新检查</Button></Space>{display.actionHint ? <p className="readiness-action-hint">{display.actionHint}</p> : null}</div>
       </section>
-      {display.confirmedNotice}
-      {display.frozenNotice}
       {error ? <Alert type="error" showIcon message="准备状态读取失败" description={error} /> : null}
       {display.reviewFailure}
       {failedChecks.length ? <ul className="exam-setup-inline-issues exam-readiness-issues" aria-label="待处理准备检查">{failedChecks.map((check) => <li key={check.code}>
@@ -349,7 +349,7 @@ export function ExamReadinessPage({ examId, canManage, canManageAssessment = fal
           className="readiness-advisory"
           type={advisory.severity === "warning" ? "warning" : "info"}
           showIcon
-          message={<span>{advisory.label}<small>提醒项，不阻断开考</small></span>}
+          message={<span>{advisory.label}<small>仅提醒，不影响准备确认</small></span>}
           description={
             <>
               <p>{advisory.message}</p>
@@ -366,7 +366,6 @@ export function ExamReadinessPage({ examId, canManage, canManageAssessment = fal
         />
       ))}
 
-      {display.collectingNotice}
       <PreparationFreezeModal freezeReview={freezeReview} working={working} disabled={!canFreezeCurrent() || loading}
         freezeError={freezeError} onCancel={closeFreezeReview} onConfirm={confirm} />
     </div>
@@ -381,8 +380,7 @@ function PreparationFreezeModal({ freezeReview, working, disabled, freezeError, 
   return (
       <Modal title="确认准备完成" width={560} open={Boolean(freezeReview)} confirmLoading={working} okButtonProps={{ disabled: disabled }} maskClosable={!working} closable={!working} okText="确认冻结并完成准备" cancelText="返回修改" onCancel={onCancel} onOk={() => void onConfirm()}>
         {freezeReview ? <>
-          <Alert type="warning" showIcon message="确认后将冻结本场考试准备" description="系统将按当前在读学籍生成最终学生名单，并冻结题目、答案、评分方案、评分细则和答题区域，之后不能直接修改。" />
-          <p>确认准备完成后，可前往答卷导入；阅卷与成绩请从各自入口进入。</p>
+          <Alert type="warning" showIcon message="确认后将冻结本场准备" description="按当前在读学籍生成最终学生名单，并冻结题目、答案、评分方案、评分细则和答题区域；之后不能直接修改。" />
           {freezeError ? <Alert type="error" showIcon message="冻结未完成，可重新检查或重试" description={freezeError} /> : null}
         </> : null}
       </Modal>

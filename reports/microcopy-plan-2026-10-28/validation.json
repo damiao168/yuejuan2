@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-28",
+  "mode": "static_artifact_validation",
+  "stats": {
+    "items": 109,
+    "byReport": {
+      "navigation-question-bank": 28,
+      "exam-preparation": 26,
+      "grading-release": 28,
+      "portals-ops": 27
+    },
+    "byDependency": {
+      "frontend": 50,
+      "copy": 59
+    },
+    "byPriority": {
+      "P2": 43,
+      "P3": 12,
+      "P1": 54
+    },
+    "byAction": {
+      "delete": 6,
+      "shorten": 88,
+      "merge": 35,
+      "progressive": 17,
+      "keep": 69,
+      "contextual": 38
+    },
+    "onlyKeepDecisions": 1,
+    "evidenceCount": 278,
+    "files": 718,
+    "readStates": {
+      "reviewed": 79,
+      "partial": 24,
+      "pending": 615
+    },
+    "candidateFiles": 317
+  },
+  "failures": [],
+  "brokenLinks": [],
+  "trackedDiff": "",
+  "baselineEntriesRemoved": [],
+  "limits": [
+    "没有运行真实账号/业务API/扫描硬件与离线场景",
+    "没有实施文案或交互改动",
+    "候选扫描不保证覆盖所有动态文案",
+    "语义与依赖由人工审读和交叉复核，校验器只核对结构/原文/行号/链接/快照"
+  ]
+}

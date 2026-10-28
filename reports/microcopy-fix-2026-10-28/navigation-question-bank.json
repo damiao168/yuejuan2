@@ -1,0 +1,300 @@
+{
+  "meta": {
+    "date": "2026-10-28",
+    "scope": "MC-R01..28",
+    "counts": {
+      "implemented": 27,
+      "retained": 1,
+      "deferred": 0
+    },
+    "boundaries": [
+      "未改会话、权限、题库保存与工作流请求、评分计算或原命令恢复。",
+      "F01只修改差异展示的语义空值比较，不改保存载荷。",
+      "网页引用只允许本页资料定位与复制，仍无模型地址外访能力。"
+    ]
+  },
+  "items": [
+    {
+      "id": "MC-R01",
+      "status": "implemented",
+      "summary": "待阅卷 / 待仲裁 / 已提交",
+      "files": [
+        "apps/web-admin/src/pages/TeacherDashboardPage.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R02",
+      "status": "implemented",
+      "summary": "当前暂无待办",
+      "files": [
+        "apps/web-admin/src/pages/TeacherDashboardPage.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R03",
+      "status": "implemented",
+      "summary": "忘记密码？请联系学校管理员。",
+      "files": [
+        "apps/web-admin/src/pages/LoginPage.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R04",
+      "status": "implemented",
+      "summary": "公共电脑登录最长 4 小时，离开前请退出。",
+      "files": [
+        "apps/web-admin/src/pages/LoginPage.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R05",
+      "status": "implemented",
+      "summary": "二维码 5 分钟内有效，仅供本次登录。",
+      "files": [
+        "apps/web-admin/src/pages/LoginPage.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R06",
+      "status": "implemented",
+      "summary": "进入学生端，查看已发布成绩和学习反馈。",
+      "files": [
+        "apps/web-admin/src/pages/IdentityLandingPage.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R07",
+      "status": "implemented",
+      "summary": "维护题目、答案和评分标准。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankHeader.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R08",
+      "status": "implemented",
+      "summary": "提交后锁定当前内容，需由其他教师审核。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R09",
+      "status": "implemented",
+      "summary": "审核教师：{有权限人员姓名}。请自行联系，系统暂不发送通知。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+        "apps/web-admin/src/features/question-bank/questionBankPageState.ts"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R10",
+      "status": "implemented",
+      "summary": "已发布到学校题库。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+        "apps/web-admin/src/features/question-bank/questionBankPageState.ts"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R11",
+      "status": "implemented",
+      "summary": "草稿已有更新。你在本页的修改尚未被覆盖，请先比较版本。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankConflictDialog.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R12",
+      "status": "implemented",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R13",
+      "status": "implemented",
+      "summary": "无意见时不渲染意见段落；有意见时原样展示。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R14",
+      "status": "implemented",
+      "summary": "按实际职责授权。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R15",
+      "status": "implemented",
+      "summary": "这些历史或受保护授权只读保留，本次保存不会修改。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R16",
+      "status": "implemented",
+      "summary": "添加知识点、分类目录或补充字段。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankClassificationFields.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R17",
+      "status": "retained",
+      "summary": "保留已有默认收起的特殊评分方式及其必要帮助。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/ContentFields.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R18",
+      "status": "implemented",
+      "summary": "本版本引用这些图片；原材料授权撤回或图片不可用时，将停止使用。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankReferenceImages.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R19",
+      "status": "implemented",
+      "summary": "删除‘系统会保留结构化答案’。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/ScoringEditor.tsx"
+      ],
+      "notes": "移除数据表示方式说明，具体填写规则沿用真实结构化控件。"
+    },
+    {
+      "id": "MC-R20",
+      "status": "implemented",
+      "summary": "误差设置（数值答案）",
+      "files": [
+        "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+        "apps/web-admin/src/features/question-bank/ScoringEditor.identity.test.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R21",
+      "status": "implemented",
+      "summary": "保存时用此模板替换本题评分细则（评分点、扣分规则和样例答案）；满分须一致。模板后续更新不影响本题。",
+      "files": [
+        "apps/web-admin/src/features/question-bank/ScoringEditor.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R22",
+      "status": "implemented",
+      "summary": "{差异项数}项不同",
+      "files": [
+        "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+        "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.batch50.test.tsx",
+        "apps/web-admin/src/features/question-bank/question-bank-conflict.css"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R23",
+      "status": "implemented",
+      "summary": "默认只展示空状态标题。",
+      "files": [
+        "apps/web-admin/src/components/PageState.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R24",
+      "status": "implemented",
+      "summary": "业务信息请核对来源，正式操作请进入对应页面。",
+      "files": [
+        "apps/web-admin/src/features/school-assistant/AccountConversationView.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R25",
+      "status": "implemented",
+      "summary": "支持图片、PDF和文本，最多3个附件。",
+      "files": [
+        "apps/web-admin/src/features/school-assistant/AccountConversationView.tsx"
+      ],
+      "notes": "附件规则改为可点击的details帮助，补充源码已有PDF和文本大小；触屏无需悬停。"
+    },
+    {
+      "id": "MC-R26",
+      "status": "implemented",
+      "summary": "数据来源（{数量}）",
+      "files": [
+        "apps/web-admin/src/features/school-assistant/ConversationEvidenceView.tsx",
+        "apps/web-admin/src/features/school-assistant/ConversationEvidenceView.microcopy.test.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    },
+    {
+      "id": "MC-R27",
+      "status": "implemented",
+      "summary": "参考资料（{数量}）",
+      "files": [
+        "apps/web-admin/src/components/mathMarkdownRenderers.tsx",
+        "apps/web-admin/src/components/MathMarkdown.tsx",
+        "apps/web-admin/src/components/markdownReferences.ts",
+        "apps/web-admin/src/components/MathMarkdown.interaction.test.tsx",
+        "apps/web-admin/src/components/math-markdown.css"
+      ],
+      "notes": "同一Markdown内按规范地址去重，正文用本地标记定位资料；完整地址和复制按需展开。"
+    },
+    {
+      "id": "MC-R28",
+      "status": "implemented",
+      "summary": "提交结果待确认",
+      "files": [
+        "apps/web-admin/src/components/PendingBusinessCommands.tsx"
+      ],
+      "notes": "必要限制、显示条件与原方案边界已核对。"
+    }
+  ],
+  "tests": [
+    {
+      "log": "root-tests.log",
+      "result": "首轮19文件235项：14文件通过；5文件因旧断言、Form.useWatch测试替身和默认5秒超时失败。保留原日志。"
+    },
+    {
+      "log": "root-retest.log",
+      "result": "修正后对5个受影响文件低并发复跑，63项全部通过；加上首轮其余14文件，共19文件235项不同场景通过。"
+    },
+    {
+      "log": "evidence-tests.log",
+      "result": "补充1文件2项查询进度/不完整来源展示分支测试通过；本分区共20文件237项不同场景。"
+    }
+  ],
+  "browser": {
+    "snapshot": "output/playwright/microcopy-fix-2026-10-28/question-comparison-snapshot.txt",
+    "screenshot": "output/playwright/microcopy-fix-2026-10-28/question-comparison.png",
+    "result": "合成题库同一版本显示0项不同，相同18项默认折叠；未改真实题目。"
+  }
+}

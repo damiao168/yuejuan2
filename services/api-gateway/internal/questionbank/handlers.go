@@ -174,7 +174,7 @@ func (h *Handler) SearchItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	f := SearchFilter{Query: strings.TrimSpace(q.Get("q")), BankID: q.Get("bank_id"), SubjectCode: q.Get("subject_code"), KnowledgePoint: q.Get("knowledge_point"), QuestionType: q.Get("question_type"), Archetype: q.Get("archetype"), WorkflowStatus: q.Get("workflow_status"), DifficultyBand: q.Get("difficulty_band"), CognitiveLevel: q.Get("cognitive_level"), Copyright: q.Get("copyright"), IntendedUse: q.Get("intended_use"), UsePolicy: q.Get("use_policy"), MetadataKey: q.Get("metadata_key"), MetadataValue: q.Get("metadata_value"), Mode: q.Get("mode"), Sort: q.Get("sort"), Limit: 50}
+	f := SearchFilter{PendingAction: q.Get("pending_action"), Query: strings.TrimSpace(q.Get("q")), BankID: q.Get("bank_id"), SubjectCode: q.Get("subject_code"), KnowledgePoint: q.Get("knowledge_point"), QuestionType: q.Get("question_type"), Archetype: q.Get("archetype"), WorkflowStatus: q.Get("workflow_status"), DifficultyBand: q.Get("difficulty_band"), CognitiveLevel: q.Get("cognitive_level"), Copyright: q.Get("copyright"), IntendedUse: q.Get("intended_use"), UsePolicy: q.Get("use_policy"), MetadataKey: q.Get("metadata_key"), MetadataValue: q.Get("metadata_value"), Mode: q.Get("mode"), Sort: q.Get("sort"), Limit: 50}
 	for _, entry := range []struct {
 		name   string
 		target *int

@@ -30,8 +30,8 @@ export function PaperScoringConfiguration({ context }: ViewProps) {
     {scoringGuidance && <Alert showIcon {...scoringGuidance} />}
     <AssessmentProfileEditor examId={selectedExam.id} examSubject={selectedExam.subject} examStatus={selectedExam.status} examGradingMode={selectedExam.grading_mode}
       question={selectedQuestion} canManage={options.canManageAssessment} onChanged={options.onExamChanged}
-      presentation="inline" active={context.state?.detailTab === "scoring"} />
-    {selectedQuestion && <ReferenceMaterialEditor examId={selectedExam.id} questionId={selectedQuestion.id} editable={options.canManage} onChanged={options.onExamChanged} />}
+      presentation="inline" active={context.state?.detailTab === "scoring"} registerSaveParticipant={context.actions.registerSaveParticipant} externalSaving={context.state.saveBusy} />
+    {selectedQuestion && <ReferenceMaterialEditor examId={selectedExam.id} questionId={selectedQuestion.id} editable={options.canManage} onChanged={options.onExamChanged} registerSaveParticipant={context.actions.registerSaveParticipant} externalSaving={context.state.saveBusy} />}
     <PaperFixedScoringEditor context={context} />
     {!access.editorUsesFixedScoring && <PaperRubricEditor context={context} />}
   </>;
@@ -82,8 +82,9 @@ function PaperFixedScoringControls({ context }: ViewProps) {
     </div>;
     case "numeric": return <div className="scoring-rule-grid">
       <label><span>绝对误差</span><InputNumber min={0} precision={6} value={Number(config.absolute ?? 0)} onChange={(value) => setRuleConfig("absolute", Number(value ?? 0))} /></label>
-      <label><span>相对误差</span><InputNumber min={0} max={1} step={0.001} precision={6} value={Number(config.relative ?? 0)} onChange={(value) => setRuleConfig("relative", Number(value ?? 0))} /></label>
+      <label><span>相对误差（%）</span><InputNumber min={0} max={100} step={0.1} precision={6} suffix="%" value={Number(config.relative ?? 0) * 100} onChange={(value) => setRuleConfig("relative", Number(value ?? 0) / 100)} /></label>
       <label><span>单位必须填写</span><Switch checked={Boolean(config.unit_required)} onChange={(value) => setRuleConfig("unit_required", value)} /></label>
+      <p>例如1%表示允许标准值的百分之一。已发布规则优先于答案的历史误差；保存草稿后还需发布规则。</p>
     </div>;
     default: return null;
   }

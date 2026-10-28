@@ -17,10 +17,12 @@ type memorySession struct {
 }
 
 type MemoryStore struct {
-	mu             sync.RWMutex
-	policies       map[string]Policy
-	sessions       map[string]memorySession
-	qualifications map[string]Qualification
+	mu              sync.RWMutex
+	policies        map[string]Policy
+	sessions        map[string]memorySession
+	qualifications  map[string]Qualification
+	templates       map[string]SchoolTemplate
+	templateTargets map[string]SchoolTemplateTarget
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -33,6 +35,10 @@ func (s *MemoryStore) PutPolicy(_ context.Context, tenantID, examID, questionID 
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.putPolicyLocked(tenantID, examID, questionID, input)
+}
+
+func (s *MemoryStore) putPolicyLocked(tenantID, examID, questionID string, input PutPolicyInput) (Policy, error) {
 	key := policyKey(tenantID, examID, questionID)
 	now := time.Now().UTC()
 	current, exists := s.policies[key]
@@ -48,7 +54,7 @@ func (s *MemoryStore) PutPolicy(_ context.Context, tenantID, examID, questionID 
 		MinimumExactAgreement: input.MinimumExactAgreement, MinimumWithinOneAgreement: input.MinimumWithinOneAgreement,
 		MinimumCriterionAgreement: cloneFloat(input.MinimumCriterionAgreement), MaximumSevereRate: input.MaximumSevereRate,
 		SevereErrorThreshold: input.SevereErrorThreshold, QualificationValidityDays: input.QualificationValidityDays,
-		Revision: revision, CreatedAt: createdAt, UpdatedAt: now}
+		Revision: revision, CreatedAt: createdAt, UpdatedAt: now, SchoolTemplateID: input.SchoolTemplateID, SchoolTemplateRevision: input.SchoolTemplateRevision}
 	s.policies[key] = policy
 	return clonePolicy(policy), nil
 }

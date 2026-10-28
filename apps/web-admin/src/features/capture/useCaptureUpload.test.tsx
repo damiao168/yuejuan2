@@ -5,10 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CaptureBatchDetail } from "../../api/capture";
 import { useCaptureUpload } from "./useCaptureUpload";
 
-const mocks = vi.hoisted(() => ({ upload: vi.fn(), register: vi.fn(), load: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn() }));
+const mocks = vi.hoisted(() => ({ upload: vi.fn(), register: vi.fn(), process: vi.fn(), load: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn() }));
 vi.mock("antd", () => ({ App: { useApp: () => ({ message: { success: mocks.success, error: mocks.error, info: mocks.info } }) } }));
 vi.mock("../../api/files", () => ({ uploadFile: mocks.upload }));
-vi.mock("../../api/capture", () => ({ registerCaptureFile: mocks.register }));
+vi.mock("../../api/capture", () => ({ registerCaptureFile: mocks.register, processCaptureBatch: mocks.process }));
 vi.mock("../../api/client", () => ({ getUserErrorMessage: (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback }));
 
 const front = new File(["front"], "front.png", { type: "image/png" });
@@ -24,7 +24,7 @@ describe("学生答卷上传分组", () => {
     vi.resetAllMocks();
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.upload.mockImplementation(async (file: File) => ({ file: { id: `asset-${file.name}` } }));
-    mocks.register.mockImplementation(async (_batch, asset: string) => ({ file: { id: `registered-${asset}` } })); mocks.load.mockResolvedValue(undefined);
+    mocks.register.mockImplementation(async (_batch, asset: string) => ({ file: { id: `registered-${asset}` } })); mocks.load.mockResolvedValue(undefined); mocks.process.mockResolvedValue(undefined);
     container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
     await act(async () => root.render(<Probe />));
   });
@@ -41,6 +41,22 @@ describe("学生答卷上传分组", () => {
     expect(second[3]).toEqual({ ...first[3], upload_group_file_index: 2 });
     expect(current.pendingUpload).toBeUndefined();
     expect(current.uploading).toBe(false);
+    expect(mocks.process).toHaveBeenCalledExactlyOnceWith("batch-1");
+    expect(mocks.register.mock.invocationCallOrder[1]).toBeLessThan(mocks.process.mock.invocationCallOrder[0]);
+  });
+
+  it("排队失败后只重试排队，不重传、登记或再次退出旧组", async () => {
+    const replace = vi.fn().mockResolvedValue(undefined);
+    mocks.process.mockRejectedValueOnce(new Error("处理排队连接中断")).mockResolvedValue(undefined);
+    await act(async () => current.uploadSources([front, back], 2, replace));
+    expect(current.pendingUpload).toMatchObject({ completedFiles: 2, error: "处理排队连接中断" });
+    expect(replace.mock.invocationCallOrder[0]).toBeLessThan(mocks.process.mock.invocationCallOrder[0]);
+    await act(async () => current.retryUpload());
+    expect(mocks.upload).toHaveBeenCalledTimes(2);
+    expect(mocks.register).toHaveBeenCalledTimes(2);
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(mocks.process).toHaveBeenCalledTimes(2);
+    expect(current.pendingUpload).toBeUndefined();
   });
 
   it("两次文件选择使用不同组号，不能跨选择凑页", async () => {

@@ -243,6 +243,7 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     mocks.bookmarkMarked = marked;
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(online);
     await render();
+    expect(editor().bookmarkMarked).toBe(marked);
     expect(header().draftSaveStatus).toBe("readonly");
     await edit(0);
     await act(async () => { await vi.advanceTimersByTimeAsync(5000); });

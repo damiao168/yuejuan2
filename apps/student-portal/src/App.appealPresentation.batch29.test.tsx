@@ -9,7 +9,7 @@ import { deferredResponse, installApi, jsonResponse, makeAppeal, makeQuestion, m
 const owner = studentDraftOwner(studentUser);
 const draftKey = appealDraftKey(owner, "exam-1", "release-7", "question-1");
 const explanation = "请核对第二步已经写出的完整计算过程。";
-const confirmation = "本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。";
+const confirmation = /已收到第 \d+ 版的本题申请，不可重复提交。/;
 
 function form(props: Partial<ComponentProps<typeof QuestionAppealForm>> = {}) {
   return <StudentSessionContext value={{ draftOwner: owner, submitting: false, setSubmitting: vi.fn(), reauthenticate: vi.fn() }}>
@@ -39,9 +39,9 @@ describe("学生复核表单展示职责", () => {
     render(form());
     fireEvent.change(screen.getByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
     const retry = await screen.findByRole("button", { name: "重试申请记录" });
-    expect(screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(true);
     fireEvent.click(retry);
-    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" }).disabled).toBe(false));
+    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(false));
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" }).value).toBe(explanation);
     expect(reads).toBe(2);
   });
@@ -54,7 +54,7 @@ describe("学生复核表单展示职责", () => {
     render(form({ onSubmitted }));
     expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "复核原因" }).value).toBe("recognition_error");
     expect(screen.getByText("已圈选争议区域")).toBeTruthy();
-    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
+    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" });
     await waitFor(() => expect(submit.disabled).toBe(false));
     fireEvent.click(submit);
     await screen.findByText(confirmation);
@@ -71,7 +71,7 @@ describe("学生复核表单展示职责", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
     await waitFor(() => expect(screen.queryByText("正在核对已有复核申请…")).toBeNull());
     expect(screen.getByText("正在核对答卷所属成绩版本，完成前暂不能提交。")).toBeTruthy();
-    expect(screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(true);
     fireEvent.submit(view.container.querySelector("form")!);
     expect(calls.some((call) => call.init.method === "POST")).toBe(false);
   });
@@ -82,7 +82,7 @@ describe("学生复核表单展示职责", () => {
     const calls = installApi((call) => call.init.method === "POST" ? receipt.promise : undefined);
     const view = render(form());
     fireEvent.change(screen.getByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
-    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "确认提交（仅一次）" });
+    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" });
     await waitFor(() => expect(submit.disabled).toBe(false));
     fireEvent.click(submit);
     view.rerender(form({ evidenceUnavailable: true }));
@@ -91,8 +91,8 @@ describe("学生复核表单展示职责", () => {
     expect(screen.queryByRole("textbox", { name: "具体说明" })).toBeNull();
     await act(async () => receipt.resolve(jsonResponse({ error: { code: "temporary_failure" } }, 503)));
     await within(region).findByRole("alert");
-    expect(within(region).getByText(/草稿已保存在当前标签页会话/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "确认提交（仅一次）" })).toBeNull();
+    expect(within(region).getByText(/草稿仅存于当前标签页会话/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "提交复核申请" })).toBeNull();
     expect(readAppealDraft(draftKey)?.reason).toBe(explanation);
     expect(calls.filter((call) => call.init.method === "POST")).toHaveLength(1);
   });
@@ -110,11 +110,11 @@ describe("学生复核表单展示职责", () => {
     const result = makeResult([makeQuestion(), makeQuestion({ question_id: "question-2", question_no: "2", subject: "chinese" })]);
     const calls = installApi((call) => resultRoute(call, result));
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByRole("textbox", { name: "具体说明" });
     fireEvent.click(screen.getByRole("button", { name: "语文" }));
     expect(screen.queryByRole("heading", { name: "第 1 题 · 作答与评分依据" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /^第 2 题，/ }));
+    fireEvent.click((screen.getByRole("button", { name: /^第 2 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByRole("heading", { name: "第 2 题 · 作答与评分依据" });
     const reads = calls.filter((call) => call.url.pathname.endsWith("/questions/question-2"));
     expect(reads).toHaveLength(1);

@@ -56,6 +56,7 @@ export type TemplateConfirmationView = Pick<TemplatePageViewState, "selectedTemp
   & EditorFields<"saving" | "suggestingRegions" | "readonly" | "objectiveGroups" | "reviewMessage" | "coveredQuestions">;
 
 export type TemplateSourceToolbarView = TemplateSourceStatusView
+  & TemplateBindingView
   & Pick<TemplatePageViewState, "papers" | "selectedPaperId" | "selectedTemplate" | "setSelectedPaperId" | "setSelectedTemplateId" | "canManage" | "canEditSources" | "sourceRecognitionBlocked" | "setSettingsOpen">
   & EditorFields<"saving" | "suggestingRegions" | "setLayout" | "readonly" | "createDraft" | "cloneTemplate" | "suggestQuestionRegions" | "saveDraft" | "suggestionProgress" | "suggestionError" | "suggestionTone" | "suggestionModel" | "unassignedRegions" | "objectiveGroups" | "canUndo" | "undo" | "canRedo" | "redo" | "revision" | "layout" | "resetFillGradingGroups" | "discardSuggestedRegion" | "discardObjectiveGroup">
   & PreviewFields<"preview">

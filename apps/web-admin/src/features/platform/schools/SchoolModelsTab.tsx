@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Spin } from "antd";
+import { Alert, Button, Spin } from "antd";
 import { getPlatformSchoolModelHealth, type SchoolModelHealthResponse } from "../../../api/platformSchools";
 import { ResponsiveTable } from "../../../components/ResponsiveTable";
 import { InternalRouteButton } from "../../../components/InternalRouteButton";
@@ -24,15 +24,16 @@ export function SchoolModelsTab({ tenantId }: Readonly<{ tenantId: string }>) {
   const [data, setData] = useState<SchoolModelHealthResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     // 每轮请求独立持有有效标记，学校切换后旧健康检查结果不能覆盖当前学校。
     let active = true;
     setLoading(true); setError(false);
     void getPlatformSchoolModelHealth(tenantId).then((result) => { if (active) setData(result); }).catch(() => { if (active) setError(true); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [tenantId]);
+  }, [tenantId, retry]);
   if (loading) return <div className="platform-school-panel-loading"><Spin /></div>;
-  if (error) return <Alert type="error" showIcon message="模型服务加载失败" />;
+  if (error) return <Alert type="error" showIcon message="模型服务加载失败" action={<Button onClick={() => setRetry(value => value + 1)}>重试当前内容</Button>} />;
   if (!data) return <Alert type="warning" showIcon message="暂时无法确认模型状态" />;
   const model = data.default_model;
   const structuredLabel = model.capability_status === "success" && model.capability_version !== "structured-json-v4"

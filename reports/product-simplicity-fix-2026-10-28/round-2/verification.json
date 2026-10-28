@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-28",
+  "status": "passed_with_warnings",
+  "root_regression": {
+    "log": "root-web-final.log",
+    "files": 9,
+    "tests": 103,
+    "result": "passed",
+    "note": "含3条交接后台刷新/旧投影/本地修改回归；最后一次运行覆盖此前根前端组，不累加重跑。"
+  },
+  "desktop": {
+    "log": "capture-desktop-regression.json",
+    "files": 12,
+    "tests": 197,
+    "result": "passed",
+    "followup": "capture-desktop-final-d04.json的36条与此组重叠，不另计总数。"
+  },
+  "capture_web": {
+    "log": "capture-web-regression.json",
+    "tests": 15,
+    "result": "passed"
+  },
+  "student": {
+    "log": "portals-student-tests.log",
+    "files": 4,
+    "tests": 26,
+    "result": "passed"
+  },
+  "grading": {
+    "logs": [
+      "grading-vitest-final.log",
+      "grading-ai-vitest-retry.log"
+    ],
+    "tests": 116,
+    "result": "passed",
+    "note": "7文件110条和AI独立6条；原默认5秒超时以15秒重跑该文件通过。最后复评续做22条与前组重叠，另留grading-result-resume-final.log。"
+  },
+  "portals_ops": {
+    "report": "portals-ops.json",
+    "result": "passed",
+    "note": "授权搜索、准入目录、材料来源/版本与公开单校名称定向验证；与根前端部分重叠，不合计全仓独立用例数。"
+  },
+  "workspace_typecheck": {
+    "log": "typecheck-final.log",
+    "result": "passed",
+    "latest_web_check": "web-build-delivery.log的tsc --noEmit覆盖根最后交接变更。"
+  },
+  "builds": {
+    "logs": [
+      "build-final.log",
+      "web-build-delivery.log"
+    ],
+    "result": "passed",
+    "scope": "desktop/student/web均构建通过；最后web单独重构建覆盖最终根代码。"
+  },
+  "contracts": {
+    "log": "contracts-final.log",
+    "result": "passed",
+    "registered_routes": 594,
+    "openapi": 354,
+    "reviewed_gaps": 240,
+    "schema_version": "000217",
+    "note": "SDK与路由均由正式脚本生成；含breaking、授权、schema及契约门禁。"
+  },
+  "lint": {
+    "log": "lint-delivery-final.log",
+    "result": "passed_with_warnings",
+    "errors": 0,
+    "warnings": 53
+  },
+  "backend": {
+    "logs": [
+      "questionbank-go-final.log",
+      "grading-go-final.log",
+      "portals-go-final.log",
+      "portals-eligibility-final.log",
+      "portals-route-tests.log",
+      "deployment-worker-go-final.log",
+      "deployment-worker-go-target.log"
+    ],
+    "result": "passed",
+    "note": "各组Go包和路由/账号命令定向结果保留；不把重复包运行合计独立测试数。"
+  },
+  "isolated_postgres": {
+    "log": "questionbank-postgres-final.log",
+    "tests": 2,
+    "result": "passed",
+    "scope": "本轮独立PostgreSQL 17集群与合成随机schema；应用正式217迁移，真实并发领取单成功、审批记录、事件不可改、冻结内容不可改和既有引用图片授权回归。",
+    "stopped": true,
+    "data_directory": "output/postgres-handoff-41273bfedf/data"
+  },
+  "deployment_tools": {
+    "report": "deployment.json",
+    "tls_log": "deployment-tls-final.log",
+    "tls_tests": 7,
+    "worker_log": "deployment-worker-powershell.log",
+    "dry_run_log": "deployment-launch-dry-run.log",
+    "result": "passed_in_isolation"
+  },
+  "browser": {
+    "report": "capture-desktop-browser.json",
+    "screenshot": "../../../output/playwright/round2-capture-desktop/verified.png",
+    "result": "passed",
+    "boundary": "合成双页PDF实际PDF.js worker/逐页显示和classic TIFF预览改序；自建浏览器和5186服务关闭。"
+  },
+  "baseline_preservation": {
+    "missing_baseline_files": 0,
+    "diff_check": "passed",
+    "log": "diff-check-delivery.log"
+  },
+  "limits": [
+    "未运行全仓全部测试，未声称零warning；构建仍有大块体积提示。",
+    "PostgreSQL数据与服务完全独立于学校部署；集群已停止，合成数据目录保留。",
+    "没有真实部署、学校业务写入、组织PKI轮换或真实Worker业务任务验收。",
+    "桌面验证不等于Tauri发行包、Windows凭据库跨重启或真实扫描硬件验收。",
+    "保留首轮证据，不把首轮221条及各分组重叠用例累加为本轮独立测试数。"
+  ]
+}

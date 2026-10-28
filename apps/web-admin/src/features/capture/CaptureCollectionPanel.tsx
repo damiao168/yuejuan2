@@ -76,7 +76,7 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
     const revision = summary.revision;
     dialog.current = modal.confirm({
       title: "结束本场导入",
-      content: `应收 ${summary.required_count} 人，已成功导入 ${summary.ready_count} 人，缺考 ${summary.absent_count} 人。结束时系统会再次核对全部学生与材料，并封存已处理批次。${summary.exam_status === "collecting" ? "考试将进入阅卷阶段。" : "本次补传不会改变当前阅卷阶段。"}`,
+      content: `应收${summary.required_count}人，成功导入${summary.ready_count}人，缺考${summary.absent_count}人。结束时再次核对学生与材料，并封存已处理批次。${summary.exam_status === "collecting" ? "确认后进入阅卷。" : "本次补传结束，当前阅卷阶段保持不变。"}`,
       okText: "确认结束导入", cancelText: "返回核对",
       onOk: async () => {
         const current = context.current;
@@ -182,7 +182,7 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
       <div><span>成功导入</span><strong>{summary?.ready_count ?? "—"}</strong></div>
       <div><span>待完成</span><strong>{summary?.pending_count ?? "—"}</strong></div>
     </div>
-    {finishReasons.length ? <Alert type={summary?.closed && !error ? "success" : "info"} showIcon message={finishReasons.join("；")} /> : <p className="muted">应收学生答卷已齐全，正常处理通过的页面无需逐页人工确认。结束时由系统再次核对。</p>}
+    {finishReasons.length ? <Alert type={summary?.closed && !error ? "success" : "info"} showIcon message={finishReasons.join("；")} /> : <p className="muted">正常通过的页面无需逐页确认；仍请核对材料问题。</p>}
     {summary ? <>
       <div className="capture-collection-filter"><Segmented aria-label="学生核对范围" value={filter} onChange={value => setFilter(String(value))} options={[{ value: "pending", label: `待完成 (${pendingEntries.length})` }, { value: "all", label: "全部学生" }]} /></div>
       <ResponsiveTable className="dense-data-table" rowKey="student_id" columns={columns} dataSource={entries} pagination={{ pageSize: 10 }} size="small" locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={filter === "pending" ? "学生待办已处理完毕，请继续核对材料问题" : "本场暂无学生名册"} /> }} />
@@ -195,7 +195,12 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
       </div>)}</div> : null}
     </> : null}
     <Modal title={editor && "entry" in editor ? editor.status === "absent" ? `标记缺考：${editor.entry.student_name}` : `恢复应考：${editor.entry.student_name}` : editor && "issue" in editor && editor.replace ? "上传替代答卷" : editor && "issue" in editor && editor.cancelBatch ? "取消未完成上传所在批次" : "本次选择的材料不计入"} open={Boolean(editor)} okText={editor && "issue" in editor && editor.replace ? "继续选择完整答卷" : "确认并重新核对"} cancelText="取消" confirmLoading={acting} okButtonProps={{ disabled: !reason.trim() || !canManage || localBusy }} onCancel={() => { if (!acting) setEditor(undefined); }} onOk={() => void saveResolution()}>
-      <p>{editor && "issue" in editor ? editor.cancelBatch ? "取消后，该批次的全部材料和未完成上传不再计入本场核对。请确认没有需保留的材料；对应学生仍需补传或核实缺考。" : `${editor.replace ? "请选择每名学生页数，并一次上传本次选择所对应的全部完整答卷。新文件登记成功后，" : "确认后，"}本次选择的全部文件及其答卷将退出有效输入，历史记录保留。${editor.replace ? "新答卷仍须处理成功后才算导入完成。" : "学生缺卷仍需补传或核实缺考。"}已产生评分的材料无法在这里移除。` : "请先核实学生情况并填写原因，系统会保留本次名册调整记录。"}</p>
+      <p>{editor && "issue" in editor ? editor.cancelBatch
+        ? "取消后，本批全部材料和未完成上传不再计入核对。请确认没有需保留的材料；对应学生仍需补传或核实缺考。"
+        : editor.replace
+          ? "请选择每人页数，并一次上传原选择对应的全部完整答卷。新文件登记成功后，原选择的全部文件及答卷退出有效输入，历史保留；新答卷处理成功才算导入完成。已有评分的材料不能在此移除。"
+          : "原选择的全部文件及答卷将不再计入，历史保留；对应学生仍需补传或核实缺考。已有评分的材料不能在此移除。"
+        : "请核实学生情况并填写原因，本次名册调整会留有记录。"}</p>
       <Input.TextArea aria-label="处理原因" rows={3} maxLength={300} value={reason} onChange={event => setReason(event.target.value)} placeholder="填写本次处理原因" />
     </Modal>
   </section>;

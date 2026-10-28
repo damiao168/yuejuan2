@@ -50,6 +50,7 @@ vi.mock("antd", async () => {
   Input.TextArea = (props: ComponentProps<"textarea">) => <textarea {...props} />;
   function Form({ children, disabled }: Readonly<{ children: ReactNode; disabled?: boolean }>) { return <fieldset disabled={disabled}>{children}</fieldset>; }
   Form.Item = ({ children }: Readonly<{ children: ReactNode }>) => children;
+  Form.useWatch = () => undefined;
   Form.useForm = () => {
     const form = useRef({ setFieldsValue: vi.fn(), getFieldsValue: vi.fn(() => ({})) });
     return [form.current];

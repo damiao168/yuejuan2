@@ -1,0 +1,5549 @@
+{
+  "meta": {
+    "date": "2026-10-28",
+    "status": "proposal_not_implemented",
+    "evidence": "当前源码静态复核；本轮未新增运行界面验证",
+    "countsIncludeKeep": true
+  },
+  "stats": {
+    "items": 109,
+    "byReport": {
+      "navigation-question-bank": 28,
+      "exam-preparation": 26,
+      "grading-release": 28,
+      "portals-ops": 27
+    },
+    "byDependency": {
+      "frontend": 50,
+      "copy": 59
+    },
+    "byPriority": {
+      "P2": 43,
+      "P3": 12,
+      "P1": 54
+    },
+    "byAction": {
+      "delete": 6,
+      "shorten": 88,
+      "merge": 35,
+      "progressive": 17,
+      "keep": 69,
+      "contextual": 38
+    },
+    "onlyKeepDecisions": 1,
+    "evidenceCount": 278,
+    "files": 718,
+    "readStates": {
+      "reviewed": 79,
+      "partial": 24,
+      "pending": 615
+    },
+    "candidateFiles": 317
+  },
+  "items": [
+    {
+      "id": "MC-R01",
+      "page": "教师首页：任务摘要",
+      "role": "阅卷教师、仲裁教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 81,
+          "endLine": 81,
+          "text": "已加载待阅卷",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 82,
+          "endLine": 82,
+          "text": "已加载待仲裁",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 83,
+          "endLine": 83,
+          "text": "已加载已提交",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 183,
+          "endLine": 183,
+          "text": "分别查看已分配的阅卷与仲裁；数量以当前已加载任务为准。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "有阅卷或仲裁权限时显示摘要；有当前任务时另显示段落。",
+      "problem": "同一取数范围重复四次，标签难读；当前响应数量又不能冒充全量。",
+      "actions": [
+        "shorten",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "待阅卷 / 待仲裁 / 已提交",
+        "details": "摘要仅统计当前已读取任务。完整任务请进入阅卷或仲裁列表。"
+      },
+      "targetCondition": "标签常驻；范围说明在摘要下只显示一次。",
+      "placement": "摘要标签及统一范围说明",
+      "dependency": "frontend",
+      "boundaries": [
+        "当前数据未包含全量计数，不能改成‘全部待办’。",
+        "某类别读取失败仍显示‘—’，不可变成0。"
+      ],
+      "acceptance": [
+        "同时有两种任务时范围说明只出现一次。",
+        "任一接口失败时保留对应失败提示与重试。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R02",
+      "page": "教师首页：空状态",
+      "role": "阅卷教师、仲裁教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 166,
+          "endLine": 166,
+          "text": "当前没有已加载的待办",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/TeacherDashboardPage.tsx",
+          "line": 166,
+          "endLine": 166,
+          "text": "任务分配后会显示在这里；如果任务区加载失败，请重试。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "有权限且tasks为空时；当前也可能伴随接口降级警告。",
+      "problem": "正常空状态提前解释失败，与真实失败提示重叠，且‘没有’可能掩盖尚未读取。",
+      "actions": [
+        "contextual",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "当前暂无待办",
+        "failure": "任务暂时无法读取，请重试。",
+        "details": "任务分配后会显示在这里。"
+      },
+      "targetCondition": "仅相应数据成功读取且为空时显示正常空状态；读取失败显示失败提示。",
+      "placement": "任务列表占位区",
+      "dependency": "frontend",
+      "boundaries": [
+        "先区分空结果与读取失败；不得只替换标题而保留错误条件。"
+      ],
+      "acceptance": [
+        "成功空数组显示暂无待办。",
+        "请求失败不出现‘暂无待办’结论。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R03",
+      "page": "密码登录：找回入口",
+      "role": "登录用户",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/LoginPage.tsx",
+          "line": 169,
+          "endLine": 169,
+          "text": "忘记密码？请联系学校管理员核对身份并生成一次性恢复链接。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "密码登录表单底部常驻。",
+      "problem": "用户只需知道联系谁；管理员生成凭据的实现步骤过早出现。",
+      "actions": [
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "忘记密码？请联系学校管理员。"
+      },
+      "targetCondition": "密码登录方式下保留；管理员操作页继续说明身份核验和一次性链接。",
+      "placement": "登录按钮下",
+      "dependency": "copy",
+      "boundaries": [
+        "不能增加尚不存在的自助找回链接；管理员侧身份核验不删。"
+      ],
+      "acceptance": [
+        "用户能识别联系对象，不误认为已发送恢复链接。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R04",
+      "page": "登录：公共电脑",
+      "role": "使用共享设备的用户",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/LoginPage.tsx",
+          "line": 212,
+          "endLine": 212,
+          "text": "公共电脑会话最长 4 小时；页面会持续提示，离开前请点退出。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "public_device被勾选时显示。",
+      "problem": "时限与离开前退出是必要提醒；‘页面会持续提示’只是介绍界面。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "公共电脑登录最长 4 小时，离开前请退出。"
+      },
+      "targetCondition": "仍仅公共电脑策略被选中时出现。",
+      "placement": "设备策略旁的可见提示",
+      "dependency": "copy",
+      "boundaries": [
+        "保留4小时时限和主动退出要求；不得改成‘4小时后自动清除全部数据’。"
+      ],
+      "acceptance": [
+        "公共电脑策略开启能直接看到限制；关闭后不残留。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R05",
+      "page": "微信登录：有效期与隐私",
+      "role": "微信登录用户",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/LoginPage.tsx",
+          "line": 188,
+          "endLine": 188,
+          "text": "二维码 5 分钟内有效，仅用于本次登录，不会读取微信好友或聊天信息。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "微信登录页常驻，二维码尚未生成时也显示。",
+      "problem": "有效期应与已生成二维码关联，隐私说明适合独立帮助，当前把两件事挤成小字。",
+      "actions": [
+        "contextual",
+        "progressive"
+      ],
+      "replacement": {
+        "summary": "二维码 5 分钟内有效，仅供本次登录。",
+        "detailsLabel": "微信登录会读取什么？",
+        "details": "不会读取微信好友或聊天信息。"
+      },
+      "targetCondition": "生成二维码后显示有效期；隐私帮助在生成前后都可展开。",
+      "placement": "二维码下方和独立帮助入口",
+      "dependency": "frontend",
+      "boundaries": [
+        "5分钟沿用当前实现文案；若后端返回有效期有差异，须以实际挑战期限为准。",
+        "不把二维码过期误写成账号登录会话到期。"
+      ],
+      "acceptance": [
+        "生成前没有悬空的有效期句子；生成后时限可见。",
+        "二维码失败、过期消息仍直接显示。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R06",
+      "page": "主站学生身份过渡页",
+      "role": "从主站进入的学生",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+          "line": 11,
+          "endLine": 11,
+          "text": "这里提供学校学生端入口；成绩与学习反馈是否可见，以学生端实际发布状态为准。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+          "line": 30,
+          "endLine": 30,
+          "text": "使用学校提供的学生端查看本人已发布的成绩和学习反馈。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+          "line": 31,
+          "endLine": 31,
+          "text": "此站点尚未配置学生端网址",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/IdentityLandingPage.tsx",
+          "line": 31,
+          "endLine": 31,
+          "text": "请使用学校发放的学生端网址；如不清楚入口，请联系学校管理员。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "学生身份进入主站；按是否配置VITE_STUDENT_PORTAL_URL分支。",
+      "problem": "两段都在解释另一个入口；缺失配置时向学生暴露部署状态。",
+      "actions": [
+        "merge",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "进入学生端，查看已发布成绩和学习反馈。",
+        "missing": "请使用学校发放的学生端网址，或联系学校管理员获取。"
+      },
+      "targetCondition": "有网址只保留一句和进入按钮；无网址只显示获取入口的说明。",
+      "placement": "学生入口按钮附近",
+      "dependency": "frontend",
+      "boundaries": [
+        "不承诺跨站自动登录；不改审计员工作台说明。"
+      ],
+      "acceptance": [
+        "有网址和无网址各显示一段；不显示技术环境变量或配置诊断。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R07",
+      "page": "题库：首页说明",
+      "role": "题库教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankHeader.tsx",
+          "line": 17,
+          "endLine": 17,
+          "text": "维护题目、答案和评分标准。发布后供授权教师选入考试；已开展考试使用的版本不随题库更新改变。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "题库页页头常驻。",
+      "problem": "任务介绍、权限范围、版本规则混在页头；版本影响应在发布或选题时强调。",
+      "actions": [
+        "shorten",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "维护题目、答案和评分标准。",
+        "details": "发布供授权教师选用；已有考试继续使用原版本。"
+      },
+      "targetCondition": "页头只保留任务说明；发布/新版本/选题位置保留版本影响。",
+      "placement": "页头与发布结果区",
+      "dependency": "frontend",
+      "boundaries": [
+        "必须与MC-R10配套，不能把已有考试不自动更新的事实从所有入口删掉。"
+      ],
+      "acceptance": [
+        "列表首屏不铺开版本规则；发布后仍清楚提示已有考试不变。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R08",
+      "page": "题库：审核流程说明",
+      "role": "作者、审核教师、发布教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 109,
+          "endLine": 109,
+          "text": "草稿 → 审核 → 发布到学校题库 → 在考试中选入题目。提交后锁定当前内容，作者不能审核自己的版本。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "题目详情审核区，所有工作流状态均显示。",
+      "problem": "整套流程每次重复，真正决定当前操作的是锁定、独立审核与下一步。",
+      "actions": [
+        "contextual",
+        "progressive"
+      ],
+      "replacement": {
+        "summary": "提交后锁定当前内容，需由其他教师审核。",
+        "reviewing": "审核中，当前内容已锁定。",
+        "approved": "审核通过，等待有发布权限的教师发布。",
+        "detailsLabel": "查看审核与发布流程",
+        "details": "草稿 → 审核 → 发布到题库 → 选入考试。"
+      },
+      "targetCondition": "按draft/reviewing/approved/published状态显示当前一步；完整流程可展开。",
+      "placement": "审核动作附近",
+      "dependency": "frontend",
+      "boundaries": [
+        "提交前锁定影响必须可见，不只放悬浮提示。",
+        "作者不能审核自己的版本，权限校验保持。"
+      ],
+      "acceptance": [
+        "四种状态各只显示相关说明；提交前能看到锁定后果。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R09",
+      "page": "题库：交接与未通知事实",
+      "role": "作者、审核教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 112,
+          "endLine": 112,
+          "text": "此处列出实际有权限的人员，提交不会自动发送通知。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 104,
+          "endLine": 104,
+          "text": "审核链接已复制，请发送给上方有权限的审核教师；系统不会自动通知。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/questionBankPageState.ts",
+          "line": 6,
+          "endLine": 6,
+          "text": "已提交审核，请通知本题库的审核教师在题库中处理。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "人员信息段落、复制审核链接成功提示、提交成功提示分别出现。",
+      "problem": "需要人工交接是真实限制，不能只删；三处重复的权限解释可以收敛到一次阶段提示。",
+      "actions": [
+        "merge",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "审核教师：{有权限人员姓名}。请自行联系，系统暂不发送通知。",
+        "submitted": "已提交审核，请联系上方审核教师。",
+        "approved": "发布教师：{有权限人员姓名}。",
+        "copiedReviewing": "链接已复制，请发给审核教师。",
+        "copiedApproved": "链接已复制，请发给发布教师。"
+      },
+      "targetCondition": "草稿/审核中显示审核联系人和一次未通知提示；已批准切换为发布联系人。",
+      "placement": "当前阶段联系人旁；成功提示只确认动作",
+      "dependency": "frontend",
+      "boundaries": [
+        "保留服务端授权人员名单和姓名读取失败分支。",
+        "未增加通知功能前不得写‘已通知’或‘对方将收到待办’。"
+      ],
+      "acceptance": [
+        "提交与复制都不会制造已通知的错觉；名单失败仍可重试且不伪造姓名。",
+        "已批准阶段复制链接时，提示联系发布教师，与当前联系人一致。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R10",
+      "page": "题库：发布结果",
+      "role": "发布教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 115,
+          "endLine": 115,
+          "text": "下一步在考试的“小题与分值”页点击“从题库选题”。已有考试保留原版本；新版本不会自动替换考试中的题目。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/questionBankPageState.ts",
+          "line": 5,
+          "endLine": 5,
+          "text": "已发布到学校题库。请在考试的题目页选择此版本；已有考试不受影响。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "发布版本后，详情成功块和成功消息。",
+      "problem": "两个位置重复下一步与版本影响；‘已有考试不受影响’不如明确仍用原版。",
+      "actions": [
+        "merge",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "已发布到学校题库。",
+        "details": "在考试的“小题与分值”中选入此版本。已有考试仍使用原版本。",
+        "action": "去考试中选题"
+      },
+      "targetCondition": "成功消息只报发布成功，版本影响集中在详情成功块。",
+      "placement": "发布结果块及既有选题按钮",
+      "dependency": "frontend",
+      "boundaries": [
+        "已有考试不会自动替换必须保留。",
+        "按钮仍按访问权限显示。"
+      ],
+      "acceptance": [
+        "发布后两处不重复整段说明；无考试权限时不出现不可用的入口。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R11",
+      "page": "题库：并发冲突警告",
+      "role": "题目编辑教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 56,
+          "endLine": 56,
+          "text": "本地修改已保留。先查看并比较最新版本，可下载本地备份，再决定是否放弃修改。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictDialog.tsx",
+          "line": 26,
+          "endLine": 26,
+          "text": "查看最新版本不会覆盖本地修改。采用前请核对差异，下载的备份包含当前题目内容、答案、评分编辑和附件信息。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "检测到草稿冲突时，以及查看最新版本弹窗内。",
+      "problem": "‘已保留’易被理解为持久保存；两段重复教程挤占差异本身。",
+      "actions": [
+        "shorten",
+        "merge",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "草稿已有更新。你在本页的修改尚未被覆盖，请先比较版本。",
+        "details": "采用最新版本会替换本页未保存内容。可先下载本地修改备份。",
+        "backupHelp": "备份包含题目、答案、评分编辑和附件信息；附件信息不等同于附件文件。"
+      },
+      "targetCondition": "警告提示只说明当前事实；替换影响在比较弹窗和最终危险确认中可见。",
+      "placement": "冲突提示、比较弹窗与采用确认",
+      "dependency": "frontend",
+      "boundaries": [
+        "不承诺刷新、关闭浏览器后仍可恢复；不暗示备份附带图片二进制。",
+        "保留有未保存修改时的最终危险确认。"
+      ],
+      "acceptance": [
+        "只读比较不改输入；点击采用前看到替换范围；取消不丢修改。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R12",
+      "page": "题库：两个编辑区互锁",
+      "role": "题目编辑教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 62,
+          "endLine": 62,
+          "text": "请先保存当前编辑区域，再编辑另一部分或提交审核。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "contentDirty或scoringDirty时显示；另一编辑区禁用。",
+      "problem": "‘当前区域/另一部分’含糊，用户还需推断应按哪个保存按钮。",
+      "actions": [
+        "contextual",
+        "shorten"
+      ],
+      "replacement": {
+        "contentDirty": "先保存题目内容，再编辑评分标准或提交审核。",
+        "scoringDirty": "先保存评分标准，再编辑题目内容或提交审核。"
+      },
+      "targetCondition": "按实际脏区选择文案；仅在互锁存在时显示。",
+      "placement": "禁用区域前并关联相应保存动作",
+      "dependency": "frontend",
+      "boundaries": [
+        "现有版本互锁仍保留；统一保存属于另一项功能方案，不靠改小字假装解决。"
+      ],
+      "acceptance": [
+        "分别只改题干和只改评分时，提示准确指向可用保存动作。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R13",
+      "page": "题库：审核记录空意见",
+      "role": "题库教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankPanels.tsx",
+          "line": 118,
+          "endLine": 118,
+          "text": "无补充意见",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "每条审核记录没有comment时，仍渲染独立段落。",
+      "problem": "多次操作都重复一个空值，记录时间和决定才是有效信息。",
+      "actions": [
+        "delete",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "无意见时不渲染意见段落；有意见时原样展示。"
+      },
+      "targetCondition": "只省略空comment的正文，不省略操作记录。",
+      "placement": "审核时间线",
+      "dependency": "frontend",
+      "boundaries": [
+        "不删除决定、操作者已有信息、修订号和时间等审计事实。"
+      ],
+      "acceptance": [
+        "连续5条空意见不出现5段占位；有退回原因仍完整显示。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R14",
+      "page": "题库：授权职责解释",
+      "role": "题库管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+          "line": 125,
+          "endLine": 125,
+          "text": "浏览可看题；出题可编辑草稿；审核可批准其他教师的版本；发布可将已批准版本用于题库；管理仅维护结构与授权，不自动获得看题权限。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "访问权限弹窗顶部常驻所有职责解释。",
+      "problem": "五种角色同段解释，新增某一授权时仍需扫描全部；管理不含看题是关键反直觉边界。",
+      "actions": [
+        "progressive",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "按实际职责授权。",
+        "roleHelp": {
+          "Viewer": "可浏览题目和查看统计。",
+          "Author": "可浏览、新建题目并编辑草稿。",
+          "Reviewer": "可浏览并审核其他教师的版本。",
+          "Publisher": "可浏览、发布已批准版本并停止选用题目。",
+          "Manager": "仅管理结构与授权，不自动获得看题权限。"
+        },
+        "detailsLabel": "查看各职责权限"
+      },
+      "targetCondition": "每条授权选择某职责后显示该项说明；完整职责对照可展开。",
+      "placement": "职责选择器邻近；完整权限对照",
+      "dependency": "frontend",
+      "boundaries": [
+        "roleHelp展示键须对照实际preset枚举映射，示例键不是新增契约。",
+        "管理职责不自动获得阅读权限必须选中时可见。",
+        "职责解释须按presetActions完整说明；不能遗漏发布职责同时包含的停止选用权限。"
+      ],
+      "acceptance": [
+        "每种预设职责帮助与服务端权限一致；不因删说明扩大权限。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R15",
+      "page": "题库：历史授权保护",
+      "role": "题库管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+          "line": 128,
+          "endLine": 128,
+          "text": "以下历史组合授权由服务端原样保留。可继续调整其他人员与普通题库组的预设职责；本次更新不会删改这些组合权限。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+          "line": 129,
+          "endLine": 129,
+          "text": "创建者和当前操作者的直接授权也由服务端保留。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+          "line": 131,
+          "endLine": 131,
+          "text": "当前授权读取失败，不能据空列表覆盖原授权",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "存在自定义组合、受保护用户或授权读取失败时，分别显示相关提示。",
+      "problem": "历史权限块解释过长；读取失败分支是强保护必须直接可见。",
+      "actions": [
+        "merge",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "这些历史或受保护授权只读保留，本次保存不会修改。",
+        "failure": "授权读取失败，暂不能保存。请重新读取。"
+      },
+      "targetCondition": "只读保留区头部解释一次；读取失败单独显示错误及重试。",
+      "placement": "只读授权区和保存阻断提示",
+      "dependency": "frontend",
+      "boundaries": [
+        "只读用户与自定义组合仍完整列出具体权限。",
+        "失败时继续禁用保存，不能只去掉警告。"
+      ],
+      "acceptance": [
+        "旧授权不被空列表覆盖；保护对象和具体授权可核对。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R16",
+      "page": "题库：分类规则维护",
+      "role": "题库管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankClassificationFields.tsx",
+          "line": 14,
+          "endLine": 14,
+          "text": "填写显示名称和内容类型，系统生成内部编号。已有编号保持不变，以便历史题目继续使用。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankClassificationFields.tsx",
+          "line": 31,
+          "endLine": 31,
+          "text": "每行填写一个知识点或分类名称。不再使用的条目请关闭“允许新题目选择”，历史题目中的记录会保留。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankDialogs.tsx",
+          "line": 161,
+          "endLine": 161,
+          "text": "先建立知识点或分类目录，再按需要添加补充字段。内部编号自动生成，无需填写。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "分类弹窗概览、字段区、目录区均有说明。",
+      "problem": "自动内部编号被两次介绍；‘每行’像批量文本输入，当前实际是逐条表单。",
+      "actions": [
+        "delete",
+        "shorten",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "添加知识点、分类目录或补充字段。",
+        "fields": "设置字段名称和内容类型。",
+        "terms": "停用条目后，新题不能再选，历史题目记录保留。"
+      },
+      "targetCondition": "概览一句；字段区不讲内部编号；停用影响靠近允许新题目选择开关。",
+      "placement": "分类维护分区说明",
+      "dependency": "frontend",
+      "boundaries": [
+        "已有题目继续用原规则的版本说明保留。",
+        "不改历史稳定ID生成与保留逻辑。"
+      ],
+      "acceptance": [
+        "三个区域不重复内部编号；停用时可理解影响仅限新选用。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R17",
+      "page": "题库：特殊评分方式已有折叠",
+      "role": "题库教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/ContentFields.tsx",
+          "line": 70,
+          "endLine": 70,
+          "text": "特殊作答与评分方式（通常无需修改）",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/ContentFields.tsx",
+          "line": 74,
+          "endLine": 74,
+          "text": "选择题型时自动带出常用方式；仅在实际作答形式不同时调整。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "特殊设置已放在原生details中，默认收起。",
+      "problem": "现有做法有效；辅助说明解释何时修改，有实际决策价值。",
+      "actions": [
+        "keep"
+      ],
+      "replacement": {
+        "summary": "保留现有折叠和说明。"
+      },
+      "targetCondition": "保持默认收起；用户展开后再看到说明。",
+      "placement": "特殊作答与评分方式折叠内",
+      "dependency": "copy",
+      "boundaries": [
+        "此项是保留决策，不计作需要删除的缺陷。"
+      ],
+      "acceptance": [
+        "键盘可展开；普通题目无需阅读此段便可继续。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R18",
+      "page": "题库：引用图片授权",
+      "role": "导题教师、题库教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankReferenceImages.tsx",
+          "line": 13,
+          "endLine": 13,
+          "text": "图片随本题版本保留，原材料授权撤回或图片不可用时将停止使用。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankReferenceImages.tsx",
+          "line": 13,
+          "endLine": 13,
+          "text": "导入将把这份图片清单的使用权绑定到目标草稿版本；原材料撤回后仍会停止使用。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "存在reference materials时，按已有版本与导入预览分支。",
+      "problem": "绑定清单的实现表述较绕，授权撤回的后果必须保留。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "本版本引用这些图片；原材料授权撤回或图片不可用时，将停止使用。",
+        "importing": "导入后本草稿将引用这些图片；原材料授权撤回后，将停止使用。"
+      },
+      "targetCondition": "仍仅有引用图片时显示，保留导入前后语态。",
+      "placement": "图片组上方的一次说明",
+      "dependency": "copy",
+      "boundaries": [
+        "不得改成‘永久保存’或‘离线可用’；不承诺授权撤回后图片仍可访问。"
+      ],
+      "acceptance": [
+        "撤回和不可用状态不被弱化成普通加载延迟。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R19",
+      "page": "题库：结构化答案帮助",
+      "role": "出题教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+          "line": 254,
+          "endLine": 254,
+          "text": "按题型选择或逐项填写；系统会保留结构化答案。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "标准答案字段下始终显示。",
+      "problem": "后半句只描述数据表示方式，对如何填写没有帮助；控件本身已按题型变化。",
+      "actions": [
+        "delete",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "删除‘系统会保留结构化答案’。",
+        "details": "仅当某题型有额外填写规则时，在该控件旁说明；规则须来自实际控件约束。"
+      },
+      "targetCondition": "普通输入不显示泛化帮助；特殊多空或判断控件按需显示真实规则。",
+      "placement": "具体答案控件邻近",
+      "dependency": "frontend",
+      "boundaries": [
+        "不删除结构化数据；未知历史答案内容继续可见，不能因文案清理丢字段。"
+      ],
+      "acceptance": [
+        "选择/判断/填空/简答四种题型可完成填写；输入规则不靠猜。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R20",
+      "page": "题库：误差单位",
+      "role": "数值题出题教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+          "line": 262,
+          "endLine": 262,
+          "text": "例如答案为10，填写0.1可接受9.9至10.1。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+          "line": 265,
+          "endLine": 265,
+          "text": "0.01表示允许1%的误差。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "绝对误差和相对误差字段当前无题型条件常驻。",
+      "problem": "非数值题无关；相对误差小数与百分比换算是必要单位解释，不能直接删。",
+      "actions": [
+        "progressive",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "误差设置（数值答案）",
+        "absolute": "如标准答案为10，误差0.1可接受9.9～10.1。",
+        "relative": "填写小数，例如0.01表示1%。"
+      },
+      "targetCondition": "按assessment_archetype === numeric_expression判断数值判分适用性，不按一般题型或答案外观判断。误差设置可展开；任何已有误差值均自动展示，并可清除。",
+      "placement": "误差字段及其单位帮助",
+      "dependency": "frontend",
+      "boundaries": [
+        "保持比例入参语义，不能只把label改百分比。",
+        "若要统一百分比需另做输入/输出换算与接口验证，本项不含。",
+        "非numeric_expression的历史误差须能查看和清除，否则发布校验仍会拒绝。不得只隐藏字段而保留用户无法发现的值。"
+      ],
+      "acceptance": [
+        "0.01提交仍为0.01；已有误差不被折叠隐藏到无法发现。",
+        "相同question_type下，数值判分方式可编辑误差，其他判分方式若有旧值会展示清除入口；未清除时不谎报可发布。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R21",
+      "page": "题库：选用模板",
+      "role": "题库教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+          "line": 279,
+          "endLine": 279,
+          "text": "保存时复制评分点。模板后续更新不会更改本题。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/ScoringEditor.tsx",
+          "line": 295,
+          "endLine": 295,
+          "text": "选用模板将以该版本的评分点替换当前评分点；分值需一致。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "模板字段extra常驻，选中模板后再出现第二个info。",
+      "problem": "同一动作的替换、时机、冻结后果分散两处，必须一起读才理解。",
+      "actions": [
+        "merge",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "保存时用此模板替换本题评分细则（评分点、扣分规则和样例答案）；满分须一致。模板后续更新不影响本题。"
+      },
+      "targetCondition": "未选模板不显示替换警告；选中后在保存动作前只显示一次完整后果。",
+      "placement": "已选模板与保存评分标准之间",
+      "dependency": "frontend",
+      "boundaries": [
+        "不得写成选择即已替换；实际复制在保存时发生。",
+        "模板版本和满分不一致的拒绝规则保留。",
+        "服务端复制整个Rubric，包含评分点、扣分规则、样例答案；不替换当前题目的标准答案和解析。"
+      ],
+      "acceptance": [
+        "选中、清除、保存、满分不一致四种场景文案与效果一致。",
+        "本题已有扣分规则和样例答案时，保存前能理解它们也将由模板替换；标准答案与解析不因此被替换。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R22",
+      "page": "题库：版本比较重复标签",
+      "role": "处理冲突的教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+          "line": 120,
+          "endLine": 120,
+          "text": "有差异，请核对",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+          "line": 51,
+          "endLine": 51,
+          "text": "未配置",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+          "line": 116,
+          "endLine": 116,
+          "text": "本地修改",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/question-bank/QuestionBankConflictComparison.tsx",
+          "line": 116,
+          "endLine": 116,
+          "text": "最新版本",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "18个固定比较项及评分点逐项渲染，行内反复标两列名称和相同/差异。",
+      "problem": "同列标题与空值重复；真正差异被大量相同项淹没。",
+      "actions": [
+        "merge",
+        "progressive"
+      ],
+      "replacement": {
+        "summary": "{差异项数}项不同",
+        "same": "查看{相同项数}项相同内容",
+        "columns": "本地修改 / 最新版本"
+      },
+      "targetCondition": "列标题集中在表头；默认展示实际有差异项，相同内容可展开。",
+      "placement": "版本比较弹窗",
+      "dependency": "frontend",
+      "boundaries": [
+        "须先修复F01语义空值假差异，不能直接依赖当前fingerprint计数。",
+        "明确删除非空内容仍是差异；未知历史字段和全部原内容可展开核对。"
+      ],
+      "acceptance": [
+        "同一版本未修改时不虚报差异；真删除仍提示；展开可见完整内容。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R23",
+      "page": "全局：空状态默认复述",
+      "role": "各角色",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/PageState.tsx",
+          "line": 30,
+          "endLine": 30,
+          "text": "暂无数据",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/PageState.tsx",
+          "line": 30,
+          "endLine": 30,
+          "text": "暂时还没有相关记录。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "EmptyState未传自定义description时，标题和默认说明同时出现。",
+      "problem": "默认说明重复标题，没有说明下一步；所有使用点都多出一行。",
+      "actions": [
+        "delete",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "默认只展示空状态标题。",
+        "details": "调用方仅在有真实下一步或查询范围需要解释时传description。"
+      },
+      "targetCondition": "默认description改为可选，仅显式非空值时渲染。",
+      "placement": "共享空状态组件",
+      "dependency": "frontend",
+      "boundaries": [
+        "逐个核对调用方：筛选无结果、首次无数据、权限不足、加载失败不能混用。"
+      ],
+      "acceptance": [
+        "默认空状态不出现两句同义句；已有业务说明仍显示。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R24",
+      "page": "助手：底部业务提醒",
+      "role": "学校AI助手用户",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/school-assistant/AccountConversationView.tsx",
+          "line": 53,
+          "endLine": 53,
+          "text": "业务回答以本轮来源为依据；正式操作请进入业务页面核实。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "对话输入区下方常驻。",
+      "problem": "有必要提示正式操作边界，但‘以本轮来源为依据’像实现说明且非业务对话也出现。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "业务信息请核对来源，正式操作请进入对应页面。"
+      },
+      "targetCondition": "保留一处常驻短提醒；来源缺失、失败或范围不足须另在该条回复旁显示具体问题。",
+      "placement": "输入区下方；具体异常靠近回复",
+      "dependency": "copy",
+      "boundaries": [
+        "不写成所有答案均已核验；不承诺助手已替用户发布或改分。"
+      ],
+      "acceptance": [
+        "撰写普通文本仍不过度警告；业务回答保留来源入口和操作边界。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R25",
+      "page": "助手：文件上传规则",
+      "role": "学校AI助手用户",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/school-assistant/AccountConversationView.tsx",
+          "line": 49,
+          "endLine": 49,
+          "text": "可直接粘贴 PNG、JPEG 图片，每张不超过 3 MB；支持 PDF 和文本，共最多 3 个附件",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "目前规则仅在上传按钮Tooltip中。",
+      "problem": "长规则隐藏在悬浮层，触屏用户和键盘用户可能到失败才知道限制。",
+      "actions": [
+        "shorten",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "支持图片、PDF和文本，最多3个附件。",
+        "images": "PNG/JPEG图片每张不超过3MB，可直接粘贴。"
+      },
+      "targetCondition": "选择附件入口或有附件时显示短规则；具体类型/大小失败在附件旁说明，不只靠Tooltip。",
+      "placement": "附件选择区和逐附件错误",
+      "dependency": "frontend",
+      "boundaries": [
+        "3MB仅原文明确约束图片，不可擅自扩大为所有文件统一上限。",
+        "Tooltip若保留需键盘可触发、可关闭并在指针移入时保持。"
+      ],
+      "acceptance": [
+        "触屏不悬停也能知道数量限制；超图片大小有准确提示。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R26",
+      "page": "助手：数据来源和查询进度",
+      "role": "学校AI助手用户",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/school-assistant/ConversationEvidenceView.tsx",
+          "line": 31,
+          "endLine": 31,
+          "text": "本轮数据来源（",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/school-assistant/ConversationEvidenceView.tsx",
+          "line": 36,
+          "endLine": 36,
+          "text": "工作区版本 ",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/school-assistant/ConversationEvidenceView.tsx",
+          "line": 37,
+          "endLine": 37,
+          "text": "生效发布版本 v",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "每条有业务证据的回复；来源详情当前已默认折叠，查询工具状态逐项可见。",
+      "problem": "来源折叠已经合理；可减少成功查询过程残留，但失败/部分可用不能被收进折叠后失去风险提示。",
+      "actions": [
+        "keep",
+        "contextual",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "数据来源（{数量}）",
+        "success": "已查询{数量}项资料",
+        "failure": "部分资料未能读取，请核对回答范围。"
+      },
+      "targetCondition": "运行中保留真实进度；全部完成后汇总成功项，异常摘要常显；版本与时间仍留来源详情。",
+      "placement": "回复旁状态及现有来源折叠",
+      "dependency": "frontend",
+      "boundaries": [
+        "不把unavailable/forbidden/partial改成无记录。",
+        "工作区修订和已发布版本含义不同，不合并数值。"
+      ],
+      "acceptance": [
+        "成功查询不铺满过程标签；任一失败或部分可用时摘要提醒可见；详情可追溯。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R27",
+      "page": "助手：每条网页引用",
+      "role": "阅读助手回复的用户",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/mathMarkdownRenderers.tsx",
+          "line": 46,
+          "endLine": 46,
+          "text": "复制参考地址",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/mathMarkdownRenderers.tsx",
+          "line": 45,
+          "endLine": 45,
+          "text": "复制失败，请手动复制下方地址",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "模型正文有有效HTTP(S)地址时，引用文字、按钮、完整URL一起渲染。",
+      "problem": "多来源回复出现重复按钮与长地址，打断阅读。",
+      "actions": [
+        "progressive",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "参考资料（{数量}）",
+        "entry": "{引用文字} · {域名}",
+        "action": "复制地址",
+        "failure": "复制失败，请手动复制此地址。"
+      },
+      "targetCondition": "正文保留短来源标记；资料区展示引用文字和域名，完整地址可展开及复制。",
+      "placement": "每条回复的参考资料区",
+      "dependency": "frontend",
+      "boundaries": [
+        "保持模型正文不能直接导航或发起外部访问的限制。",
+        "复制失败时地址必须仍可选择；不要把未经核验的引用文字承诺为真实网页标题。"
+      ],
+      "acceptance": [
+        "多个链接可区分；键盘可查看和复制；恶意协议不变成可执行链接。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-R28",
+      "page": "全局：待确认操作与原内容",
+      "role": "发生网络中断的阅卷/教务用户",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+          "line": 169,
+          "endLine": 169,
+          "text": "原请求可继续提交",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+          "line": 176,
+          "endLine": 176,
+          "text": "按以上原内容继续提交",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+          "line": 175,
+          "endLine": 175,
+          "text": "原提交内容：",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/PendingBusinessCommands.tsx",
+          "line": 169,
+          "endLine": 169,
+          "text": "服务器未接收，请返回业务页面重新提交",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "存在当前账号的待确认命令；点击查询回执后按状态显示。",
+      "problem": "‘原请求’偏技术，但原分数/原因/版本是继续提交的决策依据，不能折叠成一个盲点按钮。",
+      "actions": [
+        "shorten",
+        "keep",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "提交结果待确认",
+        "processing": "正在处理，请稍后查看结果。",
+        "takeover": "可以继续提交此前内容。",
+        "action": "按原内容继续提交",
+        "notAccepted": "此次提交未被接收，请返回原页面重新提交。"
+      },
+      "targetCondition": "沿用真实回执状态；只有takeover_ready且含payload时显示续交按钮，原内容始终紧邻。",
+      "placement": "待确认操作摘要、原内容与对应按钮",
+      "dependency": "copy",
+      "boundaries": [
+        "本条不增加自动回执查询；原有手动查询行为保持。",
+        "不得把unknown写成失败，也不得自动重新提交或隐藏冻结分数/原因/版本。"
+      ],
+      "acceptance": [
+        "处理中、未知、未接收、拒绝、可续交、已完成六类结果可区分；继续提交前可核对原内容。"
+      ],
+      "report": "navigation-question-bank.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E01",
+      "title": "删除复述字段名称的创建页导语",
+      "page": "新建考试",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 183,
+          "text": "名称用于考试列表；类型和年级决定后续可选范围。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 205,
+          "text": "选择本场考试包含的学科，并设置每科满分和考试时间。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "创建表单始终显示基本信息和添加学科两段说明。",
+      "problem": "字段标签与占位符已经表达任务；第一段只说明系统内部用途，第二段重复下方操作。",
+      "actions": [
+        "delete"
+      ],
+      "replacement": {
+        "summary": "",
+        "details": "删除这两段导语；保留字段标签、示例名称、必填及错误说明。"
+      },
+      "targetCondition": "沿用当前表单；两处不再显示导语。",
+      "placement": "基本信息、添加学科标题下方",
+      "dependency": "copy",
+      "boundaries": [
+        "不能删除学校/年级、班级范围和必填校验。"
+      ],
+      "risks": [
+        "删除导语后若连字段标签、示例或校验一起去掉，首次创建会失去输入依据。"
+      ],
+      "acceptance": [
+        "空表单仍能知道哪些字段必填。",
+        "名称示例、年级选项和科目分值/分钟单位仍可见。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E02",
+      "title": "创建方式小字说明实际先后顺序",
+      "page": "新建考试",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 22,
+          "text": "上传完整试卷识别题目与分值，无需预填题目数量",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 23,
+          "text": "先建立考试与科目，稍后继续完善资料和设置",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 24,
+          "text": "套用学校或系统方案中的科目和试卷结构",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "三种创建方式卡片同时显示。",
+      "problem": "第一项容易被理解为当前表单可立即上传；第二项偏泛；三项应只解释选择差异。",
+      "actions": [
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "按创建方式显示一句区别。",
+        "variants": {
+          "materials": "创建后上传试卷，识别题目与分值。",
+          "quick": "先创建考试，稍后补充资料。",
+          "template": "带入方案中的科目和试卷结构。"
+        }
+      },
+      "targetCondition": "继续使用现有创建模式和后续跳转，不改变提交行为。",
+      "placement": "各创建方式标题下",
+      "dependency": "copy",
+      "boundaries": [
+        "不能承诺当前页已支持上传、已自动确认识别结果或已带入方案不存在的设置。"
+      ],
+      "risks": [
+        "小字若仍暗示当前页可以上传，会与创建后才进入资料页的真实顺序冲突。"
+      ],
+      "acceptance": [
+        "选择资料创建后仍先创建再到资料页。",
+        "三种模式小字不使用“已识别”“一键完成”。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E03",
+      "title": "合并反复出现的创建后上传预告",
+      "page": "新建考试",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 228,
+          "text": "考试创建后，按学科上传试卷、答案、解析和评分标准；系统会逐科识别，不混合资料。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 229,
+          "text": "创建后上传试卷与答案",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 229,
+          "text": "先在第 2 题添加学科，资料入口会按学科生成。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 251,
+          "text": "创建后进入工作区按学科继续上传资料",
+          "kind": "excerpt"
+        }
+      ],
+      "currentCondition": "第4节、每科只读行及提交区同时预告后续上传。",
+      "problem": "同一个下一步被重复说明；没有学科时“第2题”还把步骤叫题。",
+      "actions": [
+        "merge",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "创建后按学科上传试卷、答案或评分资料。",
+        "details": "只在第4节说明一次；删除逐科相同小字和页脚重复句。无学科时显示“请先添加学科。”"
+      },
+      "targetCondition": "资料预告区域保留，学科与分值数据不改。",
+      "placement": "第4节标题下一行；不再逐科重复",
+      "dependency": "copy",
+      "boundaries": [
+        "不承诺多科资料自动跨科分配；实际仍需选对学科。",
+        "本项不把只读预告改成上传控件。"
+      ],
+      "risks": [
+        "合并时若删除按学科处理的范围，教师可能把不同学科资料混传；不能顺带重做创建流程。"
+      ],
+      "acceptance": [
+        "多科考试只出现一次上传预告。",
+        "未选科目时不出现“第2题”。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E04",
+      "title": "保留阅卷组织与逐题策略的边界",
+      "page": "新建考试→阅卷与发布设置",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 245,
+          "text": "此处选择阅卷组织方式。每道题实际采用的评分策略会在考试准备时核对并冻结，AI 建议不能代替教师确认。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "仅展开第5节显示；当前已有渐进披露。",
+      "problem": "需要解释考试级组织方式与单题策略不同，但可缩成两句；不应删除模型建议与最终分数的区别。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "这里设置阅卷组织方式；各题判分策略在准备确认时冻结。AI 建议须由教师确认。"
+      },
+      "targetCondition": "保持只在展开第5节后出现。",
+      "placement": "阅卷方式选择下方",
+      "dependency": "copy",
+      "boundaries": [
+        "不得把AI建议写成自动最终成绩。",
+        "不将此句扩到全页常驻；不改现有双评/盲评选项。"
+      ],
+      "risks": [
+        "过度压缩会把组织方式和实际逐题策略混为一谈，或暗示AI直接确认最终成绩。"
+      ],
+      "acceptance": [
+        "收起高级设置时不额外出现解释。",
+        "选AI建议时仍明确教师确认。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E05",
+      "title": "考试方案抽屉保留带入范围",
+      "page": "新建考试→选择考试方案",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/exams/create/CreateExamComposer.tsx",
+          "line": 261,
+          "text": "方案会带入科目、满分、时长和已有试卷结构，选中后仍可调整。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "方案抽屉打开时显示。",
+      "problem": "范围具体、有助于选择；只需压缩措辞，不删除可调整说明。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "带入科目、满分、时长和已有题目结构，选择后可调整。"
+      },
+      "targetCondition": "与现有抽屉一致。",
+      "placement": "抽屉标题下",
+      "dependency": "copy",
+      "boundaries": [
+        "只列实际带入字段，不能写成会带入学生名单、答案或正式评分配置。"
+      ],
+      "risks": [
+        "若写成带入全部设置，会让教师误以为学生、答案和细则已完整继承。"
+      ],
+      "acceptance": [
+        "选择方案后科目/满分/时长/结构确实对应；其他资料不作承诺。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E06",
+      "title": "学生范围说明按冻结前后分别表达",
+      "page": "考试准备→学生范围",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 136,
+          "text": "选择参加本场考试的班级；确认准备完成时，系统将按当前在读学籍生成最终冻结名单。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 137,
+          "text": "学生范围和名单同步已关闭。若发现漏选或名单错误，请联系考试负责人核对处理方案，不能通过修改学校学籍直接改变本场冻结名单。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "顶部导语常驻；非draft/configured时额外显示冻结Alert。",
+      "problem": "普通导语与冻结告警说明同一名单边界；应按状态给任务和影响。",
+      "actions": [
+        "shorten",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "选择参考班级；确认准备时，按当前在读学籍冻结本场名单。",
+        "variants": {
+          "frozen": "名单已冻结，不能再改范围或同步。名单有误请联系考试负责人；修改学籍不会改变本场名单。"
+        }
+      },
+      "targetCondition": "草稿/配置中显示普通导语；后续阶段只显示冻结说明。",
+      "placement": "范围页标题下保留一条状态说明",
+      "dependency": "frontend",
+      "boundaries": [
+        "需要基于现有exam.status分支呈现；不能仅凭canManage判断冻结。",
+        "保留最终名册来源及学籍变化不影响冻结事实。"
+      ],
+      "risks": [
+        "若把只读身份和冻结状态混成一条，教师可能误以为管理员可通过修改学籍改动正式名单。"
+      ],
+      "acceptance": [
+        "草稿态可看到冻结时机。",
+        "已ready/collecting时不显示“选择班级”式可编辑暗示。",
+        "只读权限与已冻结两个原因不混写。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E07",
+      "title": "准备页成功与只读提示去重",
+      "page": "考试准备→确认准备完成",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 195,
+          "text": "准备已确认，当前配置有匹配的确认记录；准备配置只读。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 196,
+          "text": "当前没有匹配的准备确认记录，请联系考试负责人核对。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 197,
+          "text": "考试已进入答卷导入阶段，后续处理请前往答卷导入工作区。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 332,
+          "text": "确认后冻结学生名单、题目、答案、评分配置和答题区域，之后不能直接修改。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "页头冻结导语始终显示；confirmed/frozen/collecting说明按状态可能并列。",
+      "problem": "成功后仍读“确认后”导语，加上成功和已导入阶段说明，使当前状态与下一步分散。",
+      "actions": [
+        "merge",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "用一条当前状态说明替代多段。",
+        "variants": {
+          "editable": "确认后将冻结学生名单、题目、答案、评分配置和答题区域，不能直接修改。",
+          "confirmed": "准备已确认，名单与配置已冻结。",
+          "collectingConfirmed": "正在导入答卷；准备配置已冻结。",
+          "frozenWithoutCurrentConfirmation": "当前阶段只读，准备确认记录与当前配置不匹配；请联系考试负责人核对。"
+        }
+      },
+      "targetCondition": "沿用confirmed与editable实际判断组合；collecting且confirmed只显示collectingConfirmed；没有匹配记录优先保留异常说明。",
+      "placement": "标题下单一状态行；下一步继续用现有“前往答卷导入”按钮",
+      "dependency": "frontend",
+      "boundaries": [
+        "不能用历史confirmed时间掩盖当前配置不匹配。",
+        "状态说明不替代最终冻结弹窗的知情确认。"
+      ],
+      "risks": [
+        "成功与当前配置不匹配是不同状态，错误合并会掩盖需要负责人核对的准备记录问题。"
+      ],
+      "acceptance": [
+        "ready、collecting、后续阶段记录不匹配三种状态各有准确一句。",
+        "无匹配确认不能显示“已确认”。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E08",
+      "title": "最终冻结确认保持完整后果",
+      "page": "考试准备→最终确认弹窗",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 384,
+          "text": "确认后将冻结本场考试准备",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 384,
+          "text": "系统将按当前在读学籍生成最终学生名单，并冻结题目、答案、评分方案、评分细则和答题区域，之后不能直接修改。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 385,
+          "text": "确认准备完成后，可前往答卷导入；阅卷与成绩请从各自入口进入。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "用户点击确认准备完成、最新readiness预读通过后打开。",
+      "problem": "不可逆的业务约束必须当面保留；后一句导航教程与决策无关。",
+      "actions": [
+        "keep",
+        "shorten",
+        "delete"
+      ],
+      "replacement": {
+        "summary": "确认后将冻结本场准备",
+        "details": "按当前在读学籍生成最终学生名单，并冻结题目、答案、评分方案、评分细则和答题区域；之后不能直接修改。",
+        "remove": "删除弹窗中的阅卷/成绩入口导航说明。"
+      },
+      "targetCondition": "仅原最终确认弹窗；异常提示仍独立可见。",
+      "placement": "警告标题与正文，紧邻确认按钮",
+      "dependency": "copy",
+      "boundaries": [
+        "保留冻结对象、名单生成来源、不能直接修改及明确确认按钮。",
+        "不把准备检查通过写成已确认；不删最新版本核对。"
+      ],
+      "risks": [
+        "删除冻结对象或不可直接修改的后果，会削弱最终确认的知情基础。"
+      ],
+      "acceptance": [
+        "弹窗仍清楚说明名单及所有配置冻结。",
+        "回退修改和网络失败提示不变。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E09",
+      "title": "非阻断提醒保留“可继续”语义",
+      "page": "考试准备→提醒项",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+          "line": 352,
+          "text": "提醒项，不阻断开考",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "readiness.advisories存在时，每条Alert标题附小字。",
+      "problem": "该标注能帮助区分必须处理与可稍后核对，应该保留；“开考”与准备任务不一致。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "仅提醒，不影响准备确认"
+      },
+      "targetCondition": "仍仅显示于advisories；不应用于checks和评分blocking_reason。",
+      "placement": "提醒标题旁状态标签",
+      "dependency": "copy",
+      "boundaries": [
+        "必须以服务端非阻断advisory分类为依据，不能把阻断项换成非阻断。"
+      ],
+      "risks": [
+        "“仅提醒”若误用到阻断项，会让教师低估准备检查失败。"
+      ],
+      "acceptance": [
+        "同时含失败检查和advisory时，只有advisory出现此标签。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E10",
+      "title": "粘贴资料帮助分层，保留真实发送范围",
+      "page": "考试资料→粘贴文本 / 文件上传",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx",
+          "line": 19,
+          "text": "行内公式使用 ",
+          "kind": "excerpt"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx",
+          "line": 21,
+          "text": "结构清晰的 Markdown 在本地解析",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportTextModal.tsx",
+          "line": 22,
+          "text": "题号、【答案】和【解析/详解】明确时不会调用大模型。只有结构无法可靠确定时，才发送本次新增资料的相关原文片段进入模型解析；若本次上传的是图片，则发送本次新增图片页面。不会重发已识别的历史资料。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "粘贴弹窗输入区上方始终显示格式说明与长Alert。",
+      "problem": "格式帮助可以按需查看；模型发送与历史资料范围须在提交前直接可见。图片发送说明不能只从文本弹窗删除，实际上传入口目前没有对应告知，需同步新增明确落点。",
+      "actions": [
+        "progressive",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "粘贴题目、答案或解析，至少20个字符；建议保留题号。",
+        "modelNotice": "结构清晰的文本在本地解析；无法可靠确定结构时，相关新增原文会送入模型解析。不会重发已识别的历史资料。",
+        "uploadNotice": "需要模型解析时，发送本次新增资料的相关原文片段；图片资料发送本次新增图片页面。不会重发已识别的历史资料。",
+        "helpTitle": "公式格式帮助",
+        "formatHelp": "行内公式用 $x^2$，独立公式用 $$...$$；也支持 \\(...\\) 与 \\[...\\]。",
+        "scopeNote": "uploadNotice 须新增在 PaperImportWorkspace 文件上传入口；当前该入口没有单独的模型发送说明。这是前端配套要求，不能只删除文本弹窗里的图片说明。"
+      },
+      "targetCondition": "粘贴弹窗在输入前常显summary与modelNotice；仅公式格式帮助可展开。文件上传入口在选择或拖入文件前常显uploadNotice，不要求用户先打开粘贴弹窗。两处改动一并交付，不新增模型解析或重发能力。",
+      "placement": "PaperImportTextModal.tsx：现有Tabs之前，输入任务行及模型发送说明常显，公式帮助可展开；PaperImportWorkspace.tsx：现有上传标题与Upload.Dragger之间新增uploadNotice。",
+      "dependency": "frontend",
+      "boundaries": [
+        "文案依据当前文本解析分支；不可概括为所有文本都本地处理或全程数据不出校。",
+        "新增披露控件须键盘可达，必要的数据发送范围仍可在提交前查看。",
+        "模型发送告知本身不折叠；只有公式格式帮助按需展开。",
+        "删除文本弹窗中的图片分支前，须先在实际文件上传入口落实图片发送范围。"
+      ],
+      "risks": [
+        "披露太深会掩盖模型发送；笼统说本地解析会误导用户的数据范围判断。"
+      ],
+      "acceptance": [
+        "未展开公式帮助时，点击“添加并识别”前仍能看到文本进入模型的条件、发送范围与不重发历史资料。",
+        "只使用文件选择或拖入图片、不打开粘贴弹窗时，上传前仍能看到新增图片页面可能送入模型的告知。",
+        "模型发送说明不使用“所有文本均本地处理”“全程不出校”或“历史资料已全部重发”。",
+        "公式格式帮助可用键盘展开；原字符上限、20字符门槛及提交禁用规则保持不变。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E11",
+      "title": "上传提示只说明资料与格式",
+      "page": "考试资料→文件上传",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+          "line": 56,
+          "text": "上传试题、答案、解析或评分标准，系统会自动识别并匹配到题目。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+          "line": 63,
+          "text": "PDF、Word、图片、Markdown、TXT；可一次添加多份资料",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "资料页上传区常驻。",
+      "problem": "自动匹配被写成确定成功；文件类型未区分Word仅docx。",
+      "actions": [
+        "shorten",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "添加试题、答案、解析或评分标准，识别后请核对匹配结果。",
+        "details": "PDF、Word（.docx）、图片、Markdown、TXT；支持多文件。"
+      },
+      "targetCondition": "沿用上传区，不改变文件accept列表。",
+      "placement": "标题下说明任务，拖拽框内只放格式",
+      "dependency": "copy",
+      "boundaries": [
+        "不承诺每份资料都能可靠匹配，也不扩大支持到.doc。",
+        "图片的具体限制仍以accept和后端校验为准。"
+      ],
+      "risks": [
+        "扩大Word格式或承诺可靠自动匹配，会造成上传失败或未核对结果被误用。"
+      ],
+      "acceptance": [
+        "错误资料仍提示需核对。",
+        "选择器仍只允许原有类型。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E12",
+      "title": "连接失败时突出旧状态与原任务恢复",
+      "page": "考试资料→结果读取异常",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+          "line": 71,
+          "text": "当前任务结果尚未确认",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperImportWorkspace.tsx",
+          "line": 71,
+          "text": "${connectionError}。下方显示最后一次读取的状态，请重新检查原任务获取最新结果。",
+          "kind": "template"
+        }
+      ],
+      "currentCondition": "config.importConnectionError传入时显示；结果区仍保留上次读取内容。",
+      "problem": "这不是普通网络小字；需要保留“旧状态”以免教师按过期进度决策，但可缩短并让原任务动作更明确。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "结果状态未更新",
+        "details": "下方是上次读取的结果。请重新检查原任务；${connectionError}",
+        "button": "重新检查原任务"
+      },
+      "targetCondition": "仅读取异常时显示；动态错误继续经现有安全用户消息处理。",
+      "placement": "结果区上方原Alert",
+      "dependency": "copy",
+      "boundaries": [
+        "不能写成识别失败或要求重新上传。",
+        "回读失败不抹掉已成功识别/登记事实。"
+      ],
+      "risks": [
+        "把读取失败说成处理失败，会诱导重新上传、重做资料结构，增加重复操作。"
+      ],
+      "acceptance": [
+        "写入成功但回读失败时，提示只引导原任务重读。",
+        "刷新成功后Alert消失。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E13",
+      "title": "资料登记说明保留与正式配置的区别",
+      "page": "考试资料→登记状态",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx",
+          "line": 43,
+          "text": "请先预览并采用本轮完整试卷的题目结构，再确认考试资料。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx",
+          "line": 44,
+          "text": "没有完整识别的试题资料来源，请补充或重新识别试卷；答案、解析资料不能代替试卷。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx",
+          "line": 45,
+          "text": "试卷题目资料已登记；题目分值、答案和评分配置仍以小题与分值中的正式配置为准。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx",
+          "line": 46,
+          "text": "请核对试卷资料完整后确认；答案、分值和评分配置在小题与分值中继续核对。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "描述已在“查看确认详情”details内；未完成且blockedReason时原因直显。",
+      "problem": "已合理折叠，不能再次建议隐藏；优化状态措辞并保留资料登记不等于正式评分配置。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "按当前状态显示。",
+        "variants": {
+          "unconfirmed": "先核对完整试卷并采用本轮题目结构。",
+          "invalid": "请补充或重新识别完整试卷；答案和解析不能代替试卷。",
+          "completed": "资料已登记；答案、分值和评分配置以“小题与分值”页为准。",
+          "pending": "确认试卷资料完整后，继续核对小题与分值。"
+        }
+      },
+      "targetCondition": "保留当前details与阻断原因直显规则。",
+      "placement": "原状态详情；无额外常驻说明",
+      "dependency": "copy",
+      "boundaries": [
+        "不能把登记写成全部题目/答案/细则已确认。",
+        "完整试卷要求不可删除。"
+      ],
+      "risks": [
+        "把登记成功写成全部准备完成，会让教师误以为答案和正式评分已冻结。"
+      ],
+      "acceptance": [
+        "completed不显示“全部准备完成”。",
+        "只有答案资料时仍明确缺试卷。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E14",
+      "title": "结构预览摘要与最终警告各承担一个任务",
+      "page": "考试资料→确认题目结构",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+          "line": 137,
+          "text": "核对完整试卷及题目范围后确认，系统会登记试卷来源并采用题目结构。小题分值和评分配置在下一步核对。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+          "line": 167,
+          "text": "请先确认上传了完整试卷",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+          "line": 168,
+          "text": "仅上传部分页面、答案或解析时，不能据此减少题目。未识别到可靠分值的小题将显示待确认，不能直接开始阅卷。已有答案和解析会保留。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "未采用本轮结构时展示摘要Alert；打开确认弹窗后展示详细警告。",
+      "problem": "摘要负责告诉下一步，弹窗负责说明删改范围与结果边界；两处重复长过程说明可精简。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "确认完整试卷与题目范围；分值和评分配置在下一步核对。",
+        "modalTitle": "请核对完整试卷",
+        "modalDetails": "部分页面、答案或解析不能作为减少题目的依据。缺少可靠分值的小题仍需核对，不能直接阅卷；已有答案和解析保留。"
+      },
+      "targetCondition": "保留两层当前条件：外部摘要与最终结构确认弹窗。",
+      "placement": "当前Alert位置",
+      "dependency": "copy",
+      "boundaries": [
+        "结构减少题目风险、缺分值不能阅卷、保留已有内容三个边界均必须出现。",
+        "保留变更表、原总分/识别总分与用户勾选；不自动采用。"
+      ],
+      "risks": [
+        "删除部分试卷和缺分值说明，会让用户按不完整材料误确认范围或准备程度。"
+      ],
+      "acceptance": [
+        "仅传答案时不会诱导删原题。",
+        "缺分值时仍知道需下一步补齐。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E15",
+      "title": "保留结构与完整资料的明确勾选",
+      "page": "考试资料→结构/资料最终确认",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperStructurePanel.tsx",
+          "line": 188,
+          "text": "我已核对资料完整，以上题目结构与实际试卷一致",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx",
+          "line": 196,
+          "text": "我已核对试卷资料完整，题目范围与实际试卷一致",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/paper-import/PaperMaterialsConfirmation.tsx",
+          "line": 193,
+          "text": "请核对这些试卷资料完整，题目分值在下一步设置。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "结构采用弹窗、采用后补登记弹窗各有自身checkbox；不会同时挂载为同一步双确认。",
+      "problem": "勾选代表具体知情事实，不是泛泛免责声明，必须保留；补登记顶部再次要求核对可去掉重复句。",
+      "actions": [
+        "keep",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "保留两个业务节点各自的明确勾选。",
+        "variants": {
+          "structureAdoption": "我已核对完整试卷，以上题目结构与实际试卷一致。",
+          "materialsRegistration": "我已核对完整试卷，题目范围与实际试卷一致。"
+        },
+        "details": "小题分值在下一步核对。"
+      },
+      "targetCondition": "沿用原弹窗各自流程：PaperStructurePanel 的结构采用checkbox使用structureAdoption；PaperMaterialsConfirmation 的资料补登记checkbox使用materialsRegistration。保持原勾选校验与代次重置，不统一成只核对题目范围。",
+      "placement": "原两个弹窗各自的checkbox；小题分值提示保留在资料列表前，不新增第二次勾选。",
+      "dependency": "copy",
+      "boundaries": [
+        "不合并或删除结构采用与登记两个不同事实。",
+        "勾选未完成时按钮继续禁用；切代次仍重置勾选。",
+        "结构采用必须明确核对题目结构，不能只核对题目数量或范围。"
+      ],
+      "risks": [
+        "把两个业务节点的勾选一并删除，可能让旧预览或未核对结构被采用。"
+      ],
+      "acceptance": [
+        "结构变更或换资料后不得保留旧checkbox。",
+        "登记恢复不能重复采用结构。",
+        "结构采用预览含题型或题目增减时，勾选明确指向“以上题目结构一致”；补登记仍只确认完整资料与题目范围。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E16",
+      "title": "答题卡空页只说上传与核对任务",
+      "page": "答题卡设置→无来源",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx",
+          "line": 48,
+          "text": "上传后自动匹配模板、识别并对应题目，发现错误可直接修改。空白卡和已填写答题卡均可辅助识别，收录学校库需核对空白来源。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx",
+          "line": 55,
+          "text": "支持 PDF，或一次选择多张 PNG、JPG 图片；系统自动识别页序与答题区域。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "无答题卡来源且可编辑时显示标题说明+上传框说明。",
+      "problem": "两段都说自动识别，学校库规则过早；正常流程已自动匹配、建稿、识别，不能再增加手工建稿指引。",
+      "actions": [
+        "merge",
+        "shorten",
+        "progressive"
+      ],
+      "replacement": {
+        "summary": "上传答题卡，核对识别出的题目与答题区域。",
+        "details": "支持PDF或多张PNG、JPG图片。",
+        "reuseHelp": "空白卡和已填写答题卡均可辅助识别；收录学校模板库前须使用不含个人信息的空白来源。"
+      },
+      "targetCondition": "普通上传只显示summary+格式；复用帮助并入现有“学校模板库”details或上传帮助。",
+      "placement": "空页标题下与拖拽框；不新增常驻Alert",
+      "dependency": "frontend",
+      "boundaries": [
+        "不承诺每次识别成功或无需核对。",
+        "将收录隐私规则移到实际学校库入口仍须在提交前明确可见。"
+      ],
+      "risks": [
+        "把学校库隐私要求移走后若不在入库前恢复可见，可能收录含学生身份的底图。"
+      ],
+      "acceptance": [
+        "未知模板来源继续沿用自动建稿/识别链。",
+        "学校库收录仍能看到空白来源约束。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E17",
+      "title": "等待页序时去掉模型术语",
+      "page": "答题卡设置→多页上传中",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateSourceToolbarView.tsx",
+          "line": 35,
+          "text": "多模态识别页序…",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "sourceUpload.uploading且phase为ordering时显示。",
+      "problem": "用户只需知道正在排列页面，无需理解模型类别。",
+      "actions": [
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "正在识别页序…"
+      },
+      "targetCondition": "完全沿用ordering条件和进度条。",
+      "placement": "原上传状态行",
+      "dependency": "copy",
+      "boundaries": [
+        "不能写“已排序完成”或给出没有根据的剩余时间。"
+      ],
+      "risks": [
+        "用“已完成”替代进行中状态会让用户提前操作后续步骤。"
+      ],
+      "acceptance": [
+        "ordering时仍读到进行中状态；其他上传阶段不误显示页序识别。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E18",
+      "title": "学校库收录成功后只保留下一步边界",
+      "page": "答题卡设置→学校模板库",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx",
+          "line": 34,
+          "text": "选择学校已收录的答题卡，或将当前空白答题卡收录供下次复用。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx",
+          "line": 45,
+          "text": "学校模板库已保存。本场考试是否启用仍需在“确认答题卡设置”中完成。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "第一句在已折叠模板库展开后显示；第二句只在published成功时显示。",
+      "problem": "库复用说明已在合适层级，不扩大折叠；成功文案必须区分入库与本场启用。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "复用学校模板，或收录当前空白答题卡供以后使用。",
+        "success": "已收录到学校库；本场仍需“确认答题卡设置”。"
+      },
+      "targetCondition": "沿用原展开/成功条件；错误和冲突仍直显。",
+      "placement": "现有模板库说明与成功Alert",
+      "dependency": "copy",
+      "boundaries": [
+        "入库不能被写为本场已启用。",
+        "不把已折叠区域误认为默认常驻。"
+      ],
+      "risks": [
+        "把已入库等同于已用于本场，可能导致准备检查仍缺绑定且用户找不到原因。"
+      ],
+      "acceptance": [
+        "收录成功但未绑定本场时仍明确下一步。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E19",
+      "title": "模板收录保留空白来源和逐页范围核对",
+      "page": "答题卡设置→收录学校模板库",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx",
+          "line": 50,
+          "text": "收录会保存并锁定当前版本；已收录布局供学校后续考试复用。本场启用另行确认。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx",
+          "line": 51,
+          "text": "确认底图为空白答题卡，且无学生姓名、学号、条码或手写答案等个人信息",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx",
+          "line": 52,
+          "text": "已逐页核对题号和完整作答区域，区域适用于同版式答题卡",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/library/TemplateLibraryPanel.tsx",
+          "line": 53,
+          "text": "已填写的学生答题卡可辅助识别；请换成经过核对的空白来源后再收录学校模板库。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "用户打开入库核对弹窗；两项勾选同时满足才能收录。",
+      "problem": "有明确隐私和跨考试复用风险，不能删除两项勾选；末尾Alert重复空白来源要求，可合并成必要动作说明。",
+      "actions": [
+        "keep",
+        "shorten",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "收录会保存并锁定当前版本，供学校同版式考试复用；本场启用另行确认。",
+        "blankCheckbox": "底图为空白答题卡，不含学生姓名、学号、条码、手写答案等个人信息。",
+        "layoutCheckbox": "已逐页核对题号与完整作答区域，适用于同版式答题卡。",
+        "details": "如使用已填写的答题卡，请先更换为核对过的空白来源。"
+      },
+      "targetCondition": "原弹窗，勾选与禁用规则不动；末尾动作说明用普通辅助文本替换重复info Alert。",
+      "placement": "原checkbox与其后的动作说明",
+      "dependency": "copy",
+      "boundaries": [
+        "不能从“无个人信息”删掉条码/手写答案，不能把所有空白印刷码等同于学生码。",
+        "不要新增系统已自动清除个人信息的承诺。"
+      ],
+      "risks": [
+        "过分压缩空白要求会漏掉条码与手写答案，或暗示系统已自动去除个人信息。"
+      ],
+      "acceptance": [
+        "已填写卡仍不能仅凭勾选推断合格，需按原流程更换来源。",
+        "两项checkbox和版本切换后的重置保持。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E20",
+      "title": "模板版本、锁定和本场使用说明分支准确",
+      "page": "答题卡设置→本场考试模板",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateBindingView.tsx",
+          "line": 31,
+          "text": "确认将保存并锁定当前版本；修改已锁定区域须克隆新版本。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateBindingView.tsx",
+          "line": 53,
+          "text": "当前版本尚未明确用于本场考试。区域检查与本场模板使用设置分别确认。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/templateViewRules.ts",
+          "line": 71,
+          "text": "首张答卷自动识别为 v${selectedTemplate.version_no}，仍需人工核对并确认。",
+          "kind": "template"
+        }
+      ],
+      "currentCondition": "草稿时显示锁定后果；未绑定时显示未用于本场；bound_auto时说明仍需人工确认。",
+      "problem": "边界有必要，当前用“明确”“使用设置”表达偏抽象；改成用户可判定状态，仍保留版本。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "确认后保存并锁定当前版本；修改区域需另建版本。",
+        "variants": {
+          "unbound": "此版本尚未用于本场考试，请确认答题卡设置。",
+          "boundAuto": "已自动识别为第${selectedTemplate.version_no}版，请核对后确认用于本场。"
+        }
+      },
+      "targetCondition": "沿用draft、无examBinding、bound_auto分支；不改变usageConfirmed判定。",
+      "placement": "版本行和确认按钮附近",
+      "dependency": "copy",
+      "boundaries": [
+        "不能把自动匹配、锁定和本场已用视作同一事实。",
+        "保留hash/版本不匹配及冻结禁用原因。"
+      ],
+      "risks": [
+        "把锁定、自动匹配和本场使用合并为一个成功状态，会误导模板版本选择。"
+      ],
+      "acceptance": [
+        "自动识别版本仍显示未最终确认。",
+        "锁定但未绑定不显示本场已用。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E21",
+      "title": "精确坐标说明保留参照系，已折叠不再隐藏",
+      "page": "答题卡设置→高级精确坐标",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P3",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateRegionSettingsView.tsx",
+          "line": 13,
+          "text": "优先在画布上框选。精确输入以整页为参照：左、上表示距页边的位置；宽、高表示占整页的百分比。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateRegionSettingsView.tsx",
+          "line": 76,
+          "text": "选项框以本题区域为参照，数值为占本题区域的百分比；每个框只覆盖一个填涂点。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "选中区域后，用户展开“精确坐标”或“单个选项”details才显示。",
+      "problem": "参照系不同会导致错框，是必须留的小字；只做短句，不以删除技术信息换取少字。",
+      "actions": [
+        "keep",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "以整页为参照，单位为百分比；左、上是距页边的位置，宽、高是区域尺寸。",
+        "optionHelp": "选项坐标以本题区域为参照，单位为百分比；每框只覆盖一个填涂点。"
+      },
+      "targetCondition": "完全保留原高级details展开条件。",
+      "placement": "对应坐标输入前",
+      "dependency": "copy",
+      "boundaries": [
+        "整页比例与题内比例不可合并成同一个“坐标”说法。",
+        "不隐藏键盘和数字调整替代操作。"
+      ],
+      "risks": [
+        "删除参照系说明可能把题内比例当成整页比例，导致选项框错位。"
+      ],
+      "acceptance": [
+        "教师能区分两个参照系；输入单位仍为%。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E22",
+      "title": "OMR校准只压缩措辞，不省资格条件",
+      "page": "答题卡设置→选择题识别与校准",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/OMRCalibrationView.tsx",
+          "line": 85,
+          "text": "校准已生效：整套模板中识别把握不低于 98% 且符合自动确认条件的结果可自动确认，其余仍转人工复核。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/OMRCalibrationView.tsx",
+          "line": 94,
+          "text": "请只依据答题图片盲标；提交后才显示机器结果，且标注不可修改。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/OMRCalibrationView.tsx",
+          "line": 173,
+          "text": "该方式用同一版空白答题卡作对照，排除印刷文字干扰。校准通过前，识别结果仅供参考，不会计入成绩。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "识别方式帮助仅差分模式显示；校准状态说明按session.status显示。",
+      "problem": "长句可压缩，但98%不是准确率保证，自动确认还有其他资格；盲标不可改是用户必须提前知道的规则。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "用同版空白卡对照识别；校准通过前，结果仅供参考，不计入成绩。",
+        "variants": {
+          "approved": "校准已生效：识别把握≥98%且满足自动确认条件的结果可自动确认，其余转人工复核。",
+          "draft": "只按答题图片标注；提交后才显示机器结果，标注不能修改。"
+        }
+      },
+      "targetCondition": "保留原差分模式与session状态条件，不将校准说明移到普通上传页。",
+      "placement": "原模式帮助、校准抽屉状态Alert",
+      "dependency": "copy",
+      "boundaries": [
+        "保留“且满足条件”，不能写成98%准确率或全部自动评分。",
+        "不删样本覆盖、独立审批等后台门禁；若阈值配置变化须用实际配置值同步。"
+      ],
+      "risks": [
+        "省掉98%之外的自动资格或把识别把握写成准确率，会夸大自动确认能力。"
+      ],
+      "acceptance": [
+        "未approved不能显示支持自动确认。",
+        "已批准文案不保证所有样本自动通过。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E23",
+      "title": "打印说明保留唯一条码和补打后果",
+      "page": "答题卡设置→打印包",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/StudentPrintingView.tsx",
+          "line": 107,
+          "text": "按班级生成带学生身份条码的受控 PDF。系统不会把姓名或学号印在答题卡上。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/StudentPrintingView.tsx",
+          "line": 221,
+          "text": "每名学生、每一页都有唯一条码。重复复印或打乱页面会进入人工核验；补打必须使用作废与重印流程。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/StudentPrintingView.tsx",
+          "line": 260,
+          "text": "已排除缺考学生和已有有效答题卡的学生，避免重复签发。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/answer-sheet-template/view/StudentPrintingView.tsx",
+          "line": 265,
+          "text": "系统会同时作废旧条码并生成该学生的新卡。已扫描的旧卡会进入核验，请收回纸质旧卡。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "打印面板、签发弹窗和补打弹窗在各自原条件显示。",
+      "problem": "这些说明解释受控签发的后果，有必要；“签发/受控”可用更直接的语言，不删关键限制。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "按班级生成带学生身份条码的PDF，不打印姓名或学号。",
+        "issueHelp": "每人每页的条码唯一，请勿重复复印或打乱页面；补打请使用“作废旧卡并补打”。",
+        "scopeHelp": "仅为应考且没有有效答题卡的学生生成。",
+        "reprintHelp": "确认后旧条码作废并生成新卡；请收回旧卡。已扫描的旧卡将进入核验。"
+      },
+      "targetCondition": "保持原打印入口、签发确认和补打确认各自可见；旧卡影响留在确认前。",
+      "placement": "原说明段与警告正文",
+      "dependency": "copy",
+      "boundaries": [
+        "不承诺条码不包含身份关联，不把“不打印姓名学号”写成匿名不可识别。",
+        "不删旧卡作废、唯一性和已有有效卡排除范围。"
+      ],
+      "risks": [
+        "省略唯一条码和作废规则会导致重复复印、旧卡混扫或错误再次签发。"
+      ],
+      "acceptance": [
+        "普通签发与补打两种任务各看到相关限制。",
+        "下载失败不提示重新签发，继续沿用原恢复入口。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E24",
+      "title": "导入页序规则用短提示加完整规则",
+      "page": "答卷导入→批次文件",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureBatchPanels.tsx",
+          "line": 249,
+          "text": "请将同一学生的全部页面连续排列，再排列下一名学生",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureBatchPanels.tsx",
+          "line": 249,
+          "text": "按选择的文件顺序、文件内页序，每 N 页组成一份学生答卷。1 页用于单面，2 页用于正反面，支持 1–20 页。PDF/TIFF 按解码页数计算；每次选择独立分组，缺页不会进入后续处理，也不会跨两次选择凑页。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "每个批次工作区常驻完整大段Alert。",
+      "problem": "页序和一次选完整答卷是任务前提，不能全折叠；格式计算细节适合按需查看。",
+      "actions": [
+        "shorten",
+        "progressive"
+      ],
+      "replacement": {
+        "summary": "每人${pagesPerStudent ?? '待选择'}页，按学生连续排列；每次须选择完整答卷。",
+        "details": "按文件选择顺序及文件内页序，每N页组成一份答卷。支持每人1–20页；PDF/TIFF按解码页数计算。每次选择独立分组，不能跨两次选择补页；缺页须处理后才能继续。",
+        "helpTitle": "查看页序与分组规则"
+      },
+      "targetCondition": "summary始终在选择文件前可见；详情经可访问的披露控件查看。",
+      "placement": "每人页数与导入按钮下方",
+      "dependency": "frontend",
+      "boundaries": [
+        "一次完整选择和不能跨次补页至少在可见短提示/详情分别明确；不得改分组隔离。",
+        "pagesPerStudent未知时不能默认显示1页已确认。"
+      ],
+      "risks": [
+        "把关键页序规则全部折叠，会让用户在选择文件前看不到一次完整分组要求。"
+      ],
+      "acceptance": [
+        "双面、三页、多PDF/TIFF和缺页各场景能找到对应规则。",
+        "未选页数仍保持原禁用与提示。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E25",
+      "title": "材料替代/排除/取消用各自准确后果",
+      "page": "答卷导入→材料处理确认",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+          "line": 198,
+          "text": "取消后，该批次的全部材料和未完成上传不再计入本场核对。请确认没有需保留的材料；对应学生仍需补传或核实缺考。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+          "line": 198,
+          "text": "本次选择的全部文件及其答卷将退出有效输入，历史记录保留。",
+          "kind": "excerpt"
+        },
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+          "line": 198,
+          "text": "已产生评分的材料无法在这里移除。",
+          "kind": "excerpt"
+        },
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+          "line": 198,
+          "text": "请先核实学生情况并填写原因，系统会保留本次名册调整记录。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "editor状态决定取消批次、替代材料、不计入或学生考勤处理，当前在一条嵌套模板中。",
+      "problem": "说明长且分支集中，不能用同一“移除文件”概括批次/整组范围；应分支保持完整事实并缩短。",
+      "actions": [
+        "contextual",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "按原操作类型呈现。",
+        "variants": {
+          "cancelBatch": "取消后，本批全部材料和未完成上传不再计入核对。请确认没有需保留的材料；对应学生仍需补传或核实缺考。",
+          "replace": "请选择每人页数，并一次上传原选择对应的全部完整答卷。新文件登记成功后，原选择的全部文件及答卷退出有效输入，历史保留；新答卷处理成功才算导入完成。已有评分的材料不能在此移除。",
+          "exclude": "原选择的全部文件及答卷将不再计入，历史保留；对应学生仍需补传或核实缺考。已有评分的材料不能在此移除。",
+          "attendance": "请核实学生情况并填写原因，本次名册调整会留有记录。"
+        }
+      },
+      "targetCondition": "完全沿用editor对应分支及已有校验；replace分支在继续选择文件之前明确每人页数和原整组答卷范围，不改变登记或处理时点，无需新后端状态。",
+      "placement": "原确认弹窗、原因输入上方；replace说明置于“继续选择完整答卷”按钮之前。",
+      "dependency": "copy",
+      "boundaries": [
+        "替代成功前不能说原资料已退出；必须保留登记成功和处理成功两个时点。",
+        "本次选择全部材料不简写成当前单个文件；取消批次影响全批。",
+        "同一次选择包含多名学生时，替代须覆盖该原选择对应的全部完整答卷；不能只补其中一个失败文件或一名学生。",
+        "保留每人页数选择，不把替代上传默认为单页或沿用未确认页数。"
+      ],
+      "risks": [
+        "把整组/全批影响简写成单个文件、或提前说替代完成，会导致保留材料范围误判。"
+      ],
+      "acceptance": [
+        "替代登记成功而后续处理失败时文案仍准确。",
+        "有评分材料仍明确无法在此移除。",
+        "取消批次与标记缺考不能混用。",
+        "原一次选择包含多名学生或多文件时，替代前明确要求重新选择对应的全部完整答卷，并设置每人页数。",
+        "取消替代选择或新文件尚未登记成功时，不显示原材料已经退出或新答卷已经导入完成。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-E26",
+      "title": "结束导入保留人数与阶段变化，去掉同页重复解释",
+      "page": "答卷导入→学生核对与结束确认",
+      "role": "学校考试管理员；有对应权限的教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+          "line": 79,
+          "text": "应收 ${summary.required_count} 人，已成功导入 ${summary.ready_count} 人，缺考 ${summary.absent_count} 人。结束时系统会再次核对全部学生与材料，并封存已处理批次。",
+          "kind": "template"
+        },
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+          "line": 79,
+          "text": "考试将进入阅卷阶段。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+          "line": 79,
+          "text": "本次补传不会改变当前阅卷阶段。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/capture/CaptureCollectionPanel.tsx",
+          "line": 185,
+          "text": "应收学生答卷已齐全，正常处理通过的页面无需逐页人工确认。结束时由系统再次核对。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "可结束导入且无finishReasons时页面说明；点击结束时弹窗有实时人数和阶段后果。",
+      "problem": "人数、封存与阶段后果是必要确认；页面常驻句可只解释无需逐页确认，避免与弹窗重复流程。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "正常通过的页面无需逐页确认；仍请核对材料问题。",
+        "dialog": "应收${summary.required_count}人，成功导入${summary.ready_count}人，缺考${summary.absent_count}人。结束时再次核对学生与材料，并封存已处理批次。",
+        "variants": {
+          "collecting": "确认后进入阅卷。",
+          "supplement": "本次补传结束，当前阅卷阶段保持不变。"
+        }
+      },
+      "targetCondition": "保持summary.can_complete、权限、本地busy及revision校验；只有能结束时显示该正常短提示。",
+      "placement": "学生核对区短说明；最终人数与后果仍在原弹窗",
+      "dependency": "copy",
+      "boundaries": [
+        "不能将ready_count与文件/页面数混写。",
+        "补传不得声称回退或新进入阅卷；不删除最终核对和封存。"
+      ],
+      "risks": [
+        "把页面人数与材料数混算，或把补传写成进入阅卷，会误导最终结束确认。"
+      ],
+      "acceptance": [
+        "普通collecting与grading/reviewing补传分别看到正确后果。",
+        "缺卷/未决材料仍由原blockers阻断。",
+        "响应丢失继续原命令恢复，不重复结束。"
+      ],
+      "report": "exam-preparation.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G01",
+      "page": "阅卷设置 / 本场大题 AI 方案",
+      "role": "学校管理员及只读教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 122,
+          "text": "学校管理员在阅卷前确认。仅用于解答、计算、证明等大题；选择题和填空题不使用。只有一个独立模型也可确认单模型方案。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 22,
+          "text": "仅用于解答、计算、证明等大题；选择题和填空题不使用本方案。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "进入 AI 方案设置且已有已保存方案时，页面导语和 GradingAIPlanDescription 同时解释适用题型；后者还复用于启动评分摘要。",
+      "problem": "设置页同屏重复解释适用范围；但启动摘要的范围提示仍独立必要。",
+      "actions": [
+        "merge",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "仅用于解答、计算、证明题；选择题和填空题不使用。可确认单模型方案。",
+        "details": "设置页仅在顶部保留此句；已保存方案卡内省略范围句。启动评分弹窗独立展示范围句。"
+      },
+      "targetCondition": "设置页显示一次；启动评分弹窗保留自己的适用范围。",
+      "placement": "方案设置标题下；启动摘要首行。",
+      "dependency": "frontend",
+      "boundaries": [
+        "不扩大支持题型；不把单模型误写成必须三模型。",
+        "学校管理员确认权限和确认动作保持不变。"
+      ],
+      "acceptance": [
+        "已有方案时，设置页适用范围只出现一次。",
+        "从启动评分弹窗进入时仍能看到不适用于选择题、填空题。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G02",
+      "page": "阅卷设置 / 分差规则",
+      "role": "学校管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 142,
+          "text": "两个允许分差均须手动填写，可填 0 分；三评后允许分差不得小于前两模型允许分差。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 142,
+          "text": "当前不足两个独立评分模型，可直接确认单模型方案，不需要填写分差。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 143,
+          "text": "A、B 差值不超过第一项时取均分，超过才启用第三评分；没有第三模型则转教师处理。按未取整分比较，三评后 C 与 A、B 均分的差值超过第二项，或三者极差超过第二项的两倍，才作为分差异常转教师处理。作答不清或模型调用失败，也不直接计零分。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 144,
+          "text": "若设置 2 分，差 2 分不调用第三模型，超过 2 分才调用。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "规则 details 默认 open；无论当前选一个、两个或三个独立模型，后两段都出现。",
+      "problem": "单模型用户仍读三评算法；双模型用户读不存在的第三评分分支。长算法与已保存方案说明重复。",
+      "actions": [
+        "contextual",
+        "progressive",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "按所选模型显示当前规则。",
+        "single": "当前为单模型，无需填写分差。建议分仍需教师确认。",
+        "dual": "两个分差均必填，可填 0；第二项不得小于第一项。A、B 分差在第一项以内时取均分，超过则转教师处理。",
+        "triple": "两个分差均必填，可填 0；第二项不得小于第一项。A、B 分差超过第一项时才调用第三模型。",
+        "details": "“计算规则”展开内容：按未取整分比较；相差恰好等于第一项时不触发第三评分。三评按 A 25%、B 25%、C 50% 汇总，最后向上取整且不超过满分。C 与 A、B 均分的差值超过第二项，或三者极差超过第二项的两倍时，转教师处理。作答不清或模型调用失败，不直接计零分。仅展示当前所选模式适用的计算段落；已保存方案与编辑中方案分别标明，不能混用。"
+      },
+      "targetCondition": "跟随编辑中的独立模型数量、第三模型是否存在切换；计算规则保留可展开入口。",
+      "placement": "字段旁保留必填与大小约束；算法放“计算规则”。",
+      "dependency": "frontend",
+      "boundaries": [
+        "当前代码在存在两个独立模型时仍要求两个分差，不能仅靠隐藏第二字段取消后端/保存约束。",
+        "保留严格超过、未取整比较、权重、最终取整和不计零分的业务边界。",
+        "不改变已启动任务冻结方案。"
+      ],
+      "acceptance": [
+        "单模型页面不出现当前不适用的三评解释。",
+        "双模型仍能填写并校验现有两项必填值。",
+        "阈值为 0 或 2 时，展开规则明确等于阈值不会触发。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G03",
+      "page": "阅卷设置 / 图片能力检测",
+      "role": "学校管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 135,
+          "text": "点击检测可能产生一次模型调用；已有同配置版本的检测可复用。保存方案不会自动调用模型。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "选定模型的检测列表下方固定出现。",
+      "problem": "费用/调用提醒必要，原句可缩短但不能完全删掉或移到远离检测按钮的位置。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "检测可能调用模型；同配置的检测结果可复用。保存方案不会调用模型。"
+      },
+      "targetCondition": "有至少一个已选模型和检测按钮时显示。",
+      "placement": "检测按钮组下方一行。",
+      "dependency": "copy",
+      "boundaries": [
+        "不承诺检测免费、不承诺每次都缓存命中。",
+        "失败原因仍在对应模型旁。"
+      ],
+      "acceptance": [
+        "点击检测前可读到可能调用模型。",
+        "保存方案按钮旁不出现“保存会自动检测”的误导。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G04",
+      "page": "阅卷设置 / 只读方案",
+      "role": "无配置权限的教师、管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 128,
+          "text": "请学校管理员确认本场大题 AI 评分方案。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 28,
+          "text": "需要学校管理员先确认本场大题方案；只有一个模型也可确认单模型。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "can_configure=false 时显示第一句；无论 confirmed_at 是否存在都要求确认。未确认摘要另有相同要求。",
+      "problem": "已确认的只读方案也催促联系管理员确认，混淆权限限制与尚未完成设置。",
+      "actions": [
+        "contextual",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "按已确认状态显示不同提示。",
+        "confirmed": "方案已确认。如需修改，请联系学校管理员。",
+        "unconfirmed": "方案尚未确认，请联系学校管理员。"
+      },
+      "targetCondition": "仅 can_configure=false；按 confirmed_at 分支，且与摘要中的未确认提示合并为一次。",
+      "placement": "只读方案底部。",
+      "dependency": "frontend",
+      "boundaries": [
+        "不把只读角色变成配置角色。",
+        "未确认时仍清楚阻止把方案视为可用。"
+      ],
+      "acceptance": [
+        "已确认+只读时不再出现“请确认”。",
+        "未确认+只读仍提示具体联系角色。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G05",
+      "page": "阅卷设置 / 保存方案按钮",
+      "role": "学校管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 148,
+          "text": "保存用于之后启动的评分，已启动任务使用其冻结方案。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/GradingAIPlanSettings.tsx",
+          "line": 145,
+          "text": "建议分仍需按本场既有规则由教师确认。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "可配置分支中，确认按钮上下各有一行。",
+      "problem": "两项均是必要作用范围提示；“冻结方案”偏实现术语，能直接说明对已有任务的影响。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "新方案仅用于之后启动的评分；已启动任务仍用原方案。",
+        "details": "AI 建议分仍需教师确认。"
+      },
+      "targetCondition": "可保存方案时保留第一句，存在 AI 建议分时保留第二句。",
+      "placement": "确认按钮下方保留作用范围；建议分说明贴近方案摘要。",
+      "dependency": "copy",
+      "boundaries": [
+        "不暗示保存会重跑已有任务。",
+        "不暗示确认 AI 方案等同确认最终分。"
+      ],
+      "acceptance": [
+        "修改并保存方案前，能判断已有任务不会切换。",
+        "单模型、多模型均保留人工确认最终分的边界。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G06",
+      "page": "启动评分 / 评分路线确认",
+      "role": "成绩管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/ExamScoringDialogs.tsx",
+          "line": 23,
+          "text": "系统将自动完成作答识别、规则判分和 AI 建议生成。AI 建议由教师确认最终分数，处理过程中可关闭页面。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "scoring.plan 存在的评分路线确认弹窗；下方同时列规则、AI、人工数量和单题路线。",
+      "problem": "导语概括成全自动完成，和实际人工路线或冻结策略不可读后降人工路线的摘要不一致。",
+      "actions": [
+        "shorten",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "将按以下路线处理作答。AI 建议分仍需教师确认；启动后可关闭页面。"
+      },
+      "targetCondition": "路线确认弹窗中固定显示；人工路线数量、题目注记和降级警告继续按原条件展示。",
+      "placement": "弹窗导语，紧邻路线汇总。",
+      "dependency": "copy",
+      "boundaries": [
+        "保留启动确认，不承诺所有步骤成功。",
+        "不删除冻结策略不可读时按人工路线处理的警告。",
+        "“启动后”指启动请求成功后，不表示仅打开弹窗就已经启动。"
+      ],
+      "acceptance": [
+        "包含人工题的计划不会被描述为全自动完成。",
+        "启动失败时仍留在弹窗并看到错误，不显示已启动成功文案。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G07",
+      "page": "阅卷台 / 最终分录入",
+      "role": "阅卷教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/ScoreEditor.tsx",
+          "line": 73,
+          "text": "填分后自动提交；标记的试卷只保存草稿，取消标记后恢复自动提交。关闭快捷键后仍可使用页面按钮。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/ScoreEditor.tsx",
+          "line": 73,
+          "text": "录分：G 聚焦并选中最终分，可输入 0、多位数或小数；1–9 直接打分（不超过满分）。A 采纳建议分。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/hooks/useAutomaticGradeSubmission.ts",
+          "line": 33,
+          "text": "if (!ready || marked || !edit || edit.taskId !== taskId) return;",
+          "kind": "excerpt"
+        }
+      ],
+      "currentCondition": "自动交分后果目前位于默认折叠的“键盘帮助”内；该行为也作用于鼠标输入。",
+      "problem": "正式交分的后果不应依赖用户打开快捷键说明；同时不能把正在保存或离线写成已保存。",
+      "actions": [
+        "progressive",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "将交分后果移到最终分输入框旁。",
+        "normal": "本次修改有效得分后将自动提交；如需稍后核对，请先标记答卷。",
+        "bookmarked": "已标记：当前仅编辑草稿；取消标记后恢复自动提交。",
+        "details": "键盘帮助仅保留：G 定位最终分；1–9 录分；A 采纳建议分。F 标记；R 退回重评；Z 撤销未提交修改；+/- 缩放。输入框内不会触发单字符操作。"
+      },
+      "targetCondition": "仅当前本人可编辑任务显示；根据已确认的标记状态切换。只读记录不出现自动交分提示。",
+      "placement": "最终分输入框下方常驻一行；操作键说明仍折叠。",
+      "dependency": "frontend",
+      "boundaries": [
+        "需要向 ScoreEditor 传入真实标记状态，不根据点击意图提前切换提示。",
+        "现有网络、合法分值、任务可编辑、保存状态等提交条件保持不变。",
+        "仅本次打开后主动修改得分或采分点才产生交分意图；恢复历史草稿、仅查看或只改说明不触发交分。",
+        "不增加自动保存能力；不把当前输入描述成已持久化。",
+        "不能把盲评的 AI 或第二意见内容加入帮助。"
+      ],
+      "acceptance": [
+        "未展开键盘帮助也能理解录分会交分。",
+        "恢复历史草稿但未主动编辑时不自动交分；本次修改有效得分后，仅满足原提交条件时自动交分。",
+        "标记失败时仍显示原状态，不宣称已暂停交分。",
+        "离线、保存失败和只读任务继续显示各自状态。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G08",
+      "page": "阅卷台 / 草稿版本冲突",
+      "role": "阅卷教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/WorkbenchHeader.tsx",
+          "line": 53,
+          "text": "草稿已被其他会话更新",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/WorkbenchHeader.tsx",
+          "line": 53,
+          "text": "为防止覆盖其他会话的修改，自动保存已暂停。可逐项选择本页或服务端内容，再按服务端新版本重新保存。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "draftSaveStatus=conflict，显示冲突 Alert 及“逐项合并 / 放弃本页修改”。",
+      "problem": "暂停保存和选择后果必要；并发版本实现的长描述可让位于当前选择。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "草稿已被其他会话更新",
+        "details": "自动保存已暂停。请逐项选择要保留的内容，或放弃本页修改。"
+      },
+      "targetCondition": "保持现有冲突条件，解决前持续显示。",
+      "placement": "原冲突 Alert；保持两个解决入口。",
+      "dependency": "copy",
+      "boundaries": [
+        "不能删除“自动保存已暂停”。",
+        "不暗示选择合并前已有新内容保存成功。",
+        "不删弃本页修改的后果确认。"
+      ],
+      "acceptance": [
+        "两处同时编辑造成冲突时，用户能知道当前未继续保存。",
+        "完成合并或放弃后，提示随实际保存状态解除。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G09",
+      "page": "阅卷任务抽屉 / 筛选范围",
+      "role": "阅卷教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/grading/workbench/components/TaskRail.tsx",
+          "line": 174,
+          "text": "考试与题目选项来自已加载的授权任务；也可搜索考试名称。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "任务抽屉底部，紧随已加载/当前显示/全部匹配统计。",
+      "problem": "已加载范围提醒真实必要，但授权细节与搜索功能可缩短；不能删成全量下拉的暗示。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "筛选选项仅含已加载任务；可搜索考试名称。"
+      },
+      "targetCondition": "保留当前显示条件；不根据未核实的全量完成状态自动隐藏。",
+      "placement": "任务计数下方一行。",
+      "dependency": "copy",
+      "boundaries": [
+        "不宣称考试/题目下拉覆盖全部任务。",
+        "不暗示搜索会获得未授权内容。"
+      ],
+      "acceptance": [
+        "仍有后续分页时，用户知道下拉范围有限。",
+        "零匹配时仍可识别为当前筛选结果，而非无任何授权任务。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G10",
+      "page": "阅卷前试评 / 顶部引导",
+      "role": "试评教师、质量管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 250,
+          "text": "用已批准的标准卷练习评分，检查你的给分与参考标准是否一致。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 250,
+          "text": "管理员准备标准卷和通过标准",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 250,
+          "text": "阅卷老师独立评分",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 250,
+          "text": "提交后查看分差，全部完成后判定是否达标",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 44,
+          "text": "独立给标准卷打分，系统会与参考分比较。每份提交后才显示参考分和相差分数。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "抽屉顶部同时展示目的段落、三步列表、资格 Alert 的独立评分说明；教师也看到管理员准备步骤。",
+      "problem": "同一任务连续解释三遍；教师需要知道自己如何开始，以及提交前不能看参考分。",
+      "actions": [
+        "merge",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "独立完成全部样本；每份提交后才显示参考分，完成后判定是否通过。",
+        "admin": "请先配置通过标准，并准备足量的已批准标准卷。"
+      },
+      "targetCondition": "教师显示 summary；canManagePolicy 分支在配置区域显示 admin；已通过状态由资格卡接管，不继续重复入门三步。",
+      "placement": "抽屉标题下只保留一段；管理员准备要求放配置区域。",
+      "dependency": "frontend",
+      "boundaries": [
+        "保留独立评分与提交后才见参考分。",
+        "不能把标准卷准备步骤从管理员配置场景删除。",
+        "不把试评练习分直接当正式任务分。"
+      ],
+      "acceptance": [
+        "教师打开抽屉只读到自己的下一步。",
+        "未提交当前样本时仍不能看到参考分。",
+        "管理员仍能明确样本必须已批准。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G11",
+      "page": "阅卷前试评 / 已获资格提示",
+      "role": "试评教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 43,
+          "text": "本题试评已通过，已具备阅卷资格",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 44,
+          "text": "本题资格有效至 ${new Date(qualification.valid_until).toLocaleDateString()}；标准卷变化后需重新确认资格。",
+          "kind": "template"
+        }
+      ],
+      "currentCondition": "qualification.status=qualified；资格状态 Alert。",
+      "problem": "有效期与标准卷变化后的资格重核属于必要边界，应保留，但标题与描述可少重复本题/资格。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "试评已通过",
+        "details": "有效至 {日期}；标准卷变化后需重新确认资格。"
+      },
+      "targetCondition": "只在资格接口实际返回 qualified 时显示，日期采用原 valid_until。",
+      "placement": "资格状态卡；紧邻开始/领取相关操作。",
+      "dependency": "copy",
+      "boundaries": [
+        "不能把考试范围、题目范围或资格有效期省略成永久通过。",
+        "不承诺标准卷变化后自动恢复资格。"
+      ],
+      "acceptance": [
+        "过期、未通过与通过三种状态不共用成功文案。",
+        "标准卷更新后按真实接口状态显示需重新确认。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G12",
+      "page": "阅卷前试评 / 通过标准字段说明",
+      "role": "质量管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 256,
+          "text": "各项要求需同时达标。题型和满分须与标准卷一致；请先在“标准卷”中准备足量且已批准的样本。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 262,
+          "text": "每份与参考分相差的绝对值，再取平均",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 263,
+          "text": "例如 60%：至少六成样本与参考分相同",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 265,
+          "text": "设置后须有可比较的采分点数据",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 266,
+          "text": "0% 表示不允许出现严重分差",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 267,
+          "text": "达到此分差即计为严重",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "canManagePolicy 的通过标准设置 details 展开后，配置导语与字段 extra 同时显示；它已是高级折叠区域。",
+      "problem": "平均绝对差、零比例和阈值含等号是有效解释，不能因“小字多”全删。仅收短重复示例和准备说明。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "所有已设置条件均须达标。标准卷须已批准，且题型、满分一致。",
+        "fields": {
+          "平均分差上限": "各样本与参考分的绝对差，再取平均。",
+          "分数完全相同的最低比例": "例如 60% 表示至少六成样本同分。",
+          "采分点判断相同的最低比例": "须有可比较的采分点数据。",
+          "严重分差的最高比例": "0% 表示不允许严重分差。",
+          "相差几分算严重分差": "相差达到此值即计入（含等于）。"
+        }
+      },
+      "targetCondition": "保持现有管理员及 details 展开条件；高风险阈值解释仍贴在字段旁。",
+      "placement": "配置区域导语、对应 Form.Item extra。",
+      "dependency": "copy",
+      "boundaries": [
+        "不能将平均绝对差误写成带正负的平均差。",
+        "不能将“达到”改成“超过”。",
+        "不改阈值范围、同时达标规则和样本要求。"
+      ],
+      "acceptance": [
+        "相差恰好等于严重阈值时，文案预期与现有判断一致。",
+        "0% 条件能被理解为一个严重分差都不允许。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G13",
+      "page": "阅卷前试评 / 未读到通过标准",
+      "role": "试评教师、质量管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+          "line": 279,
+          "text": "尚未设置本题通过标准。请管理员展开上方设置并保存，同时在“标准卷”中准备已批准的样本。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "!session 且 !policy 时显示；教师可能没有上方管理设置；加载失败也可能得到空 policy。",
+      "problem": "“尚未设置”把未读到数据当成确定未配置，并引导教师找一个无权限看到的上方区域。",
+      "actions": [
+        "contextual",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "暂未读到本题通过标准，当前不能开始试评。请联系管理员核对。",
+        "admin": "暂未读到本题通过标准。请核对并保存标准，同时准备已批准的标准卷。"
+      },
+      "targetCondition": "教师使用 summary；有配置权限时使用 admin；现有错误 Alert 保留且优先显示真实失败。",
+      "placement": "原开始试评区域，替换指向不存在上方设置的段落。",
+      "dependency": "frontend",
+      "boundaries": [
+        "不宣称服务端必然没有设置。",
+        "不放宽无通过标准时不能开始的门禁。",
+        "不新增“自动重试/已自动读取成功”承诺。"
+      ],
+      "acceptance": [
+        "无管理权限的教师不会被要求展开上方设置。",
+        "读取失败时错误 Alert 和空状态不会互相声称失败/未配置已确定。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G14",
+      "page": "成绩检查 / 检查通过状态",
+      "role": "成绩管理员、质量管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/score-management/components/QualityPanel.tsx",
+          "line": 28,
+          "text": "成绩已发布，质量校验通过",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/QualityPanel.tsx",
+          "line": 29,
+          "text": "成绩已发布并锁定，所有检查项均已处理。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/QualityPanel.tsx",
+          "line": 29,
+          "text": "所有检查项均已通过，可以发布成绩。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+          "line": 122,
+          "text": "发布可行性：${gateLabel(data.gate)}",
+          "kind": "template"
+        },
+        {
+          "file": "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+          "line": 26,
+          "text": "当前没有阻断性质量事件。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+          "line": 222,
+          "text": "const publishedOrLocked = selectedExam?.status === \"published\" || allGradesLocked;",
+          "kind": "excerpt"
+        }
+      ],
+      "currentCondition": "QualityPanel 使用 publishedOrLocked 分支；它代表基础成绩发布或锁定，不等价于学生门户版本已发布。质量总览根据质量事件给出 gateLabel。",
+      "problem": "局部检查成功被写成总发布结论，可能掩盖门户版本门禁、待发布状态或其他检查。",
+      "actions": [
+        "shorten",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "基础成绩检查通过",
+        "locked": "基础成绩已锁定；本项检查通过。门户发布状态见版本区域。",
+        "unlocked": "本项检查通过；请继续核对门户发布检查。",
+        "dashboardTitle": "评分质量检查",
+        "dashboardReady": "未发现阻断性质量事件；其他发布条件以成绩发布检查为准。"
+      },
+      "targetCondition": "仍依据各自已有数据渲染；不通过局部质量状态推导门户 published。",
+      "placement": "QualityPanel 成功状态；质量总览 Alert。",
+      "dependency": "copy",
+      "boundaries": [
+        "不删除实际阻断项或放宽发布门禁。",
+        "基础成绩锁定与门户版本状态保持独立。",
+        "不把没有质量事件描述成所有发布条件已满足。"
+      ],
+      "acceptance": [
+        "基础成绩已锁定但无门户版本时，不出现“成绩已发布”。",
+        "质量事件通过但匿名材料缺失时，用户仍看到发布未就绪。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G15",
+      "page": "成绩工作台 / 发布流程导语",
+      "role": "成绩管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+          "line": 92,
+          "text": "推荐流程：汇总并确认成绩 → 创建门户草稿 → 核对学生视角 → 发布到学生门户。创建草稿不会改变学生所见。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx",
+          "line": 36,
+          "text": "先汇总、确认，再到版本区域预览并发布到学生门户",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "页面发布工作区和基础操作栏同时重复推荐流程。",
+      "problem": "横跨基础成绩与门户版本的流程说明必要，但可只保留一个常驻入口，不应在相邻卡片重复。",
+      "actions": [
+        "merge",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "汇总并确认 → 创建门户草稿 → 核对学生预览 → 发布。创建草稿不会公开给学生。",
+        "actionPanel": "汇总并确认基础成绩。"
+      },
+      "targetCondition": "工作区保留总流程；基础操作栏只解释本栏职责，不自动代办任一步。",
+      "placement": "发布工作区标题下、基础操作栏标题下。",
+      "dependency": "copy",
+      "boundaries": [
+        "保留草稿不公开、预览和正式发布的区分。",
+        "不把学校原查询入口和学生门户合成一个状态。"
+      ],
+      "acceptance": [
+        "正常页面只有一段完整四步流程。",
+        "首次管理员仍能知道创建草稿后还有正式发布。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G16",
+      "page": "成绩工作台 / 发布门禁结果",
+      "role": "成绩管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+          "line": 101,
+          "text": "等待发布门禁数据",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+          "line": 101,
+          "text": "门禁结果读取完成后才能发布版本。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+          "line": 116,
+          "text": "当前发布门禁通过",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+          "line": 116,
+          "text": "创建草稿后，仍会在实际发布时再次核验，避免状态变化后误发布。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+          "line": 109,
+          "text": "{issue.count} 项 · {issue.code}",
+          "kind": "excerpt"
+        }
+      ],
+      "currentCondition": "门禁尚未读取时显示等待 Alert；通过时显示成功 Alert；问题行还直接显示 issue.code。",
+      "problem": "“门禁”偏内部术语，技术错误码和整段再次检查说明增加扫读负担；但异步未就绪与发布时复核不可隐去。",
+      "actions": [
+        "shorten",
+        "progressive",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "发布检查",
+        "loading": "正在读取发布检查，暂不能发布。",
+        "passed": "发布检查通过；正式发布时将再次检查。",
+        "details": "问题标题、阻断/提醒和影响数量常显；内部代码移至“技术详情”，便于排障时复制。"
+      },
+      "targetCondition": "保持现有等待/失败/通过分支；详情折叠不改变阻断判定。",
+      "placement": "门禁区域标题和原状态 Alert；问题行技术详情。",
+      "dependency": "frontend",
+      "boundaries": [
+        "未读取完成时按钮继续不可用。",
+        "再次检查仍在发布动作执行，不能以缓存通过结果跳过。",
+        "错误码可查，不能销毁排障证据。"
+      ],
+      "acceptance": [
+        "等待时不显示“可以发布”。",
+        "阻断问题一眼可见，展开后仍可复制 issue.code。",
+        "通过后、正式发布前状态改变仍会被服务端拒绝。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G17",
+      "page": "成绩工作台 / 基础成绩锁定与原查询入口",
+      "role": "成绩管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx",
+          "line": 39,
+          "text": "基础成绩不能直接修改；学生门户版本的状态请查看本页版本区域。更正请通过申诉或复评流程处理。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreActionsPanel.tsx",
+          "line": 52,
+          "text": "仅在学校使用原有成绩查询入口时操作。此操作锁定基础成绩，不会发布学生门户版本。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "基础成绩已锁定时显示锁定 Alert；原入口操作已位于高级折叠区域，只有展开才出现第二句。",
+      "problem": "两条为不同入口/后果，不能当作每次必读重复流程删除；能收短术语并保留状态分离。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "更正须通过申诉或复评；学生门户状态见版本区域。",
+        "legacy": "仅用于学校原查询入口。公开后锁定基础成绩；学生门户需另行发布。"
+      },
+      "targetCondition": "保持基础成绩锁定条件和原入口高级折叠条件，不前移原入口说明。",
+      "placement": "原锁定 Alert；原查询入口按钮旁。",
+      "dependency": "copy",
+      "boundaries": [
+        "保留直接改基础成绩受限的事实。",
+        "学校原入口公开不等于门户发布。",
+        "不为了少一步取消锁定、权限或审计。"
+      ],
+      "acceptance": [
+        "基础成绩锁定后能找到更正路径。",
+        "展开原入口时，点击前能看到不会发布门户。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G18",
+      "page": "创建门户草稿 / 冻结设置提示",
+      "role": "成绩管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 136,
+          "text": "草稿不会立即对学生生效",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 136,
+          "text": "先创建草稿，核对冻结版本的学生视角，再通过发布门禁正式发布。草稿创建后，以下公开策略随成绩一起冻结。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "创建草稿弹窗顶部固定 Alert。",
+      "problem": "不公开与设置冻结均必须保留；“生效”“策略”“门禁”可换成用户能直接判断的后果。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "创建草稿，不会公开给学生",
+        "details": "成绩和以下公开设置将随草稿冻结。核对学生预览后，再正式发布。"
+      },
+      "targetCondition": "在创建草稿提交前持续显示。",
+      "placement": "弹窗顶部，公开设置之前。",
+      "dependency": "copy",
+      "boundaries": [
+        "不能暗示草稿能持续同步基础成绩或可随意改公开设置。",
+        "不把创建草稿变为立即对外发布。"
+      ],
+      "acceptance": [
+        "创建前能理解本次勾选将随草稿固定。",
+        "草稿创建成功但未发布时，不出现已公开给学生的成功文案。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G19",
+      "page": "创建门户草稿 / 逐题公开与复核选项",
+      "role": "成绩管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 138,
+          "text": "当前仅支持针对题目申请复核，必须公开逐题得分。学生打开题目详情后可选择原因并提交；整卷或总分复核暂未提供在线申请。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 140,
+          "text": "关闭逐题得分后，题目原文、答案、反馈、评分要点、知识点和题目统计也不会出现在逐题详情中。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "考试允许学生申请复核时显示第一条；关闭逐题得分时显示第二条。",
+      "problem": "提交路径操作说明与多种详情逐项枚举可收短，必要联动和申请范围必须留在选项旁。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "开放复核须公开逐题得分；当前仅支持逐题申请。",
+        "hidden": "关闭后不显示任何逐题详情，包括题目、答案和反馈。"
+      },
+      "targetCondition": "沿用允许复核、关闭逐题得分的现有条件；不为其他分支常驻显示。",
+      "placement": "逐题得分开关及其受影响设置旁。",
+      "dependency": "copy",
+      "boundaries": [
+        "不承诺支持整卷/总分在线复核。",
+        "不移除复核开启时公开逐题得分的强制联动。",
+        "“任何逐题详情”仅指逐题详情区域，不指考试级总分/班级统计。"
+      ],
+      "acceptance": [
+        "开启复核后，管理员知道逐题得分必须公开。",
+        "关闭逐题得分后，相关详情选项仍按现有逻辑禁用/不输出。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G20",
+      "page": "创建门户草稿 / 匿名范例卷条件",
+      "role": "成绩管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 143,
+          "text": "发布前自动生成匿名范例卷",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 143,
+          "text": "请确认最高分答卷的每页均有已锁定模板、完成页面配准，并配置覆盖姓名、学号和二维码的身份区域；缺少任一条件将阻断发布。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "选中公开匿名范例卷时显示警告。",
+      "problem": "这是避免身份暴露和发布失败的必要提醒，不能转为默认隐藏帮助；需区分系统校验的版面前提与人工核对的身份覆盖完整性，不能暗示通过门禁即证明完全匿名。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "发布前自动生成匿名范例卷",
+        "details": "最高分答卷每页须有已锁定模板、成功配准和有效身份区，否则无法发布。请逐页核对身份区确实覆盖姓名、学号、二维码等身份信息；系统仅按配置区域遮挡，不能判断是否遗漏。"
+      },
+      "targetCondition": "仅选择公开匿名范例卷时常显，保持 warning 层级。",
+      "placement": "匿名范例卷选项紧下方。",
+      "dependency": "copy",
+      "boundaries": [
+        "不取消逐页检查、不弱化身份区域范围。",
+        "系统只校验每页身份区域存在且坐标有效，并按该区域遮挡；不自动判断区域是否覆盖全部姓名、学号、二维码或其他身份信息。完整性仍须人工逐页核对。",
+        "不把生成安排写成当前已生成或匿名检查已通过。",
+        "实际生成失败仍由发布门禁阻止。"
+      ],
+      "acceptance": [
+        "勾选时立即可读到系统校验前提、人工逐页核对责任和无法发布后果。",
+        "存在但偏离姓名或条码的合法身份区，不得被提示为已通过完整匿名检查；正常生成也不宣称全部身份信息已被自动识别遮挡。",
+        "未勾选时不堆积与当前方案无关的警告。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G21",
+      "page": "复评候选复核 / 接受与驳回",
+      "role": "复评审核人、成绩管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 101,
+          "text": "候选意见尚未改写成绩",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 101,
+          "text": "逐项接受后才能完成复评。完成后仍需生成并发布新的成绩版本，原发布版本保持不变。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 115,
+          "text": "请重新核对证据，填写处理说明后接受或驳回候选。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "候选复核弹窗顶部固定显示前两条；异常候选还显示核对证据提示。实际提供接受和驳回操作。",
+      "problem": "“逐项接受”误导为必须全部接受，和驳回路径冲突；需要强调逐项处理完成，而非改变审核独立性。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "候选意见尚未改写成绩",
+        "details": "请逐项完成复核。需要更正时，仍须生成并发布新成绩版本；原版本不变。",
+        "exception": "请核对证据，填写处理说明后接受或驳回。"
+      },
+      "targetCondition": "候选复核弹窗；异常项保留独立提示，不用顶部短句取代处理说明要求。",
+      "placement": "顶部 Alert、异常候选行。",
+      "dependency": "copy",
+      "boundaries": [
+        "不把候选分直接写为正式成绩。",
+        "接受、驳回及异常说明要求不变。",
+        "不暗示全驳回也一定要发布无变化版本。"
+      ],
+      "acceptance": [
+        "全部驳回时，提示不再要求逐项接受。",
+        "异常项没有说明仍按原逻辑不能完成相应处理。",
+        "接受候选后仍需正式版本发布才改变学生所见。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G22",
+      "page": "题目复评 / 创建与预览说明",
+      "role": "质量管理员、成绩管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 156,
+          "text": "复评不会直接修改已发布成绩",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 156,
+          "text": "先预览影响范围并创建任务；任务完成后生成新的成绩版本，再通过发布门禁正式发布。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreWorkflowModals.tsx",
+          "line": 165,
+          "text": "预览只用于确认范围，创建时系统会再次冻结该版本对应的题目事实。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/components/ScoreReleaseWorkspace.tsx",
+          "line": 143,
+          "text": "复评只处理指定题目，完成后必须生成并发布新的成绩版本，不会直接改分。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "复评区域介绍、创建弹窗导语与预览成功描述多次解释不直接改分及新版本流程。",
+      "problem": "需要保留预览只是估计、创建冻结范围、复评不直接改分；但完整链条不必在同一阶段重复。",
+      "actions": [
+        "merge",
+        "progressive",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "复评只处理所选题目，当前公布成绩不变。",
+        "preview": "来源：正式成绩 V{版本} · 影响 {份数} 份答卷。创建时将冻结该版本对应的题目范围。",
+        "afterCreate": "任务完成后，需生成并发布新成绩版本。"
+      },
+      "targetCondition": "进入复评区域显示 summary；预览成功显示 preview；创建按钮旁保留 afterCreate。",
+      "placement": "复评区域、预览结果、创建按钮下各一条，避免同屏重复整段。",
+      "dependency": "frontend",
+      "boundaries": [
+        "保留必须先预览的当前流程，不绕过预览/创建接口。",
+        "预览成功不代表创建必然成功，创建时仍重新核对版本与事实。",
+        "任务批准、独立复评和发布门禁保持不变。"
+      ],
+      "acceptance": [
+        "预览后来源版本已变化时，创建仍失败并显示真实原因。",
+        "用户能看到影响范围与现有成绩不变，而不需读三遍完整链条。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G23",
+      "page": "正式发布 / 最终确认",
+      "role": "成绩管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx",
+          "line": 122,
+          "text": "学生可从逐题详情申请复核；未限制原因时提供六种常用原因。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx",
+          "line": 122,
+          "text": "此版本未开放学生复核申请。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/score-management/hooks/useScoreReleaseWorkflow.tsx",
+          "line": 127,
+          "text": "请先从版本记录打开学生视角预览。发布后学生门户将展示此版本；学校原有成绩查询的状态不会因此改变。后续更正需创建新版本。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "发布前确认框按复核开关显示申请说明，同时显示学生预览、门户替换与后续更正规则；旧来源/匿名材料警告按原条件叠加。",
+      "problem": "“六种常用原因”不是本次发布决定的关键；可删计数。其余为对外发布必要后果，不能为减字删除。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "请先核对学生预览。发布后，学生门户将展示此版本；学校原查询入口状态不变。更正须创建新版本。",
+        "appealsEnabled": "此版本启用逐题复核；学生可在开放时段内从逐题详情申请。",
+        "appealsDisabled": "此版本未开放学生复核申请。"
+      },
+      "targetCondition": "沿用发布确认与开关条件；保留考试、版本、公开内容及已有警告。",
+      "placement": "发布确认框正文。",
+      "dependency": "copy",
+      "boundaries": [
+        "不声称系统已验证用户完成预览。",
+        "appeal_window.enabled 不等同于当前可申请；设有 opens_at 或 closes_at 的历史/API草稿仍按冻结开放时段执行，未设端点不限制对应方向。",
+        "旧来源版本警告、匿名材料准备、二次验证和服务端复核不得移入折叠或删掉。",
+        "不合并原查询入口与学生门户状态。"
+      ],
+      "acceptance": [
+        "点击最终发布前能读到学生将看到哪个版本。",
+        "未开放复核时不出现可申请的描述。",
+        "enabled=true 但开放时间未到或已经结束的草稿，不暗示当前即可申请；未设置时间端点时沿用原有无限制语义。",
+        "来源落后或匿名材料待生成时，原警告仍清楚可见。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G24",
+      "page": "学生题目复核 / 教师独立意见",
+      "role": "受派复核教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/QuestionAppealReviewOpinionPanel.tsx",
+          "line": 24,
+          "text": "核对原公布版本的答卷和评分依据后保存意见，交由学校管理员继续处理。意见和建议分值仅供教职工核对，学生暂不可见。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/QuestionAppealReviewOpinionPanel.tsx",
+          "line": 21,
+          "text": "这份意见尚未改变成绩。学校管理员将核对意见、安排必要的复评并向学生答复。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/QuestionAppealReviewOpinionPanel.tsx",
+          "line": 21,
+          "text": "此处为教师当时提出的建议，处理结果以管理员答复与正式发布成绩为准。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "可提交时显示填写导语；提交后有意见卡，pendingHandoff 与已处理状态各显示一段；允许修改时这些说明可能同屏。",
+      "problem": "提交前必须知道学生不可见、非直接改分；提交后以当前阶段说明替代相同流程长段。",
+      "actions": [
+        "merge",
+        "contextual",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "核对原公布材料后提交独立意见。意见和建议分仅供教职工查看，不直接改分。",
+        "pending": "意见已移交学校管理员，当前成绩未改变。",
+        "handled": "此处保留教师建议；处理结果以管理员答复和正式成绩为准。"
+      },
+      "targetCondition": "首次可提交用 summary；已有意见时使用 pending/handled 状态，不再次叠加完整首次导语；如可修改，表单只留“修改后需再次提交”。",
+      "placement": "教师意见表单上方；已保存意见卡下方。",
+      "dependency": "frontend",
+      "boundaries": [
+        "学生不可见仅指教师意见/建议分，不包括管理员已公开答复。",
+        "教师仍不结案、不直接改正式成绩。",
+        "不承诺管理员必然接受建议或自动安排复评。"
+      ],
+      "acceptance": [
+        "首次提交前明确私有范围。",
+        "移交后不出现成绩已更正的成功暗示。",
+        "已有公开答复仍独立可见，不因合并提示隐藏。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G25",
+      "page": "复核中心 / 教师导语与历史入口",
+      "role": "受派复核教师、复核管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/QuestionAppealCenterPage.tsx",
+          "line": 42,
+          "text": "处理学校分派给我的题目复核申请；考试名称和学科随受派任务提供，学生身份继续隐藏。先核对材料并移交独立意见，再由学校管理员处理。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/QuestionAppealCenterPage.tsx",
+          "line": 50,
+          "text": "此处保留原有业务记录和处理方式。学生门户新提交的题目复核申请请返回学生门户申请页签。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "教师门户申请页导语，或切到历史申诉记录后的说明。",
+      "problem": "任务摘要如何提供属于实现解释，可移除；历史与门户申请必须仍能区分，避免去错处理入口。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "核对分派给我的匿名材料，提交独立意见，由学校管理员继续处理。",
+        "history": "学生门户新申请见“学生门户申请”；本页处理历史申诉记录。"
+      },
+      "targetCondition": "门户教师视角使用 summary；仅历史页签显示 history。",
+      "placement": "对应页签标题下。",
+      "dependency": "copy",
+      "boundaries": [
+        "继续隐藏教师不应获得的学生身份。",
+        "历史申诉不自动变成门户申请，权限仍按原条件。",
+        "任务摘要加载失败的具体重读入口与错误保留。"
+      ],
+      "acceptance": [
+        "教师能识别自己的受派任务范围。",
+        "切到历史页签能立即知道新申请去哪处理。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G26",
+      "page": "历史申诉 / 独立教师复核",
+      "role": "复核教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/appeals/AppealDecisionPanel.tsx",
+          "line": 39,
+          "text": "学生姓名、班级和原阅卷教师已隐藏。复核建议仅供管理员终审，不会直接修改成绩或关闭申诉；请只依据答卷和评分标准判断。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "teacherBlindView 分支的复核意见面板。",
+      "problem": "独立性、隐藏范围和不结案都是必要边界；可调整语序并缩短，不能以“规则已看过”为由完全移除。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "请独立核对答卷和评分标准。学生身份及原阅卷人已隐藏；意见由管理员终审，不直接改分或结案。"
+      },
+      "targetCondition": "保持 teacherBlindView 条件，管理端不展示此教师专用规则。",
+      "placement": "独立复核表单顶部。",
+      "dependency": "copy",
+      "boundaries": [
+        "不展示原阅卷教师或学生身份以缩短说明成本。",
+        "不授予教师终审/结案权限。",
+        "不删原评教师不得复核的管理端分派提示。"
+      ],
+      "acceptance": [
+        "盲复核表单仍说明为何缺少身份与原评人。",
+        "提交教师建议不会被文案描述为已关闭申诉。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G27",
+      "page": "复核表单 / 未提交内容与离开提醒",
+      "role": "复核教师、复核管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/appeals/AppealDecisionPanel.tsx",
+          "line": 79,
+          "text": "未提交内容仅在本页，切换申请或刷新会丢失。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/appeals/AppealDecisionPanel.tsx",
+          "line": 79,
+          "text": "复核意见和终审结论只有提交后才写入服务端。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+          "line": 97,
+          "text": "复核意见、给学生的回复或本题复评选择尚未提交，离开后无法恢复。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/QuestionAppealWorkspace.tsx",
+          "line": 106,
+          "text": "当前意见、回复和复评选择只保存在本页，离开后无法恢复。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "历史意见非终态时固定一行，dirty 时换警告；门户工作区在 dirty 离开守卫/选择切换确认中提醒。",
+      "problem": "这是与阅卷台自动保存不同的真实边界，必须保留。可以统一“未提交”术语并仅在 dirty 时强调丢失，不声称表单自动保存。",
+      "actions": [
+        "shorten",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "提交后才会保存。",
+        "dirty": "有未提交内容；切换、关闭或刷新后无法恢复。",
+        "confirmTitle": "放弃未提交内容？",
+        "confirmBody": "当前意见、回复和复评选择尚未提交，离开后无法恢复。",
+        "confirmButtons": [
+          "放弃并继续",
+          "继续编辑"
+        ]
+      },
+      "targetCondition": "干净状态仅可编辑表单显示 summary；dirty 后显示醒目 dirty；离开守卫保持现有支持范围，不宣称覆盖所有系统关闭方式。",
+      "placement": "提交按钮旁状态行；已有离开确认。",
+      "dependency": "frontend",
+      "boundaries": [
+        "保持现有真实守卫，不承诺拦截一切浏览器/系统强制退出。",
+        "专门的“重读任务摘要保留本页内容”路径仍按现状保留，不能用一刀切句子制造误解。",
+        "提交失败时保留本页输入但不说已持久化；不增加后端草稿能力。"
+      ],
+      "acceptance": [
+        "未编辑时不弹放弃确认。",
+        "编辑后切换申请出现放弃/继续编辑选择。",
+        "提交失败仍可继续编辑，成功后 dirty 提醒解除。",
+        "重读当前任务摘要不清空已填写意见。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-G28",
+      "page": "质量总览 / 回标转复评提示",
+      "role": "质量管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+          "line": 195,
+          "text": "系统将从已发布成绩版本重新冻结本批次对应的学生范围；不会直接采用回标候选分。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+          "line": 210,
+          "text": "回标只记录候选差异，不会修改当前成绩",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+          "line": 210,
+          "text": "只有标记为“需重评”的已完成项目，才能由质量管理员明确转入题目复评。新任务仍需审批、人工复评并创建新的成绩发布版本。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/QualityDashboardViews.tsx",
+          "line": 186,
+          "text": "确认后仍需审批、复评、差异复核和新版本发布。",
+          "kind": "excerpt"
+        }
+      ],
+      "currentCondition": "回标差异卡常显不改分及完整链条；转复评区域和预览描述又解释冻结范围及后续审批。",
+      "problem": "完整治理链多处同屏重复；不同阶段保留与当前选择有关的限制即可，不要误判审批和复评本身多余。",
+      "actions": [
+        "merge",
+        "contextual",
+        "progressive"
+      ],
+      "replacement": {
+        "summary": "回标仅记录差异，当前成绩不变。",
+        "handoff": "仅已完成且标记“需重评”的项目可转入题目复评；范围以已发布成绩版本为准，不采用回标候选分。",
+        "preview": "来源成绩 V{版本} · 接手教师：{教师} · 将冻结 {份数} 份答卷。创建后仍需审批、独立复评、差异复核并发布新版本。"
+      },
+      "targetCondition": "卡片常显 summary；仅有权限且可转复评时显示 handoff；预览成功后显示 preview。批次未完成/无已发布版本时仍显示原阻断原因。",
+      "placement": "回标卡标题下、转复评按钮旁、预览结果各一条。",
+      "dependency": "frontend",
+      "boundaries": [
+        "不把回标候选分直接采纳为正式成绩。",
+        "不删除显式转交、审批、独立人工复评和新版本发布。",
+        "来源范围仍由服务端冻结；预览不具创建授权效力。"
+      ],
+      "acceptance": [
+        "只查看差异的人只读简短状态，不被无权限操作说明淹没。",
+        "批次未完成和无已发布版本时仍明确不能创建。",
+        "有权限且预览完成时，后续治理链和不直接采用候选分仍清楚可见。"
+      ],
+      "report": "grading-release.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P01",
+      "page": "学生端登录",
+      "role": "学生",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/student-portal/src/features/session/SessionScreens.tsx",
+          "line": 32,
+          "endLine": 32,
+          "text": "使用学校发放的学生账号登录。未发布的成绩不会在此显示。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/student-portal/src/features/session/SessionScreens.tsx",
+          "line": 41,
+          "endLine": 41,
+          "text": "学校代码或账号不清楚、忘记密码时，请联系学校管理员获取登录信息或重置密码。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "未登录时，说明与学校代码、账号、密码同时显示。",
+      "problem": "两段重复学校账号来源；常规登录前承担故障分支的阅读量。",
+      "actions": [
+        "shorten",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "使用学校发放的学生账号，查看本人已发布成绩。",
+        "details": {
+          "help": "学校代码、账号或密码有问题？请联系学校管理员。"
+        }
+      },
+      "targetCondition": "主说明常驻，求助说明仍在表单下。",
+      "placement": "标题下＋表单下",
+      "dependency": "copy",
+      "boundaries": [
+        "仅本人已发布成绩；不省略学校代码这一身份范围。"
+      ],
+      "acceptance": [
+        "初次访问理解账号来源与查分范围；账号有问题仍知道联系学校管理员。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P02",
+      "page": "逐题复核申请与回执",
+      "role": "学生",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx",
+          "line": 181,
+          "endLine": 181,
+          "text": "每道题在同一版成绩下只能提交一次。学校将按第 {releaseVersion} 版成绩核对原卷和评分标准。",
+          "kind": "template"
+        },
+        {
+          "file": "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx",
+          "line": 79,
+          "endLine": 79,
+          "text": "学校已收到本题复核申请。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx",
+          "line": 79,
+          "endLine": 79,
+          "text": "本题已提交过复核申请，不能重复提交。处理结果会显示在页面下方。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "打开申请表显示次数与来源；同 releaseID＋question_id 已有申请时显示只读回执。",
+      "problem": "提交前和成功后重复强调次数与收到，下一步靠后。",
+      "actions": [
+        "shorten",
+        "merge"
+      ],
+      "replacement": {
+        "summary": "第 {releaseVersion} 版：本题仅可申请一次，学校将核对这一版的原卷与评分标准。",
+        "details": {
+          "receipt": "已收到第 {releaseVersion} 版的本题申请，不可重复提交。",
+          "link": "查看申请与处理结果",
+          "button": "提交复核申请"
+        }
+      },
+      "targetCondition": "限制提交前保留一次；成功显示状态、版号与记录入口。",
+      "placement": "表单标题下；成功后原位置",
+      "dependency": "copy",
+      "boundaries": [
+        "限制为每题每版一次，不能写成永久一次。",
+        "保留版本核对、读取失败等阻断与已收到确认。"
+      ],
+      "acceptance": [
+        "同版重复打开只读且可看记录；换版不能混用旧申请。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P03",
+      "page": "复核草稿保存状态",
+      "role": "学生",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx",
+          "line": 12,
+          "endLine": 12,
+          "text": "草稿已保存在当前标签页会话，切题、返回或重新登录后可恢复；退出登录将清除。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/student-portal/src/features/appeals/QuestionAppealForm.tsx",
+          "line": 12,
+          "endLine": 12,
+          "text": "浏览器未允许保存草稿，当前输入仅在本页保留。刷新或关闭前请先复制说明。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "有 storageKey 且输入说明或选区后显示；存储成功、失败分别呈现。",
+      "problem": "成功长句掩盖会话范围；失败是丢失风险，不能与成功一起降为通用小字。",
+      "actions": [
+        "shorten",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "草稿仅存于当前标签页会话，切题、返回或重新登录可恢复；退出登录会清除。",
+        "details": {
+          "failure": "草稿未能保存，仅在本页保留。刷新或关闭前，请先复制说明。"
+        }
+      },
+      "targetCondition": "保留成功与失败两分支、错误样式及 aria-live。",
+      "placement": "申请输入区保存状态",
+      "dependency": "copy",
+      "boundaries": [
+        "不承诺跨标签页、跨设备或永久保存。",
+        "保留重新登录可恢复与主动退出清除的区别。"
+      ],
+      "acceptance": [
+        "禁用存储显示失败，不写已保存；辅助技术收到状态。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P04",
+      "page": "成绩换版与核对失败",
+      "role": "学生",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/student-portal/src/features/results/ResultDetail.tsx",
+          "line": 92,
+          "endLine": 92,
+          "text": "学校已更新成绩，第 {pendingResult.release_version} 版可查看。旧版草稿仍可复制，新版需重新核对。",
+          "kind": "template"
+        },
+        {
+          "file": "apps/student-portal/src/features/results/ResultDetail.tsx",
+          "line": 91,
+          "endLine": 91,
+          "text": "最新成绩核对失败，当前显示此前读取的第 {result.release_version} 版。{error}",
+          "kind": "template"
+        }
+      ],
+      "currentCondition": "不同 release_id 先保留当前展示，提示主动查看新版；请求失败显示先前版本。",
+      "problem": "多个旧新版事实挤在一句；核对失败不能暗示旧数据仍为最新。",
+      "actions": [
+        "shorten",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "第 {pendingResult.release_version} 版成绩已发布。旧草稿可复制；新版需重新核对后申请。",
+        "details": {
+          "failure": "未能核对最新成绩，现显示此前读取的第 {result.release_version} 版。{error}"
+        }
+      },
+      "targetCondition": "新版提示与核对失败独立，保留现有查看新版动作。",
+      "placement": "成绩标题与分数旁",
+      "dependency": "copy",
+      "boundaries": [
+        "不自动迁移草稿与选区。",
+        "核对失败仅描述正在展示的版本，不能称当前生效版。",
+        "保留错误、重试、必要重新登录。"
+      ],
+      "acceptance": [
+        "新版由用户主动查看；网络失败明确显示先前读取版号。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P05",
+      "page": "我的复核结果与当前生效成绩",
+      "role": "学生",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/student-portal/src/features/appeals/AppealStatus.tsx",
+          "line": 86,
+          "endLine": 86,
+          "text": "最近核对的当前生效成绩：第 {currentResult.release_version} 版。",
+          "kind": "template"
+        },
+        {
+          "file": "apps/student-portal/src/features/appeals/AppealStatus.tsx",
+          "line": 36,
+          "endLine": 36,
+          "text": "处理结论：已支持复核，转入重评。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/student-portal/src/features/appeals/AppealStatus.tsx",
+          "line": 106,
+          "endLine": 106,
+          "text": "此复核结果已公布（${version}），当前生效成绩为第 ${current.release_version} 版，不是本次处理关联的发布。请以当前成绩为准。",
+          "kind": "template"
+        }
+      ],
+      "currentCondition": "有申请时显示来源、原分、处理状态、学校回复、关联发布和当前生效版；ID 相等/不同/未知分别分支。",
+      "problem": "状态与结论重复；已公布记录也可能出现转入重评，用户难判断仍等待还是已生效。",
+      "actions": [
+        "merge",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "状态仅显示一次；学校处理决定与当前进度分开表达。当前生效版在列表头显示一次，各申请保留来源与关联关系。",
+        "details": {
+          "waiting": "学校复核中",
+          "rejected": "未支持申请",
+          "regrading": "已支持申请，等待重评结果发布。",
+          "sameRelease": "本次复核关联的{version}已是当前生效成绩{scoreSuffix}。",
+          "differentRelease": "复核结果已关联{version}；当前生效为第 {current.release_version} 版，请查看当前成绩。",
+          "unverified": "已关联{version}；当前生效成绩尚未核实。",
+          "noLinkedRelease": "本次申请尚未关联后续成绩版本。",
+          "rejectDecision": "学校决定：未支持本次申请。",
+          "referRegradeDecision": "学校决定：支持复核，交由重新评分。",
+          "unknownStatus": "处理中"
+        }
+      },
+      "targetCondition": "仅删除相同含义的重复状态；有明确决定时保留决定。decision=reject 或 status=rejected 仍优先拒绝结论；关联发布与当前发布不同的警示常显，未知不推断。",
+      "placement": "申请卡标题＋来源＋一条关联提示",
+      "dependency": "frontend",
+      "boundaries": [
+        "按 release ID 相等判断，不能凭版本号大小或 resolved 判断生效。",
+        "保留原版原分、复核分、当前分与学校回复。",
+        "未核实当前结果不能写已生效。",
+        "保留现有拒绝结论优先：decision=reject 或 status=rejected 时不能因唯一状态标题而吞掉拒绝事实。",
+        "当前本题分数未公开时保留缺失说明，不能用历史复核分补成当前分。"
+      ],
+      "acceptance": [
+        "学校复核中、未支持、重评中、已公布分支文案各自正确。",
+        "关联另一版仍提示当前版；核对失败仍提示未核实。",
+        "决定与状态不一致时仍呈现拒绝优先，未知状态保留“处理中”。",
+        "已公布记录中的支持决定可保留，但不得把它写成当前仍在等待进入重评。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P06",
+      "page": "旧版未提交草稿",
+      "role": "学生",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/student-portal/src/features/results/OldAppealDrafts.tsx",
+          "line": 20,
+          "endLine": 20,
+          "text": "这些草稿只保存在当前标签页会话，退出登录会清除。说明可复制；旧版圈选不会迁移，新版必须重新核对证据。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "当前账号同考试其他发布有草稿时才出现；details 已默认折叠。",
+      "problem": "现有折叠合适，仅调整内文次序，不重复建议新增折叠。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "可复制旧说明；旧版圈选不会迁移，新版需重新核对。草稿仅存于当前标签页会话，退出登录会清除。"
+      },
+      "targetCondition": "保持有旧草稿才出现、默认折叠。",
+      "placement": "现有旧草稿 details 内",
+      "dependency": "copy",
+      "boundaries": [
+        "保留来源版号题号，不承诺自动迁移。",
+        "保留复制失败的手动选择回退。"
+      ],
+      "acceptance": [
+        "展开可见复制、选区不迁移、退出清除；无草稿不显示。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P07",
+      "page": "逐题参比范围小字",
+      "role": "学生",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/student-portal/src/features/questions/QuestionCohortScope.tsx",
+          "line": 8,
+          "endLine": 8,
+          "text": "参比范围为当前成绩版本中，本次考试本题已发布成绩的参试学生；不是班级人数。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/student-portal/src/features/questions/QuestionCohortScope.tsx",
+          "line": 8,
+          "endLine": 8,
+          "text": "本版考试本题 · {population}",
+          "kind": "template"
+        },
+        {
+          "file": "apps/student-portal/src/features/questions/QuestionTables.tsx",
+          "line": 55,
+          "endLine": 55,
+          "text": "<QuestionCohortScope question={question} />",
+          "kind": "excerpt"
+        },
+        {
+          "file": "apps/student-portal/src/features/questions/QuestionTables.tsx",
+          "line": 56,
+          "endLine": 56,
+          "text": "<QuestionCohortScope question={question} />",
+          "kind": "excerpt"
+        }
+      ],
+      "currentCondition": "cohort 存在才显示；同一行平均分和群体对比各渲染一次范围及人数。",
+      "problem": "同题同范围重复两次推高长表，人数却仍须逐题保留。",
+      "actions": [
+        "merge",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "统计范围：本版成绩中，本次考试本题已发布成绩的参试学生，非班级人数。",
+        "details": {
+          "count": "参比 {count} 人",
+          "unknown": "参比人数暂未提供"
+        }
+      },
+      "targetCondition": "表前说明一次；每题仅一格保留人数；独立详情仍保留范围。",
+      "placement": "表格说明＋参试平均分列",
+      "dependency": "frontend",
+      "boundaries": [
+        "逐题 sample_size 可能不同，不能合并成班级人数。",
+        "未知人数仍为暂未提供，不写 0。",
+        "群体位置不等于知识掌握。"
+      ],
+      "acceptance": [
+        "同题不重复小字；不同题人数不丢；独立题目仍知道范围。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P08",
+      "page": "桌面连接与登录帮助",
+      "role": "扫描员／阅卷教师",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/desktop-client/src/App.tsx",
+          "line": 326,
+          "endLine": 326,
+          "text": "请向学校教务处或技术老师索取服务器地址和学校代码。地址先检查并保存，再填写账号登录。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/App.tsx",
+          "line": 345,
+          "endLine": 345,
+          "text": "使用学校分配的账号。勾选自动登录后，密码仅保存到当前 Windows 用户的系统凭据库。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/features/session/useDesktopSession.ts",
+          "line": 140,
+          "endLine": 140,
+          "text": "{ server_url: serverUrl, tenant_code: tenantCode, username, password }",
+          "kind": "excerpt"
+        }
+      ],
+      "currentCondition": "连接和登录面板同时常显；handleLogin 直接使用输入 serverUrl，检查和保存不是必经状态。",
+      "problem": "说明制造先检查再保存再登录的额外顺序；凭据边界与选项重复。",
+      "actions": [
+        "shorten",
+        "merge",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "服务器地址和学校代码由学校提供。填写后即可登录；连接失败时可先检查连接。",
+        "details": {
+          "account": "使用学校分配的账号登录。",
+          "remember": "密码仅保存到当前 Windows 用户的系统凭据库。"
+        }
+      },
+      "targetCondition": "账号面板仅留来源，凭据说明放自动登录选项旁。",
+      "placement": "服务器标题下＋自动登录项下",
+      "dependency": "copy",
+      "boundaries": [
+        "不省略服务器、学校代码和账号范围。",
+        "浏览器开发模式不承诺保存密码。",
+        "连接成功不等于认证成功。"
+      ],
+      "acceptance": [
+        "不必先点检查和保存才被文字允许登录；选项仍明确凭据存于当前 Windows 用户。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P09",
+      "page": "桌面本机离线授权",
+      "role": "阅卷教师／扫描员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/desktop-client/src/App.tsx",
+          "line": 361,
+          "endLine": 361,
+          "text": "允许当前 Windows 用户在有效期内离线解锁本账号草稿",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/App.tsx",
+          "line": 361,
+          "endLine": 361,
+          "text": "联网登录后建立授权，有效期不超过这次登录且最多七天。仅解锁本机加密数据；退出登录或清除保存信息会撤销授权。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "原生持久化可用时显示复选项；勾选后需在线登录建立授权。",
+      "problem": "复选项过长且下一段重复主语；期限和撤销不能藏进帮助。",
+      "actions": [
+        "shorten",
+        "keep",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "允许本机离线解锁本账号草稿",
+        "details": {
+          "before": "在线登录后生效，仅当前 Windows 用户可用。有效期不超过本次登录，最长七天；退出登录或清除保存信息会撤销。",
+          "after": "可离线解锁至 {expiresAt}；仅限本机加密数据，获取任务和上传仍需在线登录。"
+        }
+      },
+      "targetCondition": "建立前显示条件，成功后显示真实 expiresAt，不将勾选本身当生效。",
+      "placement": "登录选项及授权状态旁",
+      "dependency": "frontend",
+      "boundaries": [
+        "限当前 Windows 用户、本服务器、本学校和本账号本机数据。",
+        "有效期不超过本次登录且最多七天，不固定承诺七天。",
+        "退出或清除保存信息撤销；获取任务和上传仍需在线登录。"
+      ],
+      "acceptance": [
+        "未登录勾选不显示已授权；成功后真实到期；退出不遗留可用暗示。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P10",
+      "page": "离线材料与图片持久化限制",
+      "role": "阅卷教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+          "line": 238,
+          "endLine": 238,
+          "text": "点击保存后，任务数据、冻结细则与评分草稿加密写入本机，密钥由 Windows 凭据库保护。答卷图片仅缓存于本次会话，重启或加载草稿后可联网恢复图片，人工评分保持原文。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+          "line": 42,
+          "endLine": 42,
+          "text": "${materialDescription}${answerDescription}${draftDescription}答卷图片${imageDescription}，不随加密草稿恢复。",
+          "kind": "template"
+        },
+        {
+          "file": "apps/desktop-client/src/App.tsx",
+          "line": 447,
+          "endLine": 447,
+          "text": "请先加密保存草稿；重启后可在连接登录页解锁本账号草稿。答卷图片仍需联网恢复，上传和下载任务需在线登录。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "原生工作台说明、材料状态卡、离线恢复提示分别出现。",
+      "problem": "关键限制分散，材料已保存易被当作图片也离线保存。",
+      "actions": [
+        "merge",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "加密保存：任务、冻结细则、评分草稿。答卷图片仅本次会话可用，不随草稿保存或恢复；重启或加载草稿后需联网恢复。",
+        "details": {
+          "saved": "任务与评分草稿已加密保存；答卷图片未保存。",
+          "notSaved": "任务与评分草稿尚未保存。",
+          "key": "密钥由当前 Windows 用户的系统凭据库保护。",
+          "browser": "浏览器开发模式仅用于显式加密草稿回退，不能验证生产扫描或上传恢复。"
+        }
+      },
+      "targetCondition": "图片限制常显；材料卡只更新已保存与否，授权区以到期和短提醒为主。",
+      "placement": "保存草稿附近，不能仅移入折叠区",
+      "dependency": "frontend",
+      "boundaries": [
+        "显式点击保存，不承诺自动保存。",
+        "本机授权不提供离线图片恢复。",
+        "原生与浏览器回退分开，浏览器不能冒充生产扫描站验收。",
+        "恢复图片不改人工评分；无可核对材料仍按现有门禁。"
+      ],
+      "acceptance": [
+        "首次即见图片不保存；保存成功不暗示图片已存；加载后知道联网恢复。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P11",
+      "page": "离线密钥状态标签",
+      "role": "阅卷教师／开发调试人员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+          "line": 22,
+          "endLine": 22,
+          "text": "离线密钥已输入",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+          "line": 22,
+          "endLine": 22,
+          "text": "未配置离线密钥",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/components/offlineWorkbench/useOfflineWorkbench.tsx",
+          "line": 54,
+          "endLine": 54,
+          "text": "const hasKey = hasDurableDesktopStore() || offlineKey.trim().length >= 8;",
+          "kind": "excerpt"
+        }
+      ],
+      "currentCondition": "统一标签用 hasKey；原生可用直接为 true，输入框仅浏览器回退显示。",
+      "problem": "原生用户没有输入密钥却被告知已输入，造成找设置的困惑。",
+      "actions": [
+        "contextual",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "原生：使用本机加密存储",
+        "details": {
+          "browserReady": "开发密钥已设置",
+          "browserMissing": "请设置开发密钥（至少 8 位）"
+        }
+      },
+      "targetCondition": "按原生能力和浏览器回退分别命名，不用 hasKey 推断写入成功。",
+      "placement": "工作台状态标签",
+      "dependency": "frontend",
+      "boundaries": [
+        "原生能力可用不等于当前账号绑定、授权或数据保存成功。",
+        "浏览器达到长度不等于密钥已验证或安全强度保证。",
+        "仍保留至少八位和显式保存。"
+      ],
+      "acceptance": [
+        "原生不再显示已输入；浏览器按八位阈值显示设置状态；保存失败独立显示。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P12",
+      "page": "评分同步结果待确认",
+      "role": "阅卷教师",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/desktop-client/src/components/offlineWorkbench/OfflineWorkbenchView.tsx",
+          "line": 320,
+          "endLine": 320,
+          "text": "原评分结果尚待确认，分数和评语已冻结。继续同步会先核对原操作回执。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "pendingCommand 存在且未已确认同步时显示，评分冻结但可继续同步。",
+      "problem": "原操作回执偏内部术语；冻结原因是必须保留的动作解释。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "上次提交结果尚未确认，分数和评语暂不可修改。再次同步会先查询上次提交结果。"
+      },
+      "targetCondition": "保持仅未知时出现，直至回执核实，冲突与成功各用原状态。",
+      "placement": "冻结输入区与同步按钮上方",
+      "dependency": "copy",
+      "boundaries": [
+        "未知不等于失败，不鼓励新开提交。",
+        "不取消同一操作核对及冻结，不承诺重试必成功或成绩已生效。"
+      ],
+      "acceptance": [
+        "超时后知道不能改分原因；再次同步说明核对上次结果；确认后不继续显示未知。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P13",
+      "page": "扫描上传与质量检查说明",
+      "role": "扫描员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+          "line": 80,
+          "endLine": 80,
+          "text": "请先选择真实考试和可继续上传的采集批次；客户端不会创建假考试上下文。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+          "line": 84,
+          "endLine": 84,
+          "text": "默认只显示当前考试/批次。文件上传后仍需等待服务端匹配与质量检查。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+          "line": 92,
+          "endLine": 92,
+          "text": "已确认上传表示服务端收到文件；页数完整性与图像质量分别显示，图像通过后才能继续识别与阅卷。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "未选择上下文、队列标题与服务端状态区分别出现；高级答卷标识已折叠。",
+      "problem": "真实或假上下文是实现解释；上传、页数、图像区别则是必要工作信息。",
+      "actions": [
+        "shorten",
+        "merge",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "请选择考试和可上传的采集批次。",
+        "details": {
+          "queue": "当前考试与批次的待上传文件。上传后仍需服务端匹配与质量检查。",
+          "server": "上传确认仅表示已收到文件；请分别查看页数和图像质量，图像通过后才能继续识别与阅卷。",
+          "pagePassed": "页数检查通过；图像质量以下方结果为准。"
+        }
+      },
+      "targetCondition": "未选择只给下一步；已上传后保留接收、匹配、页数、图像独立结果。",
+      "placement": "选择区空态＋服务端状态区",
+      "dependency": "copy",
+      "boundaries": [
+        "不取消真实考试批次与允许上传校验。",
+        "保留当前批次或全部批次范围。",
+        "页数通过不等于图像通过；未启用设备直接采集仍明确。"
+      ],
+      "acceptance": [
+        "不再让用户读假上下文；上传后仍可知等待匹配/质量；页数通过不冒充图像通过。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P14",
+      "page": "桌面诊断与本地记录来源",
+      "role": "学校技术人员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/desktop-client/src/App.tsx",
+          "line": 504,
+          "endLine": 504,
+          "text": "读取 Tauri 运行时信息；浏览器开发模式会明确标注。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/App.tsx",
+          "line": 532,
+          "endLine": 532,
+          "text": "调用真实 /api/v1/system/status；依赖未配置会显示未配置/待接入。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/App.tsx",
+          "line": 620,
+          "endLine": 620,
+          "text": "只展示本客户端本地 error 级别日志；不是后端 audit_log。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/App.tsx",
+          "line": 646,
+          "endLine": 646,
+          "text": "记录客户端侧关键操作；这不是后端 audit_log。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "诊断、本地日志与本地操作页面分别常显区块说明。",
+      "problem": "多次真实或不是 audit_log，可以正向说明来源；技术端点有排障价值。",
+      "actions": [
+        "shorten",
+        "merge",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "客户端错误日志：仅本机记录，级别为 error。",
+        "details": {
+          "runtime": "当前客户端运行环境（原生／浏览器开发模式）。",
+          "server": "学校服务器状态；未配置的依赖会单独标明。",
+          "events": "本机关键操作记录。学校审计请由有权限的管理员在管理端查看。"
+        }
+      },
+      "targetCondition": "每区说明来源；接口路径、版本与运行时仍保留诊断明细。",
+      "placement": "各区标题下，端点留明细",
+      "dependency": "copy",
+      "boundaries": [
+        "不能称本机记录为学校完整审计。",
+        "未配置或未接入仍真实显示。",
+        "不整体删掉专业排障信息。"
+      ],
+      "acceptance": [
+        "区分服务器状态和本机日志；浏览器仍标开发模式；完整审计不误导至本机。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P15",
+      "page": "归档与永久删除本机原件",
+      "role": "扫描员／学校技术人员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/desktop-client/src/components/NativeStoragePanel.tsx",
+          "line": 80,
+          "endLine": 80,
+          "text": "原件持续留存在本机；归档只隐藏队列，不释放磁盘。当前没有自动清理期限。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/desktop-client/src/components/NativeStoragePanel.tsx",
+          "line": 55,
+          "endLine": 55,
+          "text": "学校要求保留 {days} 天。仅删除本机加密原件，上传回执仍保留。删除后不能从本机恢复；请先确认学校的服务端备份和保留要求。",
+          "kind": "template"
+        }
+      ],
+      "currentCondition": "原生面板显示留存说明；选候选后弹窗显示学校保留天数和永久删除边界。",
+      "problem": "这类小字必要；仅压缩句式，不能删除归档区别和破坏后果。",
+      "actions": [
+        "keep",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "归档只隐藏队列，不释放磁盘。原件保留在本机，目前不会自动清理。",
+        "details": {
+          "confirmation": "学校要求保留 {days} 天。将永久删除所选本机加密原件，上传回执保留；本机无法恢复。请先确认服务端备份和学校保留要求。"
+        }
+      },
+      "targetCondition": "面板短规则；每次删除确认保留动态天数、文件明细和不可恢复。",
+      "placement": "存储面板＋破坏性操作确认正文",
+      "dependency": "copy",
+      "boundaries": [
+        "保留天数不写死；仅删本机原件，回执保留。",
+        "本机无法恢复，必须先核对备份与学校保留要求。",
+        "不缩减候选资格、留存期、数量上限与确认步骤。"
+      ],
+      "acceptance": [
+        "归档不被理解为释放磁盘；删除前能核对数量文件日期大小及动态保留要求。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P16",
+      "page": "验证器试点与更换/丢失帮助",
+      "role": "教师／学校及平台管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/TOTPManagement.tsx",
+          "line": 169,
+          "endLine": 169,
+          "text": "验证器生成 6 位动态码，无需短信。目前仅用于本页的验证器管理，尚未用于登录或阅卷操作的强制验证。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/TOTPManagement.tsx",
+          "line": 176,
+          "endLine": 176,
+          "text": "更换验证器：验证并关闭原验证器，重新登录后再设置。若手机和恢复码都丢失，请联系学校管理员记录问题；目前没有自动重置入口，密码恢复链接也不会清除验证器。当前试点不会因此阻断普通登录。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/TOTPManagement.tsx",
+          "line": 173,
+          "endLine": 173,
+          "text": "公共电脑和服务会话只能查看状态。请在个人设备上登录后设置、关闭或重新生成恢复码。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "试点说明、更换/丢失帮助常显；非个人会话加只读限制。",
+      "problem": "保护范围必须醒目，异常处理长段可按需读。",
+      "actions": [
+        "shorten",
+        "progressive",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "可选试点：目前仅验证本页的验证器管理操作，登录和阅卷尚不强制使用。",
+        "details": {
+          "readOnly": "当前为公共电脑或服务会话，仅可查看。请在个人设备登录后管理验证器。",
+          "change": "更换验证器：先验证并关闭，重新登录后再设置。",
+          "lost": "手机和恢复码都丢失时，请联系学校管理员记录问题。目前无自动重置入口，重置密码也不会清除验证器；普通登录仍可使用。"
+        }
+      },
+      "targetCondition": "试点范围和只读原因常显；更换或丢失帮助可展开。",
+      "placement": "卡标题下＋操作区下帮助",
+      "dependency": "frontend",
+      "boundaries": [
+        "不声称已保护登录阅卷。",
+        "无自动重置，重置密码不清除验证器。",
+        "双重丢失仍不阻断当前试点普通登录。",
+        "只读会话不能获得管理能力。"
+      ],
+      "acceptance": [
+        "首次即知试点范围；公共电脑知只读原因；展开帮助仍见无法自动重置与可普通登录。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P17",
+      "page": "验证器手动设置与技术参数",
+      "role": "个人会话账号所有者",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/totpManagementPresentation.tsx",
+          "line": 112,
+          "endLine": 112,
+          "text": "在验证器中选择“添加账号”，扫描二维码；无法扫描时选择手动输入密钥。请勿截图、分享或将二维码上传到第三方网站。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/totpManagementPresentation.tsx",
+          "line": 114,
+          "endLine": 114,
+          "text": "类型：基于时间 · SHA-1 · 6 位 · 30 秒",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/totpManagementPresentation.tsx",
+          "line": 117,
+          "endLine": 117,
+          "text": "如果动态码即将刷新，请等待新的码。同一码成功验证后不能再用；如持续失败，请核对手机时间。设置有效期剩余 {deadline}。",
+          "kind": "template"
+        }
+      ],
+      "currentCondition": "enroll 阶段二维码与手动添加区同时显示，类型算法位数周期密钥未折叠。",
+      "problem": "扫码用户也要读整套手动参数；它们对手动路径有用，应渐进展示。",
+      "actions": [
+        "progressive",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "在验证器中添加账号并扫码。无法扫码？手动输入密钥。",
+        "details": {
+          "secretWarning": "请勿截图、分享二维码或密钥，也不要上传到第三方网站。",
+          "codeHelp": "动态码即将刷新时请等新码；成功验证的码不能再用。持续失败请核对手机时间。设置剩余 {deadline}。"
+        }
+      },
+      "targetCondition": "二维码默认，手动展开完整参数和密钥；到期与秘密提醒仍可见。",
+      "placement": "二维码下现有手动添加区",
+      "dependency": "frontend",
+      "boundaries": [
+        "勿截图分享上传第三方的提醒不能随手动参数一起隐藏。",
+        "保留时间类型、SHA-1、六位、三十秒及账号。",
+        "保留成功码不能复用、刷新等待和手机时间提示。"
+      ],
+      "acceptance": [
+        "扫码不必读参数；展开后所有原参数和值完整；展开控件可被辅助技术操作。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P18",
+      "page": "恢复码一次性显示与已生效状态",
+      "role": "个人会话账号所有者",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/totpManagementPresentation.tsx",
+          "line": 144,
+          "endLine": 144,
+          "text": "这批恢复码只显示一次，每条仅能使用一次。关闭、离开页面或超时后不会再次显示。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/totpManagementPresentation.tsx",
+          "line": 148,
+          "endLine": 148,
+          "text": "恢复码不能用于登录、修改密码或验证其他业务。此页将在 {deadline} 后隐藏；验证码验证成功时验证器已经启用，无需等待勾选才生效。",
+          "kind": "template"
+        },
+        {
+          "file": "apps/web-admin/src/components/TOTPManagement.tsx",
+          "line": 146,
+          "endLine": 146,
+          "text": "已复制，请粘贴到安全位置；复制不等于已保存",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "首次验证启用或重新生成后展示；保存勾选只控制完成关闭，不决定启用。",
+      "problem": "已启用藏在长段末，容易以为未勾选即未生效；复制下载也不等于安全保存。",
+      "actions": [
+        "merge",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "验证器已启用。请安全保存恢复码；这批码关闭、离页或 {deadline} 后不再显示。",
+        "details": {
+          "usage": "每条仅可使用一次，仅用于本试点关闭验证器；不能登录、改密码或验证其他业务。",
+          "rotate": "恢复码已更新，旧码已全部失效。请安全保存这批新码。",
+          "copyToast": "已复制，请粘贴到安全位置；复制不等于已保存。",
+          "download": "下载的是明文文件，请转存安全位置并清理下载目录；下载不等于已安全保存。"
+        }
+      },
+      "targetCondition": "首次显示已启用；重新生成显示已更新和旧码失效，再显示用途和安全保存要求。",
+      "placement": "码列表顶部＋保存确认旁",
+      "dependency": "frontend",
+      "boundaries": [
+        "验证成功已启用；重新生成不得冒充首次启用事件。",
+        "每码一次，仅关闭验证器用途，不能登录改密码或验证其他业务。",
+        "旧码重新生成后全失效；复制下载不自动确认安全保存。",
+        "仍提醒独立安全位置、不留公共电脑共享文件夹聊天，不与手机同失。"
+      ],
+      "acceptance": [
+        "未勾选仍知已启用；重新生成知旧码失效；复制下载不自动勾选；关闭超时不承诺再次读取。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P19",
+      "page": "恢复码验证即消耗",
+      "role": "个人会话账号所有者",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/totpManagementPresentation.tsx",
+          "line": 129,
+          "endLine": 129,
+          "text": "恢复码在验证成功时即被消耗，即使随后取消关闭操作，也不能再次使用。它仅能验证关闭，不能重新生成恢复码。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/totpManagementPresentation.tsx",
+          "line": 137,
+          "endLine": 137,
+          "text": "本次使用的恢复码已消耗。关闭后请重新登录，再设置新的验证器。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "关闭流程选恢复码时输入步骤说明；验证成功确认步骤再次提示。",
+      "problem": "看似重复但分别说明将发生与已发生后果，不能删掉。",
+      "actions": [
+        "keep",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "恢复码验证成功即作废，随后取消关闭也不能再用。恢复码仅可验证关闭，不能用来重新生成恢复码。",
+        "details": {
+          "after": "本次恢复码已消耗。确认关闭后需重新登录，再设置验证器。"
+        }
+      },
+      "targetCondition": "验证前将消耗，成功后已消耗，均不折叠。",
+      "placement": "输入框下＋最终确认正文",
+      "dependency": "copy",
+      "boundaries": [
+        "消耗在验证成功，不在最终确认关闭。",
+        "取消不关闭验证器，也不退还已消耗码。",
+        "关闭导致所有设备退出及原验证器恢复码失效的警告保留。"
+      ],
+      "acceptance": [
+        "输入前理解消耗；成功取消仍知已用；关闭后重登录重设路径保留。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P20",
+      "page": "人员字段留空的不同含义",
+      "role": "学校人员管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/members/teachers/MemberProfileDialog.tsx",
+          "line": 71,
+          "endLine": 71,
+          "text": "留空可清除原教职工号。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/members/teachers/MemberProfileDialog.tsx",
+          "line": 73,
+          "endLine": 73,
+          "text": "留空保留当前手机号；填写后替换为新号码。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/members/teachers/MemberProfileDialog.tsx",
+          "line": 40,
+          "endLine": 40,
+          "text": "保存姓名、教职工号或新手机号。只有登录身份发生变化时，该人员才需要重新登录。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "人员资料弹窗两个可选字段：教职工号空白删除，新手机号空白不改；保存走敏感操作。",
+      "problem": "不能合并成统一留空不修改，必须贴字段保留。",
+      "actions": [
+        "keep",
+        "shorten",
+        "contextual"
+      ],
+      "replacement": {
+        "summary": "教职工号：清空后会移除原教职工号。",
+        "details": {
+          "phone": "新手机号：留空不修改，填写后替换当前号码。",
+          "stepUp": "确认保存人员资料；登录身份变化后，该人员需重新登录。"
+        }
+      },
+      "targetCondition": "字段各留一条；重新登录或原邀请失效只在实际变化成功后显示。",
+      "placement": "各字段下方，不移至统一底注",
+      "dependency": "copy",
+      "boundaries": [
+        "不改 payload 空白语义。",
+        "仅登录身份变更需重新登录。",
+        "保留邀请失效重生成、并发冲突与输入保留提醒。"
+      ],
+      "acceptance": [
+        "只改姓名手机号空白仍保留；清教职工号先知后果；登录身份改变后仍有对应提醒。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P21",
+      "page": "班级代码与导入关联",
+      "role": "学校组织管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+          "line": 131,
+          "endLine": 131,
+          "text": "修改后，学生导入文件需使用新的班级代码。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/members/classes/ClassManagementPage.tsx",
+          "line": 135,
+          "endLine": 135,
+          "text": "学生 CSV 导入会使用班级代码进行匹配。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "编辑代码字段总显变更影响，新增时显示 CSV 匹配用途。",
+      "problem": "用途必要；未改代码时无需常显修改后的后果。",
+      "actions": [
+        "contextual",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "用于匹配学生导入文件中的班级代码。",
+        "details": {
+          "changed": "班级代码已改，后续学生导入文件请使用新代码。"
+        }
+      },
+      "targetCondition": "新增显示用途；编辑仅代码相对原值变化时显示导入影响。",
+      "placement": "代码字段下，学校年级仍常显",
+      "dependency": "frontend",
+      "boundaries": [
+        "仍必填并保留服务端约束。",
+        "不承诺更新历史导入文件或自动迁移学生。",
+        "不省略学校和年级范围。"
+      ],
+      "acceptance": [
+        "新增理解用途；只改名称不见假变更；代码改变即提醒后续文件同步。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P22",
+      "page": "模型 API Key 分支帮助",
+      "role": "平台模型管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/ModelConfigForm.tsx",
+          "line": 47,
+          "endLine": 47,
+          "text": "原密钥不会回显；留空则继续使用。同域名、同端口修改路径无需重填；更换域名或端口时需重新输入，可以使用原密钥。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/ModelConfigForm.tsx",
+          "line": 47,
+          "endLine": 47,
+          "text": "密钥将加密保存；保存只做零生成 Token 连接检测。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/ModelConfigForm.tsx",
+          "line": 29,
+          "endLine": 29,
+          "text": "新模型会单独验证并加密保存；后续更换密钥需逐个更新模型配置。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "新建、编辑、沿用已有密钥各有说明；换 API 域名或端口需重填。",
+      "problem": "默认读取全部域名端口路径分支太长，可按实际变化提示。",
+      "actions": [
+        "contextual",
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "已保存的密钥不回显；留空继续使用。",
+        "details": {
+          "changed": "API 域名或端口已变，请重新输入密钥；可以使用原密钥。",
+          "new": "密钥将加密保存。保存时检查连接，不生成回复。",
+          "reuse": "此配置将单独验证并加密保存；后续更换密钥需逐个更新配置。"
+        }
+      },
+      "targetCondition": "编辑未改源站显示基本规则；换域或端口切换为重填；仅改同域同端口路径不警告。",
+      "placement": "API Key 字段下＋复用提示",
+      "dependency": "frontend",
+      "boundaries": [
+        "不回显密钥、不取消换源站重填。",
+        "复用单独验证加密，后续轮换不自动同步。",
+        "保存连接检查不代表通过其他用途检测。",
+        "零生成 Token 不可改为供应商绝不收费。"
+      ],
+      "acceptance": [
+        "未改源站空白沿用；仅改路径不强制；换源站明示可用原密钥重填；复用知逐项轮换。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P23",
+      "page": "获取模型列表的零 Token 术语",
+      "role": "平台模型管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/ModelConfigForm.tsx",
+          "line": 98,
+          "endLine": 98,
+          "text": "零 Token 获取模型列表，也可手工输入模型名称。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/modelConfigColumns.tsx",
+          "line": 86,
+          "endLine": 86,
+          "text": "只检查接口、密钥和模型权限，不生成回复",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/modelConfigColumns.tsx",
+          "line": 86,
+          "endLine": 86,
+          "text": "发送合成测试内容，会产生少量模型用量",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "模型名称字段列获取列表帮助；检测按钮已有连接与生成两类 title。",
+      "problem": "零 Token 易被当免费承诺，换为实际动作边界。",
+      "actions": [
+        "shorten",
+        "merge",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "可获取模型列表，也可直接输入模型名称；获取列表不生成回复。"
+      },
+      "targetCondition": "列表旁一句；检测按钮仍按类型给说明。",
+      "placement": "名称字段下＋检测动作提示",
+      "dependency": "copy",
+      "boundaries": [
+        "不保证免费、不受限流。",
+        "生成检测发送合成内容且会用量。",
+        "拉列表失败仍允许手动输入。"
+      ],
+      "acceptance": [
+        "可手输；连接与生成提示不混用；列表失败有填写回退。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P24",
+      "page": "自动阅卷用途与图片检测",
+      "role": "平台模型管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.tsx",
+          "line": 33,
+          "endLine": 33,
+          "text": "识别学生答题图并生成评分建议，教师确认最终分数。此用途单独保存，不使用本地模型。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.tsx",
+          "line": 34,
+          "endLine": 34,
+          "text": "当前可先使用一个 API 模型测试；多模型评审角色为可选配置，不影响单模型自动阅卷。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/ImageGradingModelForm.tsx",
+          "line": 43,
+          "endLine": 43,
+          "text": "先保存，再检测图片能力。检测发送合成图片，会产生少量模型用量；密钥停用或配置变化后需要重新检测。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "点阅卷配置打开用途抽屉；检测依赖保存的启用配置；多模型角色现已可选折叠。",
+      "problem": "三段可按阶段组织，不重复讲独立用途与可先单模型。",
+      "actions": [
+        "merge",
+        "shorten",
+        "contextual",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "生成评分建议，教师确认最终分数。本校自动阅卷独立配置 API 模型，不回退本地模型。",
+        "details": {
+          "notSaved": "先保存本校自动阅卷模型，再检测图片能力。",
+          "probe": "检测发送合成图片，会产生少量模型用量。密钥停用或配置变化后需重新检测。",
+          "roles": "多模型评审角色（可选；单模型可直接测试）"
+        }
+      },
+      "targetCondition": "主边界常显；未保存先提示保存；已保存显示图片检测用量及失效条件。",
+      "placement": "抽屉顶部＋检测按钮旁",
+      "dependency": "frontend",
+      "boundaries": [
+        "单模型不免除准入与最终确认。",
+        "图片读取通过不等于正式评分全部门禁通过。",
+        "密钥停用或配置变化需重检。",
+        "不把当前已折叠的多模型角色误写成全展开。"
+      ],
+      "acceptance": [
+        "未保存知下一步；检测前知合成图用量；无需展开多模型仍知人工确认与无本地回退。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P25",
+      "page": "模型页全局用途指南",
+      "role": "平台模型管理员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+          "line": 583,
+          "endLine": 583,
+          "text": "普通回复检测通过后，可勾选多个供应商的模型。学校管理员在聊天页顶部切换。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+          "line": 584,
+          "endLine": 584,
+          "text": "通过结构化输出检测后，可独立指定模型或跟随默认配置；学校管理员切换聊天模型不会改变试卷解析。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+          "line": 585,
+          "endLine": 585,
+          "text": "在“应用用途”中独立分配多模态模型，直接分析答题卡图像；识别结果需人工核对后发布。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+          "line": 586,
+          "endLine": 586,
+          "text": "点击“阅卷配置”指定本校自动阅卷 API 模型并检测图片能力，系统不会回退本地模型。多模型评审角色可按需展开；模型准入与最终确认继续按已配置策略执行。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/pages/PlatformModelConfigPage.tsx",
+          "line": 587,
+          "endLine": 587,
+          "text": "连接检查只验证接口、密钥和模型访问权限。同一学校可为同一供应商和模型配置多个 API Key，密钥分别加密保存。",
+          "kind": "literal"
+        }
+      ],
+      "currentCondition": "生产模型页顶部 Alert 常显四用途＋密钥说明；角色限平台管理员，用途抽屉又有细则。",
+      "problem": "每次看列表需跨过入门长说明，可保留总原则与按需帮助。",
+      "actions": [
+        "progressive",
+        "merge",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "按用途独立配置学校模型；连接通过不代表已通过各用途检测。",
+        "details": {
+          "helpTitle": "用途与检测说明",
+          "dialogue": "日常对话：普通回复检测通过后可开放多个模型，学校管理员在聊天页切换。",
+          "document": "试卷解析：通过结构化检测后独立指定或跟随默认配置；聊天切换不会改变此设置。",
+          "answerSheet": "答题卡识别：独立指定多模态模型，人工核对后发布。",
+          "grading": "自动阅卷：独立指定 API 模型并检测图片能力，不回退本地；正式使用仍需准入与最终确认。"
+        }
+      },
+      "targetCondition": "学校和用途状态常显，完整分工放可展开用途与检测说明；关键边界仍留各抽屉。",
+      "placement": "列表上方短说明＋展开帮助",
+      "dependency": "frontend",
+      "boundaries": [
+        "聊天切换不改独立解析/答题卡用途。",
+        "答题卡人工核对后发布，正式评分依准入与最终确认。",
+        "自动阅卷不回退本地；多密钥加密与轮换可查。",
+        "保留所选学校与未保存切校保护。"
+      ],
+      "acceptance": [
+        "首次可查四用途；常用不重复读；各用途动作仍见本身边界。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P26",
+      "page": "专业模型诊断与返回摘要",
+      "role": "平台模型运维人员",
+      "priority": "P2",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/hooks/useSchoolModelActions.tsx",
+          "line": 81,
+          "endLine": 81,
+          "text": "本次返回摘要（最多 256 个字符，不会写入数据库）",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/hooks/useSchoolModelActions.tsx",
+          "line": 82,
+          "endLine": 82,
+          "text": "供应商没有返回可展示的内容摘要。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/modelConfigColumns.tsx",
+          "line": 68,
+          "endLine": 68,
+          "text": "const hasDetails = Boolean(status && status !== \"untested\" || testedAt || message || interruptedStructured);",
+          "kind": "excerpt"
+        },
+        {
+          "file": "apps/web-admin/src/features/platform-model-config/components/modelConfigColumns.tsx",
+          "line": 80,
+          "endLine": 80,
+          "text": "aria-label={`${config.model_name}：${detailLabel}`} onClick={showDetails}",
+          "kind": "excerpt"
+        }
+      ],
+      "currentCondition": "表格已有摘要状态；有记录且无进行操作可点开详情，显示结束原因、输出约束、长度与用量，并非全页常显。",
+      "problem": "已处于按需专业诊断层，不应当普通教师负担整体删除；仅短化摘要说明。",
+      "actions": [
+        "keep",
+        "shorten"
+      ],
+      "replacement": {
+        "summary": "本次返回摘要（最多 256 字符，不写入数据库）",
+        "details": {
+          "noPreview": "供应商未提供可展示的返回摘要。"
+        }
+      },
+      "targetCondition": "保持点击结果查看；不要向列表添加常显技术字段。",
+      "placement": "现有诊断弹窗摘要上方",
+      "dependency": "copy",
+      "boundaries": [
+        "保留 Token、finish_reason、response_format、API 地址。",
+        "不写入数据库仅指摘要，不扩大为检测无记录。",
+        "不承诺摘要永久可追溯。",
+        "缺失字段不等于已通过、零用量或零输出；本条不授权改默认值。"
+      ],
+      "acceptance": [
+        "各检测详情仍可查看；无摘要不伪造；明确长度与不入库。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    },
+    {
+      "id": "MC-P27",
+      "page": "学校策略预算零值与单位",
+      "role": "平台模型治理管理员",
+      "priority": "P1",
+      "evidence": [
+        {
+          "file": "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx",
+          "line": 166,
+          "endLine": 166,
+          "text": "0 表示尚未配置预算，不能通过外部沙箱准入；不是不限额。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx",
+          "line": 167,
+          "endLine": 167,
+          "text": "按平台微美元口径保存，最多六位小数；不是本月的学校总额度。",
+          "kind": "literal"
+        },
+        {
+          "file": "apps/web-admin/src/components/model-governance/ManagedGovernanceWorkspace.tsx",
+          "line": 148,
+          "endLine": 148,
+          "text": "当前生效策略 · 版本 {policy.version}",
+          "kind": "template"
+        }
+      ],
+      "currentCondition": "所选学校治理的使用策略加载后显示；标签为美元，支持六位小数，保存转微美元。",
+      "problem": "零值阻断和考试范围必要，存储用微美元可移出主要帮助。",
+      "actions": [
+        "shorten",
+        "keep"
+      ],
+      "replacement": {
+        "summary": "0 表示预算未配置，不能通过外部沙箱准入。",
+        "details": {
+          "exam": "仅限这一场考试，非学校月总额度；最多六位小数。"
+        }
+      },
+      "targetCondition": "每题保留零值含义，整场保留单次考试范围与精度；技术存储单位留运维文档。",
+      "placement": "预算字段下，学校和策略版号仍在标题",
+      "dependency": "copy",
+      "boundaries": [
+        "0 不等于不限额，不能默认放行。",
+        "美元输入、六位精度和精确微美元转换保持。",
+        "整场不是学校月额度。",
+        "保留学校、策略版本、expected_version 与外发授权范围。"
+      ],
+      "acceptance": [
+        "0 明确阻断；单位美元且最多六位小数；不误读为月额度。"
+      ],
+      "report": "portals-ops.md",
+      "implementationStatus": "proposal_not_implemented"
+    }
+  ]
+}

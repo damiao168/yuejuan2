@@ -74,10 +74,23 @@ describe("离线恢复说明通过 App 原入口展示", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([true, false])("登录页仅为当前账号与服务器显示授权到期时间：匹配=%s", async (matches) => {
+    data.offlineAccess = { actorId: matches ? "teacher" : "another-account", tenantId: "school", server: "http://localhost:8080",
+      username: "teacher", tenantCode: "school", expiresAt: "2026-10-10T14:00:00Z" };
+    await act(async () => root.render(<App />));
+    if (matches) {
+      expect(container.textContent).toContain("可离线解锁至");
+      expect(container.textContent).toContain("获取任务和上传仍需在线登录");
+    } else {
+      expect(container.textContent).not.toContain("可离线解锁至");
+      expect(container.textContent).toContain("在线登录后生效，仅当前 Windows 用户可用");
+    }
+  });
+
   it.each([
     {
       name: "匹配且有效的租约先展示重启恢复说明", expiresAt: "2026-10-10T14:00:00Z", type: "info",
-      description: "请先加密保存草稿；重启后可在连接登录页解锁本账号草稿。答卷图片仍需联网恢复，上传和下载任务需在线登录。"
+      description: "请先加密保存草稿与已准备的答卷原件；重启后可在连接登录页解锁。未保存、超限或不支持的原件需联网恢复，获取新任务和上传仍需在线登录。"
     },
     {
       name: "已有账号但租约过期时展示本页续期说明", expiresAt: "2026-10-08T14:00:00Z", type: "warning",

@@ -441,6 +441,7 @@ function QualityRunDetails({ run, runs, dimensions, gates, badFocusPatchRatio, e
   return (
     <>
       <IssueList issues={run.quality_issues} />
+      <details className="quality-diagnostics"><summary>检测详情</summary>
       <div className="quality-run-select">
         <span>检测记录</span>
         <Select
@@ -475,6 +476,7 @@ function QualityRunDetails({ run, runs, dimensions, gates, badFocusPatchRatio, e
         {badFocusPatchRatio !== undefined ? <span>局部坏块 {formatPercent(badFocusPatchRatio)}</span> : null}
         {effectiveShortEdge !== undefined ? <span>有效短边 {Math.round(effectiveShortEdge)} px</span> : null}
       </div>
+      </details>
     </>
   );
 }
@@ -487,7 +489,7 @@ function IssueList({ issues }: Readonly<{ issues: ImageQualityIssue[] }>) {
       {issues.map((issue, index) => (
         <div key={`${issue.code}-${index}`}>
           <ShieldAlert size={16} />
-          <span><strong>{issueLabels[issue.code] ?? issue.code}</strong><small>{formatObserved(issue)}</small></span>
+          <span><strong>{issueLabels[issue.code] ?? "其他图像质量问题"}</strong><small>{formatObserved(issue)}</small></span>
         </div>
       ))}
     </div>

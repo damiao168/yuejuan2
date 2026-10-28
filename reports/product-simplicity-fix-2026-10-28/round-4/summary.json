@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-28",
+  "completed": 120,
+  "observations": 120,
+  "summary": {
+    "fixed": 112,
+    "already_fixed": 8
+  },
+  "P1": {
+    "fixed": 22
+  },
+  "newly_completed": 2,
+  "status_changes": [
+    {
+      "id": "EX-22",
+      "before": "partial",
+      "after": "fixed"
+    },
+    {
+      "id": "G17",
+      "before": "partial",
+      "after": "fixed"
+    }
+  ]
+}

@@ -10,7 +10,7 @@ export function RegionGeometry({ view }: Readonly<{ view: TemplateRegionEditorVi
 			{selectedRegion ? (
 				<details className="template-option-editor template-advanced-geometry">
 					<summary>高级设置 · 精确坐标</summary>
-					<p>优先在画布上框选。精确输入以整页为参照：左、上表示距页边的位置；宽、高表示占整页的百分比。</p>
+					<p>以整页为参照，单位为百分比；左、上是距页边的位置，宽、高是区域尺寸。</p>
 					<div className="template-coordinate-fields">
 						{(["x", "y", "width", "height"] as const).map((key) => (
 							<label key={key}>
@@ -73,7 +73,7 @@ export function OptionRegionEditor({ view }: Readonly<{ view: TemplateRegionEdit
 							添加
 						</Button>
 					</div>
-					<p>选项框以本题区域为参照，数值为占本题区域的百分比；每个框只覆盖一个填涂点。</p>
+					<p>选项坐标以本题区域为参照，单位为百分比；每框只覆盖一个填涂点。</p>
 					{(selectedRegion.option_regions ?? []).map((option) => (
 						<div className="template-option-row" key={option.id}>
 							<Input

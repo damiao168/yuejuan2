@@ -130,13 +130,7 @@ export function SessionManagementPage({ onLoggedOut, accountLabel, minimumPasswo
         <Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>刷新</Button>
       </section>
 
-      <TOTPManagement
-        personalSession={sessions.some((session) => session.current && session.session_type !== "public_device" && session.session_type !== "service")}
-        accountLabel={accountLabel}
-        refreshKey={refreshKey}
-        onChanged={() => void load()}
-        onLoggedOut={onLoggedOut}
-      />
+
 
       <PersonalReviewBookmarkCleanup />
 
@@ -232,6 +226,15 @@ export function SessionManagementPage({ onLoggedOut, accountLabel, minimumPasswo
           <Button type="primary" htmlType="submit" icon={<KeyRound size={16} />} loading={actioning === "password"}>更新密码</Button>
         </Form>
       </section>
+      <details className="workspace-section"><summary>可选试点：身份验证器（尚不强制用于登录与阅卷）</summary>
+      <TOTPManagement
+        personalSession={sessions.some((session) => session.current && session.session_type !== "public_device" && session.session_type !== "service")}
+        accountLabel={accountLabel}
+        refreshKey={refreshKey}
+        onChanged={() => void load()}
+        onLoggedOut={onLoggedOut}
+      />
+      </details>
     </div>
   );
 }

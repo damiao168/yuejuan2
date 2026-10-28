@@ -109,12 +109,13 @@ function PasswordStep({ flow, password, onPassword }: Readonly<FlowContentProps 
 
 function EnrollmentStep({ flow, accountLabel, deadline, code, onCode }: Readonly<FlowContentProps & { flow: Extract<MFAFlowState, { phase: "enrollment" }> }>) {
   return <>
-    <p>在验证器中选择“添加账号”，扫描二维码；无法扫描时选择手动输入密钥。请勿截图、分享或将二维码上传到第三方网站。</p>
+    <p>在验证器中添加账号并扫码；无法扫码时可手动输入密钥。</p>
+    <p className="totp-help">请勿截图、分享二维码或密钥，也不要上传到第三方网站。</p>
     <div className="totp-provisioning"><img width={216} height={216} src={flow.enrollment.qr_code_data_url} alt="身份验证器设置二维码，包含私密密钥" />
-      <div><strong>手动添加</strong><p>账号：{accountLabel}</p><p>类型：基于时间 · SHA-1 · 6 位 · 30 秒</p><code className="totp-secret">{flow.enrollment.secret}</code></div></div>
+      <details><summary>手动设置</summary><p>账号：{accountLabel}</p><p>类型：基于时间 · SHA-1 · 6 位 · 30 秒</p><code className="totp-secret">{flow.enrollment.secret}</code></details></div>
     <label htmlFor="totp-enrollment-code">输入验证器当前的 6 位动态码</label>
     <Input id="totp-enrollment-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} disabled={flow.busy} onChange={(event) => onCode(event.target.value)} />
-    <p className="totp-help">如果动态码即将刷新，请等待新的码。同一码成功验证后不能再用；如持续失败，请核对手机时间。设置有效期剩余 {deadline}。</p>
+    <p className="totp-help">动态码即将刷新时请等新码；成功验证的码不能再用。持续失败请核对手机时间。设置剩余 {deadline}。</p>
   </>;
 }
 
@@ -126,7 +127,7 @@ function ChallengeStep({ flow, deadline, method, code, onMethod, onCode }: Reado
     </Radio.Group>}
     <label htmlFor="totp-challenge-code">{method === "totp" ? "6 位动态码" : "一条未使用的恢复码"}</label>
     <Input id="totp-challenge-code" inputMode={method === "totp" ? "numeric" : "text"} autoComplete={method === "totp" ? "one-time-code" : "off"} maxLength={method === "totp" ? 6 : 35} value={code} disabled={flow.busy} onChange={(event) => onCode(event.target.value)} />
-    <p className="totp-help">{method === "totp" ? "请使用新的动态码。同一码成功后不能再用，输入失败不会自动新建挑战。" : "恢复码在验证成功时即被消耗，即使随后取消关闭操作，也不能再次使用。它仅能验证关闭，不能重新生成恢复码。"} 验证有效期剩余 {deadline}。</p>
+    <p className="totp-help">{method === "totp" ? "请使用新的动态码。同一码成功后不能再用，输入失败不会自动新建挑战。" : "恢复码验证成功即作废，随后取消关闭也不能再用。恢复码仅可验证关闭，不能用来重新生成恢复码。"} 验证有效期剩余 {deadline}。</p>
   </>;
 }
 
@@ -134,18 +135,18 @@ function VerifiedStep({ flow, deadline }: Readonly<FlowContentProps & { flow: Ex
   return <>
     <Alert type="success" showIcon message="身份验证成功，尚未执行操作" />
     <p>{flow.challenge.operation === "mfa.disable" ? "确认关闭后，原验证器、全部恢复码及本次验证将失效，所有登录设备（包括当前设备）都会退出。" : "确认后旧恢复码将全部作废，新恢复码仅显示一次。请准备好安全的保存位置。"}</p>
-    {flow.method === "recovery_code" && <p>本次使用的恢复码已消耗。关闭后请重新登录，再设置新的验证器。</p>}
+    {flow.method === "recovery_code" && <p>本次恢复码已消耗。确认关闭后需重新登录，再设置验证器。</p>}
     <p className="totp-help">本次确认有效期剩余 {deadline}，取消不会自动执行。</p>
   </>;
 }
 
 function RecoveryStep({ flow, deadline, saved, onSaved, onCopy, onDownload, onClose }: Readonly<FlowContentProps & { flow: Extract<MFAFlowState, { phase: "recovery" }> }>) {
   return <>
-    <Alert type="warning" showIcon message="这批恢复码只显示一次，每条仅能使用一次。关闭、离开页面或超时后不会再次显示。" />
+    <Alert type="warning" showIcon message={flow.reason === "rotated" ? "恢复码已更新，旧码已全部失效。请安全保存这批新码。" : "验证器已启用，请安全保存恢复码；无需等待勾选才生效。"} />
     <p>保存到你能独立访问的安全位置，例如受保护的个人密码管理器或离线纸张。不要与验证器只放在同一部可能丢失的手机中，也不要留在公共电脑、共享文件夹或聊天记录中。</p>
     <ol className="totp-recovery-codes" aria-label="一次性恢复码">{flow.codes.map((item) => <li key={item}><code>{item}</code></li>)}</ol>
     <Space wrap><Button icon={<Copy size={16} />} onClick={onCopy}>复制恢复码</Button><Button icon={<Download size={16} />} onClick={onDownload}>下载明文文件</Button></Space>
-    <p className="totp-help">恢复码不能用于登录、修改密码或验证其他业务。此页将在 {deadline} 后隐藏；验证码验证成功时验证器已经启用，无需等待勾选才生效。</p>
+    <p className="totp-help">每条仅可使用一次，仅用于本试点关闭验证器；不能登录、改密码或验证其他业务。这批码关闭、离页或 {deadline} 后不再显示。</p>
     <Checkbox checked={saved} onChange={(event) => onSaved(event.target.checked)}>我已将恢复码保存到安全位置</Checkbox>
     <Button type="primary" disabled={!saved || flow.busy} onClick={onClose}>完成并隐藏恢复码</Button>
   </>;

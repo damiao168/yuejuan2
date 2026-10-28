@@ -272,7 +272,7 @@ describe("学校模型库操作", () => {
     await act(async () => button("阅卷配置", row("OpenAI")).click());
     const binding = mocks.bindings.mock.calls[mocks.bindings.mock.calls.length - 1]?.[0] as { onDirtyChange: (dirty: boolean) => void };
     await act(async () => binding.onDirtyChange(true));
-    await act(async () => button("使用此模型自动阅卷").click());
+    await act(async () => button("设置并验证图片能力").click());
     expect(mocks.saveGrading).toHaveBeenCalledOnce();
     await act(async () => button("关闭用途").click());
     expect(mocks.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: "放弃未保存的用途设置？" }));
@@ -371,7 +371,9 @@ describe("学校模型库操作", () => {
     expect(column("OpenAI", "text").textContent).toContain("通过");
     expect(column("OpenAI", "structured").textContent).toContain("未通过");
     expect(row("OpenAI").textContent).not.toContain("暂时无法验证");
-    expect([...row("OpenAI").querySelectorAll("[data-column-key]")].map((item) => item.getAttribute("data-column-key"))).toEqual(["model-name", "provider", "connection", "text", "structured", "assignment", "actions"]);
+    expect([...row("OpenAI").children].map((item) => item.getAttribute("data-column-key"))).toEqual(["model-name", "provider", "availability", "usage-summary", "settings"]);
+    expect(row("OpenAI").querySelector<HTMLDetailsElement>("details.platform-model-settings")?.open).toBe(false);
+    expect([...column("OpenAI", "settings").querySelectorAll("[data-column-key]")].map(item => item.getAttribute("data-column-key"))).toEqual(["connection", "text", "structured", "assignment", "actions"]);
     expect(column("OpenAI", "actions").querySelector('[aria-label$="：检测连接"]')).toBeNull();
     expect(row("OpenAI").querySelector('[aria-label="OpenAI更多操作"]')).toBeNull();
     expect([...column("OpenAI", "actions").querySelectorAll("button")].map((item) => item.textContent)).toEqual(["编辑", "停用", "删除"]);
@@ -1039,12 +1041,29 @@ describe("学校模型库操作", () => {
     mocks.discover.mockResolvedValue({ provider: { display_name: "其他兼容接口" }, models: [values.model_name] });
     await render();
     await act(async () => row("OpenAI").querySelector<HTMLButtonElement>('[aria-label="编辑OpenAI"]')!.click());
-    expect(host.querySelector("aside")?.textContent).toContain("同域名、同端口修改路径无需重填");
+    expect(host.querySelector("aside")?.textContent).toContain("已保存的密钥不回显；留空继续使用。");
     await act(async () => button("获取可用模型").click());
     expect(mocks.form.validateFields).toHaveBeenCalledWith(["supplier", "base_url"]);
     expect(mocks.discover).toHaveBeenCalledWith({ tenant_id: "school-a", credential_source_id: "OpenAI", provider: "custom", base_url: "https://example.test/" });
     await act(async () => button("检测连接并更新").click());
     expect(mocks.update).toHaveBeenLastCalledWith("OpenAI", "school-a", expect.objectContaining({ base_url: "https://example.test/", api_key: "" }));
+  });
+
+  it.each([
+    ["https://example.test/v2", false],
+    ["https://other.example.test/v1", true],
+    ["https://example.test:8443/v1", true]
+  ])("API 地址 %s 仅在域名或端口变化时提示重填密钥", async (baseURL, changed) => {
+    const values: ConfigFormValues = { supplier: "custom", api_key: "", base_url: baseURL, model_name: configs[1].model_name };
+    mocks.watch.mockImplementation((name: keyof ConfigFormValues) => values[name]);
+    mocks.form.getFieldValue.mockImplementation((name: keyof ConfigFormValues) => values[name]);
+    mocks.form.getFieldsValue.mockReturnValue(values);
+    await render();
+    await act(async () => row("OpenAI").querySelector<HTMLButtonElement>('[aria-label="编辑OpenAI"]')!.click());
+    const help = host.querySelector("aside")?.textContent;
+    expect(help?.includes("API 域名或端口已变，请重新输入密钥；可以使用原密钥。")).toBe(changed);
+    expect(help?.includes("已保存的密钥不回显；留空继续使用。")).toBe(!changed);
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 
   it("新建表单保留获取模型和保存入口，暂不可用时警告且保留填写界面", async () => {

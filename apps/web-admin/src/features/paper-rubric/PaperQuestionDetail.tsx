@@ -33,7 +33,7 @@ export function PaperQuestionDetail({ context }: ViewProps) {
       <button type="button" role="tab" aria-selected={state.detailTab === "content"} className={state.detailTab === "content" ? "active" : ""}
         onClick={() => context.actions.setDetailTab("content")}>题目与答案{state.formDirty ? " · 未保存" : ""}</button>
       <button type="button" role="tab" aria-selected={state.detailTab === "scoring"} className={state.detailTab === "scoring" ? "active" : ""}
-        onClick={() => context.actions.setDetailTab("scoring")}>评分配置{context.rubricWorkflow.rubricDirty || context.scoringRuleWorkflow.scoringRuleDirty ? " · 未保存" : ""}</button>
+        onClick={() => context.actions.setDetailTab("scoring")}>评分配置{context.rubricWorkflow.rubricDirty || context.scoringRuleWorkflow.scoringRuleDirty || state.auxiliaryDirty ? " · 未保存" : ""}</button>
     </div>
     {/* 隐藏而不是卸载表单；切换评分标签时保留字段注册和题目草稿。 */}
     <div className="paper-question-content" style={{ display: state.detailTab === "content" ? undefined : "none" }}>

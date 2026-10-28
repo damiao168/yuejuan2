@@ -212,17 +212,6 @@ describe("答题卡采集页面重构边界", () => {
     await act(async () => { button(label).click(); });
   }
 
-  async function upload(name = "考号甲.png") {
-    const calls = mocks.uploadProps.mock.calls;
-    const options = calls[calls.length - 1][0] as UploadProps;
-    const onSuccess = vi.fn(() => { events.push("success"); });
-    const onError = vi.fn();
-    await act(async () => {
-      options.customRequest!({ file: new File(["scan"], name, { type: "image/png" }), filename: "file", action: "", method: "POST", onSuccess, onError }, { defaultRequest: vi.fn() });
-    });
-    return { onSuccess, onError };
-  }
-
   it("考试列表加载先于采集错误，成功后再显示采集失败", async () => {
     const pending = deferred<{ exams: Exam[] }>();
     mocks.exams.mockReturnValue(pending.promise);
@@ -252,7 +241,7 @@ describe("答题卡采集页面重构边界", () => {
     failed.submission.quality_status = "failed";
     failed.detailError = "详情读取失败";
     await act(async () => { pending.resolve(capture([row(), failed])); });
-    expect(host.querySelector("[data-table-shell] p")?.textContent).toBe("2 / 2 条记录，已完成 0 份；1 份处理失败，可直接重试");
+    expect(host.querySelector("[data-table-shell] p")?.textContent).toBe("2 / 2 条记录，已完成 0 份；1 份需核对，请查看原因后前往批次处理");
     expect(host.querySelector('[data-row-id="failed-row"]')?.className).toBe("row-with-warning");
   });
 
@@ -267,72 +256,31 @@ describe("答题卡采集页面重构边界", () => {
     expect(host.querySelector('[data-row-id="new-row"]')).not.toBeNull();
   });
 
-  it("上传按创建、上传、页面关联、完整性、图像质检、回调、刷新顺序执行", async () => {
-    await renderPage();
-    events.length = 0;
-    const result = await upload();
-    expect(events).toEqual(["create", "upload", "associate", "integrity", "quality", "success", "refresh"]);
-    expect(mocks.create).toHaveBeenCalledWith("exam-a", { candidate_no: "考号甲", source_type: "image_upload", expected_page_count: 1 });
-    expect(mocks.upload.mock.calls[0][1]).toEqual({ owner_type: "submission", owner_id: "submission-a", school_id: "school-a", exam_id: "exam-a", submission_id: "submission-a" });
-    expect(mocks.addPage).toHaveBeenCalledWith("submission-a", "uploaded-file", 1);
-    expect(result.onSuccess).toHaveBeenCalledOnce();
-    expect(result.onError).not.toHaveBeenCalled();
-    expect(host.querySelector('.upload-queue-item progress')?.getAttribute("data-status")).toBe("success");
+  it("历史页不再新建旧上传链，正常处理转当前已授权考试批次", async () => {
+    const navigate = vi.fn(); await renderPage({ onNavigate: navigate });
+    expect(host.textContent).toContain("历史答卷");
+    expect([...host.querySelectorAll("button")].map(item => item.textContent).join("、")).not.toMatch(/转入待识别|开始识别|生成题目区域|上传答题卡/);
+    expect(mocks.uploadProps).not.toHaveBeenCalled();
+    await click("前往批次导入与处理"); expect(navigate).toHaveBeenCalledExactlyOnceWith("/exams/exam-a/capture");
+    for (const write of [mocks.create, mocks.upload, mocks.addPage, mocks.integrity, mocks.quality]) expect(write).not.toHaveBeenCalled();
   });
 
-  it("完整性未通过仍算上传成功，但不提交图像质检", async () => {
-    mocks.integrity.mockResolvedValue({ result: { valid: false, issues: [] } });
-    await renderPage();
-    const result = await upload();
-    expect(mocks.quality).not.toHaveBeenCalled();
-    expect(result.onSuccess).toHaveBeenCalledOnce();
-    expect(host.querySelector(".upload-queue-item")?.textContent).toContain("已上传，答卷完整性需处理");
+  it("无已授权考试或未提供导航时不能进入任意批次", async () => {
+    const navigate = vi.fn(); mocks.exams.mockResolvedValue({ exams: [] });
+    await renderPage({ onNavigate: navigate }); expect(button("前往批次导入与处理").disabled).toBe(true);
+    expect(navigate).not.toHaveBeenCalled(); expect(mocks.create).not.toHaveBeenCalled();
   });
 
-  it.each(["create", "upload", "addPage"] as const)("%s 在页面关联成功前失败时报告上传失败", async (stage) => {
-    mocks[stage].mockRejectedValue(new Error("关联前失败"));
+  it("只读权限重渲染保留搜索焦点和表格，采集能力按真实权限展示", async () => {
     await renderPage();
-    const result = await upload();
-    expect(result.onSuccess).not.toHaveBeenCalled();
-    expect(result.onError).toHaveBeenCalledOnce();
-    expect(mocks.integrity).not.toHaveBeenCalled();
-    expect(host.querySelector('.upload-queue-item progress')?.getAttribute("data-status")).toBe("exception");
-  });
-
-  it.each(["integrity", "quality"] as const)("%s 在页面关联后失败时保留已上传事实并刷新", async (stage) => {
-    // 页面已经关联，后续检测失败不能引导用户再次提交同一文件。
-    mocks[stage].mockRejectedValue(new Error("后续处理失败"));
-    await renderPage();
-    mocks.capture.mockClear();
-    const result = await upload();
-    expect(result.onSuccess).toHaveBeenCalledOnce();
-    expect(result.onError).not.toHaveBeenCalled();
-    expect(mocks.capture).toHaveBeenCalledOnce();
-    expect(host.querySelector(".upload-queue-item")?.textContent).toContain("后续处理失败");
-    expect(host.querySelector('.upload-queue-item progress')?.getAttribute("data-status")).toBe("success");
-  });
-
-  it("无考试时上传入口禁用且直接回调也不会创建记录", async () => {
-    mocks.exams.mockResolvedValue({ exams: [] });
-    await renderPage();
-    expect(button("上传答题卡").disabled).toBe(true);
-    const result = await upload();
-    expect(result.onError).toHaveBeenCalledOnce();
-    expect(mocks.create).not.toHaveBeenCalled();
-    expect(host.querySelector(".upload-queue-item")?.textContent).toContain("请先选择考试");
-  });
-
-  it("只读权限重渲染保留搜索焦点、表格实例和上传队列", async () => {
-    await renderPage();
-    await upload();
     const input = host.querySelector<HTMLInputElement>('input[placeholder="搜索学生或准考证号"]')!;
     input.focus();
     const table = host.querySelector("[data-table-instance]");
-    await renderPage({ canManage: false });
+    await renderPage({ canManage: false, canManageProcessing: false });
     expect(document.activeElement).toBe(input);
     expect(host.querySelector("[data-table-instance]")).toBe(table);
-    expect(host.querySelectorAll(".upload-queue-item")).toHaveLength(1);
-    expect(button("上传答题卡").disabled).toBe(true);
+    expect(host.querySelectorAll(".upload-queue-item")).toHaveLength(0);
+    expect(host.textContent).toContain("新增导入或继续处理需要采集权限");
     await renderPage({ canReadStudentNames: false });
     expect(mocks.capture).toHaveBeenLastCalledWith("exam-a", false);
     await click("页面 submission-a");
@@ -396,16 +344,16 @@ describe("答题卡采集页面重构边界", () => {
     expect(host.querySelector('[data-drawer="文字识别详情"]')?.textContent).toContain("暂无识别结果");
     expect(host.querySelector(".ocr-result-list")).toBeNull();
   });
-  it("A上传等待期间切到B，A成功刷新不能覆盖当前B列表",async()=>{
+  it("切换考试后批次入口只定位当前实际考试",async()=>{
     mocks.exams.mockResolvedValue({exams:[exam("exam-a"),exam("exam-b")]});
     mocks.capture.mockImplementation(async(id:string)=>{ const value=row(`${id}-row`); value.submission.exam_id=id; return capture([value]); });
-    const pending=deferred<{file:{id:string}}>(); mocks.upload.mockReturnValueOnce(pending.promise);
-    await renderPage(); await upload();
+    const navigate=vi.fn(); await renderPage({onNavigate:navigate});
     const picker=host.querySelector<HTMLSelectElement>("select.exam-picker")!;
     await act(async()=>{picker.value="exam-b";picker.dispatchEvent(new Event("change",{bubbles:true}));});
     expect(picker.value).toBe("exam-b"); expect(host.querySelector('[data-row-id="exam-b-row"]')).not.toBeNull();
-    await act(async()=>pending.resolve({file:{id:"uploaded-file"}}));
-    expect(mocks.create).toHaveBeenCalledWith("exam-a",expect.anything());
+    await click("前往批次导入与处理");
+    expect(navigate).toHaveBeenCalledExactlyOnceWith("/exams/exam-b/capture");
+    expect(mocks.create).not.toHaveBeenCalled();
     expect(mocks.capture).toHaveBeenLastCalledWith("exam-b",true);
     expect(picker.value).toBe("exam-b");
     expect(host.querySelector('[data-row-id="exam-a-row"]')).toBeNull();

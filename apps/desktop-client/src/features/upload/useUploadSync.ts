@@ -23,7 +23,8 @@ export function useUploadSync({
   uploadInFlightRef,
   durablePersistenceRef,
   updateQueue,
-  logEvent
+  logEvent,
+  onUploaded
 }: {
   client: DesktopApiClient;
   token: string | null;
@@ -36,6 +37,7 @@ export function useUploadSync({
   durablePersistenceRef: RefObject<Promise<void>>;
   updateQueue: UpdateQueue;
   logEvent: LogEvent;
+  onUploaded?: (context: { examId: string; captureBatchId: string }) => Promise<void>;
 }) {
   const onlineRef = useRef(isOnline);
   onlineRef.current = isOnline;
@@ -150,6 +152,7 @@ export function useUploadSync({
       progress: Math.max(item.progress, 1),
       detail: "正在上传到后端文件 API"
     }));
+    let uploadConfirmed = false;
     try {
       const completed = await resumeCaptureUpload(client, {
         file,
@@ -181,9 +184,16 @@ export function useUploadSync({
         }
       }, controller.signal);
       if (!finishUploadQueueItem(id, completed, controller, scope)) return;
+      uploadConfirmed = true;
+      if (!isUploadInterrupted(controller, scopeRef, scope)) await onUploaded?.({ examId: item.examId, captureBatchId: item.captureBatchId });
       await logEvent("info", "scan queue item uploaded", `${item.fileName ?? item.title} -> ${completed.capture_file_id ?? completed.remote_upload_id}`);
     } catch (error) {
       if (isUploadInterrupted(controller, scopeRef, scope)) return;
+      // 上传回执已确认后，检查或日志失败只能提示刷新，不能把成功文件改回失败后重复上传。
+      if (uploadConfirmed) {
+        updateQueue((current) => updateScanQueueItem(current, id, { detail: "上传已完成，处理检查暂未更新；请刷新当前批次。" }));
+        return;
+      }
       const message = getUserErrorMessage(error, "上传失败");
       updateQueue((current) => updateScanQueueItem(current, id, { status: "failed", detail: message }));
       await logEvent("error", "scan queue item failed", `${item.fileName ?? item.title}: ${message}`);
@@ -191,7 +201,7 @@ export function useUploadSync({
       activeUploads.current.delete(controller);
       uploadInFlightRef.current.delete(id);
     }
-  }, [client, durableScopeKey, finishUploadQueueItem, logEvent, prepareUploadQueueItem, prepareUploadSource, updateQueue]);
+  }, [client, durableScopeKey, finishUploadQueueItem, logEvent, onUploaded, prepareUploadQueueItem, prepareUploadSource, updateQueue]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: 批量上传读取可变队列 ref 的最新快照。
   const uploadQueueItems = useCallback(async (mode: "pending" | "failed" | "all", context?: { examId: string; captureBatchId: string }) => {

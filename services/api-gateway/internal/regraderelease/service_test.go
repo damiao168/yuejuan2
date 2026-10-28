@@ -55,6 +55,10 @@ func TestReadyRegradeCreatesChangedSuccessorFromFrozenRelease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	retried, err := svc.Create(ctx, "tenant", summary.Job.ID, "another-manager", Input{Reason: "retried after lost response", IdempotencyKey: "different-request-key"})
+	if err != nil || retried.ID != successor.ID {
+		t.Fatalf("one completed regrade must resume the same release after retry: %+v %v", retried, err)
+	}
 	detail, err := releases.Get(ctx, "tenant", successor.ID)
 	if err != nil || detail.Release.Source != scorerelease.SourceRegrade || detail.Release.SourceReleaseID != source.ID || detail.Items[0].TotalScore != 4 || detail.Questions[0].Score != 4 {
 		t.Fatalf("successor must be a changed immutable source snapshot: %#v %#v, err=%v", detail.Release, detail, err)

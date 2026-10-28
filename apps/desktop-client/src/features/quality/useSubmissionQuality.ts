@@ -6,9 +6,10 @@ import type { LocalLogEntry, SubmissionQualityResult } from "../../types";
 
 type LogEvent = (level: LocalLogEntry["level"], message: string, context?: string) => Promise<void>;
 
-export function useSubmissionQuality({ client, token, scanSubmissionId, durableScopeKey, selectedExamId, captureBatchId, linkedSubmissionIds, logEvent }: {
+export function useSubmissionQuality({ client, token, scanSubmissionId, durableScopeKey, selectedExamId, captureBatchId, linkedSubmissionIds, logEvent, autoCheck = false }: {
   client: DesktopApiClient; token: string | null; scanSubmissionId: string; durableScopeKey: string;
   selectedExamId: string; captureBatchId: string; linkedSubmissionIds: readonly string[]; logEvent: LogEvent;
+  autoCheck?: boolean;
 }) {
   const submissionId = scanSubmissionId.trim();
   const associated = linkedSubmissionIds.includes(submissionId);
@@ -79,6 +80,9 @@ export function useSubmissionQuality({ client, token, scanSubmissionId, durableS
       if (isCurrent()) { checkingRequest.current = null; setChecking(null); }
     }
   };
+  // 自动检查只随真实关联变化运行一次；失败保留重试入口，不能因错误状态变化反复发送检查请求。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 回调读取当前 context ref；日志函数变化不能触发重复检查。
+  useEffect(() => { if (autoCheck && canRunQualityCheck) void handleRunQualityCheck(); }, [context, autoCheck, canRunQualityCheck]);
 
   return {
     qualityResult: result?.owner === context ? result.value : null,

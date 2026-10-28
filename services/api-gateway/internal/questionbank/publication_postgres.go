@@ -35,6 +35,10 @@ func (s *PostgresStore) lockedVersion(ctx context.Context, tx *sql.Tx, scope aut
 		return v, i, err
 	}
 	v, err = scanVersion(tx.QueryRowContext(ctx, `SELECT `+versionCols+` FROM question_bank_item_version WHERE tenant_id=$1 AND id=$2 FOR UPDATE`, scope.TenantID, id))
+	// 交接仅改子表；等待父行锁后另开读取语句，不能使用等待前快照里的指派。
+	if err == nil {
+		v.Handoff, err = readHandoff(ctx, tx, scope.TenantID, id)
+	}
 	if err == nil && (b.Status != "active" || i.Status != "active") {
 		err = ErrLocked
 	}
@@ -56,30 +60,40 @@ func (s *PostgresStore) UpdateScoring(ctx context.Context, scope auth.AccessScop
 		if v.Revision != in.ExpectedRevision {
 			return v, ErrConflict
 		}
-		scoring, err = preserveImportedReferences(v.Scoring, scoring)
+		scoring, err = s.prepareVersionScoring(ctx, tx, scope, i, v, scoring)
 		if err != nil {
 			return v, err
-		}
-		scoring, err = s.resolveScoringTemplate(ctx, tx, scope, i, scoring)
-		if err != nil {
-			return v, err
-		}
-		for _, a := range scoring.Assets {
-			// 资产和读取 ACL 使用当前变更事务；文件共享锁保留到评分事实一起提交。
-			f, err := files.NewPostgresStore(s.db).GetScopedTx(ctx, tx, scope, a.FileAssetID)
-			if err != nil {
-				if errors.Is(err, files.ErrNotFound) || errors.Is(err, files.ErrForbidden) {
-					return v, ErrInvalidInput
-				}
-				return v, err
-			}
-			if f.HashSHA256 != a.SHA256 || f.OriginalName != a.Name || f.ContentType != a.ContentType {
-				return v, ErrInvalidInput
-			}
 		}
 		raw, _ := json.Marshal(scoring)
 		return scanVersion(tx.QueryRowContext(ctx, `UPDATE question_bank_item_version SET scoring=$3,revision=revision+1,updated_at=now() WHERE tenant_id=$1 AND id=$2 RETURNING `+versionCols, scope.TenantID, id, raw))
 	})
+}
+
+// 独立评分与整题保存共用引用、模板和文件校验；所有读取沿用当前变更事务和授权范围。
+func (s *PostgresStore) prepareVersionScoring(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, i Item, v Version, scoring Scoring) (Scoring, error) {
+	var err error
+	scoring, err = preserveImportedReferences(v.Scoring, scoring)
+	if err != nil {
+		return scoring, err
+	}
+	scoring, err = s.resolveScoringTemplate(ctx, tx, scope, i, scoring)
+	if err != nil {
+		return scoring, err
+	}
+	for _, a := range scoring.Assets {
+		// 资产和读取 ACL 使用当前变更事务；文件共享锁保留到评分事实一起提交。
+		f, err := files.NewPostgresStore(s.db).GetScopedTx(ctx, tx, scope, a.FileAssetID)
+		if err != nil {
+			if errors.Is(err, files.ErrNotFound) || errors.Is(err, files.ErrForbidden) {
+				return scoring, ErrInvalidInput
+			}
+			return scoring, err
+		}
+		if f.HashSHA256 != a.SHA256 || f.OriginalName != a.Name || f.ContentType != a.ContentType {
+			return scoring, ErrInvalidInput
+		}
+	}
+	return scoring, nil
 }
 
 func (s *PostgresStore) resolveScoringTemplate(ctx context.Context, tx *sql.Tx, scope auth.AccessScope, item Item, scoring Scoring) (Scoring, error) {
@@ -136,6 +150,12 @@ func (s *PostgresStore) Transition(ctx context.Context, scope auth.AccessScope, 
 		if err != nil {
 			return v, err
 		}
+		handoff, recipient, err := prepareHandoffTransition(v, scope.ActorID, decision, in, func(recipient, action string) error {
+			return s.postgresRecipient(ctx, tx, scope, i.BankID, recipient, action)
+		})
+		if err != nil {
+			return v, err
+		}
 		var reviewID string
 		err = tx.QueryRowContext(ctx, `INSERT INTO question_bank_review(tenant_id,version_id,reviewer_id,decision,comment,content_revision,bundle_hash) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id::text`, scope.TenantID, id, scope.ActorID, decision, in.Comment, v.Revision, v.BundleHash).Scan(&reviewID)
 		if err != nil {
@@ -152,6 +172,10 @@ func (s *PostgresStore) Transition(ctx context.Context, scope auth.AccessScope, 
 		if status == "published" {
 			// 发布状态、审核记录和当前版本指针在同一事务提交，读取者不会看到只完成一半的发布。
 			_, err = tx.ExecContext(ctx, `UPDATE question_bank_item SET current_published_version_id=$3 WHERE tenant_id=$1 AND id=$2`, scope.TenantID, i.ID, id)
+		}
+		if err == nil {
+			kind := map[string]string{"submit-review": "assigned", "approve": "approved", "publish": "published", "return-to-draft": "returned"}[decision]
+			err = saveHandoff(ctx, tx, scope, &v, handoff, kind, recipient)
 		}
 		return v, err
 	})

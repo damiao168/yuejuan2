@@ -48,6 +48,16 @@ describe("submission quality ownership", () => {
     expect(api.runSubmissionQualityCheck).toHaveBeenCalledWith(client, "answer-a");
     expect(current.qualityResult).toEqual({ valid: true, issues: [] }); expect(current.qualityError).toBeNull();
   });
+  it("automatically checks an associated answer once and leaves failures for explicit retry", async () => {
+    api.runSubmissionQualityCheck.mockRejectedValueOnce(new Error("检查暂不可用"));
+    function AutoProbe() { current = useSubmissionQuality({ client, logEvent, ...defaults, autoCheck: true }); return null; }
+    await act(async () => root.render(<AutoProbe />));
+    expect(api.runSubmissionQualityCheck).toHaveBeenCalledExactlyOnceWith(client, "answer-a");
+    expect(current.qualityError).toContain("检查暂不可用");
+    await act(async () => root.render(<AutoProbe />)); expect(api.runSubmissionQualityCheck).toHaveBeenCalledTimes(1);
+    api.runSubmissionQualityCheck.mockResolvedValueOnce({ result: { valid: true, issues: [] } });
+    await act(async () => { await current.handleRunQualityCheck(); }); expect(current.qualityResult?.valid).toBe(true);
+  });
   it("shows a current request failure and allows retry", async () => {
     api.runSubmissionQualityCheck.mockRejectedValueOnce(new Error("unavailable"));
     await mount(); await act(async () => { await current.handleRunQualityCheck(); });
@@ -97,15 +107,12 @@ describe("submission quality ownership", () => {
       pages: [{ submission_id: batchId === "batch-a" ? "answer-a" : "answer-b" }], files: [] }));
     api.runSubmissionQualityCheck.mockResolvedValue({ result: { valid: true, issues: [] } });
     await act(async () => root.render(<IntegratedProbe />)); await act(async () => capture.setSelectedExamId("exam-a"));
-    await act(async () => { await capture.handleRefreshProcessing(); await current.handleRunQualityCheck(); });
-    // detail读取后需要渲染把实际关联传入质量hook；再次点击才是当前合法答卷。
     await act(async () => { await current.handleRunQualityCheck(); });
     expect(api.runSubmissionQualityCheck).toHaveBeenLastCalledWith(client, "answer-a");
     await act(async () => capture.setCaptureBatchId("batch-b"));
-    expect((container.querySelector("button") as HTMLButtonElement).disabled).toBe(true); expect(current.qualityResult).toBeNull();
-    await act(async () => { await current.handleRunQualityCheck(); });
+    // 选批次已自动读取真实关联；即便读取立即成功，也不能把 A 的旧质量结果或检查请求带入 B。
+    expect(capture.scanSubmissionId).toBe("answer-b"); expect(current.qualityResult).toBeNull();
     expect(api.runSubmissionQualityCheck).toHaveBeenCalledTimes(1);
-    await act(async () => { await capture.handleRefreshProcessing(); });
     await act(async () => { await current.handleRunQualityCheck(); });
     expect(api.runSubmissionQualityCheck).toHaveBeenCalledTimes(2); expect(api.runSubmissionQualityCheck).toHaveBeenLastCalledWith(client, "answer-b");
   });

@@ -35,6 +35,7 @@ describe("upload sync controller", () => {
   let durablePersistenceRef: { current: Promise<void> };
   const setIsOnline = vi.fn();
   const logEvent = vi.fn().mockResolvedValue(undefined);
+  const onUploaded = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -62,7 +63,7 @@ describe("upload sync controller", () => {
         client: {} as never, token: "token", durableScopeKey, isOnline, setIsOnline,
         queueRef, fileBufferRef, uploadInFlightRef, durablePersistenceRef,
         updateQueue: (update) => { queueRef.current = update(queueRef.current); },
-        logEvent
+        logEvent, onUploaded
       });
       return null;
     }
@@ -93,6 +94,13 @@ describe("upload sync controller", () => {
     await act(async () => { await current.uploadQueueItems("pending", { examId: "exam-a", captureBatchId: "batch-a" }); });
     expect(mocks.resumeCaptureUpload).toHaveBeenCalledOnce();
     expect(queueRef.current.find((entry) => entry.id === "other-exam")?.status).toBe("pending");
+  });
+  it("checks the confirmed original batch and preserves upload success when post-upload checks fail", async () => {
+    onUploaded.mockRejectedValueOnce(new Error("检查读取失败"));
+    await mount(true); await act(async () => { await current.uploadQueueItem("item-a"); });
+    expect(onUploaded).toHaveBeenCalledWith({ examId: "exam-a", captureBatchId: "batch-a" });
+    expect(queueRef.current[0].status).toBe("succeeded"); expect(queueRef.current[0].detail).toContain("上传已完成");
+    await act(async () => { await current.uploadQueueItem("item-a"); }); expect(mocks.resumeCaptureUpload).toHaveBeenCalledOnce();
   });
 
   it("rejects an item without an idempotency key before contacting the server", async () => {

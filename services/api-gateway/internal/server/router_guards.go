@@ -90,6 +90,11 @@ type routerGuards struct {
 	withWorkerTaskPayload           func(string, string, http.HandlerFunc) http.HandlerFunc
 }
 
+// 私有意见以草稿修订作CAS；即使带幂等键也必须逐次进入业务授权，不能把敏感响应写进通用收据或重放。
+func (g routerGuards) requirePrivateOpinionDraft(handler http.HandlerFunc, permissions ...string) http.Handler {
+	return g.requireAuth(auth.RequireAnyPermission(permissions...)(handler))
+}
+
 // guard 的组合顺序本身就是权限边界；身份、资源作用域、幂等、租约和业务权限不能随意调换。
 func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuards {
 	authStore := modules.Identity.AuthStore

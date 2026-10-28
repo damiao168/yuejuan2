@@ -127,4 +127,5 @@ type Store interface {
 	GetActivePolicy(context.Context, string, assessment.SubjectCode, assessment.EducationStage, string, assessment.RiskTier) (Policy, error)
 	CreateOrGetDecision(context.Context, string, Decision) (Decision, error)
 	GetDecision(context.Context, string, string) (Decision, error)
+	ListDecisions(context.Context, string, DecisionFilter) ([]DecisionSummary, error)
 }

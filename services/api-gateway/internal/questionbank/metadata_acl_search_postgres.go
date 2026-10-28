@@ -395,6 +395,12 @@ func uniqueStrings(values []string) []string {
 }
 
 func cleanSearchFilter(f SearchFilter) (SearchFilter, error) {
+	if f.PendingAction != "" {
+		if !oneOf(f.PendingAction, "review", "publish") {
+			return f, ErrInvalidInput
+		}
+		f.Mode = "all"
+	}
 	if f.Limit <= 0 || f.Limit > 100 {
 		f.Limit = 50
 	}
@@ -418,8 +424,8 @@ func cleanSearchFilter(f SearchFilter) (SearchFilter, error) {
 
 func scanSearch(row scanner) (SearchItem, error) {
 	var out SearchItem
-	var itemRaw, contentRaw, scoringRaw []byte
-	err := row.Scan(&itemRaw, &out.Version.ID, &out.Version.TenantID, &out.Version.ItemID, &out.Version.VersionNo, &out.Version.SchemaVersion, &out.Version.Revision, &out.Version.WorkflowStatus, &out.Version.SourceVersionID, &out.Version.AuthorID, &out.Version.ContentHash, &contentRaw, &out.Version.CreatedAt, &out.Version.UpdatedAt, &scoringRaw, &out.Version.BundleHash)
+	var itemRaw, contentRaw, scoringRaw, handoff []byte
+	err := row.Scan(&itemRaw, &out.Version.ID, &out.Version.TenantID, &out.Version.ItemID, &out.Version.VersionNo, &out.Version.SchemaVersion, &out.Version.Revision, &out.Version.WorkflowStatus, &out.Version.SourceVersionID, &out.Version.AuthorID, &out.Version.ContentHash, &contentRaw, &out.Version.CreatedAt, &out.Version.UpdatedAt, &scoringRaw, &out.Version.BundleHash, &handoff)
 	if err != nil {
 		return out, pgError(err)
 	}
@@ -429,12 +435,15 @@ func scanSearch(row scanner) (SearchItem, error) {
 	if err == nil {
 		err = json.Unmarshal(scoringRaw, &out.Version.Scoring)
 	}
+	if err == nil && len(handoff) > 0 {
+		err = json.Unmarshal(handoff, &out.Version.Handoff)
+	}
 	out.Version.HashScope, out.Version.BundleSchemaVersion = "draft_content_v1", 2
 	out.StatisticsAvailable = false
 	return out, err
 }
 
-const searchVersionCols = `v.id::text,v.tenant_id::text,v.item_id::text,v.version_no,v.schema_version,v.revision,v.workflow_status,v.source_version_id::text,v.author_id::text,v.content_hash,v.content,v.created_at,v.updated_at,v.scoring,v.bundle_hash`
+const searchVersionCols = `v.id::text,v.tenant_id::text,v.item_id::text,v.version_no,v.schema_version,v.revision,v.workflow_status,v.source_version_id::text,v.author_id::text,v.content_hash,v.content,v.created_at,v.updated_at,v.scoring,v.bundle_hash,(SELECT to_jsonb(h)-'tenant_id'-'version_id' FROM question_bank_handoff h WHERE h.tenant_id=v.tenant_id AND h.version_id=v.id)`
 
 func (s *PostgresStore) SearchItems(ctx context.Context, scope auth.AccessScope, filter SearchFilter) (page SearchPage, err error) {
 	f, err := cleanSearchFilter(filter)
@@ -462,7 +471,10 @@ AND ($6='' OR i.item_code ILIKE '%'||$6||'%' OR v.content->>'stem' ILIKE '%'||$6
 AND ($9='' OR v.content->'knowledge_points' ? $9) AND ($10='' OR v.content->>'question_type'=$10) AND ($11='' OR v.content->>'assessment_archetype'=$11) AND ($12='' OR v.workflow_status=$12)
 AND ($13='' OR v.content->'metadata'->>'difficulty_band'=$13) AND ($14='' OR v.content->'metadata'->>'cognitive_level'=$14) AND ($15='' OR v.content->'metadata'->>'copyright'=$15)
 AND ($16='' OR v.content->'metadata'->>'intended_use'=$16) AND ($17='' OR v.scoring->>'use_policy'=$17) AND ($18='' OR v.content->'custom_metadata'->>$18=$19) AND $20<>1`
-	args := []any{scope.TenantID, scope.TenantWide, scope.SchoolIDs, scope.ActorID, f.Mode, f.Query, f.BankID, f.SubjectCode, f.KnowledgePoint, f.QuestionType, f.Archetype, f.WorkflowStatus, f.DifficultyBand, f.CognitiveLevel, f.Copyright, f.IntendedUse, f.UsePolicy, f.MetadataKey, f.MetadataValue, stats}
+	// 待办由当前状态和实际题库职责派生；撤权后立即移出，审核始终排除作者自己。
+	where += ` AND ($21='' OR ($21='review' AND v.workflow_status='reviewing' AND v.author_id<>$4::uuid AND question_bank_actor_has_action(b.tenant_id,b.id,$4::uuid,'review')) OR ($21='publish' AND v.workflow_status='approved' AND question_bank_actor_has_action(b.tenant_id,b.id,$4::uuid,'publish')))`
+	where += ` AND ($21='' OR NOT EXISTS(SELECT 1 FROM question_bank_handoff h WHERE h.tenant_id=v.tenant_id AND h.version_id=v.id AND CASE WHEN $21='review' THEN h.reviewer_id ELSE h.publisher_id END IS NOT NULL AND CASE WHEN $21='review' THEN h.reviewer_id ELSE h.publisher_id END<>$4::uuid))`
+	args := []any{scope.TenantID, scope.TenantWide, scope.SchoolIDs, scope.ActorID, f.Mode, f.Query, f.BankID, f.SubjectCode, f.KnowledgePoint, f.QuestionType, f.Archetype, f.WorkflowStatus, f.DifficultyBand, f.CognitiveLevel, f.Copyright, f.IntendedUse, f.UsePolicy, f.MetadataKey, f.MetadataValue, stats, f.PendingAction}
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true, Isolation: sql.LevelRepeatableRead})
 	if err != nil {
 		return page, err
@@ -478,7 +490,7 @@ AND ($16='' OR v.content->'metadata'->>'intended_use'=$16) AND ($17='' OR v.scor
 	if f.Sort == "item_code_asc" {
 		order = `i.item_code,i.id,v.version_no DESC,v.id`
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT to_jsonb(i),`+searchVersionCols+where+` ORDER BY `+order+` LIMIT $21 OFFSET $22`, append(args, f.Limit, f.Offset)...)
+	rows, err := tx.QueryContext(ctx, `SELECT to_jsonb(i),`+searchVersionCols+where+` ORDER BY `+order+` LIMIT $22 OFFSET $23`, append(args, f.Limit, f.Offset)...)
 	if err != nil {
 		return page, err
 	}

@@ -1,4 +1,5 @@
 import type { OfflineDraftRecord, OfflineSyncStatus } from "../types";
+import { MAX_OFFLINE_DRAFT_BYTES } from "./offlineAnswerMaterial";
 import {
   hasDurableDesktopStore,
   listDurableDraftEnvelopes,
@@ -52,6 +53,8 @@ export function readOfflineDraftEnvelopes(): OfflineDraftEnvelope[] {
 }
 
 export async function saveOfflineDraft(record: OfflineDraftRecord, passphrase?: string, expectedSessionId?: string) {
+  // 与原生密文正文的 4 MiB 限制一致；浏览器回退也不得在原件扩容后静默截断或丢弃已有材料。
+  if (encoder.encode(JSON.stringify(record)).byteLength > MAX_OFFLINE_DRAFT_BYTES) throw new Error("草稿与完整答卷材料超过本机加密保存的 4 MB 上限，请联网提交或减少评语后重试。");
   if (hasDurableDesktopStore()) {
     await saveDurableDraft(record, expectedSessionId);
     return;

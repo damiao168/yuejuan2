@@ -7,6 +7,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/exam"
 	"edugrade-enterprise/services/api-gateway/internal/files"
+	"edugrade-enterprise/services/api-gateway/internal/opiniondraft"
 	"edugrade-enterprise/services/api-gateway/internal/regrade"
 	"edugrade-enterprise/services/api-gateway/internal/regraderelease"
 	"edugrade-enterprise/services/api-gateway/internal/releasegate"
@@ -54,6 +55,10 @@ type ReleaseDependencies struct {
 
 // 发布协调器同时接入成绩发布与 regrade 阻断器；高分试卷能力只有数据库、文件、对象存储和 bucket 全部可用时才启用。
 func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *ReleaseModule {
+	var privateDrafts opiniondraft.Store = opiniondraft.NewMemoryStore()
+	if dependencies.DB != nil {
+		privateDrafts = opiniondraft.NewPostgresStore(dependencies.DB)
+	}
 	scoreReleaseService := scorerelease.NewService(stores.ScoreRelease)
 	var highScorePaper scorerelease.HighScorePaperManager
 	if dependencies.DB != nil && dependencies.FileStore != nil && dependencies.ObjectStore != nil && dependencies.FileBucket != "" {
@@ -78,10 +83,10 @@ func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *R
 		RegradeReleaseHandler: regraderelease.NewHandler(
 			regraderelease.NewService(dependencies.Regrade, scoreReleaseService),
 		),
-		AppealHandler: appeal.NewHandler(stores.Appeal, dependencies.Auth),
+		AppealHandler: appeal.NewHandler(stores.Appeal, dependencies.Auth).WithPrivateDrafts(privateDrafts),
 		PublishedQuestionAppealHandler: appeal.NewPublishedQuestionAppealHandler(
 			appeal.NewPublishedQuestionAppealService(stores.PublishedQuestionAppeal), dependencies.Auth,
-		).WithSegmentImage(dependencies.StudentQuestionImage).
+		).WithPrivateDrafts(privateDrafts).WithSegmentImage(dependencies.StudentQuestionImage).
 			WithExamSummaryReader(publishedQuestionAppealExamReader{store: dependencies.Exams}),
 		ReportHandler: report.NewHandler(stores.Report, dependencies.Auth),
 	}

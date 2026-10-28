@@ -40,10 +40,10 @@ function registeredQuestionAssets(job: PaperImportJob, papers: PaperVersion[]) {
 class MaterialsChangedError extends Error {}
 
 function materialsDescription(confirmed: boolean, valid: boolean, completed: boolean) {
-  if (!confirmed) return "请先预览并采用本轮完整试卷的题目结构，再确认考试资料。";
-  if (!valid) return "没有完整识别的试题资料来源，请补充或重新识别试卷；答案、解析资料不能代替试卷。";
-  if (completed) return "试卷题目资料已登记；题目分值、答案和评分配置仍以小题与分值中的正式配置为准。";
-  return "请核对试卷资料完整后确认；答案、分值和评分配置在小题与分值中继续核对。";
+  if (!confirmed) return "先核对完整试卷并采用本轮题目结构。";
+  if (!valid) return "请补充或重新识别完整试卷；答案和解析不能代替试卷。";
+  if (completed) return "资料已登记；答案、分值和评分配置以“小题与分值”页为准。";
+  return "确认试卷资料完整后，继续核对小题与分值。";
 }
 
 function materialsBlockedReason(confirmed: boolean, valid: boolean, canManage: boolean, disabled: boolean, description: string, disabledReason?: string) {
@@ -190,10 +190,10 @@ export function PaperMaterialsConfirmation({ job, papers, canManage, disabled, d
       onCancel={() => { if (!state.busy) patch({ open: false, checked: false }); }}
       onOk={() => void confirm()} okButtonProps={{ disabled: !canManage || disabled || !state.checked || !confirmed || !valid || state.readPending }} destroyOnHidden>
       <Space direction="vertical" style={{ width: "100%" }}>
-        <p>请核对这些试卷资料完整，题目分值在下一步设置。</p>
+        <p>小题分值在下一步核对。</p>
         <ul>{pending.map((source) => <li key={source.file_asset_id}>{source.original_name || `试卷资料 ${source.document_index + 1}`}</li>)}</ul>
         <Checkbox checked={state.checked} disabled={state.busy} onChange={(event) => patch({ checked: event.target.checked })}>
-          我已核对试卷资料完整，题目范围与实际试卷一致
+          我已核对完整试卷，题目范围与实际试卷一致。
         </Checkbox>
         {state.error && <p role="alert">{state.error}</p>}
       </Space>
