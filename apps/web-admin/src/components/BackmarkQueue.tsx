@@ -36,7 +36,7 @@ function rubricPoints(context?: BackmarkGraderContext) {
 function BackmarkAnswerEvidence({ context, imageUrl }: Readonly<{ context: BackmarkGraderContext; imageUrl: string }>) {
   return (
     <section>
-      <h3>{context.question.question_no} · {context.question.question_type}</h3>
+      <h3>第 {context.question.question_no} 题 · 满分 {context.question.score}</h3>
       {imageUrl ? <img className="backmark-answer-image" src={imageUrl} alt="当前答题区域" /> : <Alert type="warning" showIcon message="答题图片暂不可预览" description={context.answer.raw_answer || context.answer.ocr_text ? "可依据下方文字内容独立评分。" : "请联系管理员检查答题图处理状态。"} />}
       {(context.answer.raw_answer || context.answer.ocr_text) ? <div className="backmark-answer-text"><strong>答题内容</strong><MathMarkdown>{context.answer.raw_answer || context.answer.ocr_text || ""}</MathMarkdown></div> : null}
       <details><summary>题目与完整评分依据</summary><TaskScoringReference question={context.question} rubric={context.frozen_rubric} /></details>

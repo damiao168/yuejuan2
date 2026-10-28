@@ -100,7 +100,9 @@ describe("scoring examples use independent Chinese fields and retain historical 
     function PaperEditor() {
       const rubricWorkflow = useRubricEditor({ selectedQuestion: question, selectedExamId: "exam-1", loadConfig: mocks.loadConfig });
       const context = { selectedExam: { id: "exam-1", subject: "math", status: "draft", grading_mode: "ai_assisted" }, selectedQuestion: question,
-        options: { canManageAssessment: false }, access: { questionDisabled: false, editorUsesFixedScoring: false, showFormulaEvidence: false }, rubricWorkflow
+        options: { canManageAssessment: false }, access: { questionDisabled: false, editorUsesFixedScoring: false, showFormulaEvidence: false }, rubricWorkflow,
+        // 页面现在为所有评分区域提供统一保存上下文；此用例仍只验证真实细则表单的示例序列化。
+        state: { detailTab: "scoring", saveBusy: false, saveRefreshPending: false, formDirty: false }, actions: {}
       } as unknown as PaperRubricViewContext;
       return <><PaperScoringConfiguration context={context} /><button onClick={() => void rubricWorkflow.saveRubric()}>保存测试细则</button></>;
     }

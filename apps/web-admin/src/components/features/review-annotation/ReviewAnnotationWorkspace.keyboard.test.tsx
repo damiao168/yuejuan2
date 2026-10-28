@@ -71,7 +71,10 @@ describe("常驻图标批注", () => {
   it.each([{ disabled: true }, { drawingAvailable: false }])("只读或非单题图片不绘制：%j", async options => {
     mocks.annotations = [annotation];
     render(<ReviewAnnotationWorkspace reviewTaskId="task" renderCanvas={renderCanvas} {...options} />);
-    expect((screen.getByRole("button", { name: "打勾" }) as HTMLButtonElement).disabled).toBe(true);
+    for (const label of ["打勾", "打叉", "框选批注", "删除选中批注"]) expect(screen.queryByRole("button", { name: label })).toBeNull();
+    expect(screen.getByRole("button", { name: "选择批注" })).toBeTruthy();
+    expect(controls.disabled).toBe(true);
+    expect(controls.tool).toBe("select");
     await act(async () => { controls.onPointerDown({ x: .2, y: .3 }); controls.onPointerUp({ x: .5, y: .5 }); });
     expect(mocks.save).not.toHaveBeenCalled();
     if (options.drawingAvailable === false) expect(controls.annotations).toEqual([]);

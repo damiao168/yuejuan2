@@ -205,12 +205,13 @@ export function PendingBusinessCommands({ tenant, actor, onNavigate }: Readonly<
     }
   }
   if (!keys.length && !outcomes.length) return null;
+  // Space 会展平各组子项；同一命令可同时展示下载和完成结果，展示键必须分组避免节点复用。
   return <Alert type={keys.length ? "warning" : "success"} showIcon message={keys.length ? "提交结果待确认" : "操作结果已确认"} description={<Space direction="vertical">{keys.map(key => {
     const [operation, ...parts] = key.slice(prefix.length).split(":");
     const receipt = receipts[key];
     const payload = receipt?.payload as { score?: number; reason?: string; comment?: string; expected_revision?: number; expected_task_revision?: number } | undefined;
     const statusLabels: Record<string, string> = { processing: "正在处理，请稍后查看结果。", takeover_ready: "可以继续提交此前内容。", unknown: "暂无法确认结果", not_accepted: "此次提交未被接收，请返回原页面重新提交。", rejected: "原操作已拒绝，请返回业务页面核对", succeeded: "已完成" };
-    return <div key={key}>
+    return <div key={`pending:${key}`}>
       <strong>{operations[operation]?.label ?? "操作"}</strong><span> · {operation.startsWith("score.") || operation.startsWith("report.") ? "考试" : "任务"} {labels[key] ?? parts.join(":")}</span>
       <Button disabled={Boolean(busy)} loading={busy === key} onClick={() => void resume(key)}>查看操作结果</Button>
       {onNavigate ? <Button disabled={Boolean(busy)} onClick={() => onNavigate(businessPagePath(operation, parts.join(":")))}>返回对应业务页面</Button> : null}
@@ -219,12 +220,12 @@ export function PendingBusinessCommands({ tenant, actor, onNavigate }: Readonly<
         {receipt.status === "takeover_ready" && "payload" in receipt ? <Button disabled={Boolean(busy)} onClick={() => void resume(key, true)}>按原内容继续提交</Button> : null}
       </div> : null}
     </div>;
-  })}{Object.entries(receipts).filter(([key, receipt]) => key.includes(":report.export:") && receipt.status === "succeeded").map(([key, receipt]) => <Button key={key} onClick={() => {
+  })}{Object.entries(receipts).filter(([key, receipt]) => key.startsWith(`${prefix}report.export:`) && receipt.status === "succeeded").map(([key, receipt]) => <Button key={`download:${key}`} onClick={() => {
     try {
       captureBusinessCommandSession(tenant, actor);
       const result = receipt.result as { Content: string; ContentType: string; Filename: string };
       const url = URL.createObjectURL(decodeReportBlob(result.Content, result.ContentType));
       const link = document.createElement("a"); link.href = url; link.download = result.Filename; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (cause) { setError(getUserErrorMessage(cause, "下载已完成的报表失败")); }
-  }}>下载已完成的报表</Button>)}{outcomes.map(outcome => <div key={outcome.key}><output aria-live="polite">{outcome.text}</output>{onNavigate ? <Button disabled={Boolean(busy)} onClick={() => onNavigate(outcome.path)}>返回已完成操作的业务页面</Button> : null}</div>)}{outcomes.length ? <Button onClick={() => { setOutcomes([]); setReceipts({}); }}>关闭已确认结果</Button> : null}{error && <span role="alert">{error}</span>}</Space>} />;
+  }}>下载已完成的报表</Button>)}{outcomes.map(outcome => <div key={`completed:${outcome.key}`}><output aria-live="polite">{outcome.text}</output>{onNavigate ? <Button disabled={Boolean(busy)} onClick={() => onNavigate(outcome.path)}>返回已完成操作的业务页面</Button> : null}</div>)}{outcomes.length ? <Button onClick={() => { setOutcomes([]); setReceipts({}); }}>关闭已确认结果</Button> : null}{error && <span role="alert">{error}</span>}</Space>} />;
 }

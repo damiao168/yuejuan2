@@ -12,7 +12,6 @@ import type {
 	QuestionBankVersion,
 	QuestionBankScoring,
 	UpdateQuestionBankVersionRequest,
-	UpdateQuestionBankMetadataSchemaRequest,
 } from "@edugrade/sdk";
 import { questionBankApi } from "../../api/questionBank";
 import { listSchools } from "../../api/org";
@@ -22,15 +21,16 @@ import { ErrorState } from "../../components/PageState";
 import { usePageLoading } from "../../components/pageReadiness";
 import { useUnsavedChangesGuard } from "../../router/useUnsavedChangesGuard";
 import "./question-bank.css";
-import { defaults, contentFrom, matchingVersionForItem, metadataSchemaReadState, metadataSchemaUpdate, transitionSuccessMessages } from "./questionBankPageState";
+import { defaults, contentFrom, matchingVersionForItem, metadataSchemaReadState, transitionSuccessMessages } from "./questionBankPageState";
 import { QuestionBankHeader } from "./QuestionBankHeader";
 import { QuestionBankWorkspace } from "./QuestionBankWorkspace";
 import { QuestionBankDialogs } from "./QuestionBankDialogs";
 import { QuestionBankConflictDialog } from "./QuestionBankConflictDialog";
-import { emptySearch, isEditableACLRole, type ACLFormValues, type MetadataSchemaFormValues, type SearchFilters } from "./questionBankTypes";
-import { listQuestionBankMembers, bankRoleLabels, questionBankMemberAmbiguous, questionBankMemberLabel } from "./questionBankMembers";
+import { emptySearch, type SearchFilters } from "./questionBankTypes";
+import { listQuestionBankMembers } from "./questionBankMembers";
 import { hashQueryParam } from "../../router/query";
 import { mergeQuestionBankDraft, type ScoringDraftSnapshot } from "./questionBankDraftMerge";
+import { useQuestionBankAdministration } from "./useQuestionBankAdministration";
 
 export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 	const { message, modal } = App.useApp();
@@ -214,51 +214,11 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 			setConflict(false);
 		}
 	}, [selected, editor]);
-	useEffect(() => {
-		if (!aclOpen || !acl.data?.acl) return;
-		aclForm.setFieldsValue({
-			bindings: acl.data.acl.bindings
-				.filter((binding) => binding.preset !== "Custom" && binding.user_id !== bank?.created_by && binding.user_id !== user.id)
-				.map(({ user_id, preset }) => ({ user_id, preset })),
-			groups: acl.data.acl.groups.flatMap((group) => isEditableACLRole(group.preset) ? [{
-				id: group.id,
-				name: group.name,
-				preset: group.preset,
-				members: group.member_user_ids,
-			}] : []),
-		});
-	}, [acl.data, aclForm, aclOpen, bank?.created_by, user.id]);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: 题库身份变化必须清除旧元数据表单；读取失败不能沿用上一题库的配置。
-	useEffect(() => {
-		// 打开或切换题库时先清除旧表单。404、断网等读取失败都不能被解释成新库没有配置。
-		if (schemaOpen) schemaForm.setFieldsValue({ fields: [], taxonomies: [] });
-		setSchemaFormBankId(null);
-	}, [bankId, schemaForm, schemaOpen]);
-	useEffect(() => {
-		// 重试可能暂时恢复加载状态，失败说明要保留到成功返回，不能提前表示已恢复。
-		if (currentSchema.isError) setSchemaReadFailureBankId(bankId);
-		else if (currentSchema.isSuccess) setSchemaReadFailureBankId(null);
-	}, [bankId, currentSchema.isError, currentSchema.isSuccess]);
-	useEffect(() => {
-		if (!schemaOpen || !currentSchema.isSuccess || !currentSchema.data?.schema) return;
-		schemaForm.setFieldsValue({
-			fields: currentSchema.data.schema.fields.map((field) => ({
-				...field,
-				options_text: field.options
-					?.map((option) => `${option.value}|${option.label}`)
-					.join("\n"),
-			})),
-			taxonomies: currentSchema.data.schema.taxonomies.map((taxonomy) => ({
-				terms: taxonomy.terms,
-				id: taxonomy.id,
-				label: taxonomy.label,
-				terms_text: taxonomy.terms
-					.map((term) => `${term.id}|${term.label}`)
-					.join("\n"),
-			})),
-		});
-		setSchemaFormBankId(bankId);
-	}, [bankId, currentSchema.data, currentSchema.isSuccess, schemaForm, schemaOpen]);
+	const { saveACL, saveSchema } = useQuestionBankAdministration({
+		bankId, bank, actorId: user.id, acl, currentSchema, members: members.data?.members ?? [],
+		aclOpen, schemaOpen, aclForm, schemaForm, schemaContext, saving, setSaving, setAclOpen, setSchemaOpen,
+		setSchemaFormBankId, setSchemaReadFailureBankId, command, refresh,
+	});
 	// 未保存的题目编辑只在当前表单里；切换范围前要由用户决定是否丢弃。
 	function confirmDiscard(action: () => void, content = "当前题目内容或评分标准尚未保存，切换后无法恢复。") {
 		if (!contentDirty && !scoringDirty) return action();
@@ -652,87 +612,6 @@ export function QuestionBankPage({ user }: Readonly<{ user: SessionUser }>) {
 			message.success("已停止选用；已有考试和历史成绩保留");
 		} catch (error) {
 			message.error(getUserErrorMessage(error, "停止选用失败，题目仍保留"));
-		} finally {
-			setSaving(false);
-		}
-	}
-	async function saveACL(values: ACLFormValues) {
-		if (!acl.data?.acl || acl.isError || acl.isLoading || saving) return;
-		// 表单仅提交预设职责；组合授权由服务端在同一修订锁内保留，不能把旧动作数组作为新授权提交。
-		const retainedBindings = acl.data.acl.bindings.filter(binding => binding.preset === "Custom" || binding.user_id === bank?.created_by || binding.user_id === user.id);
-		const retainedGroups = acl.data.acl.groups.filter(group => String(group.preset) === "Custom");
-		const body = {
-			expected_revision: acl.data.acl.revision,
-			bindings: values.bindings ?? [],
-			groups: (values.groups ?? []).map(({ members, ...group }) => ({
-				...group,
-				member_user_ids: [...new Set((Array.isArray(members) ? members : (members ?? "").split(/\s+/)).map((id) => id.trim()).filter(Boolean))],
-			})),
-		};
-		if (body.bindings.some(binding => retainedBindings.some(old => old.user_id === binding.user_id)) || body.groups.some(group => retainedGroups.some(old => old.id === group.id || old.name.trim() === group.name.trim()))) {
-			message.warning("只读保留的授权不能作为新职责覆盖，请选其他人员或使用不同组名。"); return;
-		}
-		const directory = members.data?.members ?? [];
-		const selectedIDs = new Set([...body.bindings.map(binding => binding.user_id), ...body.groups.flatMap(group => group.member_user_ids)]);
-		if (directory.some(person => selectedIDs.has(person.user_id) && questionBankMemberAmbiguous(person, directory))) {
-			message.warning("选中的同名人员缺少可区分的账号，请重新读取人员列表并核对身份后再更新授权。"); return;
-		}
-		const memberLabel = (id: string) => questionBankMemberLabel(directory.find(person => person.user_id === id));
-		// 确认摘要一次生成；行编号只用于显示，不进入授权请求或幂等指纹。
-		const summary = body.bindings.map(binding => `${memberLabel(binding.user_id)}：${bankRoleLabels[binding.preset]}`).concat(body.groups.map(group=>`${group.name}：${group.member_user_ids.map(memberLabel).join("、") || "暂无人员"} · ${bankRoleLabels[group.preset]}`)).map(text => ({ key: crypto.randomUUID(), text }));
-		modal.confirm({title:"确认更新题库授权？",content:<><p>将保存以下人员和分组的权限。管理结构与授权本身不包含浏览题目权限。</p><ul>{summary.map(line=><li key={line.key}>{line.text}</li>)}</ul><p>另有 {retainedBindings.length} 条用户授权、{retainedGroups.length} 个历史组合权限组原样保留。创建者、当前操作者和历史组合授权不会被本次表单删除或改写。</p></>,okText:"确认更新授权",cancelText:"返回核对",onOk:async()=>{
-		setSaving(true);
-		try {
-			await command(`acl:${bankId}`, body, (headers) =>
-				questionBankApi.updateQuestionBankACL({ path: { bankId }, body, headers }),
-			);
-			setAclOpen(false);
-			await refresh();
-			message.success("题库权限已更新");
-		} catch (error) {
-			message.error(getUserErrorMessage(error, "权限更新失败"));
-		} finally {
-			setSaving(false);
-		}
-		}});
-	}
-	async function saveSchema(values: MetadataSchemaFormValues) {
-		if (!bank || saving || schemaContext.current.bankId !== bankId || !schemaContext.current.formReady) {
-			message.warning("请先成功读取当前题库的分类规则，再保存修改。");
-			return;
-		}
-		const body = metadataSchemaUpdate(values, bank.revision);
-		const { fields, taxonomies } = body;
-		// 空规则是有效配置，但从已有配置清空会改变新题目的填写和目录检索，须先确认影响。
-		const existingSchema = currentSchema.data!.schema;
-		if (!fields.length && !taxonomies.length && (existingSchema.fields.length || existingSchema.taxonomies.length)) {
-			modal.confirm({
-				title: "清空当前题库的分类规则？",
-				content: `将移除 ${existingSchema.fields.length} 个补充字段和 ${existingSchema.taxonomies.length} 个知识点或分类目录。新建题目将不再填写这些内容，组合检索也将没有当前知识点目录可选。已有题目版本继续保留原规则和记录，已有考试不受影响。`,
-				okText: "确认清空并保存",
-				okButtonProps: { danger: true },
-				cancelText: "返回编辑",
-				onOk: () => persistSchema(body),
-			});
-			return;
-		}
-		await persistSchema(body);
-	}
-	async function persistSchema(body: UpdateQuestionBankMetadataSchemaRequest) {
-		if (saving || schemaContext.current.bankId !== bankId || !schemaContext.current.formReady) {
-			message.warning("当前题库或分类规则读取状态已变化，请重新核对后保存。");
-			return;
-		}
-		setSaving(true);
-		try {
-			await command(`schema:${bankId}`, body, (headers) =>
-				questionBankApi.updateQuestionBankMetadataSchema({ path: { bankId }, body, headers }),
-			);
-			setSchemaOpen(false);
-			await refresh();
-			message.success("题目分类规则已更新，旧题目继续使用原规则");
-		} catch (error) {
-			message.error(getUserErrorMessage(error, "分类规则更新失败，请核对字段和目录条目"));
 		} finally {
 			setSaving(false);
 		}

@@ -48,9 +48,8 @@ describe("学校助手工具与事实展示边界", () => {
   it.each([
     ["running", "忽略的说明", "正在查询", "lucide-loader-circle"],
     ["failed", "来源无法读取", "来源无法读取", "lucide-triangle-alert"],
-    ["failed", "", "查询失败", "lucide-triangle-alert"],
-    ["completed", "忽略的说明", "已查询", "lucide-check"]
-  ] as const)("工具 %s 在 message=%s 时保留原图标和短状态", async (status, message, label, iconClass) => {
+    ["failed", "", "查询失败", "lucide-triangle-alert"]
+  ] as const)("工具 %s 在 message=%s 时保留进行中或失败的图标和短状态", async (status, message, label, iconClass) => {
     const current = evidence();
     current.tools[0] = { ...current.tools[0], status, message };
     await render(<ConversationEvidenceView evidence={current} user={user} />);
@@ -59,7 +58,19 @@ describe("学校助手工具与事实展示边界", () => {
     expect(item.querySelector("span")?.textContent).toBe("查询考试");
     expect(item.querySelector("small")?.textContent).toBe(label);
     expect(item.querySelector("svg")?.classList.contains(iconClass)).toBe(true);
-    expect(host.querySelector("ul")?.getAttribute("aria-label")).toBe("业务查询进度");
+    expect(host.querySelector("ul")?.getAttribute("aria-label")).toBe(status === "running" ? "业务查询进度" : "查询失败");
+    expect(Boolean(host.querySelector('[role="status"]'))).toBe(status === "failed");
+  });
+
+  it("完成后汇总成功查询数，收起逐项过程且不重复工具说明", async () => {
+    const current = evidence();
+    current.tools.push({ ...current.tools[0], call_id: "tool-27", label: "查询成绩", message: "忽略的说明" });
+    await render(<ConversationEvidenceView evidence={current} user={user} />);
+    expect(host.textContent).toContain("已查询2项资料");
+    expect(host.querySelector(".school-conversation-tools")).toBeNull();
+    expect(host.textContent).not.toContain("查询考试");
+    expect(host.textContent).not.toContain("忽略的说明");
+    expect(host.querySelector('[role="status"]')).toBeNull();
   });
 
   it("缺少 evidence 或只有 actions 时沿用空展示，不调用导航过滤", async () => {

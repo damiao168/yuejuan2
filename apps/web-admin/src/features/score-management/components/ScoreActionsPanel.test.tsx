@@ -24,7 +24,10 @@ function render(props: Partial<ComponentProps<typeof ScoreActionsPanel>> = {}) {
 describe("basic score workflow action panel", () => {
   it("retains all four commands for a writable unlocked examination", () => {
     const { container, disabled } = render();
-    for (const label of ["汇总最终成绩", "确认成绩", "公开并锁定基础成绩", "导出成绩"]) expect(disabled(label)).toBe(false);
+    for (const label of ["汇总最终成绩", "确认成绩", "公开并锁定基础成绩", "导出本场全部成绩 CSV"]) expect(disabled(label)).toBe(false);
+    const details = [...container.querySelectorAll("details")];
+    expect(details.map(item => item.querySelector("summary")?.textContent)).toEqual(["学校原有成绩查询入口（独立公开）", "操作记录与导出水印"]);
+    expect(details.every(item => !item.open)).toBe(true);
     expect(container.textContent).toContain("watermark-1");
     expect(container.textContent).toContain("无权查看操作记录");
     expect(container.querySelector('label[for="score-confirm-reason"]')).not.toBeNull();
@@ -36,20 +39,21 @@ describe("basic score workflow action panel", () => {
     expect(disabled("汇总最终成绩")).toBe(true);
     expect(disabled("确认成绩")).toBe(true);
     expect(disabled("公开并锁定基础成绩")).toBe(true);
-    expect(disabled("导出成绩")).toBe(false);
-    expect(container.textContent).toContain("基础成绩不能直接修改");
+    expect(disabled("导出本场全部成绩 CSV")).toBe(false);
+    expect(container.textContent).toContain("基础成绩已锁定");
+    expect(container.textContent).toContain("更正须通过申诉或复评");
   });
 
   it("blocks every write-dependent command while a reload or another action disallows writes", () => {
     const { disabled } = render({ canWrite: false });
-    for (const label of ["汇总最终成绩", "确认成绩", "公开并锁定基础成绩", "导出成绩"]) expect(disabled(label)).toBe(true);
+    for (const label of ["汇总最终成绩", "确认成绩", "公开并锁定基础成绩", "导出本场全部成绩 CSV"]) expect(disabled(label)).toBe(true);
   });
 
   it("preserves the individual examination, grade count and quality checks", () => {
     expect(render({ selectedExamId: "" }).disabled("汇总最终成绩")).toBe(true);
     const noGrades = render({ gradeTotal: 0 });
     expect(noGrades.disabled("确认成绩")).toBe(true);
-    expect(noGrades.disabled("导出成绩")).toBe(true);
+    expect(noGrades.disabled("导出本场全部成绩 CSV")).toBe(true);
     expect(render({ quality: null }).disabled("公开并锁定基础成绩")).toBe(true);
     expect(render({ quality: { ...base.quality!, can_publish: false } }).disabled("公开并锁定基础成绩")).toBe(true);
   });

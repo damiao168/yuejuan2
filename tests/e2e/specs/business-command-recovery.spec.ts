@@ -26,15 +26,19 @@ test("stale automatic human-submit command resumes after reload without changing
   await page.reload();
   // 查看回执只能读取；用户核对服务端冻结内容后才显式重放原命令。
   await page.getByRole("button", { name: "查看操作结果", exact: true }).click();
-  await expect(page.getByText("原请求可继续提交", { exact: true })).toBeVisible();
+  await expect(page.getByText("可以继续提交此前内容。", { exact: true })).toBeVisible();
   await expect(page.getByText(/原提交内容：评分 4；/)).toBeVisible();
   expect(requests).toHaveLength(1);
-  await page.getByRole("button", { name: "按以上原内容继续提交", exact: true }).click();
+  await page.getByRole("button", { name: "按原内容继续提交", exact: true }).click();
   await expect.poll(() => requests.length).toBe(2);
   expect(requests[1]).toEqual(requests[0]);
 });
 
 test("refresh exposes recovery for terminal publish, arbitration and expired export links", async ({ page }) => {
+  const duplicateKeys: string[] = [];
+  page.on("console", message => {
+    if (message.text().includes("Encountered two children with the same key")) duplicateKeys.push(message.text());
+  });
   await installApiMocks(page, { initiallyAuthenticated: true });
   await page.addInitScript(() => {
     for (const operation of ["score.confirm", "score.publish", "review.arbitrate", "report.export"]) {
@@ -50,17 +54,18 @@ test("refresh exposes recovery for terminal publish, arbitration and expired exp
   });
   page.on("request", request => { if (request.method() === "POST" && /\/publish|\/confirm-grades|\/arbitration-tasks|\/reports\/export/.test(request.url())) writes++; });
   await page.goto("/#/dashboard");
+  // 页面会自动读取遗留命令回执；确认成功后直接呈现结果，不应再要求逐条点击查询。
   for (const [label, objectLabel] of [["成绩确认", "待恢复考试"], ["成绩发布", "待恢复考试"], ["仲裁评分", "第 2 题"]]) {
-    const pending = page.getByRole("alert").getByText(label, { exact: true }).locator("..");
-    await pending.getByRole("button", { name: "查看操作结果", exact: true }).click();
     await expect(page.getByText(`${label}已完成 · 对象 ${objectLabel}`, { exact: true })).toBeVisible();
-    await expect(pending.getByRole("button", { name: "查看操作结果", exact: true })).toHaveCount(0);
   }
-  await page.getByRole("button", { name: "查看操作结果", exact: true }).click();
   await expect(page.getByText("报表导出已完成 · 对象 待恢复考试", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "查看操作结果", exact: true })).toHaveCount(0);
+  // 下载与完成结果在同一 Space 中展示，批量回执更新不能因重复 key 留下多余按钮。
+  await expect(page.getByRole("button", { name: "下载已完成的报表", exact: true })).toHaveCount(1);
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "下载已完成的报表", exact: true }).click();
   expect((await download).suggestedFilename()).toBe("original.csv");
   expect(writes).toBe(0);
+  expect(duplicateKeys).toEqual([]);
   expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("business-command:demo-school:user-school_admin:")))).toEqual([]);
 });

@@ -123,8 +123,12 @@ for (const kind of ["backmark", "regrade"] as const) describe(`${kind} answer ev
     const materials = container.querySelector('section[aria-label="本任务题目与完整评分依据"]');
     expect(materials?.textContent).toContain("第 1 题 · 满分 5");
     for (const text of ["题干", "A. 选项内容", "参考答案", "等价答案", "完整解题步骤", "冻结细则 · frozen-2", "依据完整步骤给分", "单位缺失扣一分"]) expect(materials?.textContent).toContain(text);
-    const evidence = materials?.parentElement;
-    expect(evidence?.querySelector("h3")?.textContent).toBe("1 · short_answer");
+    const referenceDetails = materials?.parentElement as HTMLDetailsElement;
+    expect(referenceDetails.tagName).toBe("DETAILS");
+    expect(referenceDetails.open).toBe(false);
+    const evidence = referenceDetails.parentElement;
+    expect(evidence?.querySelector("h3")?.textContent).toBe("第 1 题 · 满分 5");
+    expect(evidence?.textContent).not.toContain("short_answer");
     expect(evidence?.textContent).toContain("原始回答");
     expect(evidence?.textContent).not.toContain("OCR 回答");
     expect([...container.querySelectorAll("section")].find(section => section.querySelector("h3")?.textContent === scoringTitle)).toBeDefined();

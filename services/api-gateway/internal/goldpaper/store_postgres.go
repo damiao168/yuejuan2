@@ -275,7 +275,7 @@ WHERE sub.tenant_id=$1::uuid AND sub.exam_id=$2::uuid AND sub.id=$4::uuid AND su
 FOR SHARE OF seg,asset,run
 `, tenantID, examID, questionID, submissionID).Scan(
 		&source.ExamID, &source.QuestionID, &source.SubmissionID, &source.AnswerSegmentID, &source.SnapshotID,
-		&source.SubjectCode, &source.ArchetypeCode, &source.RiskTier, &source.MaxScore, &rubricJSON,
+		&source.SubjectCode, &source.ArchetypeCode, &source.RiskTier, &source.QuestionNo, &source.MaxScore, &rubricJSON,
 		&source.ImageBinding.AssetID, &source.ImageBinding.SHA256, &source.ImageBinding.OwnerType, &source.ImageBinding.OwnerID,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -356,7 +356,7 @@ func (s *PostgresStore) query(ctx context.Context, tenantID, condition string, f
 	query := `
 SELECT gp.id::text,gp.exam_id::text,gp.question_id::text,gp.submission_id::text,
        COALESCE(gp.active_version,0),gp.status,gp.nominated_by::text,gp.retired_at,gp.retirement_reason,gp.created_at,gp.updated_at,
-       COALESCE(eqs.profile_snapshot_json->>'subject_code',''),eqs.archetype_code,eqs.risk_tier,
+       COALESCE(eqs.profile_snapshot_json->>'subject_code',''),eqs.archetype_code,eqs.risk_tier,COALESCE(q.question_no,''),
        v.id::text,v.version,v.exam_question_snapshot_id::text,v.reference_score::float8,v.max_score::float8,
        v.rubric_snapshot_json,v.explanation,v.trait_scores_json,v.error_tags_json,v.source_grade_ids_json,
        v.nominated_by::text,v.approved_by::text,v.approved_at,v.created_at,

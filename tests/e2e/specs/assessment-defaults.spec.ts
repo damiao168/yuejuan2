@@ -75,6 +75,9 @@ for (const scenario of scenarios) {
 
     // 查看默认表单不等于单题保存；准备页按同次检查返回的有效方案和版本直接确认。
     await page.getByRole("navigation", { name: "考试准备与答卷导入", exact: true }).getByRole("button", { name: /^确认准备完成，/ }).click();
+    // 核对表单时显式选择学段会生成草稿；放弃草稿后仍应按后端默认方案冻结，不能隐式保存。
+    const leaveDialog = page.getByRole("dialog", { name: "放弃未保存的内容并离开？", exact: true });
+    await leaveDialog.getByRole("button", { name: "放弃并离开", exact: true }).click();
     const scoring = page.locator(".scoring-preparation");
     await expect(scoring.getByText("已匹配 1 题", { exact: true })).toBeVisible();
     await scoring.getByRole("button", { name: "查看 / 调整", exact: true }).click();
@@ -82,7 +85,7 @@ for (const scenario of scenarios) {
     await expect(scoring.getByRole("cell", { name: "系统匹配", exact: true })).toBeVisible();
     await page.locator(".preparation-heading").getByRole("button", { name: "确认准备完成", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "确认准备完成", exact: true });
-    await expect(dialog.getByText("确认后将冻结本场考试准备", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("确认后将冻结本场准备", { exact: true })).toBeVisible();
     await dialog.getByRole("button", { name: "确认冻结并完成准备", exact: true }).click();
     await expect.poll(() => frozen).toBe(true);
     expect(confirmation?.expected_configuration_hash).toBe("default-question-hash");

@@ -42,8 +42,8 @@ test("学校管理员通过真实网关登录并查看已持久化考试", async
   const examLink = page.getByText(examName, { exact: true });
   await expect(examLink).toBeVisible();
   await examLink.click();
-  // 列表先进入整场总览，再由学科入口进入工作区；固定种子 ID 防止误读另一场同名考试。
-  await expect(page).toHaveURL(new URL(`/admin/exams/overview/standalone/${examId}`, page.url()).href);
+  // 独立单科直接进入当前阶段；固定种子 ID 防止误读另一场同名考试。
+  await expect(page).toHaveURL(new URL(`/admin/exams/${examId}/grading`, page.url()).href);
   await expect(page.getByRole("heading", { name: examName, exact: true })).toBeVisible();
   const persistedExam = await page.evaluate(async (id) => {
     const response = await fetch(`/api/v1/exams/${encodeURIComponent(id)}`, { credentials: "include" });
@@ -53,6 +53,9 @@ test("学校管理员通过真实网关登录并查看已持久化考试", async
   }, examId);
   // 夹具已按正式生命周期进入 grading，真实 worker 完成批次后仍应保留考试阶段。
   expect(persistedExam).toMatchObject({ id: examId, name: examName, status: "grading" });
+  // 精简默认入口后仍保留整场总览，验证显式打开后可从学科返回工作区。
+  await page.getByRole("button", { name: "整场总览", exact: true }).click();
+  await expect(page).toHaveURL(new URL(`/admin/exams/overview/standalone/${examId}`, page.url()).href);
   const subjectRow = page.getByRole("row").filter({ has: page.getByRole("cell", { name: "语文", exact: true }) });
   await subjectRow.click();
   await expect(page).toHaveURL(new URL(`/admin/exams/${examId}/grading`, page.url()).href);

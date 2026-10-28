@@ -28,7 +28,7 @@ describe("生产成绩复核新旧入口", () => {
     expect(host.textContent).toContain("新门户题目复核队列"); expect(mocks.legacy).not.toHaveBeenCalled();
     expect(mocks.workspace).toHaveBeenLastCalledWith(expect.objectContaining({ examId: "exam", personalScope: true, currentUserId: "teacher", canManage: false, canWork: true }));
     await act(async () => [...host.querySelectorAll("button")].find((button) => button.textContent === "历史申诉记录")!.click());
-    expect(host.textContent).toContain("旧记录处理队列"); expect(host.textContent).toContain("学生门户新提交的题目复核申请请返回"); expect(mocks.legacy).toHaveBeenCalled();
+    expect(host.textContent).toContain("旧记录处理队列"); expect(host.textContent).toContain("学生门户新申请见“学生门户申请”；本页处理历史申诉记录。"); expect(mocks.legacy).toHaveBeenCalled();
   });
 
   it("新队列有未提交回复时切历史入口先确认，取消不会卸载输入", async () => {

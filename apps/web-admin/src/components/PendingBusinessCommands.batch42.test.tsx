@@ -124,6 +124,21 @@ describe("pending command result and report boundaries", () => {
     expect(revokeURL).toHaveBeenCalledWith("blob:command-report");
   });
 
+  it("does not treat a report operation fragment inside another command target as an export", async () => {
+    const target = "exam:report.export:part";
+    const key = `business-command:tenant:A:score.publish:${target}`;
+    localStorage.setItem(key, JSON.stringify({ id: "publish-original" }));
+    vi.spyOn(apiClient, "request").mockImplementation(async path => {
+      if (path === "/api/v1/score-commands/publish-original") return { command_id: "publish-original", status: "succeeded", result: {} } as never;
+      if (path === `/api/v1/exams/${encodeURIComponent(target)}`) return { exam: { name: "成绩考试" } } as never;
+      throw new Error(`unexpected ${path}`);
+    });
+    await act(async () => root.render(<PendingBusinessCommands tenant="tenant" actor="A" />));
+    expect(host.textContent).toContain("成绩发布已完成 · 对象 成绩考试");
+    expect(host.textContent).not.toContain("下载已完成的报表");
+    expect(createURL).not.toHaveBeenCalled();
+  });
+
   it("recovers an already completed report after explicit continue using the same bytes and filename fallback", async () => {
     localStorage.setItem(reportKey, JSON.stringify({ id: "report-original" }));
     let receiptReads = 0;

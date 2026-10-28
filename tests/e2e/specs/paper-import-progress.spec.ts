@@ -50,6 +50,7 @@ test("识别轮询在短暂失败后恢复，停止及重试保留资料和滚�
   await page.getByRole("dialog").getByRole("button", { name: "停止识别", exact: true }).click();
     await expect(page.getByText("已停止识别", { exact: true })).toBeVisible();
     await expect(page.getByText("1. 会议回放.png")).toBeVisible();
+    await page.getByText("其他恢复方式", { exact: true }).click();
     await page.getByRole("button", { name: "重新识别全部", exact: true }).click();
   await expect(page.getByRole("button", { name: "停止识别", exact: true })).toBeVisible();
   const retryScroll = await scrollPosition();

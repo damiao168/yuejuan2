@@ -56,7 +56,7 @@ function snapshot(score: number | null, comments: string, fit: boolean): DraftFa
 }
 
 describe("冲突字段展示不改默认合并事实", () => {
-  it("明确展示零分、空字段与结构化查看状态，默认仍保留本机", () => {
+  it("明确展示零分、空字段与可读查看状态，阅读位置折叠且默认保留本机", () => {
     const local = snapshot(0, "", false);
     const server = snapshot(2, "教师评语", true);
     const onApply = vi.fn();
@@ -66,9 +66,16 @@ describe("冲突字段展示不改默认合并事实", () => {
     expect(score.getByText("0", { selector: "pre" }).textContent).toBe("0");
     const comments = within(screen.getByLabelText("教师评语冲突"));
     expect(comments.getByText("（空）", { selector: "pre" }).textContent).toBe("（空）");
-    const viewer = within(screen.getByLabelText("图像查看位置冲突"));
-    const values = viewer.getAllByText(/"fit":/, { selector: "pre" });
-    expect(values.map((node) => node.textContent)).toEqual([JSON.stringify(local.viewer, null, 2), JSON.stringify(server.viewer, null, 2)]);
+    const viewerRegion = screen.getByLabelText("图像查看位置冲突");
+    expect(viewerRegion.tagName).toBe("DETAILS");
+    expect(viewerRegion.hasAttribute("open")).toBe(false);
+    const viewer = within(viewerRegion);
+    expect(viewer.getByText("阅读位置（默认保留本机）", { selector: "summary" })).toBeTruthy();
+    const values = viewer.getAllByText(/缩放/, { selector: "pre" });
+    expect(values.map((node) => node.textContent)).toEqual([
+      "缩放 100% · 旋转 0°\n位置：横向 0，纵向 0",
+      "缩放 100% · 旋转 0°\n位置：横向 0，纵向 0 · 自动适应"
+    ]);
     fireEvent.click(screen.getByRole("button", { name: "应用" }));
     expect(onApply).toHaveBeenCalledWith(local);
     expect(local.viewer.fit).toBe(false);
