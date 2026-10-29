@@ -118,7 +118,7 @@ export function useWorkbenchTaskSession({
   const draftConflicted = draftSaveStatus === "conflict";
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存版本变化后重算待保存差异；相同快照直接返回，不能删除版本触发而遗漏排队修改。
   useEffect(() => {
-    // 整区编辑器逐行显式保存，避免当前题自动保存与该行手动保存竞争草稿版本。
+    // 整区编辑器独立维护每题草稿队列，避免当前题重复保存而争用版本。
     // 正式提交先等已发出的草稿请求完成，再暂停去抖写入，避免交分与草稿争用版本。
     if (regionEditing || submitting) return;
     if (!draftHydrated || ctx?.task.assigned_to !== currentUserId || ctx.task.status === "submitted") return;
