@@ -4,6 +4,7 @@ import { assignReviewTask, batchAssignReviewTasks, claimNextReviewTask, releaseR
 import { formatError } from "../gradingWorkbench.model";
 import type { TaskFilter, WorkbenchContext } from "../gradingWorkbench.types";
 import type { AssignmentBatch } from "../assignmentPlan";
+import { followingVisibleActionableTask } from "../taskPaging";
 
 interface UseGradingQueueActionsOptions {
   isCurrentScope: () => boolean;
@@ -148,10 +149,14 @@ export function useGradingQueueActions(options: UseGradingQueueActionsOptions) {
     }
   };
 
-  const goNext = async () => {
+  const goNext = async (submittedGroupIds: string[] = []) => {
     if (!options.isCurrentScope()) return;
-    if (options.nextTask) {
-      options.setSelectedTaskId(options.nextTask.id);
+    // 整区提交会一次改变多题状态；此闭包仍持有提交前队列，须排除已获回执的本区成员。
+    const submitted = new Set(submittedGroupIds);
+    const following = submitted.size ? followingVisibleActionableTask(options.filteredTasks.map(task => submitted.has(task.id) ? { ...task, status: "submitted" } : task),
+      options.selectedTaskId, { canManageTasks: options.canManageTasks, initialExamId: options.initialExamId, keyword: "", taskFilter: "all" }, !options.hasMoreTasks) : options.nextTask;
+    if (following) {
+      options.setSelectedTaskId(following.id);
       return;
     }
     if (options.hasMoreTasks) {

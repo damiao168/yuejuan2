@@ -43,7 +43,8 @@ import { usePersonalReviewBookmarks } from "./hooks/usePersonalReviewBookmarks";
 import { ReviewBookmarkControls, ReviewBookmarksDrawer } from "./components/ReviewBookmarks";
 import { TaskContentContainer } from "./components/WorkbenchContainers";
 import { FrozenQuestionReference, type FrozenReferenceTab } from "./components/FrozenQuestionReference";
-import { useAutomaticGradeSubmission, useScoringDraftIntent } from "./hooks/useAutomaticGradeSubmission";
+import { useLiveScoreDraft } from "./hooks/useLiveScoreDraft";
+import { ReviewStatisticsPanel } from "./components/ReviewStatisticsPanel";
 
 export interface GradingWorkbenchProps {
   canWork: boolean;
@@ -56,9 +57,11 @@ export interface GradingWorkbenchProps {
   currentTenantId: string;
   initialExamId?: string;
   personalScope?: boolean;
+  canManageScores?: boolean;
+  onNavigate?: (path: string) => void;
 }
 
-export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage, canGrade, canVerifyEvidence, canReturn, currentUserId, currentTenantId, initialExamId = "", personalScope = false }: Readonly<GradingWorkbenchProps>) {
+export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage, canGrade, canVerifyEvidence, canReturn, currentUserId, currentTenantId, initialExamId = "", personalScope = false, canManageScores = false, onNavigate }: Readonly<GradingWorkbenchProps>) {
   const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
   const queryScope = useReviewTaskContextScope(initialExamId, canViewOriginalImage);
@@ -106,12 +109,17 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const updateRegionState = useCallback((dirty: boolean, busy: boolean) => { setRegionDirty(dirty); setRegionBusy(busy); }, []);
   const [referenceTab, setReferenceTab] = useState<FrozenReferenceTab | null>(null);
   const [actioning, setActioning] = useState<string | null>(null);
+  const [advancing, setAdvancing] = useState(false);
+  const [statisticsRevision, setStatisticsRevision] = useState(0);
+  const advanceLock = useRef(false);
+  const regionSubmit = useRef<(() => Promise<boolean>) | null>(null);
+  const registerRegionSubmit = useCallback((submit: (() => Promise<boolean>) | null) => { regionSubmit.current = submit; }, []);
   const [assignmentPreview, setAssignmentPreview] = useState<ReviewTask[] | null>(null);
   const [mathRequesting, setMathRequesting] = useState(false);
   const [mathRequestNotice, setMathRequestNotice] = useState("");
   const [mathSelection, setMathSelection] = useState<MathStepSelection | null>(null);
   const mathActionLock = useRef(false);
-  const { edit: scoreEdit, updateDraft: setEditingDraft } = useScoringDraftIntent(selectedTaskId, liveDraft, setDraft);
+  const setEditingDraft = useLiveScoreDraft(liveDraft, setDraft);
   const [goldPaperManagerOpen, setGoldPaperManagerOpen] = useState(false);
   const [calibrationQuestionId, setCalibrationQuestionId] = useState("");
   const [goldPaperCandidate, setGoldPaperCandidate] = useState<GoldPaperNominationCandidate | null>(null);
@@ -163,7 +171,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const rubricPoints = ctx?.question?.rubric?.points ?? [];
   const scoreShortcuts = useGradingScoreShortcuts({ draft, setDraft: setEditingDraft, rubricPoints: [], onInfo: (text) => message.info(text) });
   const resetScoreShortcuts = scoreShortcuts.reset;
-  const { ownsSelectedTask, canEditDraft, unsyncedDraft, pendingGradeSubmission, canSubmit } = reviewDraftState({
+  const { ownsSelectedTask, canEditDraft, pendingGradeSubmission, canSubmit } = reviewDraftState({
     ctx, currentUserId, canWork, hasSession, resolvingConflict, hasConflict: Boolean(draftConflict),
     hydrated: draftHydrated, saveStatus: draftSaveStatus, actioning,
     snapshot: createDraftSnapshot(draft, viewerMode, scale, rotation, offset, autoFit), lastSavedSnapshot: lastSavedDraft.current
@@ -171,7 +179,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   const hasPendingGradeSubmission = regionEditing ? regionDirty : pendingGradeSubmission;
   const leaveDescription = hasPendingGradeSubmission ? "当前已填写的评分尚未提交，离开不会完成交分。" : "当前证据校正尚未保存，离开后只能恢复已成功保存的版本。";
   useUnsavedChangesGuard({ dirty: hasPendingGradeSubmission || math.dirty,
-    busy: (hasPendingGradeSubmission || math.dirty) && (Boolean(actioning) || regionBusy),
+    busy: (hasPendingGradeSubmission || math.dirty) && (Boolean(actioning) || regionBusy || advancing),
     title: hasPendingGradeSubmission ? "评分尚未提交，继续离开？" : undefined,
     okText: "继续离开", cancelText: "继续阅卷", description: leaveDescription });
   const canUndoScoreChange = scoreShortcuts.canUndo;
@@ -186,13 +194,14 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     actionLock.current = false;
     mathActionLock.current = false;
     setActioning(null);
+    setAdvancing(false); advanceLock.current = false; regionSubmit.current = null;
     setRegionDirty(false); setRegionBusy(false);
     setAssignmentPreview(null);
     setTaskDrawerOpen(false); setTaskPreviewOpen(false); setManagementView(initialExamId && canGrade ? "overview" : "assignment"); setBookmarksOpen(false);
   }, [resetQueue, initialExamId, canGrade]);
   const { loadContext } = useWorkbenchTaskSession({
     state: taskState, queryScope, currentUserId, currentTenantId, initialExamId, canGrade, canViewOriginalImage,
-    hasSession, selectedTaskId, setSelectedTaskId, regionEditing, managing, taskPreviewOpen,
+    hasSession, selectedTaskId, setSelectedTaskId, regionEditing, submitting: advancing, managing, taskPreviewOpen,
     viewer, prefetch, resetScoreShortcuts, resetWorkbenchScope, loadTasks, loadGraders, isCurrentScope
   });
 
@@ -280,13 +289,39 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
     }
   });
   const { submitGrade, markDispute, adoptAiScore, openDraftConflict, applyDraftConflict, confirmReturnTask } = reviewActions;
-  // 不提供普通草稿/续租的任务直接按任务修订号交分；不能等待一个永远不会发生的草稿保存。
-  const submissionDraftReady = ctx?.reviewContext.claim.can_renew
-    ? !unsyncedDraft && draftSaveStatus === "saved"
-    : draftSaveStatus === "readonly";
-  useAutomaticGradeSubmission({ taskId: selectedTaskId, edit: scoreEdit,
-    ready: canSubmit && !regionEditing && submissionDraftReady && online && !math.dirty && bookmarks.state.isSuccess && !bookmarks.busy && !bookmarks.error && !bookmarks.uncertainTask,
-    marked: bookmarks.state.data?.marked ?? true, submit: () => submitGrade(false, true) });
+  const advance = async () => {
+    if (advanceLock.current || actionLock.current || regionBusy || contextLoading || loadingTasks || !isCurrentScope()) return;
+    const taskId = selectedTaskId;
+    if (queue.taskFilter === "reviewed") {
+      if (queue.nextReviewedTask) setSelectedTaskId(queue.nextReviewedTask.id);
+      else if (hasMoreTasks) {
+        pendingNextRef.current = taskId;
+        void loadMoreTasks();
+        message.info(pageError ? "历史记录加载失败，请在任务列表重试" : "正在加载后续历史记录");
+      } else message.info("已到历史记录末尾");
+      return;
+    }
+    advanceLock.current = true; setAdvancing(true);
+    try {
+      if (ctx && regionEditing && canWork) {
+        if (!online || draftConflict || !regionSubmit.current || !await regionSubmit.current()) return;
+      } else if (ctx && canEditDraft) {
+        if (!online || math.dirty || draftConflict) { message.warning("请先联网并处理草稿冲突或证据校正，再提交下一份。"); return; }
+        if (!canSubmit) { message.warning("请填写最终分，0 分也需要明确输入。"); return; }
+        // 等已发出的草稿写入收尾；只有正式交分成功，才能离开当前答卷。
+        const draftKey = JSON.stringify([currentUserId, taskId]);
+        await draftSaves.current.whenIdle(draftKey);
+        if (conflictedDrafts.current.has(draftKey)) { message.warning("草稿已被其他会话修改，请先处理冲突。"); return; }
+        if (!isCurrentScope() || activeTask.current !== taskId || !await submitGrade()) return;
+        setStatisticsRevision(value => value + 1);
+      } else if (hasPendingGradeSubmission || ctx && ownsSelectedTask && ["assigned", "in_progress", "returned"].includes(ctx.task.status)) {
+        message.warning("当前任务暂不可提交，请先完成读取或处理草稿冲突。"); return;
+      }
+      if (isCurrentScope() && activeTask.current === taskId) await goNext(ctx && regionEditing ? groupTaskRefs(ctx).map(task => task.id) : []);
+    } finally {
+      if (isCurrentScope()) { advanceLock.current = false; setAdvancing(false); }
+    }
+  };
   const { refreshMath, selectMathEvidenceStep, requestMathSuggestion } = useGradingMathActions({
     queryScope, isCurrentScope,
     ctx, canGrade: canGrade && ctx?.answerScope !== "grading_group", canEditDraft, viewerMode, math, activeTask, mathActionLock,
@@ -297,14 +332,14 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   useGradingKeyboard({
     quickSubmit: false, canToggleBookmark: Boolean(bookmarks.state.data && !bookmarks.busy && !bookmarks.uncertainTask && (bookmarks.state.data.marked || bookmarks.state.data.can_edit_reason)),
     hasTask: Boolean(ctx) && (!managing || taskPreviewOpen),
-    canEditDraft: canEditDraft && !regionEditing && !actioning,
-    canSubmit: false,
+    canEditDraft: canEditDraft && !regionEditing && !actioning && !advancing,
+    canSubmit: Boolean(ctx) && canWork && !actioning && !advancing && !managing,
     canReturn: canReturn && !regionEditing,
     canUndoScoreChange,
     hasAiSuggestion: canAdoptAiScore,
     maxScore,
     rubricPointCount: 0,
-    onSubmit: () => undefined,
+    onSubmit: () => void advance(),
     onSetScore: scoreShortcuts.setScore,
     onToggleCriterion: scoreShortcuts.toggleCriterion,
     onAdoptAi: () => void adoptAiScore(),
@@ -315,7 +350,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   });
 
   const changeQueueScope = (change: () => void) => {
-    if (actioning || regionBusy) { message.info("正在保存、提交或分配，请等待结果后切换。"); return; }
+    if (actioning || advancing || regionBusy) { message.info("正在保存、提交或分配，请等待结果后切换。"); return; }
     if (bookmarks.busy) { message.info("正在保存标记，请稍后切换。"); return; }
     if (!hasPendingGradeSubmission && !math.dirty) { change(); return; }
     const taskId = selectedTaskId;
@@ -338,6 +373,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
 
   return (
     <div className={`grading-shell${managing ? " grading-management" : " grading-teacher-simple"}`}>
+      {!initialExamId && canManageTasks && canManageScores && onNavigate && queue.effectiveExamId ? <div className="grading-publication-action"><Button type="primary" onClick={() => changeQueueScope(() => onNavigate(`/exams/${encodeURIComponent(queue.effectiveExamId)}/scores`))}>核对并发布本场成绩</Button></div> : null}
       <WorkbenchManagement canManageTasks={canManageTasks} managementView={managementView} initialExamId={initialExamId}
         canGrade={canGrade} canWork={canWork} currentUserId={currentUserId} managing={managing} context={ctx}
         scoring={examScoring} queue={queue} onOpenGoldPapers={() => setGoldPaperManagerOpen(true)}
@@ -345,6 +381,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         onOpenAssignments={() => changeQueueScope(() => { examScoring.setDetailOpen(false); setManagementView("assignment"); setQueueScope("all"); })}
         onViewChange={value => changeQueueScope(() => { examScoring.setDetailOpen(false); examScoring.closeImage(); setTaskPreviewOpen(false); setManagementView(value); setQueueScope(value === "work" ? "mine" : "all"); })}
         onOpenResults={openResults} />
+      <ReviewStatisticsPanel examId={queue.effectiveExamId || ctx?.task.exam_id || ""} tenantId={currentTenantId} actorId={currentUserId} personalScope={personalScope || !canManageTasks || (!managing && queueScope === 'mine')} refreshRevision={statisticsRevision} />
       {!managing ? <WorkbenchHeader
         canWork={canWork}
         canManageTasks={false}
@@ -357,9 +394,10 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         progressComplete={Boolean(taskAggregate) && !loadingTasks && !taskError}
         draftSaveStatus={regionEditing ? regionBusy ? "saving" : regionDirty ? "pending" : "saved" : draftSaveStatus}
         loading={loadingTasks || contextLoading}
-        actioning={actioning}
+        actioning={advancing ? "submit" : actioning}
         onRefresh={async () => changeQueueScope(() => { void refreshCurrent(); })}
-        onNext={async () => changeQueueScope(() => { void goNext(); })}
+        onNext={advance}
+        nextLabel={ctx && regionEditing && canWork ? "提交本区并下一份" : ctx && canEditDraft ? "提交并下一份" : "下一份"}
         onPrevious={() => changeQueueScope(() => { if (previousTask) setSelectedTaskId(previousTask.id); })}
         canPrevious={Boolean(previousTask)}
         onOpenReference={setReferenceTab}
@@ -372,6 +410,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         scoreLabel={!regionEditing && !managing && ctx ? typeof draft.score === "number" ? `${Number(draft.score.toFixed(1))}/${maxScore} 分` : "未评分" : undefined}
         personalActions={<>
           {!managing ? <Button icon={<PanelLeft size={16} />} onClick={() => changeQueueScope(() => setTaskDrawerOpen(true))}>任务</Button> : null}
+          {!managing ? <Button onClick={() => changeQueueScope(() => { setTaskFilter("reviewed"); setTaskDrawerOpen(true); })}>历史评阅</Button> : null}
           {canWork ? <ReviewBookmarkControls scope={queryScope} controller={bookmarks} /> : null}
         </>}
       /> : null}
@@ -392,8 +431,9 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
           canManageTasks={managing} onRetry={() => void loadContext(selectedTaskId)}
           selectedGrade={selectedGrade} subjectCode={subjectCode} canAdoptAiScore={canAdoptAiScore}
           regionEditor={regionEditing && ctx ? <RegionScoreEditor context={ctx} currentUserId={currentUserId}
-            canGrade={canGrade && canWork && hasSession && !draftConflict} draft={draft} setDraft={setDraft}
+            canGrade={canWork && hasSession && !draftConflict} draft={draft} setDraft={setDraft}
             isCurrentScope={isCurrentScope} onStateChange={updateRegionState}
+            registerSubmit={registerRegionSubmit}
             onDraftSaved={(taskId) => {
               queryClient.removeQueries({ queryKey: reviewTaskContextKeys.task(queryScope, taskId) });
               prefetchedTaskRef.current.delete(taskId);
@@ -407,6 +447,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
               setTasks(current => current.map(item => item.id === task.id ? task : item));
               setCtx(current => current?.task.id === task.id ? { ...current, task, reviewContext: { ...current.reviewContext, task, expected_revision: task.revision } } : current);
               void refreshTaskAggregate();
+              setStatisticsRevision(value => value + 1);
             }} /> : undefined}
           answer={{
             preview, previewLoading, viewerMode, scale, autoFit, imageSize, rotation, offset, dragging,
@@ -435,7 +476,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
           }}
           editor={{
             draft, setDraft: scoreShortcuts.updateDraft, maxScore, rubricPoints,
-            selectedGrade, canEditDraft, canReturn, actioning,
+            selectedGrade, canEditDraft, canReturn, actioning: advancing ? "submit" : actioning,
             bookmarkMarked: bookmarks.state.isSuccess && !bookmarks.busy && !bookmarks.error && !bookmarks.uncertainTask ? bookmarks.state.data?.marked : undefined,
             onAdoptAiScore: () => void adoptAiScore(), canAdoptAiScore, onMarkDispute: markDispute
           }}

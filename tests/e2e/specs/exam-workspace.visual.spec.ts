@@ -46,6 +46,15 @@ for (const viewport of desktopViewports) {
     // 异步评分表格变高可能触发浏览器滚动锚定；展示基线固定首屏，并验证考试页头完整可见。
     await page.evaluate(() => window.scrollTo(0, 0));
     await expect(workspace.locator(".exam-context-header")).toBeInViewport({ ratio: 1 });
+    // 文档未横向溢出仍可能把最后一个步骤裁在局部滚动区外；桌面展示须完整露出六个入口。
+    const preparationFits = await preparation.evaluate(element => {
+      const bounds = element.getBoundingClientRect();
+      return [...element.querySelectorAll("button")].every(button => {
+        const box = button.getBoundingClientRect();
+        return box.left >= bounds.left && box.right <= bounds.right;
+      });
+    });
+    expect(preparationFits).toBe(true);
 
     const dimensions = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,

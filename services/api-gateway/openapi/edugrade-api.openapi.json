@@ -5466,7 +5466,8 @@
             "in": "query",
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "reviewed includes both submitted and completed historical grading tasks."
           },
           {
             "name": "assigned_to",
@@ -5511,6 +5512,15 @@
               "type": "string"
             },
             "description": "Authorized exam subject code; shared by list and aggregate filtering"
+          },
+          {
+            "name": "statistics",
+            "in": "query",
+            "description": "Include live confirmed score statistics for a concrete exam_id. Status and pagination do not narrow the statistics denominator; authorization and assigned_to still apply.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {
@@ -34801,6 +34811,9 @@
             "items": {
               "$ref": "#/components/schemas/ReviewerTaskAggregate"
             }
+          },
+          "statistics": {
+            "$ref": "#/components/schemas/ReviewStatistics"
           }
         }
       },
@@ -49279,6 +49292,11 @@
           },
           "expected_revision": {
             "type": "integer"
+          },
+          "score_only": {
+            "type": "boolean",
+            "default": false,
+            "description": "Explicitly confirmed final total score without hidden per-point selections. Does not trigger submission automatically. Supplied rubric selections remain validated."
           }
         },
         "required": [
@@ -59243,6 +59261,113 @@
         "required": [
           "template"
         ]
+      },
+      "ReviewQuestionStatistics": {
+        "type": "object",
+        "required": [
+          "question_id",
+          "question_no",
+          "graded_count",
+          "full_score_count",
+          "correct_rate",
+          "average_score_rate"
+        ],
+        "properties": {
+          "question_id": {
+            "type": "string"
+          },
+          "question_no": {
+            "type": "string"
+          },
+          "graded_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "full_score_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "correct_rate": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Full-score samples divided by graded samples; null when there are no samples."
+          },
+          "average_score_rate": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Sum of scores divided by sum of maximum scores; null when there are no samples."
+          }
+        }
+      },
+      "ReviewStatistics": {
+        "type": "object",
+        "description": "Live formal scores before publication. Personal scope contains only the current reviewer opinions; exam scope contains confirmed current final grades.",
+        "required": [
+          "exam_id",
+          "scope",
+          "graded_count",
+          "full_score_count",
+          "correct_rate",
+          "average_score_rate",
+          "questions",
+          "updated_at"
+        ],
+        "properties": {
+          "exam_id": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "exam"
+            ]
+          },
+          "graded_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "full_score_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "correct_rate": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Full-score samples divided by graded samples; null when there are no samples."
+          },
+          "average_score_rate": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Sum of scores divided by sum of maximum scores; null when there are no samples."
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewQuestionStatistics"
+            }
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       }
     }
   }

@@ -21,6 +21,7 @@ interface WorkbenchTaskSessionOptions {
   selectedTaskId: string;
   setSelectedTaskId: Dispatch<SetStateAction<string>>;
   regionEditing: boolean;
+  submitting?: boolean;
   managing: boolean;
   taskPreviewOpen: boolean;
   viewer: Pick<ReturnType<typeof useAnswerViewer>, "mode" | "scale" | "rotation" | "offset" | "autoFit" | "invalidateContent" | "prepareContext" | "restore">;
@@ -35,7 +36,7 @@ interface WorkbenchTaskSessionOptions {
 // 上下文、草稿和租约共享任务/身份边界；保存仍委托既有 TaskDraftSaveQueue 与 lifecycle helper。
 export function useWorkbenchTaskSession({
   state, queryScope, currentUserId, currentTenantId, initialExamId, canGrade, canViewOriginalImage,
-  hasSession, selectedTaskId, setSelectedTaskId, regionEditing, managing, taskPreviewOpen,
+  hasSession, selectedTaskId, setSelectedTaskId, regionEditing, submitting = false, managing, taskPreviewOpen,
   viewer, prefetch, resetScoreShortcuts, resetWorkbenchScope, loadTasks, loadGraders, isCurrentScope
 }: WorkbenchTaskSessionOptions) {
   const queryClient = useQueryClient();
@@ -118,7 +119,8 @@ export function useWorkbenchTaskSession({
   // biome-ignore lint/correctness/useExhaustiveDependencies: 保存版本变化后重算待保存差异；相同快照直接返回，不能删除版本触发而遗漏排队修改。
   useEffect(() => {
     // 整区编辑器逐行显式保存，避免当前题自动保存与该行手动保存竞争草稿版本。
-    if (regionEditing) return;
+    // 正式提交先等已发出的草稿请求完成，再暂停去抖写入，避免交分与草稿争用版本。
+    if (regionEditing || submitting) return;
     if (!draftHydrated || ctx?.task.assigned_to !== currentUserId || ctx.task.status === "submitted") return;
     const snapshotValue = createDraftSnapshot(draft, viewerMode, scale, rotation, offset, autoFit);
     const snapshot = JSON.stringify(snapshotValue);
@@ -139,7 +141,7 @@ export function useWorkbenchTaskSession({
       // 同账号切换题目时补存上一题；换账号不触发旧账号的离开保存。
       if (activeUserId.current === currentUserId && activeTask.current !== taskId) void commit(true);
     };
-  }, [autoFit, ctx, currentUserId, draft, draftHydrated, draftRevision, draftConflicted, offset, online, rotation, scale, viewerMode, queryClient, queryScope, prefetchedTaskRef, regionEditing]);
+  }, [autoFit, ctx, currentUserId, draft, draftHydrated, draftRevision, draftConflicted, offset, online, rotation, scale, viewerMode, queryClient, queryScope, prefetchedTaskRef, regionEditing, submitting]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: 身份、考试或会话查询域变化都使评分编辑失效；这些失效键不能因回调未直接读取而删除。
   useEffect(() => {

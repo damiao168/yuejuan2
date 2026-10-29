@@ -51,7 +51,7 @@ test("考试工作区保留当前考试和六步导航，阅卷与成绩从业�
   await expect(preparation.getByRole("button", { name: /^学生答卷，/ })).toHaveAttribute("aria-current", "step");
   await expect(page.locator("#primary-navigation")).toBeVisible();
 
-  // 准备与答卷共用考试内导航；阅卷和成绩沿用左侧正式业务入口。
+  // 准备与答卷共用考试内导航；新增本场直达入口后，左侧全校业务入口仍应可用。
   await page.locator("#primary-navigation").getByRole("menuitem", { name: "阅卷管理", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/grading$/);
   await expect(page.locator("#primary-navigation")).toBeVisible();

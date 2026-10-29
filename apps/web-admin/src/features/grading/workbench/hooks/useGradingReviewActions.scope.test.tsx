@@ -64,7 +64,7 @@ describe("grading review scope and conflict boundaries", () => {
   };
   let switchExam: (id: string) => void;
   let changeOriginalImagePermission: (allowed: boolean) => void;
-  let submitGrade: (nominate?: boolean) => Promise<void>;
+  let submitGrade: (nominate?: boolean) => Promise<boolean>;
   let actions: ReturnType<typeof useGradingReviewActions>;
   let receiveCurrentFailure: () => void;
 

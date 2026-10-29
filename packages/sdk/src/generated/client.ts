@@ -493,7 +493,7 @@ export interface operations {
   "refreshExamCandidates": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: CandidateRefreshResponse; };
   "getExamWorkspace": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ExamWorkspaceResponse; };
   "listExamSubmissions": { args: { path: { "examId": string; }; query?: { "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: SubmissionPage; };
-  "listReviewTasks": { args: { query?: { "limit"?: number; "cursor"?: string; "status"?: string; "assigned_to"?: string; "exam_id"?: string; "question_id"?: string; "q"?: string; "unassigned"?: boolean; "subject"?: string; }; signal?: AbortSignal; }; response: ReviewTaskPage; };
+  "listReviewTasks": { args: { query?: { "limit"?: number; "cursor"?: string; "status"?: string; "assigned_to"?: string; "exam_id"?: string; "question_id"?: string; "q"?: string; "unassigned"?: boolean; "subject"?: string; "statistics"?: boolean; }; signal?: AbortSignal; }; response: ReviewTaskPage; };
   "getReviewTaskContext": { args: { path: { "taskId": string; }; signal?: AbortSignal; }; response: ReviewTaskContextResponse; };
   "listReviewAnnotations": { args: { path: { "taskId": string; }; signal?: AbortSignal; }; response: ReviewAnnotationListResponse; };
   "createReviewAnnotation": { args: { path: { "taskId": string; }; body: CreateReviewAnnotationRequest; signal?: AbortSignal; }; response: ReviewAnnotationResponse; };

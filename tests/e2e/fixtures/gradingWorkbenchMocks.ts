@@ -248,7 +248,7 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
       const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") ?? 50), 200));
       state.listCursors.push(cursor);
       const matches = (task: FixtureTask) => (!assignedTo || task.assigned_to === assignedTo) && (!examID || task.exam_id === examID)
-        && (!status || (status === "active" ? ["pending", "assigned", "in_progress", "returned"].includes(task.status) : task.status === status))
+        && (!status || (status === "active" ? ["pending", "assigned", "in_progress", "returned"].includes(task.status) : status === "reviewed" ? ["submitted", "completed"].includes(task.status) : task.status === status))
         && (!subject || task.subject.code === subject) && (!question || task.question_id === question) && (!unassigned || !task.assigned_to)
         && (!q || [task.id, task.anonymous_code, task.question_no, task.source, wireTask(task).exam_name, task.subject.code].join(" ").toLowerCase().includes(q));
       const tasks = state.tasks.filter(matches);
@@ -267,7 +267,17 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
       const remaining = state.tasks.slice(anchor + 1).filter(matches);
       const page = remaining.slice(0, limit);
       const hasMore = remaining.length > page.length;
-      return json(route, { tasks: page.map(wireTask), aggregate, next_cursor: hasMore ? page[page.length - 1]?.id ?? "" : "", has_more: hasMore });
+      const samples = state.tasks.filter(task => (!assignedTo || task.assigned_to === assignedTo) && (!examID || task.exam_id === examID))
+        .flatMap(task => { const grade = state.grades.get(task.id); return grade ? [{ task, grade }] : []; });
+      const summarize = (items: typeof samples) => ({ graded_count: items.length, full_score_count: items.filter(item => item.grade.score === item.grade.max_score).length,
+        correct_rate: items.length ? items.filter(item => item.grade.score === item.grade.max_score).length / items.length : null,
+        average_score_rate: items.length ? items.reduce((sum, item) => sum + item.grade.score, 0) / items.reduce((sum, item) => sum + item.grade.max_score, 0) : null });
+      const statistics = { exam_id: examID, scope: assignedTo ? "personal" : "exam", ...summarize(samples), updated_at: now,
+        questions: [...new Set(samples.map(item => item.task.question_id))].map(question_id => {
+          const group = samples.filter(item => item.task.question_id === question_id);
+          return { question_id, question_no: group[0].task.question_no, ...summarize(group) };
+        }) };
+      return json(route, { tasks: page.map(wireTask), aggregate: { ...aggregate, ...(url.searchParams.get("statistics") === "true" ? { statistics } : {}) }, next_cursor: hasMore ? page[page.length - 1]?.id ?? "" : "", has_more: hasMore });
     }
 
     if (path === "/api/v1/review-tasks/next" && method === "POST") {

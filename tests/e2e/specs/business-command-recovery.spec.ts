@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { installApiMocks } from "../fixtures/apiMocks";
 import { createGradingWorkbenchMockState, installGradingWorkbenchMocks } from "../fixtures/gradingWorkbenchMocks";
 
-test("stale automatic human-submit command resumes after reload without changing score or revision", async ({ page }) => {
+test("stale explicitly confirmed human-submit command resumes after reload without changing score or revision", async ({ page }) => {
   // 场景包含首次加载、自动保存和刷新恢复；冷启动耗时也计入整场上限，单步断言仍沿用原超时。
   test.setTimeout(60_000);
   await installGradingWorkbenchMocks(page, createGradingWorkbenchMockState(2));
@@ -20,11 +20,13 @@ test("stale automatic human-submit command resumes after reload without changing
   await expect(page.getByRole("button", { name: "开始处理" })).toHaveCount(0);
   const score = page.getByRole("spinbutton", { name: "最终得分" });
   await score.fill("4");
-  // Enter 快捷提交已移除；连续确认不能增加命令，草稿保存后仅由自动提交创建原请求。
+  // 普通 Enter 不交分；Ctrl+Enter 是教师明确确认，失败仍停留当前答卷。
   await score.press("Enter");
   await score.press("Control+Enter");
   await expect.poll(() => requests.length, { timeout: 10_000 }).toBe(1);
-  expect(JSON.parse(requests[0].body)).toMatchObject({ score: 4, expected_revision: 1, auto_submit: true });
+  expect(JSON.parse(requests[0].body)).toMatchObject({ score: 4, expected_revision: 1, score_only: true });
+  await expect(page.locator(".answer-panel")).toContainText("fixture-01");
+  await expect(score).toHaveValue("4.0");
   await page.reload();
   // 刷新后页面自动只读回执；不抢点正在自动核对的入口，用户核对冻结内容后才重放。
   await expect(page.getByText("可以继续提交此前内容。", { exact: true })).toBeVisible();

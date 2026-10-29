@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { ReviewTask } from "../../../api/review";
-import { appendTaskPage, followingVisibleActionableTask, precedingVisibleTask, visibleTasks } from "./taskPaging";
+import { appendTaskPage, followingReviewedTask, followingVisibleActionableTask, precedingVisibleTask, visibleTasks } from "./taskPaging";
 
 describe("review task paging", () => {
+  it("历史评阅包含正式提交与已完成任务，排除草稿且前进不回绕", () => {
+    const tasks = ["assigned", "submitted", "completed", "cancelled"].map((status, index) => ({ id: `task-${index}`, exam_id: "exam", question_id: "q", status, question_no: "18" } as ReviewTask));
+    const options = { canManageTasks: false, initialExamId: "exam", keyword: "", taskFilter: "reviewed" };
+    expect(visibleTasks(tasks, options).map(task => task.id)).toEqual(["task-1", "task-2"]);
+    expect(followingReviewedTask(tasks, "task-1", options)?.id).toBe("task-2");
+    expect(followingReviewedTask(tasks, "task-2", options)).toBeUndefined();
+    expect(followingReviewedTask(tasks, "task-0", options)).toBeUndefined();
+    expect(followingReviewedTask(tasks, "task-1", { ...options, initialExamId: "other" })).toBeUndefined();
+  });
   it("上一份能回看已提交答卷且不越过当前筛选范围或回绕", () => {
     const tasks = ["submitted", "assigned", "assigned"].map((status, index) => ({ id: `task-${index}`, exam_id: "exam", question_id: "q", status, question_no: "18" } as ReviewTask));
     const options = { canManageTasks: false, initialExamId: "exam", keyword: "", taskFilter: "active" };

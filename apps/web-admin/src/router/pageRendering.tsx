@@ -105,7 +105,7 @@ function renderExamWorkspaceModule(context: Readonly<RouteRenderingContext>, rea
       case "processing":
         return <SubmissionCapturePage canManage={writeAllows(["submission:manage", "file:manage", "ocr:manage", "segment:manage"])} canManageProcessing={writeAllows(["capture:manage"])} canReadStudentNames={hasEveryPermission(user, ["org:manage"])} initialExamId={examId} onNavigate={navigate} />;
       case "grading":
-        return <GradingWorkbenchPage canWork={writeAllows(["review:work"])} canManageTasks={adminAllows(["review:manage"])} canViewOriginalImage={experience === "admin"} canGrade={adminAllows(["grading:manage"])} canVerifyEvidence={adminAllows(["evidence:manage"])} canReturn={writeAllows(["review:work"])} currentUserId={user.id} currentTenantId={user.tenant} initialExamId={examId} personalScope={experience === "teacher"} />;
+        return <GradingWorkbenchPage canWork={writeAllows(["review:work"])} canManageTasks={adminAllows(["review:manage"])} canViewOriginalImage={experience === "admin"} canGrade={adminAllows(["grading:manage"])} canVerifyEvidence={adminAllows(["evidence:manage"])} canReturn={writeAllows(["review:work"])} currentUserId={user.id} currentTenantId={user.tenant} initialExamId={examId} personalScope={experience === "teacher"} canManageScores={adminPermission(["score:manage", "exam:manage", "submission:manage"])} onNavigate={navigate} />;
       case "quality":
         return <QualityDashboardPage examId={examId} canManage={adminAllows(["review:manage"])} currentUserId={user.id} onNavigate={navigate} />;
       case "scores":

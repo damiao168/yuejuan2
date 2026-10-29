@@ -139,6 +139,13 @@ func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 		Q:          strings.TrimSpace(r.URL.Query().Get("q")),
 		Limit:      limit + 1,
 	}
+	if value := r.URL.Query().Get("statistics"); value != "" {
+		filter.IncludeStatistics, err = strconv.ParseBool(value)
+		if err != nil {
+			httpx.Error(w, r, http.StatusBadRequest, "invalid_filter", "statistics must be a boolean")
+			return
+		}
+	}
 	if value := r.URL.Query().Get("unassigned"); value != "" {
 		filter.Unassigned, err = strconv.ParseBool(value)
 		if err != nil {
@@ -989,6 +996,10 @@ func applyReviewListScope(filter *ListFilter, scope auth.AccessScope) {
 	filter.ScopeMode = scope.QueryMode()
 	filter.ScopeActorID = scope.ActorID
 	filter.ScopeSchoolIDs = append([]string(nil), scope.SchoolIDs...)
+	if filter.ScopeMode == "school" {
+		// 班级与外校分派会扩展导航学校；完整学校范围只能来自持久化的管理员绑定，空绑定不能退回导航集合。
+		filter.ScopeSchoolIDs = scope.ManagedSchoolIDs()
+	}
 	filter.ScopeExamIDs = append([]string(nil), scope.ExamIDs...)
 	filter.ScopeTaskIDs = append([]string(nil), scope.ReviewTaskIDs...)
 }

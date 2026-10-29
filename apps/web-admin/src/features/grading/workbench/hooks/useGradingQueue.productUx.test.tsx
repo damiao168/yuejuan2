@@ -40,6 +40,26 @@ describe("task query and complete selection", () => {
     await act(async () => { queue.setKeyword(value); });
     await act(async () => { await vi.advanceTimersByTimeAsync(300); });
   }
+  it("历史下一份等待后续页后定位已完成记录，末尾不回绕或寻找待评任务", async () => {
+    const more = deferred<TaskPage>();
+    const first = { ...task("history-first"), status: "submitted", assigned_to: "admin" };
+    const last = { ...task("history-last"), status: "completed", assigned_to: "admin" };
+    api.list.mockImplementation((filter) => filter.limit === 1 ? Promise.resolve({ tasks: [], aggregate: aggregate(2), has_more: false })
+      : filter.status === "reviewed" ? filter.cursor ? more.promise : Promise.resolve({ tasks: [first], aggregate: aggregate(2), has_more: true, next_cursor: "history-next" })
+      : Promise.resolve({ tasks: [], aggregate: aggregate(0), has_more: false }));
+    await mount(false);
+    await act(async () => { queue.setTaskFilter("reviewed"); });
+    expect(queue.selectedTaskId).toBe(first.id);
+    expect(queue.loadingMoreTasks).toBe(true);
+    expect(queue.nextReviewedTask).toBeUndefined();
+    await act(async () => { queue.pendingNextRef.current = first.id; more.resolve({ tasks: [last], has_more: false }); });
+    expect(queue.selectedTaskId).toBe(last.id);
+    expect(queue.pendingNextRef.current).toBeNull();
+    expect(queue.nextReviewedTask).toBeUndefined();
+    await act(async () => { queue.pendingNextRef.current = last.id; queue.setTasks(current => [...current]); });
+    expect(queue.selectedTaskId).toBe(last.id);
+    expect(api.info).toHaveBeenLastCalledWith("已到当前历史记录末尾");
+  });
   it("整区当前题提交后保留共享图选择，防止自动换题丢掉其它行草稿", async () => {
     const held = { current: "a" };
     await mount(true, held);
@@ -49,6 +69,19 @@ describe("task query and complete selection", () => {
     expect(queue.selectedTaskId).toBe("a");
     await act(async () => { held.current = ""; queue.setTasks(current => [...current]); });
     expect(queue.selectedTaskId).toBe("b");
+  });
+  it("明确切换到历史后，旧整区任务不能阻止已载完的历史记录被选中", async () => {
+    const held = { current: "a" };
+    const more = deferred<TaskPage>();
+    await mount(true, held);
+    const first = { ...task("history-first"), status: "submitted" };
+    const last = { ...task("history-last"), status: "completed" };
+    api.list.mockImplementation((filter) => filter.limit === 1 ? Promise.resolve({ tasks: [], aggregate: aggregate(2), has_more: false })
+      : filter.cursor ? more.promise : Promise.resolve({ tasks: [first], aggregate: aggregate(2), has_more: true, next_cursor: "history-next" }));
+    await act(async () => { queue.setTaskFilter("reviewed"); });
+    await act(async () => { more.resolve({ tasks: [last], has_more: false }); });
+    expect(queue.selectedTaskId).toBe(first.id);
+    expect(queue.filteredTasks.map(item => item.id)).toEqual([first.id, last.id]);
   });
   it("sends subject, question and unassigned filters to list and matched aggregate, keeping whole-state progress", async () => {
     await mount(); await act(async () => { queue.setSubjectFilter("math"); queue.setQuestionFilter("q1"); queue.setUnassignedOnly(true); });

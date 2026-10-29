@@ -33,6 +33,7 @@ export interface WorkbenchHeaderProps {
   actioning: string | null;
   onRefresh: () => Promise<void>;
   onNext: () => Promise<void>;
+  nextLabel?: string;
   onPrevious?: () => void | Promise<void>;
   canPrevious?: boolean;
   onOpenReference?: (tab: FrozenReferenceTab) => void;
@@ -85,6 +86,7 @@ export function WorkbenchHeader({
   actioning,
   onRefresh,
   onNext,
+  nextLabel = "下一份",
   onPrevious,
   canPrevious = false,
   onOpenReference,
@@ -114,7 +116,7 @@ export function WorkbenchHeader({
           {onOpenReference ? <><Button disabled={!hasContext} onClick={() => onOpenReference("rules")}>评分细则</Button><Button disabled={!hasContext} onClick={() => onOpenReference("question")}>题目与答案</Button></> : null}
           <Button icon={<RefreshCw size={16} />} onClick={() => void onRefresh()} loading={loading}>刷新</Button>
           {showReviewerActions && onPrevious ? <Button icon={<ArrowLeft size={16} />} onClick={() => void onPrevious()} disabled={!canWork || !canPrevious}>上一份</Button> : null}
-          {showReviewerActions ? <Button icon={<ArrowRight size={16} />} onClick={() => void onNext()} disabled={!canWork}>下一份</Button> : null}
+          {showReviewerActions ? <Button type={nextLabel === "下一份" ? "default" : "primary"} icon={<ArrowRight size={16} />} onClick={() => void onNext()} disabled={!canWork || loading || Boolean(actioning)} loading={actioning === "submit"}>{nextLabel}</Button> : null}
           {/* 当前答卷打开后已自动续租；只有空选择且仍有任务时才需要显式领取，避免重复领取看起来毫无变化。 */}
           {canWork && showReviewerActions && !hasContext && !loading && remainingCount > 0 ? <Button type="primary" icon={<BadgeCheck size={16} />} disabled={Boolean(actioning)} loading={actioning === "claim-task"} onClick={() => void onClaim()}>领取任务</Button> : null}
         </Space>

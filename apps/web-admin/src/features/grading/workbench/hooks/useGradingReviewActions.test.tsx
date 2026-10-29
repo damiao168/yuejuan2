@@ -50,7 +50,7 @@ describe("grading review submission lifecycle", () => {
   let switchUser: (id: string) => void;
   let switchExam: (id: string) => void;
   let changeOriginalImagePermission: (allowed: boolean) => void;
-  let submitGrade: (nominate?: boolean) => Promise<void>;
+  let submitGrade: (nominate?: boolean) => Promise<boolean>;
   let actions: ReturnType<typeof useGradingReviewActions>;
   let refs: Pick<UseGradingReviewActionsOptions, "contextRequestRef" | "lastSavedDraft" | "prefetchedTaskRef" | "pendingNextRef" | "suppressAutoSelectRef">;
 
@@ -259,18 +259,19 @@ describe("grading review submission lifecycle", () => {
     expect(mocks.nominate).toHaveBeenCalledWith(expect.objectContaining({ sourceGradeId: "grade-A", referenceScore: 6 }));
   });
 
-  it("自动提交只传最终分，不再用隐藏的评分点或自动跳题", async () => {
+  it("教师显式提交只传最终分，不伪造隐藏的采分点，调用方确认成功后再切题", async () => {
     await mount();
-    const pending = actions.submitGrade(false, true);
+    const pending = actions.submitGrade();
     await act(async () => { finishSubmit({ human_grade: { id: "grade-A", score: 6 } }); await pending; });
-    expect(mocks.submitHumanGrade).toHaveBeenCalledWith("A", expect.objectContaining({ auto_submit: true, score: 6, rubric_selections: [] }));
+    expect(mocks.submitHumanGrade).toHaveBeenCalledWith("A", expect.objectContaining({ score_only: true, score: 6, rubric_selections: [] }));
+    expect(mocks.submitHumanGrade.mock.calls[0][1]).not.toHaveProperty("auto_submit");
     expect(current.selectedTaskId).toBe("A");
     expect(current.ctx?.task.status).toBe("submitted");
   });
 
   it("只返回任务回执的交分也能完成本地状态，且不会提名不存在的学生成绩", async () => {
     await mount();
-    const pending = actions.submitGrade(true, true);
+    const pending = actions.submitGrade(true);
     await act(async () => {
       finishSubmit({ task: { id: "A", status: "submitted", revision: 4 } });
       await pending;

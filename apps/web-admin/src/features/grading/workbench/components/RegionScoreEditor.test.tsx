@@ -2,8 +2,8 @@
 import { act, useState, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReviewTaskContext } from "../../../../api/review";
-import { createInitialDraft } from "../gradingWorkbench.model";
+import type { ReviewTaskContext, SaveReviewDraftPayload } from "../../../../api/review";
+import { createInitialDraft, serverDraftSnapshot } from "../gradingWorkbench.model";
 import type { WorkbenchContext } from "../gradingWorkbench.types";
 import { RegionScoreEditor } from "./RegionScoreEditor";
 import { ApiClientError } from "../../../../api/client";
@@ -45,9 +45,11 @@ function deferred() {
 describe("整区共图独立录分", () => {
   let root: Root, host: HTMLDivElement;
   let current = true;
+  let submitRegion: (() => Promise<boolean>) | null = null;
+  const registerSubmit = (submit: (() => Promise<boolean>) | null) => { submitRegion = submit; };
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.clearAllMocks(); current = true;
+    vi.clearAllMocks(); current = true; submitRegion = null;
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     host = document.createElement("div"); document.body.append(host); root = createRoot(host);
     api.context.mockImplementation(async (id: string) => ({ context: context(Number(id.slice(1))) }));
@@ -56,18 +58,17 @@ describe("整区共图独立录分", () => {
     api.submit.mockImplementation(async (id: string) => ({ task: { ...context(Number(id.slice(1))).task, status: "submitted", revision: 100 } }));
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.useRealTimers(); });
-  async function mount() {
-    const value = context(12);
+  async function mount(value = context(12)) {
     const work = { task: value.task, reviewContext: value, gradingGroupId: "fill", gradingGroupImageUrl: "/shared", ocrResults: [], ocrText: "" } as unknown as WorkbenchContext;
     function Shell() {
       const [activeWork, setWork] = useState(work);
-      const [draft, setDraft] = useState(() => createInitialDraft(work));
+      const [draft, setDraft] = useState(() => serverDraftSnapshot(createInitialDraft(work), value.draft, false, "group").snapshot.draft);
       return <RegionScoreEditor context={activeWork} currentUserId="teacher" canGrade draft={draft} setDraft={setDraft}
         onStateChange={api.state} onSubmitted={task => {
           api.submitted(task);
           setWork(previous => previous.task.id === task.id ? { ...previous, task,
             reviewContext: { ...previous.reviewContext, task, expected_revision: task.revision } } : previous);
-        }} onDraftSaved={api.saved} isCurrentScope={() => current} />;
+        }} onDraftSaved={api.saved} isCurrentScope={() => current} registerSubmit={registerSubmit} />;
     }
     await act(async () => root.render(<Shell />));
   }
@@ -77,13 +78,84 @@ describe("整区共图独立录分", () => {
     await act(async () => button.click());
   }
   async function settle() { await act(async () => { await vi.advanceTimersByTimeAsync(1200); }); }
-  it("三题自动分别提交；一题失败保留其它回执和本题分数", async () => {
+  async function confirm() { let result = false; await act(async () => { result = await submitRegion!(); }); return result; }
+  it("整区停止录分只保存各题草稿，重新打开仍恢复零分及其它已存输入", async () => {
+    const saved = new Map<string, ReviewTaskContext["draft"]>();
+    api.save.mockImplementation(async (id: string, body: SaveReviewDraftPayload) => {
+      const draft = { ...body, score: body.score ?? undefined, id: `draft-${id}`, review_task_id: id, reviewer_id: "teacher",
+        updated_at: "2026-10-29T00:00:00Z", revision: body.expected_revision + 1 };
+      saved.set(id, draft); return { draft };
+    });
+    api.context.mockImplementation(async (id: string) => ({ context: { ...context(Number(id.slice(1))), draft: saved.get(id) ?? null } }));
+    await mount(); await click(12, "2分"); await click(13, "0分"); await click(14, "4分");
+    await settle();
+    expect(api.save).toHaveBeenCalledTimes(3);
+    expect(api.submit).not.toHaveBeenCalled();
+    expect(saved.get("t13")?.score).toBe(0);
+    await mount({ ...context(12), draft: saved.get("t12")! });
+    expect([12, 13, 14].map(no => row(no).querySelector("output")?.textContent)).toEqual(["2", "0", "4"]);
+    await settle();
+    expect(api.save).toHaveBeenCalledTimes(3);
+    expect(api.submit).not.toHaveBeenCalled();
+    expect(api.state).toHaveBeenLastCalledWith(true, false);
+  });
+  it("旧草稿保存慢回执只推进版本，不覆盖等待期间继续录入的新分数", async () => {
+    const waiting = deferred();
+    api.save.mockImplementationOnce(async (_id: string, body: object) => { await waiting.promise; return { draft: { ...body, revision: 1 } }; });
+    await mount(); await click(13, "2分"); await settle();
+    expect(api.save).toHaveBeenCalledWith("t13", expect.objectContaining({ score: 2, expected_revision: 0 }));
+    await click(13, "4分");
+    await act(async () => waiting.resolve());
+    expect(row(13).querySelector("output")?.textContent).toBe("4");
+    await settle();
+    expect(api.save).toHaveBeenLastCalledWith("t13", expect.objectContaining({ score: 4, expected_revision: 1 }));
+    expect(api.submit).not.toHaveBeenCalled();
+  });
+  it("明确下一份先等待在途草稿，重复确认不另开提交，正式请求使用最新草稿版本", async () => {
+    const waiting = deferred();
+    api.save.mockImplementationOnce(async (_id: string, body: object) => { await waiting.promise; return { draft: { ...body, revision: 1 } }; });
+    await mount(); await click(12, "2分"); await click(13, "0分"); await click(14, "4分"); await settle();
+    let pending!: Promise<boolean>;
+    await act(async () => { pending = submitRegion!(); expect(await submitRegion!()).toBe(false); });
+    expect(api.submit).not.toHaveBeenCalled();
+    await act(async () => { waiting.resolve(); expect(await pending).toBe(true); });
+    expect(api.submit).toHaveBeenCalledTimes(3);
+    expect(api.save).toHaveBeenCalledWith("t12", expect.objectContaining({ score: 2, expected_revision: 1 }));
+    expect(api.submit).toHaveBeenCalledWith("t13", expect.objectContaining({ score: 0, score_only: true }));
+  });
+  it("草稿网络失败只重试保存，不出现提交重试或自动交分", async () => {
+    api.save.mockRejectedValueOnce(new Error("network"));
+    await mount(); await click(13, "2分"); await settle();
+    expect(row(13).textContent).toContain("草稿保存失败");
+    expect(row(13).textContent).not.toContain("重试本题提交");
+    await click(13, "重试保存草稿");
+    expect(api.save).toHaveBeenCalledTimes(2);
+    expect(api.submit).not.toHaveBeenCalled();
+    expect(row(13).querySelector("output")?.textContent).toBe("2");
+  });
+  it("草稿版本冲突阻止交分；明确重读只采用本题服务端草稿，保留其它题输入", async () => {
+    api.save.mockRejectedValueOnce(new ApiClientError(409, "revision_conflict", "draft conflict"));
+    await mount(); await click(13, "2分"); await settle();
+    expect(row(13).textContent).toContain("草稿已被其他会话修改");
+    await click(12, "0分"); await click(14, "4分");
+    expect(await confirm()).toBe(false);
+    expect(api.submit).not.toHaveBeenCalled();
+    api.context.mockImplementation(async (id: string) => ({ context: { ...context(Number(id.slice(1))), draft: { score: 0, rubric_selections: [], comments: "", private_note: "", student_feedback: "", viewer_state: {}, revision: 7 } } }));
+    await click(13, "重读并采用服务端草稿");
+    expect([12, 13, 14].map(no => row(no).querySelector("output")?.textContent)).toEqual(["0", "0", "4"]);
+    expect(await confirm()).toBe(true);
+    expect(api.save).toHaveBeenCalledWith("t13", expect.objectContaining({ score: 0, expected_revision: 7 }));
+    expect(api.submit).toHaveBeenCalledTimes(3);
+  });
+  it("录分停留不交分；教师确认后逐题提交，一题失败保留其它回执和本题分数", async () => {
     await mount();
     await click(12, "2分"); await click(13, "0分"); await click(14, "4分");
     api.submit.mockImplementation(async (id: string) => { if (id === "t14") throw new Error("network"); return { task: { ...context(Number(id.slice(1))).task, status: "submitted", revision: 100 } }; });
     await settle();
+    expect(api.submit).not.toHaveBeenCalled();
+    expect(await confirm()).toBe(false);
     expect(api.save).toHaveBeenCalledWith("t12", expect.objectContaining({ score: 2, expected_revision: 0, rubric_selections: [{ point_id: "p12", score: 2 }] }));
-    expect(api.submit).toHaveBeenCalledWith("t13", expect.objectContaining({ auto_submit: true, score: 0, expected_revision: 13, rubric_selections: [] }));
+    expect(api.submit).toHaveBeenCalledWith("t13", expect.objectContaining({ score_only: true, score: 0, expected_revision: 13, rubric_selections: [] }));
     expect(row(12).textContent).toContain("已提交");
     expect(row(13).textContent).toContain("已提交");
     expect(row(14).querySelector("output")?.textContent).toBe("4");
@@ -99,7 +171,7 @@ describe("整区共图独立录分", () => {
   it("提交当前12题只更新本行，保留13和14的分数与未保存状态", async () => {
     await mount();
     await click(12, "2分"); await click(13, "0分"); await click(14, "4分");
-    await settle();
+    expect(await confirm()).toBe(true);
     expect(row(12).textContent).toContain("本题已提交：2 / 6 分");
     expect(row(13).textContent).toContain("本题已提交：0 / 6 分");
     expect(row(14).textContent).toContain("本题已提交：4 / 6 分");
@@ -111,18 +183,24 @@ describe("整区共图独立录分", () => {
   it("同一题连续保存使用上一份成功回执的新草稿版本", async () => {
     api.save.mockImplementation(async (_id: string, body: { expected_revision: number }) => ({ draft: { ...body, revision: body.expected_revision + 1 } }));
     api.submit.mockRejectedValue(new ApiClientError(409, "review_task_marked", "已标记"));
-    await mount(); await click(12, "2分"); await settle();
-    await click(12, "4分"); await settle();
+    await mount(); await click(12, "2分"); await click(13, "0分"); await click(14, "4分");
+    expect(await confirm()).toBe(false);
+    await click(12, "4分");
+    expect(await confirm()).toBe(false);
     expect(api.save.mock.calls.map(([id, body]) => [id, body.score, body.expected_revision])).toEqual([["t12", 2, 0], ["t12", 4, 1]]);
     expect(api.state).toHaveBeenLastCalledWith(true, false);
   });
 
-  it("未填分不自动提交，直接最终分无需隐藏评分点或额外原因", async () => {
+  it("整区有未录分的题目时不能部分提交，明确确认支持直接总分与零分", async () => {
     await mount(); await settle();
     expect(api.submit).not.toHaveBeenCalled();
     expect(api.state).toHaveBeenLastCalledWith(false, false);
     await click(13, "总分调整为4"); await settle();
-    expect(api.submit).toHaveBeenCalledWith("t13", expect.objectContaining({ score: 4, auto_submit: true, rubric_selections: [] }));
+    expect(await confirm()).toBe(false);
+    expect(api.submit).not.toHaveBeenCalled();
+    await click(12, "0分"); await click(14, "2分");
+    expect(await confirm()).toBe(true);
+    expect(api.submit).toHaveBeenCalledWith("t13", expect.objectContaining({ score: 4, score_only: true, rubric_selections: [] }));
   });
 
   it("历史已提交行缺少正式得分时不展示空草稿为未评分", async () => {
@@ -163,12 +241,14 @@ describe("整区共图独立录分", () => {
     expect(api.submit).not.toHaveBeenCalled();
   });
   it("同一事件重复点击只发一份请求，会话变化后不续发提交", async () => {
-    await mount(); await click(13, "2分");
+    await mount(); await click(12, "2分"); await click(13, "0分"); await click(14, "4分");
     const waiting = deferred(); api.renew.mockReturnValue(waiting.promise);
-    await settle();
+    let pending!: Promise<boolean>;
+    await act(async () => { pending = submitRegion!(); expect(await submitRegion!()).toBe(false); });
     expect(api.renew).toHaveBeenCalledTimes(1);
+    expect(row(13).querySelector("button")?.disabled).toBe(true);
     current = false;
-    await act(async () => waiting.resolve());
+    await act(async () => { waiting.resolve(); expect(await pending).toBe(false); });
     expect(api.submit).not.toHaveBeenCalled();
     expect(api.submitted).not.toHaveBeenCalled();
   });

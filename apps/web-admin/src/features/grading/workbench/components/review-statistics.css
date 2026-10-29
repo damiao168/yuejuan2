@@ -1,0 +1,10 @@
+.review-statistics-panel { margin-block: 8px; padding: 12px 16px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 10px; background: var(--card-background, #fff); }
+.review-statistics-summary { display: flex; align-items: center; gap: 24px; }
+.review-statistics-summary h2 { margin: 0; font-size: 15px; white-space: nowrap; }
+.review-statistics-totals { display: flex; flex: 1; flex-wrap: wrap; column-gap: 28px; row-gap: 8px; }
+.review-statistics-totals > div { display: flex; align-items: baseline; gap: 8px; }
+.review-statistics-totals span { font-size: 13px; }
+.review-statistics-totals strong { font-size: 19px; }
+.review-statistics-totals small { font-size: 12px; font-weight: normal; }
+.review-statistics-panel details { margin-top: 8px; }
+@media (max-width: 760px) { .review-statistics-summary { flex-wrap: wrap; gap: 12px; } .review-statistics-totals { order: 1; flex-basis: 100%; column-gap: 20px; } }

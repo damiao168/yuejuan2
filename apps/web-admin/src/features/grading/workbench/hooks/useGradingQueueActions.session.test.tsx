@@ -248,6 +248,18 @@ describe("workbench queue action scope and request ownership (mock API)", () => 
     expect(api.assign).not.toHaveBeenCalled();
     expect(api.release).not.toHaveBeenCalled();
   });
+
+  it.each([false, true])("整区成功后跳过本区所有旧状态，hasFollowing=%s", async hasFollowing => {
+    const current = fixture();
+    current.options.canManageTasks = false;
+    current.options.filteredTasks = [task("A"), task("B"), task("C"), ...(hasFollowing ? [task("D")] : [])];
+    current.options.nextTask = task("B");
+    await render(current.options);
+    await actions.goNext(["A", "B", "C"]);
+    expect(current.state.selected).toBe(hasFollowing ? "D" : "");
+    expect(api.claim).not.toHaveBeenCalled();
+    expect(current.options.setTaskFilter).not.toHaveBeenCalled();
+  });
 });
 
 function StableProbe({ options, publish }: Readonly<{ options: Options; publish: (actions: ReturnType<typeof useGradingQueueActions>) => void }>) {

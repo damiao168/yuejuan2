@@ -5,7 +5,7 @@ import { listAllActiveGraders, type ManagedUser } from "../../../../api/users";
 import { displayNameOrUsername } from "../../../../auth/session";
 import { formatError } from "../gradingWorkbench.model";
 import type { ReviewerProgress, TaskFilter } from "../gradingWorkbench.types";
-import { appendTaskPage, followingVisibleActionableTask, precedingVisibleTask, visibleTasks } from "../taskPaging";
+import { appendTaskPage, followingReviewedTask, followingVisibleActionableTask, precedingVisibleTask, visibleTasks } from "../taskPaging";
 import { hashQueryParam } from "../../../../router/query";
 import { useGradingQueuePages } from "./useGradingQueuePages";
 import { examSubjectLabel } from "../../../../constants/examStatus";
@@ -146,7 +146,7 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
 
   useEffect(() => {
     // 整区内提交当前题后，其它评分行可能尚未保存；由教师明确切换，再离开这张共享图。
-    if (selectedTaskId && heldGroupTask?.current === selectedTaskId) return;
+    if (selectedTaskId && heldGroupTask?.current === selectedTaskId && tasks.some(task => task.id === selectedTaskId)) return;
     if (taskFilter === "active" && tasks.some(task => task.id === selectedTaskId && task.assigned_to === currentUserId && ["submitted", "completed"].includes(task.status))) return;
     if (loadingTasks || filteredTasks.some((task) => task.id === selectedTaskId)) return;
     if (selectedTaskId && hasMoreTasks && !tasks.some((task) => task.id === selectedTaskId)) return;
@@ -215,18 +215,24 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
   const previousTask = useMemo(() => precedingVisibleTask(tasks, selectedTaskId,
     { canManageTasks, initialExamId: effectiveExamId, keyword, taskFilter, questionId: questionFilter, subject: subjectFilter }),
     [canManageTasks, effectiveExamId, keyword, questionFilter, subjectFilter, selectedTaskId, taskFilter, tasks]);
+  const nextReviewedTask = useMemo(() => followingReviewedTask(tasks, selectedTaskId,
+    { canManageTasks, initialExamId: effectiveExamId, keyword, taskFilter, questionId: questionFilter, subject: subjectFilter }),
+    [canManageTasks, effectiveExamId, keyword, questionFilter, subjectFilter, selectedTaskId, taskFilter, tasks]);
   useEffect(() => {
     const fromTaskId = pendingNextRef.current;
     if (!fromTaskId || loadingTasks || loadingMoreTasks) return;
-    const following = followingVisibleActionableTask(tasks, fromTaskId,
-      { canManageTasks, initialExamId: effectiveExamId, keyword, taskFilter, questionId: questionFilter, subject: subjectFilter }, !hasMoreTasks);
+    const options = { canManageTasks, initialExamId: effectiveExamId, keyword, taskFilter, questionId: questionFilter, subject: subjectFilter };
+    // 历史翻页只定位下一份已阅记录，不能复用只找待评任务的规则而跳过整页历史。
+    const following = taskFilter === "reviewed" ? followingReviewedTask(tasks, fromTaskId, options)
+      : followingVisibleActionableTask(tasks, fromTaskId, options, !hasMoreTasks);
     if (following) {
       pendingNextRef.current = null;
       suppressAutoSelectRef.current = false;
       setSelectedTaskId(following.id);
     } else if (!hasMoreTasks && !pageError) {
       pendingNextRef.current = null;
-      if (!canManageTasks) onInfo("当前没有更多已分配给你的阅卷任务");
+      if (taskFilter === "reviewed") onInfo("已到当前历史记录末尾");
+      else if (!canManageTasks) onInfo("当前没有更多已分配给你的阅卷任务");
     }
   }, [canManageTasks, hasMoreTasks, effectiveExamId, keyword, questionFilter, subjectFilter, loadingMoreTasks, loadingTasks, onInfo, pageError, taskFilter, tasks]);
 
@@ -260,7 +266,7 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
     selectedTaskId, setSelectedTaskId, loadingTasks, loadingMoreTasks, hasMoreTasks, pageError, taskError,
     nextTaskCursor, graders, gradersError, assignmentUserId, setAssignmentUserId, assignmentTaskIds,
     setAssignmentTaskIds, filteredTasks, assignableTasks, graderOptions, graderNames, reviewerProgress,
-    myProgress, remainingCount, selectedIndex, prefetchTasks, nextTask, previousTask, pendingNextRef, suppressAutoSelectRef,
+    myProgress, remainingCount, selectedIndex, prefetchTasks, nextTask, previousTask, nextReviewedTask, pendingNextRef, suppressAutoSelectRef,
     loadTasks, loadMoreTasks, refreshTaskAggregate, loadGraders, reset,
     examFilter, effectiveExamId, setExamFilter: updateExamFilter, subjectFilter, setSubjectFilter: updateSubjectFilter, questionFilter, setQuestionFilter: updateQuestionFilter,
     unassignedOnly, setUnassignedOnly: updateUnassignedOnly, subjectOptions, examOptions, questionOptions, matchedAggregate, unassignedCount,

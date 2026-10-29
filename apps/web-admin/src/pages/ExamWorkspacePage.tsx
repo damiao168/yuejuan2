@@ -6,7 +6,7 @@ import { useExamWorkspace } from "../query/examWorkspace";
 import { getUserErrorMessage } from "../api/client";
 import { ExamWorkspaceLayout } from "../features/exams/workspace/ExamWorkspaceLayout";
 
-export function ExamWorkspacePage({ examId, section, moduleContent, onNavigate, currentUser }: Readonly<{
+export function ExamWorkspacePage({ examId, section, moduleContent, onNavigate, currentUser, experience }: Readonly<{
   examId: string;
   section: string;
   experience: ProductExperience;
@@ -26,5 +26,7 @@ export function ExamWorkspacePage({ examId, section, moduleContent, onNavigate, 
     moduleContent={typeof moduleContent === "function" ? moduleContent(Boolean(data.read_only) || data.exam_status === "archived") : moduleContent}
     onNavigate={onNavigate}
     canReadReadiness={hasEveryPermission(currentUser, ["exam:manage"])}
+    canManageScores={experience === "admin" && hasEveryPermission(currentUser, ["score:manage", "exam:manage", "submission:manage"])}
+    canReadGrading={experience === "admin" && hasEveryPermission(currentUser, ["review:manage"])}
   />;
 }

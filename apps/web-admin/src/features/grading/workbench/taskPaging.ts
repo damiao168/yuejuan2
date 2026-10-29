@@ -35,7 +35,8 @@ export function visibleTasks(tasks: ReviewTask[], options: {
   const text = options.keyword.trim().toLowerCase();
   return groupTasksByQuestion(tasks).filter((task) => {
     const activeStatuses = options.canManageTasks ? ["pending", "assigned", "in_progress", "returned"] : ["assigned", "in_progress", "returned"];
-    const statusMatched = options.taskFilter === "all" || (options.taskFilter === "active" ? activeStatuses.includes(task.status) : task.status === options.taskFilter);
+    const statusMatched = options.taskFilter === "all" || (options.taskFilter === "active" ? activeStatuses.includes(task.status)
+      : options.taskFilter === "reviewed" ? ["submitted", "completed"].includes(task.status) : task.status === options.taskFilter);
     const examMatched = !options.initialExamId || task.exam_id === options.initialExamId;
     const scopeMatched = (!options.questionId || task.question_id === options.questionId) && (!options.subject || task.subject === options.subject);
     // 服务端把这些字段以单个空格拼接后做字面查询；省略的名称/学科按空字符串还原，保留分隔空格。
@@ -43,6 +44,13 @@ export function visibleTasks(tasks: ReviewTask[], options: {
       .map((value) => value ?? "").join(" ").toLowerCase().includes(text);
     return statusMatched && examMatched && scopeMatched && keywordMatched;
   });
+}
+
+/** 历史浏览只前往下一条正式评阅，不回绕、领取新任务或把未交草稿当成已阅。 */
+export function followingReviewedTask(tasks: ReviewTask[], selectedTaskId: string, options: Parameters<typeof visibleTasks>[1]): ReviewTask | undefined {
+  const history = visibleTasks(tasks, { ...options, taskFilter: "reviewed" });
+  const index = history.findIndex(task => task.id === selectedTaskId);
+  return index >= 0 ? history[index + 1] : undefined;
 }
 
 export function followingVisibleActionableTask(tasks: ReviewTask[], selectedTaskId: string, options: Parameters<typeof visibleTasks>[1], wrap: boolean): ReviewTask | undefined {

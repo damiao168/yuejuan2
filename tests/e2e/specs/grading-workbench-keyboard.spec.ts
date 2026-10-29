@@ -6,7 +6,7 @@ import {
   subjectFixtures
 } from "../fixtures/gradingWorkbenchMocks";
 
-test("阅卷教师核对异常来源，快捷录分后自动提交并手动切换 20 份跨学科任务", async ({ page }) => {
+test("阅卷教师核对异常来源，录分停留不交分，点击或快捷键确认后切换 20 份跨学科任务", async ({ page }) => {
   test.setTimeout(240_000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   const state = createGradingWorkbenchMockState(20);
@@ -17,7 +17,7 @@ test("阅卷教师核对异常来源，快捷录分后自动提交并手动切�
   await page.goto("/#/teacher/grading", { waitUntil: "domcontentloaded" });
 
   const score = page.getByRole("spinbutton", { name: "最终得分" });
-  const next = page.getByRole("button", { name: "下一份", exact: true });
+  const next = page.getByRole("button", { name: "提交并下一份", exact: true });
   await expect(score).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(".answer-panel")).toContainText("fixture-01");
   await page.getByRole("button", { name: "任务", exact: true }).click();
@@ -32,13 +32,12 @@ test("阅卷教师核对异常来源，快捷录分后自动提交并手动切�
   await page.getByRole("checkbox", { name: /^启用单字符快捷键/ }).check();
   await page.getByText("键盘帮助", { exact: true }).click();
 
-  // 标记时只保留草稿；Enter 和 Ctrl+Enter 都不能绕过标记触发正式提交。
+  // 录分、失焦和普通 Enter 都只保存草稿；必须明确执行下一份。
   await page.getByRole("button", { name: "标记试卷", exact: true }).click();
   await expect(page.getByRole("button", { name: "已标记", exact: true })).toBeEnabled();
   await score.focus();
   await page.keyboard.press("1");
   await page.keyboard.press("Enter");
-  await page.keyboard.press("Control+Enter");
   await score.evaluate((element) => (element as HTMLInputElement).blur());
   await expect.poll(() => state.drafts.get("review-task-01")?.score, { timeout: 8_000 }).toBe(1);
   expect(state.submissions).toHaveLength(0);
@@ -55,26 +54,25 @@ test("阅卷教师核对异常来源，快捷录分后自动提交并手动切�
     const task = taskOrder[index];
     await expect(page.locator(".answer-panel")).toContainText(task.anonymous_code);
 
-    // 首份取消标记后提交已有编辑，其余任务用数字快捷键录分；提交成功不再自动翻页。
-    const submitted = page.waitForResponse((response) => response.request().method() === "POST"
-      && new URL(response.url()).pathname === `/api/v1/review-tasks/${task.id}/submit`, { timeout: 10_000 });
     if (index === 0) await page.getByRole("button", { name: "已标记", exact: true }).click();
     else await page.keyboard.press("1");
+    // 首份已等待草稿回执，其余交替使用点击和 Ctrl+Enter；二者都需正式提交成功才翻页。
+    const submitted = page.waitForResponse((response) => response.request().method() === "POST"
+      && new URL(response.url()).pathname === `/api/v1/review-tasks/${task.id}/submit`, { timeout: 10_000 });
+    if (index % 2 === 0) await next.click();
+    else await page.keyboard.press("Control+Enter");
     const response = await submitted;
     expect(response.status()).toBe(200);
-    expect(response.request().postDataJSON()).toMatchObject({ score: 1, auto_submit: true });
+    expect(response.request().postDataJSON()).toMatchObject({ score: 1, score_only: true });
+    expect(response.request().postDataJSON()).not.toHaveProperty("auto_submit");
     await expect.poll(() => state.submissions).toHaveLength(index + 1);
-    await expect(page.locator(".answer-panel")).toContainText(task.anonymous_code);
-    await expect(page.getByRole("region", { name: "本题评分记录" })).toContainText("已提交得分：1 / 9");
-
     if (index + 1 < taskOrder.length) {
-      await next.click();
       await expect(page.locator(".answer-panel")).toContainText(taskOrder[index + 1].anonymous_code);
       if (index === 0) {
         await page.getByRole("button", { name: "上一份", exact: true }).click();
         await expect(page.locator(".answer-panel")).toContainText(task.anonymous_code);
         await expect(page.getByRole("region", { name: "本题评分记录" })).toContainText("已提交得分：1 / 9");
-        await next.click();
+        await page.getByRole("button", { name: "下一份", exact: true }).click();
         await expect(page.locator(".answer-panel")).toContainText(taskOrder[index + 1].anonymous_code);
         expect(state.submissions).toHaveLength(1);
       }
@@ -88,7 +86,7 @@ test("阅卷教师核对异常来源，快捷录分后自动提交并手动切�
 test("两个浏览器窗口保存同一草稿时，后写窗口收到 revision conflict", async ({ browser }) => {
   test.setTimeout(60_000);
   const state = createGradingWorkbenchMockState(1);
-  // 两个窗口保持标记状态，只比较草稿修订号，避免首个窗口自动提交后变成只读。
+  // 两个窗口保留草稿，比较修订号；输入本身不会触发正式提交。
   Object.assign(state.bookmarks.get(state.tasks[0].id)!, { id: `bookmark-${state.tasks[0].id}`, marked: true, revision: 1 });
   const firstContext = await browser.newContext();
   const secondContext = await browser.newContext();
@@ -126,7 +124,7 @@ test("教师核对完整冻结资料后直接采纳建议分，批注工具保�
   const state = createGradingWorkbenchMockState(1);
   const task = state.tasks[0];
   state.currentAiSuggestionTaskIds.add(task.id);
-  // 先标记保留可编辑草稿，核对资料与采纳分数都不能绕过标记自动提交。
+  // 核对资料与采纳建议只更新草稿，教师确认下一份后才提交。
   Object.assign(state.bookmarks.get(task.id)!, { id: `bookmark-${task.id}`, marked: true, revision: 1 });
   await installGradingWorkbenchMocks(page, state);
   await page.route(`**/api/v1/review-tasks/${task.id}/context`, async (route) => {

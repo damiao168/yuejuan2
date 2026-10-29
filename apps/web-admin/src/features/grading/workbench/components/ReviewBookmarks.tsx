@@ -27,7 +27,7 @@ export function ReviewBookmarkControls({ scope, controller }: { scope: ReviewTas
     } finally { writing.current = false; }
   };
   return <>
-    <Button type={marked ? "primary" : "default"} icon={marked ? <BookmarkCheck size={16} /> : <Bookmark size={16} />} aria-pressed={marked} title={marked ? "留待本人复查；点击取消后恢复自动提交" : "留待本人复查，标记后暂停自动提交"} loading={controller.busy} disabled={!state.data || controller.busy || (!marked && !state.data.can_edit_reason) || Boolean(controller.uncertainTask)} onClick={() => void toggle()}>{marked ? "已标记" : "标记试卷"}</Button>
+    <Button type={marked ? "primary" : "default"} icon={marked ? <BookmarkCheck size={16} /> : <Bookmark size={16} />} aria-pressed={marked} title={marked ? "留待本人复查；点击取消标记" : "标记答卷，留待本人复查"} loading={controller.busy} disabled={!state.data || controller.busy || (!marked && !state.data.can_edit_reason) || Boolean(controller.uncertainTask)} onClick={() => void toggle()}>{marked ? "已标记" : "标记试卷"}</Button>
     {state.isError ? <Button size="small" onClick={() => void state.refetch()}>重试标记状态</Button> : null}
   </>;
 }

@@ -358,7 +358,7 @@ export type SubmissionPage = (CursorPageMeta) & ({ "submissions": Array<({ "id":
 
 export type ReviewTask = { "id": string; "tenant_id": string; "exam_id": string; "question_id": string; "question_no": string; "answer_segment_id": string; "submission_id": string; "anonymous_code": string; "source": string; "reason_code"?: string; "status": string; "priority": number; "assigned_to"?: string; "return_reason"?: string; "grade_round": string; "due_at"?: string; "revision": number; "created_by": string; "created_at": string; "updated_at": string; "exam_name"?: string; "subject"?: string; };
 
-export type ReviewTaskAggregate = { "total_count": number; "completed_count": number; "remaining_count": number; "status_counts": Record<string, number>; "reviewers": Array<ReviewerTaskAggregate>; };
+export type ReviewTaskAggregate = { "total_count": number; "completed_count": number; "remaining_count": number; "status_counts": Record<string, number>; "reviewers": Array<ReviewerTaskAggregate>; "statistics"?: ReviewStatistics; };
 
 export type ReviewerTaskAggregate = { "reviewer_id": string; "total_count": number; "completed_count": number; "remaining_count": number; };
 
@@ -1152,7 +1152,7 @@ export type ReviewCommandArbitrationTask = { "id": string; "tenant_id": string; 
 
 export type ReviewCommandReviewContext = { "question"?: ReviewQuestion; "rubric"?: FrozenReviewRubric; "raw_answer"?: string; "ocr_text"?: string; "ai_suggestion"?: Record<string, unknown>; };
 
-export type ReviewCommandSubmitGradeInput = { "auto_submit"?: boolean; "score": number; "rubric_selections": Array<ReviewCommandRubricSelection> | null; "comments": string; "private_note": string; "student_feedback": string; "reason": string; "expected_revision": number; };
+export type ReviewCommandSubmitGradeInput = { "auto_submit"?: boolean; "score": number; "rubric_selections": Array<ReviewCommandRubricSelection> | null; "comments": string; "private_note": string; "student_feedback": string; "reason": string; "expected_revision": number; "score_only"?: boolean; };
 
 export type ReviewCommandArbitrationSubmitResult = { "arbitration_task": ReviewCommandArbitrationTask; "final_grade": ReviewCommandFinalGrade; };
 
@@ -1669,6 +1669,10 @@ export type ApproveCalibrationSchoolTemplateRequest = { "name": string; "source_
 export type WithdrawCalibrationSchoolTemplateRequest = { "expected_revision": number; "reason": string; };
 
 export type CalibrationSchoolTemplateResponse = { "template": CalibrationSchoolTemplate; };
+
+export type ReviewQuestionStatistics = { "question_id": string; "question_no": string; "graded_count": number; "full_score_count": number; "correct_rate": number | null; "average_score_rate": number | null; };
+
+export type ReviewStatistics = { "exam_id": string; "scope": "personal" | "exam"; "graded_count": number; "full_score_count": number; "correct_rate": number | null; "average_score_rate": number | null; "questions": Array<ReviewQuestionStatistics>; "updated_at": string; };
 
 export interface components {
   schemas: {
@@ -2507,5 +2511,7 @@ export interface components {
     "ApproveCalibrationSchoolTemplateRequest": ApproveCalibrationSchoolTemplateRequest;
     "WithdrawCalibrationSchoolTemplateRequest": WithdrawCalibrationSchoolTemplateRequest;
     "CalibrationSchoolTemplateResponse": CalibrationSchoolTemplateResponse;
+    "ReviewQuestionStatistics": ReviewQuestionStatistics;
+    "ReviewStatistics": ReviewStatistics;
   };
 }

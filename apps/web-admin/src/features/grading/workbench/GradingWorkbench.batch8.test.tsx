@@ -16,7 +16,7 @@ import { createReviewTaskContextScope, reviewTaskContextKeys } from "../../../qu
 
 const mocks = vi.hoisted(() => ({
   loadContext: vi.fn(), save: vi.fn(), renew: vi.fn(), verify: vi.fn(), removeQueries: vi.fn(), invalidateQueries: vi.fn(),
-  submitGrade: vi.fn(async () => undefined), bookmarkMarked: false,
+  submitGrade: vi.fn(async () => true), goNext: vi.fn(async () => undefined), bookmarkMarked: false,
   notify: { info: vi.fn(), warning: vi.fn(), error: vi.fn(), success: vi.fn() },
   loadTasks: vi.fn(async () => undefined), loadGraders: vi.fn(async () => undefined), resetQueue: vi.fn(),
   resetShortcuts: vi.fn(), prepareViewer: vi.fn(), restoreViewer: vi.fn(), invalidateViewer: vi.fn(),
@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("antd", () => ({ App: { useApp: () => ({ message: mocks.notify, modal: { confirm: mocks.confirm } }) }, Alert: () => null, Button: () => null, Space: () => null, Drawer: () => null }));
+vi.mock("./components/ReviewStatisticsPanel", () => ({ ReviewStatisticsPanel: () => null }));
 vi.mock("./components/ReviewBookmarks", () => ({ ReviewBookmarkControls: () => null, ReviewBookmarksDrawer: () => null }));
 vi.mock("./hooks/usePersonalReviewBookmarks", () => ({ usePersonalReviewBookmarks: () => ({ state: { isSuccess: true, data: { marked: mocks.bookmarkMarked } }, busy: false, error: "", uncertainTask: "" }) }));
 vi.mock("../../../api/review", () => ({ renewReviewTask: mocks.renew, saveReviewDraft: mocks.save, verifyEvidence: mocks.verify }));
@@ -65,7 +66,7 @@ vi.mock("./hooks/useAnswerViewer", () => ({ useAnswerViewer: () => ({
 vi.mock("./hooks/useMathWorkbenchEvidence", () => ({ useMathWorkbenchEvidence: () => ({ state: { phase: "unavailable", understanding: null }, dirty: false, refresh: mocks.asyncNoop }) }));
 vi.mock("./hooks/useExamScoring", () => ({ useExamScoring: () => ({ loadSummary: mocks.asyncNoop }) }));
 vi.mock("./hooks/useGradingScoreShortcuts", () => ({ useGradingScoreShortcuts: ({ setDraft }: { setDraft: unknown }) => ({ reset: mocks.resetShortcuts, updateDraft: setDraft, canUndo: false, setScore: mocks.noop, toggleCriterion: mocks.noop, undo: mocks.noop }) }));
-vi.mock("./hooks/useGradingQueueActions", () => ({ useGradingQueueActions: () => ({ assignSelectedTasks: mocks.asyncNoop, claimTask: mocks.asyncNoop, goNext: mocks.asyncNoop, releaseCurrentTask: mocks.asyncNoop }) }));
+vi.mock("./hooks/useGradingQueueActions", () => ({ useGradingQueueActions: () => ({ assignSelectedTasks: mocks.asyncNoop, claimTask: mocks.asyncNoop, goNext: mocks.goNext, releaseCurrentTask: mocks.asyncNoop }) }));
 vi.mock("./hooks/useGradingReviewActions", () => ({ useGradingReviewActions: (options: Record<string, unknown>) => {
   mocks.review = options;
   return { submitGrade: mocks.submitGrade, markDispute: mocks.asyncNoop, adoptAiScore: mocks.asyncNoop, openDraftConflict: mocks.asyncNoop, applyDraftConflict: mocks.noop, confirmReturnTask: mocks.noop };
@@ -110,6 +111,7 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.bookmarkMarked = false;
+    mocks.submitGrade.mockResolvedValue(true);
     vi.useFakeTimers();
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
@@ -235,10 +237,10 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
 
   it.each([
     ["teacher", false, true, 1],
-    ["teacher", true, true, 0],
+    ["teacher", true, true, 1],
     ["other", false, true, 0],
     ["teacher", false, false, 0]
-  ] as const)("任务无普通草稿时按任务契约交分，仍保护归属、标记和在线状态 %s/%s/%s", async (owner, marked, online, expected) => {
+  ] as const)("普通草稿不可续租时不自动交分，明确确认仍按任务归属和在线状态执行 %s/%s/%s", async (owner, marked, online, expected) => {
     mocks.loadContext.mockResolvedValue(context("A", owner, false));
     mocks.bookmarkMarked = marked;
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(online);
@@ -249,8 +251,10 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
     expect(mocks.save).not.toHaveBeenCalled();
     expect(mocks.renew).not.toHaveBeenCalled();
+    expect(mocks.submitGrade).not.toHaveBeenCalled();
+    await act(async () => header().onNext());
     expect(mocks.submitGrade).toHaveBeenCalledTimes(expected);
-    if (expected) expect(mocks.submitGrade).toHaveBeenCalledWith(false, true);
+    expect(mocks.goNext).toHaveBeenCalledTimes(owner === "other" ? 1 : expected);
   });
 
   it("debounces edits for 1200ms and persists an explicit zero rather than null", async () => {
@@ -269,24 +273,37 @@ describe("batch8 workbench common original/current lifecycle (mock hooks/API)", 
     expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: true }));
   });
 
-  it.each([false, true])("只在有未交分时确认内部切换，0分与标记状态均不遗漏 marked=%s", async marked => {
+  it.each([false, true])("录入零分只保存草稿，明确下一份才提交并导航 marked=%s", async marked => {
     mocks.bookmarkMarked = marked;
     await render();
-    expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: false, busy: false }));
     await act(async () => header().onNext());
-    expect(mocks.confirm).not.toHaveBeenCalled();
+    expect(mocks.submitGrade).not.toHaveBeenCalled();
+    expect(mocks.goNext).not.toHaveBeenCalled();
     await edit(0);
-    await act(async () => { vi.advanceTimersByTime(1200); });
+    await act(async () => { vi.advanceTimersByTime(5000); });
     expect(header().draftSaveStatus).toBe("saved");
-    await act(async () => header().onNext());
-    expect(mocks.confirm).toHaveBeenLastCalledWith(expect.objectContaining({ title: "评分尚未提交，继续离开？" }));
+    expect(mocks.submitGrade).not.toHaveBeenCalled();
     expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: true }));
-    // 草稿同步成功不代表正式交分；收到提交状态之后才解除退出保护。
-    await act(async () => (mocks.review!.setCtx as (update: (value: WorkbenchContext) => WorkbenchContext) => void)(value => ({ ...value, task: { ...value.task, status: "submitted" } })));
-    expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: false, busy: false }));
-    mocks.confirm.mockClear();
     await act(async () => header().onNext());
+    expect(mocks.submitGrade).toHaveBeenCalledTimes(1);
+    expect(mocks.goNext).toHaveBeenCalledTimes(1);
     expect(mocks.confirm).not.toHaveBeenCalled();
+  });
+
+  it("提交失败保留当前题，重复下一份在回执返回前不能重发", async () => {
+    const submitted = deferred<boolean>();
+    mocks.submitGrade.mockReturnValue(submitted.promise);
+    await render(); await edit(4);
+    let pending!: Promise<void>;
+    await act(async () => { pending = header().onNext(); await header().onNext(); });
+    expect(mocks.submitGrade).toHaveBeenCalledTimes(1);
+    expect(mocks.goNext).not.toHaveBeenCalled();
+    expect(editor().actioning).toBe("submit");
+    await act(async () => { submitted.resolve(false); await pending; });
+    expect(editor().draft.score).toBe(4);
+    expect(editor().context.task.id).toBe("A");
+    expect(mocks.goNext).not.toHaveBeenCalled();
+    expect(mocks.guard).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: true, busy: false }));
   });
 
   it("离线未评分时改变图像位置仍可离开，后台恢复保存照常保留", async () => {

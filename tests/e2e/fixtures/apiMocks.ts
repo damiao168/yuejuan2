@@ -352,6 +352,15 @@ export async function installApiMocks(
       });
     }
     if (path === "/api/v1/review-tasks" && request.method() === "GET") {
+      if (url.searchParams.get("statistics") === "true" && url.searchParams.get("exam_id")) {
+        // 通用空场景没有正式分数；按新契约返回空统计，不能让新增面板误报接口故障或零正确率。
+        return json(route, { tasks: [], next_cursor: "", has_more: false, aggregate: {
+          total_count: 0, completed_count: 0, remaining_count: 0, status_counts: {}, reviewers: [], statistics: {
+            exam_id: url.searchParams.get("exam_id"), scope: url.searchParams.get("assigned_to") ? "personal" : "exam",
+            graded_count: 0, full_score_count: 0, correct_rate: null, average_score_rate: null, questions: [], updated_at: "2026-10-28T08:00:00Z"
+          }
+        } });
+      }
       return json(route, { tasks: [], next_cursor: "", has_more: false });
     }
     if (/^\/api\/v1\/exams\/[^/]+\/scoring-readiness$/.test(path) && request.method() === "GET") {

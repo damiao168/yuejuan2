@@ -8,7 +8,7 @@ test("当前 AI 失败隐藏历史建议，教师草稿和人工提交仍可使�
   const state = createGradingWorkbenchMockState(1);
   const task = state.tasks[0];
   state.currentAiSuggestionTaskIds.add(task.id);
-  // 先标记以核对草稿和失败提示；取消标记后再验证人工录分自动提交。
+  // 先核对草稿和失败提示，再由教师明确确认提交。
   Object.assign(state.bookmarks.get(task.id)!, { id: `bookmark-${task.id}`, marked: true, revision: 1 });
   // 存量文字仅作为已保存记录加载；删除评语入口后，评分更新仍须保留原值。
   state.drafts.set(task.id, {
@@ -48,9 +48,10 @@ test("当前 AI 失败隐藏历史建议，教师草稿和人工提交仍可使�
   await page.screenshot({ path: "output/playwright/ai-output-incomplete-teacher.png", fullPage: true });
 
   await page.getByRole("button", { name: "已标记", exact: true }).click();
+  expect(state.submissions).toHaveLength(0);
+  await page.getByRole("button", { name: "提交并下一份", exact: true }).click();
   await expect.poll(() => state.submissions, { timeout: 10_000 }).toEqual([task.id]);
   expect(state.grades.get(task.id)).toMatchObject({ score: 4, comments: "教师保留的评语", student_feedback: "教师保留的学生反馈", private_note: "教师保留的内部备注" });
-  await expect(page.locator(".answer-panel")).toContainText(task.anonymous_code);
 });
 
 test("主观题批次显示固定失败标签和未知用量，查看诊断不创建新批次（本地夹具）", async ({ page }) => {

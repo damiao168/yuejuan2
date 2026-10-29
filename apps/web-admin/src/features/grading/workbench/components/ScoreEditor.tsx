@@ -49,6 +49,8 @@ export function ScoreEditor({
   if (!canEditDraft) return <section className="score-panel" aria-label="本题评分记录">
     <div className="panel-head"><div><h2>评分记录</h2><p>满分 {maxScore || "—"}</p></div><Space size={8}>{!requiresSecondOpinion ? aiRecordButton : null}<StatusTag tone="neutral">只读</StatusTag></Space></div>
     <p>{draft.score === null ? "当前没有可展示的评分记录。" : `${["submitted", "completed"].includes(context.task.status) ? "已提交得分" : "评分草稿"}：${draft.score} / ${maxScore}`}</p>
+    {context.reviewContext.human_grade ? <><p>评阅时间：{new Date(context.reviewContext.human_grade.created_at).toLocaleString("zh-CN", { hour12: false })}</p>
+      {context.reviewContext.human_grade.comments ? <p>评语：{context.reviewContext.human_grade.comments}</p> : null}</> : null}
   </section>;
   return (
     <section className="score-panel" aria-label="题目评分">
@@ -64,17 +66,16 @@ export function ScoreEditor({
       ) : null}
 
       <SharedScoreControl
-        disabled={!canEditDraft || actioning === "submit"}
+        disabled={!canEditDraft || Boolean(actioning)}
         maxScore={maxScore}
         rubricPoints={rubricPoints}
         showRubric={false}
         value={{ score: draft.score, rubricSelections: draft.rubricSelections }}
         onChange={(value) => setDraft((current) => ({ ...current, ...value }))}
       />
-      {/* 标记状态未确认时不能宣称会交分；这里只提示后果，提交条件仍由阅卷控制器判断。 */}
-      <p className="muted" role="status">{bookmarkMarked === undefined ? "标记状态尚未确认，暂不能自动提交。" : bookmarkMarked ? "已标记：当前仅编辑草稿；取消标记后恢复自动提交。" : "联网且满足提交条件后，本次修改的有效得分将自动提交；稍后核对请先标记答卷。"}</p>
+      <p className="muted" role="status">{bookmarkMarked ? "本题已标记。" : ""}录分仅保存草稿；点击“提交并下一份”或按 Ctrl / ⌘ + Enter 后正式交分。</p>
 
-      <details className="grading-shortcut-help"><summary>键盘帮助</summary><Checkbox data-grading-shortcuts-toggle="true" checked={singleKeyShortcutsEnabled} onChange={(event) => setSingleKeyShortcutsEnabled(event.target.checked)}>启用单字符快捷键</Checkbox><p>{!singleKeyShortcutsEnabled ? "单字符快捷键已关闭。" : actioning ? "当前操作处理中，录分快捷键暂不可用。" : "当前单题可编辑，快捷键可用。"}输入框内不会触发单字符操作。</p><p>G 定位最终分；1–9 录分（不超过满分）。{!requiresSecondOpinion ? "A 采纳建议分。" : null}</p><p>F 标记；R 退回重评（需确认）；Z 撤销未提交修改；+/- 缩放。</p></details>
+      <details className="grading-shortcut-help"><summary>键盘帮助</summary><Checkbox data-grading-shortcuts-toggle="true" checked={singleKeyShortcutsEnabled} onChange={(event) => setSingleKeyShortcutsEnabled(event.target.checked)}>启用单字符快捷键</Checkbox><p>{!singleKeyShortcutsEnabled ? "单字符快捷键已关闭。" : actioning ? "当前操作处理中，录分快捷键暂不可用。" : "当前单题可编辑，快捷键可用。"}输入框内不会触发单字符操作。</p><p>Ctrl / ⌘ + Enter 提交并下一份；G 定位最终分；1–9 录分（不超过满分）。{!requiresSecondOpinion ? "A 采纳建议分。" : null}</p><p>F 标记；R 退回重评（需确认）；Z 撤销未提交修改；+/- 缩放。</p></details>
 
       <Space wrap className="grading-submit-bar">
         {canReturn ? (

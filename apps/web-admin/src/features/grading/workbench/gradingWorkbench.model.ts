@@ -14,6 +14,7 @@ import type {
 export const taskFilterOptions: { label: string; value: TaskFilter }[] = [
   { label: "全部状态", value: "all" },
   { label: "可处理", value: "active" },
+  { label: "历史评阅", value: "reviewed" },
   { label: "待分配", value: "pending" },
   { label: "已分配", value: "assigned" },
   { label: "处理中", value: "in_progress" },

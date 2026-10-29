@@ -94,7 +94,7 @@ describe("single-question inspector focus", () => {
     const editable = parse(<ScoreEditor {...editor} canEditDraft />);
     expect(editable.querySelector('[data-inspector="score-control"]')).not.toBeNull();
     expect(editable.querySelector('[data-inspector="score-control"]')?.getAttribute("data-show-rubric")).toBe("false");
-    for (const obsolete of ["提交并下一份", "提交并提名标准卷", "连续阅卷", "Ctrl / ⌘ + Enter"]) expect(editable.textContent).not.toContain(obsolete);
+    for (const obsolete of ["提交并提名标准卷", "连续阅卷"]) expect(editable.textContent).not.toContain(obsolete);
   });
 
   it.each([undefined, false, true])("交分提示在快捷键帮助之外，标记状态=%s", (bookmarkMarked) => {
@@ -103,7 +103,7 @@ describe("single-question inspector focus", () => {
     const host = parse(<ScoreEditor {...editor} />);
     const notice = host.querySelector('[role="status"]');
     expect(notice?.closest("details")).toBeNull();
-    expect(notice?.textContent).toBe(bookmarkMarked === undefined ? "标记状态尚未确认，暂不能自动提交。" : bookmarkMarked ? "已标记：当前仅编辑草稿；取消标记后恢复自动提交。" : "联网且满足提交条件后，本次修改的有效得分将自动提交；稍后核对请先标记答卷。");
+    expect(notice?.textContent).toBe((bookmarkMarked ? "本题已标记。" : "") + "录分仅保存草稿；点击“提交并下一份”或按 Ctrl / ⌘ + Enter 后正式交分。");
     expect(editor.setDraft).not.toHaveBeenCalled();
     const readonly = parse(<ScoreEditor {...editor} canEditDraft={false} />);
     expect(readonly.querySelector('[role="status"]')).toBeNull();

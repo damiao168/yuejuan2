@@ -65,7 +65,7 @@ export function WorkbenchTaskContent({ context, loading, error, hasTasks, canMan
       <section className="grading-panels">
         <AnswerEvidencePane {...answer} context={context} />
         <aside className="grading-inspector">
-          {editor.canEditDraft && regionEditor ? regionEditor : <ScoreEditor {...editor} context={context} onShowAiRecord={canShowRecord ? () => setRecordOpenFor(recordScope) : undefined} />}
+          {regionEditor ? regionEditor : <ScoreEditor {...editor} context={context} onShowAiRecord={canShowRecord ? () => setRecordOpenFor(recordScope) : undefined} />}
           <EvidenceInspector {...evidence} context={context} />
         </aside>
       </section>

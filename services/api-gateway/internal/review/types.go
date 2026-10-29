@@ -121,7 +121,9 @@ type BatchAssignInput struct {
 
 type SubmitGradeInput struct {
 	// 自动提交仍走正式写分门禁；省略此字段保留原有人工提交与命令指纹。
-	AutoSubmit       bool              `json:"auto_submit,omitempty"`
+	AutoSubmit bool `json:"auto_submit,omitempty"`
+	// ScoreOnly 由教师显式确认总分；不触发自动交分，也不改变标记的提交门禁。
+	ScoreOnly        bool              `json:"score_only,omitempty"`
 	Score            float64           `json:"score"`
 	RubricSelections []RubricSelection `json:"rubric_selections"`
 	Comments         string            `json:"comments"`
@@ -206,17 +208,18 @@ type SubmitResult struct {
 }
 
 type ListFilter struct {
-	Status          string
-	AssignedTo      string
-	ExamID          string
-	QuestionID      string
-	Subject         string
-	Q               string
-	Unassigned      bool
-	Limit           int
-	CursorPriority  int
-	CursorCreatedAt time.Time
-	CursorID        string
+	IncludeStatistics bool
+	Status            string
+	AssignedTo        string
+	ExamID            string
+	QuestionID        string
+	Subject           string
+	Q                 string
+	Unassigned        bool
+	Limit             int
+	CursorPriority    int
+	CursorCreatedAt   time.Time
+	CursorID          string
 	// Scope 字段由 HTTP handler 根据服务器生成的认证作用域填充。
 	ScopeMode      string
 	ScopeActorID   string
@@ -233,6 +236,7 @@ type TaskAggregate struct {
 	RemainingCount int                     `json:"remaining_count"`
 	StatusCounts   map[string]int          `json:"status_counts"`
 	Reviewers      []ReviewerTaskAggregate `json:"reviewers"`
+	Statistics     *ReviewStatistics       `json:"statistics,omitempty"`
 }
 
 type ReviewerTaskAggregate struct {

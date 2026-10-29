@@ -81,34 +81,30 @@ export function useGradingReviewActions({
   const { openDraftConflict, applyDraftConflict } = useGradingDraftConflict({
     ctx, currentUserId, draft, viewerMode, scale, rotation, offset, autoFit, setResolvingConflict, queryScope, prefetchedTaskRef, activeTask, activeUserId, canViewOriginalImage, conflictServerContext, setDraftConflict, notify, draftConflict, conflictedDrafts, draftSaves, setCtx, setDraftRevision, lastSavedDraft, setDraft, restoreViewer, setDraftSaveStatus, isCurrentSession
   });
-  const submitGrade = async (nominateAsGold = false, automatic = false) => {
-    if (!isCurrentSession()) return;
+  const submitGrade = async (nominateAsGold = false) => {
+    if (!isCurrentSession()) return false;
     if (!ctx) {
       notify.error("请先选择任务");
-      return;
+      return false;
     }
-    if (!canSubmit || draft.score === null) { notify.error("请先填写最终分，0分也需要明确输入"); return; }
-    if (!automatic && rubricPoints.length && Math.abs(draft.score - rubricPoints.reduce((sum, point) => sum + (draft.rubricSelections[point.id] ?? 0), 0)) > 0.001 && (!draft.reason.trim() || draft.reason === "教师复核完成")) {
-      notify.error("最终分与评分细则合计不同，请填写人工调整原因"); return;
-    }
+    if (!canSubmit || draft.score === null) { notify.error("请先填写最终分，0分也需要明确输入"); return false; }
     const score = Number(draft.score);
     if (!Number.isFinite(score) || score < 0 || score > maxScore) {
       notify.error("最终分必须在 0 到题目满分之间");
-      return;
+      return false;
     }
+    let confirmed = false;
     await runAction(
       "submit",
       async () => {
         if (!isCurrentSession()) return;
         const submittedTaskId = ctx.task.id;
-        const selections = automatic ? [] : Object.entries(draft.rubricSelections)
-          .filter(([, value]) => Number(value) > 0)
-          .map(([point_id, value]) => ({ point_id, score: Number(value) }));
+        // 此入口由教师确认最终总分；不伪造采分点，也不再以自动提交绕过显式确认。
         const result = await submitHumanGrade(submittedTaskId, {
-          ...(automatic ? { auto_submit: true } : {}),
+          score_only: true,
           expected_revision: ctx.reviewContext.expected_revision,
           score,
-          rubric_selections: selections,
+          rubric_selections: [],
           comments: draft.comments,
           private_note: draft.privateNote,
           student_feedback: draft.studentFeedback,
@@ -116,13 +112,14 @@ export function useGradingReviewActions({
         });
         // 查询缓存和任务队列属于当前阅卷作用域；迟到响应不能清掉或改写新考试的状态。
         if (!isCurrentSession()) return;
+        confirmed = true;
         removeReviewDraftFallback(currentUserId, submittedTaskId);
         queryClient.removeQueries({ queryKey: reviewTaskContextKeys.task(queryScope, submittedTaskId) });
         prefetchedTaskRef.current.delete(submittedTaskId);
         const submittedTask = result.task ?? { ...ctx.task, status: "submitted" };
         setTasks((current) => current.map((task) => task.id === submittedTaskId ? { ...task, ...submittedTask } : task));
 
-        // 正式提交只更新原答卷，不再推进队列；上一份、下一份由教师明确选择。
+        // 只有提交回执确认成功后，调用方才能执行教师发起的“下一份”；失败须留在原题。
         const stillActive = activeTask.current === submittedTaskId;
         if (nominateAsGold && stillActive && result.human_grade) {
           setGoldPaperCandidate({
@@ -141,7 +138,8 @@ export function useGradingReviewActions({
         }
         if (stillActive) {
           contextRequestRef.current += 1;
-          setCtx(current => current?.task.id === submittedTaskId ? { ...current, task: submittedTask, reviewContext: { ...current.reviewContext, task: submittedTask, expected_revision: submittedTask.revision } } : current);
+          setCtx(current => current?.task.id === submittedTaskId ? { ...current, task: submittedTask, reviewContext: { ...current.reviewContext, task: submittedTask,
+            expected_revision: submittedTask.revision, human_grade: result.human_grade ?? current.reviewContext.human_grade, draft: null } } : current);
           setDraft(current => ({ ...current, score: result.human_grade?.score ?? score }));
           setDraftHydrated(false);
           setDraftSaveStatus("saved");
@@ -151,8 +149,9 @@ export function useGradingReviewActions({
         if (!isCurrentSession()) return;
         await examScoring.loadSummary();
       },
-      automatic ? "" : "人工评分已提交"
+      "人工评分已提交"
     );
+    return confirmed && isCurrentSession();
   };
 
   const markDispute = async () => {

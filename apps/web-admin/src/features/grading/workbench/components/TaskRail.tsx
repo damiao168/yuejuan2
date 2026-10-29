@@ -149,7 +149,7 @@ function ReviewTaskRail({
     // 刷新中仍可能保留旧任务；先显示加载或错误，不提前展示旧列表。
     if (loadingTasks) return <LoadingState label="正在读取阅卷任务" />;
     if (taskError) return <ErrorState message={taskError} onRetry={() => void onLoadTasks()} />;
-    if (filteredTasks.length === 0) return <EmptyState title="暂无阅卷任务" description="当前筛选下没有需要处理的答卷。" />;
+    if (filteredTasks.length === 0) return <EmptyState title={taskFilter === "reviewed" ? "暂无历史评阅记录" : "暂无阅卷任务"} description={taskFilter === "reviewed" ? "正式提交后，可在这里回看本人评分和答卷。" : "当前筛选下没有需要处理的答卷。"} />;
     return (
       <List
         dataSource={filteredTasks}
@@ -161,6 +161,7 @@ function ReviewTaskRail({
   return (
     <aside className="grading-task-rail">
       <section className="grading-taskbar">
+        {!canManageTasks && canWork ? <Segmented aria-label="评阅记录范围" value={taskFilter} disabled={Boolean(actioning)} options={[{ label: "待评阅", value: "active" }, { label: "历史评阅", value: "reviewed" }]} onChange={value => onTaskFilterChange(value as TaskFilter)} /> : null}
         {canManageTasks && canWork ? <Segmented value={queueScope} options={[{ label: "待我处理", value: "mine" }, { label: "全部任务", value: "all" }]} onChange={(value) => onQueueScopeChange(value as "mine" | "all")} /> : null}
         <div className="grading-scope-filters">
           {fixedExam ? <span>{scope.examOptions.find(option => option.value === scope.effectiveExamId)?.label || "本场考试"}{scope.subjectFilter ? ` · ${examSubjectLabel(scope.subjectFilter)}` : ""}</span> : <>

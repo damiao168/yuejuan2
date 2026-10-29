@@ -58,7 +58,8 @@ SELECT `+reviewTaskColumns+`
 FROM review_task
 WHERE tenant_id = $1
   AND deleted_at IS NULL
-  AND ($2 = '' OR status = $2 OR ($2 = 'active' AND status IN ('pending','assigned','in_progress','returned')))
+  AND ($2 = '' OR status = $2 OR ($2 = 'active' AND status IN ('pending','assigned','in_progress','returned'))
+    OR ($2 = 'reviewed' AND status IN ('submitted','completed')))
   AND ($3 = '' OR assigned_to::text = $3)
   AND ($4 = '' OR exam_id::text = $4)
   AND ($14 = '' OR question_id::text = $14)
@@ -69,7 +70,7 @@ WHERE tenant_id = $1
   AND ($7 = '' OR priority < $5 OR (priority = $5 AND (created_at > $6 OR (created_at = $6 AND id::text > $7))))
   AND (
     $9 IN ('platform', 'tenant')
-    OR ($9 = 'school' AND EXISTS (SELECT 1 FROM exam e WHERE e.tenant_id = review_task.tenant_id AND e.id = review_task.exam_id AND e.school_id::text = ANY(string_to_array(NULLIF($10, ''), ','))))
+    OR ($9 = 'school' AND (assigned_to::text=$12 OR EXISTS (SELECT 1 FROM exam e WHERE e.tenant_id = review_task.tenant_id AND e.id = review_task.exam_id AND e.school_id::text = ANY(string_to_array(NULLIF($10, ''), ',')))))
     OR ($9 = 'class' AND exam_id::text = ANY(string_to_array(NULLIF($11, ''), ',')))
     OR ($9 = 'assigned' AND (assigned_to::text = $12 OR id::text = ANY(string_to_array(NULLIF($13, ''), ','))))
   )
@@ -113,7 +114,8 @@ SELECT status, COALESCE(assigned_to::text, ''), count(*)::int
 FROM review_task
 WHERE tenant_id = $1
   AND deleted_at IS NULL
-  AND ($2 = '' OR status = $2 OR ($2 = 'active' AND status IN ('pending','assigned','in_progress','returned')))
+  AND ($2 = '' OR status = $2 OR ($2 = 'active' AND status IN ('pending','assigned','in_progress','returned'))
+    OR ($2 = 'reviewed' AND status IN ('submitted','completed')))
   AND ($3 = '' OR assigned_to::text = $3)
   AND ($4 = '' OR exam_id::text = $4)
   AND ($10 = '' OR question_id::text = $10)
@@ -123,7 +125,7 @@ WHERE tenant_id = $1
     (SELECT concat_ws(' ',e.name,e.subject) FROM exam e WHERE e.tenant_id=review_task.tenant_id AND e.id=review_task.exam_id))),lower($12)) > 0)
   AND (
     $5 IN ('platform', 'tenant')
-    OR ($5 = 'school' AND EXISTS (SELECT 1 FROM exam e WHERE e.tenant_id = review_task.tenant_id AND e.id = review_task.exam_id AND e.school_id::text = ANY(string_to_array(NULLIF($6, ''), ','))))
+    OR ($5 = 'school' AND (assigned_to::text=$8 OR EXISTS (SELECT 1 FROM exam e WHERE e.tenant_id = review_task.tenant_id AND e.id = review_task.exam_id AND e.school_id::text = ANY(string_to_array(NULLIF($6, ''), ',')))))
     OR ($5 = 'class' AND exam_id::text = ANY(string_to_array(NULLIF($7, ''), ',')))
     OR ($5 = 'assigned' AND (assigned_to::text = $8 OR id::text = ANY(string_to_array(NULLIF($9, ''), ','))))
   )
@@ -177,6 +179,16 @@ GROUP BY status, assigned_to
 	sort.Strings(ids)
 	for _, id := range ids {
 		aggregate.Reviewers = append(aggregate.Reviewers, *reviewers[id])
+	}
+	if filter.IncludeStatistics && filter.ExamID != "" {
+		if err := rows.Close(); err != nil {
+			return TaskAggregate{}, err
+		}
+		statistics, err := s.reviewStatistics(ctx, tenantID, filter)
+		if err != nil {
+			return TaskAggregate{}, err
+		}
+		aggregate.Statistics = statistics
 	}
 	return aggregate, nil
 }

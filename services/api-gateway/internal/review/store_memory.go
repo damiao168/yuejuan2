@@ -96,7 +96,11 @@ func reviewTaskMatchesFilter(task ReviewTask, tenantID string, filter ListFilter
 	if filter.Status == "active" && !containsString([]string{"pending", "assigned", "in_progress", "returned"}, task.Status) {
 		return false
 	}
-	if filter.Status != "" && filter.Status != "active" && task.Status != filter.Status {
+	// 历史包含单评提交和双评最终化；列表与聚合共用此边界，草稿不能进入已阅记录。
+	if filter.Status == "reviewed" && !submittedReviewStatus(task.Status) {
+		return false
+	}
+	if filter.Status != "" && filter.Status != "active" && filter.Status != "reviewed" && task.Status != filter.Status {
 		return false
 	}
 	if filter.AssignedTo != "" && task.AssignedTo != filter.AssignedTo {
@@ -177,7 +181,13 @@ func (s *MemoryStore) AggregateTasks(ctx context.Context, tenantID string, filte
 	if err != nil {
 		return TaskAggregate{}, err
 	}
-	return aggregateReviewTasks(tasks), nil
+	aggregate := aggregateReviewTasks(tasks)
+	if filter.IncludeStatistics && filter.ExamID != "" {
+		s.mu.RLock()
+		aggregate.Statistics = s.reviewStatisticsLocked(tenantID, filter)
+		s.mu.RUnlock()
+	}
+	return aggregate, nil
 }
 
 func aggregateReviewTasks(tasks []ReviewTask) TaskAggregate {
@@ -1085,9 +1095,9 @@ func validateSubmit(input SubmitGradeInput, ctx Context) error {
 	if err != nil {
 		return err
 	}
-	// 自动模式未勾选采分点时，最终分直接作为人工评分；已有真实选择仍须核对累计值。
-	// 普通提交继续要求总分与所选得分点之和相等，只容忍 0.0001 分浮点误差。
-	if hasRubric && (!input.AutoSubmit || len(input.RubricSelections) > 0) && math.Abs(input.Score-selectedScore) > 0.0001 {
+	// 显式总分模式和兼容的自动模式可不勾选采分点；已有真实选择仍须核对累计值。
+	// 逐点提交继续要求总分与所选得分点之和相等，只容忍 0.0001 分浮点误差。
+	if hasRubric && ((!input.AutoSubmit && !input.ScoreOnly) || len(input.RubricSelections) > 0) && math.Abs(input.Score-selectedScore) > 0.0001 {
 		return ErrInvalidInput
 	}
 	return nil

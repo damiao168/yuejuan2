@@ -165,7 +165,8 @@
   .exam-setup-inline-issues li { grid-template-columns: 1fr; gap: 2px; }
 }
 
-@media (max-width: 1080px) {
+/* 桌面中等宽度下，阅卷与发布入口占用页头空间；步骤另起一行，六个入口保持完整可见。 */
+@media (max-width: 1600px) {
   .exam-workspace-canvas .exam-context-header.has-preparation { grid-template-columns: minmax(0, 1fr) max-content; gap: 4px 12px; }
   .exam-context-header.has-preparation .exam-preparation-progress { grid-column: 1 / -1; grid-row: 2; }
   .exam-context-header.has-preparation .exam-context-status { grid-column: 2; grid-row: 1; }
