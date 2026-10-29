@@ -18,8 +18,16 @@ async function installAnswerImage(page: Page, questionType: string, width: numbe
   });
   await page.route("**/api/v1/review-assets/reading-image", route => route.fulfill({ status: 200, contentType: "image/svg+xml",
     body: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="white"/><text x="8" y="24" font-size="20">A B C D</text></svg>` }));
+  // 有图时才挂载批注画布；无批注是合法空列表，不能让旧通用夹具的未知接口404伪装成产品错误。
+  const annotationPath = `/api/v1/review-tasks/${task.id}/annotations`;
+  await page.route(`**${annotationPath}`, route => route.request().method() === "GET"
+    ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ annotations: [] }) })
+    : route.fallback());
+  const annotationResponse = page.waitForResponse(response => new URL(response.url()).pathname === annotationPath && response.request().method() === "GET");
   await page.goto(`/teacher/grading?status=reviewed&task=${task.id}`);
   await expect(page.getByRole("region", { name: "本题评分记录", exact: true })).toBeVisible();
+  expect((await annotationResponse).status()).toBe(200);
+  await expect(page.locator(".review-annotation-workspace").getByRole("alert")).toHaveCount(0);
   return state;
 }
 
