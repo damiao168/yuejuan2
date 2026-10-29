@@ -1648,7 +1648,7 @@ export type WithdrawCalibrationSchoolTemplateRequest = { "expected_revision": nu
 
 export type CalibrationSchoolTemplateResponse = { "template": CalibrationSchoolTemplate; };
 
-export type ReviewQuestionStatistics = { "question_id": string; "question_no": string; "graded_count": number; "full_score_count": number; "correct_rate": number | null; "average_score_rate": number | null; };
+export type ReviewQuestionStatistics = { "question_id": string; "question_no": string; "graded_count": number; "full_score_count": number; "correct_rate": number | null; "average_score_rate": number | null; "average_score"?: number | null; };
 
 export type ReviewStatistics = { "exam_id": string; "scope": "personal" | "exam"; "graded_count": number; "full_score_count": number; "correct_rate": number | null; "average_score_rate": number | null; "questions": Array<ReviewQuestionStatistics>; "updated_at": string; };
 

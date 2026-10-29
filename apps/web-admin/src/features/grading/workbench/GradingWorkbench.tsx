@@ -381,7 +381,7 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
         onOpenAssignments={() => changeQueueScope(() => { examScoring.setDetailOpen(false); setManagementView("assignment"); setQueueScope("all"); })}
         onViewChange={value => changeQueueScope(() => { examScoring.setDetailOpen(false); examScoring.closeImage(); setTaskPreviewOpen(false); setManagementView(value); setQueueScope(value === "work" ? "mine" : "all"); })}
         onOpenResults={openResults} />
-      <ReviewStatisticsPanel examId={queue.effectiveExamId || ctx?.task.exam_id || ""} tenantId={currentTenantId} actorId={currentUserId} personalScope={personalScope || !canManageTasks || (!managing && queueScope === 'mine')} refreshRevision={statisticsRevision} />
+      <ReviewStatisticsPanel examId={queue.effectiveExamId || ctx?.task.exam_id || ""} tenantId={currentTenantId} actorId={currentUserId} personalScope={personalScope || !canManageTasks || (!managing && queueScope === 'mine')} refreshRevision={statisticsRevision} questionId={!managing ? ctx?.task.question_id : undefined} questionNo={ctx?.task.question_no} />
       {!managing ? <WorkbenchHeader
         canWork={canWork}
         canManageTasks={false}

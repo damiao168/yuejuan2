@@ -275,7 +275,7 @@ export async function installGradingWorkbenchMocks(page: Page, state = createGra
       const statistics = { exam_id: examID, scope: assignedTo ? "personal" : "exam", ...summarize(samples), updated_at: now,
         questions: [...new Set(samples.map(item => item.task.question_id))].map(question_id => {
           const group = samples.filter(item => item.task.question_id === question_id);
-          return { question_id, question_no: group[0].task.question_no, ...summarize(group) };
+          return { question_id, question_no: group[0].task.question_no, average_score: group.reduce((sum, item) => sum + Number(item.grade.score), 0) / group.length, ...summarize(group) };
         }) };
       return json(route, { tasks: page.map(wireTask), aggregate: { ...aggregate, ...(url.searchParams.get("statistics") === "true" ? { statistics } : {}) }, next_cursor: hasMore ? page[page.length - 1]?.id ?? "" : "", has_more: hasMore });
     }

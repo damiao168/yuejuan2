@@ -80,6 +80,7 @@ export function AnswerEvidencePane({
     const isImage = Boolean(preview?.contentType.startsWith("image/"));
     if (isImage && viewerMode !== "ocr") {
       return <AdaptiveAnswerImage key={`${context.task.id}:${viewerMode}:${preview!.url}`} source={preview!.url}
+      questionType={viewerMode === "original" ? undefined : context.question?.question_type}
       label={`${context.task.question_no} 答题图查看区`} helpId={viewerHelpId} imageSize={imageSize} scale={scale} autoFit={autoFit} rotation={rotation} offset={offset} dragging={dragging} viewportRef={viewportRef}
       onZoom={onZoom} onFit={onFit} onResetView={onResetView} onImageLoad={onImageLoad} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
       controls={controls} annotations={annotations}

@@ -26,7 +26,7 @@ class MockResizeObserver {
 
 function fixture(overrides: Partial<Props> = {}): Props {
   return {
-    source: "blob:authorized-answer", label: "1 答题图查看区", helpId: "answer-help", imageSize: Object.freeze({ width: 600, height: 6000 }),
+    source: "blob:authorized-answer", label: "1 答题图查看区", helpId: "answer-help", questionType: "calculation", imageSize: Object.freeze({ width: 600, height: 6000 }),
     scale: .15, autoFit: true, rotation: 0, offset: Object.freeze({ x: 0, y: 0 }), dragging: false, viewportRef: { current: null },
     onZoom: vi.fn(), onFit: vi.fn(), onResetView: vi.fn(), onImageLoad: vi.fn(), onPointerDown: vi.fn(), onPointerMove: vi.fn(), onPointerUp: vi.fn(),
     ...overrides
@@ -65,7 +65,7 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
   it("纵长图默认横排分段，每个显示窗口保留同一张完整原图及原图坐标", () => {
     const props = fixture();
     const { container } = render(<AdaptiveAnswerImage {...props} />);
-    expect(button("智能分段").getAttribute("aria-pressed")).toBe("true");
+    expect(button("分段阅读").getAttribute("aria-pressed")).toBe("true");
     expect(container.querySelector(".answer-reading-tiles")?.getAttribute("data-reading-axis")).toBe("vertical");
     expect(tiles(container).length).toBeGreaterThan(1);
     expect(tiles(container)[0].querySelector("svg")?.getAttribute("viewBox")?.split(" ").slice(0, 2)).toEqual(["0", "0"]);
@@ -85,7 +85,7 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     expect(container.querySelector<HTMLElement>(".answer-viewer-stage")?.style.height).toBe("900px");
     expect(button("整图查看").getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(button("重置视图"));
-    expect(button("智能分段").getAttribute("aria-pressed")).toBe("true");
+    expect(button("分段阅读").getAttribute("aria-pressed")).toBe("true");
     expect(sourceRects(container)).toEqual(originalWindows);
     expect(props.onResetView).toHaveBeenCalledOnce();
     expectOriginalImageWindows(container, props.source);
@@ -106,7 +106,7 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     expectOriginalImageWindows(container, props.source);
   });
 
-  it("未知尺寸先载入整图，父级收到实际像素尺寸后才呈现智能分段", () => {
+  it("未知尺寸先载入整图，父级收到实际像素尺寸后才呈现分段阅读", () => {
     const props = fixture({ imageSize: null });
     const { container, rerender } = render(<AdaptiveAnswerImage {...props} />);
     const image = container.querySelector("img")!;
@@ -118,17 +118,31 @@ describe("AdaptiveAnswerImage 阅读交互", () => {
     expectOriginalImageWindows(container, props.source);
   });
 
-  it("横长图沿原图横向分段并竖排，窗口只改变横坐标", () => {
+  it("横向长条保留完整作答，不把同一行切成多个阅读窗口", () => {
     const props = fixture({ imageSize: { width: 18000, height: 600 } });
     const { container } = render(<AdaptiveAnswerImage {...props} />);
-    const grid = container.querySelector<HTMLElement>(".answer-reading-tiles")!;
-    expect(grid.getAttribute("data-reading-axis")).toBe("horizontal");
-    expect(grid.style.gridTemplateColumns).toBe("repeat(1, max-content)");
-    expect(tiles(container).length).toBeGreaterThan(1);
-    const windows = tiles(container).map(tile => tile.dataset.sourceRect!.split(",").map(Number));
-    expect(windows[1][0]).toBeGreaterThan(windows[0][0]);
-    windows.forEach(window => { expect(window[1]).toBe(0); expect(window[3]).toBe(600); });
-    expectOriginalImageWindows(container, props.source, 18000, 600);
+    expect(tiles(container)).toHaveLength(0);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(props.source);
+    expect(screen.queryByRole("group", { name: "答题图阅读布局" })).toBeNull();
+  });
+
+  it.each(["single_choice", "multiple_choice", "true_false", "fill_blank", "numeric", undefined])("题型 %s 即使几何比例很长也保留整图", (questionType) => {
+    const props = fixture({ questionType });
+    const { container } = render(<AdaptiveAnswerImage {...props} />);
+    expect(tiles(container)).toHaveLength(0);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(props.source);
+    fireEvent.click(button("重置视图"));
+    expect(tiles(container)).toHaveLength(0);
+    expect(props.onResetView).toHaveBeenCalledOnce();
+  });
+
+  it("短小多选题完整显示且不呈现分段开关或重复选项窗口", () => {
+    const props = fixture({ questionType: "multiple_choice", imageSize: { width: 302, height: 28 }, scale: 1 });
+    const { container } = render(<AdaptiveAnswerImage {...props} />);
+    expect(container.querySelectorAll("img")).toHaveLength(1);
+    expect(tiles(container)).toHaveLength(0);
+    expect(screen.getByLabelText("答题图缩放比例").textContent).toBe("100%");
+    expect(screen.queryByRole("group", { name: "答题图阅读布局" })).toBeNull();
   });
 
   it("窗口变窄后重新规划列数和原图窗口，卸载时释放尺寸观察器", () => {

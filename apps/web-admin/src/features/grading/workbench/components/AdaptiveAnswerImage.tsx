@@ -1,14 +1,14 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import { Button, Segmented, Space, Tooltip } from "antd";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
-import { planImageReadingLayout } from "../imageReadingLayout";
+import { canSegmentAnswerImage, planImageReadingLayout } from "../imageReadingLayout";
 import type { AnswerEvidencePaneProps } from "./AnswerEvidencePane";
 import type { ReviewAnnotationCanvasControls } from "../../../../components/features/review-annotation";
 import { AnswerImageAnnotationLayer } from "./AnswerImageAnnotationLayer";
 import "./answer-image-reading.css";
 
 type Props = Pick<AnswerEvidencePaneProps, "scale" | "autoFit" | "imageSize" | "rotation" | "offset" | "dragging" | "viewportRef" | "onZoom" | "onFit" | "onPointerDown" | "onPointerMove" | "onPointerUp" | "onImageLoad" | "mathSelection"> & {
-  source: string; label: string; helpId: string; onResetView?: () => void; controls?: ReactNode; annotations?: ReviewAnnotationCanvasControls;
+  source: string; label: string; helpId: string; questionType?: string; onResetView?: () => void; controls?: ReactNode; annotations?: ReviewAnnotationCanvasControls;
 };
 
 function rotatedImage(size: NonNullable<Props["imageSize"]>, rotation: number) {
@@ -47,10 +47,11 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
     return () => { observer.disconnect(); window.removeEventListener("resize", measure); };
   }, []);
   const oriented = useMemo(() => imageSize ? rotatedImage(imageSize, rotation) : null, [imageSize, rotation]);
-  const plan = useMemo(() => planImageReadingLayout({ imageWidth: oriented?.width ?? 0, imageHeight: oriented?.height ?? 0, viewportWidth: frame.width, viewportHeight: frame.height, gap: 8, captionHeight: 20 }), [oriented, frame]);
+  const allowSegmentation = Boolean(imageSize && canSegmentAnswerImage(props.questionType, imageSize.width, imageSize.height));
+  const plan = useMemo(() => planImageReadingLayout({ imageWidth: oriented?.width ?? 0, imageHeight: oriented?.height ?? 0, viewportWidth: frame.width, viewportHeight: frame.height, gap: 8, captionHeight: 20, allowSegmentation }), [oriented, frame, allowSegmentation]);
   const segmented = layout === "smart" && plan.tiles.length > 1;
   const tiles = plan.tiles;
-  const wholeFit = oriented ? Math.min(4, Math.max(.1, Math.min((frame.width - 16) / oriented.width, (frame.height - 16) / oriented.height))) : 1;
+  const wholeFit = oriented ? Math.min(1, Math.max(.1, Math.min((frame.width - 16) / oriented.width, (frame.height - 16) / oriented.height))) : 1;
   const relativeZoom = autoFit ? 1 : scale / wholeFit;
   const tileScale = plan.scale * relativeZoom;
   const displayedScale = segmented ? tileScale : scale;
@@ -80,7 +81,7 @@ export function AdaptiveAnswerImage(props: Readonly<Props>) {
     <div className="answer-reading-toolbar">
       <Space size={6} wrap>
         {props.controls}
-        {plan.tiles.length > 1 ? <Tooltip title="按图像和窗口比例自动分段；整图内容完整保留"><Segmented value={layout} onChange={value => changeLayout(value as "smart" | "whole")} options={[{ label: "智能分段", value: "smart" }, { label: "整图查看", value: "whole" }]} size="small" aria-label="答题图阅读布局" /></Tooltip> : null}
+        {plan.tiles.length > 1 ? <Tooltip title="长作答图使用连续、重叠的阅读窗口，不按语义切题；可随时查看整图"><Segmented value={layout} onChange={value => changeLayout(value as "smart" | "whole")} options={[{ label: "分段阅读", value: "smart" }, { label: "整图查看", value: "whole" }]} size="small" aria-label="答题图阅读布局" /></Tooltip> : null}
         <Button size="small" icon={<ZoomOut size={15} />} aria-label="缩小答题图" onClick={() => onZoom(-1)} />
         <output className="answer-reading-scale" aria-label="答题图缩放比例">{Math.round(displayedScale * 100)}%</output>
         <Button size="small" icon={<ZoomIn size={15} />} aria-label="放大答题图" onClick={() => onZoom(1)} />

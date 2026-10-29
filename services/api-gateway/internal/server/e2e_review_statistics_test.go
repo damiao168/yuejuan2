@@ -41,6 +41,16 @@ func TestLiveReviewStatisticsAndHistoryWithPostgresTestDatabase(t *testing.T) {
 	if got := read(adminToken, "&statistics=true&status=active&limit=1"); got.TotalCount != 0 || got.Statistics == nil || got.Statistics.Scope != "exam" || got.Statistics.GradedCount != 6 || got.Statistics.FullScoreCount != 1 || math.Abs(*got.Statistics.CorrectRate-1.0/6) > 0.000001 {
 		t.Fatalf("unpublished objective grades were omitted: %+v", got)
 	}
+	adminStatistics := read(adminToken, "&statistics=true&limit=1").Statistics
+	for _, question := range adminStatistics.Questions {
+		var expected float64
+		if err := db.QueryRow(`SELECT avg(score)::float8 FROM question_grade WHERE tenant_id=$1 AND exam_id=$2 AND question_id=$3 AND is_current AND status='confirmed' AND deleted_at IS NULL`, fixture.TenantID, fixture.ExamID, question.QuestionID).Scan(&expected); err != nil {
+			t.Fatal(err)
+		}
+		if question.AverageScore == nil || math.Abs(*question.AverageScore-expected) > 0.000001 {
+			t.Fatalf("administrator average mixed question scores: question=%s average=%v want=%v", question.QuestionID, question.AverageScore, expected)
+		}
+	}
 	if got := read(adminToken, "&limit=1"); got.Statistics != nil {
 		t.Fatal("ordinary task lists must not run a live statistics query")
 	}
@@ -72,6 +82,9 @@ SELECT $1,id,answer_segment_id,$3,1,1,'single',now()+interval '10 seconds' FROM 
 	got := read(graderToken, "&statistics=true&status=active&assigned_to="+fixture.AdminID+"&limit=1")
 	if got.TotalCount != 0 || got.Statistics == nil || got.Statistics.Scope != "personal" || got.Statistics.GradedCount != 2 || got.Statistics.FullScoreCount != 1 || *got.Statistics.CorrectRate != 0.5 || *got.Statistics.AverageScoreRate != 0.5 {
 		t.Fatalf("personal statistics leaked another opinion or counted duplicate history: %+v", got)
+	}
+	if len(got.Statistics.Questions) != 1 || got.Statistics.Questions[0].QuestionID != fixture.QuestionIDs["single_choice"] || got.Statistics.Questions[0].AverageScore == nil || *got.Statistics.Questions[0].AverageScore != 0.5 {
+		t.Fatalf("personal question average leaked another opinion or counted duplicate history: %+v", got.Statistics.Questions)
 	}
 	first := e2eGetJSON(t, router, "/api/v1/review-tasks?exam_id="+fixture.ExamID+"&status=reviewed&limit=1", graderToken, http.StatusOK)
 	second := e2eGetJSON(t, router, "/api/v1/review-tasks?exam_id="+fixture.ExamID+"&status=reviewed&limit=1&cursor="+url.QueryEscape(first["next_cursor"].(string)), graderToken, http.StatusOK)

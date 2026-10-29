@@ -157,6 +157,7 @@ describe("教师工作台展示分支", () => {
     await render(["grader"], ["review:work"]);
     expect(counts()).toEqual(["0", "9"]);
     const history = host.querySelector('section[aria-label="历史评阅"]')!;
+    expect(history.textContent).not.toMatch(/密号|数学|高一期中/);
     expect(history.textContent).toContain("第 submitted/first 题评阅记录");
     const first = history.querySelector<HTMLButtonElement>(".teacher-task-list button")!;
     await act(async () => { first.click(); });

@@ -63,6 +63,20 @@ describe("答题图局部键盘操作", () => {
     expect(viewer.scale).toBe(viewer.fitScale);
   });
 
+  it("小裁图自动保持原始比例，主动放大后重置或历史视图适配不会继续拉伸", async () => {
+    await mount();
+    await act(async () => viewer.onImageLoad({ width: 120, height: 20 }));
+    await act(async () => viewer.resetView());
+    expect(viewer.scale).toBe(1);
+    expect(viewer.fitScale).toBe(1);
+    await act(async () => viewer.zoom(1));
+    expect(viewer.scale).toBeGreaterThan(1);
+    await act(async () => viewer.restore({ mode: "segment", scale: 4, rotation: 0, offset: { x: 0, y: 0 }, fit: true }));
+    await act(async () => viewer.fit({ width: 120, height: 20 }));
+    expect(viewer.scale).toBe(1);
+    expect(viewer.autoFit).toBe(true);
+  });
+
   it("Escape释放当前拖拽，后续pointermove不会继续移动", async () => {
     await mount(); const viewport = viewer.viewportRef.current!;
     viewport.setPointerCapture = vi.fn(); viewport.hasPointerCapture = vi.fn(() => true); viewport.releasePointerCapture = vi.fn();

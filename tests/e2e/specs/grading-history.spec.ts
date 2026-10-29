@@ -18,9 +18,9 @@ test("教师首页没有待办时仍可分页查看本人历史，并从已完�
   await expect(history.locator(".teacher-task-list button")).toHaveCount(10);
   await history.getByRole("button", { name: "加载更多历史记录", exact: true }).click();
   await expect(history.locator(".teacher-task-list button")).toHaveCount(12);
-  await expect(history).not.toContainText("fixture-13");
+  await expect(history).not.toContainText(/fixture-|密号|连续阅卷测试考试/);
   await page.screenshot({ path: testInfo.outputPath("teacher-dashboard-history.png"), fullPage: true });
-  await history.locator(".teacher-task-list button").filter({ hasText: "fixture-02" }).click();
+  await history.getByRole("button", { name: "第 Q02 题评阅记录 已完成", exact: true }).click();
   await expect(page).toHaveURL(/teacher\/grading\?status=reviewed&task=review-task-02/);
   const record = page.getByRole("region", { name: "本题评分记录", exact: true });
   await expect(record).toContainText("已提交得分：7 / 9");

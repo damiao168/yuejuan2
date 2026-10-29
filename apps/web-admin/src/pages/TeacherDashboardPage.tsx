@@ -252,7 +252,7 @@ function TeacherDashboardContent({ user, onNavigate }: Readonly<{ user: SessionU
         {data?.reviewHistory.length ? <div className="teacher-task-list">{data.reviewHistory.map(task => (
           <button type="button" key={task.id} onClick={() => onNavigate(`/grading?status=reviewed&task=${encodeURIComponent(task.id)}`)}>
             <span className="teacher-task-icon"><BookOpenCheck size={17} /></span>
-            <span><strong>第 {task.question_no} 题评阅记录</strong><small>{reviewTaskDetail(task)}</small></span>
+            <span><strong>第 {task.question_no} 题{task.source === "omr_ambiguous" ? "客观题核验记录" : "评阅记录"}</strong></span>
             <StatusTag tone="success">{taskStatusLabels[task.status]}</StatusTag><ArrowRight size={16} />
           </button>
         ))}</div> : !data?.warnings.includes("历史评阅暂时不可用") ? <p className="muted">暂无历史评阅记录</p> : null}

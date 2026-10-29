@@ -58687,6 +58687,14 @@
             "minimum": 0,
             "maximum": 1,
             "description": "Sum of scores divided by sum of maximum scores; null when there are no samples."
+          },
+          "average_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "Arithmetic mean of formal scores for this question only, including zero scores; null when there are no graded samples. Scores from other questions are never combined."
           }
         }
       },

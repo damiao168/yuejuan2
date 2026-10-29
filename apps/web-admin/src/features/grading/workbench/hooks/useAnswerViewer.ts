@@ -61,7 +61,8 @@ export function useAnswerViewer({ context, canViewOriginalImage, prefetchedPrevi
     const contentHeight = quarterTurn ? size.width : size.height;
     const availableWidth = Math.max(120, viewport.clientWidth - 32);
     const availableHeight = Math.max(80, viewport.clientHeight - 32);
-    return Math.min(4, Math.max(0.1, Math.min(availableWidth / contentWidth, availableHeight / contentHeight)));
+    // 自动适配只缩小以保留整图，不把低分辨率小裁图拉满画布；教师仍可主动放大。
+    return Math.min(1, Math.max(0.1, Math.min(availableWidth / contentWidth, availableHeight / contentHeight)));
   }, [rotation]);
 
   const fit = useCallback((size = imageSize, force = false) => {

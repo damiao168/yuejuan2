@@ -15,8 +15,9 @@ type ReviewScoreStatistics struct {
 }
 
 type ReviewQuestionStatistics struct {
-	QuestionID string `json:"question_id"`
-	QuestionNo string `json:"question_no"`
+	QuestionID   string   `json:"question_id"`
+	QuestionNo   string   `json:"question_no"`
+	AverageScore *float64 `json:"average_score"`
 	ReviewScoreStatistics
 }
 
@@ -48,7 +49,14 @@ func buildReviewStatistics(examID, scope string, samples []reviewStatisticSample
 	all := []reviewStatisticSample{}
 	for questionID, group := range questions {
 		all = append(all, group...)
-		result.Questions = append(result.Questions, ReviewQuestionStatistics{QuestionID: questionID, QuestionNo: group[0].questionNo, ReviewScoreStatistics: summarizeReviewSamples(group)})
+		var totalScore float64
+		for _, sample := range group {
+			totalScore += sample.score
+		}
+		// 平均分只在同一道题的正式样本内计算；不能把不同题目的分数相加后称为本题平均分。
+		averageScore := totalScore / float64(len(group))
+		result.Questions = append(result.Questions, ReviewQuestionStatistics{QuestionID: questionID, QuestionNo: group[0].questionNo,
+			AverageScore: &averageScore, ReviewScoreStatistics: summarizeReviewSamples(group)})
 	}
 	sort.Slice(result.Questions, func(i, j int) bool {
 		if compared := compareGradingGroupQuestionNo(result.Questions[i].QuestionNo, result.Questions[j].QuestionNo); compared != 0 {

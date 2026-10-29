@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planImageReadingLayout, type ImageReadingLayout } from "./imageReadingLayout";
+import { canSegmentAnswerImage, planImageReadingLayout, type ImageReadingLayout } from "./imageReadingLayout";
 
 function expectCompleteCoverage(layout: ImageReadingLayout, sourceLength: number) {
   const vertical = layout.axis === "vertical";
@@ -21,6 +21,33 @@ function expectCompleteCoverage(layout: ImageReadingLayout, sourceLength: number
 }
 
 describe("planImageReadingLayout", () => {
+  it("小裁图无需缩小或分段，自动显示不能超过原始像素", () => {
+    const layout = planImageReadingLayout({ imageWidth: 302, imageHeight: 28, viewportWidth: 1500, viewportHeight: 650 });
+    expect(layout.axis).toBe("none");
+    expect(layout.tiles).toHaveLength(1);
+    expect(layout.scale).toBe(1);
+  });
+
+  it("未获准分段的客观题保持完整原图", () => {
+    const layout = planImageReadingLayout({ imageWidth: 600, imageHeight: 6000, viewportWidth: 1800, viewportHeight: 900, allowSegmentation: false });
+    expect(layout.tiles).toHaveLength(1);
+    expect(layout.axis).toBe("none");
+    expect(layout.scale).toBe(.15);
+  });
+
+  it("不足四成的放大收益不打断连续作答", () => {
+    const layout = planImageReadingLayout({ imageWidth: 1000, imageHeight: 1400, viewportWidth: 1800, viewportHeight: 900 });
+    expect(layout.tiles).toHaveLength(1);
+  });
+
+  it("自动分段只接收明确主观题的纵长原图，旋转交给显示层处理", () => {
+    expect(canSegmentAnswerImage("essay", 600, 6000)).toBe(true);
+    expect(canSegmentAnswerImage("structured_steps", 1119, 2415)).toBe(true);
+    expect(canSegmentAnswerImage("calculation", 18000, 600)).toBe(false);
+    for (const type of ["multiple_choice", "single_choice", "true_false", "fill_blank", "selected_response", undefined]) {
+      expect(canSegmentAnswerImage(type, 600, 6000)).toBe(false);
+    }
+  });
   it("纵长图一次横排所有分段，完整覆盖且整体放入画布", () => {
     const layout = planImageReadingLayout({ imageWidth: 600, imageHeight: 6000, viewportWidth: 1800, viewportHeight: 900 });
     expect(layout.axis).toBe("vertical");

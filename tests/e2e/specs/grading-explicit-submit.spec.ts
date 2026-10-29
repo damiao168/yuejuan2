@@ -20,9 +20,11 @@ test("输入零分、失焦、普通 Enter 和输入法确认都只保存草稿�
   await page.getByRole("button", { name: "提交并下一份", exact: true }).click();
   await expect.poll(() => state.submissions).toEqual(["review-task-01"]);
   expect(state.grades.get("review-task-01")?.score).toBe(0);
-  const statistics = page.getByRole("region", { name: "本人已评正确率", exact: true });
-  await expect(statistics).toContainText("0.0%");
-  await expect(statistics).toContainText("1 题次");
+  const statistics = page.getByRole("region", { name: "本人逐题平均分", exact: true });
+  await statistics.getByText("查看全部题目平均分", { exact: true }).click();
+  const firstQuestion = statistics.getByRole("row").filter({ hasText: "第 Q01 题" });
+  await expect(firstQuestion).toContainText("0 分");
+  await expect(firstQuestion.getByRole("cell").last()).toHaveText("1");
   await expect(page.locator(".answer-panel")).toContainText("fixture-02");
   // 空分数不能被误当零分，也不能通过下一份跳过当前任务。
   await page.getByRole("button", { name: "提交并下一份", exact: true }).click();

@@ -9,6 +9,7 @@ export interface ImageReadingLayoutInput {
   gap?: number;
   // 每段标题占用的 CSS 高度；横向长图竖排时每一行都要扣除。
   captionHeight?: number;
+  allowSegmentation?: boolean;
 }
 
 export interface ImageReadingTile {
@@ -35,10 +36,19 @@ export interface ImageReadingLayout {
 
 const OVERLAP = 0.1;
 const ASPECT_MISMATCH_THRESHOLD = 1.8;
+// 整图缩小不足四分之一时优先保留连续阅读；分段至少增大四成才抵消上下文切换。
+const MIN_WHOLE_READING_SCALE = 0.75;
+const MIN_READING_GAIN = 1.4;
 const MAX_TILES = 4096;
 const DEFAULT_GAP = 12;
 
 const isPositiveFinite = (value: number) => Number.isFinite(value) && value > 0;
+
+export function canSegmentAnswerImage(questionType: string | undefined, width: number, height: number): boolean {
+  // 题型未知、选项条和短答案保留上下文；几何窗口不能判断选项或句子的语义边界。
+  return ["short_answer", "calculation", "essay", "discussion", "short_constructed", "structured_steps", "extended_response"].includes(questionType ?? "")
+    && isPositiveFinite(width) && isPositiveFinite(height) && height / width >= ASPECT_MISMATCH_THRESHOLD;
+}
 
 /**
  * 只计算阅读视口，不裁剪或改写图片；所有 tile 坐标均以原图左上角为原点，单位为原图 px。
@@ -52,7 +62,7 @@ export function planImageReadingLayout(input: ImageReadingLayoutInput): ImageRea
   const validImage = isPositiveFinite(imageWidth) && isPositiveFinite(imageHeight);
   const validViewport = isPositiveFinite(viewportWidth) && isPositiveFinite(viewportHeight);
   const wholeScale = validImage && validViewport
-    ? Math.min(viewportWidth / imageWidth, viewportHeight / imageHeight)
+    ? Math.min(1, viewportWidth / imageWidth, viewportHeight / imageHeight)
     : 1;
   const whole: ImageReadingLayout = {
     axis: "none",
@@ -67,7 +77,7 @@ export function planImageReadingLayout(input: ImageReadingLayoutInput): ImageRea
     displayWidth: validImage ? imageWidth * wholeScale : 0,
     displayHeight: validImage ? imageHeight * wholeScale : 0,
   };
-  if (!validImage || !validViewport) return whole;
+  if (!validImage || !validViewport || input.allowSegmentation === false || wholeScale >= MIN_WHOLE_READING_SCALE) return whole;
 
   // 相同图片在横屏和竖屏下可能有不同读法，必须比较图片与画布的比例，而非固定判断图片长宽比。
   // 用对数比较，避免极长图的比例先溢出，再污染段数和循环边界。
@@ -91,12 +101,13 @@ export function planImageReadingLayout(input: ImageReadingLayoutInput): ImageRea
     const crossScale = availableCross / candidate / sourceCross;
     const candidateLength = sourceLength / (1 + (candidate - 1) * (1 - OVERLAP));
     const lengthScale = viewportLength / candidateLength;
-    const candidateScale = Math.min(crossScale, lengthScale);
+    const candidateScale = Math.min(1, crossScale, lengthScale);
     if (candidateScale > scale * (1 + 1e-9)) { count = candidate; scale = candidateScale; }
     // 横向可用宽度随段数递减、段长限制随段数放宽；交点之后不会出现更大的缩放比例。
     if (crossScale <= lengthScale) break;
   }
-  if (count === 1) return whole;
+  // 仅轻微增大不值得打断连续作答；自动布局也不能放大原始像素制造虚假的清晰度。
+  if (count === 1 || scale < wholeScale * MIN_READING_GAIN) return whole;
   const tileLength = sourceLength / (1 + (count - 1) * (1 - OVERLAP));
   const step = tileLength * (1 - OVERLAP);
   const finalStart = sourceLength - tileLength;

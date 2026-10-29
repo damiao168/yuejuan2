@@ -28,6 +28,30 @@ func TestReviewStatisticsDistinguishNoSamplesZeroAndPartialCredit(t *testing.T) 
 	if len(statistics.Questions) != 2 || statistics.Questions[0].GradedCount != 2 || *statistics.Questions[0].CorrectRate != 0.5 {
 		t.Fatalf("question statistics: %+v", statistics.Questions)
 	}
+	if *statistics.Questions[0].AverageScore != 1 || *statistics.Questions[1].AverageScore != 4 {
+		t.Fatalf("per-question average mixed raw points with another question or a score rate: %+v", statistics.Questions)
+	}
+}
+
+func TestReviewQuestionAverageKeepsZeroAndSeparatesDistinctQuestionsWithSameNumber(t *testing.T) {
+	// 不同试卷题目可能复用题号；统计按 question_id 隔离，零分也必须计入本题平均分。
+	statistics := buildReviewStatistics("exam", "exam", []reviewStatisticSample{
+		{questionID: "short", questionNo: "1", score: 0, maximum: 2},
+		{questionID: "long", questionNo: "1", score: 8, maximum: 10},
+		{questionID: "long", questionNo: "1", score: 10, maximum: 10},
+	})
+	if len(statistics.Questions) != 2 {
+		t.Fatalf("distinct questions sharing a number were merged: %+v", statistics.Questions)
+	}
+	for _, question := range statistics.Questions {
+		want := 0.0
+		if question.QuestionID == "long" {
+			want = 9
+		}
+		if question.AverageScore == nil || *question.AverageScore != want {
+			t.Fatalf("question=%s average=%v want=%v", question.QuestionID, question.AverageScore, want)
+		}
+	}
 }
 
 func TestReviewQuestionStatisticsFollowNaturalQuestionOrder(t *testing.T) {
@@ -67,6 +91,9 @@ func TestPersonalStatisticsKeepLatestOwnFormalGradeOutsideActiveStatus(t *testin
 	}
 	if aggregate.TotalCount != 1 || aggregate.CompletedCount != 0 {
 		t.Fatalf("statistics changed queue filtering: %+v", aggregate)
+	}
+	if len(aggregate.Statistics.Questions) != 1 || aggregate.Statistics.Questions[0].AverageScore == nil || *aggregate.Statistics.Questions[0].AverageScore != 5 {
+		t.Fatalf("question average counted duplicate grades, drafts or another reviewer: %+v", aggregate.Statistics.Questions)
 	}
 }
 
