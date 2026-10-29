@@ -93,7 +93,9 @@ test("平台学校总表提供运营摘要、搜索与五个详情入口", async
 
   await drawer.getByRole("tab", { name: "活动与安全" }).click();
   await expect(drawer.getByText("发布期中考试成绩", { exact: true })).toBeVisible();
-  await expect(drawer.getByText("1 / 2", { exact: true })).toBeVisible();
+  await expect(drawer.locator(".platform-school-facts div").filter({ has: page.getByText("活跃管理员", { exact: true }) }).locator("dd")).toHaveText("2");
+  await expect(drawer.locator(".platform-school-facts div").filter({ has: page.getByText("活跃会话", { exact: true }) }).locator("dd")).toHaveText("5");
+  await expect(drawer.getByText(/启用 MFA|身份验证器/)).toHaveCount(0);
 });
 
 test("学校列表各字段打开对应详情，并显示所点的创建时间或状态", async ({ page }) => {
