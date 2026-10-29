@@ -142,7 +142,8 @@ jobs:
 
   web-e2e-mocked:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 完整浏览器回归包含 120 份连续阅卷；为安装、全量场景及诊断上传留出总时限，各用例的超时仍由 Playwright 单独约束。
+    timeout-minutes: 25
     # 镜像版本须与 package-lock.json 的 Playwright 一致；预装浏览器和系统依赖，避免安装挤占测试时限。
     container:
       image: mcr.microsoft.com/playwright:v1.55.1-noble@sha256:2f29369043d81d6d69a815ceb80760f55e85f5020371ad06a4d996f18503ad1c
