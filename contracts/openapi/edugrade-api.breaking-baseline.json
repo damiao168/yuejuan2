@@ -1518,92 +1518,6 @@
         "$ref": "#/components/schemas/ReauthenticateResponse"
       }
     },
-    "GET /api/v1/auth/mfa": {
-      "operationId": "getMFAStatus",
-      "parameters": [],
-      "requestBody": null,
-      "response": {
-        "$ref": "#/components/schemas/MFAStatusResponse"
-      }
-    },
-    "POST /api/v1/auth/mfa/totp/enroll": {
-      "operationId": "enrollTOTP",
-      "parameters": [],
-      "requestBody": {
-        "required": true,
-        "schema": {
-          "$ref": "#/components/schemas/TOTPEnrollmentRequest"
-        }
-      },
-      "response": {
-        "$ref": "#/components/schemas/TOTPEnrollmentResponse"
-      }
-    },
-    "POST /api/v1/auth/mfa/totp/confirm": {
-      "operationId": "confirmTOTP",
-      "parameters": [],
-      "requestBody": {
-        "required": true,
-        "schema": {
-          "$ref": "#/components/schemas/TOTPConfirmationRequest"
-        }
-      },
-      "response": {
-        "$ref": "#/components/schemas/MFARecoveryCodesResponse"
-      }
-    },
-    "POST /api/v1/auth/step-up/start": {
-      "operationId": "startMFAChallenge",
-      "parameters": [],
-      "requestBody": {
-        "required": true,
-        "schema": {
-          "$ref": "#/components/schemas/MFAChallengeStartRequest"
-        }
-      },
-      "response": {
-        "$ref": "#/components/schemas/MFAChallengeStartResponse"
-      }
-    },
-    "POST /api/v1/auth/step-up/verify": {
-      "operationId": "verifyMFAChallenge",
-      "parameters": [],
-      "requestBody": {
-        "required": true,
-        "schema": {
-          "$ref": "#/components/schemas/MFAChallengeVerifyRequest"
-        }
-      },
-      "response": {
-        "$ref": "#/components/schemas/MFAChallengeVerifyResponse"
-      }
-    },
-    "POST /api/v1/auth/mfa/totp/disable": {
-      "operationId": "disableTOTP",
-      "parameters": [],
-      "requestBody": {
-        "required": true,
-        "schema": {
-          "$ref": "#/components/schemas/MFACommandRequest"
-        }
-      },
-      "response": {
-        "$ref": "#/components/schemas/MFADisableResponse"
-      }
-    },
-    "POST /api/v1/auth/mfa/recovery-codes/rotate": {
-      "operationId": "rotateMFARecoveryCodes",
-      "parameters": [],
-      "requestBody": {
-        "required": true,
-        "schema": {
-          "$ref": "#/components/schemas/MFACommandRequest"
-        }
-      },
-      "response": {
-        "$ref": "#/components/schemas/MFARecoveryCodesResponse"
-      }
-    },
     "GET /api/v1/auth/security-events": {
       "operationId": "listPersonalSecurityEvents",
       "parameters": [],
@@ -2089,6 +2003,14 @@
           "required": false,
           "schema": {
             "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "statistics",
+          "required": false,
+          "schema": {
+            "type": "boolean"
           }
         }
       ],
@@ -6863,6 +6785,18 @@
           "schema": {
             "type": "integer"
           }
+        },
+        {
+          "in": "query",
+          "name": "pending_action",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "review",
+              "publish"
+            ]
+          }
         }
       ],
       "requestBody": null,
@@ -8862,6 +8796,727 @@
       ],
       "requestBody": null,
       "response": null
+    },
+    "PATCH /api/v1/platform/model-api-configs/{id}": {
+      "operationId": "updateManagedModelAPIConfig",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "tenant_id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ManagedModelAPIConfigUpdateInput"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/ManagedModelAPIConfigResponse"
+      }
+    },
+    "POST /api/v1/question-bank/versions/{versionId}/handoff": {
+      "operationId": "assignQuestionBankHandoff",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankHandoffRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "POST /api/v1/question-bank/versions/{versionId}/claim-review": {
+      "operationId": "claimQuestionBankReview",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankClaimRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "POST /api/v1/question-bank/versions/{versionId}/claim-publish": {
+      "operationId": "claimQuestionBankPublish",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "header",
+          "name": "Idempotency-Key",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/QuestionBankClaimRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankVersionResponse"
+      }
+    },
+    "GET /api/v1/question-bank/versions/{versionId}/handoff-events": {
+      "operationId": "listQuestionBankHandoffEvents",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "versionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/QuestionBankHandoffEventsResponse"
+      }
+    },
+    "GET /api/v1/ai-eligibility/decisions": {
+      "operationId": "listAIEligibilityDecisions",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "tenant_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/AIEligibilityDecisionPage"
+      }
+    },
+    "GET /api/v1/audit-logs": {
+      "operationId": "listAuditLogs",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "action",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "actor_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "target_type",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "target_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "exam_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "ip_address",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "created_from",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "created_to",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/AuditLogPage"
+      }
+    },
+    "POST /api/v1/audit-logs/export": {
+      "operationId": "exportAuditLogs",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "action",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "actor_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "target_type",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "target_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "exam_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "ip_address",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "created_from",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "created_to",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
+    },
+    "GET /api/v1/public/schools/{code}": {
+      "operationId": "getPublicSchoolName",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "code",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PublicSchoolNameResponse"
+      }
+    },
+    "GET /api/v1/exams/{examId}/subjective-grading-sources": {
+      "operationId": "listSubjectiveGradingSources",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "question_id",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/SubjectiveGradingSourcePage"
+      }
+    },
+    "GET /api/v1/question-appeals/{id}/private-draft": {
+      "operationId": "getQuestionAppealPrivateDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+      }
+    },
+    "PUT /api/v1/question-appeals/{id}/private-draft": {
+      "operationId": "saveQuestionAppealPrivateDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/PutPrivateOpinionDraftRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+      }
+    },
+    "DELETE /api/v1/question-appeals/{id}/private-draft": {
+      "operationId": "deleteQuestionAppealPrivateDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/DeletePrivateOpinionDraftRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+      }
+    },
+    "GET /api/v1/appeals/{id}/private-draft": {
+      "operationId": "getAppealPrivateDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+      }
+    },
+    "PUT /api/v1/appeals/{id}/private-draft": {
+      "operationId": "saveAppealPrivateDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/PutPrivateOpinionDraftRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+      }
+    },
+    "DELETE /api/v1/appeals/{id}/private-draft": {
+      "operationId": "deleteAppealPrivateDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/DeletePrivateOpinionDraftRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+      }
+    },
+    "GET /api/v1/arbitration-tasks/{id}/private-draft": {
+      "operationId": "getArbitrationPrivateDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+      }
+    },
+    "PUT /api/v1/arbitration-tasks/{id}/private-draft": {
+      "operationId": "saveArbitrationPrivateDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/PutPrivateOpinionDraftRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+      }
+    },
+    "DELETE /api/v1/arbitration-tasks/{id}/private-draft": {
+      "operationId": "deleteArbitrationPrivateDraft",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/DeletePrivateOpinionDraftRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+      }
+    },
+    "GET /api/v1/exams/{examId}/questions/{questionId}/calibration-templates": {
+      "operationId": "listCalibrationSchoolTemplates",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "path",
+          "name": "questionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/CalibrationSchoolTemplateDirectory"
+      }
+    },
+    "POST /api/v1/exams/{examId}/questions/{questionId}/calibration-templates": {
+      "operationId": "approveCalibrationSchoolTemplate",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "path",
+          "name": "questionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ApproveCalibrationSchoolTemplateRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/CalibrationSchoolTemplateResponse"
+      }
+    },
+    "POST /api/v1/exams/{examId}/questions/{questionId}/calibration-templates/{templateId}/withdraw": {
+      "operationId": "withdrawCalibrationSchoolTemplate",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "path",
+          "name": "questionId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "path",
+          "name": "templateId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/WithdrawCalibrationSchoolTemplateRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/CalibrationSchoolTemplateResponse"
+      }
     }
   },
   "schemas": {
@@ -11759,15 +12414,10 @@
           "type": "object",
           "required": [
             "active_admins",
-            "mfa_enabled",
             "active_sessions"
           ],
           "properties": {
             "active_admins": {
-              "type": "integer",
-              "format": "int64"
-            },
-            "mfa_enabled": {
               "type": "integer",
               "format": "int64"
             },
@@ -12394,235 +13044,6 @@
       },
       "additionalProperties": false
     },
-    "MFAStatusResponse": {
-      "type": "object",
-      "required": [
-        "available",
-        "enabled",
-        "recovery_codes_remaining"
-      ],
-      "properties": {
-        "available": {
-          "type": "boolean"
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "recovery_codes_remaining": {
-          "type": "integer"
-        }
-      },
-      "additionalProperties": false
-    },
-    "TOTPEnrollmentRequest": {
-      "type": "object",
-      "required": [
-        "password"
-      ],
-      "properties": {
-        "password": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "TOTPEnrollmentResponse": {
-      "type": "object",
-      "required": [
-        "enrollment_id",
-        "secret",
-        "qr_code_data_url",
-        "expires_at"
-      ],
-      "properties": {
-        "enrollment_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "secret": {
-          "type": "string"
-        },
-        "qr_code_data_url": {
-          "type": "string"
-        },
-        "expires_at": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "additionalProperties": false
-    },
-    "TOTPConfirmationRequest": {
-      "type": "object",
-      "required": [
-        "enrollment_id",
-        "code"
-      ],
-      "properties": {
-        "enrollment_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "code": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "MFARecoveryCodesResponse": {
-      "type": "object",
-      "required": [
-        "status",
-        "recovery_codes"
-      ],
-      "properties": {
-        "status": {
-          "type": "string",
-          "enum": [
-            "enabled",
-            "rotated"
-          ]
-        },
-        "recovery_codes": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "MFAChallengeStartRequest": {
-      "type": "object",
-      "required": [
-        "operation",
-        "password"
-      ],
-      "properties": {
-        "operation": {
-          "type": "string",
-          "enum": [
-            "mfa.disable",
-            "mfa.recovery.rotate"
-          ]
-        },
-        "password": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "MFAChallengeStartResponse": {
-      "type": "object",
-      "required": [
-        "challenge_id",
-        "operation",
-        "methods",
-        "expires_at"
-      ],
-      "properties": {
-        "challenge_id": {
-          "type": "string"
-        },
-        "operation": {
-          "type": "string",
-          "enum": [
-            "mfa.disable",
-            "mfa.recovery.rotate"
-          ]
-        },
-        "methods": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "totp",
-              "recovery_code"
-            ]
-          }
-        },
-        "expires_at": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "additionalProperties": false
-    },
-    "MFAChallengeVerifyRequest": {
-      "type": "object",
-      "required": [
-        "challenge_id",
-        "method",
-        "code"
-      ],
-      "properties": {
-        "challenge_id": {
-          "type": "string"
-        },
-        "method": {
-          "type": "string",
-          "enum": [
-            "totp",
-            "recovery_code"
-          ]
-        },
-        "code": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "MFAChallengeVerifyResponse": {
-      "type": "object",
-      "required": [
-        "status",
-        "operation",
-        "expires_at"
-      ],
-      "properties": {
-        "status": {
-          "type": "string",
-          "const": "verified"
-        },
-        "operation": {
-          "type": "string",
-          "enum": [
-            "mfa.disable",
-            "mfa.recovery.rotate"
-          ]
-        },
-        "expires_at": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "additionalProperties": false
-    },
-    "MFACommandRequest": {
-      "type": "object",
-      "required": [
-        "challenge_id"
-      ],
-      "properties": {
-        "challenge_id": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "MFADisableResponse": {
-      "type": "object",
-      "required": [
-        "status"
-      ],
-      "properties": {
-        "status": {
-          "type": "string",
-          "const": "disabled"
-        }
-      },
-      "additionalProperties": false
-    },
     "OrganizationScope": {
       "type": "object",
       "required": [
@@ -13192,11 +13613,7 @@
             "auth.credential_recovery_completed",
             "auth.reauthentication_failed",
             "auth.session_reauthenticated",
-            "auth.session_locked",
-            "auth.mfa_enabled",
-            "auth.mfa_disabled",
-            "auth.mfa_recovery_used",
-            "auth.mfa_recovery_rotated"
+            "auth.session_locked"
           ]
         },
         "risk_level": {
@@ -15523,6 +15940,9 @@
           "items": {
             "$ref": "#/components/schemas/ReviewerTaskAggregate"
           }
+        },
+        "statistics": {
+          "$ref": "#/components/schemas/ReviewStatistics"
         }
       }
     },
@@ -17195,6 +17615,9 @@
           "items": {
             "$ref": "#/components/schemas/GoldPaperVersion"
           }
+        },
+        "question_no": {
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -17474,6 +17897,13 @@
         "updated_at": {
           "type": "string",
           "format": "date-time"
+        },
+        "school_template_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "school_template_revision": {
+          "type": "integer"
         }
       },
       "additionalProperties": false
@@ -17524,6 +17954,13 @@
           "type": "integer"
         },
         "expected_revision": {
+          "type": "integer"
+        },
+        "school_template_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "school_template_revision": {
           "type": "integer"
         }
       },
@@ -22040,6 +22477,18 @@
         "created_at": {
           "type": "string",
           "format": "date-time"
+        },
+        "exam_name": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "question_no": {
+          "type": "string"
+        },
+        "anonymous_code": {
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -23375,6 +23824,9 @@
             "null"
           ],
           "format": "date-time"
+        },
+        "eligible_for_resolution": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
@@ -24296,6 +24748,18 @@
         "created_at": {
           "type": "string",
           "format": "date-time"
+        },
+        "exam_name": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "question_no": {
+          "type": "string"
+        },
+        "anonymous_code": {
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -29344,6 +29808,9 @@
         },
         "expected_revision": {
           "type": "integer"
+        },
+        "score_only": {
+          "type": "boolean"
         }
       }
     },
@@ -30197,6 +30664,9 @@
         },
         "import_provenance": {
           "$ref": "#/components/schemas/QuestionBankImportProvenance"
+        },
+        "handoff": {
+          "$ref": "#/components/schemas/QuestionBankHandoff"
         }
       },
       "additionalProperties": false
@@ -30399,6 +30869,9 @@
         "custom_metadata": {
           "type": "object",
           "additionalProperties": true
+        },
+        "scoring": {
+          "$ref": "#/components/schemas/QuestionBankScoring"
         }
       },
       "additionalProperties": false
@@ -30749,6 +31222,17 @@
         },
         "comment": {
           "type": "string"
+        },
+        "expected_handoff_revision": {
+          "type": "integer"
+        },
+        "reviewer_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "publisher_id": {
+          "type": "string",
+          "format": "uuid"
         }
       },
       "additionalProperties": false
@@ -37793,6 +38277,1003 @@
         }
       },
       "additionalProperties": false
+    },
+    "ManagedModelAPIConfigUpdateInput": {
+      "type": "object",
+      "properties": {
+        "display_name": {
+          "type": "string"
+        },
+        "adapter_type": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "model_version": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "api_key": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "expected_updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "credential_only": {
+          "type": "boolean"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "display_name",
+            "adapter_type",
+            "base_url",
+            "model_name",
+            "model_version",
+            "region",
+            "status",
+            "is_default"
+          ],
+          "properties": {
+            "credential_only": {
+              "const": false
+            }
+          }
+        },
+        {
+          "required": [
+            "credential_only",
+            "api_key",
+            "expected_updated_at"
+          ],
+          "properties": {
+            "credential_only": {
+              "const": true
+            },
+            "api_key": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "ManagedModelAPIConfig": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "display_name",
+        "adapter_type",
+        "base_url",
+        "model_name",
+        "model_version",
+        "region",
+        "status",
+        "is_default",
+        "credential_configured",
+        "updated_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenant_id": {
+          "type": "string"
+        },
+        "provider_key": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "adapter_type": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "model_version": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "capability_profile": {
+          "type": "string"
+        },
+        "health_state": {
+          "type": "string"
+        },
+        "credential_hint": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "last_test_status": {
+          "type": "string"
+        },
+        "last_text_status": {
+          "type": "string"
+        },
+        "last_capability_status": {
+          "type": "string"
+        },
+        "config_source": {
+          "type": "string"
+        },
+        "provider_registry_version": {
+          "type": "string"
+        },
+        "credential_configured": {
+          "type": "boolean"
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "modalities": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pricing_policy": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data_policy": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_text_usage": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_text_diagnostic": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_capability_usage": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_capability_diagnostic": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "ManagedModelAPIConfigResponse": {
+      "type": "object",
+      "required": [
+        "config"
+      ],
+      "properties": {
+        "config": {
+          "$ref": "#/components/schemas/ManagedModelAPIConfig"
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuestionBankHandoff": {
+      "type": "object",
+      "required": [
+        "revision",
+        "updated_at"
+      ],
+      "properties": {
+        "revision": {
+          "type": "integer"
+        },
+        "reviewer_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "publisher_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "claimed_by": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "claimed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuestionBankHandoffRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "expected_handoff_revision",
+        "reviewer_id",
+        "publisher_id"
+      ],
+      "properties": {
+        "expected_revision": {
+          "type": "integer"
+        },
+        "expected_handoff_revision": {
+          "type": "integer"
+        },
+        "reviewer_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "publisher_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuestionBankClaimRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "expected_handoff_revision"
+      ],
+      "properties": {
+        "expected_revision": {
+          "type": "integer"
+        },
+        "expected_handoff_revision": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuestionBankHandoffEvent": {
+      "type": "object",
+      "required": [
+        "id",
+        "version_id",
+        "handoff_revision",
+        "content_revision",
+        "kind",
+        "actor_id",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "handoff_revision": {
+          "type": "integer"
+        },
+        "content_revision": {
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "assigned",
+            "reassigned",
+            "claimed",
+            "approved",
+            "published",
+            "returned"
+          ]
+        },
+        "actor_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "recipient_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuestionBankHandoffEventsResponse": {
+      "type": "object",
+      "required": [
+        "events"
+      ],
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/QuestionBankHandoffEvent"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "AIEligibilityDecisionSummary": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "run_item_id",
+        "subject_code",
+        "education_stage",
+        "archetype_code",
+        "risk_tier",
+        "decision",
+        "external_ai_allowed",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenant_id": {
+          "type": "string"
+        },
+        "run_item_id": {
+          "type": "string"
+        },
+        "subject_code": {
+          "type": "string"
+        },
+        "education_stage": {
+          "type": "string"
+        },
+        "archetype_code": {
+          "type": "string"
+        },
+        "risk_tier": {
+          "type": "string"
+        },
+        "decision": {
+          "$ref": "#/components/schemas/ScoringMode"
+        },
+        "external_ai_allowed": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AIEligibilityDecisionPage": {
+      "type": "object",
+      "required": [
+        "decisions",
+        "next_cursor",
+        "has_more"
+      ],
+      "properties": {
+        "decisions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AIEligibilityDecisionSummary"
+          }
+        },
+        "next_cursor": {
+          "type": "string"
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AuditLog": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenant_id",
+        "action",
+        "target_type",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenant_id": {
+          "type": "string"
+        },
+        "actor_id": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "target_type": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "ip_address": {
+          "type": "string"
+        },
+        "user_agent": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "before_value": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "after_value": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AuditLogPage": {
+      "type": "object",
+      "required": [
+        "audit_logs",
+        "next_cursor",
+        "has_more"
+      ],
+      "properties": {
+        "audit_logs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AuditLog"
+          }
+        },
+        "next_cursor": {
+          "type": "string"
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PublicSchoolNameResponse": {
+      "type": "object",
+      "required": [
+        "school"
+      ],
+      "properties": {
+        "school": {
+          "type": "object",
+          "required": [
+            "code",
+            "name"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "SubjectiveGradingSource": {
+      "type": "object",
+      "required": [
+        "answer_segment_id",
+        "question_id",
+        "question_no",
+        "submission_label",
+        "question_type",
+        "unavailable_reason",
+        "ready"
+      ],
+      "properties": {
+        "answer_segment_id": {
+          "type": "string"
+        },
+        "question_id": {
+          "type": "string"
+        },
+        "question_no": {
+          "type": "string"
+        },
+        "submission_label": {
+          "type": "string"
+        },
+        "question_type": {
+          "type": "string"
+        },
+        "unavailable_reason": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SubjectiveGradingSourcePage": {
+      "type": "object",
+      "required": [
+        "sources",
+        "next_cursor",
+        "has_more"
+      ],
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SubjectiveGradingSource"
+          }
+        },
+        "next_cursor": {
+          "type": "string"
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PrivateOpinionDraft": {
+      "type": "object",
+      "required": [
+        "source",
+        "source_revision",
+        "values",
+        "updated_at",
+        "expires_at"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "source_revision": {
+          "type": "integer"
+        },
+        "values": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PrivateOpinionDraftResponse": {
+      "type": "object",
+      "required": [
+        "revision",
+        "source",
+        "source_revision",
+        "draft"
+      ],
+      "properties": {
+        "revision": {
+          "type": "integer"
+        },
+        "source": {
+          "type": "string"
+        },
+        "source_revision": {
+          "type": "integer"
+        },
+        "draft": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/PrivateOpinionDraft"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "PutPrivateOpinionDraftRequest": {
+      "type": "object",
+      "required": [
+        "source",
+        "source_revision",
+        "expected_revision",
+        "values"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "source_revision": {
+          "type": "integer"
+        },
+        "expected_revision": {
+          "type": "integer"
+        },
+        "values": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "DeletePrivateOpinionDraftRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision"
+      ],
+      "properties": {
+        "expected_revision": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CalibrationSchoolTemplate": {
+      "type": "object",
+      "required": [
+        "id",
+        "school_id",
+        "source_exam_id",
+        "source_question_id",
+        "approved_by",
+        "subject",
+        "name",
+        "source_policy_revision",
+        "policy",
+        "status",
+        "revision",
+        "approved_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "school_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "source_exam_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "source_question_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "approved_by": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "withdrawn_by": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source_policy_revision": {
+          "type": "integer"
+        },
+        "policy": {
+          "$ref": "#/components/schemas/CalibrationPolicy"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "withdrawn"
+          ]
+        },
+        "revision": {
+          "type": "integer"
+        },
+        "approved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "withdrawn_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "withdraw_reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CalibrationSchoolTemplateDirectory": {
+      "type": "object",
+      "required": [
+        "templates",
+        "capabilities",
+        "question"
+      ],
+      "properties": {
+        "templates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/CalibrationSchoolTemplate"
+          }
+        },
+        "capabilities": {
+          "type": "object",
+          "required": [
+            "can_approve",
+            "can_withdraw"
+          ],
+          "properties": {
+            "can_approve": {
+              "type": "boolean"
+            },
+            "can_withdraw": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "question": {
+          "type": "object",
+          "required": [
+            "school_id",
+            "subject",
+            "archetype_code",
+            "max_score"
+          ],
+          "properties": {
+            "school_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "subject": {
+              "type": "string"
+            },
+            "archetype_code": {
+              "type": "string"
+            },
+            "max_score": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "ApproveCalibrationSchoolTemplateRequest": {
+      "type": "object",
+      "required": [
+        "name",
+        "source_policy_revision"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "source_policy_revision": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "WithdrawCalibrationSchoolTemplateRequest": {
+      "type": "object",
+      "required": [
+        "expected_revision",
+        "reason"
+      ],
+      "properties": {
+        "expected_revision": {
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CalibrationSchoolTemplateResponse": {
+      "type": "object",
+      "required": [
+        "template"
+      ],
+      "properties": {
+        "template": {
+          "$ref": "#/components/schemas/CalibrationSchoolTemplate"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ReviewQuestionStatistics": {
+      "type": "object",
+      "required": [
+        "question_id",
+        "question_no",
+        "graded_count",
+        "full_score_count",
+        "correct_rate",
+        "average_score_rate"
+      ],
+      "properties": {
+        "question_id": {
+          "type": "string"
+        },
+        "question_no": {
+          "type": "string"
+        },
+        "graded_count": {
+          "type": "integer"
+        },
+        "full_score_count": {
+          "type": "integer"
+        },
+        "correct_rate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "average_score_rate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "ReviewStatistics": {
+      "type": "object",
+      "required": [
+        "exam_id",
+        "scope",
+        "graded_count",
+        "full_score_count",
+        "correct_rate",
+        "average_score_rate",
+        "questions",
+        "updated_at"
+      ],
+      "properties": {
+        "exam_id": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "personal",
+            "exam"
+          ]
+        },
+        "graded_count": {
+          "type": "integer"
+        },
+        "full_score_count": {
+          "type": "integer"
+        },
+        "correct_rate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "average_score_rate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "questions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ReviewQuestionStatistics"
+          }
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     }
   }
 }

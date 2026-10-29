@@ -31,10 +31,6 @@ var personalSecurityActions = map[string]struct{}{
 	"auth.reauthentication_failed":       {},
 	"auth.session_reauthenticated":       {},
 	"auth.session_locked":                {},
-	"auth.mfa_enabled":                   {},
-	"auth.mfa_disabled":                  {},
-	"auth.mfa_recovery_used":             {},
-	"auth.mfa_recovery_rotated":          {},
 }
 
 // ListSecurityEvents 将已有审计轨迹投影为仅供本人查看的有限视图；原始 IP、用户代理、请求 ID 和审计前后载荷不会通过此端点返回。

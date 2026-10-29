@@ -4,8 +4,8 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 607,
-    "openapi": 367,
+    "registered": 600,
+    "openapi": 360,
     "registered_gaps": 240
   },
   "routes": [
@@ -755,41 +755,6 @@
       "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
     },
     {
-      "method": "GET",
-      "path": "/api/v1/auth/mfa",
-      "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "openapi",
-      "operation_id": "getMFAStatus"
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/auth/mfa/recovery-codes/rotate",
-      "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "openapi",
-      "operation_id": "rotateMFARecoveryCodes"
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/auth/mfa/totp/confirm",
-      "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "openapi",
-      "operation_id": "confirmTOTP"
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/auth/mfa/totp/disable",
-      "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "openapi",
-      "operation_id": "disableTOTP"
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/auth/mfa/totp/enroll",
-      "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "openapi",
-      "operation_id": "enrollTOTP"
-    },
-    {
       "method": "POST",
       "path": "/api/v1/auth/password",
       "source": "services/api-gateway/internal/server/routes_auth.go",
@@ -855,20 +820,6 @@
       "owner": "api-platform",
       "review_after": "2026-12-31",
       "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/auth/step-up/start",
-      "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "openapi",
-      "operation_id": "startMFAChallenge"
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/auth/step-up/verify",
-      "source": "services/api-gateway/internal/server/routes_auth.go",
-      "coverage": "openapi",
-      "operation_id": "verifyMFAChallenge"
     },
     {
       "method": "POST",

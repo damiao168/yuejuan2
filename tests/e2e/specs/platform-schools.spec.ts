@@ -48,7 +48,7 @@ async function installSchoolMocks(page: Page) {
   }));
   await page.route(`**/api/v1/platform/schools/${tenantId}/activity*`, (route) => json(route, {
     activities: [{ id: "event-1", event_type: "score.released", severity: "success", title: "发布期中考试成绩", summary: "成绩已完成发布", actor_name: "张老师", happened_at: "2026-09-22T12:20:00Z" }],
-    security: { active_admins: 2, mfa_enabled: 1, active_sessions: 5, last_login_at: "2026-09-22T12:31:00Z" }
+    security: { active_admins: 2, active_sessions: 5, last_login_at: "2026-09-22T12:31:00Z" }
   }));
 }
 

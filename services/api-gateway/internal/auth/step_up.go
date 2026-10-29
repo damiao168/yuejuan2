@@ -32,7 +32,7 @@ func RequireRecentAuth(maxAge time.Duration) func(http.Handler) http.Handler {
 	}
 }
 
-// RequireAuthLevel 是未来 MFA/WebAuthn 和企业 IdP 会话的服务端边界；当前仅密码会话的等级为 1。
+// RequireAuthLevel 是高认证等级和企业 IdP 会话的服务端边界；当前仅密码会话的等级为 1。
 func RequireAuthLevel(level int) func(http.Handler) http.Handler {
 	if level < 1 {
 		level = 1

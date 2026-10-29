@@ -26,7 +26,6 @@ export function SchoolActivityTab({ tenantId }: Readonly<{ tenantId: string }>) 
   return <div className="platform-school-detail-sections">
     <section><h3>账号安全</h3><dl className="platform-school-facts">
       <div><dt>活跃管理员</dt><dd>{numberText(data?.security.active_admins ?? 0)}</dd></div>
-      <div><dt>启用 MFA</dt><dd>{numberText(data?.security.mfa_enabled ?? 0)} / {numberText(data?.security.active_admins ?? 0)}</dd></div>
       <div><dt>活跃会话</dt><dd>{numberText(data?.security.active_sessions ?? 0)}</dd></div>
       <div><dt>最近登录</dt><dd>{fullDate(data?.security.last_login_at)}</dd></div>
     </dl></section>

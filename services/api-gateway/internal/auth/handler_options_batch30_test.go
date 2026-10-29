@@ -33,8 +33,8 @@ func TestBatch30HandlerOptionsKeepExplicitGuardAndNormalizedValues(t *testing.T)
 		CookieName: " session ", DeviceCookieName: " device ", CookieSecure: true,
 		RememberedSessionTTL: time.Hour, PublicSessionTTL: time.Minute,
 		DeviceBindingTTL: 3 * time.Hour, RiskMode: " OFF ", LoginGuard: guard, LoginLimiter: limiter,
-		LoginLimiterFailClosed: true, MFAEnabled: true, MFAMasterKey: "invalid",
-		WechatEnabled: true, WechatAppID: " app ", WechatAppSecret: " secret ",
+		LoginLimiterFailClosed: true,
+		WechatEnabled:          true, WechatAppID: " app ", WechatAppSecret: " secret ",
 		WechatRedirectURL: " url ", WechatChallengeTTL: time.Minute,
 	})
 	if h.loginGuard != guard || h.loginService.guard != guard || h.cookieName != "session" ||
@@ -43,9 +43,9 @@ func TestBatch30HandlerOptionsKeepExplicitGuardAndNormalizedValues(t *testing.T)
 		t.Fatal("explicit guard or session options changed")
 	}
 	if h.loginService.options.DeviceBindingTTL != 3*time.Hour || h.loginService.options.RiskMode != "off" ||
-		!h.mfaEnabled || h.mfaCipher != nil || !h.wechatEnabled || h.wechatAppID != "app" ||
+		!h.wechatEnabled || h.wechatAppID != "app" ||
 		h.wechatAppSecret != "secret" || h.wechatRedirectURL != "url" || h.wechatChallengeTTL != time.Minute {
-		t.Fatal("normalization or invalid MFA key handling changed")
+		t.Fatal("normalization changed")
 	}
 	withLimiter := NewHandler(NewMemoryStore(), time.Hour, HandlerOptions{LoginLimiter: limiter})
 	layered, ok := withLimiter.loginGuard.(*LayeredLoginAttemptGuard)

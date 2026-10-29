@@ -348,32 +348,6 @@
   color: var(--text-muted);
 }
 
-.totp-status-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding: 12px 0;
-}
-
-.section-heading.compact.totp-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.totp-heading > div { flex: 1; min-width: 0; }
-
-.totp-status-row > div:first-of-type { flex: 1; min-width: 200px; }
-.totp-status-row p { margin: 4px 0 0; color: var(--text-muted); }
-.totp-management .ant-alert { margin-top: 12px; }
-.totp-help { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
-.ant-modal.totp-flow-modal { top: 32px; }
-.totp-dialog-body { display: grid; gap: 12px; padding: 8px 4px 0 0; max-height: calc(100dvh - 164px); overflow-y: auto; }
-.totp-dialog-body p { margin: 0; line-height: 1.7; }
-.totp-dialog-body label { font-weight: 500; }
-.totp-dialog-actions { justify-content: flex-end; margin-top: 12px; }
-.totp-provisioning { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
-.totp-provisioning > div { flex: 1; min-width: 180px; }
-.totp-secret { display: block; margin-top: 8px; padding: 10px; background: var(--surface); overflow-wrap: anywhere; user-select: all; }
-.totp-recovery-codes { display: grid; gap: 6px; margin: 0; padding-left: 28px; }
-.totp-recovery-codes code { font-size: 13px; overflow-wrap: anywhere; user-select: all; }
-
 .school-dashboard {
   gap: 16px;
 }

@@ -27,7 +27,6 @@ type routerGuards struct {
 	authenticate                    func(http.Handler) http.Handler
 	requireAuth                     func(http.Handler) http.Handler
 	requireAccount                  func(http.HandlerFunc) http.Handler
-	requireMFAAccount               func(http.HandlerFunc) http.Handler
 	requireLockedAccount            func(http.HandlerFunc) http.Handler
 	requirePermission               func(string, http.HandlerFunc) http.Handler
 	requireRecentPermission         func(string, http.HandlerFunc) http.Handler
@@ -130,11 +129,6 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 			}
 			idempotency.CommandIdentity(handler).ServeHTTP(w, r)
 		}))
-	}
-	// 一次性注册秘密、恢复码和作用域授权绝不能被通用幂等收据持久化或重放，即使客户端提供 Idempotency-Key。
-	// MFAStore 负责原子消费。
-	requireMFAAccount := func(handler http.HandlerFunc) http.Handler {
-		return authenticateAccount(handler)
 	}
 	requireLockedAccount := func(handler http.HandlerFunc) http.Handler {
 		return authenticateLockedAccount(idempotent(handler))
@@ -361,7 +355,6 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		requirePersonalReviewRead:       requirePersonalReviewRead,
 		requirePersonalReviewWrite:      requirePersonalReviewWrite,
 		requirePersonalReviewCleanup:    requirePersonalReviewCleanup,
-		requireMFAAccount:               requireMFAAccount,
 		requireLockedAccount:            requireLockedAccount,
 		requirePermission:               requirePermission,
 		requireRecentPermission:         requireRecentPermission,

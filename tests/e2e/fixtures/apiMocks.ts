@@ -79,7 +79,6 @@ export async function installApiMocks(
       });
     }
     if (path === "/api/v1/auth/logout") return json(route, { status: "ok" });
-    if (path === "/api/v1/auth/mfa" && request.method() === "GET") return json(route, { available: true, enabled: false, recovery_codes_remaining: 0 });
     if (path === "/api/v1/auth/sessions" && request.method() === "GET") return json(route, { sessions: [
       { id: "session-current", session_type: "remembered_device", device_name: "办公室 Windows 电脑", created_at: "2026-09-20T08:00:00Z", last_seen_at: "2026-09-20T12:00:00Z", expires_at: "2026-10-20T08:00:00Z", current: true },
       { id: "session-tablet", session_type: "standard", device_name: "教务处平板", created_at: "2026-09-19T08:00:00Z", last_seen_at: "2026-09-19T10:00:00Z", expires_at: "2026-09-21T08:00:00Z", current: false }

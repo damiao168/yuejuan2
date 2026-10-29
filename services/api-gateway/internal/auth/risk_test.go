@@ -79,7 +79,7 @@ func TestBrowserLoginCreatesOpaqueRecognizedDeviceBinding(t *testing.T) {
 		t.Fatalf("device should become recognized only after first successful login: %#v", events)
 	}
 	if events[1].DeviceTrusted {
-		t.Fatal("password-observed device must not be treated as MFA-trusted")
+		t.Fatal("password-observed device must not be treated as strong-authentication trusted")
 	}
 }
 

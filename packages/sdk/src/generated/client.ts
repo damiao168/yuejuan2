@@ -40,17 +40,6 @@ import type {
   ManagedChatModelResponse,
   ManagedChatCompletionResponse,
   OnboardingReadiness,
-  MFAStatusResponse,
-  TOTPEnrollmentRequest,
-  TOTPEnrollmentResponse,
-  TOTPConfirmationRequest,
-  MFARecoveryCodesResponse,
-  MFAChallengeStartRequest,
-  MFAChallengeStartResponse,
-  MFAChallengeVerifyRequest,
-  MFAChallengeVerifyResponse,
-  MFACommandRequest,
-  MFADisableResponse,
   AuthLoginRequest,
   AuthLoginResponse,
   WechatLoginStartRequest,
@@ -470,13 +459,6 @@ export interface operations {
   "createAccessToken": { args: { body: AuthLoginRequest; signal?: AbortSignal; }; response: AuthTokenResponse; };
   "lockPublicComputerSession": { args: { signal?: AbortSignal; }; response: SessionLockResponse; };
   "reauthenticateSession": { args: { body: ReauthenticateRequest; signal?: AbortSignal; }; response: ReauthenticateResponse; };
-  "getMFAStatus": { args: { signal?: AbortSignal; }; response: MFAStatusResponse; };
-  "enrollTOTP": { args: { body: TOTPEnrollmentRequest; signal?: AbortSignal; }; response: TOTPEnrollmentResponse; };
-  "confirmTOTP": { args: { body: TOTPConfirmationRequest; signal?: AbortSignal; }; response: MFARecoveryCodesResponse; };
-  "startMFAChallenge": { args: { body: MFAChallengeStartRequest; signal?: AbortSignal; }; response: MFAChallengeStartResponse; };
-  "verifyMFAChallenge": { args: { body: MFAChallengeVerifyRequest; signal?: AbortSignal; }; response: MFAChallengeVerifyResponse; };
-  "disableTOTP": { args: { body: MFACommandRequest; signal?: AbortSignal; }; response: MFADisableResponse; };
-  "rotateMFARecoveryCodes": { args: { body: MFACommandRequest; signal?: AbortSignal; }; response: MFARecoveryCodesResponse; };
   "listPersonalSecurityEvents": { args: { signal?: AbortSignal; }; response: SecurityEventListResponse; };
   "verifyAccountActivation": { args: { body: OneTimeTokenRequest; signal?: AbortSignal; }; response: ActivationPreviewResponse; };
   "completeAccountActivation": { args: { body: CompleteOneTimePasswordRequest; signal?: AbortSignal; }; response: ActivationCompleteResponse; };
@@ -1115,41 +1097,6 @@ export class EduGradeApi {
 
   reauthenticateSession(args: operations["reauthenticateSession"]["args"]): Promise<operations["reauthenticateSession"]["response"]> {
     const requestPath = "/api/v1/auth/reauthenticate";
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
-  }
-
-  getMFAStatus(args: operations["getMFAStatus"]["args"] = {}): Promise<operations["getMFAStatus"]["response"]> {
-    const requestPath = "/api/v1/auth/mfa";
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
-  }
-
-  enrollTOTP(args: operations["enrollTOTP"]["args"]): Promise<operations["enrollTOTP"]["response"]> {
-    const requestPath = "/api/v1/auth/mfa/totp/enroll";
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
-  }
-
-  confirmTOTP(args: operations["confirmTOTP"]["args"]): Promise<operations["confirmTOTP"]["response"]> {
-    const requestPath = "/api/v1/auth/mfa/totp/confirm";
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
-  }
-
-  startMFAChallenge(args: operations["startMFAChallenge"]["args"]): Promise<operations["startMFAChallenge"]["response"]> {
-    const requestPath = "/api/v1/auth/step-up/start";
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
-  }
-
-  verifyMFAChallenge(args: operations["verifyMFAChallenge"]["args"]): Promise<operations["verifyMFAChallenge"]["response"]> {
-    const requestPath = "/api/v1/auth/step-up/verify";
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
-  }
-
-  disableTOTP(args: operations["disableTOTP"]["args"]): Promise<operations["disableTOTP"]["response"]> {
-    const requestPath = "/api/v1/auth/mfa/totp/disable";
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
-  }
-
-  rotateMFARecoveryCodes(args: operations["rotateMFARecoveryCodes"]["args"]): Promise<operations["rotateMFARecoveryCodes"]["response"]> {
-    const requestPath = "/api/v1/auth/mfa/recovery-codes/rotate";
     return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 

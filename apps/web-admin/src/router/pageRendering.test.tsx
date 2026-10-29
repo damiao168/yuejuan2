@@ -160,7 +160,6 @@ describe("route permission props and identity keys", () => {
     const page = element(renderAppRouteContent(renderContext));
     expect(page.key).toBe(path === "/question-bank" ? `school-1:user-1:${path}` : "school-1:user-1");
     if (path === "/account/sessions") {
-      expect(page.props.accountLabel).toBe("school-1/tester");
       expect(page.props.onLoggedOut).toBe(renderContext.logout);
     }
   });

@@ -189,7 +189,6 @@ type ActivityItem struct {
 
 type SecuritySummary struct {
 	ActiveAdmins   int64      `json:"active_admins"`
-	MFAEnabled     int64      `json:"mfa_enabled"`
 	ActiveSessions int64      `json:"active_sessions"`
 	LastLoginAt    *time.Time `json:"last_login_at,omitempty"`
 }

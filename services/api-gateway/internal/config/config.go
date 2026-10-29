@@ -2,7 +2,6 @@ package config
 
 import (
 	"bufio"
-	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"math"
@@ -78,8 +77,6 @@ type AuthConfig struct {
 	SessionCookieSecure    bool
 	RiskMode               string
 	DeviceBindingTTL       time.Duration
-	MFAEnabled             bool
-	MFAMasterKey           string
 	WechatEnabled          bool
 	WechatAppID            string
 	WechatAppSecret        string
@@ -186,7 +183,6 @@ func Load(envFile string) (Config, error) {
 		"EDUGRADE_GRADING_AGENT_TOKEN":         "",
 		"EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY": localModelCredentialMasterKey,
 		"EDUGRADE_BARCODE_HMAC_KEYS":           "",
-		"EDUGRADE_MFA_MASTER_KEY":              "",
 		"EDUGRADE_WECHAT_APP_SECRET":           "",
 	}
 	secretValues := make(map[string]string, len(secretDefaults))
@@ -229,8 +225,6 @@ func Load(envFile string) (Config, error) {
 			SessionCookieSecure:    sessionCookieSecure,
 			RiskMode:               strings.ToLower(strings.TrimSpace(getEnv("EDUGRADE_AUTH_RISK_MODE", "shadow"))),
 			DeviceBindingTTL:       parser.Duration("EDUGRADE_DEVICE_BINDING_TTL", 180*24*time.Hour),
-			MFAEnabled:             parser.Bool("EDUGRADE_MFA_ENABLED", false),
-			MFAMasterKey:           secretValues["EDUGRADE_MFA_MASTER_KEY"],
 			WechatEnabled:          parser.Bool("EDUGRADE_WECHAT_LOGIN_ENABLED", false),
 			WechatAppID:            strings.TrimSpace(os.Getenv("EDUGRADE_WECHAT_APP_ID")),
 			WechatAppSecret:        secretValues["EDUGRADE_WECHAT_APP_SECRET"],
@@ -367,9 +361,6 @@ func validateProductionConfig(cfg Config) error {
 }
 
 func validateInitialConfig(cfg Config) error {
-	if err := validateMFAConfig(cfg.Auth, cfg.ModelSecrets); err != nil {
-		return err
-	}
 	if err := validateWechatConfig(cfg.Auth); err != nil {
 		return err
 	}
@@ -383,19 +374,6 @@ func validateInitialConfig(cfg Config) error {
 		return err
 	}
 	return validateAIServiceConfig(cfg.AIService, cfg.Service)
-}
-
-func validateMFAConfig(auth AuthConfig, modelSecrets ModelSecretConfig) error {
-	if auth.MFAEnabled {
-		key, err := base64.StdEncoding.DecodeString(strings.TrimSpace(auth.MFAMasterKey))
-		if err != nil || len(key) != 32 {
-			return fmt.Errorf("EDUGRADE_MFA_MASTER_KEY must be a base64-encoded 32-byte independent key when MFA is enabled")
-		}
-		if strings.TrimSpace(auth.MFAMasterKey) == strings.TrimSpace(modelSecrets.MasterKey) {
-			return fmt.Errorf("EDUGRADE_MFA_MASTER_KEY must not reuse EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY")
-		}
-	}
-	return nil
 }
 
 func validateWechatConfig(auth AuthConfig) error {

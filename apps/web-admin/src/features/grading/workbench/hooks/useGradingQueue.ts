@@ -3,7 +3,7 @@ import type { ReviewTask } from "../../../../api/review";
 import { listReviewTasks } from "../../../../api/review";
 import { listAllActiveGraders, type ManagedUser } from "../../../../api/users";
 import { displayNameOrUsername } from "../../../../auth/session";
-import { formatError } from "../gradingWorkbench.model";
+import { formatError, taskFilterOptions } from "../gradingWorkbench.model";
 import type { ReviewerProgress, TaskFilter } from "../gradingWorkbench.types";
 import { appendTaskPage, followingReviewedTask, followingVisibleActionableTask, precedingVisibleTask, visibleTasks } from "../taskPaging";
 import { hashQueryParam } from "../../../../router/query";
@@ -21,7 +21,7 @@ interface UseGradingQueueOptions {
 }
 
 export function useGradingQueue({ canManageTasks, canWork, currentUserId, initialExamId, personalScope, onInfo, heldGroupTask }: UseGradingQueueOptions) {
-  const [taskFilter, setTaskFilter] = useState<TaskFilter>("active");
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>(() => taskFilterOptions.find(option => option.value === hashQueryParam("status"))?.value ?? "active");
   const [queueScope, setQueueScope] = useState<"mine" | "all">(canManageTasks ? "all" : "mine");
   const [keyword, setKeyword] = useState(hashQueryParam("q"));
   const [serverKeyword, setServerKeyword] = useState(hashQueryParam("q"));

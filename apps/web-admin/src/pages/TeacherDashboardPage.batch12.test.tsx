@@ -84,7 +84,7 @@ describe("教师工作台展示分支", () => {
     expect(mocks.reviews).toHaveBeenCalledWith({ assigned_to: user.id });
     expect(mocks.arbitrations).toHaveBeenCalledWith({ assigned_to: user.id });
     expect(counts()).toEqual(["6", "5", "2"]);
-    const buttons = [...host.querySelectorAll<HTMLButtonElement>(".teacher-task-list button")];
+    const buttons = [...host.querySelectorAll<HTMLButtonElement>(".teacher-task-pane:not([aria-label]) .teacher-task-list button")];
     expect(buttons.map((button) => button.querySelector("strong")?.textContent)).toEqual([
       "第 a/1 题仲裁", "第 a/2 题仲裁", "第 a/3 题仲裁", "第 a/4 题仲裁",
       "第 r/1 题阅卷", "第 r/2 题阅卷", "第 r/3 题阅卷", "第 r/4 题阅卷",
@@ -102,7 +102,8 @@ describe("教师工作台展示分支", () => {
     mocks.reviews.mockResolvedValue({ tasks: [{ ...review("r1", "assigned"), exam_name: examName, exam_id: examId, subject, source }] });
     await render(user.roles, ["review:work"]);
     expect(host.querySelector(".teacher-task-list small")?.textContent).toBe(expected);
-    expect(mocks.reviews).toHaveBeenCalledExactlyOnceWith({ assigned_to: user.id });
+    expect(mocks.reviews).toHaveBeenCalledWith({ assigned_to: user.id });
+    expect(mocks.reviews).toHaveBeenCalledWith({ assigned_to: user.id, status: "reviewed", limit: 10 });
     expect(mocks.arbitrations).not.toHaveBeenCalled();
   });
 
@@ -144,6 +145,59 @@ describe("教师工作台展示分支", () => {
     await render(user.roles, ["review:work", "arbitration:work"]);
     expect(counts()).toEqual(["—", "—", "—"]);
     expect(host.querySelector("[data-empty]")).toBeNull();
-    expect(host.querySelectorAll("aside")).toHaveLength(2);
+    expect(host.querySelectorAll("aside")).toHaveLength(3);
+  });
+
+  it("全部待办处理后仍直接显示已提交和已完成历史，并使用独立服务端总数与游标续页", async () => {
+    mocks.reviews.mockImplementation(async (filter) => {
+      if (filter.status !== "reviewed") return { tasks: [] };
+      if (filter.cursor) return { tasks: [review("older/completed", "completed")], has_more: false, aggregate: { total_count: 9 } };
+      return { tasks: [review("submitted/first", "submitted")], has_more: true, next_cursor: "history-page-2", aggregate: { total_count: 9 } };
+    });
+    await render(["grader"], ["review:work"]);
+    expect(counts()).toEqual(["0", "9"]);
+    const history = host.querySelector('section[aria-label="历史评阅"]')!;
+    expect(history.textContent).toContain("第 submitted/first 题评阅记录");
+    const first = history.querySelector<HTMLButtonElement>(".teacher-task-list button")!;
+    await act(async () => { first.click(); });
+    expect(mocks.navigate).toHaveBeenLastCalledWith("/grading?status=reviewed&task=submitted%2Ffirst");
+    const more = [...history.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "加载更多历史记录")!;
+    await act(async () => { more.click(); });
+    expect(mocks.reviews).toHaveBeenCalledWith({ assigned_to: user.id, status: "reviewed", limit: 10, cursor: "history-page-2" });
+    expect(history.querySelectorAll(".teacher-task-list button")).toHaveLength(2);
+    expect(history.textContent).toContain("第 older/completed 题评阅记录");
+    const all = [...history.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "查看全部历史评阅")!;
+    await act(async () => { all.click(); });
+    expect(mocks.navigate).toHaveBeenLastCalledWith("/grading?status=reviewed");
+  });
+
+  it("历史读取失败不显示零完成数，刷新后可恢复记录", async () => {
+    mocks.reviews.mockImplementation(async filter => {
+      if (filter.status === "reviewed") throw new Error("history unavailable");
+      return { tasks: [review("active", "assigned")] };
+    });
+    await render(["grader"], ["review:work"]);
+    expect(counts()).toEqual(["1", "—"]);
+    expect(host.textContent).toContain("历史评阅暂时不可用");
+    expect(host.textContent).not.toContain("暂无历史评阅记录");
+    mocks.reviews.mockResolvedValue({ tasks: [review("completed", "completed")], has_more: false });
+    const refresh = [...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "刷新")!;
+    await act(async () => { refresh.click(); });
+    expect(host.textContent).toContain("第 completed 题评阅记录");
+    expect(host.textContent).not.toContain("历史评阅暂时不可用");
+  });
+
+  it("历史续页失败保留已读记录和重试入口", async () => {
+    mocks.reviews.mockImplementation(async filter => {
+      if (filter.cursor) throw new Error("network unavailable");
+      return { tasks: filter.status === "reviewed" ? [review("saved", "submitted")] : [], has_more: true, next_cursor: "next" };
+    });
+    await render(["grader"], ["review:work"]);
+    const history = host.querySelector('section[aria-label="历史评阅"]')!;
+    const more = [...history.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "加载更多历史记录")!;
+    await act(async () => { more.click(); });
+    expect(history.textContent).toContain("第 saved 题评阅记录");
+    expect(history.textContent).toContain("历史评阅加载失败，请重试");
+    expect(more.disabled).toBe(false);
   });
 });

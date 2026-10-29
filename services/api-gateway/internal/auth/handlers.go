@@ -24,8 +24,6 @@ type Handler struct {
 	deviceCookieName       string
 	cookieSecure           bool
 	trustedProxies         []*net.IPNet
-	mfaEnabled             bool
-	mfaCipher              *mfaCipher
 	wechatEnabled          bool
 	wechatAppID            string
 	wechatAppSecret        string
@@ -48,8 +46,6 @@ type HandlerOptions struct {
 	LoginGuard             LoginAttemptGuard
 	LoginLimiterFailClosed bool
 	TrustedProxyCIDRs      []string
-	MFAEnabled             bool
-	MFAMasterKey           string
 	WechatEnabled          bool
 	WechatAppID            string
 	WechatAppSecret        string
@@ -96,10 +92,6 @@ func NewHandler(store Store, sessionTTL time.Duration, options ...HandlerOptions
 			cfg.LoginGuard = NewMemoryLoginAttemptGuard(cfg.LoginFailureLimit, cfg.LoginFailureWindow)
 		}
 	}
-	var credentialCipher *mfaCipher
-	if cfg.MFAEnabled {
-		credentialCipher, _ = newMFACipher(cfg.MFAMasterKey) // 配置无效时拒绝放行。
-	}
 	handler := &Handler{
 		store:                  store,
 		sessionTTL:             sessionTTL,
@@ -111,8 +103,6 @@ func NewHandler(store Store, sessionTTL time.Duration, options ...HandlerOptions
 		deviceCookieName:       cfg.DeviceCookieName,
 		cookieSecure:           cfg.CookieSecure,
 		trustedProxies:         parseTrustedProxyCIDRs(cfg.TrustedProxyCIDRs),
-		mfaEnabled:             cfg.MFAEnabled,
-		mfaCipher:              credentialCipher,
 		wechatEnabled:          cfg.WechatEnabled,
 		wechatAppID:            cfg.WechatAppID,
 		wechatAppSecret:        cfg.WechatAppSecret,
@@ -168,8 +158,6 @@ func mergeHandlerOptions(cfg HandlerOptions, option HandlerOptions) HandlerOptio
 	cfg.LoginGuard = option.LoginGuard
 	cfg.LoginLimiterFailClosed = option.LoginLimiterFailClosed
 	cfg.TrustedProxyCIDRs = option.TrustedProxyCIDRs
-	cfg.MFAEnabled = option.MFAEnabled
-	cfg.MFAMasterKey = option.MFAMasterKey
 	cfg.WechatEnabled = option.WechatEnabled
 	cfg.WechatAppID = strings.TrimSpace(option.WechatAppID)
 	cfg.WechatAppSecret = strings.TrimSpace(option.WechatAppSecret)

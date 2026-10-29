@@ -134,7 +134,7 @@ export type PlatformSchoolUsageBreakdown = { "key": string; "label": string; "to
 
 export type PlatformSchoolModelHealthResponse = { "default_model": PlatformSchoolModelHealth; "roles": Array<{ "agent_role": "primary_a" | "primary_b" | "arbiter"; "model_name": string; "provider_key": string; "status": string; }>; };
 
-export type PlatformSchoolActivityResponse = { "activities": Array<{ "id": string; "event_type": string; "severity": string; "title": string; "summary": string; "actor_name"?: string; "happened_at": string; }>; "security": { "active_admins": number; "mfa_enabled": number; "active_sessions": number; "last_login_at"?: string; }; };
+export type PlatformSchoolActivityResponse = { "activities": Array<{ "id": string; "event_type": string; "severity": string; "title": string; "summary": string; "actor_name"?: string; "happened_at": string; }>; "security": { "active_admins": number; "active_sessions": number; "last_login_at"?: string; }; };
 
 export type DocumentModelSelection = { "revision": string; "mode": "follow_chat" | "model"; "model_config_id"?: string; "updated_at"?: string; };
 
@@ -171,28 +171,6 @@ export type OnboardingNextAction = { "code": string; "path": string; };
 export type OnboardingCheck = { "key": string; "state": "ready" | "action_required" | "warning" | "optional" | "unavailable"; "severity": "blocking" | "recommended" | "optional"; "title": string; "description"?: string; "action_code"?: string; "action_path"?: string; "metadata"?: Record<string, unknown>; };
 
 export type OnboardingReadiness = { "scope": "platform" | "school"; "ready_for_use": boolean; "completed_count": number; "total_required": number; "checks": Array<OnboardingCheck>; "next_action"?: OnboardingNextAction; };
-
-export type MFAStatusResponse = { "available": boolean; "enabled": boolean; "recovery_codes_remaining": number; };
-
-export type TOTPEnrollmentRequest = { "password": string; };
-
-export type TOTPEnrollmentResponse = { "enrollment_id": string; "secret": string; "qr_code_data_url": string; "expires_at": string; };
-
-export type TOTPConfirmationRequest = { "enrollment_id": string; "code": string; };
-
-export type MFARecoveryCodesResponse = { "status": "enabled" | "rotated"; "recovery_codes": Array<string>; };
-
-export type MFAChallengeStartRequest = { "operation": "mfa.disable" | "mfa.recovery.rotate"; "password": string; };
-
-export type MFAChallengeStartResponse = { "challenge_id": string; "operation": "mfa.disable" | "mfa.recovery.rotate"; "methods": Array<"totp" | "recovery_code">; "expires_at": string; };
-
-export type MFAChallengeVerifyRequest = { "challenge_id": string; "method": "totp" | "recovery_code"; "code": string; };
-
-export type MFAChallengeVerifyResponse = { "status": "verified"; "operation": "mfa.disable" | "mfa.recovery.rotate"; "expires_at": string; };
-
-export type MFACommandRequest = { "challenge_id": string; };
-
-export type MFADisableResponse = { "status": "disabled"; };
 
 export type OrganizationScope = { "tenant_wide": boolean; "school_ids": Array<string>; "grade_ids": Array<string>; "class_ids": Array<string>; };
 
@@ -242,7 +220,7 @@ export type ManagedUserActivationDelivery = { "token": string; "path": string; "
 
 export type ManagedUserActivationDeliveryResponse = { "activation": ManagedUserActivationDelivery; };
 
-export type SecurityEvent = { "id": string; "event_type": "auth.login_succeeded" | "auth.login_failed" | "auth.login_rate_limited" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "auth.sessions_revoked_all" | "auth.account_activated" | "auth.credential_recovery_completed" | "auth.reauthentication_failed" | "auth.session_reauthenticated" | "auth.session_locked" | "auth.mfa_enabled" | "auth.mfa_disabled" | "auth.mfa_recovery_used" | "auth.mfa_recovery_rotated"; "risk_level": "low" | "medium" | "high"; "device_summary": string; "occurred_at": string; };
+export type SecurityEvent = { "id": string; "event_type": "auth.login_succeeded" | "auth.login_failed" | "auth.login_rate_limited" | "auth.logout" | "auth.password_changed" | "auth.session_revoked" | "auth.sessions_revoked_all" | "auth.account_activated" | "auth.credential_recovery_completed" | "auth.reauthentication_failed" | "auth.session_reauthenticated" | "auth.session_locked"; "risk_level": "low" | "medium" | "high"; "device_summary": string; "occurred_at": string; };
 
 export type SecurityEventListResponse = { "events": Array<SecurityEvent>; };
 
@@ -1762,17 +1740,6 @@ export interface components {
     "OnboardingNextAction": OnboardingNextAction;
     "OnboardingCheck": OnboardingCheck;
     "OnboardingReadiness": OnboardingReadiness;
-    "MFAStatusResponse": MFAStatusResponse;
-    "TOTPEnrollmentRequest": TOTPEnrollmentRequest;
-    "TOTPEnrollmentResponse": TOTPEnrollmentResponse;
-    "TOTPConfirmationRequest": TOTPConfirmationRequest;
-    "MFARecoveryCodesResponse": MFARecoveryCodesResponse;
-    "MFAChallengeStartRequest": MFAChallengeStartRequest;
-    "MFAChallengeStartResponse": MFAChallengeStartResponse;
-    "MFAChallengeVerifyRequest": MFAChallengeVerifyRequest;
-    "MFAChallengeVerifyResponse": MFAChallengeVerifyResponse;
-    "MFACommandRequest": MFACommandRequest;
-    "MFADisableResponse": MFADisableResponse;
     "OrganizationScope": OrganizationScope;
     "AuthUser": AuthUser;
     "AuthLoginRequest": AuthLoginRequest;

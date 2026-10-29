@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 import { installApiMocks } from "../fixtures/apiMocks";
 
 test("安全活动合并设备名称并精简侧栏品牌区", async ({ page }) => {
+  const authenticatorRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/\/auth\/(?:mfa|step-up)(?:\/|$)/.test(new URL(request.url()).pathname)) authenticatorRequests.push(request.url());
+  });
   await installApiMocks(page, { role: "school_admin", initiallyAuthenticated: true });
 
   await page.goto("/#/admin/account/sessions", { waitUntil: "domcontentloaded" });
@@ -9,6 +13,11 @@ test("安全活动合并设备名称并精简侧栏品牌区", async ({ page }) 
   await expect(page.getByRole("heading", { name: "账户安全" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "安全活动" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "登录设备" })).toHaveCount(0);
+  await expect(page.getByText(/身份验证器|验证器动态码|重新生成恢复码/)).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "修改密码" })).toBeVisible();
+  await page.getByRole("button", { name: "刷新", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "安全活动" })).toBeVisible();
+  expect(authenticatorRequests).toEqual([]);
   const expandActivity = page.getByRole("button", { name: "展开安全活动" });
   await expect(expandActivity).toHaveAttribute("aria-expanded", "false");
   await expect(page.locator("#account-security-activity-details")).toBeHidden();

@@ -110,7 +110,7 @@
 | STORY-071 | [题目质量与曝光治理](STORY-071-question-quality-exposure-governance.md) | Planned / P0 |
 | STORY-072 | [通知与事件中心](STORY-072-notification-event-center.md) | Planned / P0 |
 | STORY-073 | [学校集成中心](STORY-073-integration-hub.md) | Planned / P0 |
-| STORY-074 | [企业身份与 MFA](STORY-074-enterprise-identity-mfa.md) | Planned / P1 |
+| STORY-074 | [企业身份与学校 SSO](STORY-074-enterprise-identity-mfa.md) | Planned / P1（验证器范围已撤回） |
 | STORY-075 | [跨考试纵向学情](STORY-075-assessment-series-longitudinal-analytics.md) | Planned / P1 |
 | STORY-076 | [考试运营中心](STORY-076-exam-operations-center.md) | Planned / P1 |
 | STORY-077 | [学习反馈与错因体系](STORY-077-learning-feedback-error-taxonomy.md) | Planned / P2 |

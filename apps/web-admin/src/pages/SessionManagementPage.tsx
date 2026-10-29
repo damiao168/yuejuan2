@@ -5,7 +5,6 @@ import { getUserErrorMessage } from "../api/client";
 import { changePassword, listSecurityEvents, listSessions, logoutAll, revokeSession, type DeviceSession, type SecurityEvent } from "../api/auth";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { newPasswordValidator } from "../auth/loginSecurity";
-import { TOTPManagement } from "../components/TOTPManagement";
 import { PersonalReviewBookmarkCleanup } from "../features/grading/workbench/components/PersonalReviewBookmarkCleanup";
 
 interface PasswordFormValues {
@@ -32,16 +31,12 @@ function securityEventLabel(type: string) {
     "auth.session_revoked": "一台设备已退出",
     "auth.sessions_revoked_all": "全部设备已退出",
     "auth.account_activated": "账号已激活",
-    "auth.credential_recovery_completed": "账号恢复已完成",
-    "auth.mfa_enabled": "身份验证器已启用",
-    "auth.mfa_disabled": "身份验证器已关闭",
-    "auth.mfa_recovery_used": "身份验证器恢复码已使用",
-    "auth.mfa_recovery_rotated": "身份验证器恢复码已重新生成"
+    "auth.credential_recovery_completed": "账号恢复已完成"
   };
   return labels[type] ?? "账户安全状态已更新";
 }
 
-export function SessionManagementPage({ onLoggedOut, accountLabel, minimumPasswordLength = 8 }: Readonly<{ onLoggedOut: () => void; accountLabel: string; minimumPasswordLength?: number }>) {
+export function SessionManagementPage({ onLoggedOut, minimumPasswordLength = 8 }: Readonly<{ onLoggedOut: () => void; minimumPasswordLength?: number }>) {
   const { message } = App.useApp();
   const [form] = Form.useForm<PasswordFormValues>();
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
@@ -49,7 +44,6 @@ export function SessionManagementPage({ onLoggedOut, accountLabel, minimumPasswo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [actioning, setActioning] = useState<string>();
-  const [refreshKey, setRefreshKey] = useState(0);
   const [activityExpanded, setActivityExpanded] = useState(false);
 
   const load = useCallback(async () => {
@@ -59,7 +53,6 @@ export function SessionManagementPage({ onLoggedOut, accountLabel, minimumPasswo
       const [sessionResponse, eventResponse] = await Promise.all([listSessions(), listSecurityEvents()]);
       setSessions(sessionResponse.sessions);
       setEvents(eventResponse.events);
-      setRefreshKey((current) => current + 1);
     } catch (loadError) {
       setError(getUserErrorMessage(loadError, "登录设备加载失败"));
     } finally {
@@ -226,15 +219,6 @@ export function SessionManagementPage({ onLoggedOut, accountLabel, minimumPasswo
           <Button type="primary" htmlType="submit" icon={<KeyRound size={16} />} loading={actioning === "password"}>更新密码</Button>
         </Form>
       </section>
-      <details className="workspace-section"><summary>可选试点：身份验证器（尚不强制用于登录与阅卷）</summary>
-      <TOTPManagement
-        personalSession={sessions.some((session) => session.current && session.session_type !== "public_device" && session.session_type !== "service")}
-        accountLabel={accountLabel}
-        refreshKey={refreshKey}
-        onChanged={() => void load()}
-        onLoggedOut={onLoggedOut}
-      />
-      </details>
     </div>
   );
 }

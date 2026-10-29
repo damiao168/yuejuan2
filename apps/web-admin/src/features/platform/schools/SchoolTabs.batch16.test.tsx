@@ -63,7 +63,7 @@ describe("学校详情局部展示", () => {
   });
 
   it("活动颜色保留 warning、success、其他优先级", async () => {
-    api.activity.mockResolvedValue({ security: { active_admins: 1, mfa_enabled: 1, active_sessions: 1 },
+    api.activity.mockResolvedValue({ security: { active_admins: 1, active_sessions: 1 },
       activities: ["warning", "success", "unknown"].map((severity) => ({
         id: severity, event_type: "test", severity, title: severity, summary: "说明", happened_at: "2026-10-05T00:00:00Z",
       })) });

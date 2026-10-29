@@ -110,7 +110,7 @@ export interface SchoolModelHealthResponse {
 
 export interface SchoolActivityResponse {
   activities: Array<{ id: string; event_type: string; severity: string; title: string; summary: string; actor_name?: string; happened_at: string }>;
-  security: { active_admins: number; mfa_enabled: number; active_sessions: number; last_login_at?: string };
+  security: { active_admins: number; active_sessions: number; last_login_at?: string };
 }
 
 const base = "/api/v1/platform/schools";

@@ -199,7 +199,7 @@ func EvaluateLoginRisk(input LoginRiskContext, now time.Time) RiskDecision {
 		decision.Level = RiskLevelHigh
 		decision.Action = RiskActionStepUp
 		decision.RequiredAuthLevel = 2
-		decision.RequiredMethods = []string{"passkey", "enterprise_idp", "totp"}
+		decision.RequiredMethods = []string{"passkey", "enterprise_idp"}
 		decision.MaxAuthAge = 10 * time.Minute
 	case decision.Score >= 25:
 		decision.Level = RiskLevelMedium

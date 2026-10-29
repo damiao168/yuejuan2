@@ -40,6 +40,19 @@ describe("task query and complete selection", () => {
     await act(async () => { queue.setKeyword(value); });
     await act(async () => { await vi.advanceTimersByTimeAsync(300); });
   }
+  it("首页历史入口按reviewed请求本人记录，打开指定历史任务后仍保持历史队列", async () => {
+    window.location.hash = "#/grading?status=reviewed&task=history%2Fcompleted";
+    const completed = { ...task("history/completed"), status: "completed", assigned_to: "admin" };
+    const submitted = { ...task("history/submitted"), status: "submitted", assigned_to: "admin" };
+    api.list.mockImplementation(async filter => ({ tasks: filter.limit === 1 ? [] : [completed, submitted], aggregate: aggregate(2), has_more: false }));
+    await mount(false);
+    expect(queue.taskFilter).toBe("reviewed");
+    expect(queue.selectedTaskId).toBe(completed.id);
+    expect(queue.filteredTasks.map(item => item.id)).toEqual([completed.id, submitted.id]);
+    expect(api.list).toHaveBeenCalledWith(expect.objectContaining({ status: "reviewed", limit: 50 }));
+    expect(api.list.mock.calls.filter(([filter]) => filter.limit === 50).every(([filter]) => filter.status === "reviewed")).toBe(true);
+    expect(api.get).not.toHaveBeenCalled();
+  });
   it("历史下一份等待后续页后定位已完成记录，末尾不回绕或寻找待评任务", async () => {
     const more = deferred<TaskPage>();
     const first = { ...task("history-first"), status: "submitted", assigned_to: "admin" };

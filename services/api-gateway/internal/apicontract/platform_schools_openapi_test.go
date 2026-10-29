@@ -52,7 +52,7 @@ func TestPlatformSchoolsOpenAPIContract(t *testing.T) {
 	if _, ok := modelHealthProperties["credential_hint"]; !ok {
 		t.Fatal("model health contract must expose only the redacted credential hint")
 	}
-	for _, forbidden := range []string{"api_key", "credential_ciphertext", "password", "totp_secret"} {
+	for _, forbidden := range []string{"api_key", "credential_ciphertext", "password"} {
 		if _, ok := modelHealthProperties[forbidden]; ok {
 			t.Fatalf("sensitive field %q must not appear in model health contract", forbidden)
 		}

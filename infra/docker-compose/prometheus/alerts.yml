@@ -8,7 +8,7 @@ groups:
           severity: critical
         annotations:
           summary: Distributed authentication rate limiting is degraded
-          description: Production login and MFA verification fail closed until Redis-backed rate limiting recovers.
+          description: Production login verification fails closed until Redis-backed rate limiting recovers.
 
   - name: edugrade-managed-models
     rules:

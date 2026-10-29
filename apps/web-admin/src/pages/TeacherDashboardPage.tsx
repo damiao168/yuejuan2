@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button } from "antd";
 import { ArrowRight, BookOpenCheck, Gavel, RefreshCw } from "lucide-react";
 import { getSafeUserText, getUserErrorMessage } from "../api/client";
@@ -13,6 +13,10 @@ import { QuestionBankHandoffs } from "../features/question-bank/QuestionBankHand
 
 interface TeacherHomeData {
   reviewTasks: ReviewTask[];
+  reviewHistory: ReviewTask[];
+  historyCount: number;
+  historyCursor?: string;
+  historyHasMore: boolean;
   arbitrationTasks: ArbitrationTask[];
   warnings: string[];
 }
@@ -76,7 +80,7 @@ function TeacherWorkSummary({ canReview, canArbitrate, warnings, activeReviewCou
   const arbitrationUnavailable = warnings?.includes("仲裁任务暂时不可用");
   const reviewCount = reviewUnavailable ? "—" : activeReviewCount;
   const arbitrationCount = arbitrationUnavailable ? "—" : activeArbitrationCount;
-  const completedCount = reviewUnavailable ? "—" : completedReviewCount;
+  const completedCount = warnings?.includes("历史评阅暂时不可用") ? "—" : completedReviewCount;
   return (
     <section className="teacher-summary" aria-label="工作摘要">
       {canReview ? <div><span>待阅卷</span><strong>{reviewCount}</strong></div> : null}
@@ -92,42 +96,90 @@ async function fetchTeacherHome(user: SessionUser): Promise<TeacherHomeData> {
   // 阅卷和仲裁分别降级，某一接口失败时仍展示另一类已分派任务并提示缺失。
   const results = await Promise.allSettled([
     canReview ? listReviewTasks({ assigned_to: user.id }) : Promise.resolve({ tasks: [] }),
-    canArbitrate ? listArbitrationTasks({ assigned_to: user.id }) : Promise.resolve({ arbitration_tasks: [] })
+    canArbitrate ? listArbitrationTasks({ assigned_to: user.id }) : Promise.resolve({ arbitration_tasks: [] }),
+    // 历史单独按状态分页，不能从待办首屏推导，否则完成全部任务后会无记录可看。
+    canReview ? listReviewTasks({ assigned_to: user.id, status: "reviewed", limit: 10 }) : Promise.resolve({ tasks: [], has_more: false, next_cursor: undefined, aggregate: undefined })
   ]);
   const warnings: string[] = [];
   if (results[0].status === "rejected") warnings.push("阅卷任务暂时不可用");
   if (results[1].status === "rejected") warnings.push("仲裁任务暂时不可用");
+  if (results[2].status === "rejected") warnings.push("历史评阅暂时不可用");
+  const history = results[2].status === "fulfilled" ? results[2].value : undefined;
+  const reviewHistory = (history?.tasks ?? []).filter(task => ["submitted", "completed"].includes(task.status));
   return {
     reviewTasks: results[0].status === "fulfilled" ? results[0].value.tasks : [],
+    reviewHistory,
+    historyCount: history?.aggregate?.total_count ?? reviewHistory.length,
+    historyCursor: history?.next_cursor,
+    historyHasMore: Boolean(history?.has_more),
     arbitrationTasks: results[1].status === "fulfilled" ? results[1].value.arbitration_tasks : [],
     warnings
   };
 }
 
 export function TeacherDashboardPage({ user, onNavigate }: Readonly<{ user: SessionUser; onNavigate: (path: string) => void }>) {
+  // 切换账号时重建本人的列表和游标，旧账号的分页回执不能进入新页面。
+  return <TeacherDashboardContent key={JSON.stringify([user.tenant, user.id])} user={user} onNavigate={onNavigate} />;
+}
+
+function TeacherDashboardContent({ user, onNavigate }: Readonly<{ user: SessionUser; onNavigate: (path: string) => void }>) {
   const [data, setData] = useState<TeacherHomeData>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string>();
+  const requestVersion = useRef(0);
+  const historyPending = useRef(false);
 
   const load = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError(undefined);
+    setHistoryError(undefined);
+    setHistoryLoading(false);
+    historyPending.current = false;
     try {
-      setData(await fetchTeacherHome(user));
+      const result = await fetchTeacherHome(user);
+      if (version === requestVersion.current) setData(result);
     } catch (loadError) {
-      setError(getUserErrorMessage(loadError, "教师工作台加载失败"));
+      if (version === requestVersion.current) setError(getUserErrorMessage(loadError, "教师工作台加载失败"));
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
     void load();
+    return () => { requestVersion.current += 1; };
   }, [load]);
+
+  const loadMoreHistory = async () => {
+    if (loading || historyPending.current || !data?.historyHasMore) return;
+    if (!data.historyCursor) { setHistoryError("历史记录分页位置缺失，请刷新后重试"); return; }
+    const cursor = data.historyCursor;
+    const version = requestVersion.current;
+    historyPending.current = true;
+    setHistoryLoading(true);
+    setHistoryError(undefined);
+    try {
+      const page = await listReviewTasks({ assigned_to: user.id, status: "reviewed", limit: 10, cursor });
+      if (version !== requestVersion.current) return;
+      if (page.has_more && (!page.next_cursor || page.next_cursor === cursor)) throw new Error("历史记录分页位置未推进");
+      setData(current => current ? { ...current,
+        reviewHistory: [...new Map([...current.reviewHistory, ...page.tasks.filter(task => ["submitted", "completed"].includes(task.status))].map(task => [task.id, task])).values()],
+        historyCount: page.aggregate?.total_count ?? current.historyCount,
+        historyCursor: page.next_cursor, historyHasMore: Boolean(page.has_more)
+      } : current);
+    } catch (loadError) {
+      if (version === requestVersion.current) setHistoryError(getUserErrorMessage(loadError, "历史评阅加载失败，请重试"));
+    } finally {
+      if (version === requestVersion.current) { historyPending.current = false; setHistoryLoading(false); }
+    }
+  };
 
   const activeReviews = useMemo(() => (data?.reviewTasks ?? []).filter((task) => activeReviewStatuses.has(task.status)), [data?.reviewTasks]);
   const activeArbitrations = useMemo(() => (data?.arbitrationTasks ?? []).filter((task) => activeArbitrationStatuses.has(task.status)), [data?.arbitrationTasks]);
-  const completedReviews = (data?.reviewTasks ?? []).filter((task) => ["submitted", "completed"].includes(task.status)).length;
+  const completedReviews = data?.historyCount ?? 0;
   const canReview = hasAnyPermission(user, ["review:manage", "review:work"]);
   const canArbitrate = hasAnyPermission(user, ["arbitration:manage", "arbitration:work"]);
   const learningLinks = [
@@ -194,6 +246,19 @@ export function TeacherDashboardPage({ user, onNavigate }: Readonly<{ user: Sess
         ))}</div>
         <div className="teacher-task-more">{canReview ? <Button type="link" onClick={() => onNavigate("/grading")}>查看全部阅卷任务</Button> : null}{canArbitrate ? <Button type="link" onClick={() => onNavigate("/arbitration")}>查看全部仲裁任务</Button> : null}</div>
       </section> : emptyTaskState}
+
+      {canReview ? <section className="teacher-task-pane" aria-label="历史评阅">
+        <div className="section-head"><h2>历史评阅</h2><Button type="link" onClick={() => onNavigate("/grading?status=reviewed")}>查看全部历史评阅</Button></div>
+        {data?.reviewHistory.length ? <div className="teacher-task-list">{data.reviewHistory.map(task => (
+          <button type="button" key={task.id} onClick={() => onNavigate(`/grading?status=reviewed&task=${encodeURIComponent(task.id)}`)}>
+            <span className="teacher-task-icon"><BookOpenCheck size={17} /></span>
+            <span><strong>第 {task.question_no} 题评阅记录</strong><small>{reviewTaskDetail(task)}</small></span>
+            <StatusTag tone="success">{taskStatusLabels[task.status]}</StatusTag><ArrowRight size={16} />
+          </button>
+        ))}</div> : !data?.warnings.includes("历史评阅暂时不可用") ? <p className="muted">暂无历史评阅记录</p> : null}
+        {historyError ? <Alert type="error" showIcon message={historyError} /> : null}
+        {data?.historyHasMore ? <div className="teacher-task-more"><Button loading={historyLoading} disabled={loading} onClick={() => void loadMoreHistory()}>加载更多历史记录</Button></div> : null}
+      </section> : null}
 
       {learningLinks.length ? <section className="teacher-learning-links"><h2>教学工作</h2><div>{learningLinks.map((link) => <Button key={link.path} onClick={() => onNavigate(link.path)}>{link.title}<ArrowRight size={15} /></Button>)}</div></section> : null}
       <QuestionBankHandoffs key={`${user.tenant}:${user.id}`} user={user} onNavigate={onNavigate} />

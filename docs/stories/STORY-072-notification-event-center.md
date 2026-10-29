@@ -29,4 +29,4 @@ Go 测试路由与 envelope；真实 PostgreSQL 验证回滚无事件、重复�
 
 ## 规划审阅与实施记录
 
-规划已根据[现有 outbox](../../services/api-gateway/internal/outbox/outbox.go)收敛为增量工作。账号安全前置切片已为四类 MFA 安全变更增加事务内语义事实与 `awaiting_channel` 通知待办，但没有收件人路由、站内通知、外部渠道或投递状态，不能声明已经具有完整通知领域。后续 fan-out 必须保留该待办，使用 `(event_id, recipient, channel)` 去重，不能把现有日志 Publisher 的 `published_at` 当作送达。
+规划已根据[现有 outbox](../../services/api-gateway/internal/outbox/outbox.go)收敛为增量工作。原验证器试点的专用通知意图表随 `000220` 退役；既有 `audit_log` 和 `event_outbox` 历史事实保留，见[退役记录](../architecture/teacher-account-security-mfa-pilot.md)。后续通知中心应按本 Story 的业务事件范围另行建立收件人路由和投递状态，不继续依赖该专用表，也不自动把退役功能的旧事件发送给用户。fan-out 仍使用 `(event_id, recipient, channel)` 去重，不能把现有日志 Publisher 的 `published_at` 当作送达。

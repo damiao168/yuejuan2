@@ -4,6 +4,8 @@
 > 本文描述建模时的**当前工作区**，包含用户已有未提交改动；不是该提交的纯净快照。
 > 本轮只进行静态架构理解，没有执行生产服务、数据库迁移、外部模型调用或全面 Bug 审查。风险列表是下一轮审查定位，不是缺陷清单。
 
+2026-10-29 认证链路修订：身份验证器已退役，当前 auth 入口和实体链路已去掉其处理器、凭据及挑战；`000220` 清理专用表并保留审计。历史统计、迁移索引和旧架构证据仍对应各自建模日期，不能据此启用已删除能力。升级边界见[退役记录](architecture/teacher-account-security-mfa-pilot.md)。
+
 ## 0. 范围、方法与可信度
 
 ### 0.1 覆盖范围
@@ -164,7 +166,7 @@ Go import 图也不是全部业务依赖图：很多跨域关系通过 SQL JOIN�
 | web-admin pages／features | 考试准备、试卷导入、采集、阅卷质控、发布／题库 | pages/*；features/grading/workbench、paper-import、question-bank、members | shell → 特性 hooks → api/* → HTTP | 草稿、revision、commandId、处理进度 |
 | student-portal | 当前公开考试／成绩、逐题证据和申诉 | App.tsx、api.ts | 学生 → SDK → student／score-release／question-appeal API | PublishedExam、StudentResult、release_id |
 | desktop-client | 离线扫描 spool、上传恢复、阅卷草稿、设备诊断 | App.tsx、OfflineWorkbench、src/lib、src-tauri/src/lib.rs | React ↔ Tauri IPC；HTTP → captureupload／review | SyncQueueItem、离线草稿、源文件、凭据 |
-| auth | 人／服务身份、会话、激活恢复、TOTP、角色授权、范围解析、审计 | handlers.go、mfa_handlers.go、access_scope.go | 所有受保护路由；依赖 SQL、Redis guard、db tenant context | User、Session、角色权限、挑战、security_epoch |
+| auth | 人／服务身份、会话、激活恢复、角色授权、范围解析、审计 | handlers.go、handlers_session.go、step_up.go、access_scope.go | 所有受保护路由；依赖 SQL、Redis guard、db tenant context | User、Session、角色权限、security_epoch；step_up.go 保留近期密码认证 |
 | org | 租户、学校／学年／年级／班级、学生学籍及教师绑定 | handlers.go、enrollment_postgres.go | 组织页面／auth scope／exam；依赖 auth | Tenant、Student、Enrollment、teacher_class |
 | exam | 单科考试、多科 session／模板、考生快照、状态 | handlers.go、status.go、session_postgres.go | 准备页面 → exam；下游 paper、capture、score 读考试 | Exam、ExamSession、candidate snapshot |
 | paper | 试卷题目、答案／rubric、模板绑定、就绪与文档导入 | handlers.go、configuration_handlers.go、document_import.go | 页面／questionbank／workers；依赖 assessment、files、runtime、AI parser | Paper、Question、Rubric、Template、PaperImportJob |
@@ -243,9 +245,9 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | Tenant、School、Grade、Class：org/types.go | org/handlers.go → store_postgres.go | UpdateTenant；组织／学籍相关写入 | 未见统一硬删除 API | auth scope、exam、dashboard；租户状态影响可用性 |
 | Student、StudentEnrollment：org/types.go | CreateStudent／ImportStudentsCSV；enrollment_postgres.go | UpdateStudent／TransferStudent，保留学籍关系 | 未见通用删除入口 | roster、candidate snapshot、submission、学生身份；学年／班级变化不应改写历史考试名单 |
-| User：auth/types.go | bootstrap.go、org 租户初始化、user_admin.CreateManagedUser、学生关联路径 | activation／recovery、UpdateManagedUserStatus、MFA／密码安全变更 | 禁用／撤销会话为关键终止；不假定有通用用户删除 | 所有认证／授权；status、security_epoch、角色与绑定 |
+| User：auth/types.go | bootstrap.go、org 租户初始化、user_admin.CreateManagedUser、学生关联路径 | activation／recovery、UpdateManagedUserStatus、密码安全变更 | 禁用／撤销会话为关键终止；不假定有通用用户删除 | 所有认证／授权；status、security_epoch、角色与绑定 |
 | Session：auth/types.go | login → CreateSessionInput／Store.CreateSession | lock、reauthenticate、refresh activity、revoke | Logout → DeleteSession（按 Store 撤销语义）；超时失效 | Cookie／Bearer 验证；session_type、过期、锁定、认证新鲜度／等级 |
-| 激活／恢复／TOTP／MFA challenge | auth/activation.go、recovery.go、mfa*.go | 一次性消费、启用／禁用、恢复码消费、purpose/action scope | 到期／消费／撤销；通知意图另存 | 账户安全 API；挑战不能走通用响应回放保存一次性秘密 |
+| 激活／密码恢复凭据 | auth/activation.go、recovery.go | 一次性消费、账号激活、密码替换、安全版本更新 | 到期／消费／撤销 | 账户安全 API；明文链接只在签发时返回，持久化摘要 |
 | Exam、ExamSession：exam/types.go | CreateExam、CreateExamSession／session_postgres.go | UpdateExam／UpdateStatus；paper readiness；score 定稿发布 | Archive 为业务终止入口 | 全流程；draft→configured→ready→collecting→grading→reviewing→finalized→published→archived 为阶段主轴，非任意可调用转移 |
 | ExamCandidateSnapshot | exam/candidate_snapshot_postgres.go | RefreshCandidates；准备／采集阶段约束 | 快照保留，不能以现班级替代历史名单 | 印卡／签到／成绩 roster |
 | Paper、Question、AnswerKey、Rubric：paper/types.go | CreatePaper／CreateQuestion／CreateRubric；ApplyPaperImport；题库 Materialize | UpdateQuestion、追加 rubric／solution、配置变更 | DeleteQuestion 在 paper/store_postgres.go；具体条件与软删除约束由 Store／迁移决定 | grading／review／assessment／report；配置在 readiness 时冻结 |
@@ -296,14 +298,14 @@ ApiClient 为写请求补 CSRF 标记和 Idempotency-Key，统一 API 错误／r
 
 ### 5.2 身份认证与资源授权
 
-`LoginPage／desktop／worker → /auth/login 或 /auth/token → 严格 JSON／字段与设备模式检查 → Redis layered login guard → FindUserByLogin → VerifyPassword → 账户／角色／安全条件 → 可选 MFA → CreateSession → Cookie 或 opaque Bearer token`。
+`LoginPage／desktop／worker → /auth/login 或 /auth/token → 严格 JSON／字段与设备模式检查 → Redis layered login guard → FindUserByLogin → VerifyPassword → 账户／角色／安全条件 → CreateSession → Cookie 或 opaque Bearer token`。
 
 - 新密码使用 Argon2id，兼容 bcrypt 验证及升级。
 - token 是 32 随机字节的编码；数据库查找使用 SHA-256 token hash，不是 JWT 验签模型。
 - 后续请求：token extraction → FindUserBySession → 用户状态、会话安全信息 → AccessScopeResolver → WithUser／WithAccessScope → permission + ResourceBoundary → Store 的 tenant／组织／任务条件。
 - WithUser 绑定 db tenant context；启用 RLS 时 connector 激活 tenant runtime role、设置 tenant_id，连接重置恢复 unscoped。
 - AccountAuth／ReauthenticationAuth 与完整资源认证分开，支持没有数据域权限的账户安全操作／锁定会话再认证。
-- 敏感操作额外 recent auth／MFA action scope；MFA 一次性凭据不进入通用幂等回放。
+- 已登记的关键操作额外检查近期密码认证；身份验证器和操作级动态码挑战已移除，业务权限和组织范围检查仍保留。
 - 动态风险规则存在，但 config 只接受 off／shadow；不能将评分器的 RiskAction 枚举当当前强制风控行为。
 
 ### 5.3 核心事务写入：人工提交
@@ -433,7 +435,7 @@ ResourceBoundary 检查已识别的路径变量；集合列表、body 中对象 
 
 exam_owner、workspace、experience 是前端工作区概念，不能未经 auth/role_policy.go／迁移核对就当数据库角色。
 
-题库额外有 bank ACL、group ACL、action、reviewer binding、作者／审阅关系和发布状态，需单独建矩阵。敏感操作如成绩发布、导出、密钥配置还有近期认证／TOTP 挑战等要求；以 server.go 对每条路由的包装为准。
+题库额外有 bank ACL、group ACL、action、reviewer binding、作者／审阅关系和发布状态，需单独建矩阵。成绩正式发布与回滚、账号恢复等已登记关键操作还检查近期密码认证；导出和日常治理仍检查权限与范围，不能笼统视为都需要重复认证。以当前路由注册的包装为准，身份验证器挑战已移除。
 
 ### 6.3 Worker 授权
 
@@ -457,7 +459,7 @@ exam_owner、workspace、experience 是前端工作区概念，不能未经 auth
 | 审计／事件 | audit_log、event_outbox 等数据库记录 | structured log、监控 | 日志投递不是外部业务消息队列消费证明 |
 | 离线扫描 | 原生 SQLite＋加密 spool | React queue 及开发 fallback | 浏览器状态不能替代原生重启恢复事实 |
 
-敏感数据包括姓名／学号／手机号／学籍、答卷原图／答案、教师私有备注、评分／统计、登录设备与风险信息、第三方 API key、MFA secret／recovery code。数据跨越 browser／native、API、DB、MinIO、worker、外部 provider 多个边界；正常日志脱敏与公开投影应分别验证。
+敏感数据包括姓名／学号／手机号／学籍、答卷原图／答案、教师私有备注、评分／统计、登录设备与风险信息和第三方 API key。身份验证器密钥与恢复码专用表由 `000220` 删除，历史备份仍需按原敏感度管理。数据跨越 browser／native、API、DB、MinIO、worker、外部 provider 多个边界；正常日志脱敏与公开投影应分别验证。
 
 ## 8. 后台任务／异步体系
 
@@ -502,7 +504,7 @@ exam_owner、workspace、experience 是前端工作区概念，不能未经 auth
 - Windows Credential Manager、WIA／PowerShell、SQLite：桌面独有边界。
 - Prometheus／Grafana：Compose observability profile。
 - 本轮未发现支付业务、支付 SDK 或业务支付回调；CSP 中 payment=() 不是支付功能。
-- MFA security notification intent 是存储事实；未确认独立邮件／短信投递闭环，不把“通知意图”写成通知已送达。
+- 身份验证器专用 security notification intent 表已退役；历史 audit/outbox 事实保留。日志发布仍不等于独立邮件／短信已送达，后续通知中心不能依赖被删除的专用表。
 
 ### 9.2 部署与构建
 
@@ -536,7 +538,7 @@ Compose 声明 PostgreSQL、Redis、MinIO、Qdrant、API、web-admin、AI servic
 
 | 类别 | 区域 | 为什么优先 |
 | --- | --- | --- |
-| 认证 | auth login／session／activation／recovery／MFA、security_epoch | 多种会话与一次性凭据；撤销／锁定／再认证／设备模式影响全部业务 |
+| 认证 | auth login／session／activation／recovery、security_epoch、近期密码认证 | 多种会话与一次性激活／恢复凭据；撤销／锁定／再认证／设备模式影响全部业务 |
 | 权限 | AccessScope、ResourceBoundary、RLS、题库 ACL、worker TaskScope | 多租户＋学校／班级＋任务指派＋公开本人＋服务跨租户，单层遗漏可越权 |
 | 数据写入／事务 | review submit、grade current replacement、score finalize／publish、receipt／audit | 重试、锁、revision、唯一当前结果、审计必须与真实业务事实对齐 |
 | 状态机／复杂流程 | paper import generation／run／source_revision；capture 配准／模板／纠正；scoring cancel／retry | 多来源异步回调、旧页／旧代次结果、恢复与当前有效结果交织 |
@@ -559,7 +561,7 @@ Compose 声明 PostgreSQL、Redis、MinIO、Qdrant、API、web-admin、AI servic
 | 报表／导出 | report、score export、csvsafe、公开统计／批注 | 敏感字段、CSV 注入、统计口径与小样本／可见性 |
 | 运维／恢复 | migrations、backup／restore、repair、outbox／projection | 特权身份、校验／锁、恢复后跨存储一致性与可观测性 |
 | 契约 | OpenAPI、生成 SDK、路由覆盖例外、手写 API clients | 多套类型与旧新接口并存；只生成客户端不能保证调用正确 |
-| 前端异步 | pending commands、轮询、预取／草稿、MFA flow | 重复写、失租后提交、过期上下文／缓存和显示权限 |
+| 前端异步 | pending commands、轮询、预取／草稿、近期密码认证 | 重复写、失租后提交、过期上下文／缓存和显示权限 |
 
 ### Low／当前未见业务实现
 
@@ -593,7 +595,7 @@ Compose 声明 PostgreSQL、Redis、MinIO、Qdrant、API、web-admin、AI servic
 - 必须区分 source file／normalized page／active crop、OCR text confidence／专用 parser quality、原始 math artifact／effective correction。
 - AI 输出是受治理建议／证据；human_grade、question_grade、final_grade、submission_grade、score_release 是不同层次。公开 release 的 item／question facts 和 current 指针是学生结果的重要权威来源。
 - 权限是 Session + RBAC + AccessScope + 资源／列表／Store过滤 + tenant／RLS；前端 workspace／role 标签不能替代后端授权。Worker 还需要有效 task lease capability。
-- 密码 Argon2id，兼容 bcrypt；Session opaque token 的 hash 存库；不要按 JWT 模型审查。风险配置目前 off／shadow；MFA 由开关和 scoped challenges 决定。
+- 密码 Argon2id，兼容 bcrypt；Session opaque token 的 hash 存库；不要按 JWT 模型审查。风险配置目前 off／shadow；身份验证器及其配置开关、scoped challenges 已移除。
 - HTTP idempotency_record、业务 commandreceipt、paper／scoring／batch 专用命令记录、AI 进程内缓存是不同机制。响应丢失不等于事务未提交。
 - Worker queue 位于 PostgreSQL；看 lease_token、expiry、attempt、source_type／ID、revision、schema／payload hash 与 generation。不能只审通用 Complete 而忽略 source commit。
 - 文档解析是 Go 内置 durable executor + AI NDJSON；前端主要轮询。数学 verifier 是 HTTP＋受限子进程，不是通用脚本执行。
@@ -619,7 +621,7 @@ Compose 声明 PostgreSQL、Redis、MinIO、Qdrant、API、web-admin、AI servic
 | [apicontract](D:/project/yuejuan/services/api-gateway/internal/apicontract/a14_a24_openapi_test.go) | 0 / 0；16 |  |  |  |
 | [appeal](D:/project/yuejuan/services/api-gateway/internal/appeal/handlers.go) | 9 / 3372；4 | auth, httpx, logger, pagination | server | ai_grade, answer_segment, answer_segment_answer, app_user, appeal, exam, exam_question_snapshot, final_grade, human_grade, ocr_result, permission, question_appeal, question_appeal_event, question_rubric, regrade_job, role_permission, score_adjustment, score_release, score_release_item, score_release_question, submission_grade, user_role |
 | [assessment](D:/project/yuejuan/services/api-gateway/internal/assessment/http.go) | 10 / 1577；2 | auth, httpx, logger | aieligibility, calibration, grading, gradingevaluation, paper, processing, questionbank, regrade, review, seedquality, server, subjective, workspace | exam, exam_question_snapshot, file_asset, question, question_archetype, question_assessment_config, scoring_evidence, subject_profile, submission |
-| [auth](D:/project/yuejuan/services/api-gateway/internal/auth/handlers.go) | 30 / 8213；20 | csvsafe, db, httpx, logger, pagination | aidisagreement, aieligibility, answergroup, appeal, assessment, backmark, calibration, capture, captureupload, dashboard, evidence, exam, files, goldpaper, graderdrift, grading, gradingevaluation, handlers, idempotency, imagequality, mathunderstanding, modelcalibration, modelgovernance, ocr, orchestrator, org, paper, processing, qualitydashboard, questionbank, regrade, regraderelease, releasegate, report, review, reviewannotation, score, scorerelease, seedquality, segment, server, studentportal, subjective, submission, workerruntime, workspace | agent_task, ai_grade, ai_human_disagreement, answer_segment, answer_sheet_print_batch, answer_sheet_print_sheet, answer_sheet_template, app_user, appeal, arbitration_task, audit_log, auth_activation, auth_mfa_challenge, auth_mfa_recovery_code, auth_recovery, auth_risk_event, auth_security_notification_intent, auth_session, auth_totp, auth_trusted_device, backmark_batch, backmark_item, capture_batch, capture_page, event_outbox, exam, exam_class, exam_paper, file_asset, grade, math_understanding_artifact, ocr_task, omr_calibration_session, orchestration_run, page_registration_correction, page_registration_run, paper_import_job, permission, question, question_appeal, regrade_item, regrade_job, review_annotation, review_task, role, role_permission, school, school_class, student, subjective_grading_batch, submission, submission_page, teacher_class, tenant, user_role |
+| [auth](D:/project/yuejuan/services/api-gateway/internal/auth/handlers.go) | 30 / 8213；20 | csvsafe, db, httpx, logger, pagination | aidisagreement, aieligibility, answergroup, appeal, assessment, backmark, calibration, capture, captureupload, dashboard, evidence, exam, files, goldpaper, graderdrift, grading, gradingevaluation, handlers, idempotency, imagequality, mathunderstanding, modelcalibration, modelgovernance, ocr, orchestrator, org, paper, processing, qualitydashboard, questionbank, regrade, regraderelease, releasegate, report, review, reviewannotation, score, scorerelease, seedquality, segment, server, studentportal, subjective, submission, workerruntime, workspace | agent_task, ai_grade, ai_human_disagreement, answer_segment, answer_sheet_print_batch, answer_sheet_print_sheet, answer_sheet_template, app_user, appeal, arbitration_task, audit_log, auth_activation, auth_recovery, auth_risk_event, auth_session, auth_trusted_device, backmark_batch, backmark_item, capture_batch, capture_page, event_outbox, exam, exam_class, exam_paper, file_asset, grade, math_understanding_artifact, ocr_task, omr_calibration_session, orchestration_run, page_registration_correction, page_registration_run, paper_import_job, permission, question, question_appeal, regrade_item, regrade_job, review_annotation, review_task, role, role_permission, school, school_class, student, subjective_grading_batch, submission, submission_page, teacher_class, tenant, user_role |
 | [backmark](D:/project/yuejuan/services/api-gateway/internal/backmark/handlers.go) | 5 / 2056；4 | auth, httpx, logger, pagination, paper, regrade, review | qualitydashboard, server | backmark_batch, backmark_grade, backmark_item, human_grade, review_task |
 | [buildinfo](D:/project/yuejuan/services/api-gateway/internal/buildinfo/buildinfo.go) | 1 / 19；0 |  | handlers |  |
 | [calibration](D:/project/yuejuan/services/api-gateway/internal/calibration/handlers.go) | 5 / 1293；1 | assessment, auth, goldpaper, httpx, logger | seedquality, server | grader_calibration_attempt, grader_calibration_policy, grader_calibration_session, grader_question_qualification |
@@ -759,8 +761,9 @@ Compose 声明 PostgreSQL、Redis、MinIO、Qdrant、API、web-admin、AI servic
 | [000143_auth_identity_security_epoch.sql](D:/project/yuejuan/services/api-gateway/migrations/000143_auth_identity_security_epoch.sql) | auth_activation, auth_recovery |
 | [000144_question_bank_snapshot_import.sql](D:/project/yuejuan/services/api-gateway/migrations/000144_question_bank_snapshot_import.sql) | question_bank_import |
 | [000147_auth_dynamic_risk_shadow.sql](D:/project/yuejuan/services/api-gateway/migrations/000147_auth_dynamic_risk_shadow.sql) | auth_trusted_device, auth_risk_event |
-| [000149_auth_totp_scoped_challenges.sql](D:/project/yuejuan/services/api-gateway/migrations/000149_auth_totp_scoped_challenges.sql) | auth_totp, auth_mfa_recovery_code, auth_mfa_challenge |
-| [000150_auth_mfa_security_notification_intents.sql](D:/project/yuejuan/services/api-gateway/migrations/000150_auth_mfa_security_notification_intents.sql) | auth_security_notification_intent |
+| [000149_auth_totp_scoped_challenges.sql](D:/project/yuejuan/services/api-gateway/migrations/000149_auth_totp_scoped_challenges.sql) | 历史创建 auth_totp、auth_mfa_recovery_code、auth_mfa_challenge；000220 删除，原迁移不改 |
+| [000150_auth_mfa_security_notification_intents.sql](D:/project/yuejuan/services/api-gateway/migrations/000150_auth_mfa_security_notification_intents.sql) | 历史创建 auth_security_notification_intent；000220 删除，原迁移不改 |
+| [000220_retire_authenticator.sql](../services/api-gateway/migrations/000220_retire_authenticator.sql) | 退役验证器四张专用表及汇总依赖；audit_log、event_outbox 历史事实保留 |
 
 ## 附录 C. 关键源码导航
 

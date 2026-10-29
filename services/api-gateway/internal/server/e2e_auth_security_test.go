@@ -192,7 +192,7 @@ WHERE session.token_hash=$1
 	}
 }
 
-// 浏览器绑定仅持久化不透明哈希；二次登录可识别设备，但密码观察所得设备不能变成 MFA 信任。
+// 浏览器绑定仅持久化不透明哈希；二次登录可识别设备，但不能据此提升认证等级。
 func e2eAssertPasswordObservedDeviceFacts(t *testing.T, fixture teacherAccountSecurityFixture) {
 	t.Helper()
 	db, oldUser, userID, deviceCookie, recognizedSession := fixture.DB, fixture.OldUser, fixture.Login.UserID, fixture.Login.DeviceCookie, fixture.Login.RecognizedSession
@@ -222,7 +222,7 @@ WHERE tenant_id=$1::uuid AND user_id=$2::uuid AND purpose='login'
 ORDER BY occurred_at DESC, id DESC
 LIMIT 1
 `, oldUser.TenantID, userID).Scan(&recognized, &trusted); err != nil || !recognized || trusted {
-		t.Fatalf("second browser login must recognize but never MFA-trust a password-observed device: recognized=%t trusted=%t err=%v", recognized, trusted, err)
+		t.Fatalf("second browser login must recognize but never strong-authentication trust a password-observed device: recognized=%t trusted=%t err=%v", recognized, trusted, err)
 	}
 }
 

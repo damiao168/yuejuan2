@@ -107,7 +107,7 @@ func assertPlatformSchoolReadModel(t *testing.T, test platformSchoolReadModelCas
 			t.Errorf("missing JSON key %q in %s", key, response.Body.String())
 		}
 	}
-	if strings.Contains(response.Body.String(), "password") || strings.Contains(response.Body.String(), "credential_ciphertext") || strings.Contains(response.Body.String(), "totp_secret") {
+	if strings.Contains(response.Body.String(), "password") || strings.Contains(response.Body.String(), "credential_ciphertext") {
 		t.Fatalf("sensitive account/model data leaked: %s", response.Body.String())
 	}
 	if (strings.HasPrefix(test.path, "/api/v1/platform/schools?") || strings.Contains(test.path, "/usage?")) && !strings.Contains(response.Body.String(), `"arbitration_requests":`) {

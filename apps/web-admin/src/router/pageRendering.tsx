@@ -232,7 +232,7 @@ export function renderAppRouteContent(context: Readonly<RouteRenderingContext>):
     case "/system/models":
       return <PlatformModelConfigPage />;
     case "/account/sessions":
-      return <SessionManagementPage key={`${user.tenant}:${user.id}`} onLoggedOut={logout} accountLabel={`${user.tenant}/${user.username}`} minimumPasswordLength={passwordMinimumForRoles(user.roles)} />;
+      return <SessionManagementPage key={`${user.tenant}:${user.id}`} onLoggedOut={logout} minimumPasswordLength={passwordMinimumForRoles(user.roles)} />;
     case "/grading/subjective-batches":
       return <SubjectiveGradingBatchPage key={`${user.tenant}:${user.id}`} scopeKey={`${user.tenant}:${user.id}`} />;
     default:

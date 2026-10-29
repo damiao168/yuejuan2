@@ -1,6 +1,36 @@
 import { expect, test } from "@playwright/test";
 import { createGradingWorkbenchMockState, installGradingWorkbenchMocks } from "../fixtures/gradingWorkbenchMocks";
 
+test("教师首页没有待办时仍可分页查看本人历史，并从已完成记录进入只读评分", async ({ page }, testInfo) => {
+  const state = createGradingWorkbenchMockState(13);
+  for (const [index, task] of state.tasks.entries()) {
+    task.status = index % 2 ? "completed" : "submitted";
+    if (index === 12) task.assigned_to = "other-reviewer";
+    state.grades.set(task.id, { id: `grade-${task.id}`, review_task_id: task.id, reviewer_id: task.assigned_to,
+      score: index === 0 ? 0 : 7, max_score: 9, rubric_selections: [], comments: `历史评语${index + 1}`,
+      created_at: "2026-10-28T08:10:00Z" });
+  }
+  await installGradingWorkbenchMocks(page, state);
+  await page.goto("/teacher/dashboard");
+  const summary = page.getByRole("region", { name: "工作摘要", exact: true });
+  await expect(summary).toContainText("已提交12");
+  const history = page.getByRole("region", { name: "历史评阅", exact: true });
+  await expect(history.locator(".teacher-task-list button")).toHaveCount(10);
+  await history.getByRole("button", { name: "加载更多历史记录", exact: true }).click();
+  await expect(history.locator(".teacher-task-list button")).toHaveCount(12);
+  await expect(history).not.toContainText("fixture-13");
+  await page.screenshot({ path: testInfo.outputPath("teacher-dashboard-history.png"), fullPage: true });
+  await history.locator(".teacher-task-list button").filter({ hasText: "fixture-02" }).click();
+  await expect(page).toHaveURL(/teacher\/grading\?status=reviewed&task=review-task-02/);
+  const record = page.getByRole("region", { name: "本题评分记录", exact: true });
+  await expect(record).toContainText("已提交得分：7 / 9");
+  await expect(record).toContainText("历史评语2");
+  await expect(page.getByRole("spinbutton", { name: "最终得分" })).toHaveCount(0);
+  expect(state.claims).toEqual([]);
+  expect(state.submissions).toEqual([]);
+  expect(state.draftWrites).toEqual([]);
+});
+
 test("教师可回看本人已提交和已完成评分，零分不丢失，历史下一份不领取或交分", async ({ page }) => {
   const state = createGradingWorkbenchMockState(4);
   for (const [index, status, score] of [[0, "submitted", 0], [1, "completed", 7], [3, "completed", 9]] as const) {

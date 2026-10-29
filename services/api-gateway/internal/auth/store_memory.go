@@ -10,26 +10,22 @@ import (
 )
 
 type MemoryStore struct {
-	mu                     sync.RWMutex
-	users                  map[string]UserWithPassword
-	roles                  map[string]map[string]AssignableRole
-	tenantStatuses         map[string]string
-	sessions               map[string]memorySession
-	activations            map[string]memoryActivation
-	recoveries             map[string]memoryRecovery
-	devices                map[string]memoryDeviceBinding
-	riskEvents             []RiskEvent
-	totpRecords            map[string]TOTPRecord
-	mfaChallenges          map[string]MFAChallenge
-	mfaRecovery            map[string]map[string]bool
-	mfaNotificationIntents []memorySecurityNotificationIntent
-	wechatChallenges       map[string]WechatLoginChallenge
-	wechatIdentities       map[string]struct{ TenantID, UserID string }
-	boundaries             map[string]ResourceBoundary
-	audits                 []AuditRecord
-	auditSeq               int
-	userSeq                int
-	sessionSeq             int
+	mu               sync.RWMutex
+	users            map[string]UserWithPassword
+	roles            map[string]map[string]AssignableRole
+	tenantStatuses   map[string]string
+	sessions         map[string]memorySession
+	activations      map[string]memoryActivation
+	recoveries       map[string]memoryRecovery
+	devices          map[string]memoryDeviceBinding
+	riskEvents       []RiskEvent
+	wechatChallenges map[string]WechatLoginChallenge
+	wechatIdentities map[string]struct{ TenantID, UserID string }
+	boundaries       map[string]ResourceBoundary
+	audits           []AuditRecord
+	auditSeq         int
+	userSeq          int
+	sessionSeq       int
 }
 
 type memorySession struct {
@@ -86,9 +82,6 @@ func NewMemoryStore() *MemoryStore {
 		recoveries:       map[string]memoryRecovery{},
 		devices:          map[string]memoryDeviceBinding{},
 		riskEvents:       []RiskEvent{},
-		totpRecords:      map[string]TOTPRecord{},
-		mfaChallenges:    map[string]MFAChallenge{},
-		mfaRecovery:      map[string]map[string]bool{},
 		wechatChallenges: map[string]WechatLoginChallenge{},
 		wechatIdentities: map[string]struct{ TenantID, UserID string }{},
 		boundaries:       map[string]ResourceBoundary{},

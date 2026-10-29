@@ -87,7 +87,12 @@ export function useGradingQueuePages({ canManageTasks, canWork, currentUserId, i
         assertRequestedTaskScope(task, { canManageTasks, canWork, currentUserId, initialExamId, personalScope }, queueScope);
         scopedTasks.unshift(task);
       }
-      if (requestedId) { setSelectedTaskId(requestedId); filtersRef.current.taskFilter = "all"; setTaskFilter("all"); requestedTaskRef.current = ""; }
+      if (requestedId) {
+        setSelectedTaskId(requestedId);
+        // 历史入口只保留已评任务队列；普通任务深链仍放宽状态，避免目标被待办筛选隐藏。
+        const targetFilter = filtersRef.current.taskFilter === "reviewed" ? "reviewed" : "all";
+        filtersRef.current.taskFilter = targetFilter; setTaskFilter(targetFilter); requestedTaskRef.current = "";
+      }
       setTasks(scopedTasks);
       setTaskCatalogue((current) => appendTaskPage(current, scopedTasks));
       setMatchedAggregate(result.aggregate ?? null);

@@ -33,8 +33,6 @@ func NewIdentityModule(cfg config.Config, stores IdentityStores, loginGuard auth
 			CookieSecure:           cfg.Auth.SessionCookieSecure,
 			RiskMode:               cfg.Auth.RiskMode,
 			DeviceBindingTTL:       cfg.Auth.DeviceBindingTTL,
-			MFAEnabled:             cfg.Auth.MFAEnabled,
-			MFAMasterKey:           cfg.Auth.MFAMasterKey,
 			LoginGuard:             loginGuard,
 			LoginLimiterFailClosed: cfg.Auth.LoginLimiterFailClosed,
 			TrustedProxyCIDRs:      cfg.Security.TrustedProxyCIDRs,

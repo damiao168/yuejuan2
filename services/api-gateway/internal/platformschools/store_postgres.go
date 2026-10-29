@@ -244,9 +244,9 @@ WHERE ae.tenant_id=$1::uuid ORDER BY ae.happened_at DESC,ae.id DESC LIMIT $2`, t
 	}
 	var lastLogin sql.NullTime
 	err = s.db.QueryRowContext(ctx, `
-SELECT COALESCE(metrics.active_admin_count,0),COALESCE(metrics.mfa_enabled_admin_count,0),COALESCE(metrics.active_session_count,0),
+SELECT COALESCE(metrics.active_admin_count,0),COALESCE(metrics.active_session_count,0),
   metrics.last_login_at
-FROM platform_school_metrics metrics WHERE metrics.tenant_id=$1::uuid`, tenantID).Scan(&result.Security.ActiveAdmins, &result.Security.MFAEnabled, &result.Security.ActiveSessions, &lastLogin)
+FROM platform_school_metrics metrics WHERE metrics.tenant_id=$1::uuid`, tenantID).Scan(&result.Security.ActiveAdmins, &result.Security.ActiveSessions, &lastLogin)
 	if err != nil {
 		return ActivityResult{}, err
 	}

@@ -64,7 +64,7 @@ flowchart LR
 | 3 | [071 题目质量与曝光治理](../stories/STORY-071-question-quality-exposure-governance.md) | P0 | 版本级质量信号、审核治理与题池健康 | 069F、070C |
 | 4 | [072 通知与事件中心](../stories/STORY-072-notification-event-center.md) | P0 | 语义事件和站内通知 | 已有 outbox；无需等待 071 的所有指标 |
 | 5 | [073 学校集成中心](../stories/STORY-073-integration-hub.md) | P0 | OneRoster CSV Diff/Apply，再扩展 REST/Webhook/LTI | 既有组织与发布事实；Webhook 依赖 072 |
-| 6 | [074 企业身份与 MFA](../stories/STORY-074-enterprise-identity-mfa.md) | P1 | OIDC、TOTP、高风险操作 step-up | 既有 auth；学校 IdP 配置 |
+| 6 | [074 企业身份与学校 SSO](../stories/STORY-074-enterprise-identity-mfa.md) | P1 | OIDC、学校身份绑定与会话撤销；验证器范围已撤回 | 既有 auth；真实学校 IdP |
 | 7 | [075 跨考试纵向学情](../stories/STORY-075-assessment-series-longitudinal-analytics.md) | P1 | 发布版本可追溯的系列趋势 | Score Release；069C 的受控知识点增强可比性 |
 | 8 | [076 考试运营中心](../stories/STORY-076-exam-operations-center.md) | P1 | 多科考试阻断、进度与可解释估时 | 既有 exam_session、dashboard、processing、review、release gate |
 | 9 | [077 学习反馈与错因体系](../stories/STORY-077-learning-feedback-error-taxonomy.md) | P2 | 证据引用、教师确认的反馈和复习候选 | 069、075、已发布题目事实与模型治理 |
@@ -143,7 +143,7 @@ PostgreSQL 验证必须提供实际迁移、约束、事务回滚、并发和重
 - [QTI 文档](https://www.1edtech.org/standards/qti/index) 用于 070F 边界交换；内部领域模型保持独立。
 - [OneRoster 官方技术概览](https://www.1edtech.org/standards/oneroster) 定义 CSV/REST 与 roster、gradebook、resource 服务；073 初版仅实现声明的 CSV rostering 子集。
 - [LTI 官方技术概览](https://www.1edtech.org/standards/lti) 区分 Launch 与 AGS、NRPS、Deep Linking 服务；073 不以登录成功宣称完成全部 LTI Advantage。
-- [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html) 和 [WebAuthn](https://www.w3.org/TR/webauthn-3/) 用于 074 身份与强认证边界。
+- [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html) 用于 074 学校 SSO 的协议与身份绑定边界；本地身份验证器已退役，不属于该路线。
 
 用户方案中的 ATA、CTT→IRT、DKT/SAKT/AKT 论文列为后续专项研究线索。本次未复现论文结果或逐篇验证其样本适用性，不把文献中的模型效果当作本项目验收结论；070E 和后续知识追踪应另建实验与数据审批记录。
 
