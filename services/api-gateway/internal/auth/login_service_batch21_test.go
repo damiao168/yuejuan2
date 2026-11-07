@@ -187,7 +187,8 @@ func assertLoginCredentialCASStageOrder(t *testing.T, conflict bool) {
 	}
 	store, service := newLoginBatch21Service(t, &events, confirmErr, nil, nil)
 	result, err := service.Login(context.Background(), validLoginCommand())
-	want := []string{"source", "find", "account", "evaluate", "credentials"}
+	// 先查明账号身份，再选择不会互相影响的账号/来源组合桶。
+	want := []string{"find", "account", "evaluate", "credentials"}
 	if conflict {
 		requireLoginFailure(t, err, LoginFailureInvalidCredentials)
 		if sessions, err := store.ListSessions(context.Background(), "tenant-1", "user-1", "", time.Now()); err != nil || len(sessions) != 0 {

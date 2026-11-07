@@ -154,7 +154,7 @@ export interface ManagedModelAPIConfigInput {
   is_default: boolean;
 }
 
-export type ManagedModelAPIConfigUpdateInput = Omit<ManagedModelAPIConfigInput, "tenant_id" | "provider_key">;
+export type ManagedModelAPIConfigUpdateInput = Omit<ManagedModelAPIConfigInput, "tenant_id" | "provider_key"> & { expected_updated_at: string };
 
 export interface ManagedAPIProbeResult {
   ok: boolean;

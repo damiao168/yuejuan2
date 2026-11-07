@@ -79,7 +79,7 @@ func (h *Handler) ConfigureQuestion(w http.ResponseWriter, r *http.Request) {
 		TenantID: user.TenantID, ActorID: user.ID,
 		Action: "assessment.question_profile_configured", TargetType: "question", TargetID: item.QuestionID,
 		Reason:    "configure versioned subject, evidence and scoring policy",
-		IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+		IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 	httpx.JSON(w, http.StatusOK, map[string]any{"assessment_profile": item})
 }

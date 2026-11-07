@@ -175,6 +175,10 @@ func (s *Service) RecordCandidate(ctx context.Context, tenantID, itemID, actorID
 		return Item{}, ErrInvalidInput
 	}
 	input.CandidateGradeID, input.Comment = strings.TrimSpace(input.CandidateGradeID), strings.TrimSpace(input.Comment)
+	// 直接给总分时可不勾细则；空选择仍必须按 JSON 数组保存，不能让合法的省略字段变成数据库约束错误。
+	if input.RubricSelections == nil {
+		input.RubricSelections = []RubricSelection{}
+	}
 	return s.store.RecordCandidate(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(itemID), strings.TrimSpace(actorID), input)
 }
 

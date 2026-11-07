@@ -35,11 +35,12 @@ func TestArchivedResourceBoundaryRejectsWritesAndPreservesReads(t *testing.T) {
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
 			store := &archiveBoundaryFixture{MemoryStore: NewMemoryStore(), archived: scenario.archived, lookupErr: scenario.err}
-			store.AddResourceBoundary("exam", "exam-1", ResourceBoundary{TenantID: "tenant-1", ExamID: "exam-1"})
+			store.AddResourceBoundary("exam", "exam-1", ResourceBoundary{TenantID: "tenant-1", SchoolID: "school-1", ExamID: "exam-1"})
 			mux := http.NewServeMux()
 			mux.Handle(scenario.method+" /exams/{id}", RequireRequestResourceBoundary(store)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })))
 			req := httptest.NewRequest(scenario.method, "/exams/exam-1", nil)
-			req = req.WithContext(WithAccessScope(req.Context(), AccessScope{TenantID: "tenant-1", ExamIDs: []string{"exam-1"}}))
+			// 场景先具备该校管理权，再检查归档状态；教学可见范围不足以执行考试写入。
+			req = req.WithContext(WithAccessScope(req.Context(), AccessScope{TenantID: "tenant-1", ActorID: "admin-1", SchoolIDs: []string{"school-1"}, ExamIDs: []string{"exam-1"}, schoolWide: true, schoolManagementIDs: []string{"school-1"}}))
 			rec := httptest.NewRecorder()
 			mux.ServeHTTP(rec, req)
 			if rec.Code != scenario.want {

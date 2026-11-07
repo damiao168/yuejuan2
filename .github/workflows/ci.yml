@@ -23,6 +23,12 @@ jobs:
         with:
           node-version: 24
       - run: npm run ci:workflow-lint
+      - run: node scripts/ci/check-python-test-coverage.mjs
+      - run: node scripts/sync-prompt-injection-rules.mjs --check
+      - run: node --test scripts/ci/postgres-test-gate.test.mjs
+      - name: Verify migration upgrade ordering and failure recovery
+        shell: pwsh
+        run: ./scripts/test-migration-upgrade.ps1
 
   web-static:
     runs-on: ubuntu-latest
@@ -81,6 +87,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: web-admin-build-performance
+          # 日常构建证据只保留一周，避免重复构建占满制品配额并阻断发布门禁。
+          retention-days: 7
           path: |
             output/build-performance/web-admin.json
             apps/web-admin/dist/.vite/manifest.json
@@ -161,6 +169,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: web-e2e-mocked-evidence
+          retention-days: 7
           path: |
             output/playwright/test-results
             output/playwright/report
@@ -317,7 +326,8 @@ jobs:
 
   go-postgres:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Go 单包最多运行 45 分钟；作业另留迁移、其他包、清理与后续契约检查的时间。
+    timeout-minutes: 90
     services:
       postgres:
         image: postgres:16-alpine
@@ -331,6 +341,15 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U edugrade -d edugrade_e2e_backend_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
@@ -349,22 +368,13 @@ jobs:
         with:
           go-version: '1.26.10'
           cache-dependency-path: services/api-gateway/go.sum
-      - name: PostgreSQL workflows
+      - name: All PostgreSQL tests must execute
         env:
           EDUGRADE_E2E_DATABASE_URL: postgres://edugrade@127.0.0.1:5432/edugrade_e2e_backend_test?sslmode=disable
-        run: |
-          test -n "${EDUGRADE_E2E_DATABASE_URL}"
-          go test ./internal/server -count=1 -timeout 20m -v
-
-      - name: Authorization contract against migrated PostgreSQL
-        env:
-          EDUGRADE_E2E_DATABASE_URL: postgres://edugrade@127.0.0.1:5432/edugrade_e2e_backend_test?sslmode=disable
-        run: go test ./internal/auth -run '^TestAuthorizationContractPostgres$' -count=1 -v
-
-      - name: Answer-sheet library transaction boundaries
-        env:
-          YUEJUAN_TEMPLATE_LIBRARY_TEST_DATABASE_URL: postgres://edugrade@127.0.0.1:5432/edugrade_e2e_backend_test?sslmode=disable
-        run: go test ./internal/paper -run '^TestTemplateLibraryPostgres' -count=1 -v
+          EDUGRADE_REDIS_TEST_ADDRESS: 127.0.0.1:6379
+        working-directory: .
+        # 单一入口建立随机迁移库，兼容旧夹具变量，并解析测试事件拒绝任何数据库用例跳过。
+        run: node scripts/ci/run-postgres-tests.mjs
 
       - name: Recovery bucket remapping against PostgreSQL
         shell: pwsh
@@ -481,8 +491,12 @@ jobs:
             command: python -m pytest -q services/math-verification-worker/tests
           - name: math-bench
             package: ''
-            install: echo "No editable package required"
-            command: python -m pytest -q lab/evals/math-recognition/test_math_bench.py
+            install: python -m pip install sympy==1.14.0
+            command: python -m pytest -q lab/evals/math-recognition
+          - name: infrastructure-and-tools
+            package: ''
+            install: python -m pip install -r docs/architecture/tools/requirements.txt
+            command: python -m pytest -q tests/infra infra/docker-compose/scripts scripts/evals scripts/test_fujian_math_batch29.py docs/architecture/tools
           - name: ai-services
             package: ''
             install: python -m pip install -e packages/worker-runtime-python
@@ -619,6 +633,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: edugrade-sboms
+          # CI 清单供近期排查；正式发布的镜像清单由 release-images 单独保留和签名。
+          retention-days: 30
           path: sbom-*.cdx.json
           if-no-files-found: error
 
@@ -691,6 +707,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: real-system-e2e-evidence
+          retention-days: 7
           path: output/playwright/real-test-results
           if-no-files-found: ignore
       - name: Remove isolated E2E project

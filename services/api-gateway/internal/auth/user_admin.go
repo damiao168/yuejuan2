@@ -32,7 +32,8 @@ func (h *Handler) ListManagedUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	if !actorScope.IsPlatform && !actorScope.TenantWide {
 		filter.RestrictSchools = true
-		filter.SchoolIDs = append([]string(nil), actorScope.SchoolIDs...)
+		// 跨校授课只增加教学可见范围；账号列表只能使用实际管理的学校。
+		filter.SchoolIDs = actorScope.ManagedSchoolIDs()
 	}
 	users, err := h.store.ListManagedUsers(r.Context(), actor.TenantID, filter)
 	if err != nil {
@@ -74,8 +75,17 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := normalizeManagedUserInput(&input); err != nil {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_phone", "phone must be a valid mobile number")
+		writeManagedUserCreateError(w, r, err)
 		return
+	}
+	roles := managedRoleCodes(input)
+	if IsReviewTeacherRoles(roles) {
+		// 学校发放的教师密码只能用于首次登录；缺少密码不能悄悄转成另一种邀请流程。
+		if input.Password == "" || input.PasswordConfirm == "" || input.Password != input.PasswordConfirm {
+			httpx.Error(w, r, http.StatusBadRequest, "initial_password_confirmation_required", "initial password and matching confirmation are required")
+			return
+		}
+		input.MustChangePassword = true
 	}
 	invited := input.Password == ""
 	// 邀请可直接使用用户名；仅在没有用户名时才用手机号或工号生成登录名，激活要求不变。
@@ -126,7 +136,7 @@ func (h *Handler) CreateManagedUser(w http.ResponseWriter, r *http.Request) {
 	RecordAudit(r.Context(), h.store, AuditEvent{
 		TenantID: actor.TenantID, ActorID: actor.ID, Action: "auth.user_created",
 		TargetType: "user", TargetID: created.ID,
-		AfterValue: map[string]any{"username": created.Username, "display_name": created.DisplayName, "phone": created.PhoneMasked, "employee_no": created.EmployeeNo, "role_codes": created.Roles, "school_id": created.SchoolID, "class_ids": input.ClassIDs, "status": created.Status},
+		AfterValue: map[string]any{"username": created.Username, "display_name": created.DisplayName, "phone": created.PhoneMasked, "employee_no": created.EmployeeNo, "role_codes": created.Roles, "school_id": created.SchoolID, "teaching_subjects": created.TeachingSubjects, "status": created.Status},
 		Reason:     "create organization user", IPAddress: h.remoteIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 	response := map[string]any{"user": created}
@@ -147,13 +157,17 @@ func normalizeManagedUserInput(input *CreateManagedUserInput) error {
 	input.RoleCode = strings.TrimSpace(input.RoleCode)
 	input.RoleCodes = uniqueSortedIDs(input.RoleCodes)
 	input.SchoolID = strings.TrimSpace(input.SchoolID)
-	input.ClassIDs = uniqueSortedIDs(input.ClassIDs)
+	var err error
+	input.TeachingSubjects, err = NormalizeTeachingSubjects(input.TeachingSubjects)
+	if err != nil {
+		return err
+	}
 	if input.Phone == "" {
 		return nil
 	}
 	normalizedPhone, err := NormalizePhone(input.Phone)
 	if err != nil {
-		return err
+		return errInvalidProfilePhone
 	}
 	input.Phone = normalizedPhone
 	return nil
@@ -161,6 +175,10 @@ func normalizeManagedUserInput(input *CreateManagedUserInput) error {
 
 func writeManagedUserCreateError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, errInvalidProfilePhone):
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_phone", "phone must be a valid mobile number")
+	case errors.Is(err, ErrInvalidTeachingSubjects):
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_teaching_subjects", "select at least one valid teaching subject for a review teacher")
 	case errors.Is(err, ErrUsernameExists):
 		httpx.Error(w, r, http.StatusConflict, "username_exists", "username already exists")
 	case errors.Is(err, ErrIdentityExists):

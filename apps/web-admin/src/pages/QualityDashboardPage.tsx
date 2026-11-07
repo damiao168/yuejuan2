@@ -17,6 +17,8 @@ import { BackmarkBatchHistory, BackmarkSummaryContent, QualityDashboardOverview,
 import { GoldPaperManagerDrawer } from "../features/gold-papers";
 import { CalibrationDrawer } from "../features/calibration";
 import { AnswerGroupingDrawer } from "../features/answer-groups";
+import { RegradeJobsPanel } from "../features/score-management/components/RegradeJobsPanel";
+import { routeSearchParams } from "../router/query";
 
 function errorMessage(error: unknown) {
   return getUserErrorMessage(error, "质量看板暂时无法加载，请稍后重试");
@@ -40,7 +42,7 @@ function backmarkPreviewTimeRange(range: BackmarkPreview["time_range"]) {
   return "无匹配记录";
 }
 
-export function QualityDashboardPage({ examId, canManage = false, currentUserId, onNavigate }: Readonly<{ examId: string; canManage?: boolean; currentUserId?: string; onNavigate?: (path: string) => void }>) {
+export function QualityDashboardPage({ examId, canManage = false, canManageScores = false, currentUserId, onNavigate }: Readonly<{ examId: string; canManage?: boolean; canManageScores?: boolean; currentUserId?: string; onNavigate?: (path: string) => void }>) {
   const { message } = App.useApp();
   const [data, setData] = useState<QualityDashboard>();
   const [loading, setLoading] = useState(true);
@@ -488,6 +490,10 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
     }
   };
 
+  // ?regrade=<jobId> 滚动到复评面板并高亮该任务；?regrade 不带值时只滚动到面板。
+  const linkedRegrade = routeSearchParams();
+  const focusedRegradeId = linkedRegrade.has("regrade") ? linkedRegrade.get("regrade")?.trim() ?? "" : undefined;
+
   return (
     <section className="page-stack">
       <QualityDashboardOverview data={data} error={error} canManage={canManage} onSeed={openSeed} onIncidents={openIncidents} onBackmark={openBackmark} onRefresh={() => void load()} onRecompute={(questionId) => void refreshQuestionDrift(questionId)} onHandleFinding={handleFinding} />
@@ -495,8 +501,13 @@ export function QualityDashboardPage({ examId, canManage = false, currentUserId,
       {materialAction?.type === "calibration" ? <CalibrationDrawer open examId={examId} questionId={materialAction.questionId} graderId={currentUserId} canManagePolicy={canManage} questionDefaults={(() => { const question = data.questions.find(row => row.question.id === materialAction.questionId)?.question; return question ? { questionId: question.id, archetypeCode: question.archetype_code, maxScore: question.max_score } : undefined; })()} onClose={() => { setMaterialAction(undefined); void load(); }} /> : null}
       {materialAction?.type === "groups" ? <AnswerGroupingDrawer open examId={examId} initialQuestionId={materialAction.questionId} availableQuestions={data.questions.map(row => ({ id: row.question.id, question_no: row.question.question_no, question_type: row.question.archetype_code }))} canManage={canManage} canReadReview={canManage} onNavigate={onNavigate} onClose={() => { setMaterialAction(undefined); void load(); }} /> : null}
       {onNavigate ? <Button onClick={() => onNavigate(`/exams/${encodeURIComponent(examId)}/grading`)}>前往本场阅卷工作区</Button> : null}
-      <Drawer title="盲测策略" width={520} open={seedOpen} onClose={() => setSeedOpen(false)} extra={canManage ? <Button type="primary" disabled={!seedReady || seedLoading} loading={seedLoading} onClick={() => void saveSeedPolicy()}>保存</Button> : null}>
+      {/* 复评任务接口要 review:manage，成绩和发布版本读取要 score:manage；缺一项就不挂载面板。 */}
+      {canManage && canManageScores ? <RegradeJobsPanel key={examId} examId={examId} focusedRegradeId={focusedRegradeId} onNavigate={onNavigate} /> : null}
+      <Drawer title="盲测策略" width={520} open={seedOpen} onClose={() => setSeedOpen(false)} extra={canManage ? <Button type="primary" disabled={!seedReady || seedLoading} loading={seedLoading} onClick={() => void saveSeedPolicy()}>{seedPolicy.current?.needs_confirmation ? "保存并重新确认" : "保存"}</Button> : null}>
         {seedReadError ? <Alert type="error" showIcon message="当前题目的盲测策略读取失败，暂不能保存" description={seedReadError} action={<Button onClick={() => void loadSeedPolicy(seedQuestionId)}>重新读取盲测策略</Button>} /> : null}
+        {seedPolicy.current?.needs_confirmation ? <Alert type="warning" showIcon message={seedPolicy.current.confirmation_reason === "gold_set_missing"
+          ? "缺少可用盲投标准卷，本题暂不插入盲测；请补齐标准卷后保存重新确认，普通阅卷可继续。"
+          : "盲投标准卷已变化，本题暂不插入盲测；请核对策略后保存重新确认，普通阅卷可继续。"} /> : null}
         <Form form={policyForm} layout="vertical" disabled={!canManage || seedLoading}>
           <Form.Item label="题目" required>
             <Select value={seedQuestionId} options={data.questions.map((item) => ({ value: item.question.id, label: `${item.question.question_no} · ${assessmentArchetypeLabel(item.question.archetype_code)}` }))} onChange={(value) => void loadSeedPolicy(value)} />

@@ -111,7 +111,14 @@ func (h *Handler) Reauthenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	clientIP := h.remoteIP(r)
-	attempt := LoginAttempt{TenantCode: user.TenantCode, Identifier: user.Username, AccountID: user.ID, IPAddress: clientIP}
+	passwordHash, err := h.store.FindPasswordHash(r.Context(), user.TenantID, user.ID)
+	if err != nil && !errors.Is(err, ErrInvalidCredentials) {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
+		return
+	}
+	// 登录和重新核验使用同一凭据版本；恢复密码后，旧版本的失败额度不再影响当前密码。
+	attempt := LoginAttempt{TenantCode: user.TenantCode, Identifier: user.Username, AccountID: user.ID,
+		CredentialVersion: HashToken(passwordHash), IPAddress: clientIP}
 	limit, blocked := h.loginGuard.Check(r.Context(), attempt, time.Now().UTC())
 	if !h.loginLimiterAvailable(w, r) {
 		return
@@ -121,15 +128,25 @@ func (h *Handler) Reauthenticate(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusTooManyRequests, "login_rate_limited", "too many failed authentication attempts; retry later")
 		return
 	}
-	passwordHash, err := h.store.FindPasswordHash(r.Context(), user.TenantID, user.ID)
-	if err != nil && !errors.Is(err, ErrInvalidCredentials) {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "auth_service_unavailable", authServiceUnavailable)
-		return
+	if guard, ok := h.loginGuard.(loginReservationGuard); ok {
+		limit, blocked = guard.Reserve(r.Context(), &attempt, time.Now().UTC())
+		if !h.loginLimiterAvailable(w, r) {
+			guard.ReleaseReservation(r.Context(), attempt)
+			return
+		}
+		if blocked {
+			w.Header().Set("Retry-After", strconv.Itoa(max(1, int(limit.RetryAfter.Seconds()))))
+			httpx.Error(w, r, http.StatusTooManyRequests, "login_rate_limited", "too many failed authentication attempts; retry later")
+			return
+		}
 	}
 	passwordValid := err == nil && CheckPassword(passwordHash, input.Password)
 	if !passwordValid {
 		h.reauthenticationFailure(w, r, user, attempt, clientIP)
 		return
+	}
+	if guard, ok := h.loginGuard.(loginReservationGuard); ok {
+		guard.ReleaseReservation(r.Context(), attempt)
 	}
 	token := sessionToken(r, h.cookieName)
 	now := time.Now().UTC()

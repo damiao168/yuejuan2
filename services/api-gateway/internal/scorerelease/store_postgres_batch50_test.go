@@ -112,7 +112,8 @@ func studentBatch50ReadSteps(t *testing.T, visible bool) []studentBatch50Step {
 	if visible {
 		steps = append(steps,
 			studentBatch50Step{fragment: "AND submission_id = $3::uuid", args: []any{"tenant", "frozen-release", "submission"}, columns: 10},
-			studentBatch50Step{fragment: "SELECT DISTINCT ON(seg.question_id)", args: []any{"tenant", "submission"}, columns: 4})
+			studentBatch50Step{fragment: "SELECT DISTINCT ON(seg.question_id)", args: []any{"tenant", "submission"}, columns: 4},
+			studentBatch50Step{fragment: "FROM facts f CROSS JOIN target t", args: []any{"tenant", "exam", "frozen-release", "student"}, columns: 11})
 	}
 	return steps
 }
@@ -154,7 +155,7 @@ func TestBatch50PostgresStudentQuestionProjectionKeepsPolicyAndOwnedCopies(t *te
 	for _, tc := range []studentQuestionProjectionCase{
 		{"hidden", VisibilityPolicy{}, nil, "not_public"},
 		{"small cohort", VisibilityPolicy{ShowQuestionStatistics: true}, nil, "small_cohort"},
-		{"public", VisibilityPolicy{ShowQuestionStatistics: true, ShowFeedback: true, ShowRubricSummary: true}, map[string]*StudentQuestionReference{"q": ref}, ""},
+		{"public", VisibilityPolicy{ShowQuestionStatistics: true, ShowFeedback: true, ShowRubricSummary: true}, map[string]studentQuestionAggregates{"q": {Cohort: ref}}, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			assertStudentQuestionVisibilityAndCopies(t, tc, question, presentation, geometry, ref)
@@ -173,7 +174,7 @@ func TestBatch50PostgresStudentQuestionProjectionKeepsPolicyAndOwnedCopies(t *te
 type studentQuestionProjectionCase struct {
 	name   string
 	policy VisibilityPolicy
-	stats  map[string]*StudentQuestionReference
+	stats  map[string]studentQuestionAggregates
 	reason string
 }
 

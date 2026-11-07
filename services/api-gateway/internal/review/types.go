@@ -384,6 +384,8 @@ type ArbitrationFilter struct {
 	ScopeSchoolIDs  []string
 	ScopeExamIDs    []string
 	ScopeTaskIDs    []string
+	// 内存实现没有 exam 学校表；由认证处理器提供可信边界解析器，不能把导航考试当作管理学校。
+	Access auth.ExamCollectionAccess
 }
 
 type FinalGrade struct {

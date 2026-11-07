@@ -29,13 +29,14 @@ func TestManagementProgressBatch8StagePrecedence(t *testing.T) {
 		label     string
 		ready     int
 		published int
+		complete  int
 		available bool
 	}{
 		{name: "empty", status: "unavailable", label: "暂无法获取进度", available: true},
 		{name: "empty_archived", archived: true, status: "archived", label: "已归档", available: true},
-		{name: "archive_over_publication", statuses: []string{"published"}, facts: []managementSubjectFacts{{Published: true, Available: true}}, archived: true, status: "archived", label: "已归档", published: 1, available: true},
-		{name: "confirmed_publication_over_draft", statuses: []string{"draft", "draft"}, facts: []managementSubjectFacts{{Published: true, Available: true}, {Published: true, Available: true}}, status: "published", label: "已发布", published: 2, available: true},
-		{name: "partial_publication_over_preparation", statuses: []string{"ready", "configured"}, facts: []managementSubjectFacts{{Published: true, Ready: true, Available: true}, {Available: true}}, status: "partially_published", label: "部分已发布 · 1/2 科", ready: 1, published: 1, available: true},
+		{name: "archive_over_publication", statuses: []string{"published"}, facts: []managementSubjectFacts{{Published: true, Available: true}}, archived: true, status: "archived", label: "已归档", published: 1, complete: 1, available: true},
+		{name: "confirmed_publication_over_draft", statuses: []string{"draft", "draft"}, facts: []managementSubjectFacts{{Published: true, Available: true}, {Published: true, Available: true}}, status: "published", label: "已发布", published: 2, complete: 2, available: true},
+		{name: "partial_publication_over_preparation", statuses: []string{"ready", "configured"}, facts: []managementSubjectFacts{{Published: true, Ready: true, Available: true}, {Available: true}}, status: "partially_published", label: "部分已发布 · 1/2 科", ready: 1, published: 1, complete: 1, available: true},
 		{name: "draft_without_facts", statuses: []string{"draft", "draft"}, status: "draft", label: "草稿"},
 		{name: "all_ready_confirmed", statuses: []string{"ready", "configured"}, facts: []managementSubjectFacts{{Ready: true, Available: true}, {Ready: true, Available: true}}, status: "ready", label: "准备完成", ready: 2, available: true},
 		{name: "ready_facts_missing", statuses: []string{"ready", "configured"}, status: "unavailable", label: "暂无法确认准备进度"},
@@ -46,6 +47,13 @@ func TestManagementProgressBatch8StagePrecedence(t *testing.T) {
 		{name: "unknown_uniform", statuses: []string{"unknown"}, status: "unavailable", label: "暂无法获取进度"},
 		{name: "unknown_and_known", statuses: []string{"unknown", "reviewing"}, status: "ongoing", label: "进行中 · 1 科复核中"},
 		{name: "mixed_phase_order", statuses: []string{"finalized", "collecting", "draft"}, status: "ongoing", label: "进行中 · 1 科草稿、1 科答卷导入中、1 科已定稿"},
+		{name: "manual_finalized_is_not_grading_proof", statuses: []string{"finalized"}, facts: []managementSubjectFacts{{Available: true}}, status: "finalized", label: "已定稿", available: true},
+		{name: "complete_grading_before_confirmation", statuses: []string{"grading"}, facts: []managementSubjectFacts{{GradingComplete: true, Available: true}}, status: "grading", label: "阅卷中", complete: 1, available: true},
+		{name: "grading_proof_unavailable", statuses: []string{"finalized"}, facts: []managementSubjectFacts{{GradingComplete: true}}, status: "finalized", label: "已定稿"},
+		{name: "finalized_and_publication_different_subjects", statuses: []string{"finalized", "draft"}, facts: []managementSubjectFacts{{GradingComplete: true, Available: true}, {Published: true, Available: true}}, status: "partially_published", label: "部分已发布 · 1/2 科", published: 1, complete: 2, available: true},
+		// 已定稿科目的正式发布不能再计一次；另一科复核中时整场仍未结束。
+		{name: "finalized_and_publication_same_subject", statuses: []string{"finalized", "reviewing"}, facts: []managementSubjectFacts{{Published: true, GradingComplete: true, Available: true}, {Available: true}}, status: "partially_published", label: "部分已发布 · 1/2 科", published: 1, complete: 1, available: true},
+		{name: "published_status_without_receipt_is_not_complete", statuses: []string{"finalized", "published"}, status: "unavailable", label: "暂无法确认发布进度"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -60,7 +68,7 @@ func TestManagementProgressBatch8StagePrecedence(t *testing.T) {
 					facts[id] = tc.facts[index]
 				}
 			}
-			want := ManagementProgress{Status: tc.status, Label: tc.label, TotalCount: len(exams), ReadyCount: tc.ready, PublishedCount: tc.published, Counts: counts, FactsAvailable: tc.available}
+			want := ManagementProgress{Status: tc.status, Label: tc.label, TotalCount: len(exams), ReadyCount: tc.ready, PublishedCount: tc.published, GradingCompleteCount: tc.complete, Counts: counts, FactsAvailable: tc.available}
 			got := managementProgress(exams, facts, tc.archived)
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("进度分支或计数改变：got=%#v want=%#v", got, want)

@@ -220,7 +220,7 @@ func TestStudentTableFieldsRequireExplicitReleasePolicy(t *testing.T) {
 	}
 }
 
-func TestStudentTableFieldsStayHiddenAndSmallCohortsSuppressStatistics(t *testing.T) {
+func TestStudentAnswersAreIncludedAndSmallCohortsSuppressStatistics(t *testing.T) {
 	store := NewMemoryStore()
 	service := NewService(store)
 	facts := make([]SubmissionFact, 0, 9)
@@ -247,8 +247,8 @@ func TestStudentTableFieldsStayHiddenAndSmallCohortsSuppressStatistics(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Questions[0].CorrectAnswer != "" || result.Questions[0].ActualAnswer != "" {
-		t.Fatalf("answers must require ShowAnswers: %#v", result.Questions[0])
+	if result.Questions[0].CorrectAnswer != "B" || result.Questions[0].ActualAnswer != "A" {
+		t.Fatalf("published question answers should not require a separate switch: %#v", result.Questions[0])
 	}
 	if result.Reference == nil || result.Reference.StatisticsAvailable || result.Reference.UnavailableReason != "small_cohort" {
 		t.Fatalf("small cohort should expose only an unavailable marker: %#v", result.Reference)

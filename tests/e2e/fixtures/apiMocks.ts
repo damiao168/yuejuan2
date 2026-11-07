@@ -112,6 +112,8 @@ export async function installApiMocks(
           statistics: {
             active_exam_count: 0,
             collecting_exam_count: 0,
+            preparing_exam_count: 0,
+            grading_exam_count: 0,
             pending_review_question_count: 0,
             pending_review_submission_count: 0,
             pending_arbitration_count: 0,
@@ -123,6 +125,8 @@ export async function installApiMocks(
           },
           blocking_issues: [],
           active_exams: [],
+          grading_progress: { window_seconds: 3600, questions: [] },
+          appeal_statistics: { pending_assignment_count: 0, pending_decision_count: 0 },
           recent_activities: [],
           warnings: []
         });
@@ -133,15 +137,17 @@ export async function installApiMocks(
         organization_statistics: {
           active_student_count: 2,
           grade_count: 1,
-          class_count: 1,
-          teacher_count: 1,
+          class_count: 2,
+          teacher_count: 2,
           grader_count: 1,
-          empty_class_count: 0,
-          unassigned_teacher_count: 0
+          empty_class_count: 1,
+          unassigned_teacher_count: 1
         },
         statistics: {
-          active_exam_count: 3,
+          active_exam_count: 4,
           collecting_exam_count: 1,
+          preparing_exam_count: 1,
+          grading_exam_count: 1,
           pending_review_question_count: 107,
           pending_review_submission_count: 6,
           pending_arbitration_count: 3,
@@ -154,6 +160,7 @@ export async function installApiMocks(
         blocking_issues: [
           { code: "failed_submissions", label: "答题卡处理失败", count: 1, unit: "份", impact: "会阻断后续阅卷", action: "查看并重试", drilldown_path: "/capture?issue=failed" },
           { code: "unmatched_submissions", label: "答题卡未匹配学生", count: 1, unit: "份", impact: "无法计入学生成绩", action: "确认学生身份", drilldown_path: "/capture?issue=unmatched" },
+          { code: "quality_issues", label: "图像质量需要处理", count: 1, unit: "份", impact: "可能影响文字识别和切题", action: "查看质量问题", drilldown_path: "/capture?issue=quality" },
           { code: "pending_arbitration", label: "待人工复核", count: 2, unit: "份", impact: "未确认最终得分", action: "开始复核", drilldown_path: "/arbitration?status=pending" }
         ],
         active_exams: [
@@ -165,7 +172,12 @@ export async function installApiMocks(
             submission_count: 48,
             failed_count: 1,
             quality_issue_count: 1,
-            unmatched_count: 0,
+            unmatched_count: 1,
+            pending_arbitration_count: 0,
+            review_task_count: 0,
+            review_done_count: 0,
+            roster_count: 50,
+            roster_submitted_count: 47,
             created_at: "2026-08-01T00:00:00Z"
           },
           {
@@ -177,6 +189,11 @@ export async function installApiMocks(
             failed_count: 0,
             quality_issue_count: 0,
             unmatched_count: 0,
+            pending_arbitration_count: 0,
+            review_task_count: 0,
+            review_done_count: 0,
+            roster_count: 0,
+            roster_submitted_count: 0,
             created_at: "2026-07-31T00:00:00Z"
           },
           {
@@ -188,14 +205,59 @@ export async function installApiMocks(
             failed_count: 0,
             quality_issue_count: 0,
             unmatched_count: 0,
+            pending_arbitration_count: 3,
+            review_task_count: 252,
+            review_done_count: 145,
+            roster_count: 126,
+            roster_submitted_count: 126,
             created_at: "2026-07-30T00:00:00Z"
+          },
+          {
+            id: "exam-4",
+            name: "高一物理月考",
+            subject: "physics",
+            status: "finalized",
+            submission_count: 120,
+            failed_count: 0,
+            quality_issue_count: 0,
+            unmatched_count: 0,
+            pending_arbitration_count: 0,
+            review_task_count: 240,
+            review_done_count: 240,
+            roster_count: 120,
+            roster_submitted_count: 120,
+            created_at: "2026-07-20T00:00:00Z"
           }
         ],
+        grading_progress: {
+          window_seconds: 3600,
+          questions: [
+            { exam_id: "exam-3", question_id: "q-16", question_no: "16", task_count: 126, done_count: 98, remaining_count: 28, recent_done_count: 40 },
+            { exam_id: "exam-3", question_id: "q-17", question_no: "17", task_count: 126, done_count: 47, remaining_count: 79, recent_done_count: 12 },
+            { exam_id: "exam-4", question_id: "q-p1", question_no: "1", task_count: 240, done_count: 240, remaining_count: 0, recent_done_count: 0 }
+          ]
+        },
+        appeal_statistics: { pending_assignment_count: 2, pending_decision_count: 0 },
+        review_teachers: [
+          { user_id: "grader-1", username: "math_grader", display_name: "数学阅卷老师", teaching_subjects: ["english"], assigned_count: 60, in_progress_count: 5, returned_count: 0, submitted_count: 145, remaining_count: 65, is_online: true, last_active_at: "2026-08-02T07:05:00Z" },
+          { user_id: "teacher-2", username: "new_teacher", display_name: "新教师", teaching_subjects: [], assigned_count: 0, in_progress_count: 0, returned_count: 0, submitted_count: 0, remaining_count: 0, is_online: false }
+        ],
+        review_teacher_summary: {
+          teacher_count: 2,
+          online_count: 1,
+          online_window_seconds: 300,
+          task_counting_note: "按未发布、未归档考试的小题阅卷任务计数；双评按每位教师分别统计，取消任务不计。",
+          online_note: "近5分钟内使用系统且登录仍有效的阅卷教师视为在线；退出登录或账号停用后不计入。"
+        },
         recent_activities: [],
         warnings: []
       });
     }
 
+    // 学校初始化页按当前学年确定新年级的届别；学年与下方 grade-1 的 2026-2027 保持一致。
+    if (path === "/api/v1/academic-years") {
+      return json(route, { academic_years: [{ id: "academic-year-2026", tenant_id: "tenant-school", school_id: "school-1", name: "2026-2027学年", start_year: 2026, end_year: 2027, starts_at: "2026-09-01T00:00:00+08:00", ends_at: "2027-07-31T00:00:00+08:00", is_current: true, status: "active" }] });
+    }
     if (path === "/api/v1/schools") {
       return json(route, { schools: [{ id: "school-1", tenant_id: "tenant-school", name: "示范学校", code: "DEMO", status: "active" }] });
     }

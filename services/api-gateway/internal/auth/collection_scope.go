@@ -9,8 +9,9 @@ import (
 // ExamCollectionAccess 将认证范围带到无路径对象 ID 的集合查询；客户端筛选只能缩小这个范围。
 // Scope 为空只留给可信内部维护调用，HTTP 集合必须显式派生；内存存储可使用身份存储的边界解析器。
 type ExamCollectionAccess struct {
-	Scope    *AccessScope
-	Resolver ResourceBoundaryResolver
+	Scope      *AccessScope
+	Resolver   ResourceBoundaryResolver
+	Management bool
 }
 
 func (a ExamCollectionAccess) Validate(tenantID string) error {
@@ -38,6 +39,9 @@ func (a ExamCollectionAccess) Allows(ctx context.Context, tenantID, resourceType
 		}
 		boundary = resolved
 	}
+	if a.Management || a.Scope.RestrictsToManagedSchools() {
+		return AllowsManagedResourceBoundary(*a.Scope, boundary), nil
+	}
 	return AllowsResourceBoundary(*a.Scope, boundary), nil
 }
 
@@ -54,6 +58,10 @@ func (a ExamCollectionAccess) SQLArgs(tenantID string) ([]any, error) {
 	schools := []string{}
 	if s.IsSchoolWide() {
 		schools = s.ManagedSchoolIDs()
+	}
+	if a.Management || s.RestrictsToManagedSchools() {
+		// 管理集合及学校管理员的读取集合均不接受任课或分派投影，否则会扩大到校外考试。
+		return []any{wide, schools, []string{}, []string{}}, nil
 	}
 	return []any{wide, schools, append([]string{}, s.ClassIDs...), append([]string{}, s.ExamIDs...)}, nil
 }

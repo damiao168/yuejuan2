@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { App, Button, Space } from "antd";
 import { ArrowRight, Play } from "lucide-react";
-import type { SessionUser } from "../../auth/session";
+import { sessionAuthorizationKey, type SessionUser } from "../../auth/session";
 import { startExamCollection } from "../../api/configuration";
 import { getUserErrorMessage } from "../../api/client";
 import { ErrorState, LoadingState } from "../../components/PageState";
@@ -17,7 +17,7 @@ export function ExamCapturePage({ user, examId, canManage, canStart, canReview, 
   onNavigate: (path: string) => void;
 }>) {
   const { message, modal } = App.useApp();
-  const { data, error, refetch } = useExamWorkspace(examId);
+  const { data, error, refetch } = useExamWorkspace(examId, sessionAuthorizationKey(user));
   const [starting, setStarting] = useState(false);
   const startPending = useRef(false);
   const startDialog = useRef<{ destroy: () => void } | null>(null);

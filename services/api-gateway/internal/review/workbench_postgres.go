@@ -15,17 +15,25 @@ func (s *PostgresStore) ClaimNextTask(ctx context.Context, tenantID, reviewerID 
 	}
 	defer tx.Rollback()
 	var id string
+	newAssignment := false
 	// 先续接本人已分配的任务，优先最近打开的；选中行一直锁到领取完成，并跳过其他事务已锁的行。
 	err = tx.QueryRowContext(ctx, `SELECT id::text FROM review_task WHERE tenant_id=$1::uuid AND assigned_to=$2::uuid AND status IN ('assigned','in_progress','returned') AND deleted_at IS NULL AND ($3='' OR exam_id::text=$3) AND ($4='' OR question_id::text=$4) ORDER BY last_opened_at DESC NULLS LAST,priority DESC,created_at LIMIT 1 FOR UPDATE SKIP LOCKED`, tenantID, reviewerID, input.ExamID, input.QuestionID).Scan(&id)
 	// 仅内部调用显式允许时，才接手未分配或租约过期的任务；普通 HTTP 领取接口关闭此选项。
 	if errors.Is(err, sql.ErrNoRows) && options.AllowUnassigned {
 		err = tx.QueryRowContext(ctx, `SELECT id::text FROM review_task WHERE tenant_id=$1::uuid AND ((assigned_to IS NULL AND status='pending') OR (status IN ('assigned','in_progress') AND claim_expires_at<now())) AND deleted_at IS NULL AND ($2='' OR exam_id::text=$2) AND ($3='' OR question_id::text=$3) ORDER BY priority DESC,created_at LIMIT 1 FOR UPDATE SKIP LOCKED`, tenantID, input.ExamID, input.QuestionID).Scan(&id)
+		newAssignment = err == nil
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return ReviewTask{}, ErrNotFound
 	}
 	if err != nil {
 		return ReviewTask{}, err
+	}
+	// 续接本人的历史任务不重新要求学科资格；只有接收未分配或他人过期任务才是一次新分派。
+	if newAssignment {
+		if err := validateTaskAssigneeTx(ctx, tx, tenantID, id, reviewerID); err != nil {
+			return ReviewTask{}, err
+		}
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE review_task SET status=CASE WHEN assigned_to IS DISTINCT FROM $3::uuid OR status='pending' THEN 'assigned' ELSE status END,assigned_to=$3::uuid,claimed_at=now(),claim_expires_at=now()+interval '30 minutes',last_opened_at=now(),revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, id, reviewerID)
 	if err != nil {

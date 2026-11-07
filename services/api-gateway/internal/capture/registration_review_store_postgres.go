@@ -2,6 +2,7 @@ package capture
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 )
 
@@ -76,41 +77,49 @@ func (s *PostgresStore) ListProcessingSummaries(ctx context.Context, tenantID, b
 }
 
 // 每页只统计最近未失效配准的切片，不能让旧运行的成功结果掩盖当前处理阻塞。
+// 相关子查询从当前批次页面出发走索引，避免每次轮询先聚合整个租户的历史记录。
 func (s *PostgresStore) queryProcessingSummaries(ctx context.Context, tenantID, predicate, resourceID string) ([]ProcessingSummary, error) {
-	rows, err := s.db.QueryContext(ctx, `
-WITH latest_registration AS (
-  SELECT DISTINCT ON (r.capture_page_id)
-    r.capture_page_id, r.id, r.processing_status, r.match_status
-  FROM page_registration_run r
-  WHERE r.tenant_id=$1 AND r.processing_status<>'invalidated' AND r.deleted_at IS NULL
-  ORDER BY r.capture_page_id, r.created_at DESC, r.id DESC
-), completed_segments AS (
-  SELECT a.registration_run_id, count(*) AS segment_count
-  FROM answer_segment a
-  WHERE a.tenant_id=$1 AND a.processing_status='completed' AND a.deleted_at IS NULL
-  GROUP BY a.registration_run_id
-)
+	rows, err := s.db.QueryContext(ctx, processingSummariesSQL(predicate), tenantID, resourceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanProcessingSummaries(rows)
+}
+
+// predicate只由本包两个固定调用点提供，不接受HTTP或用户传入的SQL片段。
+func processingSummariesSQL(predicate string) string {
+	return `
 SELECT cp.submission_id::text, cp.id::text, cp.assigned_page_no, cp.status,
        COALESCE(sp.quality_status,''), COALESCE(pr.id::text,''),
        COALESCE(pr.processing_status,''), COALESCE(pr.match_status,''),
        COALESCE(seg.segment_count,0)
 FROM capture_page cp
 LEFT JOIN submission_page sp ON sp.tenant_id=cp.tenant_id AND sp.id=cp.submission_page_id AND sp.deleted_at IS NULL
-LEFT JOIN latest_registration pr ON pr.capture_page_id=cp.id
-LEFT JOIN completed_segments seg ON seg.registration_run_id=pr.id
-WHERE cp.tenant_id=$1 AND `+predicate+` AND cp.submission_id IS NOT NULL
+LEFT JOIN LATERAL (
+  SELECT r.id, r.processing_status, r.match_status
+  FROM page_registration_run r
+  WHERE r.tenant_id=cp.tenant_id AND r.capture_page_id=cp.id
+    AND r.processing_status<>'invalidated' AND r.deleted_at IS NULL
+  ORDER BY r.created_at DESC, r.id DESC LIMIT 1
+) pr ON true
+LEFT JOIN LATERAL (
+  SELECT count(*) AS segment_count FROM answer_segment a
+  WHERE a.tenant_id=cp.tenant_id AND a.registration_run_id=pr.id
+    AND a.processing_status='completed' AND a.deleted_at IS NULL
+) seg ON true
+WHERE cp.tenant_id=$1 AND ` + predicate + ` AND cp.submission_id IS NOT NULL
   AND cp.status<>'deleted' AND cp.deleted_at IS NULL
-ORDER BY cp.submission_id, cp.sequence_no, cp.id`, tenantID, resourceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+ORDER BY cp.submission_id, cp.sequence_no, cp.id`
+}
+
+func scanProcessingSummaries(rows *sql.Rows) ([]ProcessingSummary, error) {
 	items := make([]ProcessingSummary, 0)
 	index := make(map[string]int)
 	for rows.Next() {
 		var submissionID, id, status, quality, runID, processing, match string
 		var pageNo, segments int
-		if err = rows.Scan(&submissionID, &id, &pageNo, &status, &quality, &runID, &processing, &match, &segments); err != nil {
+		if err := rows.Scan(&submissionID, &id, &pageNo, &status, &quality, &runID, &processing, &match, &segments); err != nil {
 			return nil, err
 		}
 		position, ok := index[submissionID]
@@ -155,7 +164,7 @@ ORDER BY cp.submission_id, cp.sequence_no, cp.id`, tenantID, resourceID)
 		}
 		out.Blockers = append(out.Blockers, b)
 	}
-	if err = rows.Err(); err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	for i := range items {

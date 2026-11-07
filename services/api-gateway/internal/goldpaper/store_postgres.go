@@ -37,11 +37,15 @@ func (s *PostgresStore) Nominate(ctx context.Context, tenantID, examID, question
 		return GoldPaper{}, ErrSourceGradeMissing
 	}
 	var goldID string
+	pool, err := registerImagePoolTx(ctx, tx, tenantID, source.ImageBinding.SHA256, "")
+	if err != nil {
+		return GoldPaper{}, err
+	}
 	err = tx.QueryRowContext(ctx, `
-INSERT INTO grading_gold_paper (tenant_id, exam_id, question_id, submission_id, nominated_by)
-VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid)
+INSERT INTO grading_gold_paper (tenant_id, exam_id, question_id, submission_id, nominated_by,quality_pool)
+VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6)
 RETURNING id::text
-`, tenantID, examID, questionID, input.SubmissionID, actorID).Scan(&goldID)
+`, tenantID, examID, questionID, input.SubmissionID, actorID, pool).Scan(&goldID)
 	if isUniqueViolation(err) {
 		return GoldPaper{}, ErrConflict
 	}
@@ -67,15 +71,15 @@ func (s *PostgresStore) CreateVersion(ctx context.Context, tenantID, goldID, act
 		return GoldPaper{}, err
 	}
 	defer tx.Rollback()
-	var examID, questionID, submissionID, status string
+	var examID, questionID, submissionID, status, pool string
 	var nextVersion int
 	err = tx.QueryRowContext(ctx, `
-SELECT exam_id::text,question_id::text,submission_id::text,status,
+SELECT exam_id::text,question_id::text,submission_id::text,status,quality_pool,
        COALESCE((SELECT max(version)+1 FROM grading_gold_paper_version v WHERE v.tenant_id=gp.tenant_id AND v.gold_paper_id=gp.id),1)
 FROM grading_gold_paper gp
 WHERE tenant_id=$1::uuid AND id=$2::uuid
 FOR UPDATE
-`, tenantID, goldID).Scan(&examID, &questionID, &submissionID, &status, &nextVersion)
+`, tenantID, goldID).Scan(&examID, &questionID, &submissionID, &status, &pool, &nextVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		return GoldPaper{}, ErrNotFound
 	}
@@ -94,6 +98,13 @@ FOR UPDATE
 	}
 	if !containsAll(source.AvailableGradeIDs, input.SourceGradeIDs) {
 		return GoldPaper{}, ErrSourceGradeMissing
+	}
+	registered, err := registerImagePoolTx(ctx, tx, tenantID, source.ImageBinding.SHA256, pool)
+	if err != nil {
+		return GoldPaper{}, err
+	}
+	if registered != pool {
+		return GoldPaper{}, ErrConflict
 	}
 	if _, err := insertVersion(ctx, tx, tenantID, goldID, versionForInsert(source, actorID, nextVersion, input)); err != nil {
 		if isUniqueViolation(err) {
@@ -354,7 +365,7 @@ RETURNING id::text
 
 func (s *PostgresStore) query(ctx context.Context, tenantID, condition string, filterArgs ...any) ([]GoldPaper, error) {
 	query := `
-SELECT gp.id::text,gp.exam_id::text,gp.question_id::text,gp.submission_id::text,
+SELECT gp.id::text,gp.exam_id::text,gp.question_id::text,gp.submission_id::text,gp.quality_pool,
        COALESCE(gp.active_version,0),gp.status,gp.nominated_by::text,gp.retired_at,gp.retirement_reason,gp.created_at,gp.updated_at,
        COALESCE(eqs.profile_snapshot_json->>'subject_code',''),eqs.archetype_code,eqs.risk_tier,COALESCE(q.question_no,''),
        v.id::text,v.version,v.exam_question_snapshot_id::text,v.reference_score::float8,v.max_score::float8,
@@ -381,7 +392,7 @@ ORDER BY gp.created_at,gp.id,v.version`
 		var retiredAt, approvedAt, imageInvalidatedAt sql.NullTime
 		var approvedBy sql.NullString
 		var rubricJSON, traitsJSON, tagsJSON, gradesJSON []byte
-		if err := rows.Scan(&item.ID, &item.ExamID, &item.QuestionID, &item.SubmissionID, &item.ActiveVersion, &item.Status, &item.NominatedBy, &retiredAt, &item.RetirementReason, &item.CreatedAt, &item.UpdatedAt,
+		if err := rows.Scan(&item.ID, &item.ExamID, &item.QuestionID, &item.SubmissionID, &item.QualityPool, &item.ActiveVersion, &item.Status, &item.NominatedBy, &retiredAt, &item.RetirementReason, &item.CreatedAt, &item.UpdatedAt,
 			&item.SubjectCode, &item.ArchetypeCode, &item.RiskTier, &item.QuestionNo, &version.ID, &version.Version, &version.ExamQuestionSnapshotID, &version.ReferenceScore, &version.MaxScore,
 			&rubricJSON, &version.Explanation, &traitsJSON, &tagsJSON, &gradesJSON, &version.NominatedBy, &approvedBy, &approvedAt, &version.CreatedAt,
 			&version.ImageBinding.SegmentID, &version.ImageBinding.AssetID, &version.ImageBinding.SHA256, &version.ImageBinding.OwnerType, &version.ImageBinding.OwnerID, &imageInvalidatedAt); err != nil {

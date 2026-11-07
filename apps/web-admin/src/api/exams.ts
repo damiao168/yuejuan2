@@ -38,7 +38,8 @@ export interface ExamPayload {
   school_id: string;
   name: string;
   subject: string;
-  exam_type: string;
+  // 仅兼容旧请求；新建入口不再采集或发送考试类型。
+  exam_type?: string;
   total_score: number;
   grading_mode: string;
   appeal_enabled: boolean;
@@ -52,7 +53,7 @@ export interface ExamSessionPayload {
   grade_id: string;
   template_id?: string;
   name: string;
-  exam_type: string;
+  exam_type?: string;
   grading_mode: string;
   appeal_enabled: boolean;
   publish_policy: string;
@@ -199,6 +200,7 @@ export interface ManagementExam {
     total_count: number;
     ready_count: number;
     published_count: number;
+    grading_complete_count?: number;
     counts: Record<string, number>;
     facts_available?: boolean;
   };
@@ -219,7 +221,6 @@ export interface ManagementExamFilter {
   school_id?: string;
   grade_id?: string;
   search?: string;
-  exam_type?: string;
   status?: string;
   archive?: "active" | "archived" | "all";
   limit?: number;
@@ -233,7 +234,6 @@ export interface ManagementExamVersion {
 
 export interface ManagementExamUpdate extends ManagementExamVersion {
   name?: string;
-  exam_type?: string;
   class_ids?: string[];
 }
 

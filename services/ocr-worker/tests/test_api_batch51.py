@@ -1,3 +1,4 @@
+import hashlib
 import inspect
 import io
 import json
@@ -143,9 +144,15 @@ def test_math_missing_tenant_metadata_keeps_activation_and_route_failure():
 def test_math_workflow_uses_strict_transport_calls_and_stops_before_completion():
     api = create_autospec(EduGradeClient, instance=True)
     runner, task, claimed = _claimed_case("math", api)
-    task_input = {"subject_code": "mathematics", "region_kind": "formula"}
+    image = b"image-51"
+    # 网关返回的输入哈希必须和下载的裁图一致，测试才能进入正常完成流程。
+    task_input = {
+        "subject_code": "mathematics",
+        "region_kind": "formula",
+        "input_hash": hashlib.sha256(image).hexdigest(),
+    }
     api.get_math_task_input.return_value = {"task": task_input, "image_url": "/files/file-51/download"}
-    api.download.return_value = b"image-51"
+    api.download.return_value = image
     routed = SimpleNamespace()
     router = create_autospec(RecognitionRouter, instance=True)
     router.recognize.return_value = routed
@@ -175,7 +182,7 @@ def test_math_workflow_uses_strict_transport_calls_and_stops_before_completion()
     api.activate_task.assert_called_once_with(task, "worker-51")
     api.get_math_task_input.assert_called_once_with("runtime-51")
     api.download.assert_called_once_with("/files/file-51/download")
-    router.recognize.assert_called_once_with("mathematics", RegionKind.FORMULA, b"image-51")
+    router.recognize.assert_called_once_with("mathematics", RegionKind.FORMULA, image)
     api.complete_math_task.assert_called_once()
     api.fail_runtime_task.assert_not_called()
 

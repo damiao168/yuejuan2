@@ -22,6 +22,7 @@
 .school-chat-topbar { display: flex; min-height: 52px; flex: 0 0 52px; align-items: center; justify-content: space-between; gap: 20px; padding: 0 28px; border-bottom: 1px solid var(--border); }
 .school-chat-topbar-title { display: flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 650; }
 .school-chat-topbar-title svg { color: #3168b2; }
+.school-chat-activity { color: #7b8493; font-size: 12px; white-space: nowrap; }
 .school-chat-model-status { display: flex; min-width: 0; align-items: center; gap: 7px; overflow: hidden; color: #7b8493; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .school-chat-model-status i { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #c4cbd5; }
 .school-chat-model-status i.is-online { background: #39a778; }
@@ -133,9 +134,25 @@
 .school-chat-composer { padding: 10px 12px 9px; border: 1px solid #dae1ea; border-radius: 17px; background: #fff; box-shadow: 0 5px 23px rgba(37, 54, 75, .08); transition: border-color .16s, box-shadow .16s; }
 .school-chat-composer:focus-within { border-color: #82a9df; box-shadow: 0 6px 25px rgba(42, 95, 165, .12); }
 .school-chat-composer .ant-input { padding: 4px 5px; border: 0; box-shadow: none !important; resize: none; font-size: 14px; line-height: 1.6; }
-.school-chat-composer-bottom { display: flex; align-items: center; justify-content: space-between; padding: 3px 3px 0; color: #9ba4b1; font-size: 11px; }
-.school-chat-composer-bottom .ant-btn { width: 33px; height: 33px; }
-.school-chat-composer-bottom > .ant-btn:first-of-type { display: inline-flex; align-items: center; gap: 5px; margin-left: -4px; color: #66758a; width: auto; }
+.school-chat-composer-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; padding: 3px 3px 0; color: #9ba4b1; font-size: 11px; }
+.school-chat-composer-bottom > .ant-btn { width: 33px; height: 33px; flex: 0 0 33px; }
+.school-chat-composer-tools { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
+/* 上传入口需要容纳文字，不能套用发送圆按钮的固定宽度。 */
+.school-chat-composer-tools > .school-chat-upload.ant-btn { display: inline-flex; height: 33px; flex-shrink: 0; align-items: center; gap: 5px; margin-left: -4px; color: #66758a; width: auto; white-space: nowrap; }
+.school-chat-model-status { max-width: min(270px, 48vw); min-height: 33px; }
+.school-chat-model-selector.ant-select { width: auto; min-width: 0; max-width: 100%; font-size: 12px; }
+.school-chat-model-selector.ant-select .ant-select-selector { padding-inline: 0 17px !important; border-radius: 6px; }
+.school-chat-model-selector.ant-select .ant-select-selection-item { padding-inline-end: 0; }
+.school-chat-model-selector.ant-select .ant-select-arrow { inset-inline-end: 0; }
+.school-chat-model-selector.ant-select:not(.ant-select-disabled):hover { color: #3168b2; }
+.school-chat-model-selector.ant-select-focused { outline: 2px solid #82a9df; outline-offset: 3px; border-radius: 4px; }
+.school-chat-model-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.school-chat-model-menu { max-width: min(360px, calc(100vw - 32px)); }
+.school-chat-model-summary { padding: 5px 11px 8px; border-bottom: 1px solid #edf0f4; color: #66758a; font-size: 11px; }
+.school-chat-model-menu .ant-select-item-option { padding: 8px 11px; }
+.school-chat-model-option { display: flex; min-width: 0; flex-direction: column; gap: 2px; line-height: 1.5; }
+.school-chat-model-option strong { font-size: 13px; font-weight: 500; white-space: normal; overflow-wrap: anywhere; }
+.school-chat-model-option > span { color: #7b8493; font-size: 11px; white-space: normal; overflow-wrap: anywhere; }
 .school-chat-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .school-chat-attachments { display: flex; flex-wrap: wrap; gap: 7px; padding: 1px 4px 8px; }
 .school-chat-attachments > span { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto 22px; align-items: center; gap: 6px; max-width: min(100%, 310px); padding: 6px 6px 6px 9px; border: 1px solid #dce3ec; border-radius: 9px; color: #526070; background: #f7f9fc; }

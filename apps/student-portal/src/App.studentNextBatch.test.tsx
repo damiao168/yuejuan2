@@ -155,7 +155,7 @@ describe("学生查分与复核第二批真实边界", () => {
 		let result = makeResult();
 		const calls = installApi((call) => resultRoute(call, result));
 		render(<App />);
-		fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+		fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
 		const input = await screen.findByRole<HTMLTextAreaElement>("textbox", {
 			name: "具体说明",
 		});
@@ -177,7 +177,7 @@ describe("学生查分与复核第二批真实边界", () => {
 			screen.getByRole<HTMLTextAreaElement>("textbox", { name: "旧版复核说明" })
 				.value,
 		).toContain("第二步");
-		fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+		fireEvent.click((screen.getByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
 		expect(
 			(
 				await screen.findByRole<HTMLTextAreaElement>("textbox", {
@@ -192,8 +192,8 @@ describe("学生查分与复核第二批真实边界", () => {
 			reads[reads.length - 1]?.url.searchParams.get("expected_release_id"),
 		).toBe("release-8");
 	});
-	it("历史复核零分不由后续当前14分替代，并可重复打开当前本题", async () => {
-		installApi((call) =>
+	it("历史复核零分保留原值，查看当前成绩仅重复定位对应行", async () => {
+		const calls = installApi((call) =>
 			call.url.pathname.endsWith("question-appeals")
 				? jsonResponse({
 						appeals: [
@@ -211,16 +211,15 @@ describe("学生查分与复核第二批真实边界", () => {
 		render(<App />);
 		await screen.findByText(/复核后得分：0 \/ 20/);
 		await screen.findByText("本题当前成绩：14");
-		fireEvent.click(screen.getByRole("button", { name: "查看本题当前成绩" }));
-		await screen.findByRole("heading", { name: "第 1 题 · 作答与评分依据" });
-		fireEvent.click(screen.getByRole("button", { name: /^第 1 题，/ }));
-		await waitFor(() =>
-			expect(
-				screen.queryByRole("heading", { name: "第 1 题 · 作答与评分依据" }),
-			).toBeNull(),
-		);
-		fireEvent.click(screen.getByRole("button", { name: "查看本题当前成绩" }));
-		await screen.findByRole("heading", { name: "第 1 题 · 作答与评分依据" });
+		// 查看历史回执中的当前成绩只定位表格，不能重新引入普通单题钻取。
+		for (let attempt = 0; attempt < 2; attempt += 1) {
+			fireEvent.click(screen.getByRole("button", { name: "查看本题当前成绩" }));
+			await waitFor(() =>
+				expect(screen.getByLabelText(/^第 1 题，/).closest("tr")?.classList.contains("is-located")).toBe(true),
+			);
+			expect(screen.queryByRole("heading", { name: "第 1 题 · 成绩复核申请" })).toBeNull();
+		}
+		expect(calls.filter((call) => call.url.pathname.endsWith("questions/question-1"))).toHaveLength(0);
 	});
 	it("无页不显示无效工具或禁用优秀答卷按钮，仍能去文字反馈", async () => {
 		installApi((call) => resultRoute(call, makeResult()));
@@ -256,7 +255,7 @@ describe("学生查分与复核第二批真实边界", () => {
 		await screen.findByRole("heading", { name: "学生账号尚未开通查分权限" });
 		expect(calls).toHaveLength(1);
 		fireEvent.click(screen.getByRole("button", { name: "切换账号" }));
-		await screen.findByRole("heading", { name: "查看已发布成绩" });
+		await screen.findByText("正在前往登录…");
 		expect(listAppealDrafts(owner, "exam-1")).toHaveLength(0);
 	});
 	it("同一404按请求上下文解释，401仍要求重新登录", () => {

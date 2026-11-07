@@ -28,7 +28,6 @@
 .score-publication-status strong { font-size: var(--eg-font-reading); }
 .score-publication-status p { margin: 0; color: var(--text-muted); line-height: 1.55; }
 
-.score-summary-strip,
 .score-quality-panel,
 .score-table-panel,
 .score-actions-panel {
@@ -69,37 +68,6 @@
   width: min(420px, 52vw);
 }
 
-.score-summary-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0;
-  overflow: hidden;
-}
-
-.score-summary-strip > div {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border-right: 1px solid var(--border);
-}
-
-.score-summary-strip > div:last-child {
-  border-right: 0;
-}
-
-.score-summary-strip span {
-  color: var(--text-muted);
-  font-size: var(--eg-font-body);
-}
-
-.score-summary-strip strong {
-  font-size: var(--eg-font-title);
-  line-height: 1;
-  letter-spacing: 0;
-}
-
 .score-workspace {
   display: grid;
   gap: 12px;
@@ -117,15 +85,28 @@
 .score-workspace:not(.read-only) .score-publication-task { grid-area: publication; }
 .score-publication-task { min-width: 0; display: grid; gap: 16px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .score-regrade-focused { border-left: 3px solid var(--primary); padding-left: 12px !important; }
-.score-publication-task .score-actions-panel { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.score-publication-task .score-actions-panel > .panel-head,
-.score-publication-task .score-actions-panel > .ant-alert,
-.score-publication-task .score-actions-panel > .score-step-divider,
-.score-publication-task .score-actions-panel > .score-advanced-details { grid-column: 1 / -1; }
-.score-publication-task .score-release-workspace { padding: 0; border: 0; }
+.score-publication-task .score-actions-panel { position: static; display: flex; gap: 8px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; }
+.score-publication-task .score-release-workspace { padding: 16px 0 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; }
+.score-publication-checklist > .panel-head { margin-bottom: 4px; }
+.score-publication-checklist h3 { margin: 0; font-size: var(--eg-font-reading); }
+.score-publication-task-groups { margin: 0; padding: 0; list-style: none; }
+.score-publication-task-group { display: grid; grid-template-columns: minmax(140px, .8fr) minmax(0, 2fr) auto; align-items: center; gap: 4px 16px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.score-publication-task-group:last-child { border-bottom: 0; }
+.score-publication-task-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
+.score-publication-task-heading > .muted { font-size: var(--eg-font-caption); }
+.score-publication-task-summary { min-width: 0; line-height: 1.55; }
+.score-publication-task-action { justify-self: end; }
+.score-publication-task-details { grid-column: 2 / -1; color: var(--text-muted); font-size: var(--eg-font-caption); }
+.score-publication-task-details > summary,
+.score-publication-reminders > summary { width: fit-content; cursor: pointer; }
+.score-publication-task-details > summary:hover,
+.score-publication-reminders > summary:hover { color: var(--primary); }
+.score-publication-check-reasons { display: grid; gap: 10px; margin: 10px 0 4px; padding-left: 18px; color: var(--text); font-size: var(--eg-font-caption); line-height: 1.6; }
+.score-publication-check-reasons p { margin: 3px 0 0; color: var(--text-muted); overflow-wrap: anywhere; }
+.score-publication-reminders { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border); font-size: var(--eg-font-caption); }
+.score-publication-reminders > summary > span { margin-left: 12px; }
 .score-roster-panel > summary,
 .score-quality-panel > summary { cursor: pointer; font-weight: 600; }
-@media (max-width: 640px) { .score-publication-task .score-actions-panel { grid-template-columns: minmax(0, 1fr); } }
 
 .score-main {
   min-width: 0;
@@ -269,9 +250,31 @@
 }
 
 .score-step-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 16px;
+  padding: 6px 0;
+}
+
+.score-step-controls { display: flex; align-items: start; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.score-step-controls > div { display: grid; grid-template-columns: auto minmax(180px, 340px); align-items: center; gap: 8px; min-width: 0; }
+.score-step-controls > div > textarea,
+.score-step-controls > div > .ant-input-textarea { grid-column: 2; }
+.score-step-controls > .ant-btn { flex-shrink: 0; }
+.score-finalization-content { display: grid; gap: 6px; min-width: 0; }
+.score-finalization-result { align-self: center; color: var(--text-muted); font-size: var(--eg-font-caption); }
+.score-results-panel { scroll-margin-block: 96px; }
+.score-results-panel:focus { outline: 2px solid var(--primary); outline-offset: 4px; }
+
+.score-confirmation-step { scroll-margin-block: 96px; border-radius: var(--radius); }
+.score-confirmation-step:focus { outline: 2px solid var(--primary); outline-offset: 4px; background: var(--surface-soft); }
+
+@media (max-width: 760px) {
+  .score-step-group { grid-template-columns: minmax(0, 1fr); }
+  .score-step-controls > div { grid-template-columns: minmax(0, 1fr); flex: 1 1 240px; }
+  .score-step-controls > div > textarea,
+  .score-step-controls > div > .ant-input-textarea { grid-column: 1; }
 }
 
 .score-step-title {
@@ -385,13 +388,15 @@
     grid-column: 1 / -1;
   }
 
-  .score-summary-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @container score-shell (max-width: 760px) {
   .score-actions-panel { grid-template-columns: 1fr; }
   .score-publication-task .score-actions-panel { grid-template-columns: 1fr; }
-  .score-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .score-publication-task-group { grid-template-columns: minmax(0, 1fr) auto; gap: 5px 12px; }
+  .score-publication-task-summary { grid-column: 1 / -1; grid-row: 2; }
+  .score-publication-task-action { grid-column: 2; grid-row: 1; }
+  .score-publication-task-details { grid-column: 1 / -1; }
   .score-release-heading,
   .score-release-subhead,
   .score-release-row,
@@ -407,7 +412,39 @@
   .score-exam-select { width: 100%; }
 }
 
-@container score-shell (max-width: 420px) {
-  .score-summary-strip { grid-template-columns: 1fr; }
+
+/* 成绩发布状态行：左侧是学生能否看到成绩，右侧只有一个主按钮；窄屏时按钮换到下一行。 */
+.score-release-status { display: grid; gap: 8px; min-width: 0; }
+.score-release-status-line { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; }
+.score-release-status-line > div:first-child { display: grid; gap: 2px; min-width: 0; }
+.score-release-status-text { font-size: var(--eg-font-reading); }
+.score-release-status-text.tone-success { color: var(--success-text); }
+.score-release-status-text.tone-danger { color: var(--danger-text); }
+.score-release-status-text.tone-warning { color: var(--text); }
+.score-release-status-text.tone-processing { color: var(--primary); }
+.score-release-status-note { color: var(--text-muted); font-size: var(--eg-font-caption); }
+.score-release-status-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.score-release-status-roster { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; color: var(--text-muted); }
+.score-release-status-roster > .ant-btn-link { padding-inline: 0; }
+.score-publication-checklist:focus { outline: 2px solid var(--primary); outline-offset: 4px; }
+.score-publish-dialog { display: grid; gap: 12px; }
+.score-publish-dialog p { margin: 0; }
+.score-publish-section { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.score-publish-section > legend { margin-bottom: 4px; font-weight: 600; }
+.score-publish-summary, .score-publish-hint { color: var(--text-muted); font-size: var(--eg-font-caption); }
+.score-publish-custom { display: grid; gap: 8px; }
+.score-publish-excellent-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.score-publish-excellent-row .ant-input-number { width: 88px; }
+.score-publish-absentees { color: var(--text-muted); font-size: var(--eg-font-caption); }
+.score-publish-absentees > summary { width: fit-content; cursor: pointer; }
+.score-publish-absentees ul { margin: 6px 0; padding-left: 18px; color: var(--text); }
+.score-release-history-note { margin-bottom: 12px; }
+
+@container score-shell (max-width: 560px) {
+  .score-release-status-actions { width: 100%; }
 }
 
+/* 共享样式给表格区设了 overflow-x: auto，浏览器会把纵向也算成可滚动；分页的外边距多出几像素时，
+   名册右侧就出现一条多余的纵向滚动条。成绩页的表格都整体随页面滚动，这里只关掉纵向滚动。 */
+.score-table-panel .responsive-table-region,
+.responsive-table-region:has(> .score-roster-table) { overflow-y: hidden; }

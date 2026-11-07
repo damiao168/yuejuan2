@@ -58,6 +58,8 @@ class Settings:
     model_timeout_seconds: int = 230
     model_ready_timeout_seconds: int = 3
     model_readiness_cache_seconds: int = 10
+    # 旧网关严格拒绝未知诊断字段；先升级接收端，再显式开启缓存读写拆分。
+    cache_usage_diagnostics: bool = False
     model_queue_timeout_seconds: int = 5
     model_max_retries: int = 1
     model_context_tokens: int = 4096
@@ -98,6 +100,7 @@ class Settings:
             model_timeout_seconds=_integer("EDUGRADE_GRADING_MODEL_TIMEOUT_SECONDS", 230, 1, 600),
             model_ready_timeout_seconds=_integer("EDUGRADE_GRADING_MODEL_READY_TIMEOUT_SECONDS", 3, 1, 30),
             model_readiness_cache_seconds=_integer("EDUGRADE_GRADING_MODEL_READINESS_CACHE_SECONDS", 10, 5, 60),
+            cache_usage_diagnostics=_boolean("EDUGRADE_GRADING_CACHE_USAGE_DIAGNOSTICS", False),
             model_queue_timeout_seconds=_integer("EDUGRADE_GRADING_MODEL_QUEUE_TIMEOUT_SECONDS", 5, 0, 120),
             model_max_retries=_integer("EDUGRADE_GRADING_MODEL_MAX_RETRIES", 1, 0, 1),
             model_context_tokens=_integer("EDUGRADE_GRADING_MODEL_CONTEXT_TOKENS", 4096, 1024, 32768),

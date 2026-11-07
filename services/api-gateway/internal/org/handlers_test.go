@@ -109,8 +109,8 @@ func TestCSVImportReportsRowErrors(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("import expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
-	if !strings.Contains(rec.Body.String(), `"created":1`) || !strings.Contains(rec.Body.String(), `"errors"`) {
-		t.Fatalf("expected created count and errors: %s", rec.Body.String())
+	if !strings.Contains(rec.Body.String(), `"created":0`) || !strings.Contains(rec.Body.String(), `"committed":false`) || !strings.Contains(rec.Body.String(), `"errors"`) {
+		t.Fatalf("invalid CSV must reject the whole batch: %s", rec.Body.String())
 	}
 	if !strings.Contains(rec.Body.String(), "不能为空") || !strings.Contains(rec.Body.String(), "列不完整") {
 		t.Fatalf("import errors should be actionable Chinese messages: %s", rec.Body.String())
@@ -123,7 +123,7 @@ func TestOrganizationDuplicateCodesReturnSpecificConflicts(t *testing.T) {
 	t.Run("class code", assertOrganizationClassCodeConflict)
 }
 
-func TestCreateStudentReturnsConflictForDuplicateStudentNumber(t *testing.T) {
+func TestCreateStudentMemoryStorageRejectsWithoutPartialRoster(t *testing.T) {
 	authStore := authStoreWithPermissions(t, []string{"org:manage"})
 	orgStore := org.NewMemoryStore()
 	school, err := orgStore.CreateSchool(context.Background(), "tenant-org", org.School{Name: "第一中学", Code: "school-001"})
@@ -140,9 +140,9 @@ func TestCreateStudentReturnsConflictForDuplicateStudentNumber(t *testing.T) {
 	}
 	router := testRouter(authStore, orgStore)
 	token := login(t, router)
-	payload := `{"school_id":"` + school.ID + `","class_id":"` + class.ID + `","student_no":"1","name":"测试学生"}`
+	payload := `{"school_id":"` + school.ID + `","class_id":"` + class.ID + `","student_no":"1","name":"测试学生","password":"Synthetic123!","password_confirm":"Synthetic123!"}`
 
-	for attempt, expectedStatus := range []int{http.StatusCreated, http.StatusConflict} {
+	for attempt, expectedStatus := range []int{http.StatusServiceUnavailable, http.StatusServiceUnavailable} {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/students", bytes.NewBufferString(payload))
 		req.Header.Set("Authorization", "Bearer "+token)
 		rec := httptest.NewRecorder()
@@ -150,9 +150,13 @@ func TestCreateStudentReturnsConflictForDuplicateStudentNumber(t *testing.T) {
 		if rec.Code != expectedStatus {
 			t.Fatalf("attempt %d expected %d, got %d: %s", attempt+1, expectedStatus, rec.Code, rec.Body.String())
 		}
-		if expectedStatus == http.StatusConflict && !strings.Contains(rec.Body.String(), "student_no_conflict") {
-			t.Fatalf("duplicate student number should return explicit conflict code: %s", rec.Body.String())
+		if !strings.Contains(rec.Body.String(), "student_account_unavailable") {
+			t.Fatalf("separate memory stores must reject account aggregation: %s", rec.Body.String())
 		}
+	}
+	students, err := orgStore.ListStudents(context.Background(), "tenant-org", org.StudentListFilter{})
+	if err != nil || len(students) != 0 {
+		t.Fatalf("rejected account creation left a roster record: %+v %v", students, err)
 	}
 }
 

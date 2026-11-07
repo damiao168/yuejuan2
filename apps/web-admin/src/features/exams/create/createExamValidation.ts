@@ -41,7 +41,6 @@ function validateSubjectExam(subject: SubjectExamDraft, creationMode: ExamCreati
 export function validateCreateExam(draft: CreateExamDraft): CreateExamValidationIssue[] {
   const issues: CreateExamValidationIssue[] = [];
   if (!draft.name.trim()) issues.push({ field: "name", message: "请填写考试名称" });
-  if (!draft.examType) issues.push({ field: "examType", message: "请选择考试类型" });
   if (!draft.schoolId) issues.push({ field: "schoolId", message: "请选择考试所属学校" });
   if (!draft.gradeId) issues.push({ field: "gradeId", message: "请选择考试年级" });
   if (!draft.classIds.length) issues.push({ field: "classIds", message: "请至少选择一个参考班级" });

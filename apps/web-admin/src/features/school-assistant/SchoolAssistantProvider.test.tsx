@@ -5,8 +5,11 @@ import { within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SessionUser } from "../../auth/session";
 import { SchoolAssistantProvider, useSchoolAssistantContext } from "./SchoolAssistantProvider";
+import { CONVERSATION_REFRESH_PREFIX } from "./conversationRefresh";
+import { conversationAccountKey } from "./conversationState";
 
 const mocks = vi.hoisted(() => ({ loads: 0, cancel: vi.fn(), finish: undefined as undefined | (() => void) }));
+vi.mock("./useAccountConversation", () => ({ useAccountConversation: () => ({ threads: [], activeCount: 0 }) }));
 vi.mock("./SchoolConversation", async () => {
   mocks.loads += 1;
   await new Promise<void>((resolve) => { mocks.finish = resolve; });
@@ -54,7 +57,12 @@ describe("assistant drawer module lifecycle", () => {
     expect(loading.getAttribute("aria-live")).toBe("polite");
     expect(loading.getAttribute("aria-atomic")).toBe("true");
     expect(loading.textContent).toContain("正在加载");
+    const previousKey = `${CONVERSATION_REFRESH_PREFIX}${conversationAccountKey(user)}`;
+    window.sessionStorage.setItem(previousKey, "old-checkpoint");
+    window.sessionStorage.setItem("other-feature", "keep");
     await render({ ...user, id: "next-owner" });
+    expect(window.sessionStorage.getItem(previousKey)).toBeNull();
+    expect(window.sessionStorage.getItem("other-feature")).toBe("keep");
     await act(async () => mocks.finish!());
     expect(host.querySelector("[data-conversation]")).toBeNull();
     await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());

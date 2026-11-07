@@ -86,6 +86,7 @@ vi.mock("antd", async () => {
   }) => <><input value={value ?? ""} onChange={onChange} readOnly={readOnly} placeholder={placeholder} />{addonAfter}</>, {
     Search: ({ value, onChange, placeholder }: { value: string; onChange: React.ChangeEventHandler<HTMLInputElement>; placeholder?: string }) => <input value={value} onChange={onChange} placeholder={placeholder} />,
   });
+  Object.assign(Input, { Password: Input });
   return {
     App: { useApp: () => ({ message: mocks.message, modal: mocks.modal }) }, Form, Input,
     Button: ({ children, onClick, loading, disabled, htmlType, danger }: { children?: ReactNode; onClick?: () => void; loading?: boolean; disabled?: boolean; htmlType?: "button" | "submit" | "reset"; danger?: boolean }) =>
@@ -99,8 +100,8 @@ vi.mock("antd", async () => {
     Alert: ({ message, description, type }: { message: string; description: string; type: string }) => <aside data-alert-type={type}><strong>{message}</strong><p>{description}</p></aside>,
     Modal: ({ open, title, children, onCancel }: { open: boolean; title: string; children: ReactNode; onCancel: () => void }) =>
       open ? <div role="dialog"><h2>{title}</h2><button type="button" onClick={onCancel}>取消</button>{children}</div> : null,
-    Select: ({ options, mode, value, onChange }: { options: Array<{ value: string; label: string }>; mode?: string; value?: string | string[]; onChange?: (value: string | string[]) => void }) =>
-      <select multiple={mode === "multiple"} value={value} onChange={(event) => onChange?.(mode === "multiple" ? [...event.currentTarget.selectedOptions].map((option) => option.value) : event.currentTarget.value)}>
+    Select: ({ options, mode, value, onChange, "aria-label": label }: { options: Array<{ value: string; label: string }>; mode?: string; value?: string | string[]; onChange?: (value: string | string[]) => void; "aria-label"?: string }) =>
+      <select aria-label={label} multiple={mode === "multiple"} value={value} onChange={(event) => onChange?.(mode === "multiple" ? [...event.currentTarget.selectedOptions].map((option) => option.value) : event.currentTarget.value)}>
         {mode !== "multiple" ? <option value="" /> : null}{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>,
   };
@@ -195,6 +196,11 @@ describe("教师管理展示重构边界", () => {
     await input(field("username") as HTMLInputElement, "new_grader");
     await input(field("phone") as HTMLInputElement, "13800000000");
     await select("school_id", ["school-2"]);
+    if (host.querySelector('[data-field="teaching_subjects"]')) await select("teaching_subjects", ["mathematics", "physics"]);
+    if (host.querySelector('[data-field="password"]')) {
+      await input(field("password") as HTMLInputElement, "TeacherInitial123!");
+      await input(field("password_confirm") as HTMLInputElement, "TeacherInitial123!");
+    }
   }
   async function submit() {
     await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
@@ -227,6 +233,18 @@ describe("教师管理展示重构边界", () => {
     expect(host.querySelector("aside p")?.textContent).toContain("请联系机构管理员");
   });
 
+  it("教师名单按任教学科筛选，兼容历史学科别名且未填写不推测学科", async () => {
+    mocks.users.mockResolvedValue({ users: [member("math", ["grader"], { teaching_subjects: ["math", "physics"] }), member("english", ["grader"], { teaching_subjects: ["english"] }), member("unset", ["grader"])] });
+    await render();
+    expect(row("math").querySelector('[data-column="任教学科"]')?.textContent).toBe("数学、物理修改学科");
+    expect(row("unset").querySelector('[data-column="任教学科"]')?.textContent).toBe("未设置设置学科");
+    const filter = host.querySelector<HTMLSelectElement>('[aria-label="按任教学科筛选"]')!;
+    await act(async () => { filter.value = "mathematics"; filter.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect([...host.querySelectorAll<HTMLTableRowElement>("tbody tr")].map(item => item.dataset.userId)).toEqual(["math"]);
+    await act(async () => { filter.value = "unset"; filter.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect([...host.querySelectorAll<HTMLTableRowElement>("tbody tr")].map(item => item.dataset.userId)).toEqual(["unset"]);
+  });
+
   it.each([
     { status: "active", label: "已启用", tone: "success", recent: "尚未登录" },
     { status: "invited", label: "待激活", tone: "warning", recent: "尚未激活" },
@@ -247,6 +265,12 @@ describe("教师管理展示重构边界", () => {
     mocks.users.mockResolvedValue({ users: [member("teacher-a", ["teacher"], { status: "invited", last_login_at: date })] });
     await render();
     expect(row("teacher-a").querySelector('[data-column="最近使用"]')?.textContent).toBe(new Date(date).toLocaleString("zh-CN"));
+  });
+
+  it("新教师账号在完成首改前明确标记待修改初始密码", async () => {
+    mocks.users.mockResolvedValue({ users: [member("initial-teacher", ["teacher", "grader", "arbitrator"], { must_change_password: true })] });
+    await render();
+    expect(row("initial-teacher").textContent).toContain("待修改初始密码");
   });
 
   it.each([0, 1, 2])("管理员人数 %i 保留完整提示及权限后缀", async (count) => {
@@ -275,7 +299,7 @@ describe("教师管理展示重构边界", () => {
     expect(mocks.forms).toEqual([form]);
   });
 
-  it("新增教师只填写账号资料，默认按分配任务阅卷与复核", async () => {
+  it("新增教师填写任教学科，按学科分配阅卷与复核且不绑定班级", async () => {
     await render();
     await click("新增教师");
     await fill();
@@ -284,23 +308,23 @@ describe("教师管理展示重构边界", () => {
     expect(mocks.grades).not.toHaveBeenCalled();
     expect(mocks.classes).not.toHaveBeenCalled();
     await submit();
-    expect(mocks.create).toHaveBeenCalledWith({ display_name: "新教师", username: "new_grader", phone: "13800000000", employee_no: undefined, role_codes: ["grader", "arbitrator"], school_id: "school-2", class_ids: [] });
+    expect(mocks.create).toHaveBeenCalledWith({ display_name: "新教师", username: "new_grader", phone: "13800000000", employee_no: undefined, role_codes: ["teacher", "grader", "arbitrator"], school_id: "school-2", teaching_subjects: ["mathematics", "physics"], password: "TeacherInitial123!", password_confirm: "TeacherInitial123!" });
   });
 
   it.each([
     { phone: "13800000000" },
     { phone: "" },
-  ])("用户名邀请允许手机号为“$phone”，不增加学校或班级权限", async ({ phone }) => {
+  ])("教师账号允许手机号为“$phone”，不增加学校或班级权限", async ({ phone }) => {
     await render();
     await click("新增教师");
     await fill();
     await input(field("phone") as HTMLInputElement, phone);
     await submit();
-    expect(mocks.create).toHaveBeenCalledWith({ display_name: "新教师", username: "new_grader", phone: phone || undefined, employee_no: undefined, role_codes: ["grader", "arbitrator"], school_id: "school-2", class_ids: [] });
-    expect(mocks.message.success).toHaveBeenCalledWith("教师邀请已创建");
+    expect(mocks.create).toHaveBeenCalledWith({ display_name: "新教师", username: "new_grader", phone: phone || undefined, employee_no: undefined, role_codes: ["teacher", "grader", "arbitrator"], school_id: "school-2", teaching_subjects: ["mathematics", "physics"], password: "TeacherInitial123!", password_confirm: "TeacherInitial123!" });
+    expect(mocks.message.success).toHaveBeenCalledWith("教师账号已创建，首次登录须修改初始密码");
     expect(host.querySelector('[role="dialog"]')).toBeNull();
     expect(mocks.users).toHaveBeenCalledTimes(2);
-    expect(mocks.modal.success).not.toHaveBeenCalled();
+    expect(mocks.modal.success).toHaveBeenCalledWith(expect.objectContaining({ title: "教师账号已创建" }));
   });
 
   it("管理员创建先重置旧字段并设置默认角色，提交仍强制管理员角色", async () => {
@@ -313,46 +337,48 @@ describe("教师管理展示重构边界", () => {
     expect(field("display_name").value).toBe("");
     expect(host.querySelector('[data-field="role_codes"]')).toBeNull();
     expect(host.querySelector('[data-field="class_ids"]')).toBeNull();
+    expect(host.querySelector('[data-field="teaching_subjects"]')).toBeNull();
     await fill();
     await act(async () => { mocks.forms[0].setFieldValue("role_codes", ["grader"]); });
     await submit();
-    expect(mocks.create).toHaveBeenCalledWith({ display_name: "新教师", username: "new_grader", phone: "13800000000", employee_no: undefined, role_codes: ["school_admin"], school_id: "school-2", class_ids: [] });
+    expect(mocks.create).toHaveBeenCalledWith({ display_name: "新教师", username: "new_grader", phone: "13800000000", employee_no: undefined, role_codes: ["school_admin"], school_id: "school-2" });
     expect(mocks.message.success).toHaveBeenCalledWith("管理员邀请已创建");
   });
 
-  it("创建失败保留表单草稿，重试成功先显示邀请再刷新", async () => {
-    mocks.create.mockRejectedValueOnce(new Error("创建失败")).mockResolvedValueOnce({ user: member("created"), activation });
+  it("创建失败保留表单草稿，重试成功清理密码并刷新名单", async () => {
+    mocks.create.mockRejectedValueOnce(new Error("创建失败")).mockResolvedValueOnce({ user: member("created", ["teacher", "grader", "arbitrator"], { must_change_password: true }) });
     await render();
     await click("新增教师");
     await fill();
     await submit();
     expect(mocks.message.error).toHaveBeenCalledWith("创建失败");
     expect(field("display_name").value).toBe("新教师");
-    expect(button("创建并生成邀请").disabled).toBe(false);
+    expect(button("创建教师账号").disabled).toBe(false);
     expect(mocks.users).toHaveBeenCalledTimes(1);
     await submit();
-    expect(mocks.modal.success).toHaveBeenCalledWith(expect.objectContaining({ title: "激活邀请已生成" }));
-    expect(mocks.message.success.mock.invocationCallOrder[0]).toBeLessThan(mocks.modal.success.mock.invocationCallOrder[0]);
-    expect(mocks.modal.success.mock.invocationCallOrder[0]).toBeLessThan(mocks.users.mock.invocationCallOrder[1]);
+    expect(mocks.modal.success).toHaveBeenCalledWith(expect.objectContaining({ title: "教师账号已创建" }));
+    expect(mocks.message.success.mock.invocationCallOrder[0]).toBeLessThan(mocks.users.mock.invocationCallOrder[1]);
+    expect(mocks.forms[0].getFieldValue("password")).toBeUndefined();
   });
 
   it("操作直接展开且不再提供职责与班级配置，保留已有授权", async () => {
-    mocks.users.mockResolvedValue({ users: [member("teacher-a", ["teacher"], { school_id: "school-1", class_ids: ["class-1"] })] });
+    mocks.users.mockResolvedValue({ users: [member("teacher-a", ["teacher"], { school_id: "school-1", teaching_subjects: ["mathematics"] })] });
     await render();
-    expect([...row("teacher-a").querySelectorAll("button")].map((item) => item.textContent)).toEqual(["编辑资料", "协助恢复", "停用"]);
+    expect([...row("teacher-a").querySelectorAll("button")].map((item) => item.textContent)).toEqual(["修改学科", "编辑资料", "协助恢复", "停用"]);
     expect(host.textContent).not.toContain("职责与班级");
     expect(host.textContent).not.toContain("工作职责");
     expect(host.textContent).not.toContain("更多");
     expect(mocks.access).not.toHaveBeenCalled();
   });
 
-  it("历史表单遗留班级和角色不能带入简化后的教师邀请", async () => {
+  it("历史表单遗留班级和角色不能带入新教师账号", async () => {
     await render();
     await click("新增教师");
     await fill();
     await act(async () => { mocks.forms[0].setFieldValue("class_ids", ["class-1"]); mocks.forms[0].setFieldValue("role_codes", ["school_admin"]); });
     await submit();
-    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ school_id: "school-2", class_ids: [], role_codes: ["grader", "arbitrator"] }));
+    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ school_id: "school-2", teaching_subjects: ["mathematics", "physics"], role_codes: ["teacher", "grader", "arbitrator"] }));
+    expect(mocks.create.mock.calls[0][0]).not.toHaveProperty("class_ids");
   });
 
   it("乱码姓名回退用户名，当前登录管理员在两人名单中只占一行", async () => {

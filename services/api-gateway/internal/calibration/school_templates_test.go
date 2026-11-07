@@ -148,7 +148,7 @@ func TestSchoolTemplateApprovalRequiresSchoolManagementScope(t *testing.T) {
 		}
 		return rec
 	}
-	teacher := auth.User{ID: "teacher", TenantID: "tenant", Roles: []string{"teacher"}, Permissions: []string{"review:manage"}, DataScope: map[string]any{"teacher": map[string]any{"scope": "class", "class_id": "class", "exam_id": examID}}}
+	teacher := auth.User{ID: "teacher", TenantID: "tenant", Roles: []string{"teacher"}, Permissions: []string{"review:manage"}, DataScope: map[string]any{"teacher": map[string]any{"scope": "exam_task", "exam_id": examID}}}
 	list := request(teacher, http.MethodGet)
 	var directory struct {
 		Capabilities templateCapabilities `json:"capabilities"`

@@ -11,6 +11,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/opiniondraft"
 	"edugrade-enterprise/services/api-gateway/internal/segment"
+	"edugrade-enterprise/services/api-gateway/internal/workflowactors"
 )
 
 // PublishedQuestionAppealHandler 分别提供学生端和教职工端的数据结构。其来源与可见性边界不同，因此不复用旧的可变成绩申诉处理器。
@@ -112,7 +113,14 @@ func (h *PublishedQuestionAppealHandler) List(w http.ResponseWriter, r *http.Req
 	filter := QuestionAppealFilter{ExamID: r.URL.Query().Get("exam_id"), Status: r.URL.Query().Get("status")}
 	studentView := false
 	if hasPermission(user, appealManagePermission) {
-		// 学校管理员可查看教职工工作流，包括不可变的来源上下文和私有裁决备注。
+		scope, ok := auth.AccessScopeFromContext(r.Context())
+		if !ok {
+			httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "management scope is required")
+			return
+		}
+		resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
+		// 管理列表不能沿用任课或分派产生的考试可见范围。
+		filter.Access = auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver, Management: true}
 	} else if hasPermission(user, appealWorkPermission) {
 		filter.AssignedTo = user.ID
 	} else {
@@ -360,6 +368,8 @@ func decodePublishedQuestionAppealJSON(w http.ResponseWriter, r *http.Request, t
 
 func writePublishedQuestionAppealError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, workflowactors.ErrAssigneeIneligible):
+		httpx.Error(w, r, http.StatusForbidden, "appeal_assignee_ineligible", "select an active appeal teacher of this exam subject and school")
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "appeal_resource_not_found", "appeal resource not found")
 	case errors.Is(err, ErrInvalidInput):
@@ -372,6 +382,10 @@ func writePublishedQuestionAppealError(w http.ResponseWriter, r *http.Request, e
 		httpx.Error(w, r, http.StatusConflict, "appeal_already_filed", "this released question already has an appeal")
 	case errors.Is(err, ErrResolutionRelease):
 		httpx.Error(w, r, http.StatusConflict, "appeal_resolution_release_invalid", "appeal resolution must link a later published release")
+	case errors.Is(err, ErrRestartReviewUnavailable):
+		httpx.Error(w, r, http.StatusConflict, "question_appeal_restart_unavailable", "only an outdated and unpublished regrade can be restarted; refresh the appeal first")
+	case errors.Is(err, ErrRestartReviewSharedJob):
+		httpx.Error(w, r, http.StatusConflict, "question_appeal_restart_shared_job", "this regrade includes other students or appeals and cannot be cancelled for one appeal")
 	case errors.Is(err, ErrForbidden):
 		httpx.Error(w, r, http.StatusForbidden, "appeal_action_forbidden", "appeal action is forbidden")
 	case errors.Is(err, ErrInvalidTransition):
@@ -387,7 +401,7 @@ func (h *PublishedQuestionAppealHandler) auditAction(r *http.Request, action, ta
 	user := mustUser(r)
 	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{
 		TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: targetType, TargetID: targetID, Reason: reason,
-		IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+		IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 }
 

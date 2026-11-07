@@ -50,6 +50,11 @@ func authMiddleware(store Store, allowMissingDataScope bool, allowLocked bool, o
 				httpx.Error(w, r, http.StatusInternalServerError, "auth_lookup_failed", "failed to authenticate request")
 				return
 			}
+			// 初始密码只能完成改密或退出；不能通过直接请求业务接口绕过前端门禁。
+			if user.MustChangePassword && !initialPasswordEndpoint(r) {
+				httpx.Error(w, r, http.StatusForbidden, "password_change_required", "请先修改初始密码")
+				return
+			}
 			scope, allowed := resolveRequestAccessScope(store, w, r, user, allowMissingDataScope)
 			if !allowed {
 				return
@@ -92,6 +97,18 @@ func IsServiceUser(user User) bool {
 		}
 	}
 	return false
+}
+
+// RequireServiceUser 将工作器入口与学校人工会话分开；权限码相同也不能领取租户共享队列。
+func RequireServiceUser(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := UserFromContext(r.Context())
+		if !ok || !IsServiceUser(user) {
+			httpx.Error(w, r, http.StatusForbidden, "worker_identity_required", "authenticated worker identity is required")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func sessionToken(r *http.Request, cookieName string) string {
@@ -192,4 +209,9 @@ func HasRole(user User, role string) bool {
 		}
 	}
 	return false
+}
+
+func initialPasswordEndpoint(r *http.Request) bool {
+	return (r.Method == http.MethodGet && r.URL.Path == "/api/v1/auth/me") ||
+		(r.Method == http.MethodPost && (r.URL.Path == "/api/v1/auth/password" || r.URL.Path == "/api/v1/auth/logout"))
 }

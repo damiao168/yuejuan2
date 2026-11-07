@@ -15,10 +15,63 @@ function identityStatusPresentation(identityStatus: string): {
   return { tone: "warning", label: "待确认" };
 }
 
+function assignedPageNo(page: CapturePage) {
+  return Number.isInteger(page.assigned_page_no) && page.assigned_page_no! > 0 ? page.assigned_page_no : undefined;
+}
+
+function hasConfirmedPageNo(page: CapturePage) {
+  // 上传分组也会先分配页码；只有已处理完成或具备页码识别/人工确认依据时，才移除设置入口。
+  return Boolean(assignedPageNo(page) && (["ready", "completed"].includes(page.status)
+    || page.page_identity?.page_no_source === "visual_template_match"
+    || ["verified", "manual_override"].includes(String(page.page_identity?.barcode_status))));
+}
+
+function orderedPages(pages: CapturePage[]) {
+  // assigned_page_no 是答题卡内页码；扫描顺序只用于未分配或重复页码的稳定排序，不能作为正确页码展示。
+  return [...pages].sort((left, right) => (assignedPageNo(left) ?? Number.POSITIVE_INFINITY) - (assignedPageNo(right) ?? Number.POSITIVE_INFINITY) || left.sequence_no - right.sequence_no);
+}
+
+function MatchingPageRow({ page, canManage, actioning, onPreview, onConfirmPage, onSplit }: Readonly<{
+  page: CapturePage;
+  canManage: boolean;
+  actioning: boolean;
+  onPreview: (page: CapturePage) => Promise<void>;
+  onConfirmPage: (page: CapturePage, pageNo: number) => Promise<void>;
+  onSplit?: () => void;
+}>) {
+  const pageNo = hasConfirmedPageNo(page) ? assignedPageNo(page) : undefined;
+  const [draft, setDraft] = useState<number | null>(assignedPageNo(page) ?? null);
+  const [editing, setEditing] = useState(false);
+  const validDraft = draft !== null && Number.isInteger(draft) && draft >= 1;
+  function confirmPage() {
+    if (!canManage || actioning || !validDraft || draft === null) return;
+    void onConfirmPage(page, draft);
+  }
+  return <div className="matching-page-row" data-page-id={page.id}>
+    <div className="matching-page-identity">
+      <strong>{pageNo ? `第 ${pageNo} 页` : "页码待确认"}</strong>
+      <StatusTag tone={statusTone(page.status)}>{statusLabels[page.status] ?? "未知状态"}</StatusTag>
+    </div>
+    <Space wrap>
+      <Button icon={<FolderOpen size={15} />} onClick={() => void onPreview(page)}>查看图片</Button>
+      {pageNo && !editing ? <Button disabled={!canManage || actioning} onClick={() => setEditing(true)}>调整页序</Button> : null}
+      {onSplit ? <Button icon={<Scissors size={14} />} aria-label="拆分为新答卷" disabled={!canManage || actioning} onClick={onSplit} /> : null}
+    </Space>
+    {!pageNo || editing ? <div className="matching-page-confirmation">
+      <InputNumber min={1} value={draft} onChange={value => setDraft(value === null ? null : Number(value))}
+        onPressEnter={confirmPage} disabled={!canManage || actioning} aria-label="设置答卷页码" placeholder="填写页码" />
+      <Button disabled={!canManage || actioning || !validDraft} onClick={confirmPage}>确认页码</Button>
+      {editing ? <Button disabled={actioning} onClick={() => { setEditing(false); setDraft(assignedPageNo(page) ?? null); }}>取消调整</Button> : null}
+    </div> : null}
+  </div>;
+}
+
 export function MatchingWorkspace({
   queue,
   initialSubmissionId = "",
   canManage,
+  readOnlyReason,
+  onReopen,
   actioning,
   onPreview,
   onConfirmStudent,
@@ -30,6 +83,8 @@ export function MatchingWorkspace({
   queue: MatchingQueue;
   initialSubmissionId?: string;
   canManage: boolean;
+  readOnlyReason?: string;
+  onReopen?: () => void;
   actioning: boolean;
   onPreview: (page: CapturePage) => Promise<void>;
   onConfirmStudent: (
@@ -109,7 +164,9 @@ export function MatchingWorkspace({
     (item) => !used.has(item.id) || item.id === selected?.student_id,
   );
   if (!selected) return <Empty description="暂无待匹配答卷" />;
-  return (
+  return (<>
+    {!canManage ? <Alert type="info" showIcon message={readOnlyReason || "当前仅可查看答卷，暂不能修改学生匹配和页码。"}
+      action={onReopen ? <Button disabled={actioning} onClick={onReopen}>重开批次后匹配</Button> : undefined} /> : null}
     <div className="matching-workspace">
       <aside className="matching-submissions">
         <div className="capture-pane-title">
@@ -143,54 +200,9 @@ export function MatchingWorkspace({
       </aside>
       <section className="matching-evidence">
         <h3>答卷页面</h3>
-        {selected.pages.map((page, index) => (
-          <div className="matching-page-row" key={page.id}>
-            <Button
-              icon={<FolderOpen size={15} />}
-              onClick={() => void onPreview(page)}
-            >
-              第 {page.sequence_no} 页
-            </Button>
-            <span className="muted-text">页码</span>
-            <InputNumber
-              key={`${page.id}-${page.assigned_page_no ?? "unset"}`}
-              min={1}
-              defaultValue={page.assigned_page_no ?? undefined}
-              onBlur={(event) => {
-                const next = Number(event.target.value);
-                if (
-                  Number.isInteger(next) &&
-                  next >= 1 &&
-                  next !== page.assigned_page_no
-                )
-                  void onConfirmPage(page, next);
-              }}
-              onPressEnter={(event) => {
-                const next = Number(event.currentTarget.value);
-                if (
-                  Number.isInteger(next) &&
-                  next >= 1 &&
-                  next !== page.assigned_page_no
-                )
-                  void onConfirmPage(page, next);
-              }}
-              disabled={!canManage || actioning}
-              aria-label="确认答卷页码"
-            />
-            <Space>
-              <StatusTag tone={statusTone(page.status)}>
-                {statusLabels[page.status] ?? "未知状态"}
-              </StatusTag>
-              {selected.pages.length > 1 && index > 0 && onSplit ? (
-                <Button
-                  icon={<Scissors size={14} />}
-                  aria-label="拆分为新答卷"
-                  onClick={() => void onSplit(selected.id, page.id)}
-                />
-              ) : null}
-            </Space>
-          </div>
-        ))}
+        {orderedPages(selected.pages).map(page => <MatchingPageRow key={`${selected.id}:${page.id}:${page.revision}:${page.assigned_page_no ?? "unset"}`}
+          page={page} canManage={canManage} actioning={actioning} onPreview={onPreview} onConfirmPage={onConfirmPage}
+          onSplit={selected.pages.length > 1 && selected.pages[0].id !== page.id && onSplit ? () => void onSplit(selected.id, page.id) : undefined} />)}
         <div className="matching-evidence-note">
           <ScanLine size={17} />
           <span>
@@ -206,6 +218,7 @@ export function MatchingWorkspace({
           onChange={setCandidateId}
           placeholder="按姓名或学号查找"
           optionFilterProp="label"
+          disabled={!canManage || actioning}
           options={candidates.map((item) => ({
             value: item.id,
             label: `${item.name} · ${item.student_no} · ${item.class_name}`,
@@ -216,7 +229,7 @@ export function MatchingWorkspace({
             type="primary"
             icon={<UserCheck size={16} />}
             loading={actioning}
-            disabled={!canManage || !candidateId}
+            disabled={!canManage || actioning || !candidateId}
             onClick={() =>
               void onConfirmStudent(
                 selected.id,
@@ -231,7 +244,7 @@ export function MatchingWorkspace({
             danger
             icon={<FileQuestion size={16} />}
             loading={actioning}
-            disabled={!canManage}
+            disabled={!canManage || actioning}
             onClick={() =>
               void onUnknown(selected.id, selected.identity_revision)
             }
@@ -239,6 +252,7 @@ export function MatchingWorkspace({
             标记未知
           </Button>
         </Space>
+        <p className="muted-text">确认匹配后，名册会自动显示该生已交卷；未匹配到答卷的学生自动显示缺考。</p>
         {queue.submissions.length > 1 && onMerge ? (
           <Space direction="vertical">
             <Select
@@ -253,7 +267,7 @@ export function MatchingWorkspace({
                   label: submissionLabel(item),
                 }))}
             />
-            {target ? <div aria-label="合并目标核对"><p>目标：{submissionLabel(target)}</p>{target.pages.map((page) => <Button key={page.id} onClick={() => void onPreview(page)}>查看目标第 {page.assigned_page_no ?? page.sequence_no} 页</Button>)}</div> : null}
+            {target ? <div aria-label="合并目标核对"><p>目标：{submissionLabel(target)}</p>{orderedPages(target.pages).map((page) => <Button key={page.id} onClick={() => void onPreview(page)}>{assignedPageNo(page) ? `查看目标第 ${assignedPageNo(page)} 页` : "查看目标待确认页面"}</Button>)}</div> : null}
             <Button
               icon={<Combine size={15} />}
               disabled={!canManage || actioning || !target}
@@ -267,10 +281,10 @@ export function MatchingWorkspace({
         {selected.identity_status === "matched" ? (
           <div className="matching-confirmed">
             <Check size={17} />
-            已确认，仍可重新选择并更正
+            {canManage ? "已确认，仍可重新选择并更正" : "学生身份已确认，当前仅可查看"}
           </div>
         ) : null}
       </section>
-    </div>
+    </div></>
   );
 }

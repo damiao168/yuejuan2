@@ -3,17 +3,16 @@ import { Alert, App, Button, Empty, Input, Modal, Segmented, Space, type TableCo
 import { completeCaptureCollection, excludeCaptureFile, type CaptureCollectionEntry, type CaptureCollectionIssue, type CaptureCollectionSummary, type CompleteCaptureCollectionInput } from "../../api/captureCollection";
 import { cancelCaptureBatch, processCaptureBatch } from "../../api/capture";
 import { ApiClientError, getUserErrorMessage } from "../../api/client";
-import { setExamAttendance } from "../../api/scores";
 import { ResponsiveTable } from "../../components/ResponsiveTable";
 import { StatusTag } from "../../components/StatusTag";
 
 const entryLabels: Record<CaptureCollectionEntry["status"], string> = {
-  missing: "未收卷", processing: "正在处理", needs_attention: "需要处理", ready: "导入成功", absent: "已记缺考",
+  missing: "缺考", processing: "已交卷，处理中", needs_attention: "已交卷，待处理", ready: "已交卷", absent: "缺考",
 };
 const issueLabels: Record<string, string> = {
   missing: "尚未收到答卷", missing_submission: "尚未收到答卷", missing_pages: "答卷缺页", incomplete_pages: "答卷缺页",
-  duplicate_submission: "同一学生有重复答卷", student_unidentified: "尚未匹配学生", student_not_in_roster: "学生不在本场名册",
-  absent_has_submission: "缺考学生仍有答卷，请核对", quality_failed: "图像质量需要处理", quality_review: "图像质量需要核对",
+  duplicate_submission: "同一学生有重复答卷", student_unidentified: "尚未匹配学生", student_identity_unresolved: "答卷身份待核对", student_not_in_roster: "学生不在本场名册",
+  absent_has_submission: "答卷已收到，请重新核对匹配状态", quality_failed: "图像质量需要处理", quality_review: "图像质量需要核对",
   registration_failed: "版面对齐失败", registration_review: "版面对齐需要核对", segments_missing: "题目切分尚未完成",
   grouping_incomplete: "答卷尚未组齐，请核对文件和页序", template_missing: "尚未确认本场答题卡模板", page_needs_review: "页面质量或版面对齐需要处理",
   file_failed: "文件处理失败", file_processing: "文件正在处理", task_processing: "页面正在处理", upload_group_incomplete: "本次选择的答卷尚未组齐", upload_incomplete: "本次上传未完成",
@@ -38,7 +37,7 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
   const { message, modal } = App.useApp();
   const [filter, setFilter] = useState("pending");
   const [acting, setActing] = useState(false);
-  const [editor, setEditor] = useState<{ entry: CaptureCollectionEntry; status: "expected" | "absent" } | { issue: CaptureCollectionIssue; replace?: boolean; cancelBatch?: boolean }>();
+  const [editor, setEditor] = useState<{ issue: CaptureCollectionIssue; replace?: boolean; cancelBatch?: boolean }>();
   const [reason, setReason] = useState("");
   const busy = useRef(false);
   const active = useRef(true);
@@ -76,7 +75,7 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
     const revision = summary.revision;
     dialog.current = modal.confirm({
       title: "结束本场导入",
-      content: `应收${summary.required_count}人，成功导入${summary.ready_count}人，缺考${summary.absent_count}人。结束时再次核对学生与材料，并封存已处理批次。${summary.exam_status === "collecting" ? "确认后进入阅卷。" : "本次补传结束，当前阅卷阶段保持不变。"}`,
+      content: `已交卷${summary.required_count}人，导入完成${summary.ready_count}人，自动缺考${summary.absent_count}人。结束时再次核对学生与材料，并封存已处理批次。${summary.exam_status === "collecting" ? "确认后进入阅卷。" : "本次补传结束，当前阅卷阶段保持不变。"}`,
       okText: "确认结束导入", cancelText: "返回核对",
       onOk: async () => {
         const current = context.current;
@@ -121,9 +120,7 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
     busy.current = true;
     setActing(true);
     try {
-      if ("entry" in target) {
-        await setExamAttendance(examId, target.entry.student_id, target.status, reason.trim());
-      } else if (target.replace) {
+      if (target.replace) {
         await onReplace(target.issue, reason.trim());
       } else if (target.cancelBatch) {
         await cancelCaptureBatch(target.issue.batch_id, reason.trim());
@@ -133,10 +130,10 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
       if (!active.current || context.current.examId !== examId) return;
       setEditor(undefined);
       setReason("");
-      if ("issue" in target && target.replace) return;
+      if (target.replace) return;
       await onRefresh();
-      if ("issue" in target) await onMaterialChanged(target.issue.batch_id);
-      message.success("entry" in target ? target.status === "absent" ? "已标记缺考并重新核对" : "已恢复应考并重新核对" : target.cancelBatch ? "该批次已取消，未完成上传不再计入" : "本次选择的材料已不计入，历史记录已保留");
+      await onMaterialChanged(target.issue.batch_id);
+      message.success(target.cancelBatch ? "该批次已取消，未完成上传不再计入" : "本次选择的材料已不计入，历史记录已保留");
     } catch (cause) {
       if (active.current && context.current.examId === examId) message.error(getUserErrorMessage(cause, "处理失败，请重新核对后重试"));
     } finally {
@@ -164,28 +161,28 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
 
   const columns: TableColumnsType<CaptureCollectionEntry> = [
     { title: "学生", key: "student", render: (_, entry) => <div><strong>{entry.student_name || entry.student_no}</strong><div className="muted">{[entry.class_name, entry.student_no].filter(Boolean).join(" · ")}</div></div> },
-    { title: "导入情况", key: "status", render: (_, entry) => <div><StatusTag tone={entry.status === "ready" ? "success" : entry.status === "processing" ? "processing" : entry.status === "absent" ? "neutral" : "warning"}>{entryLabels[entry.status]}</StatusTag>{entry.status !== "ready" && entry.status !== "processing" ? <div className="muted">{entry.status === "absent" ? entry.reason || "已核实缺考" : issueLabels[entry.code] || entry.reason || (entry.status === "missing" ? "请补传答卷，或核实后标记缺考" : "请查看答卷处理具体问题")}</div> : null}</div> },
+    { title: "导入情况", key: "status", render: (_, entry) => <div><StatusTag tone={entry.status === "ready" ? "success" : entry.status === "processing" ? "processing" : entry.status === "absent" ? "neutral" : "warning"}>{entryLabels[entry.status]}</StatusTag>{entry.status !== "ready" && entry.status !== "processing" ? <div className="muted">{entry.status === "absent" || entry.status === "missing" ? "未匹配到该生答卷，自动按缺考显示" : issueLabels[entry.code] || entry.reason || "请查看答卷处理具体问题"}</div> : null}</div> },
     { title: "页数", key: "pages", width: 100, render: (_, entry) => entry.status === "absent" ? "—" : `${entry.actual_pages} / ${entry.expected_pages}` },
     { title: "操作", key: "action", render: (_, entry) => <Space wrap>
       {entry.batch_id ? <Button size="small" disabled={localBusy} onClick={() => onLocate({ batchId: entry.batch_id!, submissionId: entry.submission_id, tab: entry.code.includes("quality") ? "image-quality" : entry.code === "page_needs_review" ? "issues" : ["grouping_incomplete", "missing_pages"].includes(entry.code) ? "files" : entry.code.includes("registration") || entry.code.includes("segment") || entry.code === "template_missing" ? "processing" : "matching" })}>{entry.status === "ready" ? "查看答卷" : "查看处理"}</Button> : null}
-      {canManage && (entry.status === "missing" || entry.status === "absent") ? <Button size="small" disabled={acting || localBusy} onClick={() => { setEditor({ entry, status: entry.status === "absent" ? "expected" : "absent" }); setReason(""); }}>{entry.status === "absent" ? "恢复应考" : "标记缺考"}</Button> : null}
     </Space> },
   ];
 
   return <section className="capture-collection" aria-label="本场学生答卷核对">
     <div className="capture-collection-heading">
-      <div><h2>学生答卷核对</h2><p>{summary ? `名册 ${summary.roster_count} 人 · 缺考 ${summary.absent_count} 人 · 每人 ${summary.pages_per_student || "待确认"} 页` : "按本场已确认名册核对学生答卷"}</p></div>
+      <div><h2>全场学生核对</h2><p>{summary ? `名册 ${summary.roster_count} 人 · 缺考 ${summary.absent_count} 人 · 每人 ${summary.pages_per_student || "待确认"} 页` : "按本场已确认名册核对学生答卷"}</p></div>
       <Space wrap><Button loading={loading} onClick={() => void onRefresh()}>刷新核对</Button><Button type="primary" disabled={blocked} loading={acting} onClick={finishCollection}>结束本场导入</Button></Space>
     </div>
     <div className="capture-collection-stats" aria-label="学生导入统计">
-      <div><span>应收</span><strong>{summary?.required_count ?? "—"}</strong></div>
-      <div><span>成功导入</span><strong>{summary?.ready_count ?? "—"}</strong></div>
+      <div><span>已交卷</span><strong>{summary?.required_count ?? "—"}</strong></div>
+      <div><span>导入完成</span><strong>{summary?.ready_count ?? "—"}</strong></div>
       <div><span>待完成</span><strong>{summary?.pending_count ?? "—"}</strong></div>
     </div>
+    <p className="muted">名册学生未匹配到答卷时自动显示缺考；确认匹配后自动显示已交卷。未识别答卷仍需完成学生匹配。</p>
     {finishReasons.length ? <Alert type={summary?.closed && !error ? "success" : "info"} showIcon message={finishReasons.join("；")} /> : <p className="muted">正常通过的页面无需逐页确认；仍请核对材料问题。</p>}
     {summary ? <>
       <div className="capture-collection-filter"><Segmented aria-label="学生核对范围" value={filter} onChange={value => setFilter(String(value))} options={[{ value: "pending", label: `待完成 (${pendingEntries.length})` }, { value: "all", label: "全部学生" }]} /></div>
-      <ResponsiveTable className="dense-data-table" rowKey="student_id" columns={columns} dataSource={entries} pagination={{ pageSize: 10 }} size="small" locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={filter === "pending" ? "学生待办已处理完毕，请继续核对材料问题" : "本场暂无学生名册"} /> }} />
+      <ResponsiveTable className="dense-data-table" rowKey="student_id" columns={columns} mobilePrimaryCount={columns.length} dataSource={entries} pagination={{ pageSize: 10 }} size="small" locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={filter === "pending" ? "学生待办已处理完毕，请继续核对材料问题" : "本场暂无学生名册"} /> }} />
       {summary.issues.length ? <div className="capture-collection-materials"><h3>材料问题 <small>{summary.issues.length} 项，不计入学生人数</small></h3>{summary.issues.map(issue => <div className="capture-collection-material" key={`${issue.kind}:${issue.id}`}>
         <div><strong>{issue.name}</strong><span>{issueLabels[issue.code] || (issue.kind === "file" ? "文件需要处理" : issue.kind === "upload" ? "上传尚未完成" : issue.kind === "batch" ? "批次需要处理" : "答卷尚未唯一匹配到应考学生")}</span></div>
         <Space wrap><Button size="small" disabled={localBusy} onClick={() => onLocate({ batchId: issue.batch_id, submissionId: issue.submission_id, tab: issue.code === "task_processing" ? "processing" : issue.kind === "submission" ? "matching" : "files" })}>查看材料</Button>
@@ -194,13 +191,12 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
         </Space>
       </div>)}</div> : null}
     </> : null}
-    <Modal title={editor && "entry" in editor ? editor.status === "absent" ? `标记缺考：${editor.entry.student_name}` : `恢复应考：${editor.entry.student_name}` : editor && "issue" in editor && editor.replace ? "上传替代答卷" : editor && "issue" in editor && editor.cancelBatch ? "取消未完成上传所在批次" : "本次选择的材料不计入"} open={Boolean(editor)} okText={editor && "issue" in editor && editor.replace ? "继续选择完整答卷" : "确认并重新核对"} cancelText="取消" confirmLoading={acting} okButtonProps={{ disabled: !reason.trim() || !canManage || localBusy }} onCancel={() => { if (!acting) setEditor(undefined); }} onOk={() => void saveResolution()}>
-      <p>{editor && "issue" in editor ? editor.cancelBatch
-        ? "取消后，本批全部材料和未完成上传不再计入核对。请确认没有需保留的材料；对应学生仍需补传或核实缺考。"
-        : editor.replace
+    <Modal title={editor?.replace ? "上传替代答卷" : editor?.cancelBatch ? "取消未完成上传所在批次" : "本次选择的材料不计入"} open={Boolean(editor)} okText={editor?.replace ? "继续选择完整答卷" : "确认并重新核对"} cancelText="取消" confirmLoading={acting} okButtonProps={{ disabled: !reason.trim() || !canManage || localBusy }} onCancel={() => { if (!acting) setEditor(undefined); }} onOk={() => void saveResolution()}>
+      <p>{editor?.cancelBatch
+        ? "取消后，本批全部材料和未完成上传不再计入核对。请确认没有需保留的材料；没有有效匹配答卷的名册学生会自动显示缺考。"
+        : editor?.replace
           ? "请选择每人页数，并一次上传原选择对应的全部完整答卷。新文件登记成功后，原选择的全部文件及答卷退出有效输入，历史保留；新答卷处理成功才算导入完成。已有评分的材料不能在此移除。"
-          : "原选择的全部文件及答卷将不再计入，历史保留；对应学生仍需补传或核实缺考。已有评分的材料不能在此移除。"
-        : "请核实学生情况并填写原因，本次名册调整会留有记录。"}</p>
+          : "原选择的全部文件及答卷将不再计入，历史保留；没有有效匹配答卷的名册学生会自动显示缺考。已有评分的材料不能在此移除。"}</p>
       <Input.TextArea aria-label="处理原因" rows={3} maxLength={300} value={reason} onChange={event => setReason(event.target.value)} placeholder="填写本次处理原因" />
     </Modal>
   </section>;

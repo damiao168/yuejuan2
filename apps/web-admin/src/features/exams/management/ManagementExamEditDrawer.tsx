@@ -5,8 +5,7 @@ import { getUserErrorMessage } from "../../../api/client";
 import { updateManagementExam, type ManagementExam, type ManagementExamUpdate } from "../../../api/exams";
 import type { SchoolClass } from "../../../api/org";
 import { examSubjectLabel } from "../../../constants/examStatus";
-import { examTypeOptions } from "../../../constants/examCatalog";
-import { canEditManagementDefaultClasses, canEditManagementScope, managementDefaultClassesHelp, managementEditPayload, type ManagementEditValues } from "./managementPresentation";
+import { canEditManagementDefaultClasses, managementDefaultClassesHelp, managementEditPayload, type ManagementEditValues } from "./managementPresentation";
 import { isManagementCommandUncertain } from "./managementCommand";
 
 export function ManagementExamEditDrawer({ exam, classes, schoolName, gradeName, focusTarget, onClose, onSaved }: Readonly<{
@@ -29,7 +28,7 @@ export function ManagementExamEditDrawer({ exam, classes, schoolName, gradeName,
     command.current = null;
     setSaveError(null);
     setUncertain(false);
-    if (exam) form.setFieldsValue({ name: exam.name, exam_type: exam.exam_type, class_ids: exam.default_class_ids ?? exam.class_ids });
+    if (exam) form.setFieldsValue({ name: exam.name, class_ids: exam.default_class_ids ?? exam.class_ids });
   }, [exam, form]);
 
   const save = async () => {
@@ -38,7 +37,7 @@ export function ManagementExamEditDrawer({ exam, classes, schoolName, gradeName,
     try { values = await form.validateFields(); } catch { return; }
     // 响应丢失时保留同一请求和幂等键；重试期间冻结表单，避免同一命令被换成另一份设置。
     const pending = command.current ?? { id: crypto.randomUUID(), payload: managementEditPayload(exam, values) };
-    if (pending.payload.name === undefined && pending.payload.exam_type === undefined && pending.payload.class_ids === undefined) {
+    if (pending.payload.name === undefined && pending.payload.class_ids === undefined) {
       onClose();
       return;
     }
@@ -62,7 +61,6 @@ export function ManagementExamEditDrawer({ exam, classes, schoolName, gradeName,
 
   const affected = exam?.exams.filter((subject) => exam.inherited_subject_ids?.includes(subject.id) || exam.kind === "standalone") ?? [];
   const independent = exam?.exams.filter((subject) => !affected.some((item) => item.id === subject.id)) ?? [];
-  const scopeEditable = exam ? canEditManagementScope(exam) : false;
   const classesEditable = exam ? canEditManagementDefaultClasses(exam) : false;
   const allowedClasses = classes.filter((item) => item.school_id === exam?.school_id && (!exam.grade_id || item.grade_id === exam.grade_id));
   return <Drawer title="编辑考试" open={Boolean(exam)} onClose={() => { if (!saving) onClose(); }} width={680} destroyOnHidden
@@ -74,7 +72,6 @@ export function ManagementExamEditDrawer({ exam, classes, schoolName, gradeName,
       <Descriptions column={1} size="small"><Descriptions.Item label="学校">{schoolName || "本校"}</Descriptions.Item><Descriptions.Item label="年级">{gradeName || "未关联年级"}</Descriptions.Item></Descriptions>
       <Form form={form} layout="vertical" disabled={!exam.can_edit || saving || uncertain} preserve={false}>
         <Form.Item label="考试名称" name="name" rules={[{ required: true, whitespace: true, message: "请输入考试名称" }, { max: 200, message: "考试名称最多 200 个字符" }]}><Input /></Form.Item>
-        <Form.Item label="考试类型" name="exam_type" rules={[{ required: true, message: "请选择考试类型" }]} extra={!scopeEditable ? "考试进入后续阶段后，考试类型不能修改。" : undefined}><Select options={examTypeOptions} disabled={!scopeEditable || saving || uncertain} /></Form.Item>
         <Form.Item label="默认参考班级" name="class_ids" rules={affected.length && (exam.default_class_ids ?? exam.class_ids).length ? [{ required: true, type: "array", min: 1, message: "请选择至少一个班级" }] : []} extra={managementDefaultClassesHelp(affected.length > 0, classesEditable)}>
           <Select mode="multiple" optionFilterProp="label" disabled={!classesEditable || saving || uncertain} options={allowedClasses.map((item) => ({ label: `${item.name} (${item.code})`, value: item.id }))} />
         </Form.Item>

@@ -15,7 +15,16 @@ var (
 	ErrGoldSetIncomplete     = errors.New("active approved Gold Set is insufficient")
 	ErrSampleNotInSession    = errors.New("gold paper is not part of this calibration session")
 	ErrQualificationRequired = errors.New("current grader qualification is required")
+	ErrRetakeCooldown        = errors.New("calibration retake is cooling down")
 )
+
+// RetakeCooldownError 保留原错误分类，并给调用方真实的可重考时间，避免从本次点击重新计算24小时。
+type RetakeCooldownError struct {
+	AvailableAt time.Time
+}
+
+func (e *RetakeCooldownError) Error() string { return ErrRetakeCooldown.Error() }
+func (e *RetakeCooldownError) Unwrap() error { return ErrRetakeCooldown }
 
 type SessionStatus string
 
@@ -82,7 +91,7 @@ type GoldSample struct {
 	RubricSnapshot map[string]any  `json:"rubric_snapshot"`
 }
 
-// goldReference 在会话内冻结，不序列化给阅卷者；参考分数和预期评分细则得分只在提交后的作答结果中返回。
+// goldReference 在会话内冻结，不序列化给阅卷者；参考答案仅用于服务端计算整场一致性指标。
 type goldReference struct {
 	GoldSample
 	SnapshotID       string         `json:"snapshot_id"`
@@ -142,15 +151,15 @@ type Attempt struct {
 	GoldPaperID          string                `json:"gold_paper_id"`
 	GoldVersion          int                   `json:"gold_version"`
 	SubmittedScore       float64               `json:"submitted_score"`
-	ReferenceScore       float64               `json:"reference_score"`
+	ReferenceScore       float64               `json:"-"`
 	RubricSelections     map[string]any        `json:"rubric_selections"`
-	AbsoluteError        float64               `json:"absolute_error"`
-	ExactMatch           bool                  `json:"exact_match"`
-	WithinOne            bool                  `json:"within_one"`
-	SevereDisagreement   bool                  `json:"severe_disagreement"`
-	CriterionCorrect     int                   `json:"criterion_correct"`
-	CriterionCount       int                   `json:"criterion_count"`
-	CriterionDifferences []CriterionDifference `json:"criterion_differences"`
+	AbsoluteError        float64               `json:"-"`
+	ExactMatch           bool                  `json:"-"`
+	WithinOne            bool                  `json:"-"`
+	SevereDisagreement   bool                  `json:"-"`
+	CriterionCorrect     int                   `json:"-"`
+	CriterionCount       int                   `json:"-"`
+	CriterionDifferences []CriterionDifference `json:"-"`
 	CreatedAt            time.Time             `json:"created_at"`
 }
 

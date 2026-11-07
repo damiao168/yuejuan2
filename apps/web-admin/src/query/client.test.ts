@@ -21,4 +21,14 @@ describe("query defaults", () => {
     expect(queryClient.getQueryState(examWorkspaceKeys.detail("exam-2"))?.isInvalidated).toBe(false);
     queryClient.clear();
   });
+
+  it("workspace cache separates authorization scopes while exam invalidation reaches both", async () => {
+    const client = createAppQueryClient();
+    client.setQueryData(examWorkspaceKeys.detail("exam", "before"), { secret: "foreign" });
+    expect(client.getQueryData(examWorkspaceKeys.detail("exam", "after"))).toBeUndefined();
+    client.setQueryData(examWorkspaceKeys.detail("exam", "after"), { safe: "local" });
+    await invalidateExamWorkspace(client, "exam");
+    for (const scope of ["before", "after"]) expect(client.getQueryState(examWorkspaceKeys.detail("exam", scope))?.isInvalidated).toBe(true);
+    client.clear();
+  });
 });

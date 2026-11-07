@@ -39,12 +39,14 @@ type ManagementExam struct {
 }
 
 type ManagementProgress struct {
-	Status         string         `json:"status"`
-	Label          string         `json:"label"`
-	TotalCount     int            `json:"total_count"`
-	ReadyCount     int            `json:"ready_count"`
-	PublishedCount int            `json:"published_count"`
-	Counts         map[string]int `json:"counts"`
+	Status         string `json:"status"`
+	Label          string `json:"label"`
+	TotalCount     int    `json:"total_count"`
+	ReadyCount     int    `json:"ready_count"`
+	PublishedCount int    `json:"published_count"`
+	// 只统计已核对评分完整性或已正式发布的学科；手动阶段标签不代表阅卷结束。
+	GradingCompleteCount int            `json:"grading_complete_count"`
+	Counts               map[string]int `json:"counts"`
 	// 内存测试仓库没有确认/发布服务；false 时计数不能解释为已核实的业务完成率。
 	FactsAvailable bool `json:"facts_available"`
 }
@@ -80,7 +82,8 @@ type ManagementArchiveBulkChecker interface {
 }
 
 type managementSubjectFacts struct {
-	Ready     bool
-	Published bool
-	Available bool
+	Ready           bool
+	Published       bool
+	GradingComplete bool
+	Available       bool
 }

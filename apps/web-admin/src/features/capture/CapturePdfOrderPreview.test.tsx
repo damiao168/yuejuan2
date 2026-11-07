@@ -16,7 +16,6 @@ describe("PDF预检提交边界", () => {
     const source = new File(["tiff"], "合成答卷.tiff", { type: "image/tiff" }); const output = new File(["reordered"], "页序已调整.tiff");
     const change = vi.fn(); const pending = vi.fn(); api.tiffReorder.mockRejectedValueOnce(new Error("原件数据不完整"));
     render(<CapturePdfOrderPreview file={source} disabled={false} onChange={change} onPendingChange={pending} />);
-    fireEvent.click(screen.getByRole("button", { name: "查看TIFF页面并调整页序" }));
     await waitFor(() => expect((screen.getAllByRole("button", { name: "下移此页" })[0] as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getAllByRole("button", { name: "下移此页" })[0]); expect(pending).toHaveBeenLastCalledWith(true);
     fireEvent.click(screen.getByRole("button", { name: "应用TIFF页序" })); await screen.findByRole("alert"); expect(change).not.toHaveBeenCalled();
@@ -28,7 +27,6 @@ describe("PDF预检提交边界", () => {
     const output = new File(["reordered"], "页序已调整.pdf"); api.reorder.mockResolvedValue(output);
     const change = vi.fn(); const pending = vi.fn();
     render(<CapturePdfOrderPreview file={file} disabled={false} onChange={change} onPendingChange={pending} />);
-    fireEvent.click(screen.getByRole("button", { name: "查看PDF页面并调整页序" }));
     await waitFor(() => expect((screen.getAllByRole("button", { name: "下移此页" })[0] as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getAllByRole("button", { name: "下移此页" })[0]);
     expect(pending).toHaveBeenLastCalledWith(true); expect(change).not.toHaveBeenCalled();
@@ -40,23 +38,27 @@ describe("PDF预检提交边界", () => {
     let signal!: AbortSignal; let page!: (image: string, count: number) => void;
     api.preview.mockImplementation((_file, nextSignal, nextPage) => { signal = nextSignal; page = nextPage; return new Promise(() => {}); });
     const view = render(<CapturePdfOrderPreview file={file} disabled={false} onChange={vi.fn()} onPendingChange={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "查看PDF页面并调整页序" })); view.unmount();
+    view.unmount();
     expect(signal.aborted).toBe(true); await act(async () => page("late", 1));
     expect(screen.queryByAltText("原文件第 1 页预览")).toBeNull();
   });
-  it("读取中收起预览会取消解码并释放外层等待，不必重新展开才能导入",async()=>{
+  it("自动预览没有折叠入口，换文件取消旧解码并忽略迟到页面",async()=>{
     let signal!:AbortSignal,page!:(image:string,count:number)=>void;
-    api.preview.mockImplementation((_file,nextSignal,nextPage)=>{signal=nextSignal;page=nextPage;return new Promise(()=>{});});
-    const pending=vi.fn();render(<CapturePdfOrderPreview file={file} disabled={false} onChange={vi.fn()} onPendingChange={pending}/>);
-    fireEvent.click(screen.getByRole("button",{name:"查看PDF页面并调整页序"}));expect(pending).toHaveBeenLastCalledWith(true);
-    fireEvent.click(screen.getByRole("button",{name:"收起PDF页面"}));expect(signal.aborted).toBe(true);expect(pending).toHaveBeenLastCalledWith(false);
-    await act(async()=>page("late",1));expect(screen.queryByAltText("原文件第 1 页预览")).toBeNull();
+    api.preview.mockImplementationOnce((_file,nextSignal,nextPage)=>{signal=nextSignal;page=nextPage;return new Promise(()=>{});});
+    api.preview.mockImplementationOnce(async(_file,_signal,onPage)=>{onPage("new-page",1);});
+    const pending=vi.fn();const view=render(<CapturePdfOrderPreview file={file} disabled={false} onChange={vi.fn()} onPendingChange={pending}/>);
+    expect(pending).toHaveBeenLastCalledWith(true);
+    expect(screen.queryByRole("button",{name:/查看PDF|收起PDF/})).toBeNull();
+    const next=new File(["new"],"新答卷.pdf");view.rerender(<CapturePdfOrderPreview file={next} disabled={false} onChange={vi.fn()} onPendingChange={pending}/>);
+    expect(signal.aborted).toBe(true);await act(async()=>page("late",1));
+    await waitFor(()=>expect(pending).toHaveBeenLastCalledWith(false));
+    expect(screen.getByAltText("原文件第 1 页预览").getAttribute("src")).toBe("new-page");
   });
   it("解码失败告知外层改用原件确认，读取中阻止导入且不替换原文件",async()=>{
     let fail!:(reason:Error)=>void;api.preview.mockReturnValue(new Promise((_resolve,reject)=>{fail=reject;}));
     const pending=vi.fn(),fallback=vi.fn(),change=vi.fn();
     render(<CapturePdfOrderPreview file={file} disabled={false} onChange={change} onPendingChange={pending} onPreviewFailureChange={fallback}/>);
-    fireEvent.click(screen.getByRole("button",{name:"查看PDF页面并调整页序"}));expect(pending).toHaveBeenLastCalledWith(true);
+    expect(pending).toHaveBeenLastCalledWith(true);
     await act(async()=>fail(new Error("此文件含暂不能显示的特殊编码")));
     expect(fallback).toHaveBeenLastCalledWith("此文件含暂不能显示的特殊编码");expect(pending).toHaveBeenLastCalledWith(false);expect(change).not.toHaveBeenCalled();
     expect(screen.queryByRole("button",{name:"应用PDF页序"})).toBeNull();

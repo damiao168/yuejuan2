@@ -302,6 +302,18 @@
               "minimum": 0,
               "maximum": 9223372036854775807
             },
+            "cache_write_input_tokens": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807,
+              "description": "供应商明确报告的缓存写入输入 token 数；缺失表示未知。"
+            },
+            "uncached_input_tokens": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807,
+              "description": "供应商明确报告的未命中量，或已知缓存读写后拆出的普通输入 token 数；缺失表示未知。"
+            },
             "output_tokens": {
               "type": "integer",
               "minimum": 0,

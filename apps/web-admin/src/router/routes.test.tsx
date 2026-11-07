@@ -36,6 +36,12 @@ describe("route registration boundary", () => {
     const capture = createRouteRegistry(false).find((route) => route.path === "/capture");
     expect(capture).toMatchObject({ productionReady: true, navigation: false });
   });
+  it("keeps one combined account settings navigation entry and supports the old security link", () => {
+    const accountRoutes = createRouteRegistry(false).filter(route => route.path.startsWith("/account/"));
+    expect(accountRoutes.filter(route => route.navigation !== false).map(route => route.path)).toEqual(["/account/profile"]);
+    expect(accountRoutes.find(route => route.path === "/account/profile")?.title).toBe("个人信息与账户安全");
+    expect(accountRoutes.find(route => route.path === "/account/sessions")).toMatchObject({ title: "个人信息与账户安全", navigation: false });
+  });
 
   it("shows AI chat only in the school administrator workspace", () => {
     const chat = createRouteRegistry(false).find((route) => route.path === "/ai-chat");

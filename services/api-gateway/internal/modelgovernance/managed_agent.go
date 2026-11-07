@@ -43,6 +43,8 @@ type AgentRequest struct {
 	Messages   []AgentMessage `json:"messages"`
 	Tools      []AgentTool    `json:"tools,omitempty"`
 	ToolChoice string         `json:"tool_choice,omitempty"`
+	// DisableThinking 仅请求已知供应商支持的关闭策略；不按第三方模型名称猜测参数协议。
+	DisableThinking bool `json:"-"`
 }
 
 type AgentResponse struct {
@@ -64,7 +66,7 @@ type AgentModel interface {
 	Complete(context.Context, ManagedAPIConnection, AgentRequest) (AgentResponse, error)
 }
 
-// AgentStreamModel 用于最终回答；请求必须禁止工具调用，防止把未完成的工具计划显示为答案。
+// AgentStreamModel 用于禁止原生工具调用的流式响应；结构化动作须由调用方缓冲和验证，不能直接作为可执行工具调用。
 type AgentStreamModel interface {
 	Stream(context.Context, ManagedAPIConnection, AgentRequest, func(AgentEvent) error) (AgentResponse, error)
 }

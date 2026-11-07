@@ -1,0 +1,68 @@
+
+
+/* 教师桌面以左侧答题材料为主体，右侧集中录分；小屏仍按先材料后评分排列。 */
+.grading-teacher-simple .grading-workspace,
+.immersive-workspace .grading-teacher-simple .grading-workspace { grid-template-columns: minmax(0, 1fr); }
+.grading-teacher-simple .grading-panels,
+.immersive-workspace .grading-teacher-simple .grading-panels { grid-template-columns: minmax(0, 1fr) 280px; grid-template-areas: "answer inspector"; gap: 0; }
+.grading-teacher-simple .grading-inspector,
+.immersive-workspace .grading-teacher-simple .grading-inspector { border-left: 1px solid var(--border); border-right: 0; grid-template-rows: auto auto; }
+.grading-teacher-simple .answer-panel { border-right: 0; }
+.grading-teacher-simple .grading-inspector .panel-head { flex-wrap: wrap; align-items: flex-start; }
+/* 固定高度的桌面把评分详情留在右栏滚动，不能让长记录被工作区的裁切边界遮住。 */
+@media (min-width: 1100px) and (min-height: 821px) {
+  @container (min-width: 1051px) {
+    .immersive-workspace .grading-teacher-simple .grading-inspector { min-height: 0; overflow-y: auto; }
+  }
+}
+.grading-teacher-simple .grading-work-title { flex-wrap: wrap; min-width: 0; }
+.grading-personal-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.grading-current-task { overflow-wrap: anywhere; }
+.grading-current-score { font-variant-numeric: tabular-nums; }
+.grading-reference-details { min-width: 0; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.grading-reference-details > summary { cursor: pointer; min-height: 28px; font-weight: 600; }
+.grading-reference-details .frozen-question-reference { border: 0; }
+.grading-task-drawer .grading-task-rail { position: static; width: 100%; max-height: none; height: auto; border: 0; }
+.grading-task-drawer .grading-taskbar { display: grid; grid-template-columns: minmax(0, 1fr); }
+.grading-task-drawer .grading-task-list { max-height: none; }
+.bookmark-inline-status { padding: 8px 12px; color: var(--eg-color-text-secondary, #666); }
+.bookmark-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.bookmark-filters > * { min-width: 0; width: 100%; }
+.bookmark-list-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; }
+.bookmark-list { list-style: none; padding: 0; margin: 0 0 16px; }
+.bookmark-list li { padding: 12px 0; border-block-start: 1px solid var(--border); }
+.bookmark-open { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; text-align: left; color: inherit; background: transparent; border: 0; padding: 0 0 8px; cursor: pointer; }
+.bookmark-open small { color: var(--eg-color-text-secondary, #666); }
+.bookmark-open strong { font-size: 16px; }
+.bookmark-open p { margin: 4px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.bookmark-empty, .bookmark-loading { padding: 24px 0; }
+.bookmark-cleanup { margin-top: 24px; border-top: 1px solid var(--border); padding-block: 12px; }
+.bookmark-cleanup > summary { cursor: pointer; }
+.bookmark-cleanup > div { display: flex; justify-content: space-between; padding-block: 8px; }
+/* 覆盖共享 .ant-modal 的重要宽度规则，按滚动容器可用宽度收缩，避免窄屏竖向滚动条再挤出横向滚动条。 */
+.ant-modal.bookmark-readonly-modal { max-width: calc(100% - 16px) !important; }
+.bookmark-readonly { display: flex; flex-direction: column; gap: 12px; }
+.bookmark-readonly header { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.bookmark-readonly-layout { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 18px; align-items: start; }
+.bookmark-readonly-layout > * { min-width: 0; }
+.bookmark-readonly-answer { padding: 12px; background: #eef0f3; min-height: 240px; overflow: auto; }
+.bookmark-readonly-answer img { display: block; max-width: 100%; height: auto; margin: auto; }
+.bookmark-submitted-score { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
+.bookmark-plain-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  /* Space 把个人工具作为一个子项；小屏摊平这一层，让各按钮沿用外层双列网格。 */
+  .immersive-workspace .grading-topbar > .ant-space > .ant-space-item:has(.grading-personal-actions),
+  .immersive-workspace .grading-personal-actions { display: contents; }
+  .grading-teacher-simple .grading-panels,
+  .immersive-workspace .grading-teacher-simple .grading-panels { grid-template-columns: minmax(0, 1fr); grid-template-areas: "answer" "inspector"; }
+  .grading-teacher-simple .grading-inspector,
+  .immersive-workspace .grading-teacher-simple .grading-inspector { border-left: 0; border-top: 1px solid var(--border); }
+  .bookmark-readonly-layout { grid-template-columns: minmax(0, 1fr); }
+  .bookmark-filters { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 700px) {
+  .grading-teacher-simple .grading-panels,
+  .immersive-workspace .grading-teacher-simple .grading-panels { grid-template-columns: minmax(0, 1fr); grid-template-areas: "answer" "inspector"; }
+  .grading-teacher-simple .grading-inspector,
+  .immersive-workspace .grading-teacher-simple .grading-inspector { border-left: 0; border-top: 1px solid var(--border); }
+}

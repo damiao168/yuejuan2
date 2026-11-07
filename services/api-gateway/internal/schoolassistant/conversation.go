@@ -34,6 +34,9 @@ type preparedConversation struct {
 	messages    []modelgovernance.AgentMessage
 	tools       []modelgovernance.AgentTool
 	definitions map[string]ToolDefinition
+	webSearch   bool
+	// 页面提示只在模型选择校内分支后验证；公开规划和搜索评估不读取它。
+	businessContext *ConversationContext
 }
 
 const conversationInstructions = `你是学校管理员的 AI 助手。管理员在同一个对话里询问业务问题、追问、请求解释或编写材料。
@@ -50,7 +53,12 @@ func (s *ConversationService) prepare(ctx context.Context, input ConversationReq
 	if err != nil {
 		return preparedConversation{}, err
 	}
-	messages, err := modelgovernance.NormalizeAgentUserMessages(input.Messages)
+	var messages []modelgovernance.AgentMessage
+	if input.WebSearch {
+		messages, err = prepareWebSearch(input)
+	} else {
+		messages, err = modelgovernance.NormalizeAgentUserMessages(input.Messages)
+	}
 	if errors.Is(err, modelgovernance.ErrManagedChatInvalidImage) {
 		return preparedConversation{}, reject(400, "ai_chat_invalid_image", "图片无效或超过限制，请使用每张不超过 3 MB、2000 万像素的 PNG 或 JPEG 图片。")
 	}
@@ -58,25 +66,18 @@ func (s *ConversationService) prepare(ctx context.Context, input ConversationReq
 		return preparedConversation{}, reject(400, "ai_chat_image_budget", "本段对话的图片总大小不能超过 9 MB，请开启新对话后发送。")
 	}
 	if err != nil {
+		var failure *queryError
+		if errors.As(err, &failure) {
+			return preparedConversation{}, err
+		}
 		return preparedConversation{}, reject(400, "invalid_ai_chat_request", "对话内容为空、过长或格式不正确。")
 	}
 	trustedContext := ""
-	if input.Context != nil {
-		if len(input.Context.OriginModule) > 100 || len(input.Context.OriginSection) > 100 {
-			return preparedConversation{}, reject(400, "invalid_context", "页面上下文过长。")
-		}
-		id := strings.TrimSpace(input.Context.ExamID)
-		if id != "" {
-			if _, err := uuid.Parse(id); err != nil {
-				return preparedConversation{}, reject(400, "invalid_exam_id", "考试标识必须是 UUID。")
-			}
-			item, err := s.tools.authorizedExam(ctx, user, access, id)
-			if err != nil {
-				return preparedConversation{}, err
-			}
-			// 页面只给资源提示；名称来自获准读取，提示不能扩展工具权限或替代本轮事实。
-			data, _ := json.Marshal(map[string]string{"exam_id": item.ID, "exam_name": item.Name, "subject": item.Subject})
-			trustedContext = "\n已核实可访问的页面考试上下文（用户可改问其他考试）：" + string(data)
+	// 公开规划和网页回答不读取页面考试提示；只有选定校内分支后才另行验证并使用。
+	if !input.WebSearch && input.Context != nil {
+		trustedContext, err = s.trustedConversationContext(ctx, user, access, input.Context)
+		if err != nil {
+			return preparedConversation{}, err
 		}
 	}
 	if s.deps.Models == nil {
@@ -86,12 +87,27 @@ func (s *ConversationService) prepare(ctx context.Context, input ConversationReq
 	if err != nil || connection == nil {
 		return preparedConversation{}, reject(503, "ai_chat_model_unavailable", "当前没有可用的学校对话模型，请联系平台管理员。")
 	}
-	definitions, err := s.tools.ToolDefinitions(ctx)
-	if err != nil {
-		return preparedConversation{}, err
+	var definitions []ToolDefinition
+	if !input.WebSearch {
+		definitions, err = s.tools.ToolDefinitions(ctx)
+		if err != nil {
+			return preparedConversation{}, err
+		}
 	}
-	p := preparedConversation{requestID: uuid.NewString(), user: user, connection: *connection, definitions: make(map[string]ToolDefinition)}
-	p.messages = append([]modelgovernance.AgentMessage{{Role: "system", Content: conversationInstructions + "\n当前服务器时间：" + time.Now().UTC().Format(time.RFC3339) + trustedContext}}, messages...)
+	p := preparedConversation{requestID: uuid.NewString(), user: user, connection: *connection, definitions: make(map[string]ToolDefinition), webSearch: input.WebSearch}
+	if input.WebSearch && input.Context != nil {
+		hint := *input.Context
+		p.businessContext = &hint
+	}
+	instructions := conversationInstructions
+	serverTime := time.Now().UTC()
+	if input.WebSearch {
+		instructions = webConversationInstructions
+		// 公开天气等“今天”按中国标准时间解释，避免 UTC 午夜前后把独立查询拼到前一天。
+		serverTime = serverTime.In(time.FixedZone("Asia/Shanghai", 8*60*60))
+		instructions += "\n时间口径：Asia/Shanghai（UTC+08:00），“今天”“明天”按此时区换算，搜索词写明具体日期。"
+	}
+	p.messages = append([]modelgovernance.AgentMessage{{Role: "system", Content: instructions + "\n当前服务器时间：" + serverTime.Format(time.RFC3339) + trustedContext}}, messages...)
 	for _, definition := range definitions {
 		parameters, err := json.Marshal(definition.Parameters)
 		if err != nil {
@@ -101,6 +117,29 @@ func (s *ConversationService) prepare(ctx context.Context, input ConversationReq
 		p.definitions[definition.Name] = definition
 	}
 	return p, nil
+}
+
+func (s *ConversationService) trustedConversationContext(ctx context.Context, user auth.User, access auth.AccessScope, hint *ConversationContext) (string, error) {
+	if hint == nil {
+		return "", nil
+	}
+	if len(hint.OriginModule) > 100 || len(hint.OriginSection) > 100 {
+		return "", reject(400, "invalid_context", "页面上下文过长。")
+	}
+	id := strings.TrimSpace(hint.ExamID)
+	if id == "" {
+		return "", nil
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		return "", reject(400, "invalid_exam_id", "考试标识必须是 UUID。")
+	}
+	item, err := s.tools.authorizedExam(ctx, user, access, id)
+	if err != nil {
+		return "", err
+	}
+	// 页面只给资源提示；名称来自获准读取，提示不能扩展工具权限或替代本轮事实。
+	data, _ := json.Marshal(map[string]string{"exam_id": item.ID, "exam_name": item.Name, "subject": item.Subject})
+	return "\n已核实可访问的页面考试上下文（用户可改问其他考试）：" + string(data), nil
 }
 
 // authorizedExam 供页面提示和工具共享资源边界；名称来自获准读取，不能使用客户端标签替代。
@@ -115,7 +154,8 @@ func (s *Service) authorizedExam(ctx context.Context, user auth.User, access aut
 		}
 		return exam.Exam{}, reject(503, "resource_lookup_unavailable", examScopeVerificationFailed)
 	}
-	if item.TenantID != user.TenantID || item.ID != id || (!access.TenantWide && !access.AllowsExam(id) && (!access.IsSchoolWide() || !access.AllowsSchool(item.SchoolID))) {
+	// 助手读取整场进度和发布诊断；外校任课、受派任务形成的导航权限不能授权整校汇总。
+	if item.TenantID != user.TenantID || item.ID != id || !access.ManagesSchool(item.SchoolID) {
 		return exam.Exam{}, reject(404, "exam_not_found", examUnavailable)
 	}
 	if s.deps.Resources != nil {
@@ -126,7 +166,7 @@ func (s *Service) authorizedExam(ctx context.Context, user auth.User, access aut
 		if err != nil {
 			return exam.Exam{}, reject(503, "resource_lookup_unavailable", examScopeVerificationFailed)
 		}
-		if !auth.AllowsResourceBoundary(access, boundary) {
+		if !auth.AllowsManagedResourceBoundary(access, boundary) {
 			return exam.Exam{}, reject(404, "exam_not_found", examUnavailable)
 		}
 	}
@@ -159,17 +199,25 @@ func (s *ConversationService) run(ctx context.Context, p preparedConversation, e
 	if err := send(ConversationEvent{Type: "model", Model: &status}); err != nil {
 		return err
 	}
-	var total modelgovernance.ManagedAPIProbeUsage
-	modelCount := 0
+	if p.webSearch {
+		return s.runPublicSearchLoop(ctx, p, send)
+	}
+	return s.runBusinessConversation(ctx, p, 0, modelgovernance.ManagedAPIProbeUsage{}, send)
+}
+
+func (s *ConversationService) runBusinessConversation(ctx context.Context, p preparedConversation, modelCount int, total modelgovernance.ManagedAPIProbeUsage, send func(ConversationEvent) error) error {
 	// 旧 JSON 能力检测没有证明原生工具支持；先用不含业务数据的探针验证，成功只短暂缓存。
 	if len(p.tools) > 0 {
-		usage, called, err := s.verifyToolSupport(ctx, p)
+		usage, called, err := s.verifyToolSupport(ctx, p, modelCount+1)
 		if called {
 			modelCount++
 			addConversationUsage(&total, usage)
 		}
 		if err != nil {
 			return err
+		}
+		if total.TotalTokens >= conversationMaxTokens {
+			return errConversationBudget
 		}
 	}
 	return s.planConversation(ctx, p, modelCount, total, send)
@@ -214,7 +262,7 @@ func (s *ConversationService) requestConversationPlan(ctx context.Context, p pre
 	if err := ctx.Err(); err != nil {
 		return modelgovernance.AgentResponse{}, err
 	}
-	response, err := s.deps.Model.Complete(ctx, p.connection, modelgovernance.AgentRequest{Messages: p.messages, Tools: p.tools, ToolChoice: "auto"})
+	response, err := s.completeConversationModel(ctx, p, modelgovernance.AgentRequest{Messages: p.messages, Tools: p.tools, ToolChoice: "auto"}, "planning", *modelCount+1, conversationPlanningTimeout)
 	*modelCount += 1
 	s.recordUsage(ctx, p, *modelCount, "planning", response.Usage, err)
 	if err != nil {
@@ -324,13 +372,17 @@ func (e *conversationEvidence) add(callID string, result Result) {
 }
 
 func (s *ConversationService) answer(ctx context.Context, p preparedConversation, step int, total modelgovernance.ManagedAPIProbeUsage, send func(ConversationEvent) error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	// 最终轮只读取已有工具结果，不重新开放工具；none 仍作为内部禁止调用的约束。
 	// 避免把非思考规划历史送入思考工具协议，触发 reasoning_content 必填校验。
 	request := modelgovernance.AgentRequest{Messages: p.messages, ToolChoice: "none"}
 	var response modelgovernance.AgentResponse
 	var err error
+	started := time.Now()
 	if streamer, ok := s.deps.Model.(modelgovernance.AgentStreamModel); ok {
-		response, err = streamer.Stream(ctx, p.connection, request, func(event modelgovernance.AgentEvent) error {
+		response, err = streamConversationModel(ctx, streamer, p.connection, request, func(event modelgovernance.AgentEvent) error {
 			channel := "content"
 			if event.Type == "reasoning" {
 				channel = "reasoning"
@@ -338,21 +390,36 @@ func (s *ConversationService) answer(ctx context.Context, p preparedConversation
 				return nil
 			}
 			return send(ConversationEvent{Type: "delta", Channel: channel, Delta: event.Delta})
-		})
+		}, conversationPlanningTimeout)
 	} else {
-		response, err = s.deps.Model.Complete(ctx, p.connection, request)
+		response, err = s.completeConversationModel(ctx, p, request, "answer", step, conversationPlanningTimeout)
 		if err == nil {
 			err = send(ConversationEvent{Type: "delta", Channel: "content", Delta: response.Message.Content})
 		}
 	}
+	status := "succeeded"
+	if err != nil {
+		status = "failed"
+	}
+	code := ""
+	if err != nil {
+		code, _ = conversationError(err)
+	}
+	slog.InfoContext(ctx, "school assistant answer", "event", "school_assistant_answer", "turn_request_id", p.requestID, "phase", "answer", "step", step, "duration_ms", time.Since(started).Milliseconds(), "status", status, "error_code", code)
 	s.recordUsage(ctx, p, step, "answer", response.Usage, err)
+	addConversationUsage(&total, response.Usage)
 	if err != nil {
 		return err
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if total.TotalTokens >= conversationMaxTokens {
+		return errConversationBudget
 	}
 	if len(response.Message.ToolCalls) > 0 || strings.TrimSpace(response.Message.Content) == "" {
 		return reject(502, "invalid_ai_answer", "模型没有返回有效回答，请重试。")
 	}
-	addConversationUsage(&total, response.Usage)
 	completion := modelgovernance.ManagedChatCompletion{Message: modelgovernance.ManagedChatMessage{Role: "assistant", Content: response.Message.Content, ReasoningContent: response.Message.ReasoningContent}, ModelName: p.connection.Config.ModelName, DisplayName: p.connection.Config.DisplayName, ProviderKey: p.connection.Config.ProviderKey, FinishReason: response.FinishReason, Usage: total}
 	if err := send(ConversationEvent{Type: "done", Completion: &completion}); err != nil {
 		return err

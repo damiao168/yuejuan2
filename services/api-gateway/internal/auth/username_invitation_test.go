@@ -12,14 +12,14 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
-func TestUsernameOnlyInvitationRequiresActivationAndKeepsRoleScopes(t *testing.T) {
-	for _, roles := range [][]string{{"arbitrator", "grader"}, {"school_admin"}} {
+func TestAdministratorUsernameInvitationRequiresActivationAndKeepsRoleScopes(t *testing.T) {
+	for _, roles := range [][]string{{"school_admin"}} {
 		t.Run(strings.Join(roles, "+"), func(t *testing.T) {
 			store := newOrganizationAdminStore(t)
 			router := newTestRouter(store)
 			adminToken := login(t, router, "demo", "admin", "AdminStart123!")
 			body, err := json.Marshal(map[string]any{
-				"username": " username_teacher ", "display_name": "张老师", "school_id": "school-1", "role_codes": roles,
+				"username": " username_teacher ", "display_name": "张老师", "school_id": "school-1", "role_codes": roles, "teaching_subjects": []string{"mathematics"},
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -46,7 +46,7 @@ func TestUsernameOnlyInvitationRequiresActivationAndKeepsRoleScopes(t *testing.T
 			}
 			if created.User.Username != "username_teacher" || created.User.Status != "invited" || created.Activation.Token == "" ||
 				created.User.PhoneMasked != "" || created.User.EmployeeNo != "" || created.User.SchoolID != "school-1" ||
-				len(created.User.ClassIDs) != 0 || !slices.Equal(created.User.Roles, roles) {
+				len(created.User.TeachingSubjects) != 1 || !slices.Equal(created.User.Roles, roles) {
 				t.Fatal("username-only invitation must retain its identity, school and roles without adding phone, employee number or classes")
 			}
 			if duplicate := create(); duplicate.Code != http.StatusConflict || !strings.Contains(duplicate.Body.String(), `"code":"username_exists"`) {
@@ -100,7 +100,7 @@ func TestInvitationIdentityValidationKeepsLegacyGeneratedUsernames(t *testing.T)
 		{"employee number only", `"employee_no":"T-USERNAME-1"`, http.StatusCreated},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			body := `{` + test.identity + `,"display_name":"张老师","school_id":"school-1","role_codes":["grader","arbitrator"]}`
+			body := `{` + test.identity + `,"display_name":"学校管理员","school_id":"school-1","role_codes":["school_admin"]}`
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/users", strings.NewReader(body))
 			req.Header.Set("Authorization", "Bearer "+adminToken)
 			rec := httptest.NewRecorder()

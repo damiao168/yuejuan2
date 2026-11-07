@@ -3,8 +3,8 @@ import copy
 import pytest
 from grading_agent.template_analysis import (
     _merge_local_fill_regions,
-    _replace_verified_fill_parents,
 )
+from grading_agent.template_analysis_repair_merge import _replace_verified_fill_parents
 
 PAGE = {"width": 1000, "height": 1000}
 VERIFIED = [

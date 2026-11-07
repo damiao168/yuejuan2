@@ -4,7 +4,6 @@ import { getUserErrorMessage } from "../../../api/client";
 import {
   approveRegradeJob,
   createRegradeJob,
-  createRegradeScoreRelease,
   finalizeRegradeJob,
   getRegradeJob,
   pauseRegradeJob,
@@ -20,7 +19,6 @@ import {
 import type { SubmissionGrade } from "../../../api/scores";
 import { listReviewActors, type WorkflowActor } from "../../../api/workflowActors";
 import { closedWorkflowModal, workflowModalReducer } from "./workflowModal";
-import { getBusinessCommandSession, isBusinessCommandSessionCurrent } from "../../../api/businessCommand";
 
 type RunAction = (key: string, action: () => Promise<void>, successText: string) => Promise<void>;
 
@@ -30,7 +28,7 @@ function formatError(error: unknown) {
 
 function formatScore(value?: number | null) {
   if (value === undefined || value === null || !Number.isFinite(value)) return "-";
-  return Number(value.toFixed(1)).toString();
+  return Number(value.toFixed(2)).toString();
 }
 
 const regradeReviewSuccessText = {
@@ -39,14 +37,17 @@ const regradeReviewSuccessText = {
   exception: "已标记重评异常"
 } as const;
 
+/**
+ * 题目级复评的发起、生命周期操作和候选复核，由“复核与异常”页的复评面板使用。
+ * 复评结果版本的生成和发布归成绩发布页的“发布更正”；这里完成复评后只把任务推进到待发布。
+ */
 export function useRegradeWorkflow({
   canManage,
   selectedExamId,
   publishedRelease,
   grades,
   runAction,
-  setActioning,
-  onReleaseCreated
+  setActioning
 }: {
   canManage: boolean;
   selectedExamId: string;
@@ -54,9 +55,8 @@ export function useRegradeWorkflow({
   grades: SubmissionGrade[];
   runAction: RunAction;
   setActioning: (key: string | null) => void;
-  onReleaseCreated?: (release: ScoreRelease) => void;
 }) {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [regradeModal, dispatchRegradeModal] = useReducer(workflowModalReducer, closedWorkflowModal);
   const [regradeQuestionId, setRegradeQuestionId] = useState("");
   const [regradeReasonCode, setRegradeReasonCode] = useState("quality_incident");
@@ -74,6 +74,8 @@ export function useRegradeWorkflow({
   const [reviewedEvidence, setReviewedEvidence] = useState<Record<string, number>>({});
   const [regradeReviewConflicts, setRegradeReviewConflicts] = useState<Record<string, number>>({});
   const [previewingRegrade, setPreviewingRegrade] = useState(false);
+  // 打开、关闭复核窗口都会递增 reviewRequest；回包的代次或考试已变化时直接丢弃。
+  // reviewState 在重读候选后读取最新的本页输入，避免异步闭包拿到旧的改分和说明。
   const reviewRequest = useRef(0);
   const reviewState = useRef({ summary: regradeReview, scores: regradeReviewScores, notes: regradeReviewNotes });
   reviewState.current = { summary: regradeReview, scores: regradeReviewScores, notes: regradeReviewNotes };
@@ -168,33 +170,13 @@ export function useRegradeWorkflow({
     );
   };
 
-  const materializeRegradeRelease = (job: RegradeJob) => {
-    const session = getBusinessCommandSession();
-    const examId = selectedExamId;
-    modal.confirm({
-      title: "继续本次复评的成绩版本",
-      content: "尚无结果时创建草稿；已有结果时继续原版本。草稿须通过发布检查并正式发布后才会对学生生效。",
-      okText: "生成或继续结果版本",
-      cancelText: "取消",
-      onOk: () => runAction(
-        "regrade-release",
-        async () => {
-          const response = await createRegradeScoreRelease(job.id, { reason: `题目复评完成：${job.reason_text}`, idempotency_key: crypto.randomUUID() });
-          // 服务端按复评任务复用草稿；回执只在当前会话和考试打开，不能把迟到结果带入另一场考试。
-          if (isBusinessCommandSessionCurrent(session) && reviewExam.current === examId) onReleaseCreated?.(response.score_release);
-        },
-        "已定位本次复评的成绩版本"
-      )
-    });
-  };
-
   const transitionRegrade = (job: RegradeJob, action: "approve" | "start" | "pause" | "resume" | "finalize") => {
     const actions = {
       approve: { request: approveRegradeJob, label: "已批准复评任务" },
       start: { request: startRegradeJob, label: "复评任务已启动，已分派的阅卷员可以领取" },
       pause: { request: pauseRegradeJob, label: "复评任务已暂停" },
       resume: { request: resumeRegradeJob, label: "复评任务已恢复" },
-      finalize: { request: finalizeRegradeJob, label: "复评已完成，可生成新的成绩版本" }
+      finalize: { request: finalizeRegradeJob, label: "复评已完成，请到成绩发布页发布更正" }
     } as const;
     const current = actions[action];
     void runAction(`regrade-${action}`, async () => { await current.request(job.id); }, current.label);
@@ -312,7 +294,6 @@ export function useRegradeWorkflow({
     regradeGraderOptions,
     previewSelectedRegrade,
     createSelectedRegrade,
-    materializeRegradeRelease,
     transitionRegrade,
     openRegradeReview,
     decideRegradeItem

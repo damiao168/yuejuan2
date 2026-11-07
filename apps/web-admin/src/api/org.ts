@@ -34,6 +34,7 @@ export interface Grade {
   school_id: string;
   name: string;
   level_no: number;
+  entry_year?: number;
   academic_year: string;
   education_stage: "junior" | "senior";
   academic_year_id?: string;
@@ -66,7 +67,12 @@ export interface Student {
   name: string;
   gender?: string;
   status: string;
+  account_status?: "not_provisioned" | "active" | "disabled";
+  login_account?: string;
+  login_school_code?: string;
+  must_change_password?: boolean;
 }
+export interface StudentPasswordInput { password: string; password_confirm: string; }
 export interface StudentEnrollment { id: string; student_id: string; school_id: string; academic_year_id: string; academic_year_name: string; grade_cohort_id: string; grade_cohort_name: string; class_id: string; class_name: string; status: string; start_date: string; end_date?: string; }
 
 export interface StudentImportError {
@@ -76,6 +82,8 @@ export interface StudentImportError {
 
 export interface StudentImportResult {
   created: number;
+  skipped?: number;
+  committed?: boolean;
   errors: StudentImportError[];
 }
 
@@ -121,17 +129,21 @@ export async function listGrades(schoolId?: string) {
   return apiClient.request<{ grades: Grade[] }>(`/api/v1/grades${query}`);
 }
 
-export async function createGrade(payload: Pick<Grade, "school_id" | "name" | "level_no" | "academic_year" | "education_stage">) {
+export async function createGrade(payload: Pick<Grade, "school_id" | "name" | "level_no" | "education_stage"> & Partial<Pick<Grade, "academic_year" | "entry_year">>) {
   return apiClient.request<{ grade: Grade }>("/api/v1/grades", {
     method: "POST",
     body: JSON.stringify({ ...payload, status: "active" })
   });
 }
 
-export function updateGrade(id: string, payload: Pick<Grade, "name">) {
+export function updateGrade(id: string, payload: Partial<Pick<Grade, "name" | "level_no">>) {
   return apiClient.request<{ grade: Grade }>(`/api/v1/grades/${encodeURIComponent(id)}`, {
     method: "PATCH", body: JSON.stringify(payload)
   });
+}
+
+export function deleteGrade(id: string) {
+  return apiClient.request<void>(`/api/v1/grades/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export async function listClasses(gradeId?: string) {
@@ -152,11 +164,8 @@ export function updateClass(id: string, payload: Pick<SchoolClass, "name" | "cod
   });
 }
 
-export async function bindTeacherClass(classId: string, teacherId: string) {
-  return apiClient.request<{ status: string }>(`/api/v1/classes/${encodeURIComponent(classId)}/teachers`, {
-    method: "POST",
-    body: JSON.stringify({ teacher_id: teacherId })
-  });
+export function deleteClass(id: string) {
+  return apiClient.request<void>(`/api/v1/classes/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export async function listStudents(filter: { classId?: string; ids?: string[]; q?: string; limit?: number; cursor?: string } = {}) {
@@ -164,10 +173,16 @@ export async function listStudents(filter: { classId?: string; ids?: string[]; q
   return apiClient.request<{ students: Student[]; next_cursor: string; has_more: boolean }>(`/api/v1/students${query}`);
 }
 
-export async function createStudent(payload: Pick<Student, "school_id" | "class_id" | "student_no" | "name"> & Partial<Pick<Student, "gender" | "status">>) {
+export async function createStudent(payload: Pick<Student, "school_id" | "class_id" | "student_no" | "name"> & Partial<Pick<Student, "gender">> & StudentPasswordInput) {
   return apiClient.request<{ student: Student }>("/api/v1/students", {
     method: "POST",
-    body: JSON.stringify({ ...payload, status: payload.status ?? "active" })
+    body: JSON.stringify(payload)
+  });
+}
+
+export function openStudentAccount(id: string, payload: StudentPasswordInput) {
+  return apiClient.request<{ student: Student }>(`/api/v1/students/${encodeURIComponent(id)}/account`, {
+    method: "POST", body: JSON.stringify(payload)
   });
 }
 
@@ -198,10 +213,10 @@ export async function transferStudent(id: string, classId: string, startDate?: s
   return apiClient.request<{ enrollment: StudentEnrollment }>(`/api/v1/students/${encodeURIComponent(id)}/enrollment`, { method: "PUT", body: JSON.stringify({ class_id: classId, start_date: startDate }) });
 }
 
-export async function importStudentsCSV(csv: string) {
+export async function importStudentsCSV(csv: string, commandId?: string) {
   return apiClient.request<{ result: StudentImportResult }>("/api/v1/students/import-csv", {
     method: "POST",
-    headers: { "Content-Type": "text/csv; charset=utf-8" },
+    headers: { "Content-Type": "text/csv; charset=utf-8", ...(commandId ? { "Idempotency-Key": commandId } : {}) },
     body: csv
   });
 }

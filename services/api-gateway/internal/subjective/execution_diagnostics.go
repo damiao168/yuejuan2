@@ -21,12 +21,16 @@ type ExecutionDiagnostics struct {
 	OutputTokenLimit      *int64                `json:"output_token_limit,omitempty"`
 }
 
+// DiagnosticTokenUsage 的缓存写入与普通输入拆分仅供诊断，不扩展 ModelTokenUsage 结算账本。
+// 可选指针保留供应商未报告与明确报告零的区别。
 type DiagnosticTokenUsage struct {
-	InputTokens       *int64 `json:"input_tokens,omitempty"`
-	CachedInputTokens *int64 `json:"cached_input_tokens,omitempty"`
-	OutputTokens      *int64 `json:"output_tokens,omitempty"`
-	ReasoningTokens   *int64 `json:"reasoning_tokens,omitempty"`
-	TotalTokens       *int64 `json:"total_tokens,omitempty"`
+	InputTokens           *int64 `json:"input_tokens,omitempty"`
+	CachedInputTokens     *int64 `json:"cached_input_tokens,omitempty"`
+	CacheWriteInputTokens *int64 `json:"cache_write_input_tokens,omitempty"`
+	UncachedInputTokens   *int64 `json:"uncached_input_tokens,omitempty"`
+	OutputTokens          *int64 `json:"output_tokens,omitempty"`
+	ReasoningTokens       *int64 `json:"reasoning_tokens,omitempty"`
+	TotalTokens           *int64 `json:"total_tokens,omitempty"`
 }
 
 var diagnosticFailureKinds = map[string]bool{
@@ -68,7 +72,7 @@ func validateExecutionDiagnostics(d *ExecutionDiagnostics) error {
 	if d.Usage != nil {
 		u := d.Usage
 		known := 0
-		for _, v := range []*int64{u.InputTokens, u.CachedInputTokens, u.OutputTokens, u.ReasoningTokens, u.TotalTokens} {
+		for _, v := range []*int64{u.InputTokens, u.CachedInputTokens, u.CacheWriteInputTokens, u.UncachedInputTokens, u.OutputTokens, u.ReasoningTokens, u.TotalTokens} {
 			if v != nil {
 				if *v < 0 {
 					return ErrInvalidInput

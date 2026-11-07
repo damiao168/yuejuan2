@@ -227,6 +227,12 @@ func bookmarkSeedEvidenceFixture(t *testing.T, db *sql.DB, user auth.User, task 
 	bookmarkEvidenceExec(t, db, `UPDATE question SET options='["合成选项甲","合成选项乙"]' WHERE id=$1::uuid`, f.question)
 	bookmarkEvidenceExec(t, db, `INSERT INTO rubric_version(id,tenant_id,question_id,version,status,content_hash,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'bookmark-fixture','approved',$4,$5::uuid)`, rubricVersion, user.TenantID, f.question, strings.Repeat("c", 64), user.ID)
 	bookmarkEvidenceExec(t, db, `INSERT INTO question_rubric(tenant_id,question_id,rubric_version_id,status,max_score,points,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'approved',5,'[{"id":"p1","description":"合成评分点","score":5}]',$4::uuid)`, user.TenantID, f.question, rubricVersion, user.ID)
+	// 共享考试没有关联年级，不能依赖默认学段推导；显式配置补足冻结所需事实，保留调用方已有的计算题配置。
+	bookmarkEvidenceExec(t, db, `INSERT INTO question_assessment_config(tenant_id,exam_id,question_id,subject_profile_id,archetype_code,allowed_evidence_types,risk_tier,scoring_policy_json)
+SELECT q.tenant_id,q.exam_id,q.id,p.id,CASE q.question_type WHEN 'calculation' THEN 'structured_steps' ELSE 'short_constructed' END,'["text_span"]','R2','{"mode":"AI_ASSIST","require_evidence":true}'
+FROM question q JOIN subject_profile p ON p.tenant_id=q.tenant_id AND p.subject_code='physics' AND p.education_stage='senior' AND p.status='active'
+WHERE q.tenant_id=$1::uuid AND q.exam_id=$2::uuid AND q.id=$3::uuid
+ORDER BY p.version DESC,p.id LIMIT 1 ON CONFLICT(tenant_id,exam_id,question_id) DO NOTHING`, user.TenantID, f.exam, f.question)
 	bookmarkEvidenceExec(t, db, `SELECT assessment_apply_default_question_config($1::uuid,$2::uuid,$3::uuid)`, user.TenantID, f.exam, f.question)
 	if err := db.QueryRow(`SELECT assessment_freeze_question_snapshot($1::uuid,$2::uuid,$3::uuid)::text`, user.TenantID, f.exam, f.question).Scan(&f.snapshot); err != nil {
 		t.Fatal(err)
@@ -249,7 +255,10 @@ func bookmarkSeedEvidenceFixture(t *testing.T, db *sql.DB, user auth.User, task 
 	bookmarkEvidenceExec(t, db, `UPDATE answer_segment SET registration_run_id=$2::uuid,crop_file_asset_id=$3::uuid,crop_sha256=$4,processing_status='completed' WHERE id=$1::uuid`, f.segment, f.registration, f.crop, f.hash)
 	bookmarkEvidenceExec(t, db, `INSERT INTO answer_segment_answer(tenant_id,answer_segment_id,answer_text,source,recorded_by) VALUES($1::uuid,$2::uuid,'仅供来源内部识别文字','ocr_text',$3::uuid)`, user.TenantID, f.segment, user.ID)
 	bookmarkEvidenceExec(t, db, `INSERT INTO grading_gold_paper(id,tenant_id,exam_id,question_id,submission_id,nominated_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6::uuid)`, f.gold, user.TenantID, f.exam, f.question, f.submission, user.ID)
-	bookmarkEvidenceExec(t, db, `INSERT INTO grading_gold_paper_version(tenant_id,gold_paper_id,version,exam_question_snapshot_id,reference_score,max_score,rubric_snapshot_json,explanation,source_grade_ids_json,nominated_by,approved_by,approved_at) VALUES($1::uuid,$2::uuid,1,$3::uuid,5,5,'{}','合成参考分不得公开','["synthetic-grade"]',$4::uuid,$4::uuid,now())`, user.TenantID, f.gold, f.snapshot, user.ID)
+	// Gold 版本冻结同一答题段的真实合成裁图和归属，不省略新版本必需字段或绕开冻结图触发器。
+	bookmarkEvidenceExec(t, db, `INSERT INTO grading_gold_paper_version(tenant_id,gold_paper_id,version,exam_question_snapshot_id,reference_score,max_score,rubric_snapshot_json,explanation,source_grade_ids_json,nominated_by,approved_by,approved_at,
+frozen_answer_segment_id,frozen_crop_file_asset_id,frozen_crop_sha256,frozen_crop_owner_type,frozen_crop_owner_id)
+VALUES($1::uuid,$2::uuid,1,$3::uuid,5,5,'{}','合成参考分不得公开','["synthetic-grade"]',$4::uuid,$4::uuid,now(),$5::uuid,$6::uuid,$7,'answer_segment_crop',$8::uuid)`, user.TenantID, f.gold, f.snapshot, user.ID, f.segment, f.crop, f.hash, f.registration)
 	return f
 }
 

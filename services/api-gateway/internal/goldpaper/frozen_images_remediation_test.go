@@ -28,12 +28,16 @@ type frozenImageFixture struct {
 	asset   files.FileAsset
 }
 
-func newFrozenImageFixture(t *testing.T) *frozenImageFixture {
+func newFrozenImageFixture(t *testing.T, original ...string) *frozenImageFixture {
 	t.Helper()
 	f := &frozenImageFixture{gold: goldpaper.NewMemoryStore(), files: files.NewMemoryStore(), objects: files.NewMemoryObjectStorage()}
 	f.images = goldpaper.NewImageService(f.gold, f.files, f.objects)
 	f.source = goldpaper.Source{ExamID: "exam", QuestionID: "question", SubmissionID: "submission", SnapshotID: "snapshot", ArchetypeCode: "short_constructed", RiskTier: "R2", MaxScore: 5, RubricSnapshot: map[string]any{}, AvailableGradeIDs: []string{"grade"}}
-	f.asset = f.addImage(t, "run-original", "original-answer")
+	data := "original-answer"
+	if len(original) > 0 {
+		data = original[0]
+	}
+	f.asset = f.addImage(t, "run-original", data)
 	f.setCurrentImage(f.asset)
 	var err error
 	f.item, err = f.gold.Nominate(t.Context(), "tenant", "exam", "question", "nominator", goldpaper.NominateInput{SubmissionID: "submission", ReferenceScore: 2, Explanation: "original reference", SourceGradeIDs: []string{"grade"}})
@@ -82,7 +86,7 @@ func (f *frozenImageFixture) managerRoutes() http.Handler {
 
 // 同一题块更换当前来源后，既有 Gold 与已创建会话仍读取原资产；新版本才读取新图。
 func TestFrozenGoldImageSurvivesSourceReplacementAndNewVersion(t *testing.T) {
-	f := newFrozenImageFixture(t)
+	f := newFrozenImageFixture(t, "original-answer-0")
 	calib := calibration.NewService(calibration.NewMemoryStore(), f.gold)
 	_, err := calib.PutPolicy(t.Context(), "tenant", "exam", "question", calibration.PutPolicyInput{ArchetypeCode: "short_constructed", MaxScore: 5, MinimumSamples: 1, MaximumMAE: 0, MinimumExactAgreement: 1, MinimumWithinOneAgreement: 1, SevereErrorThreshold: 1, QualificationValidityDays: 30})
 	if err != nil {
@@ -102,7 +106,7 @@ func TestFrozenGoldImageSurvivesSourceReplacementAndNewVersion(t *testing.T) {
 		url     string
 	}{{f.managerRoutes(), f.item.AnswerImageURL}, {mux, oldURL}} {
 		response := imageRequest(tc.handler, "GET", tc.url, "grader", "review:work", "review:manage")
-		if response.Code != 200 || response.Body.String() != "original-answer" {
+		if response.Code != 200 || response.Body.String() != "original-answer-0" {
 			t.Fatalf("frozen read changed: %d %q", response.Code, response.Body.String())
 		}
 	}
@@ -130,13 +134,13 @@ func TestFrozenGoldImageSurvivesSourceReplacementAndNewVersion(t *testing.T) {
 	for _, tc := range []struct {
 		number int
 		want   string
-	}{{1, "original-answer"}, {2, "corrected-answer"}} {
+	}{{1, "original-answer-0"}, {2, "corrected-answer"}} {
 		response := imageRequest(f.managerRoutes(), "GET", goldpaper.VersionImageURL(f.item.ID, tc.number), "manager", "review:manage")
 		if response.Code != 200 || response.Body.String() != tc.want {
 			t.Fatalf("version %d: %d %q", tc.number, response.Code, response.Body.String())
 		}
 	}
-	if response := imageRequest(mux, "GET", oldURL, "grader", "review:work"); response.Code != 200 || response.Body.String() != "original-answer" {
+	if response := imageRequest(mux, "GET", oldURL, "grader", "review:work"); response.Code != 200 || response.Body.String() != "original-answer-0" {
 		t.Fatalf("old session followed new active Gold: %d %s", response.Code, response.Body.String())
 	}
 }

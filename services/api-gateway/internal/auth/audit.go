@@ -98,3 +98,36 @@ func isAuditSensitiveKey(key string) bool {
 	}
 	return false
 }
+
+// 组织导航和分派任务不授予审计权限；学校管理员只读持久化目标归属位于其管理学校的记录。
+func auditFilterHasReadableScope(filter AuditFilter) bool {
+	switch filter.ScopeMode {
+	case "", "tenant", "platform":
+		return true
+	case "school":
+		return len(uniqueSortedIDs(filter.SchoolIDs)) > 0
+	default:
+		return false
+	}
+}
+
+// 调用方持有内存仓储锁，目标归属在追加时快照，不能从操作者或自由审计值回推。
+func (s *MemoryStore) auditTargetScopeLocked(event AuditEvent) (string, string) {
+	if event.TargetType == "user" || event.TargetType == "app_user" {
+		for _, user := range s.users {
+			if user.TenantID == event.TenantID && user.ID == event.TargetID {
+				return managedUserSchoolID(user), ""
+			}
+		}
+		return "", ""
+	}
+	kind := event.TargetType
+	if kind == "class" {
+		kind = "school_class"
+	}
+	boundary, ok := s.boundaries[kind+"|"+event.TargetID]
+	if !ok || boundary.TenantID != event.TenantID {
+		return "", ""
+	}
+	return boundary.SchoolID, boundary.ExamID
+}

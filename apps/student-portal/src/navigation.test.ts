@@ -8,6 +8,7 @@ describe("学生端无井号路由", () => {
     ["/", { kind: "home" }],
     ["/exams/exam%201", { kind: "exam", examID: "exam 1" }],
     ["/exams/exam-1?from=school", { kind: "exam", examID: "exam-1" }],
+    ["/student/exams/exam-1?school=S053", { kind: "exam", examID: "exam-1" }],
     ["/exams/%E0%A4%A", { kind: "home" }],
     ["/unknown", { kind: "home" }]
   ])("直达%s和刷新解析同一页面", (path, expected) => {
@@ -54,5 +55,17 @@ describe("学生端无井号路由", () => {
       normalizeStudentLocation();
       expect(readStudentPage()).toEqual({ kind: "exam", examID: "exam-1" });
     } finally { window.removeEventListener(STUDENT_NAVIGATION_EVENT, changed); }
+  });
+  it("生产导航保持/student前缀与学校代码，旧片段书签也不跳回教师页", () => {
+    window.history.replaceState(null, "", "/student/?school=S053#/exams/exam-1");
+    normalizeStudentLocation();
+    expect(window.location.pathname).toBe("/student/exams/exam-1");
+    expect(readStudentPage()).toEqual({ kind: "exam", examID: "exam-1" });
+    goExam("next /1");
+    expect(window.location.pathname).toBe("/student/exams/next%20%2F1");
+    expect(window.location.search).toBe("?school=S053");
+    goHome();
+    expect(window.location.pathname).toBe("/student/");
+    expect(window.location.search).toBe("?school=S053");
   });
 });

@@ -46,7 +46,21 @@ func (s *PostgresStore) create(ctx context.Context, input CreateAssetInput, life
 	} else if ok {
 		return existing, ErrDuplicateFile
 	}
-	row := s.db.QueryRowContext(ctx, `
+	return insertAsset(ctx, s.db, input, lifecycle)
+}
+
+// CreateAssetInTx 把新资产与业务引用放在同一事务中，失败时一起回滚。
+// 调用方为新对象提供独立 owner ID；生命周期在引用插入前已是 active，满足文件引用触发器。
+func CreateAssetInTx(ctx context.Context, tx *sql.Tx, input CreateAssetInput) (FileAsset, error) {
+	return insertAsset(ctx, tx, input, LifecycleActive)
+}
+
+type assetInserter interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func insertAsset(ctx context.Context, queryer assetInserter, input CreateAssetInput, lifecycle string) (FileAsset, error) {
+	row := queryer.QueryRowContext(ctx, `
 INSERT INTO file_asset (
   tenant_id, school_id, exam_id, submission_id, owner_type, owner_id,
   original_name, content_type, size_bytes, hash_sha256,
@@ -117,7 +131,23 @@ RETURNING `+assetColumns+`
 	return asset, nil
 }
 
-func (s *PostgresStore) ValidateCreateScope(_ context.Context, scope auth.AccessScope, input CreateAssetInput) error {
+func (s *PostgresStore) ValidateCreateScope(ctx context.Context, scope auth.AccessScope, input CreateAssetInput) error {
+	// 考试导航可见不代表材料管理；目标学校从持久化考试/答卷取得，不能用表单中的学校替代。
+	for kind, id := range map[string]string{"exam": input.ExamID, "submission": input.SubmissionID} {
+		if id == "" || scope.TenantWide {
+			continue
+		}
+		boundary, err := auth.NewPostgresStore(s.db).ResolveResourceBoundary(ctx, scope, kind, id)
+		if err != nil {
+			return err
+		}
+		if !auth.AllowsManagedResourceBoundary(scope, boundary) {
+			return ErrForbidden
+		}
+		if input.SchoolID == "" {
+			input.SchoolID = boundary.SchoolID
+		}
+	}
 	if !AllowsCreate(scope, input) {
 		return ErrForbidden
 	}
@@ -188,22 +218,46 @@ func (s *PostgresStore) MarkUploadFailed(ctx context.Context, tenantID, id strin
 }
 
 func (s *PostgresStore) BeginDelete(ctx context.Context, scope auth.AccessScope, id string, expectedRevision int64) (FileAsset, error) {
-	asset, err := s.GetScoped(ctx, scope, id)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return FileAsset{}, err
+	}
+	defer tx.Rollback()
+	// 同一对象可有多个资产别名；先取对象键锁，再锁资产，不能只串行化当前资产 ID。
+	var bucket, key string
+	if err = tx.QueryRowContext(ctx, `SELECT storage_bucket,storage_key FROM file_asset WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL`, scope.TenantID, id).Scan(&bucket, &key); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return FileAsset{}, ErrNotFound
+		}
+		return FileAsset{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,81701))`, bucket+":"+key); err != nil {
+		return FileAsset{}, err
+	}
+	// 与新增引用的 KEY SHARE 互斥；先等在途引用提交，再核对全部引用后进入待删除状态。
+	asset, err := getScopedAsset(ctx, tx, scope, id, " FOR UPDATE")
 	if err != nil {
 		return FileAsset{}, err
 	}
 	if asset.Revision != expectedRevision {
 		return FileAsset{}, ErrConflict
 	}
+	if !allowsGenericDelete(asset) {
+		return FileAsset{}, ErrForbidden
+	}
+	if !scope.TenantWide && asset.SchoolID != "" && !scope.ManagesSchool(asset.SchoolID) {
+		return FileAsset{}, ErrForbidden
+	}
 	// 库版本固定的是对象内容；同一 bucket/key 的原文件和考试实例也不能删除共享对象。
 	// 事务触发器负责收录与删除交错时的最终拒绝，这里的查询提供可理解的权限错误。
 	var pinned bool
-	if err := s.db.QueryRowContext(ctx, `SELECT
+	if err := tx.QueryRowContext(ctx, `SELECT
 EXISTS(SELECT 1 FROM question_bank_item_asset WHERE tenant_id=$1 AND file_asset_id=$2)
 OR EXISTS(SELECT 1 FROM answer_sheet_template_library l JOIN file_asset f
  ON f.tenant_id=l.tenant_id AND f.id=l.reference_file_asset_id
  WHERE l.tenant_id=$1 AND f.storage_bucket=$3 AND f.storage_key=$4)
-OR EXISTS(SELECT 1 FROM question_reference_manifest_item i JOIN file_asset f ON f.tenant_id=i.tenant_id AND f.id IN(i.source_file_asset_id,i.page_file_asset_id,i.derived_file_asset_id) WHERE i.tenant_id=$1 AND f.storage_bucket=$3 AND f.storage_key=$4)`, scope.TenantID, id, asset.StorageBucket, asset.StorageKey).Scan(&pinned); err != nil {
+OR EXISTS(SELECT 1 FROM question_reference_manifest_item i JOIN file_asset f ON f.tenant_id=i.tenant_id AND f.id IN(i.source_file_asset_id,i.page_file_asset_id,i.derived_file_asset_id) WHERE i.tenant_id=$1 AND f.storage_bucket=$3 AND f.storage_key=$4)
+OR edugrade_file_asset_referenced($1::uuid,$2::uuid)`, scope.TenantID, id, asset.StorageBucket, asset.StorageKey).Scan(&pinned); err != nil {
 		return FileAsset{}, err
 	}
 	if pinned {
@@ -212,7 +266,15 @@ OR EXISTS(SELECT 1 FROM question_reference_manifest_item i JOIN file_asset f ON 
 	if asset.LegalHold || (asset.RetentionUntil != nil && asset.RetentionUntil.After(time.Now().UTC())) {
 		return FileAsset{}, ErrForbidden
 	}
-	return s.transition(ctx, scope.TenantID, id, expectedRevision, assetTransition{from: []string{LifecycleActive, LifecycleDeleteFailed}, to: LifecyclePendingDelete})
+	var deleted FileAsset
+	if err := scanAsset(tx.QueryRowContext(ctx, `UPDATE file_asset SET lifecycle_status='pending_delete',revision=revision+1,updated_at=now()
+WHERE tenant_id=$1::uuid AND id=$2::uuid AND revision=$3 AND deleted_at IS NULL AND lifecycle_status IN ('active','delete_failed') RETURNING `+assetColumns, scope.TenantID, id, expectedRevision), &deleted); err != nil {
+		return FileAsset{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return FileAsset{}, err
+	}
+	return deleted, nil
 }
 
 func (s *PostgresStore) CompleteDelete(ctx context.Context, tenantID, id string, expectedRevision int64) (FileAsset, error) {

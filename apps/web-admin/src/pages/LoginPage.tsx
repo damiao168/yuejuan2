@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Form, Input, Radio, Spin } from "antd";
+import { Alert, Button, Checkbox, Form, Input, Spin } from "antd";
 import type { FormInstance } from "antd";
 import { LockKeyhole, LogIn, RefreshCw, ScanLine, School, ShieldCheck } from "lucide-react";
 import { isWithinUtf8ByteLimit, LOGIN_FIELD_LIMITS } from "../auth/loginSecurity";
@@ -60,6 +60,7 @@ export function LoginPage({ onLogin, onWechatAuthenticate, loading = false, erro
     if (next === method) return;
     // 生成二维码只冻结本次策略；切换方式后，旧生成回执不能再带回已放弃的策略和二维码。
     challengeGeneration.current += 1;
+    pollGeneration.current += 1;
     setChallenge(undefined);
     setWechatLoading(false);
     setMethod(next);
@@ -153,31 +154,31 @@ export function LoginPage({ onLogin, onWechatAuthenticate, loading = false, erro
           <div><h1>EduGrade Enterprise</h1><p>智能阅卷与学情诊断平台</p></div>
         </div>
         <div className="login-method-switch" role="tablist" aria-label="登录方式">
-          <button type="button" role="tab" aria-selected={method === "password"} className={method === "password" ? "is-active" : ""} onClick={() => changeMethod("password")}><LockKeyhole size={16} />用户名密码</button>
-          <button type="button" role="tab" aria-selected={method === "wechat"} className={method === "wechat" ? "is-active" : ""} onClick={() => changeMethod("wechat")}><ScanLine size={16} />微信扫码</button>
+          <button type="button" role="tab" aria-selected={method === "password"} className={method === "password" ? "is-active" : ""} disabled={loading} onClick={() => changeMethod("password")}><LockKeyhole size={16} />账号密码</button>
+          <button type="button" role="tab" aria-selected={method === "wechat"} className={method === "wechat" ? "is-active" : ""} disabled={loading} onClick={() => changeMethod("wechat")}><ScanLine size={16} />微信扫码</button>
         </div>
 
         {method === "password" ? (
           <div className="login-method-panel" role="tabpanel">
             {error ? <Alert type="error" showIcon message="登录失败" description={error} /> : null}
-            <Form key="password" form={form} layout="vertical" onFinish={onLogin} className="login-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
+            <Form key="password" form={form} clearOnDestroy layout="vertical" onFinish={onLogin} className="login-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
               <TenantField tenantHint={tenantHint} />
-              {/* 沿用 identifier 协议，已有手机号和教职工号别名仍由服务端兼容解析。 */}
-              <Form.Item label="用户名" name="identifier" rules={[{ required: true, message: "请输入用户名" }, byteLimitRule(LOGIN_FIELD_LIMITS.identifier, "用户名过长")]}>
-                <Input placeholder="请输入用户名" autoComplete="username" maxLength={LOGIN_FIELD_LIMITS.identifier} />
+              {/* 所有身份共用 identifier 协议；服务端核实账号后决定身份，不能由登录页选择权限。 */}
+              <Form.Item label="账号" name="identifier" rules={[{ required: true, message: "请输入账号" }, byteLimitRule(LOGIN_FIELD_LIMITS.identifier, "账号过长")]}>
+                <Input placeholder="学号、用户名、教职工号或手机号" autoComplete="username" maxLength={LOGIN_FIELD_LIMITS.identifier} />
               </Form.Item>
               <Form.Item label="密码" name="password" rules={[{ required: true, message: "请输入密码" }, byteLimitRule(LOGIN_FIELD_LIMITS.password, "密码过长")]}>
                 <Input.Password prefix={<LockKeyhole size={16} />} placeholder="请输入密码" autoComplete="current-password" />
               </Form.Item>
               <DeviceOptions form={form} />
               <Button type="primary" htmlType="submit" block icon={<LogIn size={17} />} loading={loading}>登录</Button>
-              <p className="login-recovery-help">忘记密码？请联系学校管理员。</p>
+              <p className="login-recovery-help">忘记密码？请联系学校管理员；平台账号请联系运维人员。</p>
             </Form>
           </div>
         ) : (
           <div className="login-method-panel login-wechat-panel" role="tabpanel">
             {/* 挑战创建时会冻结会话策略；等待期间禁用策略输入，避免显示值和二维码策略不一致。 */}
-            <Form key="wechat" form={wechatForm} layout="vertical" onFinish={beginWechatLogin} disabled={wechatLoading} className="login-form login-wechat-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
+            <Form key="wechat" form={wechatForm} clearOnDestroy layout="vertical" onFinish={beginWechatLogin} disabled={wechatLoading} className="login-form login-wechat-form" initialValues={{ remember_device: false, public_device: false, tenant_hint: tenantHint }}>
               <TenantField tenantHint={tenantHint} />
               {!challenge ? <DeviceOptions form={wechatForm} /> : null}
               {wechatError ? <Alert type="warning" showIcon message="微信登录未完成" description={wechatError} /> : null}
@@ -191,12 +192,11 @@ export function LoginPage({ onLogin, onWechatAuthenticate, loading = false, erro
                     challengeGeneration.current += 1;
                     setChallenge(undefined);
                     setWechatError(undefined);
-                  }}>更改登录设备</Button>
+                  }}>更改登录选项</Button>
                 </div>
               ) : <Button type="primary" htmlType="submit" block icon={<ScanLine size={17} />} loading={wechatLoading}>生成微信登录二维码</Button>}
               {wechatLoading && challenge ? <Spin size="small" /> : null}
               {challenge ? <p className="wechat-security-note"><ShieldCheck size={15} />二维码 5 分钟内有效，仅供本次登录。</p> : null}
-              <details><summary>微信登录会读取什么？</summary><p>不会读取微信好友或聊天信息。</p></details>
             </Form>
           </div>
         )}
@@ -207,8 +207,8 @@ export function LoginPage({ onLogin, onWechatAuthenticate, loading = false, erro
 
 function TenantField({ tenantHint }: { tenantHint?: string }) {
   return tenantHint ? <><div className="login-tenant-context"><School size={16} /><span>学校入口：{tenantHint}</span></div><Form.Item name="tenant_hint" hidden><Input /></Form.Item></> : (
-    <Form.Item label="学校代码" name="tenant_code" rules={[{ required: true, message: "请输入学校代码" }, byteLimitRule(LOGIN_FIELD_LIMITS.tenant_code, "学校代码过长")]}>
-      <Input prefix={<School size={16} />} placeholder="请输入学校代码（由管理员提供）" autoComplete="organization" maxLength={LOGIN_FIELD_LIMITS.tenant_code} />
+    <Form.Item label="学校代码" name="tenant_code" rules={[{ required: true, message: "请输入学校代码" }, byteLimitRule(LOGIN_FIELD_LIMITS.tenant_code, "代码过长")]}>
+      <Input prefix={<School size={16} />} placeholder="请输入学校或平台代码（由管理员提供）" autoComplete="organization" maxLength={LOGIN_FIELD_LIMITS.tenant_code} />
     </Form.Item>
   );
 }
@@ -217,17 +217,21 @@ function DeviceOptions({ form }: Readonly<{ form: FormInstance }>) {
   return <>
     <Form.Item name="remember_device" hidden><Input /></Form.Item>
     <Form.Item name="public_device" hidden><Input /></Form.Item>
-    <Form.Item noStyle shouldUpdate>{({ getFieldValue }) => <Radio.Group className="login-options" aria-label="登录设备" value={getFieldValue("public_device") ? "public" : getFieldValue("remember_device") ? "personal" : "normal"} onChange={event => {
-      // 三种选择仍映射现有两个协议字段，不改变公共设备或常用设备的会话策略。
-      form.setFieldsValue({ remember_device: event.target.value === "personal", public_device: event.target.value === "public" });
-    }}>
-      <Radio value="normal">普通登录</Radio>
-      <Radio value="personal">这是我的常用电脑，30 天内减少验证</Radio>
-      <Radio value="public">这是学校公共电脑</Radio>
-    </Radio.Group>}</Form.Item>
-    <Form.Item noStyle shouldUpdate={(previous, current) => previous.public_device !== current.public_device}>
-      {({ getFieldValue }) => getFieldValue("public_device") ? <Alert className="login-public-device-alert" type="warning" showIcon message="公共电脑登录最长 4 小时，离开前请退出。" /> : null}
-    </Form.Item>
+    <Form.Item noStyle shouldUpdate>{({ getFieldValue }) => {
+      const publicDevice = Boolean(getFieldValue("public_device"));
+      return <>
+        <div className="login-options" role="group" aria-label="登录选项">
+          {publicDevice ? <span className="login-public-mode"><ShieldCheck size={15} />公共电脑模式</span> : <Checkbox checked={Boolean(getFieldValue("remember_device"))} onChange={event => {
+            form.setFieldsValue({ remember_device: event.target.checked, public_device: false });
+          }}>保持登录</Checkbox>}
+          <Button type="link" className="login-device-switch" aria-pressed={publicDevice} onClick={() => {
+            // 公共模式必须清除持久登录；切回时也不暗中恢复先前的勾选，两字段不能同时为真。
+            form.setFieldsValue({ remember_device: false, public_device: !publicDevice });
+          }}>{publicDevice ? "切回个人电脑" : "公共电脑登录"}</Button>
+        </div>
+        {publicDevice ? <Alert className="login-public-device-alert" type="warning" showIcon message="公共电脑模式已启用，离开前请退出登录。" /> : null}
+      </>;
+    }}</Form.Item>
   </>;
 }
 

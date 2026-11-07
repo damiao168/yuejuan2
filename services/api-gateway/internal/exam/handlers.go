@@ -237,7 +237,8 @@ func (h *Handler) Archive(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateCreate(input CreateInput) error {
-	if input.SchoolID == "" || input.Name == "" || input.Subject == "" || input.ExamType == "" {
+	// 考试类型已退出建考流程；旧客户端仍可携带该字段，省略时不影响考试和评分规则。
+	if input.SchoolID == "" || input.Name == "" || input.Subject == "" {
 		return ErrInvalidInput
 	}
 	if input.TotalScore <= 0 {
@@ -256,8 +257,8 @@ func validateCreateSession(input CreateSessionInput) error {
 	if input.CreationMode != "" && input.CreationMode != "materials" && input.CreationMode != "quick" && input.CreationMode != "template" {
 		return errors.New("考试创建方式无效")
 	}
-	if input.SchoolID == "" || input.GradeID == "" || input.Name == "" || input.ExamType == "" {
-		return errors.New("学校、年级、考试名称和类型不能为空")
+	if input.SchoolID == "" || input.GradeID == "" || input.Name == "" {
+		return errors.New("学校、年级和考试名称不能为空")
 	}
 	if !IsValidGradingMode(input.GradingMode) || input.PublishPolicy == "" {
 		return errors.New("阅卷或发布设置无效")
@@ -368,7 +369,7 @@ func (h *Handler) auditAction(r *http.Request, action string, targetType string,
 		TargetType: targetType,
 		TargetID:   targetID,
 		Reason:     reason,
-		IPAddress:  r.RemoteAddr,
+		IPAddress:  httpx.ClientIP(r),
 		UserAgent:  r.UserAgent(),
 		RequestID:  logger.RequestID(r.Context()),
 	})

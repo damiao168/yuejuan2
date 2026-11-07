@@ -22,7 +22,7 @@ func TestPrivateOpinionDraftRoutesDoNotCacheSensitiveReceipts(t *testing.T) {
 	identities := stores.Identity.Auth.(*auth.MemoryStore)
 	user := auth.UserWithPassword{User: auth.User{ID: "teacher", TenantID: "tenant", Username: "teacher", Status: "active",
 		Roles: []string{"teacher"}, Permissions: []string{"appeal:work"},
-		DataScope: map[string]any{"teacher": map[string]any{"scope": "class", "class_id": "class"}}}, SchoolID: "school", SecurityEpoch: 1}
+		DataScope: map[string]any{"teacher": map[string]any{"scope": "exam_task"}}}, SchoolID: "school", SecurityEpoch: 1}
 	backendRegressionSession(t, identities, user, "draft-session")
 	appeals := stores.Release.Appeal.(*appeal.MemoryStore)
 	appeals.AddSubmissionGrade(appeal.SubmissionGradeSeed{ID: "grade", SchoolID: "school", ExamID: "exam", SubmissionID: "submission", StudentID: "student", Status: "published", Locked: true})
@@ -34,7 +34,7 @@ func TestPrivateOpinionDraftRoutesDoNotCacheSensitiveReceipts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	identities.AddResourceBoundary("appeal", item.ID, auth.ResourceBoundary{TenantID: "tenant", SchoolID: "school", ClassIDs: []string{"class"}, ExamID: "exam"})
+	identities.AddResourceBoundary("appeal", item.ID, auth.ResourceBoundary{TenantID: "tenant", SchoolID: "school", ExamID: "exam", AssignedTo: "teacher"})
 	receipts := &assistantRouteIdempotencyStore{Store: stores.Idempotency}
 	stores.Idempotency = receipts
 	router := NewRouterWithApplicationStores(backendRegressionConfig(), logger.New(io.Discard, "error"), nil, nil, stores)
@@ -70,6 +70,7 @@ func TestPrivateOpinionDraftRoutesDoNotCacheSensitiveReceipts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// 保留改派前的边界夹具，模拟权限检查后发生改派，处理器仍须用当前分派拒绝读取正文。
 	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
 		denied := request(method, body)
 		if denied.Code != http.StatusForbidden || strings.Contains(denied.Body.String(), "仅本人可见") || denied.Header().Get("Idempotency-Replayed") == "true" {

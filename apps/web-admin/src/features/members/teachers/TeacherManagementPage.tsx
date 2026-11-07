@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, App, Button, Form, Input, Modal, Space, Tabs } from "antd";
+import { Alert, App, Button, Form, Input, Modal, Select, Space, Tabs } from "antd";
 import type { TableColumnsType } from "antd";
 import { getUserErrorMessage } from "../../../api/client";
 import { listSchools, type School } from "../../../api/org";
@@ -19,6 +19,7 @@ import { ResponsiveTable } from "../../../components/ResponsiveTable";
 import { isStepUpCancelledError, useStepUp } from "../../../auth/stepUpContext";
 import { AdministratorConfigurationNotice, MemberCreationFields, MemberManagementHeading, MemberStatus, recentUsage, teacherRoles, taskStaffRoleCodes, type CreateMode } from "./TeacherManagementViews";
 import { MemberProfileDialog } from "./MemberProfileDialog";
+import { isSubjectManagedTeacher, normalizeTeachingSubjects, teachingSubjectOptions, teachingSubjectsLabel } from "../../../constants/teachingSubjects";
 
 type MemberView = "teachers" | "administrators";
 
@@ -32,7 +33,7 @@ const memberColumnWidths = {
 
 function memberDialogPresentation(createMode: CreateMode) {
   if (createMode === "administrator") return { title: "新增学校管理员", submitLabel: "创建管理员邀请" };
-  return { title: "新增教师", submitLabel: "创建并生成邀请" };
+  return { title: "新增教师", submitLabel: "创建教师账号" };
 }
 
 export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: SessionUser }>) {
@@ -43,6 +44,7 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
   const [schools, setSchools] = useState<School[]>([]);
   const [view, setView] = useState<MemberView>("teachers");
   const [query, setQuery] = useState("");
+  const [subjectFilter, setSubjectFilter] = useState("");
   const [createMode, setCreateMode] = useState<CreateMode>("teacher");
   const [open, setOpen] = useState(false);
   const [profileUser, setProfileUser] = useState<ManagedUser | null>(null);
@@ -78,7 +80,11 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
   const teacherUsers = useMemo(() => users.filter((user) => !user.roles.includes("school_admin") && user.roles.some((role) => teacherRoles.has(role))), [users]);
   const administratorUsers = useMemo(() => users.filter((user) => user.roles.includes("school_admin")), [users]);
   const activeUsers = view === "teachers" ? teacherUsers : administratorUsers;
-  const visible = useMemo(() => activeUsers.filter((user) => `${user.display_name} ${user.phone_masked ?? ""} ${user.employee_no ?? ""} ${user.username}`.toLowerCase().includes(query.trim().toLowerCase())), [activeUsers, query]);
+  const visible = useMemo(() => activeUsers.filter((user) => {
+    const subjects = normalizeTeachingSubjects(user.teaching_subjects);
+    const matchesSubject = view !== "teachers" || !subjectFilter || (subjectFilter === "unset" ? !subjects.length : subjects.includes(subjectFilter));
+    return matchesSubject && `${user.display_name} ${user.phone_masked ?? ""} ${user.employee_no ?? ""} ${user.username}`.toLowerCase().includes(query.trim().toLowerCase());
+  }), [activeUsers, query, subjectFilter, view]);
   const assignableRoleCodes = useMemo(() => new Set(roles.map((role) => role.code)), [roles]);
   const canCreateAdministrator = assignableRoleCodes.has("school_admin");
   const schoolNames = useMemo(() => new Map(schools.map((school) => [school.id, school.name])), [schools]);
@@ -114,7 +120,8 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
   ];
   const teacherColumns: TableColumnsType<ManagedUser> = [
     ...identityColumns,
-    { title: "状态", dataIndex: "status", width: memberColumnWidths.status, render: (status: string) => <MemberStatus status={status} /> },
+    { title: "任教学科", dataIndex: "teaching_subjects", render: (subjects: string[] | undefined, user) => isSubjectManagedTeacher(user.roles) ? <Space size={6} wrap><span>{teachingSubjectsLabel(subjects)}</span>{canManageUser(user) ? <Button type="link" size="small" disabled={loading || Boolean(error) || saving || Boolean(updatingUserID)} onClick={() => { if (canManageUser(user)) setProfileUser(user); }}>{subjects?.length ? "修改学科" : "设置学科"}</Button> : null}</Space> : "—" },
+    { title: "状态", dataIndex: "status", width: memberColumnWidths.status, render: (status: string, user) => <MemberStatus status={status} mustChangePassword={user.must_change_password} /> },
     { title: "最近使用", key: "last_login_at", width: memberColumnWidths.recent, render: (_, user) => recentUsage(user) },
     { title: "操作", key: "actions", width: memberColumnWidths.actions, render: (_, item) => renderActions(item) }
   ];
@@ -171,7 +178,7 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
     setOpen(true);
   }
 
-  async function submit(values: { username: string; phone?: string; employee_no?: string; display_name: string; school_id: string }) {
+  async function submit(values: { username: string; phone?: string; employee_no?: string; display_name: string; school_id: string; teaching_subjects?: string[]; password?: string; password_confirm?: string }) {
     setSaving(true);
     try {
       // 教师只取得分配任务的阅卷、复核资格；学校管理权限仍通过独立管理员入口创建。
@@ -183,9 +190,12 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
         display_name: values.display_name.trim(),
         role_codes: roleCodes,
         school_id: values.school_id,
-        class_ids: []
+        // 初始密码原样提交；管理员邀请不携带隐藏的教师字段，不能沿用上次表单的密码。
+        ...(createMode === "teacher" ? { teaching_subjects: normalizeTeachingSubjects(values.teaching_subjects), password: values.password, password_confirm: values.password_confirm } : {})
       });
-      message.success(createMode === "administrator" ? "管理员邀请已创建" : "教师邀请已创建");
+      setUsers(current => [...current.filter(user => user.id !== result.user.id), result.user]);
+      message.success(createMode === "administrator" ? "管理员邀请已创建" : "教师账号已创建，首次登录须修改初始密码");
+      form.resetFields();
       setOpen(false);
       if (result.activation) {
         const activationURL = `${window.location.origin}${result.activation.path}`;
@@ -193,6 +203,12 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
           title: "激活邀请已生成",
           width: 560,
           content: <div><p>请通过可信渠道发给本人。链接将在 {new Date(result.activation.expires_at).toLocaleString("zh-CN")} 失效，且只能使用一次。</p><Space.Compact block><Input readOnly value={activationURL} /><Button type="link" onClick={() => void navigator.clipboard.writeText(activationURL).then(() => message.success("激活链接已复制"))}>复制</Button></Space.Compact></div>
+        });
+      } else if (createMode === "teacher") {
+        const school = schools.find(item => item.id === values.school_id);
+        modal.success({
+          title: "教师账号已创建",
+          content: <div><p>登录账号：{result.user.username}</p><p>学校：{school?.name ?? "所属学校"} · 学校代码：{school?.code || "请核对学校登录入口"}</p><p>任教学科：{teachingSubjectsLabel(result.user.teaching_subjects ?? values.teaching_subjects)}</p><p>请通过可信渠道将初始密码交给本人；首次登录必须修改密码。</p></div>
         });
       }
       await load();
@@ -235,21 +251,21 @@ export function TeacherManagementPage({ currentUser }: Readonly<{ currentUser: S
     <MemberManagementHeading isTeacherView={isTeacherView} canCreateAdministrator={canCreateAdministrator} loading={loading} onRefresh={() => void load()} onCreate={openCreate} />
     {error ? <Alert type="warning" showIcon message="名单刷新失败，当前显示此前读取的名单" description={error} /> : null}
     <section className="member-table-section">
-      <Tabs activeKey={view} onChange={(key) => { setView(key as MemberView); setQuery(""); }} items={[
+      <Tabs activeKey={view} onChange={(key) => { setView(key as MemberView); setQuery(""); setSubjectFilter(""); }} items={[
         { key: "teachers", label: `教学与阅卷人员（${teacherUsers.length}）` },
         { key: "administrators", label: `学校管理员（${administratorUsers.length}）` }
       ]} />
       {!isTeacherView ? <AdministratorConfigurationNotice schoolsNeedingBackup={schoolsNeedingBackup} canCreateAdministrator={canCreateAdministrator} /> : null}
-      <div className="member-management-filters"><Input.Search allowClear value={query} placeholder="搜索姓名、用户名、手机号或工号" onChange={(event) => setQuery(event.target.value)} /><span>共 {visible.length} 人</span></div>
+      <div className="member-management-filters"><Input.Search allowClear value={query} placeholder="搜索姓名、用户名、手机号或工号" onChange={(event) => setQuery(event.target.value)} />{isTeacherView ? <Select aria-label="按任教学科筛选" allowClear value={subjectFilter || undefined} placeholder="全部学科" options={[{ value: "unset", label: "未设置学科" }, ...teachingSubjectOptions]} onChange={(value) => setSubjectFilter(value || "")} /> : null}<span>共 {visible.length} 人</span></div>
       <ResponsiveTable className="dense-data-table member-management-table" rowKey="id" size="small" columns={isTeacherView ? teacherColumns : administratorColumns} dataSource={visible} pagination={{ pageSize: 20 }} />
     </section>
     {profileUser ? <MemberProfileDialog key={profileUser.id} user={profileUser} onCancel={() => setProfileUser(null)} onSaved={(user) => {
       setUsers((current) => current.map((item) => item.id === user.id ? user : item));
       setProfileUser(null);
     }} /> : null}
-    <Modal title={dialog.title} open={open} footer={null} destroyOnHidden maskClosable={!saving} closable={!saving} onCancel={() => { if (!saving) setOpen(false); }}>
+    <Modal title={dialog.title} open={open} footer={null} destroyOnHidden maskClosable={!saving} closable={!saving} onCancel={() => { if (!saving) { form.resetFields(); setOpen(false); } }}>
       <Form form={form} layout="vertical" disabled={saving} onFinish={(values) => void submit(values)}>
-        <MemberCreationFields schools={schools} />
+        <MemberCreationFields schools={schools} mode={createMode} />
         <Button type="primary" htmlType="submit" loading={saving}>{dialog.submitLabel}</Button>
       </Form>
     </Modal>

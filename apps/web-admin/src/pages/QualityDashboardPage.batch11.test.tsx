@@ -283,6 +283,20 @@ describe("质量看板展示职责回归", () => {
     expect(mocks.saveSeed).toHaveBeenCalledWith("exam", "q1", { rate: .1, min_interval: 10, max_interval: 30, status: "paused", expected_revision: 3 }); expect(mocks.message.success).toHaveBeenCalledWith("盲测策略已保存");
   });
 
+  it.each(["gold_set_changed", "gold_set_missing"] as const)("盲投证据%s保留原策略可编辑，以原修订号重新确认", async reason => {
+    mocks.seed.mockResolvedValue({ policy: { exam_id: "exam", question_id: "q1", rate: .1, min_interval: 10, max_interval: 30, status: "active", revision: 3, needs_confirmation: true, confirmation_reason: reason } });
+    await render();
+    await click("盲测策略");
+    const warning = host.querySelector('[data-drawer="盲测策略"] [data-tone="warning"]');
+    expect(warning?.textContent).toContain(reason === "gold_set_missing" ? "缺少可用盲投标准卷" : "盲投标准卷已变化");
+    expect(warning?.textContent).toContain("普通阅卷可继续");
+    expect(button("保存并重新确认").disabled).toBe(false);
+    expect(host.querySelector<HTMLInputElement>('[data-field="rate"] input')?.value).toBe("10");
+    await click("保存并重新确认");
+    expect(mocks.saveSeed).toHaveBeenCalledWith("exam", "q1", { rate: .1, min_interval: 10, max_interval: 30, status: "active", expected_revision: 3 });
+    expect(host.querySelector('[data-drawer="盲测策略"] [data-tone="warning"]')).toBeNull();
+  });
+
   it("抽样比例以百分数编辑，提交仍保持原协议小数单位", async () => {
     await render(); await click("盲测策略");
     const rate = host.querySelector<HTMLInputElement>('[data-field="rate"] input')!;

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
@@ -23,6 +24,10 @@ func (h *Handler) CreateBatch(w http.ResponseWriter, r *http.Request) {
 	segments, err := normalizeBatchSegments(input.SegmentIDs)
 	if err != nil {
 		writeStoreError(w, r, err)
+		return
+	}
+	// 集合路由中的答题段不经过路径边界；连幂等回放也须先核对每段所属学校。
+	if !h.authorizeBatchSegments(w, r, segments) {
 		return
 	}
 	recovered, recoveryErr := h.store.RecoverBatchCommand(r.Context(), user.TenantID, user.ID, input.IdempotencyKey)
@@ -70,6 +75,24 @@ func (h *Handler) CreateBatch(w http.ResponseWriter, r *http.Request) {
 	}
 	h.auditAction(r, "subjective.batch_created", "subjective_grading_batch", batch.ID, "create subjective grading batch")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"batch": batch})
+}
+
+func (h *Handler) authorizeBatchSegments(w http.ResponseWriter, r *http.Request, segments []string) bool {
+	scope, ok := auth.AccessScopeFromContext(r.Context())
+	resolver, supported := h.audit.(auth.ResourceBoundaryResolver)
+	if !ok || !supported {
+		httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "management scope is required")
+		return false
+	}
+	for _, id := range segments {
+		boundary, err := resolver.ResolveResourceBoundary(r.Context(), scope, "answer_segment", id)
+		if err != nil || !auth.AllowsManagedResourceBoundary(scope, boundary) {
+			// 不区分外校、缺失或已删除，避免借批次创建探测外校答题段。
+			httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "segment is outside the current management scope")
+			return false
+		}
+	}
+	return true
 }
 
 func (h *Handler) RecoverBatchCommand(w http.ResponseWriter, r *http.Request) {

@@ -12,6 +12,8 @@ from grading_agent.app import GradingAgentApplication
 from grading_agent.app_v2 import ProductionMathV2Application
 from grading_agent.errors import AgentError
 from grading_agent.execution_diagnostics import (
+    merge_attempt_diagnostics,
+    response_diagnostics,
     sanitize_execution_diagnostics,
     usage_facts,
 )
@@ -48,6 +50,61 @@ def invoke(model, structured):
 
 
 class OutputCompletionTests(unittest.TestCase):
+    def test_cache_diagnostics_do_not_change_legacy_usage_or_send_vendor_parameters(self):
+        for native in (False, True):
+            response = provider_response(native)
+            field = "input_tokens_details" if native else "prompt_tokens_details"
+            response["usage"][field] = {"cached_tokens": 0, "cache_creation_input_tokens": 4}
+            for enabled in (False, True):
+                with self.subTest(native=native, enabled=enabled):
+                    calls = []
+                    def transport(_url, payload, _headers, _timeout, calls=calls, response=response):
+                        calls.append(payload)
+                        return copy.deepcopy(response)
+                    adapter_type = DashScopeNativeAdapter if native else LocalLlamaCppAdapter
+                    model = adapter_type(settings(adapter_type="dashscope_native" if native else "local_llama_cpp",
+                                                  cache_usage_diagnostics=enabled), transport=transport)
+                    invoke(model, True)
+                    self.assertEqual(model.last_usage(), {"input_tokens": 7, "output_tokens": 3, "total_tokens": 10,
+                                                         "cached_input_tokens": 0})
+                    expected = dict(model.last_usage())
+                    if enabled:
+                        expected.update(cache_write_input_tokens=4, uncached_input_tokens=3)
+                    self.assertEqual(model.last_execution_diagnostics()["usage"], expected)
+                    self.assertNotIn("cache_control", json.dumps(calls))
+
+    def test_cache_breakdown_retains_unknown_and_rejects_inconsistent_optional_facts(self):
+        for raw, expected in (
+            ({"prompt_tokens": 8}, {}),
+            ({"prompt_tokens": 8, "prompt_tokens_details": {"cached_tokens": 0}}, {"cached_input_tokens": 0}),
+            ({"prompt_tokens": 8, "prompt_cache_hit_tokens": 6, "prompt_cache_miss_tokens": 2},
+             {"cached_input_tokens": 6, "uncached_input_tokens": 2}),
+            ({"prompt_tokens": 8, "prompt_cache_hit_tokens": 6, "prompt_cache_miss_tokens": 3}, {"cached_input_tokens": 6}),
+            ({"prompt_tokens": 8, "prompt_tokens_details": {"cached_tokens": 6, "cache_creation_input_tokens": 3}},
+             {"cached_input_tokens": 6}),
+            ({"prompt_tokens": 8, "prompt_tokens_details": {"cached_tokens": 6, "cache_creation_input_tokens": True}},
+             {"cached_input_tokens": 6}),
+            ({"prompt_tokens": 8, "prompt_tokens_details": {"cached_tokens": 6, "cache_creation_input_tokens": 0}},
+             {"cached_input_tokens": 6, "cache_write_input_tokens": 0, "uncached_input_tokens": 2}),
+        ):
+            with self.subTest(raw=raw):
+                usage, status = usage_facts({"usage": raw}, cache_breakdown=True)
+                self.assertEqual(status, "partial")
+                self.assertEqual(usage, {"input_tokens": 8, **expected})
+
+    def test_cache_aggregate_does_not_report_an_incomplete_subtotal_as_exact(self):
+        base = {"prompt_tokens": 8, "completion_tokens": 2, "total_tokens": 10}
+        detailed = response_diagnostics({"usage": {**base, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 8}},
+                                        None, cache_breakdown=True)
+        unknown = response_diagnostics({"usage": base}, None, cache_breakdown=True)
+        for first, second in ((detailed, unknown), (unknown, detailed)):
+            merged = merge_attempt_diagnostics(first, second, attempts=2)
+            self.assertEqual(merged["usage"], {"input_tokens": 16, "output_tokens": 4, "total_tokens": 20})
+            self.assertEqual(merged["usage_status"], "reported")
+        merged = merge_attempt_diagnostics(detailed, detailed, attempts=2)
+        self.assertEqual(merged["usage"]["cached_input_tokens"], 0)
+        self.assertEqual(merged["usage"]["uncached_input_tokens"], 16)
+
     def test_provider_correlation_is_bounded_and_not_part_of_public_diagnostics(self):
         for native in (False, True):
             response = provider_response(native, finish="length")

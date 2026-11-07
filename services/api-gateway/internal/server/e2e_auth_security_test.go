@@ -351,7 +351,11 @@ func e2eAssertConcurrentTeacherCredentialConsumption(t *testing.T, ctx context.C
 	if err != nil {
 		t.Fatal(err)
 	}
-	scope := auth.AccessScope{TenantID: actor.TenantID, ActorID: actor.ID, SchoolIDs: []string{schoolID}}
+	// 学校可见 ID 不能代替账号管理权；直接仓储场景同样从实际绑定解析受信范围。
+	scope, err := store.ResolveAccessScope(ctx, actor.User)
+	if err != nil || !scope.ManagesSchool(schoolID) {
+		t.Fatalf("resolve school administrator management scope: %v", err)
+	}
 	now := time.Now().UTC()
 	activationHash := auth.HashToken("concurrent-activation")
 	invite, err := store.CreateManagedUser(ctx, actor.User, scope, auth.CreateManagedUserInput{

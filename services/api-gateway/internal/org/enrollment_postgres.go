@@ -12,20 +12,32 @@ func (s *PostgresStore) TransferStudent(ctx context.Context, tenantID, studentID
 	if startDate == "" {
 		startDate = time.Now().UTC().Format("2006-01-02")
 	}
+	if _, err := time.Parse("2006-01-02", startDate); err != nil {
+		return StudentEnrollment{}, ErrInvalidEnrollmentDate
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return StudentEnrollment{}, err
 	}
 	defer tx.Rollback()
+	// 目标班级与删除共用行锁；转出历史仍保留，不因调整班级归属改写旧学籍。
 	var schoolID, yearID, cohortID string
-	err = tx.QueryRowContext(ctx, `SELECT st.school_id::text,cls.academic_year_id::text,cls.grade_cohort_id::text FROM student st JOIN school_class cls ON cls.tenant_id=st.tenant_id AND cls.school_id=st.school_id WHERE st.tenant_id=$1 AND st.id=$2::uuid AND cls.id=$3::uuid AND st.deleted_at IS NULL AND cls.deleted_at IS NULL FOR UPDATE OF st`, tenantID, studentID, classID).Scan(&schoolID, &yearID, &cohortID)
+	err = tx.QueryRowContext(ctx, `SELECT st.school_id::text,cls.academic_year_id::text,cls.grade_cohort_id::text FROM student st JOIN school_class cls ON cls.tenant_id=st.tenant_id AND cls.school_id=st.school_id WHERE st.tenant_id=$1 AND st.id=$2::uuid AND cls.id=$3::uuid AND st.deleted_at IS NULL AND cls.deleted_at IS NULL FOR UPDATE OF st FOR SHARE OF cls`, tenantID, studentID, classID).Scan(&schoolID, &yearID, &cohortID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return StudentEnrollment{}, ErrInvalidParent
 	}
 	if err != nil {
 		return StudentEnrollment{}, err
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE student_enrollment SET status='transferred',end_date=GREATEST(start_date,$4::date),updated_at=now() WHERE tenant_id=$1 AND student_id=$2::uuid AND academic_year_id=$3::uuid AND status='enrolled' AND end_date IS NULL AND deleted_at IS NULL`, tenantID, studentID, yearID, startDate); err != nil {
+	var hasLaterEnrollment bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM student_enrollment WHERE tenant_id=$1 AND student_id=$2::uuid AND status='enrolled' AND end_date IS NULL AND deleted_at IS NULL AND start_date>$3::date)`, tenantID, studentID, startDate).Scan(&hasLaterEnrollment); err != nil {
+		return StudentEnrollment{}, err
+	}
+	if hasLaterEnrollment {
+		return StudentEnrollment{}, ErrInvalidEnrollmentDate
+	}
+	// 跨学年转班同样结束原在读关系，不能留下另一条“当前班级”；较晚生效的关系必须先由管理员核对，不能倒退日期覆盖。
+	if _, err = tx.ExecContext(ctx, `UPDATE student_enrollment SET status='transferred',end_date=$3::date,updated_at=now() WHERE tenant_id=$1 AND student_id=$2::uuid AND status='enrolled' AND end_date IS NULL AND deleted_at IS NULL`, tenantID, studentID, startDate); err != nil {
 		return StudentEnrollment{}, err
 	}
 	var out StudentEnrollment

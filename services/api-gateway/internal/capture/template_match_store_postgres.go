@@ -8,6 +8,7 @@ import (
 	"math"
 	"strconv"
 
+	"edugrade-enterprise/services/api-gateway/internal/submission"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
@@ -155,6 +156,11 @@ func applyTemplateMatchResultInTx(ctx context.Context, tx *sql.Tx, tenantID, run
 	if current.ProcessingStatus != "processing" && current.ProcessingStatus != "retryable_error" {
 		return TemplateMatchRun{}, nil, ErrInvalidTransition
 	}
+	var submissionID string
+	// 先锁父答卷再锁页面，与加页、换页和质检使用相同顺序；页码与完整性重算必须一起提交。
+	if err = tx.QueryRowContext(ctx, `SELECT s.id::text FROM submission s JOIN submission_page sp ON sp.tenant_id=s.tenant_id AND sp.submission_id=s.id WHERE s.tenant_id=$1::uuid AND sp.id=$2::uuid AND s.deleted_at IS NULL AND sp.deleted_at IS NULL FOR UPDATE OF s`, tenantID, current.SubmissionPageID).Scan(&submissionID); err != nil {
+		return TemplateMatchRun{}, nil, mapNotFound(err)
+	}
 	page, sourceCurrent, err := loadTemplateMatchSourceTx(ctx, tx, tenantID, current)
 	if err != nil {
 		return TemplateMatchRun{}, nil, err
@@ -209,15 +215,17 @@ func applyTemplateMatchResultInTx(ctx context.Context, tx *sql.Tx, tenantID, run
 			return TemplateMatchRun{}, nil, err
 		}
 	}
+	if decision == "matched" {
+		// 质检先于视觉页码匹配完成时，旧聚合可能仍报告正式第 1、2 页缺失；按当前页面事实重算。
+		if err = submission.RefreshQualityInTx(ctx, tx, tenantID, submissionID); err != nil {
+			return TemplateMatchRun{}, nil, err
+		}
+	}
 	if _, err = tx.ExecContext(ctx, `UPDATE capture_page SET status=$3,match_candidates=$4::jsonb,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, current.CapturePageID, map[bool]string{true: "normalized", false: "needs_review"}[decision == "matched"], candidates); err != nil {
 		return TemplateMatchRun{}, nil, err
 	}
 	registrations := []RegistrationRun{}
 	if decision == "matched" {
-		var submissionID string
-		if err = tx.QueryRowContext(ctx, `SELECT submission_id::text FROM capture_page WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, current.CapturePageID).Scan(&submissionID); err != nil {
-			return TemplateMatchRun{}, nil, err
-		}
 		registrations, err = QueueSubmissionPagesInTx(ctx, tx, tenantID, submissionID, current.CreatedBy)
 		if err != nil {
 			return TemplateMatchRun{}, nil, err

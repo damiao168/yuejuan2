@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
@@ -38,7 +39,7 @@ func TestManagedDefaultConnectionMetadataIsValidatedBeforeSave(t *testing.T) {
 			}
 			probe := &defaultMetadataUpdateProber{fail: test.fail}
 			handler := NewHandler(store, nil, NewEnvironmentSecretResolver(t.TempDir()), testBaseline()).WithManagedAPIProber(probe)
-			input := ManagedAPIConfigUpdateInput{DisplayName: current.DisplayName, AdapterType: current.AdapterType,
+			input := ManagedAPIConfigUpdateInput{ClientExpectedUpdatedAt: current.UpdatedAt.Format(time.RFC3339Nano), DisplayName: current.DisplayName, AdapterType: current.AdapterType,
 				BaseURL: current.BaseURL, ModelName: current.ModelName, ModelVersion: current.ModelVersion,
 				Region: current.Region, Status: current.Status, IsDefault: true}
 			switch test.field {

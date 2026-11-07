@@ -6,7 +6,6 @@ function validDraft() {
   return {
     ...initialCreateExamDraft("school-1", { id: "grade-1" } as never),
     name: "高二期中考试",
-    examType: "midterm_exam",
     classIds: ["class-1"],
     subjects: [createSubjectDraft("math")]
   };
@@ -52,7 +51,6 @@ describe("lightweight exam creation validation", () => {
     // 创建页会聚焦数组首项；多个坏分区只生成一条摘要，后续科目和阅卷方式仍要检查。
     expect(validateCreateExam(draft)).toEqual([
       { field: "name", message: "请填写考试名称" },
-      { field: "examType", message: "请选择考试类型" },
       { field: "schoolId", message: "请选择考试所属学校" },
       { field: "gradeId", message: "请选择考试年级" },
       { field: "classIds", message: "请至少选择一个参考班级" },

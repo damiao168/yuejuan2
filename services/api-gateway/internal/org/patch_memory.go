@@ -1,16 +1,32 @@
 package org
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 func (s *MemoryStore) UpdateGrade(_ context.Context, tenantID, id string, input GradePatch) (Grade, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.grades[id]
-	if !ok || item.TenantID != tenantID {
+	if !ok || item.TenantID != tenantID || s.deletedGrades[id] {
 		return Grade{}, ErrNotFound
 	}
-	if input.Name != nil {
-		item.Name = *input.Name
+	var err error
+	item, err = applyGradePatch(item, input)
+	if err != nil {
+		return Grade{}, err
+	}
+	if input.LevelNo != nil {
+		rows := []Grade{}
+		for _, grade := range s.grades {
+			if grade.TenantID == tenantID && grade.SchoolID == item.SchoolID && !s.deletedGrades[grade.ID] {
+				rows = append(rows, grade)
+			}
+		}
+		if err = validateCurrentGradeConflict(item, rows, currentSchoolYearStart(time.Now()), false); err != nil {
+			return Grade{}, err
+		}
 	}
 	s.grades[id] = item
 	return item, nil
@@ -20,7 +36,7 @@ func (s *MemoryStore) UpdateClass(_ context.Context, tenantID, id string, input 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, ok := s.classes[id]
-	if !ok || item.TenantID != tenantID {
+	if !ok || item.TenantID != tenantID || s.deletedClasses[id] {
 		return Class{}, ErrNotFound
 	}
 	if input.Code != nil {

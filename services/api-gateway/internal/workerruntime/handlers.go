@@ -252,6 +252,6 @@ func (h *Handler) auditTask(r *http.Request, action string, task Task, reason st
 	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{
 		TenantID: task.TenantID, ActorID: actorID, Action: action, TargetType: "agent_worker_task",
 		TargetID: task.ID, AfterValue: map[string]any{"status": task.Status, "task_type": task.TaskType, "source_type": task.SourceType, "source_id": task.SourceID, "attempt_count": task.AttemptCount},
-		Reason: reason, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+		Reason: reason, IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 }

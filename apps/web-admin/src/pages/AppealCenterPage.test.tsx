@@ -134,7 +134,7 @@ describe("appeal detail selection", () => {
     mocks.submitAppealRecommendation.mockResolvedValue({});
     mocks.assignAppeal.mockResolvedValue({});
     mocks.getAppealStatistics.mockResolvedValue({ statistics: { total: 2, by_status: {} } });
-    mocks.listManagedUsers.mockResolvedValue({ users: [{ id: "other", username: "other", status: "active", roles: ["teacher"] }] });
+    mocks.listManagedUsers.mockResolvedValue({ users: [{ id: "other", username: "other", status: "active", roles: ["teacher"], teaching_subjects: ["mathematics"] }] });
   });
 
   afterEach(async () => {
@@ -157,6 +157,28 @@ describe("appeal detail selection", () => {
     await act(async () => find("刷新").click());
     expect(mocks.listAppeals.mock.calls[mocks.listAppeals.mock.calls.length - 1][0]).not.toHaveProperty("cursor");
     expect(host.querySelectorAll(".appeal-task-item")).toHaveLength(1);
+  });
+
+  it("处理第二页申诉后原地刷新，保留后续页和当前学生", async () => {
+    mocks.listAppeals.mockImplementation(({ cursor }: { cursor?: string }) => Promise.resolve(cursor
+      ? { appeals: [appeal("B")], has_more: true, next_cursor: "page-3" }
+      : { appeals: [appeal("A")], has_more: true, next_cursor: "page-2" }));
+    mocks.getAppeal.mockImplementation((id: string) => Promise.resolve({ appeal: appeal(id) }));
+    await act(async () => root.render(<AppealCenterPage mode="teacher" canRead canManage={false} canWork canReadIdentities={false} canReadExams={false} currentUser={{ id: "teacher" } as SessionUser} />));
+    const find = (label: string) => [...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === label)!;
+    await act(async () => find("加载更多申诉").click());
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".appeal-task-item")].find(button => button.textContent?.includes("考试 B"))!.click());
+    await act(async () => {
+      const reason = host.querySelector<HTMLTextAreaElement>("textarea")!;
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(reason, "依据评分标准核对第二页学生答卷");
+      reason.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => find("提交复核意见").click());
+    expect(mocks.submitAppealRecommendation).toHaveBeenCalledWith("B", expect.anything());
+    expect(mocks.listAppeals).toHaveBeenCalledTimes(2);
+    expect(host.querySelectorAll(".appeal-task-item")).toHaveLength(2);
+    expect(host.querySelector(".appeal-task-item.active")?.textContent).toContain("考试 B");
+    expect(find("加载更多申诉")).toBeDefined();
   });
 
   it("换筛选后丢弃旧分页回执并恢复分页忙碌状态", async () => {
@@ -247,6 +269,22 @@ describe("appeal detail selection", () => {
     await act(async () => { await mocks.confirm.mock.calls[0][0].onOk(); });
     expect(mocks.assignAppeal).toHaveBeenCalledWith("A", "other", 1);
     expect(host.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe("");
+  });
+
+  it("复核分派只列本场学科教师，阅卷岗位和错误学科不能替代复核岗位", async () => {
+    mocks.getAppeal.mockImplementation((id: string) => Promise.resolve({ appeal: appeal(id) }));
+    mocks.listManagedUsers.mockResolvedValue({ users: [
+      { id: "math-teacher", display_name: "数学教师", status: "active", roles: ["teacher"], teaching_subjects: ["数学"] },
+      { id: "english-teacher", display_name: "英语教师", status: "active", roles: ["teacher"], teaching_subjects: ["english"] },
+      { id: "grader", display_name: "阅卷岗位", status: "active", roles: ["grader"], teaching_subjects: ["mathematics"] },
+      { id: "unset", display_name: "未填学科", status: "active", roles: ["teacher"] },
+      { id: "admin-teacher", display_name: "兼任复核管理员", status: "active", roles: ["school_admin", "teacher"] }
+    ] });
+    await act(async () => root.render(<AppealCenterPage mode="admin" canRead canManage canWork={false} canReadIdentities={false} canReadExams={false} currentUser={{ id: "admin" } as SessionUser} />));
+    const choices = [...host.querySelectorAll<HTMLSelectElement>(".appeal-reassign select option")].map(option => option.value);
+    expect(choices).toEqual(["math-teacher", "admin-teacher"]);
+    const button = [...host.querySelectorAll<HTMLButtonElement>("button")].find(item => item.textContent === "确认更换")!;
+    expect(button.disabled).toBe(true);
   });
 
   it.each([true, false])("老筛选迟到=%s时保留当前申诉筛选、选择和详情", async late => {

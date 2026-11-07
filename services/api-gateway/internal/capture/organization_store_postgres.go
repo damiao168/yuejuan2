@@ -142,6 +142,9 @@ func (s *PostgresStore) MergeSubmissions(ctx context.Context, tenantID, batchID,
 	if err = ensureBatchWritableTx(ctx, tx, tenantID, batchID); err != nil {
 		return MatchingQueue{}, err
 	}
+	if err = lockMergeSubmissionsTx(ctx, tx, tenantID, batchID, input.SourceSubmissionID, input.TargetSubmissionID); err != nil {
+		return MatchingQueue{}, err
+	}
 	ids, err := lockMergeSourcePagesTx(ctx, tx, tenantID, batchID, input.SourceSubmissionID)
 	if err != nil {
 		return MatchingQueue{}, err
@@ -166,6 +169,35 @@ func (s *PostgresStore) MergeSubmissions(ctx context.Context, tenantID, batchID,
 		return MatchingQueue{}, err
 	}
 	return s.GetMatchingQueue(ctx, tenantID, batchID)
+}
+
+// 双方必须都是当前批次、同一考试的有效答卷；按 ID 固定锁序，校验失败前不移动任何页。
+func lockMergeSubmissionsTx(ctx context.Context, tx *sql.Tx, tenantID, batchID, sourceID, targetID string) error {
+	rows, err := tx.QueryContext(ctx, `SELECT s.id::text
+FROM submission s JOIN capture_batch b ON b.tenant_id=s.tenant_id AND b.exam_id=s.exam_id AND b.id=$2::uuid AND b.deleted_at IS NULL
+WHERE s.tenant_id=$1::uuid AND s.id IN ($3::uuid,$4::uuid) AND s.deleted_at IS NULL
+ AND EXISTS(SELECT 1 FROM capture_page p WHERE p.tenant_id=s.tenant_id AND p.submission_id=s.id AND p.capture_batch_id=b.id AND p.deleted_at IS NULL AND p.status<>'deleted')
+ AND NOT EXISTS(SELECT 1 FROM capture_page p WHERE p.tenant_id=s.tenant_id AND p.submission_id=s.id AND p.capture_batch_id<>b.id AND p.deleted_at IS NULL AND p.status<>'deleted')
+ORDER BY s.id FOR UPDATE OF s`, tenantID, batchID, sourceID, targetID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if count != 2 {
+		return ErrInvalidInput
+	}
+	return nil
 }
 
 // 合并只移动当前租户、批次和来源答卷的有效页；先按原页序加锁，后续移动沿用同一顺序。

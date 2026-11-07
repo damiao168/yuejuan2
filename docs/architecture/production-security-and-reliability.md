@@ -19,6 +19,8 @@ RBAC 决定“能否执行某类操作”，`AccessScope` 决定“能够访问�
 
 `student`、`submission`、`submission_page`、`answer_segment`、`ocr_result`、`human_grade`、`final_grade`、`appeal` 和 `file_asset` 同时启用并强制 PostgreSQL RLS。API 使用独立的非 superuser、无 `BYPASSRLS` 登录账号，连接包装器按请求上下文设置 tenant；缺少 tenant 的普通上下文默认看不到受保护行。只有显式标记的进程级对账、投影、Outbox 和解析任务可进入跨租户 maintenance scope，迁移账号不进入 API 运行时。
 
+迁移 `000221` 将同一强制策略扩展到 `question_grade`、`submission_grade`、`score_release`、`score_release_item`、`question_appeal`、`exam_candidate_snapshot`、`review_task`、`arbitration_task`、`answer_candidate`、`ai_grade` 和 `subjective_grading_run`。此清单不表示所有租户表都已覆盖；新增表的检查要求及校准分池升级边界见 [成绩数据维护说明](../engineering/grade-data-protection.md)。
+
 ## 3. Worker 身份、Lease 与 Fencing
 
 - Worker 使用专用服务账号和最小权限，不复用平台管理员身份。

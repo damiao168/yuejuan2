@@ -37,9 +37,9 @@ function StudentScorePreviewRubric({ items }: Readonly<{ items: readonly string[
 }
 
 function studentPreviewCurrentVersionText(releaseVersion: number, currentVersion?: number) {
-  if (currentVersion === releaseVersion) return "（门户当前版本）";
-  if (currentVersion === undefined) return "（门户当前未发布）";
-  return `（门户当前为 V${currentVersion}）`;
+  if (currentVersion === releaseVersion) return "（学生端当前版本）";
+  if (currentVersion === undefined) return "（学生端尚未发布）";
+  return `（学生端当前为 V${currentVersion}）`;
 }
 
 export function StudentScorePreviewContent({ result }: Readonly<{ result: StudentScorePreviewResult }>) {
@@ -124,9 +124,9 @@ export function StudentScorePreviewDialog({ release, currentVersion, portalUrl, 
   };
 
   return <Modal open title={`学生视角预览 · V${release.version}`} width={900} onCancel={onClose} footer={<Button onClick={onClose}>关闭预览</Button>}>
-    <Alert showIcon type="info" message={`正在预览 V${release.version}${currentVersionText}`} description="预览冻结成绩和公开内容；答卷图片、跨科汇总及实际申诉操作请在正式发布后由学生端核验。此处考试统计不代表学生端班级或年级排名。预览不会切换门户生效版本。" />
+    <Alert showIcon type="info" message={`正在预览 V${release.version}${currentVersionText}`} description="预览冻结成绩和公开内容；答卷图片、跨科汇总及实际申诉操作请在正式发布后由学生端核验。此处考试统计不代表学生端班级或年级排名。预览不会改变学生当前看到的版本。" />
     <p>公开策略：{visibleItems.join("、") || "仅总分"}</p>
-    <p>目标入口：学生门户{portalUrl ? <> · <a href={portalUrl} target="_blank" rel="noreferrer">{portalUrl}</a></> : " · 尚未配置入口链接，请使用学校发放的学生门户地址"}</p>
+    <p>学生端入口{portalUrl ? <> · <a href={portalUrl} target="_blank" rel="noreferrer">{portalUrl}</a></> : " · 尚未配置入口链接，请使用学校发放的学生端地址"}</p>
     {loading ? <Spin tip="正在读取冻结学生名单"><div style={{ minHeight: 70 }} /></Spin> : <div className="student-score-preview-student-selector">
       <label htmlFor="score-preview-student">选择冻结名单中的学生</label>
       <Select id="score-preview-student" showSearch optionFilterProp="label" placeholder="选择学生" value={studentId || undefined} options={studentOptions} onChange={setStudentId} />

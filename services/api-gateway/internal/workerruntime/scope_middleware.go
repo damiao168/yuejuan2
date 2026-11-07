@@ -29,7 +29,8 @@ func TaskCapabilityFromContext(ctx context.Context) (Task, bool) {
 	return task, ok
 }
 
-// RequireTaskSource 将服务请求路径资源绑定到持久任务来源；人工调用仍执行原有 RBAC 和 AccessScope 检查。
+// RequireTaskSource 将服务请求路径资源绑定到持久任务来源。
+// 共用文件路由的人工请求由外层资源边界授权；内部处理路由必须先用 RequireServiceUser 拒绝人工身份。
 func RequireTaskSource(sourceType string, pathParam string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

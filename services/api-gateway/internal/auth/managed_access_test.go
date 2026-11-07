@@ -18,14 +18,12 @@ func managedAccessFixture(t *testing.T) (*MemoryStore, User, AccessScope) {
 	for _, role := range []string{"teacher", "grader", "arbitrator", "school_admin"} {
 		store.AddRole(actor.TenantID, AssignableRole{Code: role, ScopeType: RolePolicy(role).CanonicalScope})
 	}
-	store.AddResourceBoundary("class", "class-1", ResourceBoundary{TenantID: actor.TenantID, SchoolID: "school-1"})
-	store.AddResourceBoundary("class", "class-2", ResourceBoundary{TenantID: actor.TenantID, SchoolID: "school-2"})
 	return store, actor, AccessScope{TenantID: actor.TenantID, ActorID: actor.ID, TenantWide: true}
 }
 
-func TestManagedAccessMultiRoleKeepsCanonicalScopesAndEmptyClassArray(t *testing.T) {
+func TestManagedAccessMultiRoleKeepsCanonicalTaskScopesAndTeachingSubjects(t *testing.T) {
 	store, actor, scope := managedAccessFixture(t)
-	user, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{Username: "mixed", DisplayName: "Mixed", RoleCodes: []string{"teacher", "grader"}, SchoolID: "school-1"}, "hash")
+	user, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{TeachingSubjects: []string{"mathematics"}, Username: "mixed", DisplayName: "Mixed", RoleCodes: []string{"teacher", "grader"}, SchoolID: "school-1"}, "hash")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,33 +31,29 @@ func TestManagedAccessMultiRoleKeepsCanonicalScopesAndEmptyClassArray(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	for role, expected := range map[string]string{"teacher": "class", "grader": "exam_task"} {
+	for role, expected := range map[string]string{"teacher": "exam_task", "grader": "exam_task"} {
 		if got := created.DataScope[role].(map[string]any)["scope"]; got != expected {
 			t.Fatalf("%s scope=%v want %s", role, got, expected)
 		}
 	}
 	encoded, err := json.Marshal(user)
-	if err != nil || !strings.Contains(string(encoded), `"class_ids":[]`) {
-		t.Fatalf("class_ids must be non-null array: %s err=%v", encoded, err)
+	if err != nil || !strings.Contains(string(encoded), `"teaching_subjects":["mathematics"]`) || strings.Contains(string(encoded), `"class_ids"`) {
+		t.Fatalf("teacher profile must expose subjects without class bindings: %s err=%v", encoded, err)
 	}
 }
 
-func TestManagedAccessConflictAndCrossSchoolClassDoNotMutateAuthorization(t *testing.T) {
+func TestManagedAccessConflictAndCrossSchoolTargetDoNotMutateAuthorization(t *testing.T) {
 	store, actor, scope := managedAccessFixture(t)
-	store.AddUser(UserWithPassword{User: User{ID: "teacher", TenantID: actor.TenantID, TenantCode: "demo", Username: "teacher", Status: "active", Roles: []string{"teacher"}}, SchoolID: "school-1", ManagedClassIDs: []string{"class-1"}})
-	input := UpdateManagedUserAccessInput{RoleCodes: []string{"teacher", "grader"}, ClassIDs: []string{"class-1"}, ExpectedRoles: []string{"teacher"}, ExpectedClassIDs: []string{"class-1"}, Reason: "兼任阅卷"}
+	store.AddUser(UserWithPassword{User: User{ID: "teacher", TenantID: actor.TenantID, TenantCode: "demo", Username: "teacher", Status: "active", Roles: []string{"teacher"}}, SchoolID: "school-1", TeachingSubjects: []string{"mathematics"}})
+	input := UpdateManagedUserAccessInput{RoleCodes: []string{"teacher", "grader"}, ExpectedRoles: []string{"teacher"}, Reason: "兼任阅卷"}
 	bad := input
-	bad.ExpectedClassIDs = []string{}
+	bad.ExpectedRoles = []string{"grader"}
 	if _, err := store.UpdateManagedUserAccess(context.Background(), actor, scope, "teacher", bad); !errors.Is(err, ErrManagedUserAccessConflict) {
 		t.Fatalf("stale authorization should conflict: %v", err)
 	}
-	bad = input
-	bad.ClassIDs = []string{"class-2"}
-	if _, err := store.UpdateManagedUserAccess(context.Background(), actor, scope, "teacher", bad); !errors.Is(err, ErrInvalidRoleBinding) {
-		t.Fatalf("cross-school class must fail: %v", err)
-	}
+
 	user, _ := store.FindUserByLogin(context.Background(), "demo", "teacher")
-	if len(user.Roles) != 1 || user.Roles[0] != "teacher" || user.ManagedClassIDs[0] != "class-1" {
+	if len(user.Roles) != 1 || user.Roles[0] != "teacher" || user.TeachingSubjects[0] != "mathematics" {
 		t.Fatalf("failure changed authorization: %#v", user)
 	}
 	schoolActor := User{ID: "manager", TenantID: actor.TenantID, Roles: []string{"school_admin"}}
@@ -71,13 +65,13 @@ func TestManagedAccessConflictAndCrossSchoolClassDoNotMutateAuthorization(t *tes
 func TestManagedAccessChangeRevokesCredentialsAndStaleLogin(t *testing.T) {
 	store, actor, scope := managedAccessFixture(t)
 	ctx, now := context.Background(), time.Now()
-	store.AddUser(UserWithPassword{User: User{ID: "teacher", TenantID: actor.TenantID, TenantCode: "demo", Username: "teacher", Status: "active", Roles: []string{"teacher"}}, SchoolID: "school-1"})
+	store.AddUser(UserWithPassword{User: User{ID: "teacher", TenantID: actor.TenantID, TenantCode: "demo", Username: "teacher", Status: "active", Roles: []string{"teacher"}}, SchoolID: "school-1", TeachingSubjects: []string{"mathematics"}})
 	user, _ := store.FindUserByLogin(ctx, "demo", "teacher")
 	if _, err := store.CreateSession(ctx, CreateSessionInput{TenantID: actor.TenantID, UserID: user.ID, TokenHash: "session", ExpiresAt: now.Add(time.Hour), SecurityEpoch: user.SecurityEpoch}); err != nil {
 		t.Fatal(err)
 	}
 	store.devices["device"] = memoryDeviceBinding{TenantID: actor.TenantID, UserID: user.ID, ExpiresAt: now.Add(time.Hour)}
-	if _, err := store.UpdateManagedUserAccess(ctx, actor, scope, user.ID, UpdateManagedUserAccessInput{RoleCodes: []string{"teacher", "grader"}, ClassIDs: []string{}, ExpectedRoles: []string{"teacher"}, ExpectedClassIDs: []string{}, Reason: "兼任阅卷"}); err != nil {
+	if _, err := store.UpdateManagedUserAccess(ctx, actor, scope, user.ID, UpdateManagedUserAccessInput{RoleCodes: []string{"teacher", "grader"}, ExpectedRoles: []string{"teacher"}, Reason: "兼任阅卷"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.FindUserBySession(ctx, "session", now); !errors.Is(err, ErrUnauthenticated) {
@@ -94,7 +88,7 @@ func TestManagedAccessChangeRevokesCredentialsAndStaleLogin(t *testing.T) {
 func TestConcurrentManagedAccessDemotionsKeepLastSchoolAdministrator(t *testing.T) {
 	store, actor, scope := managedAccessFixture(t)
 	for _, id := range []string{"admin-a", "admin-b"} {
-		store.AddUser(UserWithPassword{User: User{ID: id, TenantID: actor.TenantID, TenantCode: "demo", Username: id, Status: "active", Roles: []string{"school_admin"}}, SchoolID: "school-1"})
+		store.AddUser(UserWithPassword{User: User{ID: id, TenantID: actor.TenantID, TenantCode: "demo", Username: id, Status: "active", Roles: []string{"school_admin"}}, SchoolID: "school-1", TeachingSubjects: []string{"mathematics"}})
 	}
 	// 两个管理员同时降级，单独看旧人数都为二；写锁内计数必须留下一个启用管理员。
 	results := make(chan error, 2)
@@ -103,7 +97,7 @@ func TestConcurrentManagedAccessDemotionsKeepLastSchoolAdministrator(t *testing.
 		group.Add(1)
 		go func(id string) {
 			defer group.Done()
-			_, err := store.UpdateManagedUserAccess(context.Background(), actor, scope, id, UpdateManagedUserAccessInput{RoleCodes: []string{"teacher"}, ClassIDs: []string{}, ExpectedRoles: []string{"school_admin"}, ExpectedClassIDs: []string{}, Reason: "工作交接"})
+			_, err := store.UpdateManagedUserAccess(context.Background(), actor, scope, id, UpdateManagedUserAccessInput{RoleCodes: []string{"teacher"}, ExpectedRoles: []string{"school_admin"}, Reason: "工作交接"})
 			results <- err
 		}(id)
 	}

@@ -11,11 +11,11 @@ import { setBusinessCommandScope } from "../api/businessCommand";
 import { clearAllReviewDraftFallbacks } from "../auth/reviewDraftFallback";
 
 const mocks = vi.hoisted(() => ({
-  list: vi.fn(), context: vi.fn(), image: vi.fn(), users: vi.fn(), assign: vi.fn(), decide: vi.fn(), opinion: vi.fn(), resolve: vi.fn(), jobs: vi.fn(), confirm: vi.fn(), changed: vi.fn(),
+  list: vi.fn(), context: vi.fn(), image: vi.fn(), users: vi.fn(), assign: vi.fn(), restart: vi.fn(), decide: vi.fn(), opinion: vi.fn(), resolve: vi.fn(), jobs: vi.fn(), confirm: vi.fn(), changed: vi.fn(),
   createURL: vi.fn(), revokeURL: vi.fn(), controls: new Map<string, Record<string, unknown>>()
 }));
 const NativeURL = globalThis.URL;
-vi.mock("../api/questionAppeals", () => ({ listQuestionAppeals: mocks.list, getQuestionAppealContext: mocks.context, getQuestionAppealAnswerImage: mocks.image, startQuestionAppealReview: mocks.assign, decideQuestionAppeal: mocks.decide, submitQuestionAppealReviewOpinion: mocks.opinion, resolveQuestionAppeal: mocks.resolve }));
+vi.mock("../api/questionAppeals", () => ({ listQuestionAppeals: mocks.list, getQuestionAppealContext: mocks.context, getQuestionAppealAnswerImage: mocks.image, startQuestionAppealReview: mocks.assign, restartQuestionAppealReview: mocks.restart, decideQuestionAppeal: mocks.decide, submitQuestionAppealReviewOpinion: mocks.opinion, resolveQuestionAppeal: mocks.resolve }));
 vi.mock("../api/users", () => ({ listManagedUsers: mocks.users }));
 vi.mock("../api/scoreReleases", () => ({ listRegradeJobs: mocks.jobs }));
 vi.mock("../router/useUnsavedChangesGuard", () => ({ useUnsavedChangesGuard: vi.fn() }));
@@ -39,19 +39,19 @@ vi.mock("antd", async () => {
         (props.options as Array<{ value: string; label: string }>).map((option) => React.createElement("option", { key: option.value, value: option.value }, option.label)));
     },
     InputNumber: (props: Record<string, unknown>) => { mocks.controls.set("suggested-score", props); return React.createElement("input", { id: props.id as string, value: String(props.value ?? ""), onChange: (event: ChangeEvent<HTMLInputElement>) => (props.onChange as (value: number | null) => void)(event.target.value ? Number(event.target.value) : null) }); },
-    Input: { TextArea: (props: Record<string, unknown>) => { mocks.controls.set(props.id === "question-appeal-review-explanation" ? "explanation" : "reply", props); return React.createElement("textarea", { id: props.id as string, value: String(props.value), onChange: props.onChange as (event: ChangeEvent<HTMLTextAreaElement>) => void }); } },
+    Input: { TextArea: (props: Record<string, unknown>) => { mocks.controls.set(props.id === "question-appeal-restart-reason" ? "restart-reason" : props.id === "question-appeal-review-explanation" ? "explanation" : "reply", props); return React.createElement("textarea", { id: props.id as string, value: String(props.value), onChange: props.onChange as (event: ChangeEvent<HTMLTextAreaElement>) => void }); } },
     Space: ({ children }: { children: ReactNode }) => React.createElement("div", null, children),
     Tag: ({ children, color }: { children: ReactNode; color?: string }) => React.createElement("span", { "data-color": color }, children)
   };
 });
 
 function appeal(id: string, overrides: Partial<PublishedQuestionAppeal> = {}): PublishedQuestionAppeal {
-  return { id, tenant_id: "tenant", exam_id: "exam", submission_id: `submission-${id}`, source_release_id: "release", source_release_version: 2, question_id: `question-${id}`, question_no: id, source_score: 0, source_max_score: 10, reason_code: "rubric_disagreement", reason: `${id} 学生说明`, status: "under_review", assigned_to: "teacher", revision: 3, created_at: "2026-10-04", updated_at: "2026-10-04", ...overrides };
+  return { id, tenant_id: "tenant", exam_id: "exam", exam_subject: "math", submission_id: `submission-${id}`, source_release_id: "release", source_release_version: 2, question_id: `question-${id}`, question_no: id, source_score: 0, source_max_score: 10, reason_code: "rubric_disagreement", reason: `${id} 学生说明`, status: "under_review", assigned_to: "teacher", revision: 3, created_at: "2026-10-04", updated_at: "2026-10-04", ...overrides };
 }
 function context(id: string, overrides: Partial<PublishedQuestionAppealContext> = {}): PublishedQuestionAppealContext {
   return { appeal: appeal(id), source_type: "human", rubric_snapshot: { points: [{ id: 0, code: "代码", description: "说明", score: 0, points: 2 }, { name: "  名称  ", points: 2 }] }, release_history: [{ id: "release", version: 2, source: "initial", status: "published", reason: "首次发布" }], answer_image_ready: false, ...overrides };
 }
-function user(id: string, roles: string[], status = "active"): ManagedUser { return { id, username: id, display_name: `${id} 姓名`, status, roles }; }
+function user(id: string, roles: string[], status = "active"): ManagedUser { return { id, username: id, display_name: `${id} 姓名`, status, roles, teaching_subjects: ["mathematics"] }; }
 function deferred<T>() { let resolve!: (value: T) => void; let reject!: (reason: Error) => void; const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail; }); return { promise, resolve, reject }; }
 
 describe("题目申诉共同旧新回归：模拟 API/控件", () => {
@@ -88,6 +88,44 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
   function select(id: string) { const row = [...host.querySelectorAll(".question-appeal-list article")].find((node) => node.querySelector("strong")?.textContent?.startsWith(`${id} ·`)); expect(row).toBeDefined(); row!.querySelector<HTMLButtonElement>("button")!.click(); }
   function job(value: string) { (control("job").onChange as (value: string) => void)(value); }
   function reply(value: string) { (control("reply").onChange as (event: { target: { value: string } }) => void)({ target: { value } }); }
+
+  it("过时待更正申请重新处理需原因和详情修订，刷新后只选择本轮成绩的复评", async () => {
+    const old = appeal("A", { status: "upheld_pending_regrade", revision: 7, regrade_job_id: "old-job", public_response: "原回复" });
+    const next = appeal("A", { status: "under_review", revision: 8, review_source_release_id: "latest", review_source_score: 7, review_source_max_score: 10 });
+    mocks.list.mockResolvedValue({ appeals: [old] });
+    mocks.context.mockResolvedValueOnce({ context: context("A", { appeal: old }) }).mockResolvedValue({ context: context("A", { appeal: next }) });
+    mocks.restart.mockResolvedValue({ appeal: next });
+    mocks.jobs.mockResolvedValue({ regrade_jobs: [
+      { id: "old-job", question_id: "question-A", source_release_id: "release", selector: { submission_ids: ["submission-A"] }, reason_text: "旧轮次", affected_count: 1 },
+      { id: "latest-job", question_id: "question-A", source_release_id: "latest", selector: { score_band: { min: 6, max: 8 } }, reason_text: "新轮次", affected_count: 1 }
+    ] });
+    await render();
+    await act(async () => { click("重新处理"); });
+    expect(control("确认重新处理").disabled).toBe(true);
+    await act(async () => { (control("restart-reason").onChange as (event: { target: { value: string } }) => void)({ target: { value: "其他更正已发布，按最新成绩重新核对" } }); });
+    mocks.list.mockResolvedValue({ appeals: [next] });
+    await act(async () => { click("确认重新处理"); });
+    expect(mocks.restart).toHaveBeenCalledWith("A", { expected_revision: 7, reason: "其他更正已发布，按最新成绩重新核对" });
+    expect(host.textContent).toContain("已基于最新公布成绩重新处理");
+    expect(control("reply").value).toBe("");
+    expect(control("job").options).toEqual([{ value: "latest-job", label: "新轮次 · 1 份答卷" }]);
+    expect(host.textContent).toContain("本轮复核基于最新公布成绩：7 / 10");
+  });
+
+  it("重新处理失败时保留原因和原面板，不宣称已完成", async () => {
+    mocks.list.mockResolvedValue({ appeals: [appeal("A", { status: "upheld_pending_regrade" })] });
+    mocks.context.mockResolvedValue({ context: context("A", { appeal: appeal("A", { status: "upheld_pending_regrade" }) }) });
+    mocks.restart.mockRejectedValue(new ApiClientError(409, "question_appeal_restart_unavailable", "unavailable"));
+    await render();
+    await act(async () => { click("重新处理"); });
+    await act(async () => { (control("restart-reason").onChange as (event: { target: { value: string } }) => void)({ target: { value: "保留的重试原因" } }); });
+    expect(control("restart-reason").value).toBe("保留的重试原因");
+    await act(async () => { click("确认重新处理"); });
+    expect(control("restart-reason").value).toBe("保留的重试原因");
+    expect(control("确认重新处理").disabled).toBe(false);
+    expect(host.textContent).not.toContain("已基于最新公布成绩重新处理");
+    expect(host.textContent).toContain("当前申请不符合重新处理条件");
+  });
 
   it("候选页只等待队列，选择申请后才读取依据并打开材料", async () => {
     const list = deferred<{ appeals: PublishedQuestionAppeal[] }>();
@@ -297,14 +335,14 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
     expect(host.textContent).toContain("当前考试没有题目申诉"); expect(host.querySelector(".question-appeal-list")).toBeNull(); expect(control("drawer").open).toBe(false);
   });
 
-  it("管理端只列活跃指定角色，分派仍使用队列 revision", async () => {
-    mocks.users.mockResolvedValue({ users: [user("teacher", ["teacher"]), user("grader", ["grader"]), user("arbitrator", ["arbitrator"]), user("admin", ["admin"]), user("inactive", ["teacher"], "disabled")] });
+  it("管理端只列活跃同学科teacher岗位，分派仍使用队列 revision", async () => {
+    mocks.users.mockResolvedValue({ users: [user("teacher", ["teacher"]), user("grader", ["grader"]), user("arbitrator", ["arbitrator"]), user("admin", ["admin"]), user("inactive", ["teacher"], "disabled"), { ...user("english", ["teacher"]), teaching_subjects: ["english"] }, { ...user("unset", ["teacher"]), teaching_subjects: [] }] });
     mocks.context.mockResolvedValue({ context: context("A", { appeal: appeal("A", { status: "submitted", revision: 9 }) }) });
     await render(); expect(mocks.users).toHaveBeenCalledWith({ limit: 100 });
-    expect(control("reviewer").options).toEqual(["teacher", "grader", "arbitrator"].map((id) => ({ value: id, label: `${id} 姓名` })));
-    await act(async () => { (control("reviewer").onChange as (value: string) => void)("grader"); });
+    expect(control("reviewer").options).toEqual([{ value: "teacher", label: "teacher 姓名" }]);
+    await act(async () => { (control("reviewer").onChange as (value: string) => void)("teacher"); });
     await act(async () => { expect(click("开始复核")).toBeUndefined(); });
-    expect(mocks.assign).toHaveBeenCalledWith("A", { assigned_to: "grader", expected_revision: 3 }); expect(mocks.changed).toHaveBeenCalledTimes(1);
+    expect(mocks.assign).toHaveBeenCalledWith("A", { assigned_to: "teacher", expected_revision: 3 }); expect(mocks.changed).toHaveBeenCalledTimes(1);
   });
 
   it("分派选择重渲染保持 DOM 与焦点，未选择人员时保持禁用", async () => {
@@ -312,7 +350,7 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
     mocks.context.mockResolvedValue({ context: context("A", { appeal: appeal("A", { status: "submitted", assigned_to: "" }) }) });
     await render(); const selectElement = host.querySelector<HTMLSelectElement>(".question-appeal-reviewer")!; selectElement.focus();
     expect(control("开始复核").disabled).toBe(true);
-    await act(async () => { (control("reviewer").onChange as (value: string) => void)("grader"); });
+    await act(async () => { (control("reviewer").onChange as (value: string) => void)("teacher"); });
     expect(host.querySelector(".question-appeal-reviewer")).toBe(selectElement); expect(document.activeElement).toBe(selectElement); expect(control("开始复核").disabled).toBe(false);
   });
 
@@ -330,10 +368,10 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
   it("B 已选中后 A 迟到详情不能改事实或分派选择", async () => {
     // B 先完成详情，再放行 A；保护 effect 清理后旧结果不回写当前事实和选择。
     const late = deferred<{ context: PublishedQuestionAppealContext }>();
-    mocks.context.mockImplementation((id: string) => id === "A" ? late.promise : Promise.resolve({ context: context("B", { appeal: appeal("B", { status: "submitted", assigned_to: "grader" }) }) }));
+    mocks.context.mockImplementation((id: string) => id === "A" ? late.promise : Promise.resolve({ context: context("B", { appeal: appeal("B", { status: "submitted", assigned_to: "teacher" }) }) }));
     await render(); await act(async () => select("B"));
     await act(async () => late.resolve({ context: context("A", { appeal: appeal("A", { status: "submitted", assigned_to: "old" }) }) }));
-    expect(host.querySelector(".question-appeal-facts")?.textContent).toContain("B 学生说明"); expect(control("reviewer").value).toBe("grader");
+    expect(host.querySelector(".question-appeal-facts")?.textContent).toContain("B 学生说明"); expect(control("reviewer").value).toBe("teacher");
   });
 
   it("旧详情失败不覆盖 B；当前详情失败可通过重新选择重试", async () => {
@@ -430,7 +468,7 @@ describe("题目申诉共同旧新回归：模拟 API/控件", () => {
   });
 
   it("分派人员读取完整分页；人员接口失败不把真实申请队列隐藏或误报列表失败", async () => {
-    mocks.users.mockResolvedValueOnce({ users: [user("first", ["teacher"])], has_more: true, next_cursor: "next" }).mockResolvedValueOnce({ users: [user("second", ["grader"])], has_more: false });
+    mocks.users.mockResolvedValueOnce({ users: [user("first", ["teacher"])], has_more: true, next_cursor: "next" }).mockResolvedValueOnce({ users: [user("second", ["teacher"])], has_more: false });
     mocks.context.mockResolvedValue({ context: context("A", { appeal: appeal("A", { status: "submitted", assigned_to: "" }) }) });
     await render();
     expect(mocks.users).toHaveBeenCalledWith({ limit: 100, cursor: "next" });

@@ -110,6 +110,10 @@ func TestPostgresFrozenGoldMigrationAndSourceReplacement(t *testing.T) {
 	exec(`INSERT INTO grader_question_qualification(tenant_id,exam_id,question_id,grader_id,status,valid_until,calibration_session_id,gold_version,metric_snapshot_json) VALUES($1,$2,$3,$4,'qualified',now()+interval '1 day',$5,$6,'{}')`, tenant, exam, question, grader, sessionID, strings.Repeat("a", 64))
 	insert("seed_task", map[string]any{"status": "in_progress", "revision": 1})
 	apply("000216_gold_paper_frozen_images.sql")
+	// 本夹具验证 216 的图像冻结；当前仓库另需 221 的分池字段，沿用已迁移 public 的登记表结构。
+	// 221 的完整迁移和运行角色隔离由真实数据库测试覆盖，不把这里的空表克隆计为迁移验证。
+	exec(`ALTER TABLE grading_gold_paper ADD COLUMN quality_pool TEXT NOT NULL DEFAULT 'calibration'`)
+	exec(`CREATE TABLE gold_quality_image_pool (LIKE public.gold_quality_image_pool INCLUDING ALL)`)
 	store := NewPostgresStore(db)
 	history, err := store.Get(ctx, tenant, goldID)
 	if err != nil || history.Status != StatusPendingApproval || history.ActiveVersion != 0 || history.Versions[0].ApprovedBy != approver || history.Versions[0].ApprovedAt == nil || history.Versions[1].ImageInvalidatedAt == nil || history.AnswerImageURL != "" {

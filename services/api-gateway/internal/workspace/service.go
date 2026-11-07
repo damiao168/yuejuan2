@@ -110,6 +110,7 @@ func (s *Service) Get(ctx context.Context, scope auth.AccessScope, examID string
 	}
 	s.applyArchiveReadOnly(ctx, scope, item, &result)
 	// 各来源按原顺序串行读取并追加通知；任一来源降级后仍继续，投影不承诺跨来源同一快照。
+	s.applyStudentRelease(ctx, item, &result)
 	s.applySessionSubjects(ctx, scope, item, &result)
 	s.applyAssessmentSummary(ctx, item, &result)
 	s.applyPaperCounts(ctx, item, &result)
@@ -333,11 +334,14 @@ func buildStageProgress(result Projection, readiness *paper.ReadinessResult, sub
 	} else {
 		progress = append(progress, statusProgress("quality", result.Stages[3].State, "人工复核任务统计暂不可用"))
 	}
+	// ExamStatus 已按学生端发布记录修正；发布记录读取失败时不知道是否已发布，不能写成“尚未发布”或“等待发布”。
 	resultSummary := "成绩尚未发布；发布检查没有可量化的统一分母"
 	if result.ExamStatus == "published" {
 		resultSummary = "成绩已发布"
 	} else if result.ExamStatus == "archived" {
 		resultSummary = "考试已归档"
+	} else if result.releaseUnknown {
+		resultSummary = "暂无法确认成绩是否已发布"
 	} else if result.ExamStatus == "finalized" {
 		resultSummary = "成绩已确认，等待发布"
 	}
@@ -471,14 +475,14 @@ func buildNextActions(result Projection) []NextAction {
 			break
 		}
 	}
-	primary := statusAction(result.ExamID, result.ExamStatus, result.Counts)
+	primary := statusAction(result.ExamID, result.ExamStatus, result.Counts, result.releaseUnknown)
 	if !seen[primary.Route] && len(actions) < 3 {
 		actions = append(actions, primary)
 	}
 	return actions
 }
 
-func statusAction(examID string, status string, counts Counts) NextAction {
+func statusAction(examID string, status string, counts Counts, releaseUnknown bool) NextAction {
 	switch status {
 	case "draft", "configured", "ready":
 		return NextAction{Code: "continue_preparation", Label: "继续开考准备", Description: "完成试卷、评分标准和答题卡模板配置", Route: examRoute(examID, "prepare"), Priority: "normal"}
@@ -489,10 +493,12 @@ func statusAction(examID string, status string, counts Counts) NextAction {
 	case "reviewing":
 		return NextAction{Code: "continue_quality", Label: "继续复核", Description: fmt.Sprintf("剩余 %d 个复核任务", counts.PendingArbitrationCount), Route: examRoute(examID, "quality"), Priority: "normal"}
 	case "finalized":
-		return NextAction{Code: "release_scores", Label: "检查并发布成绩", Description: "确认发布门禁后向学生开放成绩", Route: examRoute(examID, "results"), Priority: "normal"}
-	default:
-		return NextAction{Code: "view_results", Label: "查看考试结果", Description: "查看成绩和考试报告", Route: examRoute(examID, "results"), Priority: "normal"}
+		// 发布记录读取失败时可能已经发布，不能再提示发布；改为查看结果，由成绩页给出实际发布状态。
+		if !releaseUnknown {
+			return NextAction{Code: "release_scores", Label: "检查并发布成绩", Description: "确认发布门禁后向学生开放成绩", Route: examRoute(examID, "results"), Priority: "normal"}
+		}
 	}
+	return NextAction{Code: "view_results", Label: "查看考试结果", Description: "查看成绩和考试报告", Route: examRoute(examID, "results"), Priority: "normal"}
 }
 
 func buildStages(examID string, status string) []Stage {

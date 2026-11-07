@@ -17,7 +17,7 @@ type Dependencies struct {
 	Exams         exam.Store
 	Submissions   submission.Store
 	Reviews       review.Store
-	Audits        auth.Store
+	Audits        auth.AuditRepository
 	Activities    ActivityStore
 	Organizations OrganizationSummaryStore
 	Now           func() time.Time
@@ -52,24 +52,31 @@ func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.
 		schoolID = accessScope.SchoolIDs[0]
 	}
 	result := Summary{
-		Scope:            Scope{TenantID: user.TenantID, SchoolID: schoolID},
-		UpdatedAt:        s.deps.Now().UTC(),
-		BlockingIssues:   []BlockingIssue{},
-		ActiveExams:      []ActiveExam{},
-		RecentActivities: []RecentActivity{},
-		Warnings:         []string{},
+		Scope:                Scope{TenantID: user.TenantID, SchoolID: schoolID},
+		UpdatedAt:            s.deps.Now().UTC(),
+		BlockingIssues:       []BlockingIssue{},
+		ActiveExams:          []ActiveExam{},
+		RecentActivities:     []RecentActivity{},
+		ReviewTeachers:       []ReviewTeacherProgress{},
+		ReviewTeacherSummary: initialReviewTeacherSummary(),
+		Warnings:             []string{},
 	}
 
 	s.applyOrganizationSummary(ctx, user.TenantID, accessScope, &result)
+	s.applyReviewTeacherProgress(ctx, user, accessScope, &result)
 
 	exams, err := s.deps.Exams.ListExams(ctx, accessScope, exam.ListFilter{SchoolID: result.Scope.SchoolID})
 	if err != nil {
 		return Summary{}, fmt.Errorf("list dashboard exams: %w", err)
 	}
+	s.applyStudentReleaseStatus(ctx, user.TenantID, exams, &result)
 
 	submissionByExam, submissionWarnings := s.submissionsByExam(ctx, user.TenantID, exams)
 	result.Warnings = append(result.Warnings, submissionWarnings...)
 	appendExamStatistics(exams, submissionByExam, &result)
+	// 首页所有考试类计数只覆盖 ActiveExams（未发布、未归档）；行号索引须在下方排序前用完。
+	activeIndex := activeExamIndex(result.ActiveExams)
+	s.applyRosterCounts(ctx, user.TenantID, &result)
 
 	tasks, taskErr := s.deps.Reviews.ListTasks(ctx, user.TenantID, review.ListFilter{
 		ScopeMode: accessScope.QueryMode(), ScopeActorID: accessScope.ActorID,
@@ -78,9 +85,11 @@ func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.
 		ScopeTaskIDs:   append([]string(nil), accessScope.ReviewTaskIDs...),
 	})
 	if taskErr != nil {
+		// 任务来源失败时 grading_progress 保持 null、各场阅卷数量省略；statistics 的待阅数是非空整数，
+		// 沿用原行为保持 0，由告警说明统计不完整。
 		result.Warnings = append(result.Warnings, "阅卷待办暂时无法统计")
 	} else {
-		result.Statistics.PendingReviewQuestionCount, result.Statistics.PendingReviewSubmissionCount = pendingReviewCounts(tasks)
+		applyReviewTaskProgress(tasks, activeIndex, result.UpdatedAt, &result)
 	}
 
 	arbitrations, arbitrationErr := s.deps.Reviews.ListArbitrationTasks(ctx, user.TenantID, review.ArbitrationFilter{
@@ -92,14 +101,16 @@ func (s *Service) Summary(ctx context.Context, user auth.User, accessScope auth.
 	if arbitrationErr != nil {
 		result.Warnings = append(result.Warnings, "人工复核待办暂时无法统计")
 	} else {
-		result.Statistics.PendingArbitrationCount, result.Statistics.PendingArbitrationSubmissionCount = pendingArbitrationCounts(arbitrations)
+		applyArbitrationProgress(arbitrations, activeIndex, &result)
 	}
 
-	var activityErr error
-	result.RecentActivities, activityErr = s.recentActivities(ctx, user.TenantID, accessScope)
-	if activityErr != nil {
+	// 动态来源失败时返回 nil 切片；保留初始化的空切片，接口仍给出 [] 而不是 null，失败只由告警说明。
+	if activities, activityErr := s.recentActivities(ctx, user.TenantID, accessScope); activityErr != nil {
 		result.Warnings = append(result.Warnings, "关键进展暂时无法加载")
+	} else if activities != nil {
+		result.RecentActivities = activities
 	}
+	s.applyAppealStatistics(ctx, user, accessScope, &result)
 
 	sort.Slice(result.ActiveExams, func(i, j int) bool {
 		return result.ActiveExams[i].CreatedAt.After(result.ActiveExams[j].CreatedAt)
@@ -156,8 +167,16 @@ func appendExamStatistics(exams []exam.Exam, submissionByExam map[string][]submi
 		if item.Status == "collecting" {
 			result.Statistics.CollectingExamCount++
 		}
+		// published 已包含学生端发布的考试，由 applyStudentReleaseStatus 按发布记录改记。
 		if item.Status == "published" || item.Status == "archived" {
 			continue
+		}
+		// 未知状态仍计入进行中考试，只是不进入任何阶段计数，避免新状态被静默丢弃。
+		switch item.Status {
+		case "draft", "configured", "ready":
+			result.Statistics.PreparingExamCount++
+		case "grading", "reviewing":
+			result.Statistics.GradingExamCount++
 		}
 		result.Statistics.ActiveExamCount++
 		result.ActiveExams = append(result.ActiveExams, activeExamStatistics(item, submissionByExam[item.ID], &result.Statistics))
@@ -189,32 +208,6 @@ func activeExamStatistics(item exam.Exam, answerSheets []submission.Submission, 
 		}
 	}
 	return active
-}
-
-func pendingReviewCounts(tasks []review.ReviewTask) (int, int) {
-	questions := 0
-	submissions := map[string]struct{}{}
-	for _, task := range tasks {
-		if task.Status == "submitted" || task.Status == "completed" {
-			continue
-		}
-		questions++
-		submissions[task.SubmissionID] = struct{}{}
-	}
-	return questions, len(submissions)
-}
-
-func pendingArbitrationCounts(tasks []review.ArbitrationTask) (int, int) {
-	count := 0
-	submissions := map[string]struct{}{}
-	for _, task := range tasks {
-		if task.Status == "completed" || task.Status == "cancelled" {
-			continue
-		}
-		count++
-		submissions[task.SubmissionID] = struct{}{}
-	}
-	return count, len(submissions)
 }
 
 func (s *Service) recentActivities(ctx context.Context, tenantID string, accessScope auth.AccessScope) ([]RecentActivity, error) {

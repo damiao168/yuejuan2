@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Stream 在最终回答轮输出文本与思考片段，携带工具时须设置 tool_choice=none。
+// Stream 在禁止原生工具调用的响应中输出文本与思考片段，携带工具时须设置 tool_choice=none。
 // 断流或消费方取消时返回已收集的内容和用量，同时保留失败结果。
 func (m *HTTPAgentModel) Stream(ctx context.Context, connection ManagedAPIConnection, request AgentRequest, emit func(AgentEvent) error) (AgentResponse, error) {
 	if emit == nil || (len(request.Tools) > 0 && request.ToolChoice != "none") {

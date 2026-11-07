@@ -236,7 +236,6 @@ export function AppLayout({
         type: "group" as const,
         label: `当前登录用户名：${accountIdentityLabel(user)}`
       },
-      { key: "sessions", label: "账户安全" },
       { key: "reading-size", label: readingSize === "large" ? "✓ 大字阅读 · 切换标准字号" : "大字阅读" },
       ...availableExperiences.filter((value) => value !== experience).map((value) => ({ key: `experience:${value}`, label: `切换到${workspaceLabel(user, value)}` })),
       { key: "logout", label: "退出登录" }
@@ -249,8 +248,6 @@ export function AppLayout({
         setReadingSize((size) => size === "large" ? "standard" : "large");
       } else if (key.startsWith("experience:")) {
         onExperienceChange(key.slice(11) as ProductExperience);
-      } else if (key === "sessions") {
-        onNavigate("/account/sessions");
       }
     }
   };

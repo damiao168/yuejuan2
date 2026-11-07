@@ -169,7 +169,14 @@ func TestImagePanelConfirmedBlankCanProduceZeroSuggestion(t *testing.T) {
 }
 
 func TestImagePanelCallsIndependentModelsAndConditionallySkipsC(t *testing.T) {
+	for _, version := range []string{ImageComparisonPromptVersion, ImageComparisonPrefixPromptVersion} {
+		t.Run(version, func(t *testing.T) { testImagePanelCallsFrozenVersion(t, version) })
+	}
+}
+
+func testImagePanelCallsFrozenVersion(t *testing.T, version string) {
 	value, policy, _ := imagePanelFixture(t, "dual_conditional_arbiter", map[string]float64{})
+	policy.PromptVersion = version
 	crop := validResolvedActiveCrop(t)
 	value.CropSHA256, value.Observation.CropSHA256 = crop.SHA256, crop.SHA256
 	var mu sync.Mutex
@@ -188,14 +195,19 @@ func TestImagePanelCallsIndependentModelsAndConditionallySkipsC(t *testing.T) {
 		if request.ObservationSourceBinding != value.Observation.ModelBinding || request.StudentImage == nil || request.FrozenReference.StandardAnswer != "冻结答案" {
 			t.Error("role lost source binding, actual crop or frozen reference")
 		}
+		if request.ModelPolicy.PromptVersion != version {
+			t.Error("role replaced the frozen version with current rollout configuration")
+		}
 		judgments := []ImageCriterionJudgment{{CriterionID: "p1", Status: "supported", EvidenceIDs: []string{"student-step"}, Reason: "有学生步骤"}, {CriterionID: "p2", Status: "contradicted", Reason: "无学生步骤"}}
 		if needsArbiter && request.AgentRole != "primary_a" {
 			judgments[1] = ImageCriterionJudgment{CriterionID: "p2", Status: "supported", EvidenceIDs: []string{"student-step"}, Reason: "另一独立模型认可该步骤"}
 		}
-		_ = json.NewEncoder(w).Encode(imageAgentResponse{SchemaVersion: ImageProtocolVersion, RequestID: request.RequestID, Observation: *value.Observation, Judgments: judgments, StudentFeedback: "核对", TeacherNote: "建议", ModelVersion: request.ManagedModel.ModelVersion, PromptVersion: ImageComparisonPromptVersion, RubricVersion: value.Rubric.Version, NeedsHumanReview: true, Telemetry: gradingAgentTelemetry{Adapter: request.ManagedModel.AdapterType, Provider: request.ManagedModel.ProviderKey, Deployment: request.ManagedModel.ConfigRevision, Region: "managed", Attempts: 1}})
+		_ = json.NewEncoder(w).Encode(imageAgentResponse{SchemaVersion: ImageProtocolVersion, RequestID: request.RequestID, Observation: *value.Observation, Judgments: judgments, StudentFeedback: "核对", TeacherNote: "建议", ModelVersion: request.ManagedModel.ModelVersion, PromptVersion: version, RubricVersion: value.Rubric.Version, NeedsHumanReview: true, Telemetry: gradingAgentTelemetry{Adapter: request.ManagedModel.AdapterType, Provider: request.ManagedModel.ProviderKey, Deployment: request.ManagedModel.ConfigRevision, Region: "managed", Attempts: 1}})
 	}))
 	defer server.Close()
 	h := NewHandler(nil, NewHTTPAdapter(HTTPAdapterConfig{BaseURL: server.URL, Token: strings.Repeat("t", 32), ModelVersion: policy.ModelVersion}), nil)
+	// 模拟升级或回退后继续执行队列任务，运行身份应优先于当前开关。
+	h.WithImagePrefixCaching(version == ImageComparisonPromptVersion)
 	h.WithImageModelByIDResolver(func(_ context.Context, _, configID, _ string) (*ImageModelConfig, error) {
 		model := value.AIPlan.ResolvedRoles[configID]
 		return &ImageModelConfig{ConfigID: configID, AdapterType: model.AdapterType, ProviderKey: model.ProviderKey, ModelName: model.ModelName, ModelVersion: model.ModelVersion, ConfigRevision: model.ConfigRevision}, nil

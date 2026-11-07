@@ -31,6 +31,10 @@ export function startQuestionAppealReview(id: string, body: StartQuestionAppealR
   return questionAppealApi.startQuestionAppealReview({ path: { id }, body });
 }
 
+export function restartQuestionAppealReview(id: string, body: { expected_revision: number; reason: string }) {
+  return questionAppealApi.restartQuestionAppealReview({ path: { id }, body });
+}
+
 export function decideQuestionAppeal(id: string, body: DecideQuestionAppealRequest) {
   return questionAppealApi.decideQuestionAppeal({ path: { id }, body });
 }

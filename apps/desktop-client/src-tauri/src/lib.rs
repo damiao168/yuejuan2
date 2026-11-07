@@ -1,3 +1,4 @@
+mod durable_commands;
 mod durable_store;
 mod scanner;
 
@@ -143,6 +144,11 @@ fn validate_server_url(value: &str) -> Result<(), String> {
 }
 
 fn is_loopback_host(host: &str) -> bool {
+    // URL 的 IPv6 host 带方括号，解析 IP 前去掉边界，和登录端的本机 HTTP 规则一致。
+    let host = host
+        .strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+        .unwrap_or(host);
     host.eq_ignore_ascii_case("localhost")
         || host
             .parse::<std::net::IpAddr>()
@@ -201,11 +207,6 @@ fn capability_statuses(app: AppHandle, session_id: Option<String>) -> Vec<Capabi
             detail: "未配置/待接入内网更新源、签名校验和灰度策略。".into(),
         },
     ]
-}
-
-#[tauri::command]
-fn claim_legacy_durable_store(app: AppHandle, session_id: String) -> Result<(), String> {
-    durable_store::with_session(&session_id, || durable_store::claim_legacy_store(app))
 }
 
 fn secure_config_capability() -> CapabilityProbe {
@@ -356,233 +357,6 @@ fn delete_desktop_credentials() -> Result<(), String> {
     }
 }
 
-#[tauri::command]
-fn bind_durable_session(
-    server: String,
-    tenant_id: String,
-    actor_id: String,
-) -> Result<String, String> {
-    durable_store::bind_session(&server, &tenant_id, &actor_id)
-}
-
-#[tauri::command]
-fn clear_durable_session() -> Result<(), String> {
-    durable_store::clear_session()
-}
-
-#[tauri::command]
-fn remove_unstarted_scan_queue_item(
-    app: AppHandle,
-    session_id: String,
-    id: String,
-) -> Result<(), String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::remove_unstarted_scan_queue_item(app, id)
-    })
-}
-
-#[tauri::command]
-fn durable_storage_usage(
-    app: AppHandle,
-    session_id: String,
-) -> Result<durable_store::storage::StorageUsage, String> {
-    durable_store::with_session(&session_id, || durable_store::storage::storage_usage(app))
-}
-
-#[tauri::command]
-fn list_archived_cleanup_candidates(
-    app: AppHandle,
-    session_id: String,
-    retain_days: i64,
-) -> Result<Vec<durable_store::storage::CleanupCandidate>, String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::storage::cleanup_candidates(app, retain_days)
-    })
-}
-
-#[tauri::command]
-fn cleanup_archived_originals(
-    app: AppHandle,
-    session_id: String,
-    retain_days: i64,
-    ids: Vec<String>,
-) -> Result<durable_store::storage::CleanupResult, String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::storage::cleanup_archived(app, retain_days, ids)
-    })
-}
-
-#[tauri::command]
-fn authorize_offline_access(
-    session_id: String,
-    access: durable_store::offline_access::OfflineAccess,
-) -> Result<durable_store::offline_access::OfflineAccess, String> {
-    durable_store::offline_access::authorize(&session_id, access)
-}
-#[tauri::command]
-fn read_offline_access() -> Result<Option<durable_store::offline_access::OfflineAccess>, String> {
-    durable_store::offline_access::read_access()
-}
-#[tauri::command]
-fn unlock_offline_access(
-    server: String,
-    tenant_id: String,
-    actor_id: String,
-) -> Result<(String, durable_store::offline_access::OfflineAccess), String> {
-    durable_store::offline_access::unlock(&server, &tenant_id, &actor_id)
-}
-#[tauri::command]
-fn revoke_offline_access(session_id: Option<String>) -> Result<(), String> {
-    match session_id {
-        Some(id) => durable_store::with_session(&id, durable_store::offline_access::revoke),
-        None => durable_store::offline_access::revoke(),
-    }
-}
-
-#[tauri::command]
-fn begin_spool_local_asset(
-    app: AppHandle,
-    session_id: String,
-    input: durable_store::SpoolAssetInput,
-) -> Result<durable_store::SpoolAssetSession, String> {
-    // 本地数据命令统一在同一会话锁内完成身份核对和读写；新增命令也需保持这个边界。
-    durable_store::with_session(&session_id, || {
-        durable_store::begin_spool_local_asset(app, input)
-    })
-}
-
-#[tauri::command]
-fn write_spool_local_asset_chunk(
-    app: AppHandle,
-    session_id: String,
-    local_asset_id: String,
-    offset: i64,
-    bytes: Vec<u8>,
-) -> Result<i64, String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::write_spool_local_asset_chunk(app, local_asset_id, offset, bytes)
-    })
-}
-
-#[tauri::command]
-fn complete_spool_local_asset(
-    app: AppHandle,
-    session_id: String,
-    local_asset_id: String,
-) -> Result<durable_store::DurableQueueItem, String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::complete_spool_local_asset(app, local_asset_id)
-    })
-}
-
-#[tauri::command]
-fn list_durable_scan_queue(
-    app: AppHandle,
-    session_id: String,
-) -> Result<Vec<durable_store::DurableQueueItem>, String> {
-    durable_store::with_session(&session_id, || durable_store::list_durable_scan_queue(app))
-}
-
-#[tauri::command]
-fn persist_durable_scan_queue_item(
-    app: AppHandle,
-    session_id: String,
-    item: durable_store::DurableQueueItem,
-) -> Result<(), String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::persist_durable_scan_queue_item(app, item)
-    })
-}
-
-#[tauri::command]
-fn archive_durable_scan_queue_items(
-    app: AppHandle,
-    session_id: String,
-    ids: Vec<String>,
-) -> Result<(), String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::archive_durable_scan_queue_items(app, ids)
-    })
-}
-
-#[tauri::command]
-fn read_durable_local_asset(
-    app: AppHandle,
-    session_id: String,
-    local_asset_id: String,
-) -> Result<durable_store::DurableSpoolFile, String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::read_durable_local_asset(app, local_asset_id)
-    })
-}
-
-#[tauri::command]
-fn read_durable_local_asset_chunk(
-    app: AppHandle,
-    session_id: String,
-    local_asset_id: String,
-    offset: i64,
-    length: usize,
-) -> Result<Vec<u8>, String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::read_durable_local_asset_chunk(app, local_asset_id, offset, length)
-    })
-}
-
-#[tauri::command]
-fn save_durable_draft(
-    app: AppHandle,
-    session_id: String,
-    record: serde_json::Value,
-) -> Result<(), String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::save_durable_draft(app, record)
-    })
-}
-
-#[tauri::command]
-fn list_durable_drafts(
-    app: AppHandle,
-    session_id: String,
-) -> Result<Vec<durable_store::OfflineDraftEnvelope>, String> {
-    durable_store::with_session(&session_id, || durable_store::list_durable_drafts(app))
-}
-
-#[tauri::command]
-fn load_durable_draft(
-    app: AppHandle,
-    session_id: String,
-    task_id: String,
-) -> Result<Option<serde_json::Value>, String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::load_durable_draft(app, task_id)
-    })
-}
-
-#[tauri::command]
-fn update_durable_draft_status(
-    app: AppHandle,
-    session_id: String,
-    task_id: String,
-    sync_status: String,
-    sync_message: Option<String>,
-) -> Result<(), String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::update_durable_draft_status(app, task_id, sync_status, sync_message)
-    })
-}
-
-#[tauri::command]
-fn purge_expired_durable_drafts(
-    app: AppHandle,
-    session_id: String,
-    now: String,
-) -> Result<usize, String> {
-    durable_store::with_session(&session_id, || {
-        durable_store::purge_expired_durable_drafts(app, now)
-    })
-}
-
 #[cfg(windows)]
 fn credential_entry() -> Result<keyring::Entry, String> {
     keyring::Entry::new(CREDENTIAL_SERVICE, CREDENTIAL_ACCOUNT).map_err(|err| err.to_string())
@@ -592,31 +366,31 @@ fn credential_entry() -> Result<keyring::Entry, String> {
 pub fn run() {
     if let Err(error) = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            bind_durable_session,
-            clear_durable_session,
-            remove_unstarted_scan_queue_item,
-            durable_storage_usage,
-            list_archived_cleanup_candidates,
-            cleanup_archived_originals,
-            authorize_offline_access,
-            read_offline_access,
-            unlock_offline_access,
-            revoke_offline_access,
+            durable_commands::bind_durable_session,
+            durable_commands::clear_durable_session,
+            durable_commands::remove_unstarted_scan_queue_item,
+            durable_commands::durable_storage_usage,
+            durable_commands::list_archived_cleanup_candidates,
+            durable_commands::cleanup_archived_originals,
+            durable_commands::authorize_offline_access,
+            durable_commands::read_offline_access,
+            durable_commands::unlock_offline_access,
+            durable_commands::revoke_offline_access,
             capability_statuses,
-            claim_legacy_durable_store,
-            begin_spool_local_asset,
-            write_spool_local_asset_chunk,
-            complete_spool_local_asset,
-            list_durable_scan_queue,
-            persist_durable_scan_queue_item,
-            archive_durable_scan_queue_items,
-            read_durable_local_asset,
-            read_durable_local_asset_chunk,
-            save_durable_draft,
-            list_durable_drafts,
-            load_durable_draft,
-            update_durable_draft_status,
-            purge_expired_durable_drafts,
+            durable_commands::claim_legacy_durable_store,
+            durable_commands::begin_spool_local_asset,
+            durable_commands::write_spool_local_asset_chunk,
+            durable_commands::complete_spool_local_asset,
+            durable_commands::list_durable_scan_queue,
+            durable_commands::persist_durable_scan_queue_item,
+            durable_commands::archive_durable_scan_queue_items,
+            durable_commands::read_durable_local_asset,
+            durable_commands::read_durable_local_asset_chunk,
+            durable_commands::save_durable_draft,
+            durable_commands::list_durable_drafts,
+            durable_commands::load_durable_draft,
+            durable_commands::update_durable_draft_status,
+            durable_commands::purge_expired_durable_drafts,
             scanner::list_scanner_devices,
             scanner::scanner_integration_status,
             scanner::list_scanner_profiles,
@@ -662,6 +436,14 @@ mod tests {
         };
         assert!(valid.validate().is_ok());
         assert!(validate_server_url("http://127.0.0.1:8080").is_ok());
+        assert!(validate_server_url("http://127.255.255.255:8080").is_ok());
+        assert!(validate_server_url("http://localhost:8080").is_ok());
+        assert!(validate_server_url("http://[::1]:8080").is_ok());
+        assert!(validate_server_url("http://[0:0:0:0:0:0:0:1]:8080").is_ok());
+        assert!(validate_server_url("http://127.review.example").is_err());
+        assert!(validate_server_url("http://127.0.0.1.review.example").is_err());
+        assert!(validate_server_url("http://localhost.review.example").is_err());
+        assert!(validate_server_url("http://[::ffff:127.0.0.1]").is_err());
         assert!(validate_server_url("http://grading.example.edu").is_err());
         assert!(validate_server_url("https://user:password@example.edu").is_err());
     }

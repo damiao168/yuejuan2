@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -47,13 +48,13 @@ func TestPostgresTemplatePageMatchingPersistsReverseSideAndKeepsQualityAndExplic
 	}
 	defer db.Close()
 	for _, ddl := range []string{
-		`CREATE TABLE file_asset(tenant_id uuid,id uuid,hash_sha256 text,content_type text)`,
+		`CREATE TABLE file_asset(tenant_id uuid,id uuid,hash_sha256 text,content_type text,owner_type text,owner_id uuid,exam_id uuid,submission_id uuid,deleted_at timestamptz)`,
 		`CREATE TABLE exam_paper(tenant_id uuid,id uuid,file_asset_id uuid)`,
 		`CREATE TABLE answer_sheet_template(tenant_id uuid,id uuid,exam_id uuid,content_hash text,name text,version_no int,layout jsonb,exam_paper_id uuid,status text,deleted_at timestamptz)`,
 		`CREATE TABLE exam_answer_sheet_template_binding_revision(tenant_id uuid,exam_id uuid,last_revision int,updated_at timestamptz,UNIQUE(tenant_id,exam_id))`,
 		`CREATE TABLE exam_answer_sheet_template_binding(tenant_id uuid,exam_id uuid,template_id uuid,template_content_hash text,mode text)`,
-		`CREATE TABLE submission(tenant_id uuid,id uuid,exam_id uuid,identity_status text DEFAULT 'unknown',deleted_at timestamptz)`,
-		`CREATE TABLE submission_page(tenant_id uuid,id uuid,submission_id uuid,page_no int,normalized_file_asset_id uuid,quality_status text,updated_at timestamptz,UNIQUE(tenant_id,submission_id,page_no))`,
+		`CREATE TABLE submission(tenant_id uuid,id uuid,exam_id uuid,identity_status text DEFAULT 'unknown',status text DEFAULT 'pages_uploaded',expected_page_count int DEFAULT 2,actual_page_count int DEFAULT 1,quality_status text DEFAULT 'unchecked',quality_issues jsonb DEFAULT '[]',updated_at timestamptz,deleted_at timestamptz)`,
+		`CREATE TABLE submission_page(tenant_id uuid,id uuid,submission_id uuid,page_no int,normalized_file_asset_id uuid,quality_status text,updated_at timestamptz,deleted_at timestamptz,UNIQUE(tenant_id,submission_id,page_no))`,
 		`CREATE TABLE capture_batch(tenant_id uuid,id uuid,status text,revision int DEFAULT 1,file_count int,page_count int,submission_count int,normal_count int,failed_count int,review_count int,updated_at timestamptz,deleted_at timestamptz)`,
 		`CREATE TABLE capture_file(tenant_id uuid,id uuid,capture_batch_id uuid,status text,deleted_at timestamptz)`,
 		`CREATE TABLE capture_page(tenant_id uuid,id uuid,capture_batch_id uuid,submission_id uuid,submission_page_id uuid,assigned_page_no int,revision int,status text,manual_override jsonb DEFAULT '{}',page_identity jsonb DEFAULT '{}',match_candidates jsonb DEFAULT '[]',barcode_template_id uuid,sheet_serial uuid,sequence_no int DEFAULT 1,updated_at timestamptz,deleted_at timestamptz)`,
@@ -75,7 +76,7 @@ func TestPostgresTemplatePageMatchingPersistsReverseSideAndKeepsQualityAndExplic
 	const batchID = "00000000-0000-0000-0000-000000000307"
 	const assetID = "00000000-0000-0000-0000-000000000308"
 	const captureID = "00000000-0000-0000-0000-000000000309"
-	for _, scenario := range []string{"reverse_side", "quality_failed", "source_changed", "manual", "controlled"} {
+	for _, scenario := range []string{"reverse_side", "quality_failed", "source_changed", "manual", "controlled", "repaired_page_numbers", "other_page_failed", "other_page_review", "other_page_unchecked", "rejected_submission", "frozen_submission"} {
 		t.Run(scenario, func(t *testing.T) {
 			tx, err := db.BeginTx(ctx, nil)
 			if err != nil {
@@ -86,17 +87,45 @@ func TestPostgresTemplatePageMatchingPersistsReverseSideAndKeepsQualityAndExplic
 				query string
 				args  []any
 			}{
-				{`INSERT INTO file_asset VALUES($1::uuid,$2::uuid,'source-hash','image/png')`, []any{tenant, assetID}},
+				// 配准输入必须来自本页已归属的规范化图，最小 schema 也保留生产查询检查的来源事实。
+				{`INSERT INTO file_asset(tenant_id,id,hash_sha256,content_type,owner_type,owner_id,exam_id,submission_id) VALUES($1::uuid,$2::uuid,'source-hash','image/png','submission_page_normalized',$3::uuid,$4::uuid,$5::uuid)`, []any{tenant, assetID, pageID, exam, submissionID}},
 				{`INSERT INTO exam_paper VALUES($1::uuid,$2::uuid,$2::uuid)`, []any{tenant, assetID}},
 				{`INSERT INTO answer_sheet_template VALUES($1::uuid,$2::uuid,$3::uuid,'template-hash','two pages',1,'{"pages":[{"page_no":1,"width":420,"height":600},{"page_no":2,"width":420,"height":600}]}',$4::uuid,'locked',NULL)`, []any{tenant, templateID, exam, assetID}},
 				{`INSERT INTO exam_answer_sheet_template_binding VALUES($1::uuid,$2::uuid,$3::uuid,'template-hash','bound_auto')`, []any{tenant, exam, templateID}},
 				{`INSERT INTO submission(tenant_id,id,exam_id) VALUES($1::uuid,$2::uuid,$3::uuid)`, []any{tenant, submissionID, exam}},
-				{`INSERT INTO submission_page VALUES($1::uuid,$2::uuid,$3::uuid,1,$4::uuid,'passed',now())`, []any{tenant, pageID, submissionID, assetID}},
+				{`INSERT INTO submission_page(tenant_id,id,submission_id,page_no,normalized_file_asset_id,quality_status,updated_at) VALUES($1::uuid,$2::uuid,$3::uuid,1,$4::uuid,'passed',now())`, []any{tenant, pageID, submissionID, assetID}},
 				{`INSERT INTO capture_batch(tenant_id,id,status) VALUES($1::uuid,$2::uuid,'processing')`, []any{tenant, batchID}},
 				{`INSERT INTO capture_page(tenant_id,id,capture_batch_id,submission_id,submission_page_id,assigned_page_no,revision,status) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,1,3,'normalized')`, []any{tenant, captureID, batchID, submissionID, pageID}},
 			} {
 				if _, err = tx.ExecContext(ctx, seed.query, seed.args...); err != nil {
 					t.Fatal(err)
+				}
+			}
+			repairsAggregate := scenario == "repaired_page_numbers" || strings.HasPrefix(scenario, "other_page_") || scenario == "rejected_submission" || scenario == "frozen_submission"
+			if repairsAggregate {
+				// 模板匹配前背面暂用页号 3；旧聚合把正式第 2 页判缺，改正页号必须同时更新聚合。
+				parentStatus := "pages_uploaded"
+				if scenario == "rejected_submission" {
+					parentStatus = "rejected"
+				} else if scenario == "frozen_submission" {
+					parentStatus = "ready_for_ocr"
+				}
+				otherQuality := "passed"
+				if strings.HasPrefix(scenario, "other_page_") {
+					otherQuality = strings.TrimPrefix(scenario, "other_page_")
+				}
+				for _, seed := range []struct {
+					query string
+					args  []any
+				}{
+					{`UPDATE submission_page SET page_no=3 WHERE id=$1::uuid`, []any{pageID}},
+					{`UPDATE capture_page SET assigned_page_no=3 WHERE id=$1::uuid`, []any{captureID}},
+					{`INSERT INTO submission_page(tenant_id,id,submission_id,page_no,quality_status,updated_at) VALUES($1::uuid,gen_random_uuid(),$2::uuid,1,$3,now())`, []any{tenant, submissionID, otherQuality}},
+					{`UPDATE submission SET actual_page_count=2,status=$2,quality_status='failed',quality_issues='[{"code":"missing_page","message":"missing page 2"}]' WHERE id=$1::uuid`, []any{submissionID, parentStatus}},
+				} {
+					if _, err = tx.ExecContext(ctx, seed.query, seed.args...); err != nil {
+						t.Fatal(err)
+					}
 				}
 			}
 			if scenario == "manual" || scenario == "controlled" {
@@ -153,12 +182,33 @@ func TestPostgresTemplatePageMatchingPersistsReverseSideAndKeepsQualityAndExplic
 			if err = tx.QueryRowContext(ctx, `SELECT cp.assigned_page_no,sp.page_no,cp.status,COALESCE(cp.page_identity->>'page_no_source','') FROM capture_page cp JOIN submission_page sp ON sp.id=cp.submission_page_id`).Scan(&captureNo, &submissionNo, &status, &identitySource); err != nil {
 				t.Fatal(err)
 			}
-			if scenario == "reverse_side" {
+			if scenario == "reverse_side" || repairsAggregate {
 				if out.Decision != "matched" || captureNo != 2 || submissionNo != 2 || identitySource != "visual_template_match" || len(registrations) != 1 || registrations[0].PageNo != 2 {
 					t.Fatalf("reverse side not persisted before registration: decision=%s cp=%d sp=%d identity=%s registrations=%#v", out.Decision, captureNo, submissionNo, identitySource, registrations)
 				}
 			} else if out.Decision != "unknown" || captureNo != 1 || submissionNo != 1 || len(registrations) != 0 || (scenario == "quality_failed" && status != "quality_rejected") {
 				t.Fatalf("stale result changed current page: decision=%s cp=%d sp=%d status=%s registrations=%#v", out.Decision, captureNo, submissionNo, status, registrations)
+			}
+			if scenario == "reverse_side" || repairsAggregate {
+				var quality, parentStatus, issues string
+				var actual int
+				if err = tx.QueryRowContext(ctx, `SELECT quality_status,status,actual_page_count,quality_issues::text FROM submission WHERE id=$1::uuid`, submissionID).Scan(&quality, &parentStatus, &actual, &issues); err != nil {
+					t.Fatal(err)
+				}
+				expectedQuality, expectedStatus, expectedActual, missingPage := "passed", "quality_checked", 2, false
+				switch scenario {
+				case "reverse_side":
+					expectedQuality, expectedStatus, expectedActual, missingPage = "failed", "pages_uploaded", 1, true
+				case "other_page_failed", "other_page_review", "other_page_unchecked":
+					expectedQuality, expectedStatus = strings.TrimPrefix(scenario, "other_page_"), "pages_uploaded"
+				case "rejected_submission":
+					expectedQuality, expectedStatus, missingPage = "failed", "rejected", true
+				case "frozen_submission":
+					expectedQuality, expectedStatus, missingPage = "failed", "ready_for_ocr", true
+				}
+				if quality != expectedQuality || parentStatus != expectedStatus || actual != expectedActual || strings.Contains(issues, "missing_page") != missingPage {
+					t.Fatalf("aggregate mismatch: quality=%s status=%s actual=%d issues=%s; want quality=%s status=%s actual=%d missingPage=%v", quality, parentStatus, actual, issues, expectedQuality, expectedStatus, expectedActual, missingPage)
+				}
 			}
 		})
 	}

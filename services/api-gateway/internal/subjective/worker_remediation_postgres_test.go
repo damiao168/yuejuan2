@@ -4,51 +4,57 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/stdlib"
 )
 
-// 直接连接明确命名的隔离库，不创建/删除数据库；测试使用完整迁移后的真实表、约束和 RLS。
+// 每次使用完整迁移的新随机库；owner 只在此库安装故障触发器，业务调用仍使用真实无 BYPASSRLS 角色。
+// 单连接保留会话 GUC，让故障解除后的重试继续验证同一事务链，不依赖人工准备过的旧测试库。
 func remediationGradingDB(t *testing.T) (*sql.DB, string) {
 	t.Helper()
-	dsn := strings.TrimSpace(os.Getenv("EDUGRADE_E2E_DATABASE_URL"))
-	if dsn == "" {
-		t.Skip("EDUGRADE_E2E_DATABASE_URL is required")
-	}
-	config, err := pgx.ParseConfig(dsn)
-	if err != nil {
-		t.Fatal("invalid grading test database configuration")
-	}
-	if config.Database != "yuejuan_remediation_20261013_grading_test" {
-		t.Fatal("only a dedicated grading_test database is allowed")
-	}
-	var tenantID string
-	initial := stdlib.OpenDB(*config)
-	if err := initial.QueryRow(`SELECT id::text FROM tenant WHERE code='demo'`).Scan(&tenantID); err != nil {
-		initial.Close()
-		t.Fatalf("read synthetic demo tenant: %v", err)
-	}
-	initial.Close()
-	config.RuntimeParams["edugrade.tenant_id"] = tenantID
-	config.RuntimeParams["statement_timeout"] = "10000"
-	config.RuntimeParams["lock_timeout"] = "3000"
-	db := stdlib.OpenDB(*config)
-	// 故障开关是会话级 GUC；一条连接让业务事务与设置始终使用同一隔离测试会话。
-	db.SetMaxOpenConns(1)
-	t.Cleanup(func() { db.Close() })
-	var actual string
-	if err := db.QueryRow(`SELECT current_database()`).Scan(&actual); err != nil || actual != config.Database {
-		t.Fatal("grading test database identity mismatch")
+	owner, db, tenantID := diagnosticsPostgresDB(t)
+	if _, err := owner.ExecContext(t.Context(), `CREATE FUNCTION remediation_grading_fault() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+  target text := current_setting('edugrade.remediation_failure_target', true);
+  stage text := current_setting('edugrade.remediation_failure_stage', true);
+BEGIN
+  IF target IS NULL OR target = '' THEN RETURN NEW; END IF;
+  IF TG_TABLE_NAME = 'agent_worker_task' THEN
+    IF NEW.id::text = target AND NEW.status = 'succeeded' AND stage = 'complete' THEN
+      RAISE EXCEPTION 'synthetic remediation failure at complete';
+    END IF;
+  ELSIF TG_TABLE_NAME = 'subjective_grading_run' THEN
+    IF NEW.id::text = target AND NEW.status IN ('succeeded','failed','conflict') AND stage = 'run' THEN
+      RAISE EXCEPTION 'synthetic remediation failure at run';
+    END IF;
+  ELSIF TG_TABLE_NAME = 'review_task' THEN
+    IF NEW.subjective_panel_id::text = target AND stage = 'handoff_task' THEN
+      RAISE EXCEPTION 'synthetic remediation failure at handoff_task';
+    END IF;
+  ELSIF TG_TABLE_NAME = 'subjective_grading_panel' THEN
+    IF NEW.id::text = target AND NEW.review_task_id IS NOT NULL AND stage = 'handoff_association' THEN
+      RAISE EXCEPTION 'synthetic remediation failure at handoff_association';
+    END IF;
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER remediation_grading_task_fault BEFORE UPDATE ON agent_worker_task
+  FOR EACH ROW EXECUTE FUNCTION remediation_grading_fault();
+CREATE TRIGGER remediation_grading_run_fault BEFORE UPDATE ON subjective_grading_run
+  FOR EACH ROW EXECUTE FUNCTION remediation_grading_fault();
+CREATE TRIGGER remediation_grading_review_fault BEFORE INSERT ON review_task
+  FOR EACH ROW EXECUTE FUNCTION remediation_grading_fault();
+CREATE TRIGGER remediation_grading_panel_fault BEFORE UPDATE ON subjective_grading_panel
+  FOR EACH ROW EXECUTE FUNCTION remediation_grading_fault();`); err != nil {
+		t.Fatalf("install isolated grading fault triggers: %v", err)
 	}
 	var triggerCount int
 	if err := db.QueryRow(`SELECT count(*) FROM pg_trigger WHERE tgname IN ('remediation_grading_task_fault','remediation_grading_run_fault','remediation_grading_review_fault','remediation_grading_panel_fault') AND NOT tgisinternal`).Scan(&triggerCount); err != nil || triggerCount != 4 {
-		t.Fatal("dedicated database owner must install the four remediation fault triggers before running this test")
+		t.Fatalf("isolated grading fault trigger count=%d: %v", triggerCount, err)
 	}
 	return db, tenantID
 }

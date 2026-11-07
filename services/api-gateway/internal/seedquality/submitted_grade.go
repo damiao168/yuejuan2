@@ -46,7 +46,7 @@ func (s *Service) graderSubmittedGrade(ctx context.Context, tenantID string, tas
 	}
 	out := &GraderHumanGrade{ID: opaqueID(task.ID, "human-grade"), TenantID: tenantID, ReviewTaskID: task.ID,
 		AnswerSegmentID: opaqueID(task.ID, "answer-artifact"), ReviewerID: task.AssignedTo,
-		Score: opinion.Score, MaxScore: task.MaxScore, GradeRound: "first", CreatedAt: opinion.SubmittedAt}
+		Score: opinion.Score, MaxScore: task.MaxScore, GradeRound: "single", CreatedAt: opinion.SubmittedAt}
 	keys := make([]string, 0, len(opinion.RubricSelections))
 	for key := range opinion.RubricSelections {
 		keys = append(keys, key)

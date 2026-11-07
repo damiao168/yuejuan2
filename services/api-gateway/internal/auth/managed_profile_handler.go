@@ -10,12 +10,14 @@ import (
 )
 
 type managedProfileRequest struct {
-	DisplayName         *string `json:"display_name"`
-	EmployeeNo          *string `json:"employee_no"`
-	Phone               *string `json:"phone,omitempty"`
-	ExpectedDisplayName *string `json:"expected_display_name"`
-	ExpectedEmployeeNo  *string `json:"expected_employee_no"`
-	ExpectedPhoneMasked *string `json:"expected_phone_masked"`
+	DisplayName              *string  `json:"display_name"`
+	EmployeeNo               *string  `json:"employee_no"`
+	Phone                    *string  `json:"phone,omitempty"`
+	ExpectedDisplayName      *string  `json:"expected_display_name"`
+	ExpectedEmployeeNo       *string  `json:"expected_employee_no"`
+	ExpectedPhoneMasked      *string  `json:"expected_phone_masked"`
+	TeachingSubjects         []string `json:"teaching_subjects"`
+	ExpectedTeachingSubjects []string `json:"expected_teaching_subjects"`
 }
 
 // UpdateManagedUserProfile 只更新同校可管理人员；登录身份变更会撤销旧会话和一次性链接。
@@ -38,6 +40,7 @@ func (h *Handler) UpdateManagedUserProfile(w http.ResponseWriter, r *http.Reques
 	}
 	input := UpdateManagedUserProfileInput{
 		DisplayName: *request.DisplayName, EmployeeNo: *request.EmployeeNo, Phone: request.Phone,
+		TeachingSubjects: request.TeachingSubjects, ExpectedTeachingSubjects: request.ExpectedTeachingSubjects,
 		ExpectedDisplayName: *request.ExpectedDisplayName, ExpectedEmployeeNo: *request.ExpectedEmployeeNo, ExpectedPhoneMasked: *request.ExpectedPhoneMasked,
 	}
 	input, err := normalizeManagedProfileInput(input)
@@ -58,15 +61,17 @@ func (h *Handler) UpdateManagedUserProfile(w http.ResponseWriter, r *http.Reques
 	// 审计只保存可见资料和脱敏手机号；完整号码不能进入审计载荷或响应。
 	RecordAudit(r.Context(), h.store, AuditEvent{
 		TenantID: actor.TenantID, ActorID: actor.ID, Action: "auth.user_profile_updated", TargetType: "user", TargetID: user.ID,
-		BeforeValue: map[string]any{"display_name": input.ExpectedDisplayName, "employee_no": input.ExpectedEmployeeNo, "phone_masked": input.ExpectedPhoneMasked},
-		AfterValue:  map[string]any{"display_name": user.DisplayName, "employee_no": user.EmployeeNo, "phone_masked": user.PhoneMasked, "login_identity_changed": identityChanged},
+		BeforeValue: map[string]any{"display_name": input.ExpectedDisplayName, "employee_no": input.ExpectedEmployeeNo, "phone_masked": input.ExpectedPhoneMasked, "teaching_subjects": input.ExpectedTeachingSubjects},
+		AfterValue:  map[string]any{"display_name": user.DisplayName, "employee_no": user.EmployeeNo, "phone_masked": user.PhoneMasked, "login_identity_changed": identityChanged, "teaching_subjects": user.TeachingSubjects},
 		Reason:      "update organization user profile", IPAddress: h.remoteIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
-	httpx.JSON(w, http.StatusOK, map[string]any{"user": user, "login_identity_changed": identityChanged})
+	httpx.JSON(w, http.StatusOK, map[string]any{"user": user, "login_identity_changed": identityChanged, "teaching_subjects": user.TeachingSubjects})
 }
 
 func writeManagedProfileError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, ErrInvalidTeachingSubjects):
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_teaching_subjects", "select at least one valid teaching subject for a review teacher")
 	case errors.Is(err, errInvalidProfilePhone):
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_phone", "phone must be a valid mobile number and cannot be cleared")
 	case errors.Is(err, errInvalidManagedProfile):

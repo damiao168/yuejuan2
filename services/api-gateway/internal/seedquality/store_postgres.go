@@ -140,6 +140,13 @@ WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$3::uuid AND grade
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
+	// 外部领取钩子的第四个参数曾误传题目ID；正式题号始终从同租户、同考试题目读取。
+	if err := tx.QueryRowContext(ctx, `SELECT question_no FROM question WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND id=$3::uuid AND deleted_at IS NULL`, tenantID, decision.Policy.ExamID, decision.Policy.QuestionID).Scan(&decision.QuestionNo); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Task{}, false, ErrContextUnavailable
+		}
+		return Task{}, false, err
+	}
 	var id string
 	err = tx.QueryRowContext(ctx, `
 INSERT INTO seed_task
@@ -277,7 +284,8 @@ ORDER BY o.observed_at DESC,o.id DESC LIMIT $5`
 const policySelect = `SELECT id::text,exam_id::text,question_id::text,rate::float8,min_interval,max_interval,
  active_gold_fingerprint,status,revision,created_by::text,created_at,updated_at FROM seed_sampling_policy `
 
-const seedTaskColumns = `id::text,exam_id::text,question_id::text,question_no,anonymous_code,source_image_url,
+const seedTaskColumns = `id::text,exam_id::text,question_id::text,
+ COALESCE((SELECT q.question_no FROM question q WHERE q.tenant_id=seed_task.tenant_id AND q.id=seed_task.question_id AND q.exam_id=seed_task.exam_id AND q.deleted_at IS NULL),question_no),anonymous_code,source_image_url,
  status,grader_id::text,max_score::float8,revision,created_at,updated_at,gold_paper_id::text,gold_version,
  exam_question_snapshot_id::text,reference_score::float8,expected_criteria_json,archetype_code`
 const seedTaskSelect = `SELECT ` + seedTaskColumns + ` FROM seed_task `
@@ -311,7 +319,8 @@ func scanTask(row scanner) (Task, error) {
 	if err := json.Unmarshal(expected, &out.ExpectedCriteria); err != nil {
 		return Task{}, fmt.Errorf("decode seed expected criteria: %w", err)
 	}
-	out.Source, out.Priority = "manual", 0
+	out.Source, out.Priority = "manual_sample", 0
+	out.AnonymousCode = anonymousCode(out.ID)
 	out.AnswerImageURL = "/api/v1/review-tasks/" + out.ID + "/segment-image"
 	out.CreatedAt, out.UpdatedAt = out.CreatedAt.UTC(), out.UpdatedAt.UTC()
 	return out, nil

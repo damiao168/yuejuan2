@@ -40,7 +40,7 @@ const mutations = [
   ["eager page import", "pageRendering", "import { lazy, type ReactNode }", 'import { GradingWorkbenchPage as EagerPage } from "../pages/GradingWorkbenchPage";\nimport { lazy, type ReactNode }', "loaded on demand"],
   ["staged route content", "appShell", /\{content\}\s*<\/RouteContent>/, "{null}</RouteContent>", "loaded on demand"],
   ["staging scope identity", "routeStaging", "<StagedRouteContent key={scopeKey}", "<StagedRouteContent key=\"global\"", "loaded on demand"],
-  ["suspense boundary", "routeStaging", "{slot.children}</Suspense>", "{null}</Suspense>", "loaded on demand"]
+  ["page inside suspense boundary", "routeStaging", "{slot.children}", "{null}", "loaded on demand"]
 ];
 for (const [name, key, before, after, message] of mutations) {
   test(`rejects removal of ${name}`, () => {

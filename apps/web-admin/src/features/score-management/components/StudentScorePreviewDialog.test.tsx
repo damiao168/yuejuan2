@@ -42,7 +42,7 @@ describe("冻结成绩学生预览", () => {
     expect(host.textContent).toContain("73 / 100 分");
     expect(host.textContent).not.toContain("99 / 100 分");
     expect(host.textContent).toContain("此版本未公开逐题详情");
-    expect(host.textContent).toContain("门户当前为 V1");
+    expect(host.textContent).toContain("学生端当前为 V1");
     expect(host.textContent).toContain("答卷图片、跨科汇总及实际申诉操作");
     expect(host.querySelector("a")?.href).toBe("https://students.example.edu/");
   });
@@ -138,10 +138,10 @@ describe("冻结成绩学生预览", () => {
   });
 
   it.each([
-    { version: 2, text: "（门户当前版本）" },
-    { version: undefined, text: "（门户当前未发布）" },
-    { version: 1, text: "（门户当前为 V1）" }
-  ])("门户版本提示沿用$text", async ({ version, text }) => {
+    { version: 2, text: "（学生端当前版本）" },
+    { version: undefined, text: "（学生端尚未发布）" },
+    { version: 1, text: "（学生端当前为 V1）" }
+  ])("学生端版本提示沿用$text", async ({ version, text }) => {
     await act(async () => root.render(<StudentScorePreviewDialog release={release} currentVersion={version} onClose={() => undefined} />));
     expect(host.textContent).toContain(`正在预览 V2${text}`);
   });

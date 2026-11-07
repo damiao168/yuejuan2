@@ -3,7 +3,6 @@ import type { Exam } from "../../api/exams";
 export interface ExamGroup {
   id: string;
   name: string;
-  examType: string;
   schoolId: string;
   gradeId: string;
   exams: Exam[];
@@ -18,7 +17,6 @@ export function groupExams(exams: Exam[]): ExamGroup[] {
       group = {
         id,
         name: exam.exam_session_name || exam.name,
-        examType: exam.exam_type,
         schoolId: exam.school_id,
         gradeId: exam.exam_session_grade_id || "",
         exams: []

@@ -1,0 +1,13 @@
+.class-cohort-page .member-management-heading { flex-wrap: wrap; }
+.class-cohort-page .member-management-heading > .ant-space { flex-wrap: wrap; }
+.class-cohort-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: flex-end; gap: 12px 20px; }
+.class-cohort-toolbar > label { display: grid; gap: 6px; min-width: 220px; max-width: 100%; color: var(--text-muted); font-size: var(--eg-font-caption); }
+.class-cohort-toolbar > label > .ant-select { width: 100%; }
+.class-cohort-toolbar > .muted-cell { padding-bottom: 8px; }
+.class-cohort-table .section-head { flex-wrap: wrap; gap: 12px; }
+.class-cohort-page .ant-input-number { width: 100%; }
+@media (max-width: 620px) {
+  .class-cohort-toolbar > label { flex: 1 1 190px; min-width: 0; }
+  .class-cohort-page .member-management-heading > .ant-space { width: 100%; }
+  .class-cohort-table .section-head > .ant-space { flex-wrap: wrap; }
+}

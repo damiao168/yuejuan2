@@ -11,6 +11,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type completedOMRFixture struct {
@@ -20,9 +21,9 @@ type completedOMRFixture struct {
 	tenant, actor, run, omr, segment, other, review, crop, task string
 }
 
-func seedCompletedOMRFixture(t *testing.T) completedOMRFixture {
+func seedCompletedOMRFixture(t *testing.T, configs ...*pgx.ConnConfig) completedOMRFixture {
 	t.Helper()
-	ctx, db := newDurableScoringFixture(t)
+	ctx, db := newDurableScoringFixture(t, configs...)
 	f := completedOMRFixture{ctx: ctx, db: db, store: NewPostgresStore(db), tenant: uuid.NewString(), actor: uuid.NewString(), run: uuid.NewString(), omr: uuid.NewString(), segment: uuid.NewString(), other: uuid.NewString(), review: uuid.NewString(), crop: uuid.NewString()}
 	for _, table := range []string{"final_grade", "submission_page", "page_registration_run", "ai_grade", "omr_calibration_session", "answer_sheet_template"} {
 		f.exec(t, "CREATE TABLE "+table+" (LIKE public."+table+" INCLUDING ALL)")

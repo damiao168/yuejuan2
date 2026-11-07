@@ -40,6 +40,8 @@ type Policy struct {
 	CreatedBy             string       `json:"created_by"`
 	CreatedAt             time.Time    `json:"created_at"`
 	UpdatedAt             time.Time    `json:"updated_at"`
+	NeedsConfirmation     bool         `json:"needs_confirmation,omitempty"`
+	ConfirmationReason    string       `json:"confirmation_reason,omitempty"`
 }
 
 type PutPolicyInput struct {

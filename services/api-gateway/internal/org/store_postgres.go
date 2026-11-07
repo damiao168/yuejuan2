@@ -232,9 +232,36 @@ func (s *PostgresStore) ListGradeCohorts(ctx context.Context, tenantID, schoolID
 }
 
 func (s *PostgresStore) CreateGrade(ctx context.Context, tenantID string, input Grade) (Grade, error) {
-	row := s.db.QueryRowContext(ctx, `
+	if err := validateGradeInput(input); err != nil {
+		return Grade{}, err
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Grade{}, err
+	}
+	defer tx.Rollback()
+	schoolYear, err := lockGradeSchool(ctx, tx, tenantID, input.SchoolID)
+	if err != nil {
+		return Grade{}, err
+	}
+	input, err = normalizeCurrentGrade(input, schoolYear)
+	if err != nil {
+		return Grade{}, err
+	}
+	existing, err := schoolGradesTx(ctx, tx, tenantID, input.SchoolID)
+	if err != nil {
+		return Grade{}, err
+	}
+	if err = validateCurrentGradeConflict(input, existing, schoolYear, true); err != nil {
+		return Grade{}, err
+	}
+	// 固定入学届别只在新建时确定；同校检查与插入共用父锁，不允许并发追加同届年度记录。
+	row := tx.QueryRowContext(ctx, `
 WITH input_value AS (
-  SELECT CASE WHEN $5 ~ '^[0-9]{4}-[0-9]{4}$' THEN split_part($5,'-',1)::int ELSE EXTRACT(YEAR FROM CURRENT_DATE)::int END start_year,
+  SELECT CASE WHEN $5 ~ '^[0-9]{4}-[0-9]{4}$' THEN split_part($5,'-',1)::int ELSE COALESCE(
+    (SELECT start_year FROM academic_year WHERE tenant_id=$1 AND school_id::text=$2 AND is_current AND deleted_at IS NULL ORDER BY start_year DESC LIMIT 1),
+    EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai'))::int-CASE WHEN EXTRACT(MONTH FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai'))<9 THEN 1 ELSE 0 END
+  ) END start_year,
     COALESCE(NULLIF($6,''),CASE WHEN $4>=10 THEN 'senior' ELSE 'junior' END) stage
 ), parent_school AS (
   SELECT id FROM school WHERE tenant_id=$1 AND id::text=$2 AND deleted_at IS NULL
@@ -259,33 +286,37 @@ WITH input_value AS (
 ), cohort_row AS (
   INSERT INTO grade_cohort(tenant_id,school_id,education_stage,entry_year,expected_graduation_year,name)
   SELECT $1,parent_school.id,input_value.stage,
-    year_row.start_year-CASE WHEN input_value.stage='senior' THEN GREATEST($4-10,0) ELSE GREATEST($4-7,0) END,
-    year_row.start_year-CASE WHEN input_value.stage='senior' THEN GREATEST($4-10,0) ELSE GREATEST($4-7,0) END+3,
-    (year_row.start_year-CASE WHEN input_value.stage='senior' THEN GREATEST($4-10,0) ELSE GREATEST($4-7,0) END)::text||'级'
+    COALESCE(NULLIF($8,0),year_row.start_year-CASE WHEN input_value.stage='senior' THEN GREATEST($4-10,0) ELSE GREATEST($4-7,0) END),
+    COALESCE(NULLIF($8,0),year_row.start_year-CASE WHEN input_value.stage='senior' THEN GREATEST($4-10,0) ELSE GREATEST($4-7,0) END)+3,
+    (COALESCE(NULLIF($8,0),year_row.start_year-CASE WHEN input_value.stage='senior' THEN GREATEST($4-10,0) ELSE GREATEST($4-7,0) END))::text||'级'
   FROM parent_school CROSS JOIN input_value CROSS JOIN year_row
   ON CONFLICT(tenant_id,school_id,education_stage,entry_year) DO UPDATE SET updated_at=now()
-  RETURNING id
+  RETURNING id,entry_year
 )
-INSERT INTO grade (tenant_id,school_id,name,level_no,academic_year,education_stage,academic_year_id,grade_cohort_id,status)
-SELECT $1,parent_school.id,$3,$4,$5,input_value.stage,year_row.id,cohort_row.id,COALESCE(NULLIF($7,''),'active')
+, inserted AS (INSERT INTO grade (tenant_id,school_id,name,level_no,academic_year,education_stage,academic_year_id,grade_cohort_id,status)
+SELECT $1,parent_school.id,$3,$4,COALESCE(NULLIF($5,''),input_value.start_year::text||'-'||(input_value.start_year+1)::text),input_value.stage,year_row.id,cohort_row.id,COALESCE(NULLIF($7,''),'active')
 FROM parent_school CROSS JOIN input_value CROSS JOIN year_row CROSS JOIN cohort_row
 RETURNING id::text,tenant_id::text,school_id::text,name,COALESCE(level_no,0),COALESCE(academic_year,''),education_stage,academic_year_id::text,grade_cohort_id::text,status
-`, tenantID, input.SchoolID, input.Name, input.LevelNo, input.AcademicYear, input.EducationStage, input.Status)
+) SELECT inserted.*,cohort_row.entry_year FROM inserted CROSS JOIN cohort_row
+`, tenantID, input.SchoolID, input.Name, input.LevelNo, input.AcademicYear, input.EducationStage, input.Status, input.EntryYear)
 	var out Grade
-	if err := row.Scan(&out.ID, &out.TenantID, &out.SchoolID, &out.Name, &out.LevelNo, &out.AcademicYear, &out.EducationStage, &out.AcademicYearID, &out.GradeCohortID, &out.Status); err != nil {
+	if err := row.Scan(&out.ID, &out.TenantID, &out.SchoolID, &out.Name, &out.LevelNo, &out.AcademicYear, &out.EducationStage, &out.AcademicYearID, &out.GradeCohortID, &out.Status, &out.EntryYear); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Grade{}, ErrInvalidParent
 		}
+		return Grade{}, err
+	}
+	if err = tx.Commit(); err != nil {
 		return Grade{}, err
 	}
 	return out, nil
 }
 
 func (s *PostgresStore) ListGrades(ctx context.Context, tenantID string, schoolID string) ([]Grade, error) {
-	query := `SELECT id::text,tenant_id::text,school_id::text,name,COALESCE(level_no,0),COALESCE(academic_year,''),education_stage,academic_year_id::text,grade_cohort_id::text,status FROM grade WHERE tenant_id=$1 AND deleted_at IS NULL`
+	query := `SELECT g.id::text,g.tenant_id::text,g.school_id::text,g.name,COALESCE(g.level_no,0),COALESCE(g.academic_year,''),g.education_stage,g.academic_year_id::text,g.grade_cohort_id::text,g.status,cohort.entry_year FROM grade g JOIN grade_cohort cohort ON cohort.tenant_id=g.tenant_id AND cohort.id=g.grade_cohort_id WHERE g.tenant_id=$1 AND g.deleted_at IS NULL`
 	args := []any{tenantID}
 	if schoolID != "" {
-		query += ` AND school_id = $2`
+		query += ` AND g.school_id = $2`
 		args = append(args, schoolID)
 	}
 	rows, err := s.db.QueryContext(ctx, query, args...)
@@ -296,7 +327,7 @@ func (s *PostgresStore) ListGrades(ctx context.Context, tenantID string, schoolI
 	out := []Grade{}
 	for rows.Next() {
 		var item Grade
-		if err := rows.Scan(&item.ID, &item.TenantID, &item.SchoolID, &item.Name, &item.LevelNo, &item.AcademicYear, &item.EducationStage, &item.AcademicYearID, &item.GradeCohortID, &item.Status); err != nil {
+		if err := rows.Scan(&item.ID, &item.TenantID, &item.SchoolID, &item.Name, &item.LevelNo, &item.AcademicYear, &item.EducationStage, &item.AcademicYearID, &item.GradeCohortID, &item.Status, &item.EntryYear); err != nil {
 			return nil, err
 		}
 		out = append(out, item)
@@ -305,12 +336,27 @@ func (s *PostgresStore) ListGrades(ctx context.Context, tenantID string, schoolI
 }
 
 func (s *PostgresStore) CreateClass(ctx context.Context, tenantID string, input Class) (Class, error) {
-	row := s.db.QueryRowContext(ctx, `
+	// 创建与软删除共用父年级行锁，等待删除提交后重新检查 deleted_at。
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Class{}, err
+	}
+	defer tx.Rollback()
+	var cohortID string
+	// 与整届删除保持 cohort→grade 的锁顺序，避免跨年度班级插入和删除互相漏检。
+	err = tx.QueryRowContext(ctx, `SELECT cohort.id::text FROM grade_cohort cohort JOIN grade g ON g.tenant_id=cohort.tenant_id AND g.grade_cohort_id=cohort.id WHERE g.tenant_id=$1 AND g.id::text=$2 AND g.school_id::text=$3 AND g.deleted_at IS NULL FOR SHARE OF cohort`, tenantID, input.GradeID, input.SchoolID).Scan(&cohortID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Class{}, ErrInvalidParent
+	}
+	if err != nil {
+		return Class{}, err
+	}
+	row := tx.QueryRowContext(ctx, `
 WITH parent_school AS (
   SELECT id FROM school WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 ),
 parent_grade AS (
-  SELECT id,academic_year_id,grade_cohort_id FROM grade WHERE tenant_id = $1 AND id::text = $3 AND school_id::text = $2 AND deleted_at IS NULL
+  SELECT id,academic_year_id,grade_cohort_id FROM grade WHERE tenant_id = $1 AND id::text = $3 AND school_id::text = $2 AND deleted_at IS NULL FOR SHARE
 )
 INSERT INTO school_class (tenant_id,school_id,grade_id,academic_year_id,grade_cohort_id,class_no,name,code,status)
 SELECT $1,parent_school.id,parent_grade.id,parent_grade.academic_year_id,parent_grade.grade_cohort_id,NULLIF($7,0),$4,$5,COALESCE(NULLIF($6,''),'active')
@@ -326,6 +372,9 @@ RETURNING id::text,tenant_id::text,school_id::text,grade_id::text,academic_year_
 		if postgresConstraint(err, "23505", "school_class_tenant_id_grade_id_code_key") {
 			return Class{}, ErrClassCodeConflict
 		}
+		return Class{}, err
+	}
+	if err = tx.Commit(); err != nil {
 		return Class{}, err
 	}
 	return out, nil
@@ -355,7 +404,17 @@ func (s *PostgresStore) ListClasses(ctx context.Context, tenantID string, gradeI
 }
 
 func (s *PostgresStore) CreateStudent(ctx context.Context, tenantID string, input Student) (Student, error) {
-	row := s.db.QueryRowContext(ctx, `
+	return createStudentRecord(ctx, s.db, tenantID, input)
+}
+
+type studentQueryer interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func createStudentRecord(ctx context.Context, query studentQueryer, tenantID string, input Student) (Student, error) {
+	// 低层名册入口供内部数据准备使用；HTTP 新增通过外层事务同时开通账号。
+	// 锁住目标班级直到学生和初始学籍一并提交，防止空班删除漏过新学生。
+	row := query.QueryRowContext(ctx, `
 WITH parent_school AS (
   SELECT id FROM school WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
 ),
@@ -363,7 +422,7 @@ parent_class AS (
   SELECT cls.id,cls.academic_year_id,cls.grade_cohort_id,cohort.entry_year,year.starts_at
   FROM (
     SELECT id,tenant_id,academic_year_id,grade_cohort_id
-    FROM school_class WHERE tenant_id = $1 AND id::text = $3 AND school_id::text = $2 AND deleted_at IS NULL
+    FROM school_class WHERE tenant_id = $1 AND id::text = $3 AND school_id::text = $2 AND deleted_at IS NULL FOR SHARE
   ) cls
   JOIN grade_cohort cohort ON cohort.tenant_id=cls.tenant_id AND cohort.id=cls.grade_cohort_id
   JOIN academic_year year ON year.tenant_id=cls.tenant_id AND year.id=cls.academic_year_id
@@ -392,6 +451,7 @@ FROM inserted CROSS JOIN parent_class CROSS JOIN enrollment
 		}
 		return Student{}, err
 	}
+	out.AccountStatus = "not_provisioned"
 	return out, nil
 }
 
@@ -401,19 +461,8 @@ func postgresConstraint(err error, code string, constraint string) bool {
 }
 
 func (s *PostgresStore) ListStudents(ctx context.Context, tenantID string, filter StudentListFilter) ([]Student, error) {
-	// 同学年转班保留旧学籍；先取仍在读且未结束的记录，避免旧班教师继续从集合读取该学生。
-	query := `SELECT st.id::text,st.tenant_id::text,st.school_id::text,COALESCE(current_enrollment.class_id::text,st.class_id::text,''),
-  COALESCE(current_enrollment.academic_year_id::text,''),COALESCE(current_enrollment.grade_cohort_id::text,''),
-  st.student_no,st.name,COALESCE(st.gender,''),st.status,COALESCE(st.admission_year,0)
-FROM student st
-LEFT JOIN LATERAL (
-  SELECT enrollment.class_id,enrollment.academic_year_id,enrollment.grade_cohort_id
-  FROM student_enrollment enrollment
-  JOIN academic_year year ON year.tenant_id=enrollment.tenant_id AND year.id=enrollment.academic_year_id
-  WHERE enrollment.tenant_id=st.tenant_id AND enrollment.student_id=st.id AND enrollment.deleted_at IS NULL
-  ORDER BY year.is_current DESC,year.start_year DESC,(enrollment.status='enrolled' AND enrollment.end_date IS NULL) DESC,enrollment.start_date DESC,enrollment.id DESC LIMIT 1
-) current_enrollment ON true
-WHERE st.tenant_id=$1 AND st.deleted_at IS NULL
+	// 当前在读关系优先于存档学年；跨年转班后不能因为旧学年仍标为 current 而回显已转出的班级。
+	query := studentProjectionSQL + ` WHERE st.tenant_id=$1 AND st.deleted_at IS NULL
   AND ($2='' OR current_enrollment.class_id::text=$2)
   AND ($3='' OR st.student_no ILIKE '%'||$3||'%' OR st.name ILIKE '%'||$3||'%')
   AND ($5='' OR st.student_no>$4 OR (st.student_no=$4 AND st.id::text>$5))
@@ -436,8 +485,8 @@ WHERE st.tenant_id=$1 AND st.deleted_at IS NULL
 	defer rows.Close()
 	out := []Student{}
 	for rows.Next() {
-		var item Student
-		if err := rows.Scan(&item.ID, &item.TenantID, &item.SchoolID, &item.ClassID, &item.AcademicYearID, &item.GradeCohortID, &item.StudentNo, &item.Name, &item.Gender, &item.Status, &item.AdmissionYear); err != nil {
+		item, err := scanStudentProjection(rows)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, item)
@@ -446,34 +495,5 @@ WHERE st.tenant_id=$1 AND st.deleted_at IS NULL
 }
 
 func (s *PostgresStore) UpdateStudentStatus(ctx context.Context, tenantID string, id string, status string) (Student, error) {
-	row := s.db.QueryRowContext(ctx, `UPDATE student SET status = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL RETURNING id::text, tenant_id::text, school_id::text, class_id::text, student_no, name, COALESCE(gender, ''), status`, tenantID, id, status)
-	var out Student
-	if err := row.Scan(&out.ID, &out.TenantID, &out.SchoolID, &out.ClassID, &out.StudentNo, &out.Name, &out.Gender, &out.Status); err != nil {
-		return Student{}, err
-	}
-	return out, nil
-}
-
-func (s *PostgresStore) BindTeacherClass(ctx context.Context, tenantID string, teacherID string, classID string) error {
-	result, err := s.db.ExecContext(ctx, `
-INSERT INTO teacher_class (tenant_id, teacher_id, class_id)
-SELECT $1::uuid,u.id,c.id
-FROM app_user u
-JOIN user_role ur ON ur.tenant_id=u.tenant_id AND ur.user_id=u.id AND ur.deleted_at IS NULL
-JOIN role r ON r.tenant_id=ur.tenant_id AND r.id=ur.role_id AND r.code='teacher' AND r.deleted_at IS NULL
-JOIN school_class c ON c.tenant_id=u.tenant_id AND c.id=$3::uuid AND c.deleted_at IS NULL
-WHERE u.tenant_id=$1::uuid AND u.id=$2::uuid AND u.deleted_at IS NULL AND u.status='active'
-ON CONFLICT (tenant_id, teacher_id, class_id) DO UPDATE SET deleted_at=NULL,updated_at=now()
-`, tenantID, teacherID, classID)
-	if err != nil {
-		return err
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected != 1 {
-		return ErrInvalidTeacherBinding
-	}
-	return nil
+	return s.UpdateStudent(ctx, tenantID, id, StudentPatch{Status: &status})
 }

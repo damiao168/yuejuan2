@@ -1,4 +1,4 @@
-// 题目列表和证据钻取共用当前成绩版本；迟到图片及批注响应不能解锁旧来源。
+// 题目列表与申诉核对共用当前成绩版本；迟到图片及批注响应不能解锁旧来源。
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getQuestion, listQuestionAnnotations, PortalApiError, studentQuestionAnswerImageURL, type StudentQuestionAnnotation, type StudentQuestion, type StudentResult } from "../../api";
 import { displaySubject, statisticsReason } from "../results/ResultOverview";
@@ -8,53 +8,45 @@ import { useStudentSession } from "../../studentSession";
 import { friendlyError, sessionExpired, studentReleaseChanged } from "../../errors";
 import { formatScore } from "../../formatting";
 import { QuestionAppealForm } from "../appeals/QuestionAppealForm";
+import { StudentText } from "./StudentText";
 
-function cohortComparison(question: StudentQuestion) {
-  const median = question.cohort?.median_score;
-  // 只有有限数值的群体中位分可比较；这表示得分位置，不表示知识已掌握。
-  if (typeof median !== "number" || !Number.isFinite(median)) {
-    return { className: "unknown", label: question.cohort_unavailable_reason ? statisticsReason(question.cohort_unavailable_reason) : "暂无对比数据" };
-  }
-  if (question.score >= median) return { className: "mastered", label: "达到群体中位分" };
-  return { className: "review", label: "低于群体中位分" };
+function QuestionStatistic({ label, value, unavailableReason }: Readonly<{ label: string; value?: number; unavailableReason?: string }>) {
+  // 0 分是有效统计；缺失或非有限值不能拿本人得分、满分或其他范围的统计补齐。
+  const available = typeof value === "number" && Number.isFinite(value);
+  const reason = available ? undefined : unavailableReason ? statisticsReason(unavailableReason) : "暂无统计数据";
+  return <span className="question-statistic-value" title={reason} aria-label={reason ? `${label}：${reason}` : undefined}>{available ? formatScore(value) : "—"}</span>;
 }
 
-// 行组件保持模块级定义；选中状态和详情请求仍由 QuestionTables 管理。
-function QuestionRow({ question, expanded, onOpen, onAppeal, showComparisons }: Readonly<{
+// 答案直接展示；单题原卷只在申诉核对中读取，常规浏览沿用下方全卷预览。
+function QuestionRow({ question, subject, located, onAppeal, showComparisons }: Readonly<{
   question: StudentQuestion;
-  expanded: boolean;
-  onOpen: (question: StudentQuestion) => Promise<void>;
+  subject: string;
+  located: boolean;
   onAppeal?: (question: StudentQuestion) => void;
   showComparisons: boolean;
 }>) {
   const { submitting } = useStudentSession();
-  const comparison = cohortComparison(question);
+  // 新比较值随题目得分公开，不受旧 cohort 的人数和展示策略限制；仅旧接口响应沿用旧范围及原因。
+  const comparison = question.score_comparison ?? question.cohort;
+  const schoolUnavailableReason = question.score_comparison ? undefined : question.cohort_unavailable_reason;
+  const classUnavailableReason = question.score_comparison ? undefined : question.cohort?.class_unavailable_reason ?? question.cohort_unavailable_reason;
   const lost = question.score < question.max_score;
   return (
-    <tr className={lost ? "lost" : ""}>
-      <td data-label="题目">
-        <button
-          type="button"
-          className="question-cell-link"
-          aria-expanded={expanded}
-          disabled={submitting}
-          data-question-id={question.question_id}
-          aria-label={`第 ${question.question_no} 题，${formatScore(question.score)} / ${formatScore(question.max_score)} 分`}
-          onClick={() => void onOpen(question)}
-        >
-          <span>第 {question.question_no} 题</span>
-          <small>{expanded ? "收起详情" : "查看作答与评分"}</small>
-        </button>
-        {onAppeal ? <button type="button" className="text-button" disabled={submitting} onClick={() => onAppeal(question)}>申请本题复核</button> : null}
+    <tr className={`${lost ? "lost" : ""}${located ? " is-located" : ""}`}>
+      <td data-label="题号">
+        <span className="question-number" tabIndex={-1} data-question-row-id={question.question_id}
+          aria-label={`第 ${question.question_no} 题，${formatScore(question.score)} / ${formatScore(question.max_score)} 分`}>第 {question.question_no} 题</span>
       </td>
-      {showComparisons ? <><td data-label="正确答案" title={question.correct_answer}>{answerText(question.correct_answer)}</td>
-      <td data-label="实际答案" className="actual-answer" title={question.actual_answer}>{answerText(question.actual_answer)}</td></> : null}
+      <td data-label="标准答案" className="question-answer"><StudentText>{answerText(question.correct_answer, "未提供或未公开", question.question_type, subject)}</StudentText></td>
+      <td data-label="实际作答" className="question-answer actual-answer"><StudentText>{answerText(question.actual_answer, "暂无可显示的文字作答", question.question_type, subject)}</StudentText></td>
       <td data-label="得分" className="student-cell">
         <strong>{formatScore(question.score)}</strong><small> / {formatScore(question.max_score)}</small>
       </td>
-      {showComparisons ? <><td data-label="班级平均分">{question.cohort?.class_mean_score !== undefined ? scoreOrDash(question.cohort.class_mean_score) : statisticsReason(question.cohort?.class_unavailable_reason ?? question.cohort_unavailable_reason)}</td>
-      <td data-label="参试学生平均分">{question.cohort?.school_mean_score !== undefined ? scoreOrDash(question.cohort.school_mean_score) : statisticsReason(question.cohort_unavailable_reason)}<QuestionCohortScope question={question} compact /></td>
-      <td data-label="群体对比"><span className={`mastery ${comparison.className}`}>{comparison.label}</span></td></> : <td data-label="失分">{formatScore(Math.max(0, question.max_score - question.score))} 分</td>}
+      {showComparisons ? <><td data-label="班级最高分" className="question-statistic"><QuestionStatistic label="班级最高分" value={question.score_comparison?.class_max_score} unavailableReason={classUnavailableReason} /></td>
+      <td data-label="全校最高分" className="question-statistic"><QuestionStatistic label="全校最高分" value={question.score_comparison?.school_max_score} unavailableReason={schoolUnavailableReason} /></td>
+      <td data-label="班级平均分" className="question-statistic"><QuestionStatistic label="班级平均分" value={comparison?.class_mean_score} unavailableReason={classUnavailableReason} /></td>
+      <td data-label="全校平均分" className="question-statistic"><QuestionStatistic label="全校平均分" value={comparison?.school_mean_score} unavailableReason={schoolUnavailableReason} /><QuestionCohortScope question={question} compact /></td></> : null}
+      <td data-label="申诉" className="question-appeal-cell">{onAppeal ? <button type="button" className="text-button" data-question-id={question.question_id} disabled={submitting} onClick={() => onAppeal(question)}>申请本题复核</button> : <span className="muted">未开放</span>}</td>
     </tr>
   );
 }
@@ -87,6 +79,7 @@ export function QuestionTables({ examID, result, questions, fallbackSubject, app
   }, [fallbackSubject, questions]);
   const [activeSubject, setActiveSubject] = useState(groups[0]?.[0] ?? "");
   const [selected, setSelected] = useState<StudentQuestion | null>(null);
+  const [locatedQuestionID, setLocatedQuestionID] = useState<string>();
   const [detail, setDetail] = useState<StudentQuestion | null>(null);
   const [appealQuestion, setAppealQuestion] = useState<Pick<StudentQuestion, "question_id" | "question_no"> | null>(null);
   const [annotations, setAnnotations] = useState<StudentQuestionAnnotation[]>([]);
@@ -99,12 +92,11 @@ export function QuestionTables({ examID, result, questions, fallbackSubject, app
   const [evidenceChecking, setEvidenceChecking] = useState(false);
   const evidenceVerificationRef = useRef({ requestID: 0, pending: false, changed: false });
   const [lostOnly, setLostOnly] = useState(false);
-  const [showComparisons, setShowComparisons] = useState(false);
+  const [showComparisons, setShowComparisons] = useState(true);
   const detailRegionRef = useRef<HTMLDivElement>(null);
   const tablesRef = useRef<HTMLDivElement>(null);
   const listPositionRef = useRef<number | undefined>(undefined);
   const appealFocusRef = useRef(false);
-  const appealIntentRef = useRef(false);
   const requestedOpenedRef = useRef<string | undefined>(undefined);
   useEffect(() => { if (selected) detailRegionRef.current?.scrollIntoView?.({ block: "nearest" }); }, [selected]);
   const requestRef = useRef(0);
@@ -121,14 +113,12 @@ export function QuestionTables({ examID, result, questions, fallbackSubject, app
     setAnnotations([]); setAnnotationError(""); setAnnotationNeedsLogin(false); setDetailNeedsLogin(false); setDetailError(friendlyError(reason));
     return true;
   }, []);
-  const openQuestion = useCallback(async (question: StudentQuestion, retry = false, forAppeal = false) => {
-    if (submitting || isSubmitting?.()) return;
-    appealIntentRef.current = forAppeal;
+  const openQuestion = useCallback(async (question: StudentQuestion) => {
+    if (submitting || isSubmitting?.() || !result.appeal_window.open) return;
     if (!selected) listPositionRef.current = window.scrollY;
     const requestId = ++requestRef.current;
     evidenceVerificationRef.current = { requestID: requestId, pending: false, changed: false };
     setEvidenceChecking(false);
-    if (!retry && selected?.question_id === question.question_id) { setSelected(null); setDetail(null); setAppealQuestion(null); setDetailLoading(false); return; }
     setSelected(question); setDetail(null); setAppealQuestion(null); setReleaseChanged(false); setAnnotations([]); setAnnotationError(""); setAnnotationNeedsLogin(false); setDetailNeedsLogin(false); setDetailError(""); setDetailLoading(true);
     const rejectEvidence = (reason: unknown): never => { markReleaseChanged(reason, requestId); throw reason; };
     try {
@@ -141,21 +131,30 @@ export function QuestionTables({ examID, result, questions, fallbackSubject, app
       const verifiedQuestion = validatedQuestionEvidence(question.question_id, questionResponse, annotationResponse);
       setDetail(verifiedQuestion);
       // 这里只保留申请身份；评分证据可被清空，回执仍属于原题、原发布版本和原账户。
-      if (forAppeal) setAppealQuestion({ question_id: verifiedQuestion.question_id, question_no: verifiedQuestion.question_no });
+      setAppealQuestion({ question_id: verifiedQuestion.question_id, question_no: verifiedQuestion.question_no });
       if (annotationResponse.status === "fulfilled") setAnnotations(annotationResponse.value.annotations);
       else { setAnnotationNeedsLogin(sessionExpired(annotationResponse.reason)); setAnnotationError(sessionExpired(annotationResponse.reason) ? friendlyError(annotationResponse.reason) : "教师批注暂时无法加载，当前显示的评分详情仍可查看。"); }
     } catch (reason) { if (requestId === requestRef.current && !evidenceVerificationRef.current.changed) { setDetailError(friendlyError(reason, "question")); setDetailNeedsLogin(sessionExpired(reason)); setReleaseChanged(studentReleaseChanged(reason)); } }
     finally { if (requestId === requestRef.current) setDetailLoading(false); }
-  }, [examID, isSubmitting, markReleaseChanged, result.release_id, selected, submitting]);
+  }, [examID, isSubmitting, markReleaseChanged, result.release_id, result.appeal_window.open, selected, submitting]);
   useEffect(() => {
-    // 同一定位请求只打开一次；显式再次查看本题递增token，普通重绘或关闭详情不应重新打开。
-    if (!requestedQuestionID || requestedOpenedRef.current === `${requestedQuestionID}:${requestedQuestionToken}`) return;
+    // 查看本题当前成绩只定位表格行；不能借旧链接重新打开已经移除的普通单题查看功能。
+    if (submitting || isSubmitting?.() || !requestedQuestionID || requestedOpenedRef.current === `${requestedQuestionID}:${requestedQuestionToken}`) return;
     const question=questions.find((item)=>item.question_id===requestedQuestionID);
     if (!question) return;
     requestedOpenedRef.current=`${requestedQuestionID}:${requestedQuestionToken}`;
+    // 定位的是列表中的当前成绩，先关闭旧申请并取消可能隐藏满分目标的筛选。
+    requestRef.current += 1; setSelected(null); setDetail(null); setAppealQuestion(null); setDetailLoading(false); setLostOnly(false);
     const group=groups.find(([,items])=>items.some((item)=>item.question_id===question.question_id)); if(group) setActiveSubject(group[0]);
-    void openQuestion(question,true);
-  }, [requestedQuestionID, requestedQuestionToken, questions, groups, openQuestion]);
+    setLocatedQuestionID(question.question_id);
+  }, [requestedQuestionID, requestedQuestionToken, questions, groups, submitting, isSubmitting]);
+  useEffect(() => {
+    if (!locatedQuestionID || requestedOpenedRef.current !== `${locatedQuestionID}:${requestedQuestionToken}`) return;
+    const group = groups.find(([, items]) => items.some(question => question.question_id === locatedQuestionID));
+    if (groups.length > 1 && group?.[0] !== activeSubject) return;
+    const row = [...(tablesRef.current?.querySelectorAll<HTMLElement>("[data-question-row-id]") ?? [])].find(item => item.dataset.questionRowId === locatedQuestionID);
+    row?.scrollIntoView?.({ block: "nearest" }); row?.focus({ preventScroll: true });
+  }, [locatedQuestionID, activeSubject, requestedQuestionToken, groups]);
   useEffect(() => { if (appealFocusRef.current && !detailLoading && detail && !releaseChanged) { const field=detailRegionRef.current?.querySelector<HTMLTextAreaElement>(".question-appeal-form textarea"); if(field) {field.focus();appealFocusRef.current=false;} } }, [detail, detailLoading, releaseChanged]);
   const retryAnnotations = async () => {
     if (!selected || submitting || isSubmitting?.() || evidenceVerificationRef.current.changed) return;
@@ -218,23 +217,23 @@ export function QuestionTables({ examID, result, questions, fallbackSubject, app
       requestRef.current += 1;
       setActiveSubject(subject); setSelected(null); setDetail(null); setAppealQuestion(null); listPositionRef.current = undefined;
     }} key={subject}>{subject}</button>)}</nav> : null}
-    {showComparisons ? <p className="muted">统计范围：本版成绩中，本次考试本题已发布成绩的参试学生，非班级人数。</p> : null}
+    {showComparisons ? <p className="muted">统计范围：本版成绩中，本次考试本题已发布的成绩；班级统计只含本班，全校统计涵盖本校参试学生。</p> : null}
     <div className="question-filter"><label><input type="checkbox" disabled={submitting} checked={lostOnly} onChange={(event) => setLostOnly(event.target.checked)} /> 只看有失分的题目</label><label><input type="checkbox" checked={showComparisons} onChange={(event) => setShowComparisons(event.target.checked)} /> 显示比较数据</label><span>群体对比仅表示本次得分位置，不代表知识掌握程度。</span></div>
     {activeGroups.map(([subject, items]) => <section className="subject-table" key={subject}>
     <header><h2 id="questions-title">{subject}逐题分析</h2><span>学生得分：{formatScore(items.reduce((sum, item) => sum + item.score, 0))} 分　满分：{formatScore(items.reduce((sum, item) => sum + item.max_score, 0))} 分</span></header>
-    <div className="paper-table-scroll"><table className="paper-score-table">
-      <thead><tr><th>题号</th>{showComparisons ? <><th>正确答案</th><th>实际答案</th></> : null}<th>我的得分</th>{showComparisons ? <><th>班级平均分</th><th>参试学生平均分</th><th title="中位分将本次参试成绩分为高低两半，同分同学可能位于同一分值。">群体中位分对比</th></> : <th>失分</th>}</tr></thead>
-      <tbody>{items.filter((question) => !lostOnly || question.score < question.max_score).map((question) => <QuestionRow key={question.question_id} question={question} showComparisons={showComparisons} expanded={selected?.question_id === question.question_id} onOpen={openQuestion} onAppeal={result.appeal_window.open ? (item) => {appealFocusRef.current=true;void openQuestion(item,true,true);} : undefined} />)}</tbody>
+    <div className="paper-table-scroll"><table className={`paper-score-table${showComparisons ? " has-comparisons" : ""}`}>
+      <thead><tr><th>题号</th><th>标准答案</th><th>实际作答</th><th>我的得分</th>{showComparisons ? <><th className="question-statistic">班级最高分</th><th className="question-statistic">全校最高分</th><th className="question-statistic">班级平均分</th><th className="question-statistic">全校平均分</th></> : null}<th className="question-appeal-cell">申诉</th></tr></thead>
+      <tbody>{items.filter((question) => !lostOnly || question.score < question.max_score).map((question) => <QuestionRow key={question.question_id} question={question} subject={subject} showComparisons={showComparisons} located={locatedQuestionID === question.question_id} onAppeal={result.appeal_window.open ? (item) => {appealFocusRef.current=true;void openQuestion(item);} : undefined} />)}</tbody>
     </table></div>
     {lostOnly && !items.some((item) => item.score < item.max_score) ? <p><output>本学科没有失分题目，可以切换为查看全部题目。</output></p> : null}
     {selected && items.some((item) => item.question_id === selected.question_id) ? <div className="question-drilldown" ref={detailRegionRef}>
       <nav className="question-review-navigation" aria-label="连续复盘">
-        <button type="button" className="secondary-button" disabled={submitting || !previousLost} onClick={() => previousLost && void openQuestion(previousLost, true, Boolean(appealQuestion))}>上一失分题</button>
-        <button type="button" className="secondary-button" disabled={submitting || !nextLost} onClick={() => nextLost && void openQuestion(nextLost, true, Boolean(appealQuestion))}>下一失分题</button>
+        <button type="button" className="secondary-button" disabled={submitting || !previousLost} onClick={() => previousLost && void openQuestion(previousLost)}>上一失分题</button>
+        <button type="button" className="secondary-button" disabled={submitting || !nextLost} onClick={() => nextLost && void openQuestion(nextLost)}>下一失分题</button>
         <button type="button" className="text-button" disabled={submitting} onClick={returnToList}>返回题目列表</button>
       </nav>
       {(detailNeedsLogin || annotationNeedsLogin) ? <button type="button" className="secondary-button" disabled={submitting} onClick={reauthenticate}>重新登录</button> : null}
-      <QuestionDrilldownContent evidenceChecking={evidenceChecking} isEvidenceBlocked={isEvidenceBlocked} onImageUnavailable={() => void verifyFailedImage(selected.question_id, selectedRequestID)} releaseChanged={releaseChanged} onSourceUnavailable={(reason) => { markReleaseChanged(reason, selectedRequestID); }} onViewCurrent={viewCurrent} examID={examID} result={result} selected={selected} detail={detail} appealQuestion={appealQuestion} detailLoading={detailLoading} detailError={detailError} annotationError={annotationError} annotations={annotations} onRetry={() => void openQuestion(selected, true, appealIntentRef.current)} onRetryAnnotations={() => void retryAnnotations()} onAppealSubmitted={onAppealSubmitted} />
+      <QuestionDrilldownContent evidenceChecking={evidenceChecking} isEvidenceBlocked={isEvidenceBlocked} onImageUnavailable={() => void verifyFailedImage(selected.question_id, selectedRequestID)} releaseChanged={releaseChanged} onSourceUnavailable={(reason) => { markReleaseChanged(reason, selectedRequestID); }} onViewCurrent={viewCurrent} examID={examID} result={result} selected={selected} detail={detail} appealQuestion={appealQuestion} detailLoading={detailLoading} detailError={detailError} annotationError={annotationError} annotations={annotations} onRetry={() => void openQuestion(selected)} onRetryAnnotations={() => void retryAnnotations()} onAppealSubmitted={onAppealSubmitted} />
     </div> : null}
   </section>)}</div>;
 }
@@ -265,15 +264,53 @@ function QuestionDrilldownContent({ evidenceChecking, isEvidenceBlocked, onImage
   const { submitting } = useStudentSession();
   const showAppeal = result.appeal_window.open && appealQuestion?.question_id === selected.question_id;
   return <>
-    <h3>第 {selected.question_no} 题 · 作答与评分依据</h3>
+    <h3>第 {selected.question_no} 题 · 成绩复核申请</h3>
     {detailLoading ? <p className="muted"><output>正在加载本题…</output></p> : null}
     {detailError ? <p className="detail-error" role="alert">{detailError} <button type="button" className="text-button" disabled={submitting} onClick={releaseChanged ? onViewCurrent : onRetry}>{releaseChanged ? "查看当前成绩并重新核对" : "重试本题"}</button></p> : null}
     {annotationError ? <p role="alert">{annotationError} <button type="button" className="text-button" onClick={onRetryAnnotations}>重试批注</button></p> : null}
-    {detail?.question_id === selected.question_id && !showAppeal ? <AnswerReview onImageUnavailable={onImageUnavailable} key={detail.question_id} question={detail} annotations={annotations} imageURL={studentQuestionAnswerImageURL(examID,detail.question_id, result.release_id)} /> : null}
     {showAppeal && appealQuestion ? <QuestionAppealForm renderReview={detail?.question_id === selected.question_id ? (imageEditor) => <AnswerReview imageEditor={imageEditor} onImageUnavailable={onImageUnavailable} key={detail.question_id} question={detail} annotations={annotations} imageURL={studentQuestionAnswerImageURL(examID,detail.question_id, result.release_id)} /> : undefined} evidenceChecking={evidenceChecking} evidenceUnavailable={releaseChanged} isEvidenceBlocked={isEvidenceBlocked} onSourceUnavailable={onSourceUnavailable} onImageUnavailable={onImageUnavailable} key={`${result.release_id}:${appealQuestion.question_id}`} examID={examID} releaseID={result.release_id} releaseVersion={result.release_version} question={appealQuestion} allowedReasonCodes={result.appeal_window.allowed_reason_codes ?? []} onSubmitted={onAppealSubmitted} /> : null}
   </>;
 }
 
-function answerText(value?: string) { return value?.trim() || "—"; }
+function answerText(value: string | undefined, fallback: string, questionType?: string, subject?: string) {
+  const text = value?.trim();
+  if (!text) return fallback;
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (typeof parsed === "string") return mathChoiceText(parsed.trim(), questionType, subject) || fallback;
+    if (subject === "数学" && ["single_choice", "multiple_choice", "fill_blank"].includes(questionType ?? "")) {
+      if (parsed === null) return fallback;
+      if (questionType === "fill_blank") {
+        const blanks = numberedMathBlanks(parsed);
+        if (blanks !== undefined) return blanks || fallback;
+      }
+    }
+    // 数字数组也可能是数学区间；仅明确选择题可合并数字，不猜测未知对象里的答案字段。
+    if (Array.isArray(parsed)) {
+      const choice = questionType === "single_choice" || questionType === "multiple_choice";
+      if (parsed.every(item => typeof item === "string" || choice && typeof item === "number" && Number.isFinite(item))) {
+        return parsed.map(item => String(item).trim()).filter(Boolean).join("、") || fallback;
+      }
+      return text;
+    }
+    if (parsed !== null && typeof parsed === "object") return "暂无法直接显示此答案";
+  } catch { /* 普通文本和数学公式不是JSON，按原文显示。 */ }
+  return mathChoiceText(text, questionType, subject);
+}
 
-function scoreOrDash(value?: number) { return value === undefined ? "—" : formatScore(value); }
+function mathChoiceText(text: string, questionType?: string, subject?: string) {
+  // OMR多选可能记录为AC或A,C；只对明确的数学多选选项整理间隔，填空区间中的逗号保留原样。
+  return subject === "数学" && questionType === "multiple_choice" && /^[A-H](?:[\s,，、;；]*[A-H])+$/.test(text)
+    ? (text.match(/[A-H]/g) ?? []).join("、") : text;
+}
+
+function numberedMathBlanks(value: unknown): string | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entry = Object.entries(value);
+  // 只读取题目编辑和试卷识别支持的各空容器；裸数字数组可能是区间或向量，不能猜成多个空。
+  if (entry.length !== 1 || !["blanks", "answers"].includes(entry[0][0]) || !Array.isArray(entry[0][1])) return undefined;
+  const answers = entry[0][1] as unknown[];
+  if (!answers.every(answer => answer == null || typeof answer === "string" || typeof answer === "number" && Number.isFinite(answer))) return undefined;
+  // 空项也保留原序号，避免把后一个空的答案挪到前面；未记录不等于确认未作答。
+  return answers.map((answer, index) => `第 ${index + 1} 空：${answer == null || typeof answer === "string" && !answer.trim() ? "未记录" : String(answer).trim()}`).join("\n");
+}

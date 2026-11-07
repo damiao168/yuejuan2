@@ -367,7 +367,9 @@ def _subtract_formula_from_text(block: OCRBlock, formula_box: tuple[float, float
     text = block.text
     start_index = max(0, min(len(text), round((overlap_left - tx) / tw * len(text))))
     end_index = max(start_index, min(len(text), round((overlap_right - tx) / tw * len(text))))
-    confidence = max(0.0, min(1.0, float(block.confidence))) * 0.85
+    raw_confidence = float(block.confidence)
+    # NaN 经 min/max 会被夹成高分；拆分出的文字也必须把非有限识别分降为 0。
+    confidence = max(0.0, min(1.0, raw_confidence)) * 0.85 if math.isfinite(raw_confidence) else 0.0
     fragments: list[OCRBlock] = []
     left_text = text[:start_index].strip(" \t=:：,，;；")
     left_width = max(0.0, overlap_left - tx)

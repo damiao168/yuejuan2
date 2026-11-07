@@ -8,6 +8,7 @@ import { listClasses, listGrades, type Grade, type SchoolClass } from "../api/or
 import { ErrorState, LoadingState } from "../components/PageState";
 import { preparationSteps } from "../features/exams/preparation/preparationSteps";
 import { ExamScoringPreparation } from "../components/features/assessment/ExamScoringPreparation";
+import { classCohortLabel, gradeCohortGroups, gradeCohortLabel } from "../features/members/gradeCohortPresentation";
 
 export function readinessCheckRoute(examId: string, section: string) {
   if (section === "exam") return `/exams?edit_exam=${encodeURIComponent(examId)}&target=scope`;
@@ -97,6 +98,7 @@ export function ExamStudentScopePage({ examId, canManage, onExamChanged }: Reado
   }, [load]);
 
   const gradeById = useMemo(() => new Map(grades.map((item) => [item.id, item])), [grades]);
+  const cohortGroups = useMemo(() => gradeCohortGroups(grades), [grades]);
   const changed = exam ? [...selected].sort((left, right) => left.localeCompare(right)).join(",") !== [...exam.class_ids].sort((left, right) => left.localeCompare(right)).join(",") : false;
   // 准备确认后名册已经冻结；后续阶段从考试列表查看准备配置时，班级选择保持只读。
   const canEditScope = canManage && Boolean(exam && ["draft", "configured"].includes(exam.status));
@@ -136,10 +138,11 @@ export function ExamStudentScopePage({ examId, canManage, onExamChanged }: Reado
       <section className="preparation-heading"><div><h2>学生范围</h2><p>{exam && !["draft", "configured"].includes(exam.status) ? "名单已冻结，不能再改范围或同步。名单有误请联系考试负责人；修改学籍不会改变本场名单。" : "选择参考班级；确认准备时，按当前在读学籍冻结本场名单。"}</p></div><Space><Button icon={<RefreshCw size={16} />} disabled={!canEditScope || changed} loading={syncing} onClick={() => void syncCandidates()}>同步学生名单</Button><Button type="primary" icon={<Save size={16} />} disabled={!canEditScope || !changed || !selected.length} loading={saving} onClick={() => void save()}>保存范围</Button></Space></section>
       {!classes.length ? <Alert type="warning" showIcon message="当前学校还没有班级" description="请先在组织与用户中创建年级、班级并导入学生。" /> : (
         <div className="class-scope-list">
-          {grades.map((grade) => {
-            const gradeClasses = classes.filter((item) => item.grade_id === grade.id);
+          {cohortGroups.map((group) => {
+            // 仅合并展示；同届旧年度班级仍用原ID勾选，不能因显示当前年级就迁移或重写考试范围。
+            const gradeClasses = classes.filter((item) => group.gradeIds.includes(item.grade_id));
             if (!gradeClasses.length) return null;
-            return <section key={grade.id}><div><strong>{grade.name}</strong><span>{grade.academic_year}</span></div><Checkbox.Group value={selected} onChange={(values) => setSelected((previous) => mergeClassSelection(previous, gradeClasses.map((item) => item.id), values as string[]))} disabled={!canEditScope}>{gradeClasses.map((item) => <Checkbox key={item.id} value={item.id}><span>{item.name}</span><small>{item.code}</small></Checkbox>)}</Checkbox.Group></section>;
+            return <section key={group.key}><div><strong>{gradeCohortLabel(group.grade)}</strong></div><Checkbox.Group value={selected} onChange={(values) => setSelected((previous) => mergeClassSelection(previous, gradeClasses.map((item) => item.id), values as string[]))} disabled={!canEditScope}>{gradeClasses.map((item) => <Checkbox key={item.id} value={item.id}><span>{classCohortLabel(item, group.grade)}</span><small>{item.code}</small></Checkbox>)}</Checkbox.Group></section>;
           })}
           {classes.filter((item) => !gradeById.has(item.grade_id)).length ? <section><div><strong>未分组班级</strong></div><Checkbox.Group value={selected} onChange={(values) => setSelected((previous) => mergeClassSelection(previous, classes.filter((item) => !gradeById.has(item.grade_id)).map((item) => item.id), values as string[]))} disabled={!canEditScope}>{classes.filter((item) => !gradeById.has(item.grade_id)).map((item) => <Checkbox key={item.id} value={item.id}>{item.name}</Checkbox>)}</Checkbox.Group></section> : null}
         </div>

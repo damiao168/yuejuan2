@@ -1,0 +1,125 @@
+
+
+.responsive-desktop-table .ant-table,
+.responsive-desktop-table .ant-table-container,
+.responsive-desktop-table .ant-table-content,
+.responsive-desktop-table table {
+  width: 100% !important;
+  max-width: 100%;
+  min-width: 0 !important;
+}
+
+.responsive-desktop-table .ant-table-cell {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.responsive-desktop-table .ant-table-cell .ant-space {
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.responsive-table-loading,
+.responsive-table-empty {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+}
+
+.responsive-record-list {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+
+.responsive-record {
+  min-width: 0;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.responsive-record-action {
+  float: right;
+  margin: 0 8px 4px;
+}
+
+.responsive-record-action,
+.responsive-table-scroll-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.responsive-table-scroll-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.responsive-record-action:focus-visible,
+.responsive-table-scroll-controls button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.responsive-record-pagination {
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+.responsive-record dl {
+  min-width: 0;
+  margin: 0;
+}
+
+.responsive-record-field {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(82px, 0.38fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 5px 8px;
+}
+
+.responsive-record-field dt {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.responsive-record-field dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.responsive-record-field dd .ant-space {
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.responsive-record-details {
+  margin-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
+.responsive-record-details summary {
+  padding: 8px;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: var(--eg-font-body);
+  font-weight: 700;
+}

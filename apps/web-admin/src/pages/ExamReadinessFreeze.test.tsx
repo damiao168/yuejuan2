@@ -18,7 +18,7 @@ vi.mock("antd", () => ({
   App: { useApp: () => ({ message: { error: mocks.error, success: mocks.success } }) },
   Alert: ({ message, description, action }: { message: ReactNode; description: ReactNode; action?: ReactNode }) => <aside>{message}{description}{action}</aside>,
   Button: ({ children, onClick, disabled, loading }: { children: ReactNode; onClick: () => void; disabled?: boolean; loading?: boolean }) => <button disabled={disabled || loading} onClick={onClick}>{children}</button>,
-  Checkbox: () => null, Space: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Checkbox: Object.assign(({ children, value }: { children: ReactNode; value: string }) => <span data-class-id={value}>{children}</span>, { Group: ({ children }: { children: ReactNode }) => <div>{children}</div> }), Space: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Modal: ({ open, title, children, onOk, onCancel, okText, cancelText, okButtonProps }: { open: boolean; title: string; children: ReactNode; onOk: () => void; onCancel: () => void; okText: string; cancelText: string; okButtonProps?: { disabled?: boolean } }) => {
     mocks.modalConfirm.mockImplementation(onOk);
     mocks.modalCancel.mockImplementation(onCancel);
@@ -56,6 +56,19 @@ describe("考试准备冻结复核", () => {
     expect(heading.textContent).toContain(frozen ? "名单已冻结，不能再改范围或同步" : "选择参考班级；确认准备时");
     expect(heading.textContent).not.toContain(frozen ? "选择参考班级" : "名单已冻结");
     expect([...heading.querySelectorAll("button")].every(button => button.disabled)).toBe(true);
+  });
+
+  it("同届跨年度班级合并到当前年级展示，保留旧班级ID和自定义名称", async () => {
+    const base = { tenant_id: "tenant", school_id: "school", grade_cohort_id: "cohort26", entry_year: 2026, education_stage: "senior", status: "active" };
+    mocks.exam.mockResolvedValue({ exam: { id: "exam-1", school_id: "school", status: "configured", class_ids: ["old-class"] } });
+    mocks.grades.mockResolvedValue({ grades: [{ ...base, id: "g-old", name: "高一", level_no: 10, academic_year: "2026-2027" }, { ...base, id: "g-new", name: "高二", level_no: 11, academic_year: "2027-2028" }] });
+    mocks.classes.mockResolvedValue({ classes: [{ id: "old-class", school_id: "school", grade_id: "g-old", name: "高一（1）班", code: "G26A" }, { id: "new-class", school_id: "school", grade_id: "g-new", name: "实验班", code: "G26B" }] });
+    await act(async () => root.render(<ExamStudentScopePage examId="exam-1" canManage />));
+    const groups = host.querySelectorAll(".class-scope-list > section");
+    expect(groups).toHaveLength(1);
+    expect(groups[0].querySelector("strong")?.textContent).toBe("2026级 · 高二");
+    expect(groups[0].querySelector('[data-class-id="old-class"]')?.textContent).toBe("高二（1）班G26A");
+    expect(groups[0].querySelector('[data-class-id="new-class"]')?.textContent).toBe("实验班G26B");
   });
 
   it("顶部常驻确认按钮，未通过检查时显示待处理数量和实际任务入口", async () => {

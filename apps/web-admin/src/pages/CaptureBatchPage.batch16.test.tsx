@@ -17,12 +17,13 @@ const mocks = vi.hoisted(() => ({
   matchStudent: vi.fn(), markUnknown: vi.fn(), matchPage: vi.fn(), lifecycle: vi.fn(), split: vi.fn(), merge: vi.fn(),
   form: { validateFields: vi.fn(), resetFields: vi.fn(), setFieldsValue: vi.fn() },
   targets: vi.fn(), getBatch: vi.fn(),
+  listLoading: false,
   uploading: false, uploadProps: undefined as UploadProps | undefined,
-  collectionProps: vi.fn(), exclude: vi.fn(),
+  collectionProps: vi.fn(), exclude: vi.fn(), reopen: vi.fn(),
   collectionSummary: undefined as CaptureCollectionSummary | undefined,
 }));
 
-vi.mock("../api/capture", () => ({ confirmRegistration: mocks.confirm, retryRegistration: mocks.retry, findCaptureTargets: mocks.targets, getCaptureBatch: mocks.getBatch }));
+vi.mock("../api/capture", () => ({ confirmRegistration: mocks.confirm, retryRegistration: mocks.retry, findCaptureTargets: mocks.targets, getCaptureBatch: mocks.getBatch, reopenCaptureBatch: mocks.reopen }));
 vi.mock("../api/captureCollection", () => ({ excludeCaptureFile: mocks.exclude }));
 vi.mock("../api/client", () => ({
   ApiClientError: class extends Error {},
@@ -30,7 +31,7 @@ vi.mock("../api/client", () => ({
 }));
 vi.mock("../features/capture/useCaptureBatchList", () => ({ useCaptureBatchList: () => ({
   batches: mocks.batches ?? (mocks.detail ? [mocks.detail.batch] : []), selectedId: "batch-16", setBatches: mocks.setBatches, setSelectedId: mocks.setSelectedId,
-  loading: false, loadingMoreBatches: false, hasMoreBatches: false, error: null, loadBatches: mocks.loadBatches, loadMoreBatches: mocks.loadBatches,
+  loading: mocks.listLoading, loadingMoreBatches: false, hasMoreBatches: false, error: null, loadBatches: mocks.loadBatches, loadMoreBatches: mocks.loadBatches,
 }) }));
 vi.mock("../features/capture/useCaptureBatchDetail", () => ({ useCaptureBatchDetail: () => ({
   detail: mocks.detail, detailError: mocks.detailError, detailLoading: mocks.detailLoading, matching: mocks.matching, matchingLoading: mocks.matchingLoading, setMatching: mocks.setMatching,
@@ -38,7 +39,7 @@ vi.mock("../features/capture/useCaptureBatchDetail", () => ({ useCaptureBatchDet
 }) }));
 vi.mock("../features/capture/useCaptureUpload", () => ({ useCaptureUpload: () => ({ uploading: mocks.uploading, uploadSources: mocks.upload, retryUpload: vi.fn(), discardUpload: vi.fn() }) }));
 vi.mock("../features/capture/useCaptureCollection", () => ({ useCaptureCollection: () => ({ summary: mocks.collectionSummary, loading: false, load: mocks.loadBatches, acceptSummary: vi.fn() }) }));
-vi.mock("../features/capture/CaptureCollectionPanel", () => ({ CaptureCollectionPanel: (props: object) => { mocks.collectionProps(props); return null; } }));
+vi.mock("../features/capture/CaptureCollectionPanel", () => ({ CaptureCollectionPanel: (props: object) => { mocks.collectionProps(props); return <section aria-label="本场学生答卷核对" />; } }));
 vi.mock("../features/capture/useCaptureMatchActions", () => ({ useCaptureMatchActions: () => ({
   matchStudent: mocks.matchStudent, markUnknown: mocks.markUnknown, matchPage: mocks.matchPage,
   changePageLifecycle: mocks.lifecycle, splitSubmission: mocks.split, mergeSubmissions: mocks.merge,
@@ -72,7 +73,7 @@ vi.mock("antd", () => {
     Upload: (props: UploadProps) => { mocks.uploadProps = props; return <div>{props.children}</div>; },
     Modal: ({ open, children, onOk, okText, okButtonProps }: { open: boolean; children: ReactNode; onOk?: () => void; okText?: string; okButtonProps?: { disabled?: boolean } }) => open ? <div>{children}<button disabled={okButtonProps?.disabled} onClick={onOk}>{okText ?? "确认"}</button></div> : null,
     Progress: ({ percent }: { percent: number }) => <progress value={percent} max={100} />,
-    Tabs: ({ items }: { items: { key: string; children: ReactNode }[] }) => <div>{items.map((item) => <section key={item.key} data-tab={item.key}>{item.children}</section>)}</div>,
+    Tabs: ({ items, className, activeKey, onChange }: { items: { key: string; label: ReactNode; children: ReactNode }[]; className?: string; activeKey: string; onChange: (key: string) => void }) => <div className={className}><div role="tablist">{items.map(item => <button key={item.key} role="tab" aria-selected={activeKey === item.key} onClick={() => onChange(item.key)}>{item.label}</button>)}</div>{items.map((item) => <section key={item.key} data-tab={item.key}>{item.children}</section>)}</div>,
   };
 });
 
@@ -113,6 +114,7 @@ describe("采集批次页条件展示与对齐回读", () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.detail = detail(); mocks.summaries = {}; mocks.matching = undefined; mocks.matchingLoading = false;
     mocks.batches = undefined; mocks.detailError = undefined; mocks.detailLoading = false;
+    mocks.listLoading = false;
     mocks.uploading = false; mocks.uploadProps = undefined;
     mocks.collectionSummary = undefined;
     mocks.loadDetail.mockResolvedValue(undefined); mocks.confirm.mockResolvedValue({}); mocks.retry.mockResolvedValue({});
@@ -149,8 +151,8 @@ describe("采集批次页条件展示与对齐回读", () => {
     await click("确认导入并处理");
     expect(mocks.upload).toHaveBeenCalledExactlyOnceWith(files, 2);
     expect(host.textContent).toContain("每人2页，按学生连续排列；每次须选择完整答卷。");
-    const groupingHelp = [...host.querySelectorAll("details")].find(item => item.querySelector("summary")?.textContent === "查看页序与分组规则");
-    expect(groupingHelp?.open).toBe(false);
+    const groupingHelp = host.querySelector('[aria-label="页序与分组规则"]');
+    expect(groupingHelp?.closest("details")).toBeNull();
     expect(groupingHelp?.textContent).toContain("不能跨两次选择补页");
   });
 
@@ -162,24 +164,27 @@ describe("采集批次页条件展示与对齐回读", () => {
     expect(mocks.uploadProps?.disabled).toBe(true);
   });
 
-  it("技术记录默认收起，可手动切换，问题定位自动展开且上传期间不能隐藏", async () => {
+  it("全场核对并入顶部同级标签，定位和上传仍可切回批次处理", async () => {
     await renderPage();
+    const workspace = host.querySelector(".capture-records")!;
     const records = () => host.querySelector<HTMLElement>("#capture-processing-records")!;
-    const toggle = () => host.querySelector<HTMLButtonElement>('[aria-controls="capture-processing-records"]')!;
-    expect(records().hidden).toBe(true);
-    expect(toggle().getAttribute("aria-expanded")).toBe("false");
-    await act(async () => toggle().click());
+    const roster = workspace.querySelector('[aria-label="本场学生答卷核对"]')!;
+    expect(host.querySelector(".member-management-heading")).toBeNull();
+    expect(workspace.querySelector(".capture-records-heading")?.textContent).toContain("导入答卷");
+    expect(workspace.contains(records())).toBe(true);
+    expect(roster.closest('[data-tab="students"]')).not.toBeNull();
+    const navigation = workspace.querySelector('[role="tablist"]')!;
+    expect(navigation.compareDocumentPosition(workspace.querySelector(".capture-batch-layout")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await click("全场学生核对");
+    expect(workspace.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe("全场学生核对");
     expect(records().hidden).toBe(false);
-    await act(async () => toggle().click());
-    expect(records().hidden).toBe(true);
+    expect(host.querySelector('[aria-controls="capture-processing-records"]')).toBeNull();
     mocks.getBatch.mockResolvedValue(detail());
     const collection = mocks.collectionProps.mock.lastCall![0] as { onLocate: (target: object) => void };
     await act(async () => collection.onLocate({ batchId: "batch-16", submissionId: "submission-16", tab: "matching" }));
     expect(records().hidden).toBe(false);
     mocks.uploading = true;
     await renderPage();
-    expect(toggle().disabled).toBe(true);
-    await act(async () => toggle().click());
     expect(records().hidden).toBe(false);
   });
 
@@ -204,6 +209,30 @@ describe("采集批次页条件展示与对齐回读", () => {
     mocks.collectionSummary.closed = true;
     await renderPage(true, "grading");
     expect([...host.querySelectorAll("button")].some(button => button.textContent === "重开批次")).toBe(false);
+  });
+
+  it("已完成的收集批次在匹配区提供原因和显式重开入口，仍要求填写重开原因", async () => {
+    mocks.detail!.batch.status = "completed";
+    mocks.collectionSummary = { exam_id: "exam-16", exam_status: "collecting", closed: false } as CaptureCollectionSummary;
+    mocks.matching = { exam_id: "exam-16", batch_id: "batch-16", candidates: [], submissions: [] };
+    await renderPage();
+    let matching = mocks.matchingProps.mock.lastCall![0];
+    expect(matching.canManage).toBe(false);
+    expect(matching.readOnlyReason).toContain("本批次已完成");
+    expect(matching.onReopen).toBeTypeOf("function");
+    await act(async () => matching.onReopen());
+    expect([...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "确认重开")?.disabled).toBe(true);
+    expect(mocks.reopen).not.toHaveBeenCalled();
+    mocks.collectionSummary.closed = true;
+    await renderPage();
+    matching = mocks.matchingProps.mock.lastCall![0];
+    expect(matching.readOnlyReason).toContain("本场导入已结束");
+    expect(matching.onReopen).toBeUndefined();
+    mocks.collectionSummary = undefined;
+    await renderPage(true, "published");
+    matching = mocks.matchingProps.mock.lastCall![0];
+    expect(matching.readOnlyReason).toContain("考试已定稿、发布或归档");
+    expect(matching.onReopen).toBeUndefined();
   });
 
   it("模板页数晚到时补默认值，刷新保留用户选择，换场次不带旧页数", async () => {
@@ -262,11 +291,12 @@ describe("采集批次页条件展示与对齐回读", () => {
     mocks.batches = [current.batch]; mocks.detail = hasDetail ? current : undefined;
     mocks.detailError = error; mocks.detailLoading = loading;
     await renderPage();
-    const workspace = host.querySelector(".capture-batch-workspace")!;
+    const workspace = host.querySelector('[data-tab="files"] .capture-batch-workspace')!;
     expect(workspace.querySelector('[data-error="true"]') !== null).toBe(mode === "error");
     expect(workspace.querySelector('[data-loading="true"]') !== null).toBe(mode === "loading");
     expect(workspace.querySelector(".capture-batch-header") !== null).toBe(mode === "ready" || mode === "warning");
-    expect(workspace.querySelector('[data-tab="files"]') !== null).toBe(mode === "ready" || mode === "warning");
+    expect(host.querySelector('[role="tab"]') !== null).toBe(true);
+    expect(host.querySelector('[data-tab="students"] [aria-label="本场学生答卷核对"]')).not.toBeNull();
     if (mode === "warning") {
       expect(workspace.textContent).toContain("后台刷新失败");
       expect([...workspace.querySelectorAll("button")].find(button => button.textContent === "导入文件")?.disabled).toBe(true);
@@ -322,7 +352,7 @@ describe("采集批次页条件展示与对齐回读", () => {
     const queue: MatchingQueue = { batch_id: "batch-16", exam_id: "exam-16", submissions: [], candidates: [] };
     mocks.matching = queue; mocks.matchingLoading = true;
     await renderPage();
-    expect(host.querySelector('[data-tab="matching"]')?.textContent).toBe("正在加载考试名册");
+    expect(host.querySelector('[data-tab="matching"] .capture-tab-content')?.textContent).toBe("正在加载考试名册");
     expect(mocks.matchingProps).not.toHaveBeenCalled();
     mocks.matchingLoading = false;
     await renderPage(false);
@@ -333,7 +363,7 @@ describe("采集批次页条件展示与对齐回读", () => {
     expect(matchingProps.onConfirmPage).toBe(mocks.matchPage);
     mocks.matching = undefined;
     await renderPage();
-    expect(host.querySelector('[data-tab="matching"]')?.textContent).toBe("暂无匹配数据");
+    expect(host.querySelector('[data-tab="matching"] .capture-tab-content')?.textContent).toBe("暂无匹配数据");
   });
 
   it.each([
@@ -369,7 +399,7 @@ describe("采集批次页条件展示与对齐回读", () => {
 
   it("无问题保持空状态，失败文件仍可跳回文件页并提示原修复流程", async () => {
     await renderPage();
-    expect(host.querySelector('[data-tab="issues"]')?.textContent).toBe("当前没有需要人工处理的页面");
+    expect(host.querySelector('[data-tab="issues"] .capture-tab-content')?.textContent).toBe("当前没有需要人工处理的页面");
     mocks.detail!.batch.failed_count = 1;
     mocks.detail!.files = [{ id: "file-16", capture_batch_id: "batch-16", file_asset_id: "asset-16", original_name: "待修复.pdf", content_type: "application/pdf", sha256: "hash-16", byte_size: 10, page_count: 1, status: "failed", created_at: "2026-10-05T00:00:00Z" }];
     await renderPage();
@@ -395,6 +425,19 @@ describe("采集批次页条件展示与对齐回读", () => {
     expect(mocks.getBatch).toHaveBeenCalledWith("outside-batch");
     expect(mocks.setSelectedId).toHaveBeenCalledWith("outside-batch");
     expect(mocks.matchingProps).toHaveBeenLastCalledWith(expect.objectContaining({ initialSubmissionId: "outside-submission" }));
+  });
+
+  it("深链完成后刷新列表不重新选择原批次", async () => {
+    mocks.listLoading = false;
+    location.hash = "#/exams/exam-16/capture?batch=outside-batch";
+    mocks.getBatch.mockResolvedValue({ ...detail(), batch: { ...detail().batch, id: "outside-batch" } });
+    await renderPage();
+    expect(mocks.getBatch).toHaveBeenCalledTimes(1);
+    mocks.setSelectedId.mockClear();
+    mocks.listLoading = true; await renderPage();
+    mocks.listLoading = false; await renderPage();
+    expect(mocks.getBatch).toHaveBeenCalledTimes(1);
+    expect(mocks.setSelectedId).not.toHaveBeenCalled();
   });
 
   it("同一学生有两份采集答卷时先锁操作并明确选择，不能自动选第一份", async () => {

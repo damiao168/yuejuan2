@@ -15,7 +15,7 @@ function cohort(sampleSize: number): NonNullable<StudentQuestion["cohort"]> {
 }
 
 describe("逐题参比范围与人数", () => {
-  it("每题均分和中位分对比使用各自人数，不把总分参比人数当作本题或班级人数", async () => {
+  it("每题全校均分使用各自人数，不把总分参比人数当作本题或班级人数", async () => {
     const result = makeResult([
       makeQuestion({ question_id: "question-1", question_no: "1", score: 0, cohort: cohort(25) }),
       makeQuestion({ question_id: "question-2", question_no: "2", score: 0, cohort: cohort(40) })
@@ -23,17 +23,17 @@ describe("逐题参比范围与人数", () => {
     installApi(call => resultRoute(call, result));
     render(<App />);
     await screen.findByLabelText("总分");
-    fireEvent.click(screen.getByLabelText("显示比较数据"));
-    const firstRow = screen.getByRole("button", { name: /^第 1 题，/ }).closest("tr")!;
-    const secondRow = screen.getByRole("button", { name: /^第 2 题，/ }).closest("tr")!;
+    const firstRow = screen.getByLabelText(/^第 1 题，/).closest("tr")!;
+    const secondRow = screen.getByLabelText(/^第 2 题，/).closest("tr")!;
     expect(within(firstRow).getAllByText("参比 25 人")).toHaveLength(1);
     expect(within(secondRow).getAllByText("参比 40 人")).toHaveLength(1);
-    expect(screen.getAllByText("统计范围：本版成绩中，本次考试本题已发布成绩的参试学生，非班级人数。")).toHaveLength(1);
+    expect(screen.getAllByText("统计范围：本版成绩中，本次考试本题已发布的成绩；班级统计只含本班，全校统计涵盖本校参试学生。")).toHaveLength(1);
     const classMean = firstRow.querySelector('[data-label="班级平均分"]')!;
-    expect(classMean.textContent).toBe("参比人数不足，不展示");
-    expect(firstRow.querySelector('[data-label="参试学生平均分"]')?.textContent).toBe("0参比 25 人");
+    expect(classMean.textContent).toBe("—");
+    expect(within(classMean as HTMLElement).getByLabelText("班级平均分：参比人数不足，不展示")).toBeTruthy();
+    expect(firstRow.querySelector('[data-label="全校平均分"]')?.textContent).toBe("0参比 25 人");
     expect(firstRow.textContent).not.toContain("300");
-    fireEvent.click(within(firstRow).getByRole("button", { name: /^第 1 题，/ }));
+    fireEvent.click(within(firstRow).getByRole("button", { name: "申请本题复核" }));
     const inspector = (await screen.findByText("对比群体平均 0%")).closest(".answer-inspector")!;
     expect(within(inspector as HTMLElement).getByText("本版考试本题 · 参比 25 人")).toBeTruthy();
   });
@@ -46,9 +46,8 @@ describe("逐题参比范围与人数", () => {
     installApi(call => resultRoute(call, result));
     render(<App />);
     await screen.findByLabelText("显示比较数据");
-    fireEvent.click(screen.getByLabelText("显示比较数据"));
-    const row = (await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!;
-    expect(within(row).getAllByText(label)).toHaveLength(3);
+    const row = (await screen.findByLabelText(/^第 1 题，/)).closest("tr")!;
+    expect([...row.querySelectorAll(".question-statistic-value")].map(cell => [cell.textContent, cell.getAttribute("title")])).toEqual(Array.from({ length: 4 }, () => ["—", label]));
     expect(row.textContent).not.toContain("本版考试本题");
     expect(row.textContent).not.toMatch(/参比 (0|300) 人/);
   });
@@ -59,8 +58,7 @@ describe("逐题参比范围与人数", () => {
     installApi(call => resultRoute(call, result));
     render(<App />);
     await screen.findByLabelText("显示比较数据");
-    fireEvent.click(screen.getByLabelText("显示比较数据"));
-    const row = (await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!;
+    const row = (await screen.findByLabelText(/^第 1 题，/)).closest("tr")!;
     expect(within(row).getAllByText("参比人数暂未提供")).toHaveLength(1);
     expect(row.textContent).not.toContain("undefined");
     expect(row.textContent).not.toContain("参比 0 人");

@@ -1,3 +1,4 @@
+import { reenterAfterUnifiedLogin } from "./test/unifiedLogin";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,6 +18,7 @@ const isAnnotation = (path: string) => path.endsWith("/questions/question-1/anno
 beforeEach(() => {
   window.history.replaceState(null, "", "/#/exams/exam-1");
   window.sessionStorage.clear();
+  window.localStorage.removeItem("edugrade.student.logout-pending");
   vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
@@ -31,7 +33,7 @@ function installReceiptScenario() {
   let result = makeResult([makeQuestion(), makeQuestion({ question_id: "question-2", question_no: "2", feedback: "第二题当前评分依据" })]);
   let loginUser = studentUser;
   const calls = installApi((call) => {
-    if (call.url.pathname === "/api/v1/auth/login") return jsonResponse({ user: loginUser });
+    if (call.url.pathname === "/api/v1/auth/me") return jsonResponse({ user: loginUser });
     if (isAppeal(call.url.pathname) && call.init.method === "POST") return receipt;
     if (isAppeal(call.url.pathname)) return records === "failed" ? failed() : jsonResponse({ appeals: records === "accepted" ? [makeAppeal()] : [] });
     if (isAnnotation(call.url.pathname)) return ++annotationReads === 1 ? failed() : annotationReads === 2 ? annotation.promise : jsonResponse({ annotations: [] });
@@ -48,7 +50,7 @@ function installReceiptScenario() {
 }
 
 async function prepareAppeal(selectRegion = false) {
-  fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+  fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
   fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
   if (selectRegion) {
     if (!screen.queryByAltText("本题答题区域")) fireEvent.click(screen.getByRole("button", { name: "标记争议位置（可选）" }));
@@ -86,9 +88,8 @@ function installSessionRecoveryScenario() {
   const nextUser = { ...studentUser, id: "student-user-2", username: "student-002", display_name: "另一位学生" };
   let restoreReads = 0;
   const calls = installApi((call) => {
-    if (call.url.pathname === "/api/v1/auth/me") return ++restoreReads === 1 ? oldRestore.promise : currentRestore.promise;
+    if (call.url.pathname === "/api/v1/auth/me") return ++restoreReads === 1 ? oldRestore.promise : restoreReads === 2 ? currentRestore.promise : jsonResponse({ user: nextUser });
     if (call.url.pathname === "/api/v1/auth/logout") return exitReply.promise;
-    if (call.url.pathname === "/api/v1/auth/login") return jsonResponse({ user: nextUser });
     if (isAppeal(call.url.pathname) && call.init.method === "POST") return receipt.promise;
     return resultRoute(call, makeResult());
   });
@@ -96,6 +97,28 @@ function installSessionRecoveryScenario() {
 }
 
 describe("换版后的原版复核回执", () => {
+  it("退出未确认后的刷新只重试撤销，不恢复旧学生Cookie", async () => {
+    window.localStorage.setItem("edugrade.student.logout-pending", "1");
+    const calls = installApi((call) => call.url.pathname === "/api/v1/auth/logout" ? failed() : resultRoute(call, makeResult()));
+    render(<App />);
+    await screen.findByRole("button", { name: "重试退出登录" });
+    expect(calls.some(call => call.url.pathname === "/api/v1/auth/me")).toBe(false);
+    expect(document.querySelector(".portal-shell")).toBeNull();
+    expect(screen.queryByText("正在前往登录…")).toBeNull();
+  });
+
+  it("两类存储都无法写入时启动先撤销Cookie，失败后不能恢复学生身份", async () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("quota", "QuotaExceededError"); });
+    const calls = installApi((call) => call.url.pathname === "/api/v1/auth/logout" ? failed() : resultRoute(call, makeResult()));
+    const view = render(<App />);
+    await screen.findByRole("button", { name: "重试退出登录" });
+    view.unmount();
+    render(<App />);
+    await screen.findByRole("button", { name: "重试退出登录" });
+    expect(calls.filter(call => call.url.pathname === "/api/v1/auth/logout")).toHaveLength(2);
+    expect(calls.some(call => call.url.pathname === "/api/v1/auth/me")).toBe(false);
+    expect(document.querySelector(".portal-shell")).toBeNull();
+  });
   it.each(["accepted", "failed"] as const)("迟到批注409后保留成功确认，记录查询为%s也不能覆盖POST事实", async (recordState) => {
     const scenario = installReceiptScenario();
     render(<App />);
@@ -131,7 +154,7 @@ describe("换版后的原版复核回执", () => {
     assertEvidenceHidden();
     scenario.setResult(makeResult([makeQuestion({ feedback: "第八版当前评分依据", score: 18 })], { release_id: "release-8", release_version: 8 }));
     fireEvent.click(screen.getByRole("button", { name: recovery }));
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，18/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，18/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("第八版当前评分依据");
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" }).value).toBe("");
     expect(screen.queryByRole("region", { name: "第 1 题复核申请回执" })).toBeNull();
@@ -223,12 +246,9 @@ describe("换版后的原版复核回执", () => {
     expect(login.disabled).toBe(false);
     if (identity === "different") scenario.setLoginUser({ ...studentUser, id: "other-student", username: "student-002" });
     fireEvent.click(login);
-    await screen.findByRole("heading", { name: "查看已发布成绩" });
-    fireEvent.change(screen.getByRole("textbox", { name: "学校代码" }), { target: { value: "school-a" } });
-    fireEvent.change(screen.getByRole("textbox", { name: "账号" }), { target: { value: identity === "same" ? "student-001" : "student-002" } });
-    fireEvent.change(screen.getByLabelText("密码"), { target: { value: "testing" } });
-    fireEvent.click(screen.getByRole("button", { name: "登录" }));
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    await screen.findByText("正在前往登录…");
+    await reenterAfterUnifiedLogin();
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const reason = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
     expect(reason.value).toBe(identity === "same" ? explanation : "");
     expect(readAppealDraft(draftKey)?.reason).toBe(identity === "same" ? explanation : undefined);
@@ -258,8 +278,8 @@ describe("换版后的原版复核回执", () => {
     const submit = await prepareAppeal();
     const form = submit.closest("form") as HTMLFormElement;
     const close = screen.getByRole("button", { name: "返回题目列表" });
-    const first = screen.getByRole("button", { name: /^第 1 题，/ });
-    const second = screen.getByRole("button", { name: /^第 2 题，/ });
+    const first = screen.getByLabelText(/^第 1 题，/).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!;
+    const second = screen.getByLabelText(/^第 2 题，/).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!;
     const english = screen.getByRole("button", { name: "英语" });
     // 同批事件可能仍拿到提交前的 state；这些处理器必须读 ref，不能只靠按钮禁用。
     act(() => {
@@ -271,7 +291,7 @@ describe("换版后的原版复核回执", () => {
       window.history.replaceState(null, "", navigation === "hashchange" ? "/#/" : "/");
       window.dispatchEvent(new Event(navigation));
     });
-    expect(screen.getByRole("heading", { name: "第 1 题 · 作答与评分依据" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "第 1 题 · 成绩复核申请" })).toBeTruthy();
     expect(window.location.pathname).toBe("/exams/exam-1");
     expect(window.location.hash).toBe("");
     expect(screen.getByRole("button", { name: "正在提交…" })).toBeTruthy();
@@ -287,7 +307,7 @@ describe("换版后的原版复核回执", () => {
     await act(async () => scenario.resolveReceipt(jsonResponse({ appeal: makeAppeal() })));
     await screen.findByText(confirmation);
     if (action === "switch") {
-      fireEvent.click((screen.getByRole("button", { name: /^第 2 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+      fireEvent.click((screen.getByLabelText(/^第 2 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
       await screen.findByText("第二题当前评分依据");
     } else fireEvent.click(screen.getByRole("button", { name: "返回题目列表" }));
     await act(async () => scenario.annotation.resolve(changed()));
@@ -305,9 +325,9 @@ describe("换版后的原版复核回执", () => {
       if (outcome === "network_failure") throw new TypeError("Failed to fetch");
       return response;
     });
+    let logoutAttempts = 0;
     const calls = installApi((call) => {
-      if (call.url.pathname === "/api/v1/auth/logout") return exitRequest;
-      if (call.url.pathname === "/api/v1/auth/login") return jsonResponse({ user: studentUser });
+      if (call.url.pathname === "/api/v1/auth/logout") return ++logoutAttempts === 1 ? exitRequest : jsonResponse({});
       if (isAppeal(call.url.pathname) && call.init.method === "POST") return receipt.promise;
       return resultRoute(call, makeResult());
     });
@@ -319,18 +339,20 @@ describe("换版后的原版复核回执", () => {
     act(() => { fireEvent.click(exit); fireEvent.submit(oldForm); fireEvent.click(exit); });
     expect(screen.getByRole("status").textContent).toBe("正在退出登录…");
     expect(screen.queryByRole("textbox", { name: "具体说明" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: "查看已发布成绩" })).toBeNull();
+    expect(screen.queryByText("正在前往登录…")).toBeNull();
     expect(readAppealDraft(draftKey)).toBeUndefined();
     expect(calls.filter((call) => call.url.pathname === "/api/v1/auth/logout")).toHaveLength(1);
     expect(calls.filter((call) => isAppeal(call.url.pathname) && call.init.method === "POST")).toHaveLength(0);
     await act(async () => exitReply.resolve(outcome === "http_failure" ? failed() : jsonResponse({})));
-    await screen.findByRole("heading", { name: "查看已发布成绩" });
-    expect(screen.queryByRole("status")).toBeNull();
-    fireEvent.change(screen.getByRole("textbox", { name: "学校代码" }), { target: { value: "school-a" } });
-    fireEvent.change(screen.getByRole("textbox", { name: "账号" }), { target: { value: "student-001" } });
-    fireEvent.change(screen.getByLabelText("密码"), { target: { value: "testing" } });
-    fireEvent.click(screen.getByRole("button", { name: "登录" }));
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    if (outcome !== "success") {
+      expect(screen.queryByText("正在前往登录…")).toBeNull();
+      expect(screen.getByRole("status").textContent).toContain("退出尚未完成");
+      fireEvent.click(screen.getByRole("button", { name: "重试退出登录" }));
+    }
+    await screen.findByText("正在前往登录…");
+    expect(screen.getByText("正在前往登录…").tagName).toBe("OUTPUT");
+    await reenterAfterUnifiedLogin();
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const reason = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
     expect(reason.value).toBe("");
     fireEvent.change(reason, { target: { value: explanation } });
@@ -364,7 +386,7 @@ describe("换版后的原版复核回执", () => {
     expect(screen.getByRole("status").textContent).toBe("正在退出登录…");
     expect(readAppealDraft(draftKey)).toBeUndefined();
     await act(async () => exitReply.resolve(jsonResponse({})));
-    await screen.findByRole("heading", { name: "查看已发布成绩" });
+    await screen.findByText("正在前往登录…");
     expect(calls.filter((call) => call.url.pathname === "/api/v1/auth/logout")).toHaveLength(1);
     expect(calls.filter((call) => isAppeal(call.url.pathname) && call.init.method === "POST")).toHaveLength(1);
   });
@@ -378,10 +400,10 @@ describe("StrictMode会话恢复响应隔离", () => {
     // StrictMode清理第一轮effect后发出第二轮；第一轮先返回，也不能修改第二轮的loading与账户。
     await act(async () => scenario.oldRestore.resolve(outcome === "success" ? jsonResponse({ user: studentUser }) : failed()));
     expect(screen.getByText("正在确认登录状态…")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "查看已发布成绩" })).toBeNull();
+    expect(screen.queryByText("正在前往登录…")).toBeNull();
     await act(async () => scenario.currentRestore.resolve(outcome === "success" ? jsonResponse({ user: studentUser }) : failed()));
-    if (outcome === "success") await screen.findByRole("button", { name: /^第 1 题，/ });
-    else await screen.findByRole("heading", { name: "查看已发布成绩" });
+    if (outcome === "success") await screen.findByLabelText(/^第 1 题，/);
+    else await screen.findByText("正在前往登录…");
     expect(screen.queryByText("正在确认登录状态…")).toBeNull();
   });
 
@@ -393,9 +415,9 @@ describe("StrictMode会话恢复响应隔离", () => {
     fireEvent.click(screen.getByRole("button", { name: "退出登录" }));
     expect(screen.getByRole("status").textContent).toBe("正在退出登录…");
     await act(async () => scenario.exitReply.resolve(jsonResponse({})));
-    await screen.findByRole("heading", { name: "查看已发布成绩" });
+    await screen.findByText("正在前往登录…");
     await act(async () => scenario.oldRestore.resolve(outcome === "success" ? jsonResponse({ user: studentUser }) : failed()));
-    expect(screen.getByRole("heading", { name: "查看已发布成绩" })).toBeTruthy();
+    expect(screen.getByText("正在前往登录…")).toBeTruthy();
     expect(screen.queryByText("正在确认登录状态…")).toBeNull();
     expect(document.querySelector(".portal-shell")).toBeNull();
     expect(readAppealDraft(draftKey)).toBeUndefined();
@@ -409,15 +431,12 @@ describe("StrictMode会话恢复响应隔离", () => {
     fireEvent.click(await prepareAppeal());
     await act(async () => scenario.receipt.resolve(jsonResponse({ error: { code: "unauthenticated" } }, 401)));
     fireEvent.click(await screen.findByRole("button", { name: "重新登录" }));
-    await screen.findByRole("heading", { name: "查看已发布成绩" });
-    fireEvent.change(screen.getByRole("textbox", { name: "学校代码" }), { target: { value: "school-a" } });
-    fireEvent.change(screen.getByRole("textbox", { name: "账号" }), { target: { value: scenario.nextUser.username } });
-    fireEvent.change(screen.getByLabelText("密码"), { target: { value: "testing" } });
-    fireEvent.click(screen.getByRole("button", { name: "登录" }));
-    const nextQuestion = await screen.findByRole<HTMLButtonElement>("button", { name: /^第 1 题，/ });
+    await screen.findByText("正在前往登录…");
+    await reenterAfterUnifiedLogin();
+    const nextQuestion = (await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!;
     // 新账户可先显示题目列表，旧提交收尾仍可能短暂保持禁用；等待真实可操作状态再验证身份隔离。
     await waitFor(() => expect(nextQuestion.disabled).toBe(false));
-    fireEvent.click(nextQuestion.closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click(nextQuestion);
     const reason = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
     expect(reason.value).toBe("");
     fireEvent.change(reason, { target: { value: "请核对新账户本题的第二步计算过程。" } });
@@ -428,7 +447,7 @@ describe("StrictMode会话恢复响应隔离", () => {
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" }).value).toBe(saved?.reason);
     expect(readAppealDraft(newKey)).toEqual(saved);
     expect(readAppealDraft(draftKey)).toBeUndefined();
-    expect(screen.queryByRole("heading", { name: "查看已发布成绩" })).toBeNull();
+    expect(screen.queryByText("正在前往登录…")).toBeNull();
   });
 
   it("真正卸载后的有效恢复也不能清掉另一个App新账户的草稿", async () => {

@@ -17,6 +17,11 @@ import (
 const ImageProtocolVersion = "grading-image-v3"
 const ImageObservationPromptVersion = "student-observation-v3-20261022-r4"
 const ImageComparisonPromptVersion = "frozen-rubric-comparison-v3-20261021"
+const ImageComparisonPrefixPromptVersion = "frozen-rubric-comparison-v3-20261106-prefix-v1"
+
+func supportedImageComparisonPrompt(version string) bool {
+	return version == ImageComparisonPromptVersion || version == ImageComparisonPrefixPromptVersion
+}
 
 type ObservationMember struct {
 	QuestionID   string `json:"question_id"`
@@ -268,6 +273,10 @@ func validObservationBBox(bbox []float64) bool {
 }
 
 func (a *HTTPAdapter) gradeImage(ctx context.Context, input AdapterInput) (AdapterOutput, error) {
+	// 待处理任务沿用创建时冻结的版本；不能因部署开关变化而换用另一套比较提示词。
+	if !supportedImageComparisonPrompt(a.policy.PromptVersion) || input.ModelPolicy.PromptVersion != a.policy.PromptVersion {
+		return AdapterOutput{}, ErrWorkerResultVersionConflict
+	}
 	request, err := imageRequest(input)
 	if err != nil {
 		return AdapterOutput{}, err
@@ -277,7 +286,7 @@ func (a *HTTPAdapter) gradeImage(ctx context.Context, input AdapterInput) (Adapt
 	if err != nil {
 		return a.failureOutput(input.RequestID, err), err
 	}
-	if response.ModelVersion != a.policy.ModelVersion || response.PromptVersion != ImageComparisonPromptVersion || response.RubricVersion != input.Rubric.Version || !response.NeedsHumanReview {
+	if response.ModelVersion != a.policy.ModelVersion || response.PromptVersion != a.policy.PromptVersion || response.RubricVersion != input.Rubric.Version || !response.NeedsHumanReview {
 		err := attachResponseDiagnostics(ErrInvalidModelOutput, response.Telemetry)
 		return a.failureOutput(input.RequestID, err), err
 	}
@@ -286,7 +295,7 @@ func (a *HTTPAdapter) gradeImage(ctx context.Context, input AdapterInput) (Adapt
 		StudentFeedback: response.StudentFeedback, TeacherNote: response.TeacherNote, Observation: &response.Observation, ImageJudgments: response.Judgments,
 		Telemetry: AdapterTelemetry{Adapter: response.Telemetry.Adapter, Provider: response.Telemetry.Provider, Deployment: response.Telemetry.Deployment, Region: response.Telemetry.Region,
 			Attempts: response.Telemetry.Attempts, ElapsedMS: response.Telemetry.ElapsedMS, Usage: response.Telemetry.Usage, ExecutionDiagnostics: response.Telemetry.ExecutionDiagnostics},
-		RawOutput: map[string]any{"schema_version": ImageProtocolVersion, "input_version_id": input.InputVersionID, "observation_prompt_version": response.Observation.PromptVersion, "comparison_prompt_version": ImageComparisonPromptVersion, "observation": response.Observation, "judgments": response.Judgments}}
+		RawOutput: map[string]any{"schema_version": ImageProtocolVersion, "input_version_id": input.InputVersionID, "observation_prompt_version": response.Observation.PromptVersion, "comparison_prompt_version": response.PromptVersion, "observation": response.Observation, "judgments": response.Judgments}}
 	if err := projectImageJudgments(&output, input); err != nil {
 		err = attachResponseDiagnostics(err, response.Telemetry)
 		return a.failureOutput(input.RequestID, err), err

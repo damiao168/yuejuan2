@@ -6,8 +6,6 @@ const commandKey = "exam-create-command:v1:demo-school:user-school_admin";
 async function prepare(page: Page) {
   await page.goto("/#/admin/exams/new");
   await page.getByRole("textbox", { name: "考试名称 *" }).fill("命令恢复验收考试");
-  await page.getByRole("combobox", { name: /考试类型/ }).click();
-  await page.getByTitle("期中考试").click();
   await page.getByRole("button", { name: /高二（1）班/ }).click();
   await page.getByRole("button", { name: "数学", exact: true }).click();
 }

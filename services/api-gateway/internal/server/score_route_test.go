@@ -71,7 +71,8 @@ func TestScoreRoutesFinalizeConfirmPublishStudentLookupAndExport(t *testing.T) {
 	reviewAssertAuditAction(t, authStore, "score.exported")
 }
 
-// 先形成待确认成绩，再验证质量门禁与发布均拒绝；此阶段不能跳过直接确认。
+// 先形成待确认成绩。发布前读取（publish 阶段）在可自动准备时按“创建草稿会自动确认”判断，不再报未确认；
+// confirmation 阶段读取不给出可发布结论；没有自动准备的旧发布接口仍拒绝，此阶段不能跳过确认直接公开。
 func scoreAssertUnconfirmedPublicationBlocked(t *testing.T, router http.Handler, token string) {
 	t.Helper()
 	req := reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/finalize", "", token)
@@ -84,8 +85,15 @@ func scoreAssertUnconfirmedPublicationBlocked(t *testing.T, router http.Handler,
 	req = reviewAuthedRequest(http.MethodGet, "/api/v1/exams/exam-1/grades/quality?stage=publish", "", token)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"can_publish":false`) || !strings.Contains(rec.Body.String(), `"grades_not_confirmed"`) {
-		t.Fatalf("quality before confirmation expected publish block, got %d %s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"can_publish":true`) || strings.Contains(rec.Body.String(), `"grades_not_confirmed"`) {
+		t.Fatalf("publish-stage read expected automatic preparation to confirm pending grades, got %d %s", rec.Code, rec.Body.String())
+	}
+
+	req = reviewAuthedRequest(http.MethodGet, "/api/v1/exams/exam-1/grades/quality?stage=confirmation", "", token)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"stage":"confirmation"`) || !strings.Contains(rec.Body.String(), `"can_publish":false`) {
+		t.Fatalf("confirmation-stage read must not report publishable grades, got %d %s", rec.Code, rec.Body.String())
 	}
 
 	req = reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/publish", `{"reason":"too early"}`, token)
@@ -100,6 +108,12 @@ func TestScoreRoutesRequirePermission(t *testing.T) {
 	authStore := reviewAuthStore(t, []string{"system:read"})
 	router := scoreRouter(authStore, seededRouteScoreStore())
 	token := reviewLogin(t, router, "review_manager")
+	// 正式文件同样经过成绩管理 guard，不能因为新增只读导出而绕过学校成绩权限。
+	formal := httptest.NewRecorder()
+	router.ServeHTTP(formal, reviewAuthedRequest(http.MethodGet, "/api/v1/exams/exam-1/score-releases/export", "", token))
+	if formal.Code != http.StatusForbidden {
+		t.Fatalf("formal export expected 403, got %d %s", formal.Code, formal.Body.String())
+	}
 
 	req := reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/finalize", "", token)
 	rec := httptest.NewRecorder()
@@ -174,16 +188,9 @@ func TestRosterRoutesRequireAdministrativeRole(t *testing.T) {
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("teacher must not read administrative roster identities, got %d %s", rec.Code, rec.Body.String())
 	}
-
-	req = reviewAuthedRequest(http.MethodPut, "/api/v1/exams/exam-1/roster/student-1/attendance", `{"status":"absent","reason":"not authorized"}`, teacherToken)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("teacher must not change attendance, got %d %s", rec.Code, rec.Body.String())
-	}
 }
 
-func TestRosterRoutesRejectMalformedIdentifiers(t *testing.T) {
+func TestRosterRouteRejectsMalformedExamID(t *testing.T) {
 	authStore := reviewAuthStore(t, []string{"score:manage"})
 	router := scoreRouter(authStore, seededRouteScoreStore())
 	token := reviewLogin(t, router, "review_manager")
@@ -193,13 +200,6 @@ func TestRosterRoutesRejectMalformedIdentifiers(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid_score_input") {
 		t.Fatalf("malformed roster exam id expected 400, got %d %s", rec.Code, rec.Body.String())
-	}
-
-	req = reviewAuthedRequest(http.MethodPut, "/api/v1/exams/00000000-0000-0000-0000-000000000901/roster/not-a-uuid/attendance", `{"status":"absent","reason":"verified"}`, token)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid_score_input") {
-		t.Fatalf("malformed roster student id expected 400, got %d %s", rec.Code, rec.Body.String())
 	}
 }
 

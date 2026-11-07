@@ -72,10 +72,18 @@ func (s *MemoryStore) Create(_ context.Context, tenantID, examID, actorID string
 		return cloneRelease(s.releases[id]), nil
 	}
 	facts := cloneFacts(s.facts[examID])
+	sourceReleaseID := s.current[tenantID+":"+examID]
+	if sourceReleaseID != "" && !s.preservesRegradeScoresLocked(tenantID, examID, facts) {
+		// 工作表尚未同步更正时继承当前正式分，不能从旧值重建。
+		facts = s.snapshotFactsLocked(sourceReleaseID)
+	} else {
+		sourceReleaseID = ""
+	}
 	if len(facts) == 0 {
 		return Release{}, ErrNotFound
 	}
 	release := s.newReleaseLocked(tenantID, examID, actorID, input)
+	release.SourceReleaseID = sourceReleaseID
 	s.saveSnapshotLocked(release.ID, facts)
 	s.releases[release.ID] = release
 	s.idempotency[key] = release.ID
@@ -231,7 +239,19 @@ func (s *MemoryStore) PublishGuarded(ctx context.Context, tenantID, id, actorID 
 	if release.Status != StatusDraft {
 		return Release{}, ErrInvalidTransition
 	}
-	// 发布时重新检查门禁；来自重评计划的草稿还要确认基础版本仍是当前发布版本。
+	currentID := s.current[tenantID+":"+release.ExamID]
+	var rebased []SubmissionFact
+	if release.Source == SourceRegrade && release.SourceReleaseID != "" && release.SourceReleaseID != currentID {
+		var ok bool
+		rebased, ok = rebaseRegradeFacts(s.snapshotFactsLocked(release.SourceReleaseID), s.snapshotFactsLocked(id), s.snapshotFactsLocked(currentID))
+		if !ok {
+			return Release{}, ErrStaleSource
+		}
+	} else if release.Source != SourceRollback && !(release.Source == SourceRegrade && release.SourceReleaseID != "") && !s.preservesRegradeScoresLocked(tenantID, release.ExamID, s.snapshotFactsLocked(id)) {
+		rebased = s.snapshotFactsLocked(currentID)
+		release.SourceReleaseID = currentID
+	}
+	// 门禁与实际快照发布在同一锁内；拒绝时不能留下已修改一半的草稿。
 	gate := s.gateLocked(tenantID, release.ExamID, id)
 	if guard != nil {
 		if err := guard(ctx, nil, release, gate); err != nil {
@@ -241,8 +261,8 @@ func (s *MemoryStore) PublishGuarded(ctx context.Context, tenantID, id, actorID 
 	if !gate.Passed {
 		return Release{}, ErrGateBlocked
 	}
-	if release.Source == SourceRegrade && release.SourceReleaseID != "" && release.SourceReleaseID != s.current[tenantID+":"+release.ExamID] {
-		return Release{}, ErrStaleSource
+	if rebased != nil {
+		s.saveSnapshotLocked(id, rebased)
 	}
 	now := s.now().UTC()
 	release.Status, release.PublishedBy, release.PublishedAt, release.GateSnapshot = StatusPublished, actorID, &now, gate
@@ -350,8 +370,10 @@ func (s *MemoryStore) newReleaseLocked(tenantID, examID, actorID string, input C
 			version = release.Version + 1
 		}
 	}
+	// 内存实现的版本都由这里创建，并随后续读取复制，因此复评任务 ID 与 PostgreSQL 扫描时一样只派生一次。
 	return Release{ID: s.idLocked("release"), TenantID: tenantID, ExamID: examID, Version: version, Source: input.Source, Reason: input.Reason,
-		Status: StatusDraft, IdempotencyKey: input.IdempotencyKey, VisibilityPolicy: cloneVisibility(input.VisibilityPolicy), AppealWindow: cloneWindow(input.AppealWindow),
+		Status: StatusDraft, IdempotencyKey: input.IdempotencyKey, RegradeJobID: regradeJobID(input.IdempotencyKey),
+		VisibilityPolicy: normalizeReleaseVisibility(cloneVisibility(input.VisibilityPolicy)), AppealWindow: cloneWindow(input.AppealWindow),
 		CreatedBy: actorID, CreatedAt: s.now().UTC(), GateSnapshot: emptyGate(s.now().UTC())}
 }
 
@@ -529,7 +551,12 @@ func cloneRelease(value Release) Release {
 	value.PublishedAt = cloneTime(value.PublishedAt)
 	return value
 }
-func cloneVisibility(value VisibilityPolicy) VisibilityPolicy { return value }
+func cloneVisibility(value VisibilityPolicy) VisibilityPolicy {
+	if value.HighScorePaperTopN != nil {
+		value.HighScorePaperTopN = new(*value.HighScorePaperTopN)
+	}
+	return value
+}
 func cloneWindow(value AppealWindow) AppealWindow {
 	value.OpensAt, value.ClosesAt = cloneTime(value.OpensAt), cloneTime(value.ClosesAt)
 	value.AllowedReasonCodes = append([]string(nil), value.AllowedReasonCodes...)

@@ -73,9 +73,13 @@ func (s *MemoryStore) CreateSession(_ context.Context, tenantID string, session 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, item := range s.sessions {
-		if item.tenantID == tenantID && item.session.ExamID == session.ExamID && item.session.QuestionID == session.QuestionID &&
-			item.session.GraderID == session.GraderID && item.session.Status == SessionInProgress {
-			return Session{}, ErrConflict
+		if item.tenantID == tenantID && item.session.ExamID == session.ExamID && item.session.QuestionID == session.QuestionID && item.session.GraderID == session.GraderID {
+			if item.session.Status == SessionInProgress {
+				return Session{}, ErrConflict
+			}
+			if item.session.Status == SessionFailed && item.session.CompletedAt != nil && item.session.CompletedAt.Add(24*time.Hour).After(session.StartedAt) {
+				return Session{}, &RetakeCooldownError{AvailableAt: item.session.CompletedAt.Add(24 * time.Hour)}
+			}
 		}
 	}
 	s.sessions[sessionKey(tenantID, session.ID)] = memorySession{tenantID: tenantID, session: cloneSession(session), policy: clonePolicy(policy), references: cloneReferences(references)}

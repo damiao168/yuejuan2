@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button, Select } from "antd";
 import { createRegradeJob, getRegradeJob, listRegradeJobs, previewRegrade, type RegradePreview } from "../api/scoreReleases";
 import { decideQuestionAppeal, type PublishedQuestionAppeal } from "../api/questionAppeals";
@@ -6,6 +6,7 @@ import type { ManagedUser } from "../api/users";
 import { getUserErrorMessage } from "../api/client";
 import { getBusinessCommandSession } from "../api/businessCommand";
 import { matchingAppealRegradeDrafts } from "./questionAppealRegradeRecovery";
+import { canAssignSubjectTask } from "../constants/teachingSubjects";
 
 /** 只为本申请的冻结答卷创建复评，不把整题所有学生默认带入影响范围。 */
 export function QuestionAppealRegradeLaunch({ appeal, reviewers, response, busy, currentUserId = "", onRecoveredResponse, onCreated, onLinked, onWorkingChange }: Readonly<{
@@ -19,7 +20,11 @@ export function QuestionAppealRegradeLaunch({ appeal, reviewers, response, busy,
   onLinked?: () => void;
   onWorkingChange: (working: boolean) => void;
 }>) {
+  // 重新处理保留原申请版本；本轮预览、创建和恢复只使用服务端返回的本轮成绩来源。
+  const sourceReleaseId = appeal.review_source_release_id || appeal.source_release_id;
   const [assignee, setAssignee] = useState("");
+  const eligibleGraders = useMemo(() => reviewers.filter(user => canAssignSubjectTask(user, appeal.exam_subject, "grader")), [appeal.exam_subject, reviewers]);
+  const canAssign = eligibleGraders.some(user => user.id === assignee);
   const [preview, setPreview] = useState<RegradePreview | null>(null);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -43,7 +48,7 @@ export function QuestionAppealRegradeLaunch({ appeal, reviewers, response, busy,
     let active=true;const session=getBusinessCommandSession();setRecovering(true);setRecoveryError("");
     void listRegradeJobs(appeal.exam_id).then(async result=>{
       if(!active||session!==getBusinessCommandSession())return;
-      const target={id:appeal.id,exam_id:appeal.exam_id,question_id:appeal.question_id,source_release_id:appeal.source_release_id,submission_id:appeal.submission_id};
+      const target={id:appeal.id,exam_id:appeal.exam_id,question_id:appeal.question_id,source_release_id:sourceReleaseId,submission_id:appeal.submission_id};
       const matches=matchingAppealRegradeDrafts(result.regrade_jobs,target,currentUserId,response);
       const candidates=await Promise.all(matches.map(async job=>{
         const detail=await getRegradeJob(job.id);const item=detail.regrade.items[0];
@@ -56,20 +61,20 @@ export function QuestionAppealRegradeLaunch({ appeal, reviewers, response, busy,
     }).catch(reason=>{if(active&&session===getBusinessCommandSession())setRecoveryError(getUserErrorMessage(reason,"已有任务核对失败，暂不能重复创建，请重试"));})
       .finally(()=>{if(active)setRecovering(false);});
     return()=>{active=false;};
-  },[appeal.id,appeal.exam_id,appeal.question_id,appeal.source_release_id,appeal.submission_id,currentUserId,response,recoveryAttempt]);
+  },[appeal.id,appeal.exam_id,appeal.question_id,sourceReleaseId,appeal.submission_id,currentUserId,response,recoveryAttempt]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 预览重试计数触发重读，接口参数保持同一冻结来源。
   useEffect(() => {
     let active = true;
     setPreview(null); setError("");
-    void previewRegrade(appeal.exam_id, appeal.question_id, { source_release_id: appeal.source_release_id, selector: { submission_ids: [appeal.submission_id] } })
+    void previewRegrade(appeal.exam_id, appeal.question_id, { source_release_id: sourceReleaseId, selector: { submission_ids: [appeal.submission_id] } })
       .then(result => { if (active) setPreview(result.preview); })
       .catch(cause => { if (active) setError(getUserErrorMessage(cause, "复评范围读取失败，请重试")); });
     return () => { active = false; };
-  }, [appeal.exam_id, appeal.question_id, appeal.source_release_id, appeal.submission_id, previewAttempt]);
+  }, [appeal.exam_id, appeal.question_id, sourceReleaseId, appeal.submission_id, previewAttempt]);
   const create = async () => {
-    if (workingRef.current || busy || recovering || recoveryError || (!createdJob && recoveryCandidates.length>1) || !preview || !assignee || !response.trim()) return;
+    if (workingRef.current || busy || recovering || recoveryError || (!createdJob && recoveryCandidates.length>1) || !preview || !assignee || (!createdJobRef.current && !canAssign) || !response.trim()) return;
     // 来源、题目和单份答卷必须与展示的预览一致；重试沿用同一幂等键，避免重复创建任务。
-    if (preview.source_release_id !== appeal.source_release_id || preview.question_id !== appeal.question_id || preview.affected_count !== 1) {
+    if (preview.source_release_id !== sourceReleaseId || preview.question_id !== appeal.question_id || preview.affected_count !== 1) {
       setError("影响范围不是本申请的一份答卷，请重新预览并联系学校考试负责人核对。"); return;
     }
     const signature = JSON.stringify([appeal.id, assignee, response.trim()]);
@@ -81,7 +86,7 @@ export function QuestionAppealRegradeLaunch({ appeal, reviewers, response, busy,
       // 创建和关联是两个事务。保留已创建任务的回执；第二步失败时只续做关联，不能再次创建。
       let jobId = createdJobRef.current;
       if (!jobId) {
-        const result = await createRegradeJob(appeal.exam_id, appeal.question_id, { source_release_id: appeal.source_release_id, selector, reason_code: "appeal_pattern", reason_text: response.trim(), strategy: "human_recheck", assignee_id: assignee, idempotency_key: operation.current.key });
+        const result = await createRegradeJob(appeal.exam_id, appeal.question_id, { source_release_id: sourceReleaseId, selector, reason_code: "appeal_pattern", reason_text: response.trim(), strategy: "human_recheck", assignee_id: assignee, idempotency_key: operation.current.key });
         // 离开申请或更换账号后，旧创建回包不能继续替新会话关联申请。
         if (!isCurrent()) return;
         jobId = result.regrade.job.id; createdJobRef.current = jobId; setCreatedJob(jobId); onCreated(jobId);
@@ -96,10 +101,10 @@ export function QuestionAppealRegradeLaunch({ appeal, reviewers, response, busy,
     {recoveryError ? <Alert type="warning" message={recoveryError} /> : null}
     {recoveryError ? <Button onClick={()=>setRecoveryAttempt(value=>value+1)}>重新核对已有任务</Button> : null}
     {!createdJob && recoveryCandidates.length>1 ? <label>已有同范围复评任务<Select aria-label="选择已有复评任务" placeholder="核对创建时间和阅卷员后继续" options={recoveryCandidates.map(item=>({value:item.id,label:item.label}))} onChange={id=>{const chosen=recoveryCandidates.find(item=>item.id===id);if(chosen){createdJobRef.current=id;setCreatedJob(id);setAssignee(chosen.assignee);if(!response.trim())onRecoveredResponse?.(chosen.response);onCreated(id);}}}/></label> : null}
-    <Select aria-label="分派本题重评阅卷员" value={assignee || undefined} placeholder="选择重评阅卷员" options={reviewers.filter((user) => user.roles.includes("grader")).map((user) => ({ value: user.id, label: user.display_name || user.username }))} onChange={setAssignee} disabled={working || busy || Boolean(createdJob)} />
+    <Select aria-label="分派本题重评阅卷员" value={createdJob || canAssign ? assignee || undefined : undefined} placeholder="选择本场学科的重评阅卷员" options={eligibleGraders.map((user) => ({ value: user.id, label: user.display_name || user.username }))} onChange={setAssignee} disabled={working || busy || Boolean(createdJob)} />
     {!preview ? <Button onClick={() => setPreviewAttempt(value => value + 1)} disabled={working || busy}>重新读取影响范围</Button> : null}
     {preview ? <Alert type={preview.affected_count === 1 ? "info" : "error"} showIcon message={`将影响 ${preview.affected_count} 份答卷`} description="创建后任务尚未改分；还需在考试成绩工作台批准、启动、复核候选、完成复评并发布新成绩。" /> : null}
-    <Button onClick={() => void create()} loading={working} disabled={busy || recovering || Boolean(recoveryError) || (!createdJob && recoveryCandidates.length>1) || !assignee || !response.trim() || preview?.affected_count !== 1}>{createdJob ? "继续关联本次复评" : "创建并关联本次复评"}</Button>
+    <Button onClick={() => void create()} loading={working} disabled={busy || recovering || Boolean(recoveryError) || (!createdJob && (recoveryCandidates.length>1 || !canAssign)) || !assignee || !response.trim() || preview?.affected_count !== 1}>{createdJob ? "继续关联本次复评" : "创建并关联本次复评"}</Button>
     {error ? <Alert type="error" showIcon message={error} /> : null}
   </section>;
 }

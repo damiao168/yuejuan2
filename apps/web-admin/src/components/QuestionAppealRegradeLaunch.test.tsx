@@ -16,7 +16,7 @@ vi.mock("antd", () => ({
 
 describe("学生申请单份答卷复评创建", () => {
   let host: HTMLDivElement; let root: Root;
-  const appeal = { id: "appeal", exam_id: "exam", question_id: "question", submission_id: "submission", source_release_id: "released", source_release_version: 2, question_no: "1", revision: 4 } as PublishedQuestionAppeal;
+  const appeal = { id: "appeal", exam_id: "exam", exam_subject: "math", question_id: "question", submission_id: "submission", source_release_id: "released", source_release_version: 2, question_no: "1", revision: 4 } as PublishedQuestionAppeal;
   beforeEach(() => {
     vi.resetAllMocks(); Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.preview.mockResolvedValue({ preview: { question_id: "question", source_release_id: "released", affected_count: 1 } });
@@ -26,9 +26,34 @@ describe("学生申请单份答卷复评创建", () => {
     host = document.createElement("div"); document.body.append(host); root = createRoot(host);
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
-  const render = async () => act(async () => root.render(<QuestionAppealRegradeLaunch appeal={appeal} reviewers={[{ id: "grader", username: "g", display_name: "重评老师", status: "active", roles: ["grader"] }]} response="已核对原卷，过程分需重新评分。" busy={false} onCreated={mocks.created} onLinked={mocks.linked} onWorkingChange={mocks.working} />));
+  const render = async () => act(async () => root.render(<QuestionAppealRegradeLaunch appeal={appeal} reviewers={[{ id: "grader", username: "g", display_name: "重评老师", status: "active", roles: ["grader"], teaching_subjects: ["mathematics"] }]} response="已核对原卷，过程分需重新评分。" busy={false} onCreated={mocks.created} onLinked={mocks.linked} onWorkingChange={mocks.working} />));
   const click = async (label: string) => act(async () => [...host.querySelectorAll("button")].find((button) => button.textContent === label)!.click());
   const choose = async () => act(async () => { const select = host.querySelector("select")!; select.value = "grader"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+
+  it("新建重评只允许本场学科grader，刷新学科后不能提交上一次的教师", async () => {
+    const reviewers = [
+      { id: "grader", username: "g", display_name: "数学阅卷", status: "active", roles: ["grader"], teaching_subjects: ["mathematics"] },
+      { id: "teacher", username: "t", display_name: "仅复核岗位", status: "active", roles: ["teacher"], teaching_subjects: ["mathematics"] },
+      { id: "english", username: "e", display_name: "英语阅卷", status: "active", roles: ["grader"], teaching_subjects: ["english"] }
+    ];
+    const view = (subject: string) => <QuestionAppealRegradeLaunch appeal={{ ...appeal, exam_subject: subject }} reviewers={reviewers} response="已核对原卷，过程分需重新评分。" busy={false} onCreated={mocks.created} onLinked={mocks.linked} onWorkingChange={mocks.working} />;
+    await act(async () => root.render(view("math")));
+    expect([...host.querySelectorAll<HTMLOptionElement>("select option")].map(option => option.value)).toEqual(["", "grader"]);
+    await choose();
+    await act(async () => root.render(view("english")));
+    expect([...host.querySelectorAll<HTMLOptionElement>("select option")].map(option => option.value)).toEqual(["", "english"]);
+    await click("创建并关联本次复评");
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("重新处理后使用本轮正式成绩预览和新建，不回到原申请旧版本", async () => {
+    mocks.preview.mockResolvedValue({ preview: { question_id: "question", source_release_id: "latest", affected_count: 1 } });
+    await act(async () => root.render(<QuestionAppealRegradeLaunch appeal={{ ...appeal, review_source_release_id: "latest" }} reviewers={[{ id: "grader", username: "g", display_name: "重评老师", status: "active", roles: ["grader"], teaching_subjects: ["mathematics"] }]} response="本轮复核回复" busy={false} onCreated={mocks.created} onLinked={mocks.linked} onWorkingChange={mocks.working} />));
+    await choose();
+    await click("创建并关联本次复评");
+    expect(mocks.preview).toHaveBeenCalledWith("exam", "question", expect.objectContaining({ source_release_id: "latest" }));
+    expect(mocks.create).toHaveBeenCalledWith("exam", "question", expect.objectContaining({ source_release_id: "latest", selector: { submission_ids: ["submission"] } }));
+  });
 
   it("预览与创建限定同一发布单份答卷，失败重试沿用幂等键并公开后续发布步骤", async () => {
     await render(); await choose();

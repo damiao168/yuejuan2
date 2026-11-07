@@ -1,12 +1,8 @@
 import { useMemo, useState, type ComponentProps } from "react";
-import { Alert, App, Button, Empty, Input, Select, Space } from "antd";
+import { Alert, Button, Empty, Input, Select, Space } from "antd";
 import { RefreshCw, Search } from "lucide-react";
-import { examSubjectLabel } from "../constants/examStatus";
 import {
-  confirmExamGrades,
-  exportExamGrades,
-  finalizeExamGrades,
-  publishExamGrades
+  exportPublishedExamGrades
 } from "../api/scores";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { usePageLoading } from "../components/pageReadiness";
@@ -14,30 +10,29 @@ import { ResponsiveTable } from "../components/ResponsiveTable";
 import { StatusTag } from "../components/StatusTag";
 import type { ProductExperience } from "../router/experience";
 import { routeQueryParam } from "../router/query";
-import { ScoreActionsPanel } from "../features/score-management/components/ScoreActionsPanel";
 import { ScorePublicationChecklist } from "../features/score-management/components/ScorePublicationChecklist";
-import { publicationChecklist } from "../features/score-management/publicationChecklist";
+import { publicationReadiness } from "../features/score-management/publicationChecklist";
 import { QualityPanel } from "../features/score-management/components/QualityPanel";
-import { ScoreReleaseWorkspace } from "../features/score-management/components/ScoreReleaseWorkspace";
-import { ScoreWorkflowModals } from "../features/score-management/components/ScoreWorkflowModals";
+import { ScoreCorrectionDialog } from "../features/score-management/components/ScoreCorrectionDialog";
+import { ScorePublishDialog } from "../features/score-management/components/ScorePublishDialog";
+import { ScoreReleaseHistory } from "../features/score-management/components/ScoreReleaseHistory";
+import { ScoreReleaseStatus } from "../features/score-management/components/ScoreReleaseStatus";
 import { StudentScorePreviewDialog } from "../features/score-management/components/StudentScorePreviewDialog";
 import type { ScoreRelease } from "../api/scoreReleases";
 import { useScoreWorkspaceData } from "../features/score-management/hooks/useScoreWorkspaceData";
 import { useScoreReleaseWorkflow } from "../features/score-management/hooks/useScoreReleaseWorkflow";
-import { useRegradeWorkflow } from "../features/score-management/hooks/useRegradeWorkflow";
-import { useRosterAttendance } from "../features/score-management/hooks/useRosterAttendance";
+import { useExamEducationStage } from "../features/score-management/hooks/useExamEducationStage";
+import { sessionPublicationText, useSessionPublication } from "../features/score-management/hooks/useSessionPublication";
 import { useScoreAction } from "../features/score-management/hooks/useScoreAction";
-import { useStepUp } from "../auth/stepUpContext";
+import { useScoreExport } from "../features/score-management/hooks/useScoreExport";
+import { activeRegradeCount, pendingCorrections, releaseStatusModel, rosterCounts } from "../features/score-management/releaseStatus";
 import { createRosterColumns, createScoreColumns } from "../features/score-management/scoreColumns";
 import {
-  basePublicationLabel,
-  createSummary,
-  portalPublicationLabel,
   qualityCheckStatus,
   rosterReconciliationStatus,
   scoreWorkspacePresentation,
+  scoreExamOptionLabel,
   statusLabels,
-  summaryStatus
 } from "../features/score-management/scorePresentation";
 
 function saveBlob(blob: Blob, filename: string) {
@@ -101,7 +96,7 @@ function ScoreResultsTables({
         <div className="panel-head">
           <div>
             <h2>名册对账</h2>
-            <p>以本场考试关联班级为应考名单；未交卷、身份冲突和缺页未解决时不能发布成绩。</p>
+            <p>按本场冻结名册与已匹配答卷核对；缺考自动计算，身份冲突、缺页和未完成评分仍需处理。</p>
           </div>
           <StatusTag tone={rosterBadge.tone}>
             {rosterBadge.label}
@@ -132,10 +127,10 @@ function ScoreResultsTables({
         {loadingScores ? <LoadingState label="正在读取质量检查" /> : <QualityPanel quality={quality} publishedOrLocked={publishedOrLocked} actionFor={qualityActionFor} />}
       </details>
 
-      <section className="score-table-panel">
+      <section className="score-table-panel score-results-panel" id="score-results" role="group" aria-labelledby="score-results-title" tabIndex={-1}>
         <div className="panel-head">
           <div>
-            <h2>成绩列表</h2>
+            <h2 id="score-results-title">成绩列表</h2>
             <p>
               当前显示 {filteredGrades.length} 条 · 共 {filteredGradeTotal} 条
               {filteredGradeTotal !== gradeTotal ? `（全场 ${gradeTotal} 条）` : ""}
@@ -184,12 +179,13 @@ export function ScoreManagementPage({
   mode,
   canManage,
   canReadStudentNames,
-  canReadAudit,
   onNavigate,
   canHandleCapture = false,
   canHandleReview = false,
   canHandleArbitration = false,
-  initialExamId = ""
+  initialExamId = "",
+  selectionScope,
+  resetUnavailableRememberedSelection = false
 }: Readonly<{
   mode: ProductExperience;
   canManage: boolean;
@@ -200,162 +196,127 @@ export function ScoreManagementPage({
   canHandleReview?: boolean;
   canHandleArbitration?: boolean;
   initialExamId?: string;
+  selectionScope?: string;
+  resetUnavailableRememberedSelection?: boolean;
 }>) {
-  const { message, modal } = App.useApp();
-  const { runWithStepUp } = useStepUp();
-  const workspace = useScoreWorkspaceData({ canManage, canReadAudit, canReadStudentNames, initialExamId });
+  // 本页不再重复展示审计流水，审计记录仍由服务端保存并在统一操作审计页查看。
+  const workspace = useScoreWorkspaceData({ canManage, canReadAudit: false, canReadStudentNames, initialExamId, selectionScope, resetUnavailableRememberedSelection });
   const {
-    exams, selectedExamId, setSelectedExamId, submissions, grades, gradeTotal,
+    exams, selectedExamId, setSelectedExamId, grades,
     allGradesLocked, quality, releaseGate, scoreReleases,
     currentPublishedRelease,
-    regradeJobs, roster, setRoster, identities, auditLogs, loadingExams,
+    regradeJobs, roster, identities, loadingExams,
     loadingScores, error, loadExamList, loadScores, refresh
   } = workspace;
   // 先读取考试目录，再读取自动选中考试的成绩；目录控件的 loading 也属于首屏等待。
   usePageLoading(loadingExams || loadingScores);
-  const [lastWatermark, setLastWatermark] = useState("");
-  const [confirmReason, setConfirmReason] = useState("");
-  const [publishReason, setPublishReason] = useState("");
   const [previewRelease, setPreviewRelease] = useState<{ examId: string; release: ScoreRelease } | null>(null);
   const portalUrl = import.meta.env.VITE_STUDENT_PORTAL_URL?.trim();
-  const { actioning, setActioning, runAction } = useScoreAction({ selectedExamId, loadExamList, loadScores });
+  const { actioning, runAction } = useScoreAction({ selectedExamId, loadExamList, loadScores });
   // 数据重读失败时快照保留用于查看；新读数到来前或已有提交进行中，不能再依据旧门禁提交。
-  const canWrite = canManage && !loadingScores && !error && !actioning;
+  const canWrite = canManage && !loadingExams && !loadingScores && !error && !actioning;
 
   const selectedExam = useMemo(() => exams.find((exam) => exam.id === selectedExamId), [exams, selectedExamId]);
-  const summary = useMemo(() => createSummary(submissions, gradeTotal, quality, roster), [gradeTotal, quality, roster, submissions]);
-  const scoreAuditLogs = useMemo(() => auditLogs.filter((item) => item.action.startsWith("score.")), [auditLogs]);
   const publishedOrLocked = selectedExam?.status === "published" || allGradesLocked;
-  // 版本列表按创建序号排序，较早草稿也可能最后发布；门户生效状态以服务端当前指针为准。
+  // 发布记录按版本号排序，较早草稿也可能最后发布；学生端当前看到哪个版本以服务端“当前版本”指针为准。
   const publishedRelease = currentPublishedRelease ?? undefined;
+  const runExport = useScoreExport({
+    ownerKey: JSON.stringify([selectionScope, initialExamId, selectedExamId, mode, canManage]),
+    enabled: Boolean(canWrite), selectedExamId, runAction,
+    onExport: (result, fallbackFilename) => {
+      saveBlob(result.blob, result.filename ?? fallbackFilename);
+    }
+  });
   const previewStudentLabels = useMemo(() => Object.fromEntries(Object.values(identities.students).map((student) => {
     const className = identities.classes[student.class_id]?.name;
     const classSuffix = className ? ` · ${className}` : "";
     return [student.id, `${student.name} · ${student.student_no}${classSuffix}`];
   })), [identities]);
 
+  const adminView = mode === "admin";
+  const educationStage = useExamEducationStage(selectedExam, adminView && canManage);
   const releaseWorkflow = useScoreReleaseWorkflow({
-    selectedExamId, selectedExam, gradeTotal, releaseGate,
-    currentPublishedRelease: publishedRelease, runAction
+    selectedExamId, selectedExam, currentPublishedRelease: publishedRelease, educationStage, runAction,
+    reload: () => loadScores(selectedExamId),
+    onPreview: release => setPreviewRelease({ examId: selectedExamId, release })
   });
-  const regradeWorkflow = useRegradeWorkflow({
-    canManage, selectedExamId, publishedRelease, grades, runAction, setActioning,
-    onReleaseCreated: release => setPreviewRelease({ examId: selectedExamId, release })
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const readiness = publicationReadiness(quality, releaseGate, roster);
+  const corrections = pendingCorrections(regradeJobs, scoreReleases);
+  const linkedRegradeId = routeQueryParam("regrade");
+  // 从复核申请跳来时优先发布该申请对应的更正；否则按完成先后依次发布。
+  const nextCorrection = corrections.find(item => item.job.id === linkedRegradeId) ?? corrections[0];
+  const statusModel = releaseStatusModel({
+    examId: selectedExamId, loading: loadingExams || loadingScores, error,
+    readiness: readiness.status, blockedGroups: readiness.groups.length,
+    publishedRelease, pendingCorrections: corrections.length
   });
-  const attendanceWorkflow = useRosterAttendance({ selectedExamId, setRoster, runAction });
-  const { openAttendanceEditor } = attendanceWorkflow;
+  const sessionPublication = useSessionPublication(exams, selectedExam, Boolean(publishedRelease), adminView && canManage);
+  const exportBlocked = !publishedRelease || Boolean(sessionPublication?.missingSubjects.length);
+  // “复核与异常”页约定：?regrade=<任务> 定位并高亮该任务，不带值的 ?regrade 只滚动到复评面板。
+  const regradePath = (jobId?: string) => `/exams/${encodeURIComponent(selectedExamId)}/quality?regrade${jobId ? `=${encodeURIComponent(jobId)}` : ""}`;
   const qualityActionFor = (code: string) => {
-    if (!onNavigate || !selectedExamId) return undefined;
+    if (!selectedExamId) return undefined;
+    if (!onNavigate) return undefined;
     const base = `/exams/${encodeURIComponent(selectedExamId)}`;
-    if (["unfinished_review_tasks", "missing_final_grades"].includes(code) && canHandleReview) return { label: "处理阅卷任务", run: () => onNavigate(`${base}/grading`) };
+    if (["unfinished_review_tasks", "missing_final_grades", "missing_submission_grades"].includes(code) && canHandleReview) return { label: "处理阅卷任务", run: () => onNavigate(`${base}/grading`) };
     if (code === "unfinished_arbitration_tasks" && canHandleArbitration) return { label: "处理仲裁任务", run: () => onNavigate(`/arbitration?exam=${encodeURIComponent(selectedExamId)}`) };
-    if (["ocr_failed_unhandled", "missing_pages_unresolved", "unidentified_submission", "missing_submission_unresolved", "no_submission_grades"].includes(code) && canHandleCapture) return { label: "核查答卷与匹配", run: () => onNavigate(`${base}/capture`) };
-    if (code === "grades_not_confirmed") return { label: "定位成绩确认", run: () => { const input = document.getElementById("score-confirm-reason"); input?.scrollIntoView({ block: "nearest" }); input?.focus({ preventScroll: true }); } };
+    if (["ocr_failed_unhandled", "missing_pages_unresolved", "unidentified_submission", "missing_submission_unresolved"].includes(code) && canHandleCapture) return { label: "核查答卷与匹配", run: () => onNavigate(`${base}/capture`) };
     return undefined;
   };
   const publicationActionFor = (code: string, route?: string) => {
+    if (["score_integrity_mismatch", "release_snapshot_incomplete"].includes(code) && onNavigate && canHandleReview) return { label: "核查阅卷结果", run: () => onNavigate(`/exams/${encodeURIComponent(selectedExamId)}/grading`) };
     const knownAction = qualityActionFor(code);
     if (knownAction) return knownAction;
-    if (route === "regrade") return { label: "查看复评任务", run: () => document.getElementById("score-regrade-tasks")?.scrollIntoView({ block: "start", behavior: "smooth" }) };
-    if (route === "roster") return { label: "核对名册", run: () => { const details = document.getElementById("score-roster-details") as HTMLDetailsElement | null; if (details) { details.open = true; details.scrollIntoView({ block: "start" }); } } };
-    if (onNavigate && selectedExamId && ["quality", "questions"].includes(route ?? "")) return { label: route === "quality" ? "查看质量问题" : "配置题目", run: () => onNavigate(`/exams/${encodeURIComponent(selectedExamId)}/${route}`) };
-    if (["no_submission_grades", "question_coverage_incomplete", "score_integrity_mismatch", "release_snapshot_incomplete"].includes(code)) return { label: "定位成绩汇总", run: () => document.getElementById("score-preparation")?.scrollIntoView({ block: "start" }) };
+    // 复评任务在“复核与异常”页处理；已完成待发布的更正就在本页发布。
+    if (route === "regrade" && nextCorrection) return { label: "发布更正", run: () => releaseWorkflow.openCorrection(nextCorrection) };
+    if (route === "regrade" && onNavigate && selectedExamId) return { label: "查看复评任务", run: () => onNavigate(regradePath()) };
+    if (route === "roster" && onNavigate && canHandleCapture) return { label: "核对学生答卷", run: () => onNavigate(`/exams/${encodeURIComponent(selectedExamId)}/capture`) };
+    // 结束答卷导入等收卷环节的新检查都带 capture 路由；统一进入答卷与匹配页，不显示“请联系管理员”。
+    if (route === "capture" && onNavigate && canHandleCapture) return { label: "核查答卷与匹配", run: () => onNavigate(`/exams/${encodeURIComponent(selectedExamId)}/capture`) };
+    if (onNavigate && selectedExamId && (route === "questions" || code === "quality_questions_missing")) return { label: "查看本场考试小题", run: () => onNavigate(`/exams/${encodeURIComponent(selectedExamId)}/questions`) };
+    if (onNavigate && selectedExamId && route === "quality") return { label: "查看质量问题", run: () => onNavigate(`/exams/${encodeURIComponent(selectedExamId)}/quality`) };
     return undefined;
   };
 
-  const finalize = () =>
-    runAction(
-      "finalize",
-      async () => {
-        if (!selectedExamId) {
-          throw new Error("请先选择考试");
-        }
-        await finalizeExamGrades(selectedExamId);
-      },
-      "最终成绩已汇总"
-    );
-
-  const confirmGrades = () =>
-    runAction(
-      "confirm",
-      async () => {
-        if (!selectedExamId) {
-          throw new Error("请先选择考试");
-        }
-        if (!confirmReason.trim()) {
-          throw new Error("请填写确认原因");
-        }
-        await confirmExamGrades(selectedExamId, confirmReason.trim());
-      },
-      "成绩已确认"
-    );
-
-  const publish = () => {
-    if (!selectedExamId) {
-      message.error("请先选择考试");
-      return;
-    }
-    if (!quality?.can_publish) {
-      message.error("发布前质量检查未通过");
-      return;
-    }
-    if (!publishReason.trim()) {
-      message.error("请填写发布原因");
-      return;
-    }
-    modal.confirm({
-      title: "确认发布成绩",
-      content: `将《${selectedExam?.name ?? "未选择考试"}》共 ${gradeTotal} 份基础成绩公开并锁定，学校原有的考试成绩查询入口将可读取这些记录。学生门户的成绩版本需单独发布；如需更正，请使用申诉或复评流程。确定继续吗？`,
-      okText: "公开并锁定",
-      cancelText: "取消",
-      onOk: () =>
-        runAction(
-          "publish",
-          async () => {
-            // 正式发布前必须再次通过校验；用户取消校验只是结束当前操作，不应被当成发布失败。
-            await runWithStepUp({
-              reason: "正式发布成绩",
-              action: () => publishExamGrades(selectedExamId, publishReason.trim())
-            });
-            await loadExamList();
-          },
-          "基础成绩已公开并锁定"
-        )
-    });
+  const exportOfficialGrades = () => {
+    if (!selectedExamId) return;
+    // 按钮只提示当前学科是否已发布；同场其他学科及固定版本由服务端在同一快照再次核验。
+    void runExport("export-official", exportPublishedExamGrades, "教师成绩表已导出，班级平均分在每张表最下面", `exam-${selectedExamId}-teacher-scores.xlsx`);
   };
 
-  const exportGrades = () => {
-    if (!selectedExamId) {
-      message.error("请先选择考试");
-      return;
-    }
-    void runAction(
-          "export",
-          async () => {
-            const result = await exportExamGrades(selectedExamId);
-            setLastWatermark(result.watermark ?? "");
-            saveBlob(result.blob, result.filename ?? `exam-${selectedExamId}-grades.csv`);
-          },
-          "成绩已导出"
-        );
-  };
-
-  const rosterColumns = createRosterColumns({ canWrite: Boolean(canWrite), publishedOrLocked, openAttendanceEditor, canOpenSubmission: entry => entry.resolution_code === "grading_incomplete" ? canHandleReview && Boolean(entry.submission_id) : canHandleCapture, openSubmission: onNavigate && (canHandleCapture || canHandleReview) ? entry => {
+  const rosterColumns = createRosterColumns({ canOpenSubmission: entry => entry.resolution_code === "grading_incomplete" ? canHandleReview && Boolean(entry.submission_id) : canHandleCapture, openSubmission: onNavigate && (canHandleCapture || canHandleReview) ? entry => {
     const base = `/exams/${encodeURIComponent(selectedExamId)}`;
     if (entry.resolution_code === "grading_incomplete" && canHandleReview && entry.submission_id) onNavigate(`${base}/grading?q=${encodeURIComponent(entry.submission_id)}`);
     else if (canHandleCapture) onNavigate(`${base}/capture?submission=${encodeURIComponent(entry.submission_id ?? "")}&student=${encodeURIComponent(entry.student_id ?? "")}`);
   } : undefined });
-  const columns = createScoreColumns({ canReadStudentNames, identities });
-  const publicationState = {
-    examId: selectedExamId, loadingExams, loadingScores, error,
-    examStatus: selectedExam?.status, releaseVersion: publishedRelease?.version
-  };
-  const summaryBadge = summaryStatus(mode, selectedExam?.status, publishedOrLocked, summary.canPublish);
+  // 旧的“公开并锁定”入口已移除，新考试不会再出现锁定成绩；只有确有锁定记录时才显示锁定列。
+  const columns = createScoreColumns({ canReadStudentNames, identities, showLock: allGradesLocked || grades.some(grade => grade.locked) });
   const qualityBadge = qualityCheckStatus(quality);
   const rosterBadge = rosterReconciliationStatus(roster?.summary.unresolved ?? 0);
   const presentation = scoreWorkspacePresentation(mode);
   const linkedAppealId = routeQueryParam("appeal");
-  const linkedRegradeId = routeQueryParam("regrade");
+  const linkedRegrade = regradeJobs.find(job => job.id === linkedRegradeId);
+  const activeRegrades = activeRegradeCount(regradeJobs);
+
+  const runPrimary = () => {
+    const primary = statusModel.primary;
+    if (primary?.kind === "locate") {
+      const target = document.getElementById("score-publication-checklist");
+      target?.scrollIntoView({ block: "start", behavior: "smooth" });
+      target?.focus({ preventScroll: true });
+    } else if (primary?.kind === "publish") releaseWorkflow.openPublish();
+    else if (primary?.kind === "correction" && nextCorrection) releaseWorkflow.openCorrection(nextCorrection);
+    else if (primary?.kind === "export") exportOfficialGrades();
+  };
+
+  // 复核申请跳转来的提示：更正已可发布时引导发布；复评仍在进行时引导到复评所在页面。
+  const linkedCorrectionPending = Boolean(linkedRegradeId && corrections.some(item => item.job.id === linkedRegradeId));
+  const appealNotice = linkedCorrectionPending
+    ? "本次申请的复评已完成，点上方「发布更正」后返回原申请公布结果。"
+    : linkedRegrade && linkedRegrade.status !== "ready_for_release"
+      ? "本次申请的复评仍在进行，请在“复核与异常”页继续处理。"
+      : "正在处理复核申请，发布完成后返回原申请公布结果。";
 
   const statusOptions = useMemo(() => {
     const statuses = Array.from(new Set(grades.map((grade) => grade.status)));
@@ -369,7 +330,7 @@ export function ScoreManagementPage({
           <Space>
             <h1>{presentation.title}</h1>
           </Space>
-          <p>{presentation.description}</p>
+          {mode !== "admin" ? <p>{presentation.description}</p> : null}
         </div>
         <Space wrap>
           <Select
@@ -378,7 +339,7 @@ export function ScoreManagementPage({
             disabled={Boolean(actioning)}
             value={selectedExamId || undefined}
             placeholder="选择考试"
-            options={exams.map((exam) => ({ label: `${exam.name} · ${examSubjectLabel(exam.subject)}`, value: exam.id }))}
+            options={exams.map((exam) => ({ label: scoreExamOptionLabel(exam), value: exam.id }))}
             onChange={setSelectedExamId}
           />
           <Button icon={<RefreshCw size={16} />} onClick={() => void refresh()} loading={loadingExams || loadingScores}>
@@ -389,69 +350,22 @@ export function ScoreManagementPage({
 
       <ScoreWorkspaceNotices identityError={identities.error} error={error} onRetry={() => void refresh()} />
 
-      <section className="score-summary-strip">
-        <div>
-          <span>应考人数</span>
-          <strong>{summary.expectedStudents}</strong>
-        </div>
-        <div>
-          <span>实收答卷</span>
-          <strong>{summary.receivedSubmissions}</strong>
-        </div>
-        <div>
-          <span>已生成成绩</span>
-          <strong>{summary.completedGrades}</strong>
-        </div>
-        <div>
-          <span>已确认缺考</span>
-          <strong>{summary.absentStudents}</strong>
-        </div>
-        {mode !== "admin" ? <div>
-          <span>名册未解决</span>
-          <strong>{summary.unresolvedRoster}</strong>
-        </div> : null}
-        {mode !== "admin" ? <div>
-          <span>流程待办</span>
-          <strong>{summary.unfinishedReviews + summary.pendingArbitrations + summary.ocrFailures}</strong>
-        </div> : null}
-        {mode !== "admin" ? <div>
-          <span>{presentation.summaryTitle}</span>
-          <StatusTag tone={summaryBadge.tone}>{summaryBadge.label}</StatusTag>
-        </div> : null}
-      </section>
-
       <section className={presentation.workspaceClass}>
-        {mode === "admin" ? <section className="score-publication-task" aria-label="成绩发布任务">
-          <div className="panel-head"><h2>成绩发布</h2><strong>{portalPublicationLabel(publicationState)}</strong></div>
+        {adminView ? <section className="score-publication-task" aria-label="成绩发布任务">
+          <ScoreReleaseStatus
+            model={statusModel} canWrite={Boolean(canWrite)} actioning={actioning}
+            onPrimary={runPrimary} onExport={exportOfficialGrades} exportBlocked={exportBlocked}
+            roster={roster} rosterColumns={rosterColumns} sessionText={sessionPublicationText(sessionPublication)}
+            activeRegrades={activeRegrades} onOpenRegrades={onNavigate && selectedExamId ? () => onNavigate(regradePath(regradeJobs.find(job => job.status !== "ready_for_release" && job.status !== "cancelled")?.id)) : undefined}
+            historyCount={scoreReleases.length} onOpenHistory={() => setHistoryOpen(true)}
+          />
           <ScorePublicationChecklist quality={quality} gate={releaseGate} roster={roster} actionFor={publicationActionFor} />
-          {linkedAppealId && onNavigate ? <Alert type="info" showIcon message={regradeJobs.some(job => job.id === linkedRegradeId) ? "本次申请的复评已定位，按任务当前状态继续处理。" : "正在处理复核申请，发布完成后返回原申请公布结果。"} action={<Button disabled={Boolean(actioning)} onClick={() => onNavigate(`/exams/${encodeURIComponent(selectedExamId)}/appeals?appeal=${encodeURIComponent(linkedAppealId)}`)}>返回原复核申请</Button>} /> : null}
-          <div id="score-preparation"><ScoreActionsPanel
-            publishedOrLocked={publishedOrLocked} canWrite={Boolean(canWrite)} selectedExamId={selectedExamId}
-            gradeTotal={gradeTotal} quality={quality} actioning={actioning}
-            confirmReason={confirmReason} publishReason={publishReason}
-            setConfirmReason={setConfirmReason} setPublishReason={setPublishReason}
-            finalize={finalize} confirmGrades={confirmGrades} publish={publish} exportGrades={exportGrades}
-            lastWatermark={lastWatermark} canReadAudit={canReadAudit} scoreAuditLogs={scoreAuditLogs}
-            legacyPublicationLabel={basePublicationLabel(publicationState)}
-          /></div>
-          <ScoreReleaseWorkspace
-          canWrite={canWrite}
-          selectedExamId={selectedExamId}
-          gradeTotal={gradeTotal}
-          releaseGate={releaseGate}
-          scoreReleases={scoreReleases}
-          regradeJobs={regradeJobs}
-          publishedRelease={publishedRelease}
-          actioning={actioning}
-          releaseWorkflow={releaseWorkflow}
-          regradeWorkflow={regradeWorkflow}
-          onPreviewRelease={(release) => setPreviewRelease({ examId: selectedExamId, release })}
-          portalUrl={portalUrl}
-          showGateDetails={false}
-          canPublish={publicationChecklist(quality, releaseGate, roster).passed}
-          focusedRegradeId={linkedRegradeId}
-        /></section> : null}
-        <ScoreResultsTables
+          {linkedAppealId && onNavigate ? <Alert type="info" showIcon message={appealNotice} action={<Space wrap>
+            {linkedRegrade && linkedRegrade.status !== "ready_for_release" ? <Button onClick={() => onNavigate(regradePath(linkedRegrade.id))}>前往复评</Button> : null}
+            <Button disabled={Boolean(actioning)} onClick={() => onNavigate(`/exams/${encodeURIComponent(selectedExamId)}/appeals?appeal=${encodeURIComponent(linkedAppealId)}`)}>返回原复核申请</Button>
+          </Space>} /> : null}
+        </section> : null}
+        {mode !== "admin" ? <ScoreResultsTables
           data={workspace}
           rosterColumns={rosterColumns}
           columns={columns}
@@ -462,20 +376,24 @@ export function ScoreManagementPage({
           publishedOrLocked={publishedOrLocked}
           qualityActionFor={qualityActionFor}
           statusOptions={statusOptions}
-          compactChecks={mode === "admin"}
-        />
+        /> : null}
       </section>
 
-      <ScoreWorkflowModals
-        selectedExam={selectedExam}
-        gradeTotal={gradeTotal}
-        publishedReleaseExists={Boolean(publishedRelease)}
-        actioning={actioning}
-        attendanceWorkflow={attendanceWorkflow}
-        releaseWorkflow={releaseWorkflow}
-        regradeWorkflow={regradeWorkflow}
-      />
-      {mode === "admin" && previewRelease?.examId === selectedExamId ? <StudentScorePreviewDialog key={`${selectedExamId}:${previewRelease.release.id}`} release={previewRelease.release} currentVersion={publishedRelease?.version} portalUrl={portalUrl} studentLabels={previewStudentLabels} onClose={() => setPreviewRelease(null)} /> : null}
+      {adminView ? <>
+        <ScorePublishDialog
+          workflow={releaseWorkflow} exam={selectedExam} counts={rosterCounts(roster)} educationStage={educationStage}
+          actioning={actioning} canWrite={Boolean(canWrite)} absentees={(roster?.entries ?? []).filter(entry => entry.status === "absent")}
+        />
+        <ScoreCorrectionDialog workflow={releaseWorkflow} currentRelease={publishedRelease} remaining={corrections.length} actioning={actioning} canWrite={Boolean(canWrite)} />
+        <ScoreReleaseHistory
+          open={historyOpen} onClose={() => setHistoryOpen(false)} releases={scoreReleases} currentRelease={publishedRelease}
+          canWrite={Boolean(canWrite)} canPublish={readiness.status === "ready"} actioning={actioning}
+          onPreview={(release) => setPreviewRelease({ examId: selectedExamId, release })}
+          onPublish={releaseWorkflow.publishRelease} onRevokePaper={releaseWorkflow.revokeSharedPaper}
+          onRepublish={() => { setHistoryOpen(false); releaseWorkflow.openPublish(); }}
+        />
+      </> : null}
+      {adminView && previewRelease?.examId === selectedExamId ? <StudentScorePreviewDialog key={`${selectedExamId}:${previewRelease.release.id}`} release={previewRelease.release} currentVersion={publishedRelease?.version} portalUrl={portalUrl} studentLabels={previewStudentLabels} onClose={() => setPreviewRelease(null)} /> : null}
     </div>
   );
 }

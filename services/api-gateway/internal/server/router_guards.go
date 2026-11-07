@@ -47,6 +47,7 @@ type routerGuards struct {
 	requireSegmentEvidenceRead      func(http.HandlerFunc) http.Handler
 	requireOrchestratorManage       func(http.HandlerFunc) http.Handler
 	requireGradingManage            func(http.HandlerFunc) http.Handler
+	requireGradingAIPlanManage      func(http.HandlerFunc) http.Handler
 	requireEvidenceManage           func(http.HandlerFunc) http.Handler
 	requireReviewManage             func(http.HandlerFunc) http.Handler
 	requireReviewWork               func(http.HandlerFunc) http.Handler
@@ -210,11 +211,15 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 	requireGradingManage := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission(permissionGradingManage)(idempotent(handler)))
 	}
+	requireGradingAIPlanManage := func(handler http.HandlerFunc) http.Handler {
+		// AI 评分计划是整校管理配置，读取也要求管理学校；普通教学和本人任务读取沿用各自守卫。
+		return requireAuth(auth.RequireManagedRequestResourceBoundary(resourceResolver)(auth.RequirePermission(permissionGradingManage)(idempotent(handler))))
+	}
 	requireEvidenceManage := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission(permissionEvidenceManage)(idempotent(handler)))
 	}
 	requireReviewManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission(permissionReviewManage)(idempotent(handler)))
+		return requireAuth(auth.RequireManagedRequestResourceBoundary(resourceResolver)(auth.RequirePermission(permissionReviewManage)(idempotent(handler))))
 	}
 	requireReviewWork := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequireAnyPermission(permissionReviewManage, permissionReviewWork)(idempotent(handler)))
@@ -225,13 +230,13 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		))
 	}
 	requireArbitrationManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission(permissionArbitrationManage)(idempotent(handler)))
+		return requireAuth(auth.RequireManagedRequestResourceBoundary(resourceResolver)(auth.RequirePermission(permissionArbitrationManage)(idempotent(handler))))
 	}
 	requireArbitrationWork := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequireAnyPermission(permissionArbitrationManage, "arbitration:work")(idempotent(handler)))
 	}
 	requireScoreManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission(permissionScoreManage)(idempotent(handler)))
+		return requireAuth(auth.RequireManagedRequestResourceBoundary(resourceResolver)(auth.RequirePermission(permissionScoreManage)(idempotent(handler))))
 	}
 	requireRosterManage := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequireAnyRole("platform_admin", "tenant_admin", "school_admin")(
@@ -248,13 +253,21 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		return requireAuth(auth.RequirePermission("appeal:read")(idempotent(handler)))
 	}
 	requireAppealManage := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequirePermission("appeal:manage")(idempotent(handler)))
+		return requireAuth(auth.RequireManagedRequestResourceBoundary(resourceResolver)(auth.RequirePermission("appeal:manage")(idempotent(handler))))
 	}
 	requireAppealWork := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("appeal:work")(idempotent(handler)))
 	}
 	requireQuestionAppealRead := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequireAnyPermission("student:grade:read", "appeal:read", "appeal:work", "appeal:manage")(idempotent(handler)))
+		guarded := auth.RequireAnyPermission("student:grade:read", "appeal:read", "appeal:work", "appeal:manage")(idempotent(handler))
+		return requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, _ := auth.UserFromContext(r.Context())
+			if auth.HasPermission(user, "appeal:manage") {
+				auth.RequireManagedRequestResourceBoundary(resourceResolver)(guarded).ServeHTTP(w, r)
+				return
+			}
+			guarded.ServeHTTP(w, r)
+		}))
 	}
 	requireAuditRead := func(handler http.HandlerFunc) http.Handler {
 		return requireAuth(auth.RequirePermission("audit:read")(idempotent(handler)))
@@ -317,14 +330,14 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 	}
 	// worker 写接口只接受具备 OCR 或编排权限的服务身份，具体任务的租户、来源和租约仍由 withWorkerTask* 再核验。
 	requireWorkerExecute := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequireAnyPermission(permissionOCRManage, permissionOrchestratorManage)(idempotent(handler)))
+		return authenticate(auth.RequireServiceUser(auth.RequireAnyPermission(permissionOCRManage, permissionOrchestratorManage)(idempotent(handler))))
 	}
 	requireWorkerCompletion := func(handler http.HandlerFunc) http.Handler {
 		// 完成回调由 completion scope 在租约校验后包装收据，不能在这里提前重放。
-		return requireAuth(auth.RequireAnyPermission(permissionOCRManage, permissionOrchestratorManage)(handler))
+		return authenticate(auth.RequireServiceUser(auth.RequireAnyPermission(permissionOCRManage, permissionOrchestratorManage)(handler)))
 	}
 	requireWorkerRead := func(handler http.HandlerFunc) http.Handler {
-		return requireAuth(auth.RequireAnyPermission(permissionOCRManage, permissionOrchestratorManage, permissionSystemRead)(idempotent(handler)))
+		return authenticate(auth.RequireServiceUser(auth.RequireAnyPermission(permissionOCRManage, permissionOrchestratorManage, permissionSystemRead)(idempotent(handler))))
 	}
 	withScopedExam := func(handler http.HandlerFunc) http.HandlerFunc {
 		return handler
@@ -375,6 +388,7 @@ func buildRouterGuards(cfg config.Config, modules ApplicationModules) routerGuar
 		requireSegmentEvidenceRead:      requireSegmentEvidenceRead,
 		requireOrchestratorManage:       requireOrchestratorManage,
 		requireGradingManage:            requireGradingManage,
+		requireGradingAIPlanManage:      requireGradingAIPlanManage,
 		requireEvidenceManage:           requireEvidenceManage,
 		requireReviewManage:             requireReviewManage,
 		requireReviewWork:               requireReviewWork,

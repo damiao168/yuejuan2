@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { App, Button, Form, Input, List, Popconfirm, Tag } from "antd";
 import { ChevronDown, ChevronUp, KeyRound, LogOut, RefreshCw, ShieldCheck, Smartphone } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
 import { changePassword, listSecurityEvents, listSessions, logoutAll, revokeSession, type DeviceSession, type SecurityEvent } from "../api/auth";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { newPasswordValidator } from "../auth/loginSecurity";
-import { PersonalReviewBookmarkCleanup } from "../features/grading/workbench/components/PersonalReviewBookmarkCleanup";
 
 interface PasswordFormValues {
   currentPassword: string;
@@ -36,7 +35,7 @@ function securityEventLabel(type: string) {
   return labels[type] ?? "账户安全状态已更新";
 }
 
-export function SessionManagementPage({ onLoggedOut, minimumPasswordLength = 8 }: Readonly<{ onLoggedOut: () => void; minimumPasswordLength?: number }>) {
+export function SessionManagementPage({ onLoggedOut, minimumPasswordLength = 8, embedded = false, refreshVersion = 0 }: Readonly<{ onLoggedOut: () => void; minimumPasswordLength?: number; embedded?: boolean; refreshVersion?: number }>) {
   const { message } = App.useApp();
   const [form] = Form.useForm<PasswordFormValues>();
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
@@ -45,22 +44,30 @@ export function SessionManagementPage({ onLoggedOut, minimumPasswordLength = 8 }
   const [error, setError] = useState<string>();
   const [actioning, setActioning] = useState<string>();
   const [activityExpanded, setActivityExpanded] = useState(false);
+  const requestVersion = useRef(0);
 
   const load = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError(undefined);
     try {
       const [sessionResponse, eventResponse] = await Promise.all([listSessions(), listSecurityEvents()]);
+      if (version !== requestVersion.current) return;
       setSessions(sessionResponse.sessions);
       setEvents(eventResponse.events);
     } catch (loadError) {
-      setError(getUserErrorMessage(loadError, "登录设备加载失败"));
+      if (version === requestVersion.current) setError(getUserErrorMessage(loadError, "登录设备加载失败"));
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshVersion由合并页递增，明确用于触发安全区域重新读取。
+  useEffect(() => {
+    // 合并页统一刷新时，较早的设备读取不能覆盖新结果；离页后也不再更新旧账号状态。
+    void load();
+    return () => { requestVersion.current++; };
+  }, [load, refreshVersion]);
 
   const securityActivity = useMemo(() => [
     ...sessions.map((session) => ({ id: `session:${session.id}`, kind: "session" as const, occurredAt: session.last_seen_at, session })),
@@ -115,23 +122,18 @@ export function SessionManagementPage({ onLoggedOut, minimumPasswordLength = 8 }
 
   return (
     <div className="page-stack session-management-page">
-      <section className="page-heading">
+      {!embedded ? <section className="page-heading">
         <div>
           <h1>账户安全</h1>
           <p>管理登录方式、设备和最近安全活动。浏览器只保存安全会话，不保存你的密码。</p>
         </div>
         <Button icon={<RefreshCw size={16} />} loading={loading} onClick={() => void load()}>刷新</Button>
-      </section>
-
-
-
-      <PersonalReviewBookmarkCleanup />
-
+      </section> : null}
       <section className="workspace-section">
         <div className="section-heading compact">
           <div>
             <h2>登录与恢复方式</h2>
-            <p>密码由你本人维护；学校管理员只能生成一次性恢复链接，无法查看或设置你的最终密码。</p>
+            <p>使用本人密码登录；忘记密码时，请联系管理员协助恢复账号。</p>
           </div>
         </div>
         <div className="account-security-methods">

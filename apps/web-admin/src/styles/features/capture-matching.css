@@ -18,7 +18,10 @@
 .matching-submissions .capture-batch-row { border-radius: 0; }
 .matching-evidence h3,
 .matching-candidates h3 { margin: 0 0 16px; font-size: var(--eg-font-reading); }
-.matching-page-row { display: grid; grid-template-columns: 1fr 80px auto; gap: 8px; align-items: center; margin-bottom: 10px; }
+.matching-page-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.matching-page-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.matching-page-confirmation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; }
+.matching-page-confirmation .ant-input-number { width: 112px; }
 .matching-evidence-note,
 .matching-confirmed { display: flex; gap: 8px; align-items: flex-start; margin-top: 18px; color: var(--text-muted); line-height: 1.5; }
 .matching-candidates { display: flex; flex-direction: column; gap: 16px; }

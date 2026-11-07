@@ -7,18 +7,18 @@ import { createRouteRegistry, examWorkspaceSections, routeFromPath } from "./rou
 
 type HumanRole = "platform_admin" | "tenant_admin" | "school_admin" | "teacher" | "grader" | "arbitrator" | "auditor" | "student";
 const allExperiences: ProductExperience[] = ["admin", "teacher", "auditor", "student"];
-const schoolPages = ["/question-bank", "/dashboard", "/account/sessions", "/exams", "/exams/new", "/papers", "/capture", "/grading", "/arbitration", "/scores", "/reports", "/appeals", "/members/students", "/members/classes", "/members/teachers", "/organization/setup", "/grading/subjective-batches", "/audit"];
+const schoolPages = ["/question-bank", "/dashboard", "/account/profile", "/account/sessions", "/exams", "/exams/new", "/papers", "/capture", "/grading", "/arbitration", "/scores", "/reports", "/appeals", "/members/students", "/members/classes", "/members/teachers", "/organization/setup", "/grading/subjective-batches", "/audit"];
 
 // 逐角色的期望独立于路由注册表：路径迁移不能把“平台有业务权限”误当作学校页面访问权。
 const allowedPages: Record<HumanRole, readonly string[]> = {
-  platform_admin: ["/dashboard", "/account/sessions", "/platform/getting-started", "/platform/schools", "/platform/model-config", "/system/models", "/system/status", "/audit"],
+  platform_admin: ["/dashboard", "/account/profile", "/account/sessions", "/platform/getting-started", "/platform/schools", "/platform/model-config", "/system/models", "/system/status", "/audit"],
   tenant_admin: schoolPages,
   school_admin: [...schoolPages, "/ai-chat"],
-  teacher: ["/question-bank", "/dashboard", "/account/sessions", "/grading", "/reports", "/appeals"],
-  grader: ["/dashboard", "/account/sessions", "/grading"],
-  arbitrator: ["/dashboard", "/account/sessions", "/arbitration"],
-  auditor: ["/dashboard", "/account/sessions", "/audit"],
-  student: ["/dashboard", "/account/sessions"]
+  teacher: ["/question-bank", "/dashboard", "/account/profile", "/account/sessions", "/grading", "/reports", "/appeals"],
+  grader: ["/dashboard", "/account/profile", "/account/sessions", "/grading"],
+  arbitrator: ["/dashboard", "/account/profile", "/account/sessions", "/arbitration"],
+  auditor: ["/dashboard", "/account/profile", "/account/sessions", "/audit"],
+  student: ["/dashboard", "/account/profile", "/account/sessions"]
 };
 
 function session(roles: HumanRole[]): SessionUser {

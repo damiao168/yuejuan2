@@ -90,14 +90,14 @@ func (s *MemoryStore) OnboardingReadiness(_ context.Context, tenantID string, sc
 func (s *MemoryStore) hasActiveTeachingStructureLocked(tenantID string, allowsSchool func(string) bool) bool {
 	hasGrade := false
 	for _, grade := range s.grades {
-		if grade.TenantID == tenantID && grade.Status == "active" && allowsSchool(grade.SchoolID) {
+		if !s.deletedGrades[grade.ID] && grade.TenantID == tenantID && grade.Status == "active" && allowsSchool(grade.SchoolID) {
 			hasGrade = true
 			break
 		}
 	}
 	hasClass := false
 	for _, class := range s.classes {
-		if class.TenantID == tenantID && class.Status == "active" && allowsSchool(class.SchoolID) {
+		if !s.deletedClasses[class.ID] && class.TenantID == tenantID && class.Status == "active" && allowsSchool(class.SchoolID) {
 			hasClass = true
 			break
 		}

@@ -2,18 +2,21 @@ package server
 
 import (
 	"net/http"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 // OCR 和编排写回接口必须同时验证任务来源与租约；分段证据读取另用角色和权限组合，允许复核人员查看而不授予处理写权。
 func registerProcessingRoutes(mux *http.ServeMux, ctx routerContext) {
 	mux.Handle("POST /api/v1/submissions/{id}/ocr-tasks", ctx.guards.requireOCRManage(ctx.modules.Capture.OCRHandler.CreateTask))
 	mux.Handle("GET /api/v1/submissions/{id}/ocr-tasks", ctx.guards.requireOCRManage(ctx.modules.Capture.OCRHandler.ListBySubmission))
-	mux.Handle("GET /api/v1/ocr-tasks/pending", ctx.guards.requireOCRManage(ctx.modules.Capture.OCRHandler.ListPending))
+	mux.Handle("GET /api/v1/ocr-tasks/pending", ctx.guards.requireWorkerExecute(auth.RequireAnyRole("page_processing_worker")(http.HandlerFunc(ctx.modules.Capture.OCRHandler.ListPending)).ServeHTTP))
 	mux.Handle("GET /api/v1/ocr-tasks/{id}", ctx.guards.requireOCRManage(ctx.modules.Capture.OCRHandler.GetTask))
-	mux.Handle("GET /api/v1/ocr-tasks/{id}/input", ctx.guards.requireOCRManage(ctx.guards.withWorkerTaskSource("ocr_task", "id", ctx.modules.Capture.OCRHandler.GetTaskInput)))
-	mux.Handle("POST /api/v1/ocr-tasks/{id}/start", ctx.guards.requireOCRManage(ctx.guards.withWorkerTaskSource("ocr_task", "id", ctx.modules.Capture.OCRHandler.StartTask)))
-	mux.Handle("POST /api/v1/ocr-tasks/{id}/results", ctx.guards.requireOCRManage(ctx.guards.withWorkerTaskSource("ocr_task", "id", ctx.modules.Capture.OCRHandler.CompleteTask)))
-	mux.Handle("POST /api/v1/ocr-tasks/{id}/fail", ctx.guards.requireOCRManage(ctx.guards.withWorkerTaskSource("ocr_task", "id", ctx.modules.Capture.OCRHandler.FailTask)))
+	mux.Handle("GET /api/v1/ocr-tasks/{id}/input", ctx.guards.requireWorkerExecute(ctx.guards.withWorkerTaskSource("ocr_task", "id", ctx.modules.Capture.OCRHandler.GetTaskInput)))
+	mux.Handle("POST /api/v1/ocr-tasks/{id}/start", ctx.guards.requireWorkerExecute(ctx.guards.withWorkerTaskSource("ocr_task", "id", ctx.modules.Capture.OCRHandler.StartTask)))
+	// 成功回调的原租约只能进入严格结果重放；读取、启动和失败仍要求活动租约。
+	mux.Handle("POST /api/v1/ocr-tasks/{id}/results", ctx.guards.requireWorkerCompletion(ctx.guards.withWorkerTaskCompletionSource("ocr_task", "id", ctx.modules.Capture.OCRHandler.CompleteTask)))
+	mux.Handle("POST /api/v1/ocr-tasks/{id}/fail", ctx.guards.requireWorkerExecute(ctx.guards.withWorkerTaskSource("ocr_task", "id", ctx.modules.Capture.OCRHandler.FailTask)))
 
 	mux.Handle("POST /api/v1/submissions/{id}/segment-answers", ctx.guards.requireSegmentManage(ctx.modules.Exam.SegmentHandler.Generate))
 	mux.Handle("GET /api/v1/submissions/{id}/answer-segments", ctx.guards.requireSegmentManage(ctx.modules.Exam.SegmentHandler.ListBySubmission))

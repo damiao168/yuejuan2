@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-SOURCE = Path(__file__).with_name("generate-fujian-2024-math-simulation.py")
+SOURCE = Path(__file__).with_name("fujian_math_simulation_render.py")
 WIDTH = 1654
 HEIGHT = 2339
 TRACE_CHOICE_ID = "Q4"

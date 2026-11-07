@@ -23,7 +23,7 @@ func TestManagedRoleAssignmentPolicy(t *testing.T) {
 func TestCanonicalHumanAndServiceScopes(t *testing.T) {
 	want := map[string]string{
 		"platform_admin": "platform", "tenant_admin": "tenant", "school_admin": "school",
-		"teacher": "class", "grader": "exam_task", "arbitrator": "exam_task",
+		"teacher": "exam_task", "grader": "exam_task", "arbitrator": "exam_task",
 		"student": "self", "auditor": "tenant", "page_processing_worker": "service",
 	}
 	for role, scope := range want {

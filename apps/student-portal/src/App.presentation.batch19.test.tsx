@@ -37,7 +37,7 @@ describe("student appeal presentation boundaries", () => {
     const pending = deferredResponse();
     installApi((call) => call.init.method === "POST" ? pending.promise : resultRoute(call, makeResult()));
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: "请核对原卷第二步已经写出的计算过程。" } });
     await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "提交复核申请" }));
@@ -49,7 +49,7 @@ describe("student appeal presentation boundaries", () => {
     expect(screen.queryByText("正在提交复核申请，请等待回执后再切换题目或离开。")).toBeNull();
     fireEvent.click(await screen.findByRole("button", { name: "重新登录" }));
     expectNativeStatus(await screen.findByText("请重新登录。未提交的复核草稿会在同一账号登录后恢复。"));
-    expect(screen.getByRole("heading", { name: "查看已发布成绩" })).toBeTruthy();
+    expect(screen.getByText("正在前往登录…")).toBeTruthy();
   });
 
   it("keeps the existing-appeal loading output and submission guard until the check resolves", async () => {

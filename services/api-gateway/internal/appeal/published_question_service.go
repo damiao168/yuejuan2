@@ -115,6 +115,10 @@ func normalizePublishedQuestionAppealCreate(input CreatePublishedQuestionAppealI
 	input.ReasonCode = strings.TrimSpace(input.ReasonCode)
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.SelectedRegion = cloneMap(input.SelectedRegion)
+	// 未选择局部作答区域也是有效申诉；数据库要求对象，不能把省略的可选字段编码成 JSON null。
+	if input.SelectedRegion == nil {
+		input.SelectedRegion = map[string]any{}
+	}
 	return input
 }
 

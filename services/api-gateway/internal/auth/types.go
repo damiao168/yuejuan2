@@ -28,15 +28,17 @@ var (
 const PlatformTenantID = "00000000-0000-0000-0000-000000000001"
 
 type User struct {
-	ID          string         `json:"id"`
-	TenantID    string         `json:"tenant_id"`
-	TenantCode  string         `json:"tenant_code"`
-	Username    string         `json:"username"`
-	DisplayName string         `json:"display_name"`
-	Status      string         `json:"status"`
-	Roles       []string       `json:"roles"`
-	Permissions []string       `json:"permissions"`
-	DataScope   map[string]any `json:"data_scope"`
+	// MustChangePassword 由服务端限制初始凭据会话；改密前不能访问业务数据。
+	MustChangePassword bool           `json:"must_change_password"`
+	ID                 string         `json:"id"`
+	TenantID           string         `json:"tenant_id"`
+	TenantCode         string         `json:"tenant_code"`
+	Username           string         `json:"username"`
+	DisplayName        string         `json:"display_name"`
+	Status             string         `json:"status"`
+	Roles              []string       `json:"roles"`
+	Permissions        []string       `json:"permissions"`
+	DataScope          map[string]any `json:"data_scope"`
 	// OrganizationScope 是已解析、由服务端信任的组织边界。DataScope 仍是持久化 RBAC 声明；
 	// 客户端判断哪些学校、年级和班级可选时，应使用此投影。
 	OrganizationScope  *OrganizationScope `json:"organization_scope,omitempty"`
@@ -57,30 +59,31 @@ type OrganizationScope struct {
 
 type UserWithPassword struct {
 	User
-	PasswordHash    string
-	SchoolID        string
-	PhoneNormalized string
-	EmployeeNo      string
-	SecurityEpoch   int64
-	ActivatedAt     time.Time
-	LastLoginAt     time.Time
-	CreatedAt       time.Time
-	ManagedClassIDs []string
+	PasswordHash     string
+	SchoolID         string
+	PhoneNormalized  string
+	EmployeeNo       string
+	SecurityEpoch    int64
+	ActivatedAt      time.Time
+	LastLoginAt      time.Time
+	CreatedAt        time.Time
+	TeachingSubjects []string
 }
 
 type ManagedUser struct {
-	ID          string     `json:"id"`
-	Username    string     `json:"username"`
-	DisplayName string     `json:"display_name"`
-	PhoneMasked string     `json:"phone_masked,omitempty"`
-	EmployeeNo  string     `json:"employee_no,omitempty"`
-	Status      string     `json:"status"`
-	Roles       []string   `json:"roles"`
-	ClassIDs    []string   `json:"class_ids"`
-	SchoolID    string     `json:"school_id,omitempty"`
-	ActivatedAt *time.Time `json:"activated_at,omitempty"`
-	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at,omitempty"`
+	MustChangePassword bool       `json:"must_change_password"`
+	ID                 string     `json:"id"`
+	Username           string     `json:"username"`
+	DisplayName        string     `json:"display_name"`
+	PhoneMasked        string     `json:"phone_masked,omitempty"`
+	EmployeeNo         string     `json:"employee_no,omitempty"`
+	Status             string     `json:"status"`
+	Roles              []string   `json:"roles"`
+	TeachingSubjects   []string   `json:"teaching_subjects"`
+	SchoolID           string     `json:"school_id,omitempty"`
+	ActivatedAt        *time.Time `json:"activated_at,omitempty"`
+	LastLoginAt        *time.Time `json:"last_login_at,omitempty"`
+	CreatedAt          time.Time  `json:"created_at,omitempty"`
 }
 
 type ManagedUserFilter struct {
@@ -104,6 +107,9 @@ type AssignableRole struct {
 }
 
 type CreateManagedUserInput struct {
+	PasswordConfirm string `json:"password_confirm,omitempty"`
+	// 初始凭据必须由本人改密，客户端不能关闭这个要求。
+	MustChangePassword  bool      `json:"-"`
 	Username            string    `json:"username"`
 	Phone               string    `json:"phone,omitempty"`
 	EmployeeNo          string    `json:"employee_no,omitempty"`
@@ -112,7 +118,7 @@ type CreateManagedUserInput struct {
 	RoleCode            string    `json:"role_code"`
 	RoleCodes           []string  `json:"role_codes,omitempty"`
 	SchoolID            string    `json:"school_id,omitempty"`
-	ClassIDs            []string  `json:"class_ids,omitempty"`
+	TeachingSubjects    []string  `json:"teaching_subjects,omitempty"`
 	ActivationTokenHash string    `json:"-"`
 	ActivationExpiresAt time.Time `json:"-"`
 }
@@ -148,23 +154,23 @@ type UpdateManagedUserStatusInput struct {
 	Status string `json:"status"`
 }
 
-// UpdateManagedUserAccessInput 只调整同校职责和教学班级；旧值用于拒绝覆盖另一位管理员的修改。
+// UpdateManagedUserAccessInput 只调整同校职责；旧值用于拒绝覆盖另一位管理员的修改。
 type UpdateManagedUserAccessInput struct {
-	RoleCodes        []string `json:"role_codes"`
-	ClassIDs         []string `json:"class_ids"`
-	ExpectedRoles    []string `json:"expected_roles"`
-	ExpectedClassIDs []string `json:"expected_class_ids"`
-	Reason           string   `json:"reason"`
+	RoleCodes     []string `json:"role_codes"`
+	ExpectedRoles []string `json:"expected_roles"`
+	Reason        string   `json:"reason"`
 }
 
-// UpdateManagedUserProfileInput 只修改基本资料；手机号省略时保留现值，工号允许显式清空。
+// UpdateManagedUserProfileInput 由管理员维护资料和任教学科；省略学科字段时保留现值。
 type UpdateManagedUserProfileInput struct {
-	DisplayName         string  `json:"display_name"`
-	EmployeeNo          string  `json:"employee_no"`
-	Phone               *string `json:"phone,omitempty"`
-	ExpectedDisplayName string  `json:"expected_display_name"`
-	ExpectedEmployeeNo  string  `json:"expected_employee_no"`
-	ExpectedPhoneMasked string  `json:"expected_phone_masked"`
+	DisplayName              string   `json:"display_name"`
+	EmployeeNo               string   `json:"employee_no"`
+	Phone                    *string  `json:"phone,omitempty"`
+	ExpectedDisplayName      string   `json:"expected_display_name"`
+	ExpectedEmployeeNo       string   `json:"expected_employee_no"`
+	ExpectedPhoneMasked      string   `json:"expected_phone_masked"`
+	TeachingSubjects         []string `json:"teaching_subjects,omitempty"`
+	ExpectedTeachingSubjects []string `json:"expected_teaching_subjects,omitempty"`
 }
 
 type Session struct {
@@ -268,6 +274,8 @@ type AuditEvent struct {
 }
 
 type AuditRecord struct {
+	SchoolID    string         `json:"-"`
+	ExamID      string         `json:"-"`
 	ID          string         `json:"id"`
 	TenantID    string         `json:"tenant_id"`
 	ActorID     string         `json:"actor_id,omitempty"`
@@ -298,8 +306,9 @@ type AuditFilter struct {
 	IncludeNext     bool
 	CursorCreatedAt time.Time
 	CursorID        string
-	// ScopeMode 从已认证主体派生。在审计记录包含可信资源投影前，非租户级作用域拒绝放行。
+	// ScopeMode 和 SchoolIDs 从已认证主体的实际管理学校派生，不能接受客户端指定学校。
 	ScopeMode string
+	SchoolIDs []string
 }
 
 type CredentialRepository interface {

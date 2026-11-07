@@ -265,7 +265,8 @@ func (s *PostgresStore) checkExam(ctx context.Context, q queryer, scope auth.Acc
 	if err = json.Unmarshal(classes, &b.ClassIDs); err != nil {
 		return err
 	}
-	if !auth.AllowsResourceBoundary(scope, b) {
+	// 复制会改写目标考试题目，题库读取权和任课可见范围不能替代目标学校管理权。
+	if !auth.AllowsManagedResourceBoundary(scope, b) {
 		return ErrNotFound
 	}
 	return nil

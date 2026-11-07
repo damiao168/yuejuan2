@@ -92,6 +92,19 @@ describe("统一安排教师预览", () => {
     expect(identities((props.onConfirm as ReturnType<typeof vi.fn>).mock.calls[0][0])).toEqual([["a", ["14", "16", "18"]], ["b", ["15", "17", "19"]]]);
   });
 
+  it("预览中教师不再符合学科条件时清除其计划，阻止提交旧教师", async () => {
+    const props = fixture();
+    const { rerender } = render(<AssignmentPreview {...props} />);
+    expect(confirmButton().disabled).toBe(false);
+    rerender(<AssignmentPreview {...props} options={[{ value: "b", label: "教师乙" }]} />);
+    expect(confirmButton().disabled).toBe(true);
+    await act(async () => { await controls.confirm!(); });
+    expect(props.onConfirm).not.toHaveBeenCalled();
+    chooseTeachers(["b"]);
+    await act(async () => { fireEvent.click(confirmButton()); });
+    expect(identities((props.onConfirm as ReturnType<typeof vi.fn>).mock.calls[0][0])).toEqual([["b", ["2", "10", "12-b", "12-a"]]]);
+  });
+
   it("自定义数量先填入当前均分数，调整后按指定份数提交完整计划", async () => {
     const props = fixture();
     render(<AssignmentPreview {...props} />);

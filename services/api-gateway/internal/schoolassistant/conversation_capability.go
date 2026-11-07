@@ -10,7 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *ConversationService) verifyToolSupport(ctx context.Context, p preparedConversation) (modelgovernance.ManagedAPIProbeUsage, bool, error) {
+func (s *ConversationService) verifyToolSupport(ctx context.Context, p preparedConversation, step int) (modelgovernance.ManagedAPIProbeUsage, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return modelgovernance.ManagedAPIProbeUsage{}, false, err
+	}
 	config := p.connection.Config
 	key := strings.Join([]string{p.user.TenantID, config.ID, config.ModelName, config.AdapterType, config.UpdatedAt.UTC().Format(time.RFC3339Nano)}, ":")
 	s.mu.Lock()
@@ -33,7 +36,7 @@ func (s *ConversationService) verifyToolSupport(ctx context.Context, p preparedC
 			err = modelgovernance.ErrAgentToolsUnsupported
 		}
 	}
-	s.recordUsage(ctx, p, 0, "tool_capability", response.Usage, err)
+	s.recordUsage(ctx, p, step, "tool_capability", response.Usage, err)
 	if err != nil {
 		return response.Usage, true, err
 	}

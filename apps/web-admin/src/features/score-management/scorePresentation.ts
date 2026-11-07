@@ -1,6 +1,6 @@
 import type { QualityCheckResult, RosterReport } from "../../api/scores";
 import type { Submission } from "../../api/submissions";
-import { examStatusLabels } from "../../constants/examStatus";
+import { examStatusLabels, examSubjectLabel } from "../../constants/examStatus";
 import type { ProductExperience } from "../../router/experience";
 import type { StatusTone } from "../../types";
 
@@ -38,26 +38,29 @@ export const sourceLabels: Record<string, string> = {
 
 export const rosterStatusLabels: Record<string, string> = {
   graded: "已评分",
-  absent: "已标记缺考",
+  submitted: "已交卷",
+  absent: "缺考",
   unmatched: "未匹配待处理",
   missing_pages: "缺页待处理"
 };
 
 export const rosterResolutionLabels: Record<string, string> = {
   graded: "成绩已汇总",
-  absent: "已人工确认缺考",
-  missing_submission: "未收到答卷（请核查缺考或漏扫）",
-  grading_incomplete: "答卷已匹配，评分尚未完成",
+  absent: "未匹配到答卷，自动按缺考处理",
+  missing_submission: "未收到匹配答卷，请核查漏扫或未识别答卷",
+  grading_incomplete: "已交卷，仍有小题未完成评分",
+  awaiting_aggregation: "评分已完成，发布时自动汇总总分",
   duplicate_submission: "同一学生关联多份答卷",
   student_unidentified: "答卷尚未关联学生",
+  student_identity_unresolved: "答卷身份待核对",
   student_not_in_roster: "答卷学生不在本场应考名册",
-  absent_has_submission: "已标记缺考但存在答卷",
+  absent_has_submission: "已收到答卷，请重新核对匹配状态",
   missing_pages: "实收页数少于应收页数或质量检查失败"
 };
 
 export function formatScore(value?: number | null) {
   if (value === undefined || value === null || !Number.isFinite(value)) return "-";
-  return Number(value.toFixed(1)).toString();
+  return Number(value.toFixed(2)).toString();
 }
 
 export function statusTone(status: string): StatusTone {
@@ -69,6 +72,7 @@ export function statusTone(status: string): StatusTone {
 
 export function rosterStatusTone(status: string): StatusTone {
   if (status === "graded") return "success";
+  if (status === "submitted") return "processing";
   if (status === "absent") return "neutral";
   return "danger";
 }
@@ -88,9 +92,16 @@ export function scoreWorkspacePresentation(mode: ProductExperience) {
   }
   return {
     shellClass: "score-shell", workspaceClass: "score-workspace", title: "成绩发布",
-    description: "处理发布待办，汇总并确认成绩，再核对学生预览和发布。", summaryTitle: "基础成绩检查",
-    emptyGrades: "该考试暂无成绩。请先完成阅卷，再点击『汇总最终成绩』生成成绩。"
+    description: "选择考试，处理完待办后发布成绩，学生即可查看。", summaryTitle: "基础成绩检查",
+    emptyGrades: "该考试还没有汇总的成绩。阅卷完成后，发布时会自动汇总。"
   };
+}
+
+export function scoreExamOptionLabel(exam: { name: string; subject: string }): string {
+  const subject = examSubjectLabel(exam.subject);
+  const parts = exam.name.trim().split(/\s*[·•]\s*/u);
+  // 创建多科考试时名称已经带学科，选择器只补一次；保持各考次原有名称和 ID。
+  return parts[parts.length - 1] === subject ? exam.name : `${exam.name} · ${subject}`;
 }
 
 export type ScorePublicationState = Readonly<{
@@ -116,7 +127,7 @@ export function portalPublicationLabel(state: ScorePublicationState): string {
   if (state.loadingScores) return "正在核对";
   if (state.error) return "状态暂不可用";
   if (state.releaseVersion !== undefined) return `当前版本 V${state.releaseVersion}`;
-  return "门户无当前版本";
+  return "尚未向学生发布";
 }
 
 export function summaryStatus(

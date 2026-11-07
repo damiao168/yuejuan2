@@ -179,6 +179,7 @@ WHERE cp.tenant_id=$1::uuid AND cp.submission_id=$2::uuid AND cp.status='needs_r
 	return binding, nil
 }
 
+// 配准再次核对规范化图的页、考试、答卷和哈希，旧投影或异常 worker 写回也不能借文件 ID 扩大授权。
 func loadRegistrationPagesTx(ctx context.Context, tx *sql.Tx, tenantID, submissionID string, bindingExists bool) ([]registrationPageRow, error) {
 	rows, err := tx.QueryContext(ctx, `SELECT cp.id::text,cp.submission_page_id::text,sp.normalized_file_asset_id::text,cp.assigned_page_no,cp.revision,fa.hash_sha256,
 	COALESCE(sheet.template_id::text,cp.barcode_template_id::text,''),COALESCE(sheet.template_content_hash,''),
@@ -186,6 +187,10 @@ func loadRegistrationPagesTx(ctx context.Context, tx *sql.Tx, tenantID, submissi
 	FROM capture_page cp
 	JOIN submission_page sp ON sp.tenant_id=cp.tenant_id AND sp.id=cp.submission_page_id
 	JOIN file_asset fa ON fa.tenant_id=sp.tenant_id AND fa.id=sp.normalized_file_asset_id
+	  AND fa.owner_type='submission_page_normalized' AND fa.owner_id=sp.id
+	  AND fa.exam_id=(SELECT s.exam_id FROM submission s WHERE s.tenant_id=sp.tenant_id AND s.id=sp.submission_id)
+	  AND (fa.submission_id IS NULL OR fa.submission_id=sp.submission_id)
+	  AND fa.content_type='image/png' AND fa.hash_sha256<>'' AND fa.deleted_at IS NULL
 	LEFT JOIN answer_sheet_print_sheet sheet ON sheet.tenant_id=cp.tenant_id AND sheet.id=cp.sheet_serial
 	WHERE cp.tenant_id=$1 AND cp.submission_id=$2::uuid
 	  AND (cp.status='normalized' OR ($3::boolean AND cp.status='needs_review' AND EXISTS(

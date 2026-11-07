@@ -412,6 +412,10 @@ func examScopePredicate(examAlias, classAlias string) string {
 }
 
 func scopeQueryArgs(scope auth.AccessScope) []any {
+	if scope.RestrictsToManagedSchools() {
+		// 学校管理员读取列表与详情都只按管理学校过滤；考试或班级导航不能扩大 SQL 的 OR 分支。
+		return []any{scope.TenantID, false, scopeIDsJSON(scope.ManagedSchoolIDs()), "[]", "[]"}
+	}
 	return []any{
 		scope.TenantID,
 		scope.TenantWide,

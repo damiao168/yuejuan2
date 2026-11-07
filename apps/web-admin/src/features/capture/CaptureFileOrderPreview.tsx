@@ -81,7 +81,7 @@ export function CaptureFileOrderPreview({ files, pages, onChange, disabled = fal
     <p>按学生连续排列，核对页序后再导入。</p>
     {!imageOnly && <p>PDF/TIFF将按文件内页序拆分，页数和分组以服务端解码校验为准。</p>}
     {counting && !imageOnly ? <p role="status">正在本地核对页数…</p> : null}
-    {groups && !imageOnly ? <details open={groups.length <= 8}><summary>预计 {groups.length} 份答卷，共 {groups.reduce((sum, group) => sum + group.received, 0)} 页</summary><ol aria-label="逐份答卷分组">{groups.slice(0, 100).map(group => <li key={group.number}>第 {group.number} 份答卷：{group.sources.map(source => `${source.file.name} 第 ${source.first}${source.last === source.first ? "" : `–${source.last}`} 页`).join("、")}{group.received < pages! ? `（还缺 ${pages! - group.received} 页）` : ""}</li>)}</ol>{groups.length > 100 ? <p>已列出前100份；其余答卷按相同页序继续分组。</p> : null}</details> : null}
+    {groups && !imageOnly ? <section aria-label="答卷分组预览"><h4>预计 {groups.length} 份答卷，共 {groups.reduce((sum, group) => sum + group.received, 0)} 页</h4><ol aria-label="逐份答卷分组">{groups.slice(0, 100).map(group => <li key={group.number}>第 {group.number} 份答卷：{group.sources.map(source => `${source.file.name} 第 ${source.first}${source.last === source.first ? "" : `–${source.last}`} 页`).join("、")}{group.received < pages! ? `（还缺 ${pages! - group.received} 页）` : ""}</li>)}</ol>{groups.length > 100 ? <p>已列出前100份；其余答卷按相同页序继续分组。</p> : null}</section> : null}
     {missing > 0 && !imageOnly ? <p role="alert">本次选择还缺 {missing} 页，补齐后再导入。</p> : null}
     <ol aria-label="本次文件页序与分组预览">{files.map((file, index) => <li key={`${index}:${file.name}:${file.size}:${file.lastModified}`}>
       <LocalPageThumbnail file={file} />

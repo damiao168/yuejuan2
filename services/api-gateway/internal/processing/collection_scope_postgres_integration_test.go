@@ -23,20 +23,19 @@ func TestPostgresExceptionCollectionUsesSameSchoolClassExamScopeForProjection(t 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Host != "127.0.0.1" || cfg.Port != 55983 || cfg.User != "review_actor" || !strings.HasPrefix(cfg.Database, "review_") {
-		t.Fatal("integration fixture requires the owned review cluster and database")
-	}
+	// 写入由下方随机 search_path 限定；测试连接不再依赖某次人工审查的账户、库名和端口。
 	admin := stdlib.OpenDB(*cfg)
 	defer admin.Close()
 	schema := "review_processing_scope_" + strings.ReplaceAll(uuid.NewString(), "-", "")
 	quoted := pgx.Identifier{schema}.Sanitize()
-	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
+	// 建表与合成数据准备单独计时；慢盘初始化不能耗尽后续所有权限场景的同一个窗口。
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
 	defer cancel()
 	if _, err := admin.ExecContext(ctx, "CREATE SCHEMA "+quoted); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		cleanup, stop := context.WithTimeout(context.Background(), 10*time.Second)
+		cleanup, stop := context.WithTimeout(context.Background(), 30*time.Second)
 		defer stop()
 		if _, err := admin.ExecContext(cleanup, "DROP SCHEMA "+quoted+" CASCADE"); err != nil {
 			t.Errorf("cleanup schema: %v", err)
@@ -105,6 +104,8 @@ func TestPostgresExceptionCollectionUsesSameSchoolClassExamScopeForProjection(t 
 		{"tenant", auth.AccessScope{TenantID: tenant, ActorID: "admin", TenantWide: true}, "", exams[2], true, base.Add(2 * time.Hour)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
+			defer cancel()
 			filter := ExceptionFilter{ExamID: tc.exam, Limit: 1, Access: auth.ExamCollectionAccess{Scope: &tc.scope}}
 			out, err := store.ListExceptions(ctx, tenant, filter)
 			if err != nil {

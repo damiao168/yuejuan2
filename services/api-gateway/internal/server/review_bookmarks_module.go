@@ -41,6 +41,6 @@ func newPersonalReviewBookmarkHandler(cfg config.Config, stores GradingQualitySt
 		}
 	}
 	images, _ := dependencies.SegmentImage.(segment.VersionedCropImageReader)
-	evidence := reviewbookmark.NewEvidenceService(provider, images, []byte(cfg.ModelSecrets.MasterKey))
+	evidence := reviewbookmark.NewEvidenceService(provider, images, []byte(cfg.ModelSecrets.ReviewEvidenceKey))
 	return reviewbookmark.NewHandler(store).WithEvidence(evidence)
 }

@@ -46,8 +46,6 @@
     "POST /api/v1/capture-pages/{id}/delete",
     "POST /api/v1/capture-pages/{id}/page-match/confirm",
     "POST /api/v1/capture-pages/{id}/restore",
-    "POST /api/v1/classes",
-    "POST /api/v1/classes/{id}/teachers",
     "POST /api/v1/double-mark-sessions",
     "POST /api/v1/exams",
     "POST /api/v1/exams/{examId}/answer-sheet-templates",
@@ -64,7 +62,6 @@
     "POST /api/v1/gold-papers/{id}/retire",
     "POST /api/v1/gold-papers/{id}/versions",
     "POST /api/v1/gold-papers/{id}/versions/{version}/approve",
-    "POST /api/v1/grades",
     "POST /api/v1/model-approvals",
     "POST /api/v1/model-approvals/{id}/revoke",
     "POST /api/v1/model-deployments",
@@ -120,12 +117,9 @@
     "POST /api/v1/submissions/{id}/student-match/unknown",
     "POST /api/v1/tenants",
     "PUT /api/v1/exams/{examId}/double-mark-policy",
-    "PUT /api/v1/exams/{examId}/questions/{questionId}/seed-policy",
-    "PUT /api/v1/exams/{examId}/roster/{studentId}/attendance",
     "PUT /api/v1/model-policy",
     "PUT /api/v1/questions/{id}/double-mark-policy",
     "PUT /api/v1/review-tasks/{id}/draft",
-    "PUT /api/v1/students/{id}/enrollment",
     "PUT /api/v1/submissions/{id}/pages/{pageNo}"
   ]
 }

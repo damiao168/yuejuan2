@@ -34,6 +34,7 @@ export interface CaptureCollectionSummary {
   completed_by?: string;
   pages_per_student: number;
   roster_count: number;
+  // 有有效匹配答卷的名册人数；未匹配学生自动计入 absent_count，不需要人工出勤标记。
   required_count: number;
   ready_count: number;
   absent_count: number;

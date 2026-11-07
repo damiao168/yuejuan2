@@ -146,6 +146,9 @@ func (s *PostgresStore) createArbitrationTaskTx(ctx context.Context, tx *sql.Tx,
 		if !arbitratorAllowed(candidate, pending.AssignedTo) {
 			return ArbitrationTask{}, ErrForbidden
 		}
+		if err := validateReviewAssigneeTx(ctx, tx, tenantID, session.ExamID, pending.AssignedTo, "arbitration:work"); err != nil {
+			return ArbitrationTask{}, err
+		}
 	}
 	taskContext, err := s.loadContextTx(ctx, tx, tenantID, session.AnswerSegmentID)
 	if err != nil {

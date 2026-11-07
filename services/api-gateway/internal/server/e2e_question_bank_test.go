@@ -27,20 +27,22 @@ func TestE2EPostgresQuestionBank(t *testing.T) {
 	}
 	db := e2eOpenPostgresTestDB(t, dsn)
 	e2eApplyPostgresMigrations(t, db)
-	e2eActivatePostgresDemoUsers(t, db, []string{"tenant_admin", "teacher", "student"})
+	e2eActivatePostgresDemoUsers(t, db, []string{"tenant_admin", "teacher"})
 	router := e2ePostgresRouter(db)
 	token := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
 	teacherToken := e2eLoginWithTenant(t, router, "demo", "teacher", "ChangeMe123!")
-	studentToken := e2eLoginWithTenant(t, router, "demo", "student", "ChangeMe123!")
 	actor := e2eLookupUserID(t, db, "demo", "tenant_admin")
 	var tenant, school string
 	if err := db.QueryRow(`SELECT tenant_id::text FROM app_user WHERE id=$1::uuid`, actor).Scan(&tenant); err != nil {
 		t.Fatal(err)
 	}
 	school = e2eString(t, e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", token, `{"name":"Question bank fixture school","code":"qb-fixture"}`, http.StatusCreated)["school"].(map[string]any), "id")
-	grade := e2eString(t, e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", token, `{"school_id":"`+school+`","name":"QB grade","level_no":8,"academic_year":"2026"}`, http.StatusCreated)["grade"].(map[string]any), "id")
-	class := e2eString(t, e2ePostJSON(t, router, http.MethodPost, "/api/v1/classes", token, `{"school_id":"`+school+`","grade_id":"`+grade+`","name":"QB class","code":"qb-class"}`, http.StatusCreated)["class"].(map[string]any), "id")
-	if err := org.NewPostgresStore(db).BindTeacherClass(context.Background(), tenant, e2eLookupUserID(t, db, "demo", "teacher"), class); err != nil {
+	grade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", token, story056JSON(t, map[string]any{"school_id": school, "name": "Synthetic student grade", "level_no": 10}), http.StatusCreated)["grade"].(map[string]any)
+	class := e2ePostJSON(t, router, http.MethodPost, "/api/v1/classes", token, story056JSON(t, map[string]any{"school_id": school, "grade_id": e2eString(t, grade, "id"), "name": "Synthetic student class", "code": "qb-student"}), http.StatusCreated)["class"].(map[string]any)
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/students", token, story056JSON(t, map[string]any{"school_id": school, "class_id": e2eString(t, class, "id"), "student_no": "QB-STUDENT", "name": "Synthetic question bank student", "password": "SyntheticStudent123!", "password_confirm": "SyntheticStudent123!"}), http.StatusCreated)
+	studentToken := e2eLoginProvisionedStudent(t, router, "qb-fixture", "QB-STUDENT", "SyntheticStudent123!")
+	// 题库教师依赖账号本校和内容 ACL；不能借教学班级绑定恢复考试、组织管理范围。
+	if _, err := db.Exec(`UPDATE app_user SET school_id=$1,teaching_subjects=ARRAY['mathematics']::text[] WHERE tenant_id=$2 AND id=$3`, school, tenant, e2eLookupUserID(t, db, "demo", "teacher")); err != nil {
 		t.Fatal(err)
 	}
 	scope := auth.AccessScope{TenantID: tenant, ActorID: actor, TenantWide: true}
@@ -84,10 +86,52 @@ func TestE2EPostgresQuestionBank(t *testing.T) {
 	teacherBank := qbRequest(t, router, questionBankRequest{Method: http.MethodPost, Path: "/api/v1/question-banks", Token: teacherToken, Key: "teacher-bank", Body: qbJSON(t, questionbank.CreateBankInput{SchoolID: school, Name: "Teacher private bank"}), Want: 201})["bank"].(map[string]any)
 	teacherBankID := e2eString(t, teacherBank, "id")
 	qbRequest(t, router, questionBankRequest{Method: http.MethodPost, Path: "/api/v1/question-banks/" + teacherBankID + "/items", Token: teacherToken, Key: "teacher-item", Body: qbJSON(t, questionbank.CreateItemInput{ItemCode: "T1", Content: content}), Want: 201})
+	if teacherPage := qbRequest(t, router, questionBankRequest{Method: http.MethodGet, Path: "/api/v1/question-banks", Token: teacherToken, Want: 200}); teacherPage["total"] != float64(1) {
+		t.Fatal("teacher own bank missing after removing class binding")
+	}
+	qbRequest(t, router, questionBankRequest{Method: http.MethodGet, Path: "/api/v1/question-banks/" + teacherBankID, Token: teacherToken, Want: 200})
+	if teacherItems := qbRequest(t, router, questionBankRequest{Method: http.MethodGet, Path: "/api/v1/question-bank/items?bank_id=" + teacherBankID, Token: teacherToken, Want: 200}); teacherItems["total"] != float64(1) {
+		t.Fatal("teacher own item search missing after removing class binding")
+	}
 	qbRequest(t, router, questionBankRequest{Method: http.MethodGet, Path: "/api/v1/question-banks/" + teacherBankID, Token: token, Key: "", Body: "", Want: 404})
 	if privatePage := qbRequest(t, router, questionBankRequest{Method: http.MethodGet, Path: "/api/v1/question-banks", Token: token, Key: "", Body: "", Want: 200}); privatePage["total"] != float64(1) {
 		t.Fatal("tenant administrator inherited private teacher bank")
 	}
+	t.Run("teacher school facts remain local and require active identity", func(t *testing.T) {
+		teacherID := e2eLookupUserID(t, db, "demo", "teacher")
+		teacherScope := auth.AccessScope{TenantID: tenant, ActorID: teacherID, AssignedOnly: true}
+		teacherStore := questionbank.NewPostgresStore(db)
+		if teacherScope.AllowsSchool(school) || teacherScope.AllowsClass(uuid.NewString()) || teacherScope.AllowsExam(uuid.NewString()) {
+			t.Fatal("question bank school facts expanded organization or exam scope")
+		}
+		for _, test := range []struct{ name, revoke, restore string }{
+			{"disabled account", `UPDATE app_user SET status='disabled' WHERE tenant_id=$1 AND id=$2`, `UPDATE app_user SET status='active' WHERE tenant_id=$1 AND id=$2`},
+			{"missing school", `UPDATE app_user SET school_id=NULL WHERE tenant_id=$1 AND id=$2`, `UPDATE app_user SET school_id=$3 WHERE tenant_id=$1 AND id=$2`},
+			{"revoked teacher role", `UPDATE user_role SET deleted_at=now() WHERE tenant_id=$1 AND user_id=$2 AND deleted_at IS NULL`, `UPDATE user_role SET deleted_at=NULL WHERE tenant_id=$1 AND user_id=$2`},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				if _, err := db.Exec(test.revoke, tenant, teacherID); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() {
+					args := []any{tenant, teacherID}
+					if test.name == "missing school" {
+						args = append(args, school)
+					}
+					if _, err := db.Exec(test.restore, args...); err != nil {
+						t.Error(err)
+					}
+				})
+				// 即使创建者 ACL 仍在，账号失效或失去可信学校、教师身份后也不能读自己的题库。
+				if _, err := teacherStore.GetBank(t.Context(), teacherScope, teacherBankID); !errors.Is(err, questionbank.ErrNotFound) {
+					t.Fatalf("inactive teacher retained bank access: %v", err)
+				}
+				if page, err := teacherStore.ListBanks(t.Context(), teacherScope, questionbank.Filter{}); err != nil || page.Total != 0 {
+					t.Fatalf("inactive teacher bank directory: total=%d err=%v", page.Total, err)
+				}
+			})
+		}
+	})
 
 	store := questionbank.NewPostgresStore(db)
 	ctx := context.Background()

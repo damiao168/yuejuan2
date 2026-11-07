@@ -15,14 +15,14 @@ func (s *PostgresStore) reviewStatistics(ctx context.Context, tenantID string, f
 	if filter.AssignedTo != "" {
 		scope = "personal"
 	}
-	// 学校整场统计只认管理员绑定；兼任阅卷员可在外校读取本人的正式意见，不能扩展为外校整场统计。
+	// 学校管理员统计仅限本校；只有普通受派阅卷人员可读取本人外校正式意见。
 	query := `WITH readable_exam AS (
  SELECT e.id FROM exam e WHERE e.tenant_id=$1::uuid AND e.id::text=$2 AND e.deleted_at IS NULL
  AND ($4='' OR e.subject=$4)
  AND ($5 IN ('platform','tenant')
    OR ($5='school' AND e.school_id::text=ANY(string_to_array(NULLIF($6,''),',')))
    OR ($5='class' AND e.id::text=ANY(string_to_array(NULLIF($7,''),',')))
-   OR ($5 IN ('school','assigned') AND $8<>'' AND $8=$9 AND EXISTS (
+   OR ($5='assigned' AND $8<>'' AND $8=$9 AND EXISTS (
      SELECT 1 FROM review_task allowed WHERE allowed.tenant_id=e.tenant_id AND allowed.exam_id=e.id
        AND allowed.assigned_to::text=$9 AND allowed.deleted_at IS NULL)))
 ), samples AS (`

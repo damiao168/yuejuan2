@@ -26,6 +26,10 @@ func managementProgress(exams []Exam, facts map[string]managementSubjectFacts, a
 		if fact.Published {
 			p.PublishedCount++
 		}
+		// 定稿阶段可由人工切换；只有已核实的评分完整性或正式发布才算阅卷结束。
+		if fact.Available && (fact.GradingComplete || fact.Published) {
+			p.GradingCompleteCount++
+		}
 	}
 	if archived {
 		p.Status, p.Label = "archived", "已归档"
@@ -196,6 +200,14 @@ func managementMatchesFilter(item ManagementExam, filter ManagementListFilter) b
 	}
 	if filter.Search != "" && !strings.Contains(strings.ToLower(item.Name), strings.ToLower(filter.Search)) {
 		return false
+	}
+	// 大类在分页截断前匹配整场事实；已评分与正式发布可混合，阶段标签不能代替未完成的学科。
+	complete := item.Progress.TotalCount > 0 && item.Progress.GradingCompleteCount == item.Progress.TotalCount
+	if filter.Status == "active" {
+		return !archived && !complete
+	}
+	if filter.Status == "completed" {
+		return !archived && complete
 	}
 	return filter.Status == "" || item.Progress.Status == filter.Status
 }

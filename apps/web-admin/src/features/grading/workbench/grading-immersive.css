@@ -1,0 +1,346 @@
+
+
+/* 沉浸式阅卷让答案、评分依据和下一步操作保持在同一个视口中。 */
+.immersive-workspace .grading-shell {
+  height: 100%;
+  min-height: 0;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #eef1f5;
+}
+
+.immersive-workspace .grading-overview {
+  gap: 8px;
+  padding: 8px 12px;
+  border-width: 0 0 1px;
+}
+
+.immersive-workspace .grading-overview-head {
+  align-items: flex-start;
+}
+
+.immersive-workspace .grading-overview-head h2 {
+  font-size: var(--eg-font-reading);
+}
+
+.immersive-workspace .grading-overview-head p {
+  display: none;
+}
+
+.immersive-workspace .grading-run-strip { padding: 10px 0; }
+.immersive-workspace .grading-run-counts dd { font-size: 20px; }
+.immersive-workspace .grading-run-counts dd { margin-top: 4px; }
+
+.immersive-workspace .reviewer-progress-panel {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-width: 0 0 1px;
+  border-radius: 0;
+}
+
+.immersive-workspace .reviewer-progress-head {
+  min-width: 148px;
+}
+
+.immersive-workspace .reviewer-progress-head p {
+  display: none;
+}
+
+.immersive-workspace .reviewer-progress-list {
+  grid-template-columns: 1fr;
+}
+
+.immersive-workspace .reviewer-progress-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 10px;
+}
+
+.immersive-workspace .reviewer-progress-label,
+.immersive-workspace .reviewer-progress-meta {
+  margin: 0;
+}
+
+.immersive-workspace .grading-topbar {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-width: 0 0 1px;
+  border-radius: 0;
+}
+
+.immersive-workspace .grading-topbar h1 {
+  font-size: var(--eg-font-reading);
+}
+
+.immersive-workspace .grading-topbar p {
+  display: none;
+}
+
+.immersive-workspace .grading-taskbar {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 8px;
+  border-width: 0;
+  border-radius: 0;
+}
+
+.immersive-workspace .grading-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-template-columns: 216px minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
+}
+
+.immersive-workspace .grading-task-rail {
+  position: static;
+  height: 100%;
+  max-height: none;
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+}
+
+.immersive-workspace .grading-task-list {
+  height: auto;
+  max-height: none;
+}
+
+.immersive-workspace .grading-main {
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.immersive-workspace .grading-panels {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "answer inspector";
+  gap: 0;
+  overflow: hidden;
+}
+
+.immersive-workspace .answer-panel,
+.immersive-workspace .grading-inspector {
+  height: 100%;
+  border-width: 0;
+  border-radius: 0;
+}
+
+.immersive-workspace .answer-panel {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: #e8ebef;
+  padding: 10px;
+}
+
+.immersive-workspace .answer-panel .panel-head {
+  flex: 0 0 auto;
+  margin: 0 0 10px;
+}
+
+.immersive-workspace .answer-viewer {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  place-items: safe center;
+}
+
+.immersive-workspace .grading-inspector {
+  grid-template-rows: auto auto;
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: var(--eg-color-surface);
+}
+
+.immersive-workspace .evidence-panel {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.immersive-workspace .score-panel {
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 9px 10px;
+  overflow: visible;
+}
+
+.immersive-workspace .rubric-score-list {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.immersive-workspace .grading-submit-bar {
+  width: 100%;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+@media (min-width: 1100px) and (max-height: 720px) {
+  .immersive-workspace .grading-topbar {
+    min-height: 40px;
+    padding-block: 4px;
+  }
+
+  .immersive-workspace .answer-panel .panel-head p,
+  .immersive-workspace .evidence-panel .panel-head p,
+  .immersive-workspace .grading-submit-note {
+    display: none;
+  }
+
+  .immersive-workspace .evidence-panel,
+  .immersive-workspace .score-panel {
+    padding-block: 7px;
+  }
+}
+
+@media (min-width: 1100px) and (max-height: 820px) {
+  .immersive-workspace .grading-shell {
+    height: auto;
+    min-height: calc(100svh - 48px);
+  }
+
+  .immersive-workspace .grading-workspace {
+    flex: 0 0 auto;
+    height: auto;
+    align-items: start;
+    overflow: visible;
+  }
+
+  .immersive-workspace .grading-main,
+  .immersive-workspace .grading-panels {
+    height: auto;
+    overflow: visible;
+  }
+
+  .immersive-workspace .grading-panels {
+    grid-template-rows: auto;
+    align-items: start;
+  }
+
+  .immersive-workspace .answer-panel,
+  .immersive-workspace .grading-inspector {
+    height: auto;
+  }
+
+  .immersive-workspace .answer-viewer {
+    flex: 0 0 auto;
+    height: min(64vh, 720px);
+    min-height: 440px;
+  }
+
+  .immersive-workspace .grading-inspector {
+    overflow: visible;
+  }
+
+  .immersive-workspace .grading-task-rail {
+    position: sticky;
+    top: 60px;
+    height: calc(100svh - 72px);
+    max-height: calc(100svh - 72px);
+  }
+}
+
+@media (max-width: 1099px) {
+  .immersive-workspace .grading-shell,
+  .immersive-workspace .grading-workspace,
+  .immersive-workspace .grading-panels {
+    height: auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas: "answer" "inspector";
+    overflow: visible;
+  }
+
+  .immersive-workspace .grading-inspector {
+    height: auto;
+    grid-template-rows: auto auto;
+    overflow: visible;
+  }
+
+  .immersive-workspace .score-panel,
+  .immersive-workspace .rubric-score-list {
+    overflow: visible;
+  }
+
+  .immersive-workspace .grading-task-rail {
+    max-height: none;
+  }
+
+  .immersive-workspace .answer-viewer {
+    overscroll-behavior-y: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .immersive-workspace .grading-topbar {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .immersive-workspace .reviewer-progress-panel {
+    display: flex;
+    align-items: stretch;
+    padding: 10px 12px;
+  }
+
+  .immersive-workspace .reviewer-progress-head p {
+    display: block;
+  }
+
+  .immersive-workspace .reviewer-progress-row {
+    display: block;
+    padding: 8px 10px;
+  }
+
+  .immersive-workspace .reviewer-progress-label {
+    margin-bottom: 5px;
+  }
+
+  .immersive-workspace .reviewer-progress-meta {
+    margin-top: 4px;
+  }
+
+  .immersive-workspace .grading-topbar > .ant-space {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+  }
+
+  .immersive-workspace .grading-topbar > .ant-space > .ant-space-item:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .immersive-workspace .grading-topbar > .ant-space .ant-btn {
+    width: 100%;
+  }
+
+  .immersive-workspace .grading-taskbar {
+    grid-template-columns: 1fr;
+    padding: 10px 12px;
+  }
+
+  .immersive-workspace .grading-taskbar .ant-select,
+  .immersive-workspace .grading-taskbar .ant-input-affix-wrapper {
+    width: 100%;
+  }
+}

@@ -6,13 +6,21 @@ import json
 from urllib import request as urlrequest
 
 from .errors import AgentError
+from .question_context import QUESTION_CONTEXT_PROMPT_VERSION
 
 
-def math_wrapper_hash():
-    from .app_v2 import math_candidate_messages, math_candidate_schema
+def math_wrapper_hash(prompt_version=None):
+    from .app_v2 import (
+        math_candidate_messages,
+        math_candidate_prefix_messages,
+        math_candidate_schema,
+    )
     from .contract_v2 import validate_reference_materials, validate_response_v2
-    sources = ["math-material-wrapper-v1", *(inspect.getsource(f) for f in (
-        math_candidate_messages, math_candidate_schema, validate_reference_materials, validate_response_v2
+    # 能力接口和许可消费必须选同一部署版本；旧许可不能授权新消息布局。
+    prefix = prompt_version == QUESTION_CONTEXT_PROMPT_VERSION
+    layout = math_candidate_prefix_messages if prefix else math_candidate_messages
+    sources = ["math-material-wrapper-v2-prefix" if prefix else "math-material-wrapper-v1", *(inspect.getsource(f) for f in (
+        layout, math_candidate_schema, validate_reference_materials, validate_response_v2
     ))]
     return hashlib.sha256("\n".join(sources).encode("utf-8")).hexdigest()
 
@@ -27,7 +35,7 @@ class MaterialDispatch:
         self._consume_started = False
         self.consumed = False
         self.responded = False
-        if not self.base_url or settings.adapter_type != "local_llama_cpp" or request["math_wrapper_hash"] != math_wrapper_hash():
+        if not self.base_url or settings.adapter_type != "local_llama_cpp" or request["math_wrapper_hash"] != math_wrapper_hash(settings.prompt_version):
             raise AgentError("reference_material_capability_unavailable", "reference image dispatch capability is unavailable", status=422, request_id=self.request_id)
 
     def _record(self, stage, usage=None, usage_state="unavailable"):

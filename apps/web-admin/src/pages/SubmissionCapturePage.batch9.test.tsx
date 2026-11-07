@@ -212,6 +212,33 @@ describe("答题卡采集页面重构边界", () => {
     await act(async () => { button(label).click(); });
   }
 
+  it("OCR详情关闭或切换答卷后丢弃迟到结果", async () => {
+    const old = deferred<SubmissionView>();
+    mocks.capture.mockResolvedValue(capture([row("A"), row("B")]));
+    mocks.detail.mockImplementation((submission: { id: string }) => submission.id === "A" ? old.promise : Promise.resolve({ ...row("B"), ocrTasks: [task("B-task")] }));
+    await renderPage();
+    await click("OCR A");
+    await click("关闭 文字识别详情");
+    await click("OCR B");
+    await act(async () => old.resolve({ ...row("A"), ocrTasks: [task("A-task")] }));
+    const drawer = host.querySelector('[data-drawer="文字识别详情"]');
+    expect(drawer?.querySelector('[data-row-id="B-task"]')).not.toBeNull();
+    expect(drawer?.querySelector('[data-row-id="A-task"]')).toBeNull();
+    await click("关闭 文字识别详情");
+    expect(host.querySelector('[data-drawer="文字识别详情"]')).toBeNull();
+  });
+
+  it("切换考试后迟到的OCR详情不能重开旧考试抽屉", async () => {
+    const old = deferred<SubmissionView>();
+    mocks.detail.mockReturnValue(old.promise);
+    await renderPage();
+    await click("OCR submission-a");
+    await renderPage({ initialExamId: "exam-b" });
+    await act(async () => old.resolve({ ...row(), ocrTasks: [task("old-exam-task")] }));
+    expect(host.querySelector('[data-drawer="文字识别详情"]')).toBeNull();
+    expect(host.querySelector('[data-row-id="old-exam-task"]')).toBeNull();
+  });
+
   it("考试列表加载先于采集错误，成功后再显示采集失败", async () => {
     const pending = deferred<{ exams: Exam[] }>();
     mocks.exams.mockReturnValue(pending.promise);

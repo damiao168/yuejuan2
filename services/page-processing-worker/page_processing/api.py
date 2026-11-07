@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import math
+import threading
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from typing import Any
@@ -43,6 +44,10 @@ class APIError(RuntimeError):
         self.retry_after = retry_after
 
 
+class AuthenticationError(APIError):
+    """会话刷新仍失败；主循环等待后重试，不能把它当成页面解码失败。"""
+
+
 @dataclass
 class Client:
     base_url: str
@@ -52,9 +57,10 @@ class Client:
     token: str | None = None
     worker_instance_id: str | None = None
     current_task: dict[str, str] | None = None
+    _authentication_lock: Any = field(default_factory=threading.Lock, init=False, repr=False)
 
-    def login(self) -> None:
-        payload = self._json("POST", "/api/v1/auth/token", {"tenant_code": self.tenant_code, "username": self.username, "password": self.password, "client_type": "service", "device_name": "Page Processing Worker"}, auth=False)
+    def login(self, *, timeout: float | None = None) -> None:
+        payload = self._json("POST", "/api/v1/auth/token", {"tenant_code": self.tenant_code, "username": self.username, "password": self.password, "client_type": "service", "device_name": "Page Processing Worker"}, auth=False, timeout=timeout)
         token = payload.get("access_token")
         if not isinstance(token, str) or not token:
             raise APIError("login_missing_access_token")
@@ -86,7 +92,7 @@ class Client:
     def download(self, path: str) -> bytes:
         req = self._request("GET", path, None)
         try:
-            with _open_request(req, timeout=120) as response:
+            with self._open(req, timeout=120) as response:
                 return read_bounded(response, MAX_DOCUMENT_RESPONSE_BYTES)
         except error.HTTPError as exc:
             if exc.code in {401, 403}:
@@ -117,14 +123,14 @@ class Client:
         req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
         req.add_header("Content-Length", str(len(body)))
         try:
-            with _open_request(req, timeout=180) as response:
+            with self._open(req, timeout=180) as response:
                 result = json.loads(read_json_response(response).decode("utf-8"))
         except error.HTTPError as exc:
             if exc.code == 409:
                 existing = _existing_asset_from_conflict(exc)
                 if existing is not None:
                     return existing
-            raise APIError(f"decoded_page_upload_failed:{exc.code}") from exc
+            raise APIError(f"decoded_page_upload_failed:{exc.code}", status_code=exc.code) from exc
         except ResponseValidationError as exc:
             raise APIError("decoded_page_upload_invalid_response") from exc
         file_info = result.get("file") or {}
@@ -175,7 +181,7 @@ class Client:
         req = self._request(method, path, json.dumps(payload).encode("utf-8"), auth=auth)
         req.add_header("Content-Type", "application/json")
         try:
-            with _open_request(req, timeout=120 if timeout is None else timeout) as response:
+            with self._open(req, timeout=120 if timeout is None else timeout, auth=auth) as response:
                 raw = read_json_response(response)
         except error.HTTPError as exc:
             raise APIError(
@@ -187,11 +193,45 @@ class Client:
             raise APIError("api_request_failed:transport") from exc
         return json.loads(raw.decode("utf-8")) if raw else {}
 
+    def _open(self, req: request.Request, *, timeout: float, auth: bool = True) -> Any:
+        try:
+            return _open_request(req, timeout=timeout)
+        except error.HTTPError as exc:
+            if exc.code != 401 or not auth:
+                raise
+            exc.close()
+        # 401 表示操作尚未获准；只重放一次原请求，保留任务与租约能力，不重新领取或解码。
+        # 心跳和主线程可能同时过期；仅第一个线程刷新，后来的线程复用新令牌。
+        refresh_timeout = min(timeout, 10.0)
+        if not self._authentication_lock.acquire(timeout=refresh_timeout):
+            raise AuthenticationError("session_refresh_busy")
+        try:
+            if not self.token or req.get_header("Authorization") == "Bearer " + self.token:
+                self.token = None
+                try:
+                    self.login(timeout=refresh_timeout)
+                except APIError as exc:
+                    raise AuthenticationError("session_refresh_failed", status_code=exc.status_code, retry_after=exc.retry_after) from exc
+            req.add_header("Authorization", "Bearer " + str(self.token))
+        finally:
+            self._authentication_lock.release()
+        try:
+            return _open_request(req, timeout=timeout)
+        except error.HTTPError as exc:
+            if exc.code == 401:
+                # 新令牌仍被拒绝时停止本次重放，避免无界登录循环。
+                self.token = None
+                exc.close()
+                raise AuthenticationError("session_refresh_rejected", status_code=401) from exc
+            raise
+
     def _request(self, method: str, path: str, body: bytes | None, auth: bool = True) -> request.Request:
         url = _trusted_service_url(self.base_url, path)
         headers = {"Accept": "application/json"}
-        if auth and self.token:
-            headers["Authorization"] = "Bearer " + self.token
+        if auth:
+            if self.token:
+                headers["Authorization"] = "Bearer " + self.token
+            # 刷新失败会清空令牌，但在途任务的租约仍有效；后续重新登录重放时也必须保留原能力头。
             if self.current_task:
                 headers.update(_task_capability_headers(self.current_task))
         return request.Request(url, data=body, headers=headers, method=method)

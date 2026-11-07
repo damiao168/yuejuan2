@@ -7,7 +7,7 @@ import (
 )
 
 func TestSchoolManagementDoesNotExpandForeignAssignedSubmission(t *testing.T) {
-	// 实际范围派生读取本校与外校分派。只读考试材料仍可用，答卷必须区分所属学校和具体分派。
+	// 学校管理员兼任阅卷角色时，旧外校任务也不能扩展考试或答卷读取范围。
 	user := User{ID: "hybrid", TenantID: "tenant", Roles: []string{"school_admin", "grader", "teacher"}, DataScope: map[string]any{
 		"school_admin": map[string]any{"scope": "school", "school_id": "school-a"},
 		"grader":       map[string]any{"scope": "exam_task"},
@@ -15,15 +15,13 @@ func TestSchoolManagementDoesNotExpandForeignAssignedSubmission(t *testing.T) {
 	}}
 	store, script := openAuthBatch49Store(t, []authBatch49Step{
 		{kind: "query", fragment: "WITH scoped_school", args: []any{"tenant", "hybrid", "school-a"}, columns: 4, rows: [][]driver.Value{{"{school-a}", "{}", "{class-a}", "{exam-a}"}}},
-		{kind: "query", fragment: "WITH scoped_class", args: []any{"tenant", "hybrid", "class-b,class-a"}, columns: 4, rows: [][]driver.Value{{"{school-b}", "{grade-b}", "{class-b}", "{exam-b}"}}},
-		{kind: "query", fragment: "FROM review_task rt", args: []any{"tenant", "hybrid"}, columns: 4, rows: [][]driver.Value{{"{task-b}", "{}", "{exam-b}", "{submission-assigned}"}}},
 	})
 	scope, err := store.ResolveAccessScope(t.Context(), user)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assertAuthBatch49Script(t, script, "")
-	if !reflect.DeepEqual(scope.ManagedSchoolIDs(), []string{"school-a"}) || !scope.AllowsSchool("school-b") || !scope.AllowsExam("exam-b") {
+	if !reflect.DeepEqual(scope.ManagedSchoolIDs(), []string{"school-a"}) || scope.AllowsSchool("school-b") || scope.AllowsExam("exam-b") {
 		t.Fatalf("management source or navigation scope lost: %#v", scope)
 	}
 	for _, resource := range []string{"submission", "submission_page", "answer_segment", "file_asset", "ai_human_disagreement"} {
@@ -32,7 +30,7 @@ func TestSchoolManagementDoesNotExpandForeignAssignedSubmission(t *testing.T) {
 			want                           bool
 		}{
 			{"own school", "school-a", "exam-a", "own-school-unassigned", true},
-			{"foreign assignment", "school-b", "exam-b", "submission-assigned", true},
+			{"foreign assignment", "school-b", "exam-b", "submission-assigned", false},
 			{"foreign sibling", "school-b", "exam-b", "submission-other", false},
 		} {
 			boundary := ResourceBoundary{ResourceType: resource, TenantID: "tenant", SchoolID: tc.school, ExamID: tc.exam, SubmissionID: tc.submission, ClassIDs: []string{"class-b"}}
@@ -41,14 +39,14 @@ func TestSchoolManagementDoesNotExpandForeignAssignedSubmission(t *testing.T) {
 			}
 		}
 	}
-	if !AllowsResourceBoundary(scope, ResourceBoundary{ResourceType: "question", TenantID: "tenant", SchoolID: "school-b", ExamID: "exam-b"}) {
-		t.Fatal("assigned exam materials must stay readable")
+	if AllowsResourceBoundary(scope, ResourceBoundary{ResourceType: "question", TenantID: "tenant", SchoolID: "school-b", ExamID: "exam-b"}) {
+		t.Fatal("school manager read foreign exam materials")
 	}
 	if AllowsResourceBoundary(scope, ResourceBoundary{ResourceType: "review_task", ResourceID: "task-other", TenantID: "tenant", SchoolID: "school-b", ExamID: "exam-b", AssignedTo: "other"}) {
 		t.Fatal("foreign unassigned task inherited local school management")
 	}
-	if !AllowsResourceBoundary(scope, ResourceBoundary{ResourceType: "review_task", ResourceID: "task-b", TenantID: "tenant", SchoolID: "school-b", ExamID: "exam-b", AssignedTo: user.ID}) {
-		t.Fatal("concrete foreign assignment must stay readable")
+	if AllowsResourceBoundary(scope, ResourceBoundary{ResourceType: "review_task", ResourceID: "task-b", TenantID: "tenant", SchoolID: "school-b", ExamID: "exam-b", AssignedTo: user.ID}) {
+		t.Fatal("school manager read concrete foreign assignment")
 	}
 	managed := scope.ManagedSchoolIDs()
 	managed[0] = "school-b"
@@ -68,7 +66,7 @@ func TestMemorySchoolScopeUsesStoredSchoolWithoutUpgradingOtherRoleNavigation(t 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !scope.managesSchool("school-a") || scope.managesSchool("school-b") || !scope.AllowsSchool("school-b") {
+	if !scope.managesSchool("school-a") || scope.managesSchool("school-b") || scope.AllowsSchool("school-b") || scope.AllowsExam("exam-b") {
 		t.Fatalf("navigation and school authority merged: %#v", scope)
 	}
 	args, err := (ExamCollectionAccess{Scope: &scope}).SQLArgs("tenant")

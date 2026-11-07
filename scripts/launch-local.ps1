@@ -96,6 +96,8 @@ function Initialize-DeploymentEnv([string]$Path) {
     Set-EnvValue $Path "EDUGRADE_MINIO_ROOT_PASSWORD" (New-HexSecret)
     Set-EnvValue $Path "EDUGRADE_MINIO_APP_SECRET_KEY" (New-HexSecret)
     Set-EnvValue $Path "EDUGRADE_QDRANT_API_KEY" (New-HexSecret)
+    Set-EnvValue $Path "EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY" (New-HexSecret)
+    Set-EnvValue $Path "EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY" (New-HexSecret)
     Set-EnvValue $Path "EDUGRADE_BARCODE_HMAC_KEYS" "local-v1:$(New-HexSecret)"
     Set-EnvValue $Path "EDUGRADE_GRADING_AGENT_TOKEN" (New-HexSecret)
     Set-EnvValue $Path "EDUGRADE_MATH_VERIFY_TOKEN" (New-HexSecret)
@@ -135,6 +137,8 @@ function Assert-GeneratedEnv([string]$Path) {
         "EDUGRADE_MINIO_ROOT_PASSWORD",
         "EDUGRADE_MINIO_APP_SECRET_KEY",
         "EDUGRADE_QDRANT_API_KEY",
+        "EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY",
+        "EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY",
         "EDUGRADE_GRADING_AGENT_TOKEN",
         "EDUGRADE_MATH_VERIFY_TOKEN",
         "EDUGRADE_GRAFANA_ADMIN_PASSWORD",
@@ -150,6 +154,9 @@ function Assert-GeneratedEnv([string]$Path) {
     }
     if ($values["EDUGRADE_GRADING_AGENT_TOKEN"] -eq $values["EDUGRADE_MATH_VERIFY_TOKEN"]) {
         throw "Generated internal service tokens must be different."
+    }
+    if ($values["EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY"] -eq $values["EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY"]) {
+        throw "Generated model encryption and review evidence secrets must be different."
     }
     if ($values["EDUGRADE_BARCODE_HMAC_KEYS"] -notmatch "^local-v1:[0-9a-f]{64}$") {
         throw "Generated barcode HMAC key has an invalid format."

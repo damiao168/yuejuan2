@@ -93,8 +93,7 @@ func (s *Service) prepare(ctx context.Context, input QueryRequest) (preparedQuer
 	if !auth.HasPermission(user, requiredPermission(input.PresetIntent)) {
 		return preparedQuery{}, reject(403, "permission_denied", "当前账号不能查询这类数据。")
 	}
-	// 班级角色的父学校 ID 只用于组织导航，不能据此返回整场考试统计。
-	// 未选择考试时只能返回范围澄清；只有带了具体考试 ID 才检查该考试是否属于当前任务范围。
+	// 未选择考试时只返回范围澄清；指定考试后还须在 authorizedExam 核对管理学校，导航考试不授予整场统计权限。
 	if input.ContextHint.ExamID != "" && !access.TenantWide && !access.IsSchoolWide() && !access.AllowsExam(input.ContextHint.ExamID) {
 		return preparedQuery{}, reject(403, "unsupported_access_scope", "首期整场考试统计不支持当前班级或任务范围。")
 	}

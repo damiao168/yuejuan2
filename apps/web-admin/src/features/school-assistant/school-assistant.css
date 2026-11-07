@@ -1,4 +1,9 @@
 .school-assistant-page { min-height: calc(100svh - 48px); background: var(--surface, #fff); }
+.school-assistant-background-entry.ant-btn { position: fixed; right: 24px; bottom: 24px; z-index: 990; max-width: calc(100vw - 32px); box-shadow: 0 4px 18px #00000014; border-color: var(--primary, #1677ff); color: var(--primary, #1677ff); }
+.school-assistant-background-spinner { animation: school-assistant-background-spin 1s linear infinite; }
+@keyframes school-assistant-background-spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) { .school-assistant-background-entry.ant-btn { right: 16px; bottom: 16px; } }
+@media (prefers-reduced-motion: reduce) { .school-assistant-background-spinner { animation: none; } }
 .school-assistant-modes { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 28px; border-bottom: 1px solid var(--border, #e5e7eb); }
 .school-assistant-modes > strong { font-size: 17px; font-weight: 650; }
 .school-assistant-general .school-chat-shell { height: calc(100svh - 121px); min-height: 520px; }

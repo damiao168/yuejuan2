@@ -1,5 +1,4 @@
-import { Button, Space, type TableColumnsType } from "antd";
-import { UserCheck, UserX } from "lucide-react";
+import { Button, type TableColumnsType } from "antd";
 import type { RosterEntry, SubmissionGrade } from "../../api/scores";
 import { StatusTag } from "../../components/StatusTag";
 import type { ScoreIdentityMaps } from "./hooks/useScoreWorkspaceData";
@@ -9,25 +8,17 @@ import {
 } from "./scorePresentation";
 
 type RosterColumnOptions = Readonly<{
-  canWrite: boolean;
-  publishedOrLocked: boolean;
-  openAttendanceEditor: (entry: RosterEntry, status: "expected" | "absent") => void;
   openSubmission?: (entry: RosterEntry) => void;
   canOpenSubmission?: (entry: RosterEntry) => boolean;
 }>;
 
-function AttendanceAction({ entry, options }: Readonly<{ entry: RosterEntry; options: RosterColumnOptions }>) {
+function RosterAction({ entry, options }: Readonly<{ entry: RosterEntry; options: RosterColumnOptions }>) {
   const canOpen = Boolean(options.openSubmission) && options.canOpenSubmission?.(entry) !== false;
+  // 等待自动汇总的答卷已经评完，发布时自动生成总分，没有需要定位处理的内容。
+  if (entry.resolution_code === "awaiting_aggregation") return "-";
   if (entry.status !== "graded" && entry.status !== "absent" && entry.resolution_code !== "missing_submission" && canOpen) return <Button size="small" onClick={() => options.openSubmission?.(entry)}>{entry.resolution_code === "grading_incomplete" ? "查看阅卷任务" : "定位答卷处理"}</Button>;
-  // 答卷临时行没有可调整的名册身份；锁定或门禁不可写时也不能进入调整表单。
-  if (!options.canWrite || options.publishedOrLocked || !entry.student_id || entry.key.startsWith("submission:")) return entry.resolution_code === "missing_submission" && canOpen ? <Button size="small" onClick={() => options.openSubmission?.(entry)}>核查漏扫与匹配</Button> : "-";
-  if (entry.status === "absent") {
-    return <Button size="small" icon={<UserCheck size={14} />} onClick={() => options.openAttendanceEditor(entry, "expected")}>恢复应考</Button>;
-  }
-  if (entry.resolution_code === "missing_submission") {
-    return <Space wrap><Button size="small" danger icon={<UserX size={14} />} onClick={() => options.openAttendanceEditor(entry, "absent")}>标记缺考</Button>{canOpen ? <Button size="small" onClick={() => options.openSubmission?.(entry)}>核查漏扫与匹配</Button> : null}</Space>;
-  }
-  return <span className="muted">请先处理答卷</span>;
+  if ((entry.status === "absent" || entry.resolution_code === "missing_submission") && canOpen) return <Button size="small" onClick={() => options.openSubmission?.(entry)}>核查漏扫与匹配</Button>;
+  return "-";
 }
 
 export function createRosterColumns(options: RosterColumnOptions): TableColumnsType<RosterEntry> {
@@ -50,19 +41,20 @@ export function createRosterColumns(options: RosterColumnOptions): TableColumnsT
         <div className="score-roster-resolution">
           <span>{rosterResolutionLabels[value] ?? "未知处理方式"}</span>
           {record.expected_page_count > 0 ? <small>{`页数 ${record.actual_page_count}/${record.expected_page_count}`}</small> : null}
-          {record.attendance_reason ? <small>{`处置原因：${record.attendance_reason}`}</small> : null}
         </div>
       )
     },
-    { title: "操作", key: "actions", width: 130, render: (_value, entry) => <AttendanceAction entry={entry} options={options} /> }
+    { title: "操作", key: "actions", width: 160, render: (_value, entry) => <RosterAction entry={entry} options={options} /> }
   ];
 }
 
-export function createScoreColumns({ canReadStudentNames, identities }: Readonly<{
+export function createScoreColumns({ canReadStudentNames, identities, showLock = true }: Readonly<{
   canReadStudentNames: boolean;
   identities: ScoreIdentityMaps;
+  /** 没有任何锁定成绩时不显示锁定列，避免整列都是“未锁定”。 */
+  showLock?: boolean;
 }>): TableColumnsType<SubmissionGrade> {
-  return [
+  const columns: TableColumnsType<SubmissionGrade> = [
     { title: "匿名码", dataIndex: "anonymous_code", width: 150 },
     {
       title: "学生姓名", dataIndex: "student_id", width: 140,
@@ -104,4 +96,5 @@ export function createScoreColumns({ canReadStudentNames, identities }: Readonly
       render: (value: boolean) => <StatusTag tone={value ? "success" : "neutral"}>{value ? "已锁定" : "未锁定"}</StatusTag>
     }
   ];
+  return showLock ? columns : columns.filter(column => column.title !== "锁定");
 }

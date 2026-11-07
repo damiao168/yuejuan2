@@ -13,7 +13,7 @@ export const questionAppealReasonLabels: Record<string, string> = {
 };
 
 export function formatQuestionAppealScore(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return Number(value.toFixed(2)).toString();
 }
 
 export function questionAppealStatusColor(status: string): string {

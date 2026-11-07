@@ -9,6 +9,7 @@ import { appendTaskPage, followingReviewedTask, followingVisibleActionableTask, 
 import { hashQueryParam } from "../../../../router/query";
 import { useGradingQueuePages } from "./useGradingQueuePages";
 import { examSubjectLabel } from "../../../../constants/examStatus";
+import { canTeachSubjects, isSubjectManagedTeacher, normalizeTeachingSubjects, teachingSubjectsLabel } from "../../../../constants/teachingSubjects";
 
 interface UseGradingQueueOptions {
   canManageTasks: boolean;
@@ -35,7 +36,7 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
   const pendingPageRef = useRef<Promise<ReviewTask[]> | null>(null);
   const pendingNextRef = useRef<string | null>(null);
   const [graders, setGraders] = useState<ManagedUser[]>([]);
-  const [gradersError, setGradersError] = useState<string | null>(null);
+  const [graderLoadError, setGradersError] = useState<string | null>(null);
   const [assignmentUserId, setAssignmentUserId] = useState("");
   const [assignmentTaskIds, setAssignmentTaskIds] = useState<string[]>([]);
   const taskListRequestRef = useRef(0);
@@ -114,14 +115,30 @@ export function useGradingQueue({ canManageTasks, canWork, currentUserId, initia
     () => filteredTasks.filter((task) => !["submitted", "completed", "in_progress", "cancelled"].includes(task.status) && task.source !== "double_mark_required"),
     [filteredTasks]
   );
+  const assignmentSubjects = useMemo(() => {
+    const selected = assignmentTaskIds.length ? assignableTasks.filter(task => assignmentTaskIds.includes(task.id)) : assignableTasks;
+    return [...new Set(selected.map(task => task.subject ?? ""))];
+  }, [assignableTasks, assignmentTaskIds]);
   const graderOptions = useMemo(
-    () => graders.map((grader) => {
+    () => graders.filter(grader => canTeachSubjects(grader, assignmentSubjects)).map((grader) => {
       const name = displayNameOrUsername(grader.display_name, grader.username);
       const username = grader.username.trim();
-      return { value: grader.id, label: !username || name === username ? name : `${name} · ${username}` };
+      const identity = !username || name === username ? name : `${name} · ${username}`;
+      return { value: grader.id, label: `${identity} · ${isSubjectManagedTeacher(grader.roles) ? teachingSubjectsLabel(grader.teaching_subjects) : "管理员"}` };
     }),
-    [graders]
+    [assignmentSubjects, graders]
   );
+  const gradersError = graderLoadError || (assignmentTaskIds.length && !graderOptions.length
+    ? assignmentSubjects.some(subject => !subject)
+      ? "所选任务缺少考试学科，请先核对考试资料后再分配。"
+      : normalizeTeachingSubjects(assignmentSubjects).length > 1
+        ? "没有同时任教所选学科的教师，请按学科分别选择任务并分配。"
+        : "当前学科没有可分配的阅卷教师，请先在人员资料中设置任教学科并确认账号已启用。"
+    : null);
+  useEffect(() => {
+    // 所选题目或学科变化后，旧教师可能已不再匹配，不能沿用上一次的分配对象。
+    setAssignmentUserId(current => graderOptions.some(option => option.value === current) ? current : "");
+  }, [graderOptions]);
   const graderNames = useMemo(
     () => Object.fromEntries(graders.map((grader) => [grader.id, displayNameOrUsername(grader.display_name, grader.username)])),
     [graders]

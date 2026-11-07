@@ -5,8 +5,8 @@ import type { ColumnType } from "antd/es/table";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Exam } from "../api/exams";
 import type { RosterEntry, SubmissionGrade } from "../api/scores";
-import type { ScoreActionsPanel } from "../features/score-management/components/ScoreActionsPanel";
-import type { ScoreReleaseWorkspace } from "../features/score-management/components/ScoreReleaseWorkspace";
+import type { ScoreReleaseStatus } from "../features/score-management/components/ScoreReleaseStatus";
+import type { ScorePublicationChecklist } from "../features/score-management/components/ScorePublicationChecklist";
 import type { QualityPanel } from "../features/score-management/components/QualityPanel";
 import type { useScoreWorkspaceData } from "../features/score-management/hooks/useScoreWorkspaceData";
 import { emptyScoreWorkspaceSnapshot } from "../features/score-management/hooks/scoreWorkspaceState";
@@ -14,8 +14,7 @@ import { ScoreManagementPage } from "./ScoreManagementPage";
 
 type Workspace = ReturnType<typeof useScoreWorkspaceData>;
 type PageProps = ComponentProps<typeof ScoreManagementPage>;
-type ActionProps = ComponentProps<typeof ScoreActionsPanel>;
-type ReleaseProps = ComponentProps<typeof ScoreReleaseWorkspace>;
+type StatusProps = ComponentProps<typeof ScoreReleaseStatus>;
 type QualityProps = ComponentProps<typeof QualityPanel>;
 type SearchProps = {
   value: string;
@@ -33,14 +32,15 @@ type Confirmation = { title: string; content: ReactNode; onOk: () => Promise<voi
 
 const mocks = vi.hoisted(() => ({
   workspace: vi.fn<typeof useScoreWorkspaceData>(),
-  actions: vi.fn<(props: ActionProps) => void>(),
-  releases: vi.fn<(props: ReleaseProps) => void>(),
+  status: vi.fn<(props: StatusProps) => void>(),
+  openPublish: vi.fn(), openCorrection: vi.fn(),
   quality: vi.fn<(props: QualityProps) => void>(),
+  checklist: vi.fn<(props: ComponentProps<typeof ScorePublicationChecklist>) => void>(),
   tables: vi.fn<(props: TableProps) => void>(),
   search: vi.fn<(props: SearchProps) => void>(),
   error: vi.fn(), modal: vi.fn<(options: Confirmation) => void>(),
-  finalize: vi.fn(), confirm: vi.fn(), publish: vi.fn(), export: vi.fn(),
-  stepUp: vi.fn(), run: vi.fn(), setActioning: vi.fn(), attendance: vi.fn(),
+  finalize: vi.fn(), confirm: vi.fn(), publish: vi.fn(), export: vi.fn(), exportReport: vi.fn(), exportOfficial: vi.fn(),
+  stepUp: vi.fn(), run: vi.fn(), setActioning: vi.fn(),
   setKeyword: vi.fn(), setAppliedKeyword: vi.fn(), setStatusFilter: vi.fn(),
   setSelectedExamId: vi.fn(), setRoster: vi.fn(), refresh: vi.fn(),
   loadExamList: vi.fn(), loadScores: vi.fn(), loadMoreGrades: vi.fn(),
@@ -52,33 +52,29 @@ vi.mock("../features/score-management/hooks/useScoreWorkspaceData", () => ({ use
 vi.mock("../features/score-management/hooks/useScoreAction", () => ({
   useScoreAction: () => ({ actioning: mocks.actioning, setActioning: mocks.setActioning, runAction: mocks.run })
 }));
-vi.mock("../features/score-management/hooks/useScoreReleaseWorkflow", () => ({ useScoreReleaseWorkflow: () => ({}) }));
-vi.mock("../features/score-management/hooks/useRegradeWorkflow", () => ({ useRegradeWorkflow: () => ({}) }));
-vi.mock("../features/score-management/hooks/useRosterAttendance", () => ({ useRosterAttendance: () => ({ openAttendanceEditor: mocks.attendance }) }));
+vi.mock("../features/score-management/hooks/useScoreReleaseWorkflow", () => ({ useScoreReleaseWorkflow: () => ({ openPublish: mocks.openPublish, openCorrection: mocks.openCorrection }) }));
+vi.mock("../features/score-management/hooks/useExamEducationStage", () => ({ useExamEducationStage: () => "senior" }));
+vi.mock("../features/score-management/hooks/useSessionPublication", () => ({ useSessionPublication: () => null, sessionPublicationText: () => "" }));
 vi.mock("../auth/stepUpContext", () => ({ useStepUp: () => ({ runWithStepUp: mocks.stepUp }) }));
 vi.mock("../api/scores", () => ({
   finalizeExamGrades: mocks.finalize, confirmExamGrades: mocks.confirm,
-  publishExamGrades: mocks.publish, exportExamGrades: mocks.export
+  publishExamGrades: mocks.publish, exportExamGrades: mocks.export,
+  exportExamGradeReport: mocks.exportReport, exportPublishedExamGrades: mocks.exportOfficial
 }));
-vi.mock("../features/score-management/components/ScoreWorkflowModals", () => ({ ScoreWorkflowModals: () => null }));
+vi.mock("../features/score-management/components/ScorePublishDialog", () => ({ ScorePublishDialog: () => null }));
+vi.mock("../features/score-management/components/ScoreCorrectionDialog", () => ({ ScoreCorrectionDialog: () => null }));
+vi.mock("../features/score-management/components/ScoreReleaseHistory", () => ({ ScoreReleaseHistory: () => null }));
 vi.mock("../features/score-management/components/StudentScorePreviewDialog", () => ({ StudentScorePreviewDialog: () => null }));
 vi.mock("../components/StatusTag", () => ({ StatusTag: ({ children }: { children: ReactNode }) => <span>{children}</span> }));
 vi.mock("../components/PageState", () => ({
   LoadingState: ({ label }: { label: string }) => <p role="status">{label}</p>,
   ErrorState: ({ message, onRetry }: { message: string; onRetry: () => void }) => <aside role="alert">{message}<button onClick={onRetry}>重试读取</button></aside>
 }));
-vi.mock("../features/score-management/components/ScoreActionsPanel", () => ({
-  ScoreActionsPanel: (props: ActionProps) => {
-    mocks.actions(props);
-    return <aside data-testid="actions-panel">
-      <input id="score-confirm-reason" aria-label="确认原因" value={props.confirmReason} onChange={(event) => props.setConfirmReason(event.target.value)} />
-      <input aria-label="发布原因" value={props.publishReason} onChange={(event) => props.setPublishReason(event.target.value)} />
-      <button onClick={props.publish} disabled={!props.canWrite}>公开并锁定基础成绩</button>
-    </aside>;
+vi.mock("../features/score-management/components/ScoreReleaseStatus", () => ({
+  ScoreReleaseStatus: (props: StatusProps) => {
+    mocks.status(props);
+    return <aside data-testid="release-status"><button onClick={props.onPrimary}>{props.model.primary?.label ?? "无主操作"}</button></aside>;
   }
-}));
-vi.mock("../features/score-management/components/ScoreReleaseWorkspace", () => ({
-  ScoreReleaseWorkspace: (props: ReleaseProps) => { mocks.releases(props); return <aside data-testid="release-workspace" />; }
 }));
 vi.mock("../features/score-management/components/QualityPanel", () => ({
   QualityPanel: (props: QualityProps) => {
@@ -89,7 +85,7 @@ vi.mock("../features/score-management/components/QualityPanel", () => ({
     })}</div>;
   }
 }));
-vi.mock("../features/score-management/components/ScorePublicationChecklist", () => ({ ScorePublicationChecklist: () => <section aria-label="发布待办" /> }));
+vi.mock("../features/score-management/components/ScorePublicationChecklist", () => ({ ScorePublicationChecklist: (props: ComponentProps<typeof ScorePublicationChecklist>) => { mocks.checklist(props); return <section aria-label="发布待办" />; } }));
 vi.mock("../components/ResponsiveTable", () => ({
   ResponsiveTable: (props: TableProps) => {
     mocks.tables(props);
@@ -102,7 +98,7 @@ vi.mock("../components/ResponsiveTable", () => ({
 }));
 vi.mock("antd", () => ({
   App: { useApp: () => ({ message: { error: mocks.error }, modal: { confirm: mocks.modal } }) },
-  Alert: ({ message, description }: { message: ReactNode; description: ReactNode }) => <aside role="alert">{message}{description}</aside>,
+  Alert: ({ message, description, action }: { message: ReactNode; description: ReactNode; action?: ReactNode }) => <aside role="alert">{message}{description}{action}</aside>,
   Button: ({ children, onClick, disabled, loading }: { children: ReactNode; onClick?: () => void; disabled?: boolean; loading?: boolean }) => <button disabled={disabled} data-loading={loading} onClick={onClick}>{children}</button>,
   Empty: Object.assign(({ description }: { description: ReactNode }) => <p>{description}</p>, { PRESENTED_IMAGE_SIMPLE: "simple" }),
   Space: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -163,7 +159,7 @@ describe("评分管理页第53批展示拆分", () => {
   let host: HTMLDivElement;
   let root: Root;
   const base: PageProps = { mode: "admin", canManage: true, canReadStudentNames: false, canReadAudit: false };
-  const actions = () => latest(mocks.actions.mock.calls);
+  const actions = () => latest(mocks.status.mock.calls);
   const search = () => latest(mocks.search.mock.calls);
   const table = (key: string) => mocks.tables.mock.calls.slice().reverse().find(([props]) => props.rowKey === key)![0];
 
@@ -200,16 +196,23 @@ describe("评分管理页第53批展示拆分", () => {
   };
 
   describe("展示接线", () => {
-    it("未确认成绩的处理动作聚焦确认原因，不展开原查询入口", async () => {
-      data = { ...data, quality: { stage: "publish", can_publish: false, quality: { passed: false, issues: [{ code: "grades_not_confirmed", message: "待确认", count: 1, blocking: true }] } } };
-      await render({ onNavigate: vi.fn() });
-      const originalEntry = document.createElement("details"); originalEntry.className = "score-advanced-details"; host.append(originalEntry);
-      const input = host.querySelector<HTMLInputElement>("#score-confirm-reason")!;
-      const scroll = vi.fn(); Object.defineProperty(input, "scrollIntoView", { value: scroll });
-      await click("定位成绩确认");
-      expect(document.activeElement).toBe(input);
-      expect(scroll).toHaveBeenCalledOnce();
-      expect(originalEntry.open).toBe(false);
+    it("移除手工汇总确认入口，前置问题继续定位本场小题", async () => {
+      const onNavigate = vi.fn();
+      await render({ onNavigate, canHandleCapture: true });
+      expect(host.querySelector(".score-summary-strip")).toBeNull();
+      expect(host.querySelector("#score-confirmation-step")).toBeNull();
+      expect(host.querySelector("#score-preparation")).toBeNull();
+      expect(host.querySelector(".score-results-panel")).toBeNull();
+      expect(host.querySelector(".score-roster-panel")).toBeNull();
+      expect(host.querySelector(".score-quality-panel")).toBeNull();
+      latest(mocks.checklist.mock.calls).actionFor("quality_questions_missing", "questions")?.run();
+      expect(onNavigate).toHaveBeenCalledWith("/exams/exam%20%2Fa/questions");
+      latest(mocks.checklist.mock.calls).actionFor("roster_unresolved", "roster")?.run();
+      expect(onNavigate).toHaveBeenLastCalledWith("/exams/exam%20%2Fa/capture");
+      onNavigate.mockClear();
+      expect(latest(mocks.checklist.mock.calls).actionFor("capture_collection_incomplete", "capture")?.label).toBe("核查答卷与匹配");
+      expect(mocks.finalize).not.toHaveBeenCalled();
+      expect(mocks.confirm).not.toHaveBeenCalled();
     });
     it("身份降级和读取失败可同时提示，教师模式仍省略管理端发布区域", async () => {
       data = { ...data, error: "成绩重读失败", identities: { ...data.identities, error: "身份读取不完整" } };
@@ -218,26 +221,25 @@ describe("评分管理页第53批展示拆分", () => {
       expect(alerts.map((item) => item.textContent)).toEqual(["学生身份信息读取不完整身份读取不完整", "成绩重读失败重试读取"]);
       expect(host.querySelectorAll('[aria-label="成绩发布任务"]')).toHaveLength(1);
       expect(host.querySelector(".score-publication-status")).toBeNull();
-      expect(host.querySelector('[data-testid="release-workspace"]')).not.toBeNull();
+      expect(host.querySelector('[data-testid="release-status"]')).not.toBeNull();
       await click("重试读取");
       expect(mocks.refresh).toHaveBeenCalledTimes(1);
       await render({ mode: "teacher", canManage: false });
       expect(host.querySelector(".score-publication-status")).toBeNull();
-      expect(host.querySelector('[data-testid="release-workspace"]')).toBeNull();
-      expect(host.querySelector('[data-testid="actions-panel"]')).toBeNull();
+      expect(host.querySelector('[data-testid="release-status"]')).toBeNull();
       expect(host.querySelectorAll('[role="alert"]')).toHaveLength(2);
       expect(host.querySelector(".score-shell")?.classList.contains("read-only")).toBe(true);
     });
 
     it("重读时替换三个展示区，读完后保留表格数据引用、分页及加载更多入口", async () => {
       data = { ...data, loadingScores: true, loadingMoreGrades: true };
-      await render();
+      await render({ mode: "teacher", canManage: false });
       expect([...host.querySelectorAll('[role="status"]')].map((item) => item.textContent)).toEqual(["正在核对考试名册", "正在读取质量检查", "正在读取成绩"]);
       expect(mocks.tables).not.toHaveBeenCalled();
       expect(mocks.quality).not.toHaveBeenCalled();
       expect(host.querySelector(".load-more-row")).toBeNull();
       data = { ...data, loadingScores: false };
-      await render();
+      await render({ mode: "teacher", canManage: false });
       expect(table("key").dataSource).toBe(data.roster!.entries);
       expect(table("id").dataSource).toBe(data.grades);
       expect(table("id").pagination).toBe(false);
@@ -247,30 +249,26 @@ describe("评分管理页第53批展示拆分", () => {
       await click("加载更多成绩");
       expect(mocks.loadMoreGrades).toHaveBeenCalledTimes(1);
       data = { ...data, gradesHaveMore: false };
-      await render();
+      await render({ mode: "teacher", canManage: false });
       expect(host.querySelector(".load-more-row")).toBeNull();
     });
   });
 
   describe("控件回调与重渲染", () => {
-    it("搜索清空和提交沿用顺序，原因更新不会重新挂载成绩搜索控件", async () => {
-      await render();
+    it("搜索清空和提交沿用顺序，重读仍保留成绩搜索控件", async () => {
+      await render({ mode: "teacher", canManage: false });
       const originalInput = host.querySelector<HTMLInputElement>('input[aria-label="成绩搜索"]')!;
       await act(async () => search().onChange({ target: { value: "  anonymous-a  " } } as ChangeEvent<HTMLInputElement>));
-      await render();
+      await render({ mode: "teacher", canManage: false });
       expect(mocks.order).toEqual(["keyword:  anonymous-a  "]);
       await click("搜索成绩");
       expect(mocks.setAppliedKeyword).toHaveBeenLastCalledWith("anonymous-a");
-      await act(async () => { actions().setConfirmReason(" 保留确认原因 "); actions().setPublishReason("保留发布原因"); });
+      await render({ mode: "teacher", canManage: false });
       expect(host.querySelector('input[aria-label="成绩搜索"]')).toBe(originalInput);
       expect(originalInput.value).toBe("  anonymous-a  ");
-      expect(host.querySelector<HTMLInputElement>('input[aria-label="确认原因"]')!.value).toBe(" 保留确认原因 ");
-      expect(host.querySelector<HTMLInputElement>('input[aria-label="发布原因"]')!.value).toBe("保留发布原因");
-      await act(async () => actions().confirmGrades());
-      expect(mocks.confirm).toHaveBeenCalledWith("exam /a", "保留确认原因");
       mocks.order = [];
       await act(async () => search().onChange({ target: { value: "" } } as ChangeEvent<HTMLInputElement>));
-      await render();
+      await render({ mode: "teacher", canManage: false });
       expect(mocks.order).toEqual(["keyword:", "applied:"]);
       await act(async () => {
         const select = host.querySelector<HTMLSelectElement>(".toolbar-select")!;
@@ -287,11 +285,10 @@ describe("评分管理页第53批展示拆分", () => {
       if (boundary === "action") mocks.actioning = "publish";
       await render({ canManage: boundary !== "read-only" });
       expect(mocks.workspace).toHaveBeenLastCalledWith({
-        canManage: boundary !== "read-only", canReadStudentNames: false, canReadAudit: false, initialExamId: ""
+        canManage: boundary !== "read-only", canReadStudentNames: false, canReadAudit: false, initialExamId: "", selectionScope: undefined, resetUnavailableRememberedSelection: false
       });
       expect(data.grades).toHaveLength(1);
       expect(actions().canWrite).toBe(false);
-      expect(latest(mocks.releases.mock.calls).canWrite).toBe(false);
     });
 
     it("真实名册列和质量回调保留 review、arbitration、capture 入口及编码参数", async () => {
@@ -301,7 +298,7 @@ describe("评分管理页第53批展示拆分", () => {
         { code: "unfinished_arbitration_tasks", message: "arbitration", blocking: true, count: 1 },
         { code: "missing_pages_unresolved", message: "capture", blocking: true, count: 1 }
       ] } } };
-      await render({ canManage: false, canHandleReview: true, canHandleArbitration: true, onNavigate });
+      await render({ mode: "teacher", canManage: false, canHandleReview: true, canHandleArbitration: true, onNavigate });
       expect(host.textContent).toContain("权限受限");
       expect(host.textContent).not.toContain("测试学生");
       expect(host.textContent).not.toContain("定位答卷处理");
@@ -311,7 +308,7 @@ describe("评分管理页第53批展示拆分", () => {
         "/exams/exam%20%2Fa/grading?q=paper%20%2Freview", "/exams/exam%20%2Fa/grading", "/arbitration?exam=exam%20%2Fa"
       ]);
       onNavigate.mockClear();
-      await render({ canManage: false, canReadStudentNames: true, canHandleCapture: true, onNavigate });
+      await render({ mode: "teacher", canManage: false, canReadStudentNames: true, canHandleCapture: true, onNavigate });
       expect(host.textContent).toContain("测试学生");
       expect(host.textContent).not.toContain("查看阅卷任务");
       expect(host.textContent).not.toContain("处理阅卷任务");
@@ -323,34 +320,89 @@ describe("评分管理页第53批展示拆分", () => {
     });
   });
 
-  describe("基础成绩发布确认", () => {
-    it("导出直接请求本场全部成绩，保留服务端导出流程且不再弹固定确认", async () => {
-      mocks.export.mockReturnValue(new Promise(() => undefined));
+  describe("学生端发布状态", () => {
+    const releasedAt = "2026-10-31T13:30:00Z";
+    const release = (id: string, version: number, status: "draft" | "published", extra: Record<string, unknown> = {}) =>
+      ({ id, version, status, source: "initial", reason: "", visibility_policy: {}, appeal_window: { enabled: false }, published_at: status === "published" ? releasedAt : null, ...extra }) as unknown as Workspace["scoreReleases"][number];
+
+    // 阅卷已完成但尚未生成总分的答卷由发布时自动汇总；只剩这种情况时主按钮应直接是“发布成绩”。
+    it("只剩等待自动汇总的答卷时显示检查已通过，主按钮打开发布弹窗", async () => {
+      data = { ...data,
+        releaseGate: { version: "1", passed: true, blocking: [], warnings: [], counts: {}, generated_at: "" },
+        roster: { entries: [{ key: "student:a", student_id: "a", submission_id: "paper-a", status: "submitted", resolution_code: "awaiting_aggregation", expected_page_count: 2, actual_page_count: 2 }],
+          summary: { expected: 1, received: 1, graded: 0, absent: 0, unresolved: 0, missing_pages: 0, unidentified: 0 } } };
       await render();
-      await act(async () => actions().exportGrades());
-      expect(mocks.export).toHaveBeenCalledWith("exam /a");
-      expect(mocks.modal).not.toHaveBeenCalled();
-      expect(mocks.run).toHaveBeenCalledWith("export", expect.any(Function), "成绩已导出");
+      expect(actions().model).toMatchObject({ text: "未发布 · 检查已通过", primary: { kind: "publish", label: "发布成绩" } });
+      await click("发布成绩");
+      expect(mocks.openPublish).toHaveBeenCalledTimes(1);
     });
-    it("窗口打开后重渲染仍使用原考试和原因，确认后先完成二次校验再重读考试", async () => {
+
+    // 复评任务完成后状态不变；只有对应结果版本已发布，才不再算待发布更正。
+    it("已完成复评的结果版本未发布时主按钮为发布更正，已发布后改为导出", async () => {
+      const job = { id: "job-1", status: "ready_for_release", reason_text: "答案更正", affected_count: 2, updated_at: "2026-10-31T12:00:00Z" } as unknown as Workspace["regradeJobs"][number];
+      const current = release("r1", 1, "published");
+      data = { ...data, currentPublishedRelease: current, regradeJobs: [job], scoreReleases: [current, release("r2", 2, "draft", { source: "regrade", regrade_job_id: "job-1" })] };
       await render();
-      await act(async () => actions().setPublishReason(" 原发布原因 "));
-      await click("公开并锁定基础成绩");
-      const confirmation = mocks.modal.mock.calls[0][0];
-      expect(confirmation.title).toBe("确认发布成绩");
-      expect(confirmation.content).toContain("第一场考试");
-      expect(mocks.publish).not.toHaveBeenCalled();
-      expect(mocks.stepUp).not.toHaveBeenCalled();
-      // 确认窗口保留打开时的闭包；页面重渲染不能把尚未确认的命令改成另一场考试。
-      data = { ...data, selectedExamId: "exam-b", gradeTotal: 9 };
+      expect(actions().model.primary).toEqual({ kind: "correction", label: "发布更正" });
+      await click("发布更正");
+      expect(mocks.openCorrection).toHaveBeenCalledWith(expect.objectContaining({ job, draft: expect.objectContaining({ id: "r2" }) }));
+      data = { ...data, scoreReleases: [current, release("r2", 2, "published", { source: "regrade", regrade_job_id: "job-1" })] };
       await render();
-      await act(async () => actions().setPublishReason("新发布原因"));
-      mocks.order = [];
-      await act(async () => confirmation.onOk());
-      expect(mocks.publish).toHaveBeenCalledWith("exam /a", "原发布原因");
-      expect(mocks.stepUp).toHaveBeenCalledWith(expect.objectContaining({ reason: "正式发布成绩" }));
-      expect(mocks.order).toEqual(["action", "step-up", "publish", "step-up-complete", "exams"]);
-      expect(mocks.run).toHaveBeenCalledWith("publish", expect.any(Function), "基础成绩已公开并锁定");
+      expect(actions().model.primary).toEqual({ kind: "export", label: "导出教师成绩表" });
+    });
+
+    it("从复核申请跳来且复评仍在进行时，引导到复核与异常页的对应任务", async () => {
+      const onNavigate = vi.fn();
+      const original = window.location.pathname + window.location.search;
+      window.history.replaceState(null, "", "/admin/scores?appeal=appeal-1&regrade=job-2");
+      try {
+        data = { ...data, regradeJobs: [{ id: "job-2", status: "running" } as unknown as Workspace["regradeJobs"][number]] };
+        await render({ onNavigate });
+        expect(host.textContent).toContain("本次申请的复评仍在进行");
+        expect(actions().activeRegrades).toBe(1);
+        await click("前往复评");
+        expect(onNavigate).toHaveBeenLastCalledWith("/exams/exam%20%2Fa/quality?regrade=job-2");
+      } finally {
+        window.history.replaceState(null, "", original);
+      }
+    });
+  });
+
+  describe("正式教师成绩表导出", () => {
+    it("使用正式快照接口，并保留当前考试归属判断", async () => {
+      mocks.exportOfficial.mockReturnValue(new Promise(() => undefined));
+      await render({ canReadAudit: true });
+      await act(async () => actions().onExport());
+      expect(mocks.exportOfficial).toHaveBeenCalledWith("exam /a", expect.any(AbortSignal));
+      expect(mocks.run).toHaveBeenCalledWith("export-official", expect.any(Function), "教师成绩表已导出，班级平均分在每张表最下面", expect.any(Function));
+      expect(mocks.workspace).toHaveBeenLastCalledWith(expect.objectContaining({ canReadAudit: false }));
+      expect(mocks.export).not.toHaveBeenCalled();
+      expect(mocks.exportReport).not.toHaveBeenCalled();
+    });
+
+    it("切换考试后不下载上一场考试迟到的文件", async () => {
+      let resolve!: (value: { blob: Blob; contentType: string }) => void;
+      mocks.exportOfficial.mockReturnValue(new Promise(done => { resolve = done; }));
+      const download = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+      const originalCreate = Object.getOwnPropertyDescriptor(URL, "createObjectURL");
+      const createURL = vi.fn(() => "blob:synthetic");
+      Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createURL });
+      try {
+        await render({ selectionScope: "school:admin" });
+        await act(async () => actions().onExport());
+        const oldOperation = mocks.run.mock.results[0].value as Promise<void>;
+        data = { ...data, selectedExamId: "exam-b" };
+        await render({ selectionScope: "school:admin" });
+        await act(async () => { resolve({ blob: new Blob(["old exam"]), contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }); await oldOperation; });
+        expect(download).not.toHaveBeenCalled();
+        expect(createURL).not.toHaveBeenCalled();
+        const isCurrent = mocks.run.mock.calls[0][3] as () => boolean;
+        expect(isCurrent()).toBe(false);
+      } finally {
+        download.mockRestore();
+        if (originalCreate) Object.defineProperty(URL, "createObjectURL", originalCreate);
+        else Reflect.deleteProperty(URL, "createObjectURL");
+      }
     });
   });
 });

@@ -131,8 +131,8 @@ SELECT $1,id,answer_segment_id,$3,1,1,'single',now()+interval '10 seconds' FROM 
 			}
 		})
 	}
-	t.Run("mixed school administrator keeps only own external review scope", func(t *testing.T) {
-		// 同一外校再放入另一人的任务，避免测试只证明本人任务可见却漏检整场队列的越权。
+	t.Run("mixed school administrator cannot read external review or statistics", func(t *testing.T) {
+		// 保留本人及他人的遗留外校任务；学校管理员本校限制必须同时覆盖个人筛选和整场队列。
 		if _, err := db.Exec(`INSERT INTO review_task(tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,source,status,assigned_to,created_by)
 SELECT tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,'other-reviewer','score_anomaly','completed',$3,$3
 FROM review_task WHERE tenant_id=$1 AND id=$2`, fixture.TenantID, tasks[0], fixture.AdminID); err != nil {
@@ -151,8 +151,8 @@ FROM review_task WHERE tenant_id=$1 AND id=$2`, fixture.TenantID, tasks[0], fixt
 			query, mode  string
 			tasks, count int
 		}{
-			{"", "exam", 2, 0},
-			{"&assigned_to=" + graderID, "personal", 2, 2},
+			{"", "exam", 0, 0},
+			{"&assigned_to=" + graderID, "personal", 0, 0},
 			{"&assigned_to=" + fixture.AdminID, "personal", 0, 0},
 		} {
 			request := httptest.NewRequest(http.MethodGet, "/api/v1/review-tasks?exam_id="+fixture.ExamID+"&statistics=true&limit=1"+tc.query, nil)

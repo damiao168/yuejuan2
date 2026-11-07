@@ -12,7 +12,7 @@ export function usePageVisible() {
   return useContext(PageVisibilityContext);
 }
 
-/** 首屏加载状态参与切页等待；脱离路由容器时仍按普通加载组件显示。 */
+/** 仅在显式提供 PageReadiness 的边界中登记等待；路由只为模块加载提供该上下文，页面取数独立展示。 */
 export function usePageLoading(loading = true) {
   const readiness = useContext(PageReadinessContext);
   useLayoutEffect(() => loading ? readiness?.registerLoading() : undefined, [readiness, loading]);
@@ -27,7 +27,7 @@ export function createPageReadiness() {
   const schedule = () => {
     cancel();
     if (!complete || blockers.size) return;
-    // 延后一轮任务，让首屏 effect 发起取数、父子加载组件交接后再判断，避免只等到模块就提前切页。
+    // 延后一轮任务，等模块加载边界提交或移除后再展示；普通页面取数不会在这里登记。
     timer = setTimeout(() => {
       if (!complete || blockers.size) return;
       const onReady = complete;

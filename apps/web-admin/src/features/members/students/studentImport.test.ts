@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SchoolClass } from "../../../api/org";
-import { prepareStudentImport, remapStudentImportError } from "./studentImport";
+import { prepareStudentImport, remapStudentImportError, studentImportErrorsCSV } from "./studentImport";
 
 const classes = [
   { id: "class-1", school_id: "school-1", code: "G10-01" }
@@ -73,5 +73,24 @@ describe("student CSV import preparation", () => {
     const prepared = prepareStudentImport("学号,姓名,班级\n001,合成甲,G10-01\n,,\n002,合成乙,G10-01\n", classes);
     expect(prepared.errors).toEqual([]); expect(prepared.sourceRows).toEqual([2, 4]);
     expect(remapStudentImportError({ row: 3, message: "重复学号" }, prepared.sourceRows).row).toBe(4);
+  });
+
+  it("CSV重名表头不能被解析器静默重命名后选错学生字段", () => {
+    const prepared = prepareStudentImport("学号,姓名,姓名,班级\n001,张三,李四,G10-01", classes);
+    expect(prepared.csv).toBe("");
+    expect(prepared.errors).toEqual([{ row: 1, message: "表头存在重名列，请先改为不同名称再导入" }]);
+  });
+
+  it("普通CSV与Excel保持相同的10000行上限", () => {
+    const prepared = prepareStudentImport(["学号,姓名,班级", ...Array.from({ length: 10001 }, (_, index) => `${index},合成学生,G10-01`)].join("\n"), classes);
+    expect(prepared.csv).toBe("");
+    expect(prepared.errors[0].message).toContain("10000");
+  });
+
+  it("完整错误表使用中文列名且阻止输入被表格软件当成公式", () => {
+    const content = studentImportErrorsCSV([{ row: 2, message: '=HYPERLINK("https://synthetic.invalid")' }, { row: 5, message: "学号与现有学生冲突" }]);
+    expect(content).toContain("行号,问题说明\r\n");
+    expect(content).toContain("2,\"'=HYPERLINK");
+    expect(content).toContain("5,学号与现有学生冲突");
   });
 });

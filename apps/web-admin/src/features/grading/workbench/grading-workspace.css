@@ -1,0 +1,243 @@
+
+
+.grading-topbar,
+.grading-taskbar,
+.answer-panel,
+.grading-inspector,
+.grading-bottom > div {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.grading-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+.grading-topbar h1,
+.panel-head h2,
+.grading-bottom h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.grading-topbar h1 {
+  flex-shrink: 0;
+  font-size: var(--eg-font-section);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.grading-work-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.grading-work-title span {
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grading-topbar p,
+.panel-head p,
+.grading-task-item span,
+.viewer-scale {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.grading-taskbar {
+  display: grid;
+  /* 筛选项都在任务侧栏内；整组范围和状态不能共用一行挤压彼此。 */
+  grid-template-columns: minmax(0, 1fr);
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+}
+
+.grading-taskbar > *,
+.grading-taskbar .grading-scope-filters > label,
+.grading-taskbar .ant-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.grading-taskbar > .muted {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.grading-task-rail .grading-taskbar {
+  border: 0;
+  border-radius: 0;
+}
+
+.grading-task-rail {
+  position: sticky;
+  top: 92px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100svh - 116px);
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.grading-assignment-bar {
+  display: grid;
+  /* 批量分配也在窄侧栏中；按钮和说明各占整行，避免长按钮把相邻列挤成竖排。 */
+  grid-template-columns: minmax(0, 1fr);
+  flex-shrink: 0;
+  gap: 7px;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.grading-assignment-select-all {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.grading-assignment-bar > *,
+.grading-assignment-bar .ant-select,
+.grading-assignment-bar .ant-btn {
+  width: 100%;
+  min-width: 0;
+}
+
+.grading-assignment-bar .ant-btn {
+  height: auto;
+  min-height: 40px;
+  white-space: normal;
+}
+
+.grading-assignment-bar .muted {
+  overflow-wrap: break-word;
+}
+
+.grading-workspace {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.grading-task-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  padding: 8px;
+}
+
+.grading-task-item {
+  display: flex !important;
+  justify-content: flex-start !important;
+  gap: 10px;
+  align-items: center !important;
+  padding: 10px 8px !important;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.grading-task-item .grading-task-primary {
+  flex: 1 1 auto;
+}
+
+.grading-task-item .grading-task-status {
+  flex: 0 0 auto;
+  align-items: flex-end;
+}
+
+.grading-task-item.active,
+.grading-task-item:hover {
+  background: var(--hover-bg);
+}
+
+.grading-task-item > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.grading-task-item strong,
+.grading-task-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grading-main,
+.grading-main-empty {
+  min-width: 0;
+}
+
+.grading-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grading-main-empty {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.grading-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+  grid-template-areas: "answer inspector";
+  gap: 12px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.answer-panel {
+  grid-area: answer;
+}
+
+.grading-inspector {
+  grid-area: inspector;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.answer-panel,
+.evidence-panel,
+.score-panel {
+  min-width: 0;
+  padding: 12px;
+}
+
+.evidence-panel,
+.score-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.evidence-panel {
+  border-bottom: 1px solid var(--border);
+}
+
+.annotation-entry-placeholder {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}

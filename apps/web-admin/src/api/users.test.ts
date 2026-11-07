@@ -1,11 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { listAllActiveGraders, listAllManagedUsers, type ManagedUser } from "./users";
+import { createManagedUser, listAllActiveGraders, listAllManagedUsers, type ManagedUser } from "./users";
 
 afterEach(() => vi.unstubAllGlobals());
 const grader = (id: string, status = "active"): ManagedUser => ({ id, username: id, display_name: id, status, roles: ["grader"] });
 const response = (users: ManagedUser[], has_more: boolean, next_cursor: string) => new Response(JSON.stringify({ users, has_more, next_cursor }));
 
 describe("quality reviewer pagination", () => {
+  it("教师账号的初始密码和确认原样传递，不把确认或首改标记混入返回凭据", async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ user: { ...grader("new"), must_change_password: true } })));
+    vi.stubGlobal("fetch", fetch);
+    const password = " 保留空格的初始密码123 ";
+    await createManagedUser({ username: "new", display_name: "教师", school_id: "school", teaching_subjects: ["mathematics"], role_codes: ["teacher", "grader", "arbitrator"], password, password_confirm: password });
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ password, password_confirm: password });
+  });
   it("完整人员列表读取超过 200 人，保留服务器搜索条件并去重", async () => {
     const fetch = vi.fn()
       .mockResolvedValueOnce(response(Array.from({ length: 200 }, (_, i) => grader(`g-${i}`)), true, "page-2"))

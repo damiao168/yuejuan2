@@ -38,8 +38,8 @@ func (s *PostgresStore) DeleteStudent(ctx context.Context, tenantID, id string) 
 		return err
 	}
 	defer tx.Rollback()
-	var status string
-	err = tx.QueryRowContext(ctx, `SELECT status FROM student WHERE tenant_id=$1 AND id::text=$2 AND deleted_at IS NULL FOR UPDATE`, tenantID, id).Scan(&status)
+	var status, schoolID string
+	err = tx.QueryRowContext(ctx, `SELECT status,school_id::text FROM student WHERE tenant_id=$1 AND id::text=$2 AND deleted_at IS NULL FOR UPDATE`, tenantID, id).Scan(&status, &schoolID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
 	}
@@ -50,7 +50,7 @@ func (s *PostgresStore) DeleteStudent(ctx context.Context, tenantID, id string) 
 		return ErrStudentMustBeInactive
 	}
 	// 历史或软删除的业务记录也属于引用，不能为了移除名册而级联删考试、答卷、成绩。
-	// 学生账号作用域使用 JSON 而非外键，需要在数据库外键保护之外单独检查。
+	// 正确绑定的新学生账号由后续步骤停用并保留账户行；只有 JSON 的历史关联不能自动处理。
 	var inUse bool
 	err = tx.QueryRowContext(ctx, `SELECT
  EXISTS(SELECT 1 FROM exam_candidate_snapshot WHERE tenant_id=$1 AND student_id::text=$2)
@@ -63,12 +63,16 @@ func (s *PostgresStore) DeleteStudent(ctx context.Context, tenantID, id string) 
  OR EXISTS(SELECT 1 FROM appeal WHERE tenant_id=$1 AND student_id::text=$2)
  OR EXISTS(SELECT 1 FROM question_appeal WHERE tenant_id=$1 AND student_id::text=$2)
  OR EXISTS(SELECT 1 FROM user_role WHERE tenant_id=$1 AND deleted_at IS NULL
-   AND jsonb_path_exists(data_scope,'$.**.student_id ? (@ == $student_id)',jsonb_build_object('student_id',$2::text)))`, tenantID, id).Scan(&inUse)
+   AND jsonb_path_exists(data_scope,'$.**.student_id ? (@ == $student_id)',jsonb_build_object('student_id',$2::text))
+   AND NOT EXISTS(SELECT 1 FROM app_user account WHERE account.tenant_id=user_role.tenant_id AND account.id=user_role.user_id AND account.student_id::text=$2))`, tenantID, id).Scan(&inUse)
 	if err != nil {
 		return err
 	}
 	if inUse {
 		return ErrStudentInUse
+	}
+	if err = retireUnusedStudentAccount(ctx, tx, tenantID, schoolID, id); err != nil {
+		return err
 	}
 	// 新建名册已有初始学籍；仅清除此学生的学籍，其他业务引用由上面的检查和外键共同阻止。
 	if _, err = tx.ExecContext(ctx, `DELETE FROM student_enrollment WHERE tenant_id=$1 AND student_id::text=$2`, tenantID, id); err != nil {

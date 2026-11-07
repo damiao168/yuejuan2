@@ -93,7 +93,7 @@ func TestManagedUpdateRejectsProbeForEarlierCredentialRevision(t *testing.T) {
 			}
 			probe := &reviewManagedProbeBarrier{}
 			handler := NewHandler(store, nil, NewEnvironmentSecretResolver(t.TempDir()), testBaseline()).WithManagedAPIProber(probe)
-			a := ManagedAPIConfigUpdateInput{DisplayName: config.DisplayName, AdapterType: config.AdapterType,
+			a := ManagedAPIConfigUpdateInput{ClientExpectedUpdatedAt: config.UpdatedAt.Format(time.RFC3339Nano), DisplayName: config.DisplayName, AdapterType: config.AdapterType,
 				BaseURL: reviewManagedNewURL, ModelName: config.ModelName, ModelVersion: config.ModelVersion,
 				Region: config.Region, Status: "active", IsDefault: true}
 			b := a
@@ -130,6 +130,11 @@ func TestManagedUpdateRejectsProbeForEarlierCredentialRevision(t *testing.T) {
 					t.Fatal("A did not finish")
 				}
 			} else {
+				connection, err := store.GetManagedAPIConnection(ctx, tenant, config.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				a.ClientExpectedUpdatedAt = connection.Config.UpdatedAt.Format(time.RFC3339Nano)
 				response = reviewManagedUpdate(t, handler, tenant, config.ID, a)
 			}
 			connection, err := ResolveDefaultManagedAPI(ctx, store, tenant)

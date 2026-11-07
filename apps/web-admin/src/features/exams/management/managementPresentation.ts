@@ -7,17 +7,31 @@ export interface ManagementFilters {
   schoolId: string;
   gradeId: string;
   status: string;
-  examType: string;
-  archive: "active" | "archived" | "all";
 }
 
 export const managementStatusOptions = [
-  { label: "草稿", value: "draft" }, { label: "准备中", value: "configured" },
-  { label: "准备完成", value: "ready" }, { label: "答卷导入中", value: "collecting" },
-  { label: "阅卷中", value: "grading" }, { label: "复核中", value: "reviewing" },
-  { label: "已定稿", value: "finalized" }, { label: "部分已发布", value: "partially_published" },
-  { label: "已发布", value: "published" }, { label: "多个阶段进行中", value: "ongoing" }
+  { label: "全部进度", value: "" }, { label: "正在进行", value: "active" }, { label: "阅卷结束", value: "completed" }
 ];
+
+export function managementProgressFilter(status: string) {
+  // 旧书签继续落到对应的大类，不能在精简后的下拉框里留下无法选择的细分值。
+  if (status === "completed" || status === "finalized" || status === "published") return "completed";
+  return status && status !== "archived" ? "active" : "";
+}
+
+export function managementGradingComplete(exam: ManagementExam) {
+  const { total_count: total, grading_complete_count: complete, published_count: published } = exam.progress;
+  if (total <= 0) return false;
+  if (complete !== undefined) return complete === total;
+  // 旧 API 没有核对评分完整性的计数，只有全部正式发布才可确认结束；手动定稿标签不足以证明。
+  return published === total;
+}
+
+export function managementProgressLabel(exam: ManagementExam) {
+  if (isManagementExamArchived(exam)) return "已归档";
+  if (managementGradingComplete(exam)) return "阅卷结束";
+  return exam.progress.status === "unavailable" ? "进度待核查" : "正在进行";
+}
 
 export function isManagementExamArchived(exam: ManagementExam) {
   return Boolean(exam.archived_at) || exam.progress.status === "archived" || Boolean(exam.legacy_archived && exam.archived_subject_ids?.length === exam.exams.length);
@@ -41,19 +55,11 @@ export function managementExamKey(exam: Pick<ManagementExam, "kind" | "id">) {
 export function filterManagementExams(exams: ManagementExam[], filters: ManagementFilters, classGrade: Map<string, string>) {
   const keyword = filters.search.trim().toLowerCase();
   return exams.filter((exam) => {
-    const archived = isManagementExamArchived(exam);
-    const archiveMatched = filters.archive === "all" || (filters.archive === "archived" ? archived : !archived);
-    const statusMatched = !filters.status || (filters.status === "active"
-      ? !archived && exam.progress.published_count < exam.progress.total_count
-      : exam.progress.status === filters.status);
-    return archiveMatched && statusMatched && (!keyword || exam.name.toLowerCase().includes(keyword))
-      && (!filters.examType || exam.exam_type === filters.examType)
+    const complete = managementGradingComplete(exam);
+    const statusMatched = !filters.status || (filters.status === "completed" ? complete : !complete);
+    return !isManagementExamArchived(exam) && statusMatched && (!keyword || exam.name.toLowerCase().includes(keyword))
       && (!filters.gradeId || exam.grade_id === filters.gradeId || exam.class_ids.some((id) => classGrade.get(id) === filters.gradeId));
   });
-}
-
-export function canEditManagementScope(exam: ManagementExam) {
-  return !exam.archived_at && exam.exams.every((subject) => ["draft", "configured"].includes(subject.status));
 }
 
 export function canEditManagementDefaultClasses(exam: ManagementExam) {
@@ -70,7 +76,6 @@ export function managementDefaultClassesHelp(hasAffectedSubjects: boolean, class
 
 export interface ManagementEditValues {
   name: string;
-  exam_type: string;
   class_ids: string[];
 }
 
@@ -84,7 +89,6 @@ function compareClassIds(left: string, right: string) {
 export function managementEditPayload(exam: ManagementExam, values: ManagementEditValues): ManagementExamUpdate {
   const payload: ManagementExamUpdate = { ...managementExamVersion(exam) };
   if (values.name.trim() !== exam.name) payload.name = values.name.trim();
-  if (values.exam_type !== exam.exam_type) payload.exam_type = values.exam_type;
   const current = [...(exam.default_class_ids ?? exam.class_ids)].sort(compareClassIds);
   if (JSON.stringify([...values.class_ids].sort(compareClassIds)) !== JSON.stringify(current)) payload.class_ids = values.class_ids;
   return payload;

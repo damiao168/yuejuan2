@@ -370,7 +370,7 @@ func exerciseBatch6ManagedUpdate(t *testing.T, test batch6ManagedUpdateCase) {
 		prober.result.ErrorCode = "provider_timeout"
 	}
 	handler := NewHandler(store, nil, NewEnvironmentSecretResolver(t.TempDir()), testBaseline()).WithManagedAPIProber(prober)
-	update := ManagedAPIConfigUpdateInput{DisplayName: "Changed", AdapterType: input.AdapterType, BaseURL: input.BaseURL, APIKey: "rotated-fixture-secret-123", ModelName: "new-model", ModelVersion: "v2", Region: "cn", Status: "active", IsDefault: test.isDefault}
+	update := ManagedAPIConfigUpdateInput{ClientExpectedUpdatedAt: item.UpdatedAt.Format(time.RFC3339Nano), DisplayName: "Changed", AdapterType: input.AdapterType, BaseURL: input.BaseURL, APIKey: "rotated-fixture-secret-123", ModelName: "new-model", ModelVersion: "v2", Region: "cn", Status: "active", IsDefault: test.isDefault}
 	body, err := json.Marshal(update)
 	if err != nil {
 		t.Fatal(err)

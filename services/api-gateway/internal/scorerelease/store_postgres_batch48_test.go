@@ -118,7 +118,10 @@ func assertReleaseDraftDatabaseOwnership(t *testing.T, source string) {
 	if source != SourceInitial {
 		draft.SourceReleaseID = "frozen-source"
 	}
-	visibility, err := json.Marshal(draft.VisibilityPolicy)
+	// 初始、回滚和重评都取消独立答案开关，其余公开项仍按草稿原值写入。
+	storedVisibility := draft.VisibilityPolicy
+	storedVisibility.ShowAnswers = true
+	visibility, err := json.Marshal(storedVisibility)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,11 +138,14 @@ func assertReleaseDraftDatabaseOwnership(t *testing.T, source string) {
 	if err != nil || !reflect.DeepEqual(state.args, wantArgs) {
 		t.Fatalf("release insert changed: args=%#v err=%v", state.args, err)
 	}
+	if !got.VisibilityPolicy.ShowAnswers || draft.VisibilityPolicy.ShowAnswers {
+		t.Fatalf("stored visibility must normalize answers without mutating the input: got=%#v draft=%#v", got.VisibilityPolicy, draft.VisibilityPolicy)
+	}
 	// 聚合对象可含数据库拥有的字段，但草稿写入不能采纳它们。
 	if got.ID != "persisted-release" || got.Status != StatusDraft || !got.CreatedAt.Equal(created) || got.PublishedAt != nil || got.PublishedBy != "" {
 		t.Fatalf("draft fields replaced database facts: %#v", got)
 	}
-	if got.SourceReleaseID != draft.SourceReleaseID || !reflect.DeepEqual(got.VisibilityPolicy, draft.VisibilityPolicy) || !reflect.DeepEqual(got.AppealWindow, draft.AppealWindow) {
+	if got.SourceReleaseID != draft.SourceReleaseID || !reflect.DeepEqual(got.VisibilityPolicy, storedVisibility) || !reflect.DeepEqual(got.AppealWindow, draft.AppealWindow) {
 		t.Fatalf("release policy or provenance changed: %#v", got)
 	}
 	if !strings.Contains(state.query, "NULLIF($9, '')::uuid") || !strings.Contains(state.query, "RETURNING ") {

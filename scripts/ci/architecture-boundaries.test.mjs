@@ -39,7 +39,7 @@ test("hook signal retains multiline calls and nested generic arguments", () => {
 });
 
 test("audit fields use horizontal whitespace rather than absorbing unrelated blank lines", () => {
-  const source = `${"\n".repeat(20000)}  Audit\t auth.Store\n  audit auth.Store\n`;
+  const source = `type Dependencies struct {${"\n".repeat(20000)}  Audit\t auth.Store\n  audit auth.Store\n}`;
   assert.equal(countBroadAuthStoreConsumers([source]), 2);
 });
 
@@ -50,8 +50,24 @@ test("broad audit store consumers cannot grow beyond the debt budget", () => {
 func NewHandler(audit auth.Store) {}
 type Dependencies struct { Audit auth.Store }
 `;
-  assert.equal(countBroadAuthStoreConsumers([source]), 1);
+  assert.equal(countBroadAuthStoreConsumers([source]), 2);
   assert.ok(MAX_BROAD_AUTH_STORE_CONSUMERS < 20);
+});
+
+test("store fields are counted by type regardless of name, embedding or layout", () => {
+  const source = `type Dependencies struct {
+  Audits auth.Store
+  renamed *auth.Store
+  First, Second auth.Store
+  auth.Store
+  Narrow auth.AuditRepository
+  // False auth.Store
+  Label string \`json:"auth.Store"\`
+}
+type Inline struct { Other auth.Store; Narrow auth.AuditRepository }
+func New(audit auth.Store) {}
+/* type Ignored struct { Fake auth.Store } */`;
+  assert.equal(countBroadAuthStoreConsumers([source]), 6);
 });
 
 test("frontend debt allows reductions but rejects new giants and growth", () => {

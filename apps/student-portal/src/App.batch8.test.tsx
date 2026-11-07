@@ -36,20 +36,8 @@ async function renderResult(questions: StudentQuestion[] = [makeQuestion()], han
 }
 
 async function openFirstQuestion() {
-  fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+  fireEvent.click((screen.getByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
   await screen.findByRole("heading", { name: "申请复核" });
-}
-
-function cohort(median: number): NonNullable<StudentQuestion["cohort"]> {
-  return {
-    sample_size: 25,
-    mean_score_rate: 0.6,
-    full_score_rate: 0.3,
-    zero_score_rate: 0.1,
-    class_mean_score: 5,
-    school_mean_score: 6,
-    median_score: median
-  };
 }
 
 describe("Batch8 equivalent student portal behavior", () => {
@@ -117,41 +105,39 @@ describe("Batch8 equivalent student portal behavior", () => {
     await renderResult(questions);
     const tabs = screen.getByRole("navigation", { name: "科目" });
     expect(within(tabs).getAllByRole("button").map((button) => button.textContent)).toEqual(["数学", "英语"]);
-    expect(screen.getAllByRole("button", { name: /^第 \d+ 题，/ }).map((button) => button.getAttribute("aria-label"))).toEqual([
+    expect(screen.getAllByLabelText(/^第 \d+ 题，/).map((button) => button.getAttribute("aria-label"))).toEqual([
       "第 1 题，14 / 20 分", "第 2 题，14 / 20 分", "第 10 题，14 / 20 分"
     ]);
     fireEvent.click(within(tabs).getByRole("button", { name: "英语" }));
-    expect(screen.getAllByRole("button", { name: /^第 \d+ 题，/ })).toHaveLength(1);
+    expect(screen.getAllByLabelText(/^第 \d+ 题，/)).toHaveLength(1);
     expect(questions).toEqual(original);
     questions.forEach((question, index) => expect(question).toBe(references[index]));
   });
 
   it.each([
-    [undefined, 5, "unknown", "暂无对比数据"],
-    [Number.NaN, 5, "unknown", "暂无对比数据"],
-    [Number.POSITIVE_INFINITY, 5, "unknown", "暂无对比数据"],
-    [Number.NEGATIVE_INFINITY, 5, "unknown", "暂无对比数据"],
-    [0, 0, "mastered", "达到群体中位分"],
-    [-1, 0, "mastered", "达到群体中位分"],
-    [5, 5, "mastered", "达到群体中位分"],
-    [5, 4.5, "review", "低于群体中位分"]
-  ] as const)("preserves median boundary %s with score %s", async (median, score, className, label) => {
-    const question = makeQuestion({ score, cohort: median === undefined ? undefined : cohort(median) });
+    [undefined, "—"],
+    [Number.NaN, "—"],
+    [Number.POSITIVE_INFINITY, "—"],
+    [Number.NEGATIVE_INFINITY, "—"],
+    [0, "0"],
+    [5, "5"],
+    [4.5, "4.5"]
+  ] as const)("shows the published statistics value %s without inferring mastery", async (value, label) => {
+    const question = makeQuestion({ score_comparison: value === undefined ? undefined : { class_max_score: value, school_max_score: value, class_mean_score: value, school_mean_score: value } });
     await renderResult([question]);
-    fireEvent.click(screen.getByLabelText("显示比较数据"));
-    const comparison = screen.getByText(label);
-    expect(comparison.classList.contains(className)).toBe(true);
+    const row = screen.getByLabelText(/^第 1 题，/).closest("tr")!;
+    expect([...row.querySelectorAll(".question-statistic-value")].map(cell => cell.textContent)).toEqual([label, label, label, label]);
     expect(screen.queryByText("已掌握")).toBeNull();
   });
 
   it("keeps row identity and keyboard focus on a normal parent rerender", async () => {
     await renderResult();
-    const rowButton = screen.getByRole("button", { name: /^第 1 题，/ });
+    const rowButton = screen.getByLabelText(/^第 1 题，/);
     rowButton.focus();
     fireEvent.click(screen.getByRole("button", { name: "大字阅读" }));
-    expect(screen.getByRole("button", { name: /^第 1 题，/ })).toBe(rowButton);
+    expect(screen.getByLabelText(/^第 1 题，/)).toBe(rowButton);
     expect(document.activeElement).toBe(rowButton);
-    expect(rowButton.getAttribute("aria-expanded")).toBe("false");
+    expect(rowButton.getAttribute("aria-expanded")).toBeNull();
   });
 
   it("keeps the appeal draft, focus, region and selected row on a parent rerender", async () => {
@@ -171,7 +157,7 @@ describe("Batch8 equivalent student portal behavior", () => {
     expect(reason.value).toBe("请核对原卷第二步中的识别内容。");
     expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "复核原因" }).value).toBe("rubric_disagreement");
     expect(screen.getByText("已圈选争议区域")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /^第 1 题，/ }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.queryByRole("button", { name: /^第 1 题，/ })).toBeNull();
     expect(calls.filter((call) => call.url.pathname.endsWith("/questions/question-1"))).toHaveLength(questionRequests);
   });
 
@@ -180,7 +166,7 @@ describe("Batch8 equivalent student portal behavior", () => {
     const first = makeQuestion();
     const second = makeQuestion({ question_id: "english-2", question_no: "2", subject: "english" });
     await renderResult([first, second], (call) => call.url.pathname.endsWith("/questions/question-1") ? oldResponse.promise : undefined);
-    fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((screen.getByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.click(screen.getByRole("button", { name: /^英语$/ }));
     await act(async () => oldResponse.resolve(dataResponse({ question: { ...first, feedback: "过期的第一题评分依据" } })));
     expect(screen.queryByText("过期的第一题评分依据")).toBeNull();
@@ -188,7 +174,7 @@ describe("Batch8 equivalent student portal behavior", () => {
     fireEvent.click(screen.getByRole("button", { name: /^数学$/ }));
     const unmountedResponse = deferredResponse();
     installApi((call) => call.url.pathname.endsWith("/questions/question-1") ? unmountedResponse.promise : resultRoute(call, makeResult([first, second])));
-    fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((screen.getByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     act(() => {
       window.history.replaceState(null, "", "/#/");
       window.dispatchEvent(new HashChangeEvent("hashchange"));

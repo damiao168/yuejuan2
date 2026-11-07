@@ -151,9 +151,21 @@ func (s *Service) GetGraderTaskContext(ctx context.Context, tenantID, taskID, gr
 func PublicTask(task Task, tenantID string) GraderTask {
 	return GraderTask{ID: task.ID, TenantID: tenantID, ExamID: task.ExamID, QuestionID: task.QuestionID,
 		QuestionNo: task.QuestionNo, AnswerSegmentID: opaqueID(task.ID, "answer-artifact"), SubmissionID: opaqueID(task.ID, "submission"),
-		AnonymousCode: task.AnonymousCode, Source: task.Source, Status: task.Status, Priority: task.Priority,
-		AssignedTo: task.AssignedTo, GradeRound: "first", Revision: task.Revision,
+		AnonymousCode: anonymousCode(task.ID), Source: task.Source, Status: PublicTaskStatus(task.Status), Priority: task.Priority,
+		AssignedTo: task.AssignedTo, GradeRound: "single", Revision: task.Revision,
 		CreatedBy: opaqueID(task.ID, "creator"), CreatedAt: task.CreatedAt, UpdatedAt: task.UpdatedAt}
+}
+
+// PublicTaskStatus 使用普通阅卷的对外状态；盲投内部仍以 in_progress/completed 管理质量观察。
+func PublicTaskStatus(status string) string {
+	switch status {
+	case "in_progress":
+		return "assigned"
+	case "completed":
+		return "submitted"
+	default:
+		return status
+	}
 }
 
 func (s *Service) GetGraderImageSource(ctx context.Context, tenantID, taskID, graderID string) (GraderImageSource, bool, error) {
@@ -223,6 +235,9 @@ func objectField(source map[string]any, key string) map[string]any {
 
 func opaqueID(taskID, scope string) string {
 	digest := sha256.Sum256([]byte(scope + "\x00" + taskID))
+	// 合成标识保持稳定，但版本位和变体必须与普通随机 UUID 一致，避免单凭格式识别盲投。
+	digest[6] = (digest[6] & 0x0f) | 0x40
+	digest[8] = (digest[8] & 0x3f) | 0x80
 	value, _ := uuid.FromBytes(digest[:16])
 	return value.String()
 }

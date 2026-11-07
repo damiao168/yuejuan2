@@ -23,9 +23,10 @@ func TestPostgresRecognitionCompletionRollsBackArtifactsAndTriggeredTasks(t *tes
 		t.Skip("EDUGRADE_REVIEW_PG_DSN is not configured")
 	}
 	cfg, err := pgx.ParseConfig(dsn)
-	if err != nil || cfg.Host != "127.0.0.1" || cfg.Port != 55983 || cfg.Database != "review_root_round10_grading_test" {
-		t.Fatal("refuse a database outside the isolated review fixture")
+	if err != nil {
+		t.Fatal(err)
 	}
+	// DSN 由调用者显式提供；下方只写随机 schema，不能绑定某次审查的端口和库名。
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	admin := stdlib.OpenDB(*cfg)
@@ -35,7 +36,9 @@ func TestPostgresRecognitionCompletionRollsBackArtifactsAndTriggeredTasks(t *tes
 		t.Fatal(err)
 	}
 	defer func() {
-		if _, err := admin.ExecContext(context.Background(), "DROP SCHEMA "+schema+" CASCADE"); err != nil {
+		cleanup, stop := context.WithTimeout(context.Background(), 30*time.Second)
+		defer stop()
+		if _, err := admin.ExecContext(cleanup, "DROP SCHEMA "+schema+" CASCADE"); err != nil {
 			t.Errorf("clean isolated schema: %v", err)
 		}
 	}()
@@ -59,6 +62,13 @@ func TestPostgresRecognitionCompletionRollsBackArtifactsAndTriggeredTasks(t *tes
 		t.Fatal("production enqueue function is missing")
 	}
 	if _, err := db.ExecContext(ctx, string(raw[start:end])); err != nil {
+		t.Fatal(err)
+	}
+	restoreMigration, err := os.ReadFile(filepath.Join("..", "..", "migrations", "000226_restore_math_crop_artifact_pointer.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, string(restoreMigration)); err != nil {
 		t.Fatal(err)
 	}
 	tenant, actor, exam, question, segment, snapshot := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
@@ -93,6 +103,7 @@ func TestPostgresRecognitionCompletionRollsBackArtifactsAndTriggeredTasks(t *tes
 	input := runtimeFormulaInput()
 	input.AnswerSegmentID, input.ExamQuestionSnapshotID = segment, snapshot
 	input.SolutionGraph.AnswerSegmentID = segment
+	mustExec(`UPDATE answer_segment SET crop_sha256=$2 WHERE id=$1`, segment, input.InputHash)
 	prepared, err := prepareRuntimeArtifact(input)
 	if err != nil {
 		t.Fatal(err)
@@ -154,6 +165,102 @@ func TestPostgresRecognitionCompletionRollsBackArtifactsAndTriggeredTasks(t *tes
 	}
 	if _, err := artifacts.GetLatestArtifact(ctx, uuid.NewString(), segment); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("foreign tenant result: %v", err)
+	}
+	// 新裁切先完成后，旧任务即使拿着当时有效的成功租约重放，也不能重新激活旧哈希。
+	newInput := cloneInput(input)
+	newInput.InputHash = "sha256:crop-2"
+	for index := range newInput.Blocks {
+		newInput.Blocks[index].SourceImageHash = newInput.InputHash
+	}
+	newInput, err = prepareRuntimeArtifact(newInput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustExec(`UPDATE answer_segment SET crop_sha256=$2 WHERE id=$1`, segment, newInput.InputHash)
+	newCurrent, err := artifacts.CreateArtifact(ctx, tenant, newInput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 另一个更旧哈希的任务此前从未写过产物；它迟到完成才是原问题的覆盖入口。
+	neverAccepted := cloneInput(completion.Input)
+	neverAccepted.InputHash = "sha256:never-accepted-old-crop"
+	for index := range neverAccepted.Blocks {
+		neverAccepted.Blocks[index].SourceImageHash = neverAccepted.InputHash
+	}
+	oldTask, err := runtime.CreateTask(ctx, tenant, actor, workerruntime.CreateTaskInput{
+		TaskType: "evidence_verify", QueueName: "math-understanding", SourceType: "answer_segment", SourceID: segment,
+		PayloadSchemaVersion: "math-understanding-task-v1", IdempotencyKey: "old-math:" + segment,
+		Payload: map[string]any{"answer_segment_id": segment, "exam_question_snapshot_id": snapshot, "subject_code": "mathematics", "input_hash": neverAccepted.InputHash},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldClaim := claim("late-old-crop")
+	if _, _, err := artifacts.completeRuntimeArtifact(ctx, recognitionRuntimeCompletion{Task: oldTask, ActorID: actor, Input: neverAccepted, LeaseToken: oldClaim.LeaseToken}); !errors.Is(err, ErrRevisionConflict) {
+		t.Fatalf("never-accepted stale task replaced current: %v", err)
+	}
+	completion.LeaseToken = second.LeaseToken
+	if _, _, err := artifacts.completeRuntimeArtifact(ctx, completion); !errors.Is(err, ErrRevisionConflict) {
+		t.Fatalf("stale completion replaced current crop: %v", err)
+	}
+	if _, err := artifacts.CreateArtifact(ctx, tenant, input); !errors.Is(err, ErrRevisionConflict) {
+		t.Fatalf("direct stale artifact replay: %v", err)
+	}
+	currentAfterReplay, err := artifacts.GetLatestArtifact(ctx, tenant, segment)
+	if err != nil || currentAfterReplay.ID != newCurrent.ID || currentAfterReplay.InputHash != newInput.InputHash {
+		t.Fatalf("new crop pointer lost: %+v %v", currentAfterReplay, err)
+	}
+	// 无需重跑被去重的识别任务：恢复原裁切就恢复其证据，且不能改动实体裁切文件。
+	cropFile := uuid.NewString()
+	mustExec(`UPDATE answer_segment SET crop_sha256=$2,crop_file_asset_id=$3,processing_status='completed' WHERE id=$1`, segment, input.InputHash, cropFile)
+	restored, err := artifacts.GetLatestArtifact(ctx, tenant, segment)
+	if err != nil || restored.InputHash != input.InputHash || restored.ID != stored.ID {
+		t.Fatalf("return to recognized crop did not restore pointer: %+v %v", restored, err)
+	}
+	verified, err := artifacts.CreateDerivedArtifact(ctx, tenant, restored.ID, 0, restored.CreateArtifactInput, map[string]any{"status": "verified"})
+	if err != nil || verified.Version <= newCurrent.Version {
+		t.Fatalf("restored crop reused an occupied version: %+v %v", verified, err)
+	}
+	mustExec(`UPDATE answer_segment SET crop_sha256=$2 WHERE id=$1`, segment, newInput.InputHash)
+	mustExec(`UPDATE answer_segment SET crop_sha256=$2 WHERE id=$1`, segment, input.InputHash)
+	if _, err := artifacts.CreateArtifact(ctx, tenant, input); err != nil {
+		t.Fatalf("matching recognition replay: %v", err)
+	}
+	latest, err := artifacts.GetLatestArtifact(ctx, tenant, segment)
+	if err != nil || latest.ID != verified.ID || latest.Stage != "verified" {
+		t.Fatalf("crop restore or replay lost verified evidence: %+v %v", latest, err)
+	}
+	var actualHash, actualFile string
+	if err := db.QueryRowContext(ctx, `SELECT crop_sha256,crop_file_asset_id::text FROM answer_segment WHERE id=$1`, segment).Scan(&actualHash, &actualFile); err != nil || actualHash != input.InputHash || actualFile != cropFile {
+		t.Fatalf("artifact restoration modified entity image: %q %q %v", actualHash, actualFile, err)
+	}
+	// 升级演练：同一哈希下已有新版冻结快照的产物，旧 current 却仍指向旧快照；正式回填段也必须识别这类存量。
+	newSnapshot := uuid.NewString()
+	mustExec(`INSERT INTO exam_question_snapshot(id,tenant_id,exam_id,question_id,subject_profile_id,subject_profile_version,archetype_code,allowed_evidence_types,risk_tier,profile_snapshot_json,archetype_snapshot_json,rubric_snapshot_json,scoring_policy_snapshot_json,content_hash,snapshot_version)
+SELECT $2,tenant_id,exam_id,question_id,subject_profile_id,subject_profile_version,archetype_code,allowed_evidence_types,risk_tier,profile_snapshot_json,archetype_snapshot_json,rubric_snapshot_json,scoring_policy_snapshot_json,content_hash,snapshot_version+1 FROM exam_question_snapshot WHERE id=$1`, snapshot, newSnapshot)
+	newSnapshotInput := cloneInput(input)
+	newSnapshotInput.ExamQuestionSnapshotID = newSnapshot
+	newSnapshotInput, err = prepareRuntimeArtifact(newSnapshotInput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newSnapshotArtifact, err := artifacts.CreateArtifact(ctx, tenant, newSnapshotInput)
+	if err != nil || newSnapshotArtifact.ID == restored.ID {
+		t.Fatalf("same hash reused evidence from an obsolete frozen snapshot: %+v %v", newSnapshotArtifact, err)
+	}
+	mustExec(`UPDATE math_understanding_artifact SET is_current=false WHERE tenant_id=$1 AND answer_segment_id=$2 AND is_current`, tenant, segment)
+	mustExec(`UPDATE math_understanding_artifact SET is_current=true WHERE id=$1`, verified.ID)
+	backfill := strings.LastIndex(string(restoreMigration), "\nDO $$")
+	if backfill < 0 {
+		t.Fatal("formal 000226 backfill block not found")
+	}
+	mustExec(string(restoreMigration[backfill:]))
+	upgraded, err := artifacts.GetLatestArtifact(ctx, tenant, segment)
+	if err != nil || upgraded.ID != newSnapshotArtifact.ID || upgraded.ExamQuestionSnapshotID != newSnapshot {
+		t.Fatalf("formal backfill kept same-hash stale snapshot pointer: %+v %v", upgraded, err)
+	}
+	if _, err := artifacts.CreateArtifact(ctx, tenant, input); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("late old-snapshot writer replaced restored current evidence: %v", err)
 	}
 	if db.Stats().InUse != 0 {
 		t.Fatal("single connection did not return to the pool")

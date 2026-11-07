@@ -2,15 +2,14 @@ package grading
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"net/http"
-
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	filespkg "edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
+	"encoding/json"
+	"errors"
+	"net/http"
 )
 
 const (
@@ -42,6 +41,8 @@ func (h *Handler) RecordAnswer(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	// 这是人工录入入口；来源和置信度是服务端事实，不能由表单伪装成 OCR 或导入结果。
+	input.Source, input.Confidence = "manual_entry", nil
 	answer, err := h.store.RecordAnswer(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
 	if err != nil {
 		writeStoreError(w, r, err)
@@ -134,438 +135,6 @@ func (h *Handler) PublishScoringRule(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"scoring_rule": rule})
 }
 
-func (h *Handler) CreateOMRCalibration(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.omrCalibrationStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
-		return
-	}
-	var input CreateOMRCalibrationInput
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	detail, err := store.CreateOMRCalibration(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "grading.omr_calibration_created", "omr_calibration_session", detail.Session.ID, "create deterministic OMR calibration sample")
-	httpx.JSON(w, http.StatusCreated, map[string]any{"calibration": decorateOMRCalibrationDetail(detail)})
-}
-
-func (h *Handler) ListOMRCalibrations(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.omrCalibrationStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
-		return
-	}
-	items, err := store.ListOMRCalibrations(r.Context(), user.TenantID, r.PathValue("id"))
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"calibrations": items})
-}
-
-func (h *Handler) GetOMRCalibration(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.omrCalibrationStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
-		return
-	}
-	detail, err := store.GetOMRCalibration(r.Context(), user.TenantID, r.PathValue("id"))
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"calibration": decorateOMRCalibrationDetail(detail)})
-}
-
-func (h *Handler) LabelOMRCalibrationCase(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.omrCalibrationStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
-		return
-	}
-	var input LabelOMRCalibrationCaseInput
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	detail, err := store.LabelOMRCalibrationCase(r.Context(), user.TenantID, r.PathValue("id"), r.PathValue("caseId"), user.ID, input)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "grading.omr_calibration_case_labeled", "omr_calibration_case", r.PathValue("caseId"), "record immutable manual OMR calibration label")
-	httpx.JSON(w, http.StatusOK, map[string]any{"calibration": decorateOMRCalibrationDetail(detail)})
-}
-
-func (h *Handler) ApproveOMRCalibration(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.omrCalibrationStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
-		return
-	}
-	var input ApproveOMRCalibrationInput
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	detail, err := store.ApproveOMRCalibration(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "grading.omr_calibration_approved", "omr_calibration_session", detail.Session.ID, "approve OMR automatic-confirmation calibration")
-	httpx.JSON(w, http.StatusOK, map[string]any{"calibration": decorateOMRCalibrationDetail(detail)})
-}
-
-func (h *Handler) RevokeOMRCalibration(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.omrCalibrationStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
-		return
-	}
-	var input RevokeOMRCalibrationInput
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	detail, err := store.RevokeOMRCalibration(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "grading.omr_calibration_revoked", "omr_calibration_session", detail.Session.ID, "revoke OMR automatic-confirmation calibration")
-	httpx.JSON(w, http.StatusOK, map[string]any{"calibration": decorateOMRCalibrationDetail(detail)})
-}
-
-func (h *Handler) DiscardOMRCalibration(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.omrCalibrationStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_calibration_unavailable", omrCalibrationStoreRequired)
-		return
-	}
-	var input DiscardOMRCalibrationInput
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	detail, err := store.DiscardOMRCalibration(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "grading.omr_calibration_discarded", "omr_calibration_session", detail.Session.ID, "discard draft OMR calibration without altering its evidence")
-	httpx.JSON(w, http.StatusOK, map[string]any{"calibration": decorateOMRCalibrationDetail(detail)})
-}
-
-func (h *Handler) RecoverScoringCommand(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	result, err := h.scoringStore().RecoverScoringCommand(r.Context(), user.TenantID, r.PathValue("examId"), user.ID, r.PathValue("commandId"))
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, result)
-}
-
-func (h *Handler) StartScoringRun(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	var input StartScoringRunInput
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	run, err := h.scoringStore().StartScoringRun(r.Context(), user.TenantID, r.PathValue("examId"), user.ID, input)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	if err = h.scoringStore().ProcessRuleCandidates(r.Context(), user.TenantID, run.ID, user.ID, h.engine); err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	runSummary, summaryErr := h.scoringStore().GetScoringSummary(r.Context(), user.TenantID, run.ExamID)
-	if summaryErr == nil && runSummary.Run != nil && runSummary.Run.ID == run.ID {
-		run = *runSummary.Run
-	}
-	h.auditAction(r, "grading.scoring_run_started", "scoring_run", run.ID, "start exam scoring orchestration")
-	httpx.JSON(w, http.StatusCreated, map[string]any{"scoring_run": run})
-}
-
-func (h *Handler) GetScoringReadiness(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	readiness, err := h.scoringStore().GetScoringReadiness(r.Context(), user.TenantID, r.PathValue("examId"))
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"scoring_readiness": readiness})
-}
-
-func (h *Handler) GetScoringSummary(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	summary, err := h.scoringStore().GetScoringSummary(r.Context(), user.TenantID, r.PathValue("examId"))
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"scoring_summary": summary})
-}
-
-func (h *Handler) GetExamAutomationResults(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.scoringRecoveryStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_results_unavailable", "scoring results are unavailable")
-		return
-	}
-	results, err := store.GetExamAutomationResults(r.Context(), user.TenantID, r.PathValue("examId"))
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, results)
-}
-
-func (h *Handler) GetScoringRun(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.scoringRecoveryStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
-		return
-	}
-	detail, err := store.GetScoringRunDetail(r.Context(), user.TenantID, r.PathValue("runId"))
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"scoring_run": detail.Run, "items": detail.Items})
-}
-
-func (h *Handler) CancelScoringRun(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	if h.runtime == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
-		return
-	}
-	store, ok := h.scoringRecoveryStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
-		return
-	}
-	run, taskIDs, err := store.BeginScoringRunCancellation(r.Context(), user.TenantID, r.PathValue("runId"))
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	// 先将评分任务置为 cancelling，再取消外部 worker；中途失败保留该状态，供再次取消时接续。
-	for _, taskID := range taskIDs {
-		task, getErr := h.runtime.Get(r.Context(), user.TenantID, taskID)
-		if getErr != nil {
-			httpx.Error(w, r, http.StatusConflict, "scoring_run_cancellation_pending", "scoring run cancellation is waiting for worker task state")
-			return
-		}
-		if task.Status != workerruntime.StatusQueued && task.Status != workerruntime.StatusLeased && task.Status != workerruntime.StatusRunning {
-			continue
-		}
-		if _, cancelErr := h.runtime.Cancel(r.Context(), user.TenantID, taskID); cancelErr != nil {
-			httpx.Error(w, r, http.StatusConflict, "scoring_run_cancellation_pending", "scoring run cancellation is waiting for worker task state")
-			return
-		}
-	}
-	run, err = store.FinalizeScoringRunCancellation(r.Context(), user.TenantID, run.ID)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "grading.scoring_run_cancelled", "scoring_run", run.ID, "cancel scoring run and its active worker tasks")
-	httpx.JSON(w, http.StatusOK, map[string]any{"scoring_run": run})
-}
-
-func (h *Handler) RetryFailedScoringRun(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	if h.runtime == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
-		return
-	}
-	store, ok := h.scoringRecoveryStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
-		return
-	}
-	commands, ok := h.store.(OMRRetryCommandStore)
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
-		return
-	}
-	runID := r.PathValue("runId")
-	failed, err := store.ListFailedOMRTasks(r.Context(), user.TenantID, runID)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	requeued := 0
-	skipped := 0
-	for _, failedTask := range failed {
-		// 每个来源命令连同入队和汇总一起提交，故障时仍保留可再次枚举的终止失败项。
-		if _, retryErr := commands.RetryOMRTask(r.Context(), user.TenantID, failedTask.OMRRunID); retryErr != nil {
-			skipped++
-			continue
-		}
-		requeued++
-	}
-	if coordinator, supported := h.store.(interface {
-		ResumeScoringRun(context.Context, string, string, bool) (ScoringRun, int, int, error)
-	}); supported {
-		_, extra, extraSkipped, resumeErr := coordinator.ResumeScoringRun(r.Context(), user.TenantID, runID, true)
-		if resumeErr != nil {
-			writeStoreError(w, r, resumeErr)
-			return
-		}
-		requeued += extra
-		skipped += extraSkipped
-	}
-	run, err := store.RefreshScoringRun(r.Context(), user.TenantID, runID)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "grading.scoring_run_retry_failed", "scoring_run", run.ID, "requeue failed OMR worker tasks")
-	httpx.JSON(w, http.StatusOK, map[string]any{"scoring_run": run, "requeued": requeued, "skipped": skipped})
-}
-
-func (h *Handler) ResumeScoringRun(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.store.(interface {
-		ResumeScoringRun(context.Context, string, string, bool) (ScoringRun, int, int, error)
-	})
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
-		return
-	}
-	run, requeued, skipped, err := store.ResumeScoringRun(r.Context(), user.TenantID, r.PathValue("runId"), false)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "grading.scoring_run_resumed", "scoring_run", run.ID, "resume frozen scoring plan")
-	httpx.JSON(w, http.StatusOK, map[string]any{"scoring_run": run, "requeued": requeued, "skipped": skipped})
-}
-
-func (h *Handler) ReprocessSegmentScore(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	store, ok := h.scoringRecoveryStore()
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "scoring_recovery_unavailable", scoringRecoveryUnavailable)
-		return
-	}
-	var input StartScoringRunInput
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	run, err := store.ReprocessSegmentScore(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	if err = h.scoringStore().ProcessRuleCandidates(r.Context(), user.TenantID, run.ID, user.ID, h.engine); err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	if refreshed, refreshErr := store.RefreshScoringRun(r.Context(), user.TenantID, run.ID); refreshErr == nil {
-		run = refreshed
-	}
-	h.auditAction(r, "grading.segment_score_reprocessed", "answer_segment", r.PathValue("id"), "reprocess score for one answer segment")
-	httpx.JSON(w, http.StatusCreated, map[string]any{"scoring_run": run})
-}
-
-func (h *Handler) CompleteOMR(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	if h.runtime == nil || h.files == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_dependencies_unavailable", "OMR result dependencies are unavailable")
-		return
-	}
-	var input OMRResultInput
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	run, err := h.scoringStore().GetOMRRun(r.Context(), user.TenantID, r.PathValue("runId"))
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	task, err := h.runtime.Get(r.Context(), user.TenantID, input.TaskID)
-	if err != nil || task.SourceType != "omr_run" || task.SourceID != run.ID || run.RuntimeTaskID != task.ID {
-		httpx.Error(w, r, http.StatusConflict, "omr_task_mismatch", "worker task does not belong to this OMR run")
-		return
-	}
-	overlay, err := h.files.Get(r.Context(), user.TenantID, input.OverlayFileAssetID)
-	// 叠加图必须属于当前 OMR 运行且哈希一致，避免把其他考试的识别产物写入本题。
-	if err != nil || overlay.ExamID != run.ExamID || overlay.OwnerType != "omr_evidence" || overlay.OwnerID != run.ID || overlay.HashSHA256 != input.OverlaySHA256 {
-		httpx.Error(w, r, http.StatusBadRequest, "omr_overlay_invalid", "OMR overlay has an invalid owner, hash, or exam")
-		return
-	}
-	out, questionGrade, err := h.scoringStore().ApplyOMRResult(r.Context(), user.TenantID, run.ID, user.ID, input, h.engine)
-	if err != nil {
-		if isOMRRuntimeCompletionError(err) {
-			httpx.Error(w, r, http.StatusConflict, "omr_task_completion_failed", "OMR task lease or result is no longer valid")
-			return
-		}
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "grading.omr_completed", "omr_run", out.ID, "complete OMR extraction")
-	response := map[string]any{"omr_run": out}
-	if questionGrade != nil {
-		response["question_grade"] = questionGrade
-	}
-	httpx.JSON(w, http.StatusOK, response)
-}
-
-func (h *Handler) FailOMR(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	if h.runtime == nil {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_dependencies_unavailable", "OMR result dependencies are unavailable")
-		return
-	}
-	commands, ok := h.store.(OMRFailureCommandStore)
-	if !ok {
-		httpx.Error(w, r, http.StatusServiceUnavailable, "omr_dependencies_unavailable", "OMR result dependencies are unavailable")
-		return
-	}
-	var input OMRFailureInput
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	run, err := h.scoringStore().GetOMRRun(r.Context(), user.TenantID, r.PathValue("runId"))
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	task, err := h.runtime.Get(r.Context(), user.TenantID, input.TaskID)
-	if err != nil || task.SourceType != "omr_run" || task.SourceID != run.ID || run.RuntimeTaskID != task.ID {
-		httpx.Error(w, r, http.StatusConflict, "omr_task_mismatch", "worker task does not belong to this OMR run")
-		return
-	}
-	// 来源写入失败时不能先消费租约或结束 attempt；同一租约可在事务回滚后再次提交。
-	out, taskStatus, err := commands.ApplyOMRWorkerFailure(r.Context(), user.TenantID, run.ID, input)
-	if err != nil {
-		if isOMRRuntimeCompletionError(err) || errors.Is(err, ErrRevisionConflict) {
-			httpx.Error(w, r, http.StatusConflict, "omr_task_failure_rejected", "OMR task failure is no longer valid")
-			return
-		}
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "grading.omr_failed", "omr_run", out.ID, input.ErrorCode)
-	httpx.JSON(w, http.StatusOK, map[string]any{"omr_run": out, "task_status": taskStatus})
-}
-
 func (h *Handler) ruleStore() RuleStore {
 	return h.store.(RuleStore)
 }
@@ -580,15 +149,6 @@ func (h *Handler) omrCalibrationStore() (OMRCalibrationStore, bool) {
 func (h *Handler) scoringRecoveryStore() (ScoringRecoveryStore, bool) {
 	store, ok := h.store.(ScoringRecoveryStore)
 	return store, ok
-}
-
-func isOMRRuntimeCompletionError(err error) bool {
-	return errors.Is(err, workerruntime.ErrNotFound) ||
-		errors.Is(err, workerruntime.ErrInvalidInput) ||
-		errors.Is(err, workerruntime.ErrLeaseExpired) ||
-		errors.Is(err, workerruntime.ErrLeaseMismatch) ||
-		errors.Is(err, workerruntime.ErrConflict) ||
-		errors.Is(err, workerruntime.ErrInvalidTransition)
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
@@ -652,21 +212,6 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
-func decorateOMRCalibrationDetail(detail OMRCalibrationDetail) OMRCalibrationDetail {
-	for index := range detail.Cases {
-		detail.Cases[index].SegmentImageURL = "/api/v1/answer-segments/" + detail.Cases[index].AnswerSegmentID + "/image"
-		if detail.Cases[index].Matches == nil {
-			// 浏览器开发者工具或直接 API 调用不得影响盲标注。本案例取得一次性人工标签后，才展示不可变工作器快照。
-			detail.Cases[index].ObservedDecision = ""
-			detail.Cases[index].ObservedOptions = nil
-			detail.Cases[index].ObservedConfidence = 0
-			detail.Cases[index].Measurements = nil
-			detail.Cases[index].SampleStratum = ""
-		}
-	}
-	return detail
-}
-
 // 路由必须先经过认证和权限中间件；这里仅取上下文身份，不再次认证。
 func mustUser(r *http.Request) auth.User {
 	user, _ := auth.UserFromContext(r.Context())
@@ -682,7 +227,7 @@ func (h *Handler) auditAction(r *http.Request, action string, targetType string,
 		TargetType: targetType,
 		TargetID:   targetID,
 		Reason:     reason,
-		IPAddress:  r.RemoteAddr,
+		IPAddress:  httpx.ClientIP(r),
 		UserAgent:  r.UserAgent(),
 		RequestID:  logger.RequestID(r.Context()),
 	})

@@ -62,6 +62,8 @@ func newAnswerSheetSelectionPostgresFixture(t *testing.T) (*PostgresStore, strin
 		`CREATE TABLE model_sandbox_approval(tenant_id uuid,managed_model_api_config_id uuid,revoked_at timestamptz,expires_at timestamptz)`,
 		`CREATE TABLE tenant_model_policy_model(tenant_id uuid,managed_model_api_config_id uuid,enabled bool)`,
 		`CREATE TABLE tenant_document_model_selection(tenant_id uuid,managed_model_api_config_id uuid,mode text)`,
+		// 删除守卫同时读取评分模型选择；隔离夹具须提供该空表，避免被后续功能的关联检查提前打断。
+		`CREATE TABLE tenant_grading_model_selection(tenant_id uuid,managed_model_api_config_id uuid,mode text)`,
 		`CREATE FUNCTION edugrade_tenant_matches(candidate uuid) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT current_setting('edugrade.tenant_id',true)=candidate::text $$`,
 		`GRANT USAGE ON SCHEMA ` + schema + ` TO edugrade_tenant_runtime`,
 		`GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA ` + schema + ` TO edugrade_tenant_runtime`,

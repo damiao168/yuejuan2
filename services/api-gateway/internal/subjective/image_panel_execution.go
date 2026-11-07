@@ -64,6 +64,10 @@ func imagePlanRoleModel(plan *grading.GradingAIPlan, role string) (grading.Gradi
 
 func (h *Handler) executeImageRole(ctx context.Context, tenantID string, input AdapterInput, role string, identity grading.GradingAIModel) ImageRoleResult {
 	result := ImageRoleResult{Role: role, Status: "failed", Model: identity}
+	if !supportedImageComparisonPrompt(input.ModelPolicy.PromptVersion) {
+		result.ErrorCode = "worker_result_version_conflict"
+		return result
+	}
 	base, ok := h.adapter.(*HTTPAdapter)
 	if !ok || h.imageModelByIDResolver == nil {
 		result.ErrorCode = "visual_model_unavailable"
@@ -75,7 +79,7 @@ func (h *Handler) executeImageRole(ctx context.Context, tenantID string, input A
 		return result
 	}
 	adapter := *base
-	adapter.policy.ModelVersion, adapter.policy.PromptVersion = identity.ModelVersion, ImageComparisonPromptVersion
+	adapter.policy.ModelVersion, adapter.policy.PromptVersion = identity.ModelVersion, input.ModelPolicy.PromptVersion
 	adapter.adapterType, adapter.providerKey, adapter.deploymentKey, adapter.deploymentRegion = model.AdapterType, model.ProviderKey, model.ConfigRevision, "managed"
 	input.RequestID, input.AgentRole = input.RequestID+":"+role, role
 	input.ImageModel, input.ModelPolicy = model, adapter.Policy()
@@ -96,6 +100,10 @@ func (h *Handler) executeImageRole(ctx context.Context, tenantID string, input A
 // executeImagePlan 共用父任务租约。A/B 互不传递结果；C 也只看原图、冻结观察和量规，不接收已有分数。
 // 先按未取整分比较阈值，避免每个角色提前取整导致额外仲裁或掩盖分歧。
 func (h *Handler) executeImagePlan(ctx context.Context, tenantID string, prepared WorkerExecutionContext, input AdapterInput) (AdapterOutput, error) {
+	if !supportedImageComparisonPrompt(prepared.Policy.PromptVersion) {
+		return AdapterOutput{}, ErrWorkerResultVersionConflict
+	}
+	input.ModelPolicy = prepared.Policy
 	plan := imagePlanForQuestion(prepared.Context.AIPlan, prepared.Context.Question.QuestionType)
 	if plan == nil {
 		return AdapterOutput{}, ErrInvalidInput
@@ -179,17 +187,17 @@ func imageScoringBasis(value Context) map[string]any {
 	return basis
 }
 
-func imageRawOutput(value Context, judgments []ImageCriterionJudgment) map[string]any {
+func imageRawOutput(value Context, judgments []ImageCriterionJudgment, promptVersion string) map[string]any {
 	return map[string]any{"schema_version": ImageProtocolVersion, "input_version_id": value.InputVersionID,
 		"assessment_snapshot_id": value.AssessmentSnapshot.ID, "observation": value.Observation, "judgments": judgments,
-		"observation_prompt_version": value.Observation.PromptVersion, "comparison_prompt_version": ImageComparisonPromptVersion,
+		"observation_prompt_version": value.Observation.PromptVersion, "comparison_prompt_version": promptVersion,
 		"scoring_basis": imageScoringBasis(value)}
 }
 
 // settleImagePanelOutput 不接受回调中的汇总分、角色分或采分点分值，全部从冻结量规和每次独立判断重建。
 // 不可读、uncertain 或任一角色失败时保留候选与证据，FinalScore 留空，不能把失败当作零分。
 func settleImagePanelOutput(value Context, policy ModelPolicy, output *AdapterOutput) error {
-	if output == nil || output.PanelExecution == nil || value.AIPlan == nil || value.Observation == nil {
+	if output == nil || output.PanelExecution == nil || value.AIPlan == nil || value.Observation == nil || !supportedImageComparisonPrompt(policy.PromptVersion) || output.PromptVersion != policy.PromptVersion {
 		return ErrInvalidModelOutput
 	}
 	execution := output.PanelExecution
@@ -234,14 +242,14 @@ func settleImagePanelOutput(value Context, policy ModelPolicy, output *AdapterOu
 			return ErrInvalidModelOutput
 		}
 		roleOutput := result.Output
-		if roleOutput.ModelVersion != identity.ModelVersion || roleOutput.PromptVersion != ImageComparisonPromptVersion || roleOutput.Telemetry.Adapter != identity.AdapterType || roleOutput.Telemetry.Provider != identity.ProviderKey || roleOutput.Telemetry.Deployment != identity.ConfigRevision || roleOutput.RequestID != output.RequestID+":"+result.Role {
+		if roleOutput.ModelVersion != identity.ModelVersion || roleOutput.PromptVersion != policy.PromptVersion || roleOutput.Telemetry.Adapter != identity.AdapterType || roleOutput.Telemetry.Provider != identity.ProviderKey || roleOutput.Telemetry.Deployment != identity.ConfigRevision || roleOutput.RequestID != output.RequestID+":"+result.Role {
 			return ErrInvalidModelOutput
 		}
 		roleOutput.Observation = value.Observation
 		if err := projectImageJudgments(roleOutput, AdapterInput{SegmentID: value.SegmentID, Question: value.Question, Rubric: value.Rubric, CropSHA256: value.CropSHA256, Observation: value.Observation}); err != nil {
 			return err
 		}
-		roleOutput.RawOutput = imageRawOutput(value, roleOutput.ImageJudgments)
+		roleOutput.RawOutput = imageRawOutput(value, roleOutput.ImageJudgments, policy.PromptVersion)
 		if ValidateOutput(*roleOutput, value) != nil || validateOutputExecutionDiagnostics(*roleOutput) != nil {
 			return ErrInvalidModelOutput
 		}
@@ -315,7 +323,7 @@ func settleImagePanelOutput(value Context, policy ModelPolicy, output *AdapterOu
 	if execution.FinalScore != nil {
 		base.SuggestedScore = *execution.FinalScore
 	}
-	base.RawOutput = imageRawOutput(value, base.ImageJudgments)
+	base.RawOutput = imageRawOutput(value, base.ImageJudgments, policy.PromptVersion)
 	base.RawOutput["panel_execution"] = imagePanelPublicOutput(execution)
 	base.RawOutput["score_prefill_allowed"] = execution.FinalScore != nil
 	base.NeedsHumanReview = true

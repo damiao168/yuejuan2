@@ -211,12 +211,19 @@ func (s *PublishedQuestionAppealMemoryStore) GetPublishedQuestionAppealContext(c
 	return PublishedQuestionAppealContext{Appeal: item, RubricSnapshot: map[string]any{}, ReleaseHistory: history}, nil
 }
 
-func (s *PublishedQuestionAppealMemoryStore) ListPublishedQuestionAppeals(_ context.Context, tenantID string, filter QuestionAppealFilter) ([]PublishedQuestionAppeal, error) {
+func (s *PublishedQuestionAppealMemoryStore) ListPublishedQuestionAppeals(ctx context.Context, tenantID string, filter QuestionAppealFilter) ([]PublishedQuestionAppeal, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	items := make([]PublishedQuestionAppeal, 0)
 	for _, item := range s.appeals {
 		if item.TenantID != tenantID || (filter.ExamID != "" && item.ExamID != filter.ExamID) || (filter.StudentID != "" && item.StudentID != filter.StudentID) || (filter.AssignedTo != "" && item.AssignedTo != filter.AssignedTo) || (filter.Status != "" && item.Status != filter.Status) {
+			continue
+		}
+		allowed, err := filter.Access.Allows(ctx, tenantID, "exam", item.ExamID, item.ExamID)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
 			continue
 		}
 		items = append(items, clonePublishedQuestionAppeal(item))
@@ -326,7 +333,7 @@ func (s *PublishedQuestionAppealMemoryStore) resolutionReleaseMatchesLocked(item
 	source, sourceExists := s.sources[publishedQuestionSourceKey(item.TenantID, item.ExamID, item.StudentID, releaseID, item.QuestionID)]
 	// 夹具也必须具化真实发布的学生答卷题目及重评结果，只有版本号的记录不能结案。
 	if !ok || job.Status != "ready_for_release" || job.FinalizedAt == nil || regrade.Status != "resolved" ||
-		resolution.Source != "regrade" || resolution.SourceReleaseID != item.SourceReleaseID ||
+		resolution.Source != "regrade" || resolution.SourceReleaseID != effectiveReviewSourceID(item) ||
 		resolution.PublishedAt == nil || resolution.PublishedAt.Before(*job.FinalizedAt) ||
 		!sourceExists || !source.Published || source.SubmissionID != item.SubmissionID ||
 		source.FinalGradeID != regrade.OldFinalGradeID || source.MaxScore != regrade.MaxScore {
@@ -349,8 +356,8 @@ func (s *PublishedQuestionAppealMemoryStore) matchingRegradeJobLocked(item Publi
 	job, exists := s.regradeJobs[jobID]
 	regrade, includesSubmission := job.Items[item.SubmissionID]
 	ok := exists && includesSubmission && job.TenantID == item.TenantID && job.ExamID == item.ExamID &&
-		job.QuestionID == item.QuestionID && job.SourceReleaseID == item.SourceReleaseID && job.Status != "cancelled" &&
-		regrade.OldFinalGradeID == item.SourceFinalGradeID && regrade.Status != "cancelled"
+		job.QuestionID == item.QuestionID && job.SourceReleaseID == effectiveReviewSourceID(item) && job.Status != "cancelled" &&
+		regrade.OldFinalGradeID == effectiveReviewFinalGradeID(item) && regrade.Status != "cancelled"
 	return job, regrade, ok
 }
 
@@ -406,6 +413,14 @@ func sourceAppealWindowOpen(enabled bool, opensAt, closesAt *time.Time, allowed 
 func clonePublishedQuestionAppeal(in PublishedQuestionAppeal) PublishedQuestionAppeal {
 	in.SelectedRegion = cloneMap(in.SelectedRegion)
 	in.ReviewOpinion = cloneQuestionAppealReviewOpinion(in.ReviewOpinion)
+	if in.ReviewSourceScore != nil {
+		value := *in.ReviewSourceScore
+		in.ReviewSourceScore = &value
+	}
+	if in.ReviewSourceMaxScore != nil {
+		value := *in.ReviewSourceMaxScore
+		in.ReviewSourceMaxScore = &value
+	}
 	if in.ReviewedScore != nil {
 		value := *in.ReviewedScore
 		in.ReviewedScore = &value

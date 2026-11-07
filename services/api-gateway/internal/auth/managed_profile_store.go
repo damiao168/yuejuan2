@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"slices"
 	"strings"
 	"time"
 )
@@ -40,11 +41,17 @@ func (s *PostgresStore) UpdateManagedUserProfile(ctx context.Context, actor User
 		return ManagedUser{}, false, errInvalidManagedProfile
 	}
 	identityChanged := phone != oldPhone || input.EmployeeNo != user.EmployeeNo
-	if !identityChanged && input.DisplayName == user.DisplayName {
+	subjects := user.TeachingSubjects
+	if input.TeachingSubjects != nil {
+		subjects = input.TeachingSubjects
+	}
+	subjectsChanged := !slices.Equal(subjects, user.TeachingSubjects)
+	credentialsChanged := identityChanged || subjectsChanged
+	if !credentialsChanged && input.DisplayName == user.DisplayName {
 		return user, false, nil
 	}
 	// 手机号和工号是租户内登录别名；唯一索引负责并发查重，不能先查再写后假定无冲突。
-	_, err = tx.ExecContext(ctx, `UPDATE app_user SET display_name=$3,employee_no=NULLIF($4,''),phone_normalized=NULLIF($5,''),security_epoch=security_epoch+CASE WHEN $6 THEN 1 ELSE 0 END,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, actor.TenantID, user.ID, input.DisplayName, input.EmployeeNo, phone, identityChanged)
+	_, err = tx.ExecContext(ctx, `UPDATE app_user SET display_name=$3,employee_no=NULLIF($4,''),phone_normalized=NULLIF($5,''),teaching_subjects=string_to_array($7,','),security_epoch=security_epoch+CASE WHEN $6 THEN 1 ELSE 0 END,updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, actor.TenantID, user.ID, input.DisplayName, input.EmployeeNo, phone, credentialsChanged, strings.Join(subjects, ","))
 	if err != nil {
 		lowerError := strings.ToLower(err.Error())
 		if strings.Contains(lowerError, "uq_app_user_tenant_phone") || strings.Contains(lowerError, "uq_app_user_tenant_employee_no") {
@@ -52,7 +59,8 @@ func (s *PostgresStore) UpdateManagedUserProfile(ctx context.Context, actor User
 		}
 		return ManagedUser{}, false, err
 	}
-	if identityChanged {
+	// 学科资格变化也撤销旧凭据，使后续分配按管理员最新维护的资格复核。
+	if credentialsChanged {
 		if err := revokeManagedProfileCredentials(ctx, tx, actor.TenantID, user.ID); err != nil {
 			return ManagedUser{}, false, err
 		}
@@ -61,6 +69,7 @@ func (s *PostgresStore) UpdateManagedUserProfile(ctx context.Context, actor User
 		return ManagedUser{}, false, err
 	}
 	user.DisplayName, user.EmployeeNo, user.PhoneMasked = input.DisplayName, input.EmployeeNo, MaskPhone(phone)
+	user.TeachingSubjects = append([]string{}, subjects...)
 	return user, identityChanged, nil
 }
 
@@ -107,7 +116,12 @@ func (s *MemoryStore) UpdateManagedUserProfile(_ context.Context, actor User, sc
 			return ManagedUser{}, false, errInvalidManagedProfile
 		}
 		identityChanged := phone != target.PhoneNormalized || input.EmployeeNo != target.EmployeeNo
-		if !identityChanged && input.DisplayName == target.DisplayName {
+		subjects := target.TeachingSubjects
+		if input.TeachingSubjects != nil {
+			subjects = input.TeachingSubjects
+		}
+		credentialsChanged := identityChanged || !slices.Equal(subjects, target.TeachingSubjects)
+		if !credentialsChanged && input.DisplayName == target.DisplayName {
 			return user, false, nil
 		}
 		// 同一写锁内排除目标后查重；失败时不改变资料、安全版本或链接。
@@ -118,7 +132,8 @@ func (s *MemoryStore) UpdateManagedUserProfile(_ context.Context, actor User, sc
 			}
 		}
 		target.DisplayName, target.EmployeeNo, target.PhoneNormalized = input.DisplayName, input.EmployeeNo, phone
-		if identityChanged {
+		target.TeachingSubjects = append([]string{}, subjects...)
+		if credentialsChanged {
 			target.SecurityEpoch++
 			s.revokeUserCredentials(target.TenantID, target.ID)
 			now := time.Now().UTC()

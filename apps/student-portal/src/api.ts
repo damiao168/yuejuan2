@@ -9,6 +9,7 @@ export interface AuthUser {
   roles: string[];
   permissions: string[];
   data_scope: Record<string, unknown>;
+  must_change_password?: boolean;
 }
 
 export interface PublishedExam {
@@ -48,6 +49,13 @@ export interface StudentQuestion {
   max_score: number;
   score_rate?: number;
   knowledge_points?: string[];
+  // 本题公开得分的四项比较值独立于旧 cohort 的统计展示策略；缺失值不能用本人得分或满分补齐。
+  score_comparison?: {
+    class_max_score?: number;
+    school_max_score?: number;
+    class_mean_score?: number;
+    school_mean_score?: number;
+  };
   cohort?: {
     sample_size: number;
     mean_score_rate: number;
@@ -66,6 +74,15 @@ export interface StudentQuestion {
   answer_geometry?: { x: number; y: number; width: number; height: number };
   feedback?: string;
   rubric_summary?: string[];
+}
+
+export interface StudentHighScorePaper {
+  paper_id?: string;
+  available: boolean;
+  total_score?: number;
+  max_score?: number;
+  pages?: Array<{ page_no: number; question_id: string; submission_page_id?: string }>;
+  score_marks?: Array<{ question_id: string; question_no: string; score: number; max_score: number; page_no: number; answer_geometry?: { x: number; y: number; width: number; height: number } }>;
 }
 
 export interface StudentResult {
@@ -90,13 +107,8 @@ export interface StudentResult {
   rankings?: { class_rank: number; class_size: number; grade_rank: number; grade_size: number; class_unavailable_reason?: string; grade_unavailable_reason?: string };
   session_summary?: { published_count: number; expected_count: number; subjects: Array<{ exam_id: string; subject: string; name: string; status: string; score?: number; max_score?: number; published_at?: string; statistics_available: boolean; statistics_reason?: string; mean_score_rate?: number; sample_size?: number }> };
   paper_pages?: Array<{ page_no: number; question_id: string; submission_page_id?: string }>;
-  high_score_paper?: {
-    available: boolean;
-    total_score?: number;
-    max_score?: number;
-    pages?: Array<{ page_no: number; question_id: string; submission_page_id?: string }>;
-    score_marks?: Array<{ question_id: string; question_no: string; score: number; max_score: number; page_no: number; answer_geometry?: { x: number; y: number; width: number; height: number } }>;
-  };
+  high_score_papers?: StudentHighScorePaper[];
+  high_score_paper?: StudentHighScorePaper;
   subject_balance?: Array<{
     subject: string;
     student_score_rate: number;
@@ -212,8 +224,22 @@ export function login(input: { tenant_code: string; username: string; password: 
   });
 }
 
-export function logout() {
-  return request<void>("/api/v1/auth/logout", { method: "POST", headers: { "X-EduGrade-CSRF": "1" } });
+export async function logout() {
+  try {
+    await request<void>("/api/v1/auth/logout", { method: "POST", headers: { "X-EduGrade-CSRF": "1" } });
+  } catch (error) {
+    // 已失效会话不必再次撤销；只接受明确的未认证响应，不能把断网当成退出成功。
+    if (error instanceof PortalApiError && error.status === 401 && error.code === "unauthenticated") return;
+    throw error;
+  }
+}
+
+export function changePassword(input: { current_password: string; new_password: string }) {
+  return request<{ status: string; revoked_count: number }>("/api/v1/auth/password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-EduGrade-CSRF": "1" },
+    body: JSON.stringify(input)
+  });
 }
 
 export function listPublishedExams() {
@@ -235,8 +261,8 @@ export function studentQuestionAnswerImageURL(examID: string, questionID: string
   return `${baseUrl}/api/v1/student/exams/${encodeURIComponent(examID)}/questions/${encodeURIComponent(questionID)}/answer-image${studentReleaseQuery(expectedReleaseID)}`;
 }
 
-export function studentPaperPageImageURL(examID: string, questionID: string, highScore = false, expectedReleaseID?: string) {
-  const query = studentReleaseQuery(expectedReleaseID, highScore);
+export function studentPaperPageImageURL(examID: string, questionID: string, highScore = false, expectedReleaseID?: string, paperID?: string) {
+  const query = studentReleaseQuery(expectedReleaseID, highScore, paperID);
   return `${baseUrl}/api/v1/student/exams/${encodeURIComponent(examID)}/questions/${encodeURIComponent(questionID)}/page-image${query}`;
 }
 
@@ -263,10 +289,11 @@ export function listQuestionAppeals(examID: string) {
 }
 
 // 页面绑定的发布 ID 随每次证据请求发送；服务端比较实际读取版本，不能由前端预查指针代替。
-function studentReleaseQuery(expectedReleaseID?: string, highScore = false) {
+function studentReleaseQuery(expectedReleaseID?: string, highScore = false, paperID?: string) {
  const query = new URLSearchParams();
  if (expectedReleaseID) query.set("expected_release_id", expectedReleaseID);
  if (highScore) query.set("variant", "high_score");
+ if (highScore && paperID) query.set("paper_id", paperID);
  const value = query.toString();
  return value ? `?${value}` : "";
 }

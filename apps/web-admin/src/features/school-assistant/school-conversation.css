@@ -17,6 +17,10 @@
 .school-conversation-sources section { padding: 8px 0; border-top: 1px solid var(--border); }
 .school-conversation-sources section > span { margin-left: 10px; }
 .school-conversation-sources p { margin: 3px 0 0; }
+.school-conversation-web-sources a { display: inline-flex; align-items: baseline; gap: 4px; overflow-wrap: anywhere; }
+.school-chat-web-search-control { display: inline-flex; flex-shrink: 0; }
+.school-chat-web-search.ant-btn { white-space: nowrap; color: var(--text-muted); }
+.school-chat-web-search.ant-btn.is-active { color: var(--primary); background: #edf4ff; }
 .school-conversation-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
 .school-conversation-failure { margin-left: 43px; }
 .school-conversation-failure .school-chat-send-error { margin-left: 0; }

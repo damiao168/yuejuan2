@@ -140,8 +140,10 @@ func memoryStatisticsScopeAllows(task ReviewTask, filter ListFilter) bool {
 	switch filter.ScopeMode {
 	case "", "platform", "tenant":
 		return true
-	case "school", "assigned":
-		// 内存仓库没有考试到管理学校的索引，不能用导航考试证明整场权限；此时只提供本人意见，无样本仍返回 null 比例。
+	case "school":
+		// 此集合由管理员的本校资源关系派生，个人分派不能扩大它；空集合不提供外校样本。
+		return containsString(filter.ScopeExamIDs, task.ExamID)
+	case "assigned":
 		return filter.ScopeActorID != "" && filter.AssignedTo == filter.ScopeActorID && task.AssignedTo == filter.ScopeActorID
 	case "class":
 		return containsString(filter.ScopeExamIDs, task.ExamID)

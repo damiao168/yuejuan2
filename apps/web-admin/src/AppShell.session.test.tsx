@@ -8,17 +8,22 @@ import type { SessionUser } from "./auth/session";
 import { executeBusinessCommand, getBusinessCommandSession } from "./api/businessCommand";
 import { AppShell } from "./AppShell";
 import type { RouteRenderingContext } from "./router/pageRendering";
+import { CONVERSATION_REFRESH_PREFIX } from "./features/school-assistant/conversationRefresh";
 
 type LoginProps = { onLogin: (values: LoginFormValues) => Promise<void>; onWechatAuthenticate: (authenticate: () => Promise<LoginResponse | undefined>) => Promise<void>; loading: boolean; error?: string };
 type LayoutProps = { user: SessionUser; onLogout: () => void; onLockSession: () => Promise<void>; onReauthenticate: (password: string) => Promise<void>; children: ReactNode };
 const state = vi.hoisted(() => ({
-  me: vi.fn(), login: vi.fn(), logout: vi.fn(), lock: vi.fn(), reauthenticate: vi.fn(),
+  me: vi.fn(), login: vi.fn(), logout: vi.fn(), lock: vi.fn(), reauthenticate: vi.fn(), changePassword: vi.fn(), schools: vi.fn(),
   push: vi.fn(), replace: vi.fn(), clear: vi.fn(), cancelQueries: vi.fn(),
   loginProps: null as LoginProps | null, layoutProps: null as LayoutProps | null,
   path: "/admin/dashboard", renderContent: vi.fn(),
+  openStudent: vi.fn(),
+  firstChange: null as { onChangePassword: (input: { current_password: string; new_password: string }) => Promise<void>; onLogout: () => void } | null,
 }));
-vi.mock("./api/auth", () => ({ getCurrentUser: state.me, login: state.login, logout: state.logout, lockCurrentSession: state.lock, reauthenticate: state.reauthenticate }));
-vi.mock("./api/org", () => ({ listSchools: vi.fn(async () => ({ schools: [] })) }));
+vi.mock("./api/auth", () => ({ changePassword: state.changePassword, getCurrentUser: state.me, login: state.login, logout: state.logout, lockCurrentSession: state.lock, reauthenticate: state.reauthenticate }));
+vi.mock("./api/org", () => ({ listSchools: state.schools }));
+vi.mock("./auth/loginDestination", async (importOriginal) => ({ ...await importOriginal<typeof import("./auth/loginDestination")>(), openStudentPortal: state.openStudent }));
+vi.mock("./auth/FirstPasswordChange", () => ({ FirstPasswordChange: (props: NonNullable<typeof state.firstChange>) => { state.firstChange = props; return <section>首次登录请修改密码</section>; } }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ clear: state.clear, cancelQueries: state.cancelQueries }) }));
 vi.mock("@tanstack/react-router", () => ({ useRouter: () => ({ history: { push: state.push, replace: state.replace } }), useRouterState: () => state.path }));
 vi.mock("antd", async () => {
@@ -58,15 +63,17 @@ function deferred<T>() {
 }
 const form = (identifier: string): LoginFormValues => ({ identifier, password: "test-password", tenant_code: "school", remember_device: false, public_device: false });
 const response = (id: string): LoginResponse => ({ user: authUser(id), expires_at: "2099-01-01" });
+const refreshKey = (actor: string) => `${CONVERSATION_REFRESH_PREFIX}${JSON.stringify(["school", actor, ["school_admin"], ["ai_chat:use"], { schoolIds: ["school"] }, false])}`;
 
 describe("AppShell session boundaries", () => {
   let host: HTMLDivElement;
   let root: Root;
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-    for (const mock of [state.me, state.login, state.logout, state.lock, state.reauthenticate, state.push, state.replace, state.clear, state.cancelQueries]) mock.mockReset();
+    for (const mock of [state.me, state.login, state.logout, state.lock, state.reauthenticate, state.changePassword, state.schools, state.push, state.replace, state.clear, state.cancelQueries, state.openStudent]) mock.mockReset();
     state.loginProps = null;
     state.layoutProps = null;
+    state.firstChange = null;
     state.path = "/admin/dashboard";
     state.renderContent.mockReset().mockReturnValue(null);
     state.me.mockRejectedValue(new Error("not logged in"));
@@ -74,12 +81,48 @@ describe("AppShell session boundaries", () => {
     state.lock.mockResolvedValue({ status: "locked" });
     state.reauthenticate.mockResolvedValue({ status: "authenticated" });
     state.cancelQueries.mockResolvedValue(undefined);
+    state.changePassword.mockResolvedValue({ status: "password_changed" });
+    state.schools.mockResolvedValue({ schools: [] });
     window.localStorage.clear();
+    window.sessionStorage.clear();
     host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
   });
-  afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); });
+  afterEach(async () => { await act(async () => root.unmount()); host.remove(); window.history.replaceState(null, "", "/"); vi.restoreAllMocks(); });
+
+  it("统一表单的学生身份进入独立门户，保留学校和考试深链，初始密码不挂载教师业务", async () => {
+    window.history.replaceState(null, "", "/?return_to=%2Fstudent%2Fexams%2Fexam-1");
+    await act(async () => root.render(<AppShell />));
+    state.login.mockResolvedValue({ ...response("student"), user: { ...authUser("student"), roles: ["student"], must_change_password: true } });
+    await act(async () => state.loginProps!.onLogin({ ...form("00123"), tenant_code: "S053" }));
+    expect(state.openStudent).toHaveBeenCalledExactlyOnceWith("/student/exams/exam-1?school=S053");
+    expect(state.renderContent).not.toHaveBeenCalled();
+    expect(state.firstChange).toBeNull();
+    expect(state.push).not.toHaveBeenCalled();
+  });
+
+  it("已有学生会话从统一入口恢复后直接进入门户，不显示管理工作台", async () => {
+    state.me.mockResolvedValue({ user: { ...authUser("student"), roles: ["student"], permissions: ["student:grade:read"] } });
+    await act(async () => root.render(<AppShell />));
+    expect(state.openStudent).toHaveBeenCalledExactlyOnceWith("/student/");
+    expect(state.renderContent).not.toHaveBeenCalled(); expect(state.layoutProps).toBeNull();
+  });
+
+  it("初始密码会话不挂载业务路由或预读学校，改密成功直接清身份回登录", async () => {
+    state.me.mockResolvedValue({ user: { ...authUser("new"), must_change_password: true, permissions: ["org:manage"] } });
+    await act(async () => root.render(<AppShell />));
+    expect(host.textContent).toContain("首次登录请修改密码");
+    expect(state.renderContent).not.toHaveBeenCalled(); expect(state.layoutProps).toBeNull(); expect(state.schools).not.toHaveBeenCalled();
+    state.path = "/admin/exams/another/scores";
+    await act(async () => root.render(<AppShell />));
+    expect(state.renderContent).not.toHaveBeenCalled();
+    window.sessionStorage.setItem(refreshKey("new"), "initial-session checkpoint");
+    await act(async () => state.firstChange!.onChangePassword({ current_password: "initial-123", new_password: "personal-456" }));
+    expect(state.changePassword).toHaveBeenCalledWith({ current_password: "initial-123", new_password: "personal-456" });
+    expect(host.textContent).toContain("Login"); expect(getBusinessCommandSession().scope).toBe("");
+    expect(window.sessionStorage.getItem(refreshKey("new"))).toBeNull();
+  });
 
   it("serializes rapid A/B logins and never publishes A after B starts", async () => {
     await act(async () => root.render(<AppShell />));
@@ -196,12 +239,12 @@ describe("AppShell session boundaries", () => {
     const result = expect(unlocking).rejects.toMatchObject({ name: "SessionTransitionChangedError" });
     await act(async () => state.layoutProps!.onLogout());
     const B = state.login.mockResolvedValueOnce(response("B"));
-    let login!: Promise<void>;
-    await act(async () => { login = state.loginProps!.onLogin(form("B")); });
-    // B 的认证写请求排在旧再认证和退出后，不能被它们迟到的 Cookie 响应覆盖。
+    // 服务端退出未确认前隐藏登录入口，旧再认证完成后仍不能恢复旧身份。
+    expect(host.textContent).toContain("正在退出登录");
     expect(B).not.toHaveBeenCalled();
     window.localStorage.setItem("business-command:school:B:score.publish:exam", JSON.stringify({ id: "B-command" }));
-    await act(async () => { unlock.resolve({ status: "authenticated" }); await result; await login; });
+    await act(async () => { unlock.resolve({ status: "authenticated" }); await result; });
+    await act(async () => state.loginProps!.onLogin(form("B")));
     expect(host.textContent).toBe("B");
     expect(getBusinessCommandSession().scope).toBe("school:B");
     expect(window.localStorage.getItem("business-command:school:B:score.publish:exam")).toBe(JSON.stringify({ id: "B-command" }));
@@ -218,6 +261,101 @@ describe("AppShell session boundaries", () => {
     await act(async () => state.loginProps!.onLogin(form("A")));
     await act(async () => state.layoutProps!.onLogout());
     expect(window.localStorage.getItem(key)).toBeNull();
+  });
+
+  it("clears only chat refresh checkpoints on explicit logout without erasing other tab state or pending receipts", async () => {
+    state.me.mockResolvedValue({ user: authUser("A") });
+    await act(async () => root.render(<AppShell />));
+    window.sessionStorage.setItem(refreshKey("A"), "A checkpoint");
+    window.sessionStorage.setItem(refreshKey("B"), "B checkpoint");
+    window.sessionStorage.setItem("exam-import-progress", "keep import");
+    window.sessionStorage.setItem("edugrade.ai-chat.refresh.v10:other", "other version");
+    const pending = "business-command:school:A:score.publish:exam";
+    window.localStorage.setItem(pending, JSON.stringify({ id: "pending-command" }));
+    window.localStorage.setItem("ordinary-preference", "keep preference");
+    await act(async () => state.layoutProps!.onLogout());
+    expect(window.sessionStorage.getItem(refreshKey("A"))).toBeNull();
+    expect(window.sessionStorage.getItem(refreshKey("B"))).toBeNull();
+    expect(window.sessionStorage.getItem("exam-import-progress")).toBe("keep import");
+    expect(window.sessionStorage.getItem("edugrade.ai-chat.refresh.v10:other")).toBe("other version");
+    expect(window.localStorage.getItem(pending)).toBe(JSON.stringify({ id: "pending-command" }));
+    expect(window.localStorage.getItem("ordinary-preference")).toBe("keep preference");
+  });
+
+  it("clears chat refresh checkpoints when the current initial authentication restore fails", async () => {
+    window.sessionStorage.setItem(refreshKey("A"), "old checkpoint");
+    window.sessionStorage.setItem("exam-import-progress", "keep import");
+    const pending = "business-command:school:A:score.publish:exam";
+    window.localStorage.setItem(pending, JSON.stringify({ id: "pending-command" }));
+    window.localStorage.setItem("ordinary-preference", "keep preference");
+    await act(async () => root.render(<AppShell />));
+    expect(host.textContent).toContain("Login");
+    expect(window.sessionStorage.getItem(refreshKey("A"))).toBeNull();
+    expect(window.sessionStorage.getItem("exam-import-progress")).toBe("keep import");
+    expect(window.localStorage.getItem(pending)).toBe(JSON.stringify({ id: "pending-command" }));
+    expect(window.localStorage.getItem("ordinary-preference")).toBe("keep preference");
+  });
+
+  it("keeps refresh checkpoints across ordinary unmount and successful cookie-session restoration", async () => {
+    state.me.mockResolvedValue({ user: authUser("A") });
+    window.sessionStorage.setItem(refreshKey("A"), "in-progress checkpoint");
+    await act(async () => root.render(<AppShell />));
+    expect(window.sessionStorage.getItem(refreshKey("A"))).toBe("in-progress checkpoint");
+    await act(async () => root.unmount());
+    expect(window.sessionStorage.getItem(refreshKey("A"))).toBe("in-progress checkpoint");
+    root = createRoot(host);
+    await act(async () => root.render(<AppShell />));
+    expect(host.textContent).toBe("A");
+    expect(window.sessionStorage.getItem(refreshKey("A"))).toBe("in-progress checkpoint");
+  });
+
+  it("does not reuse a prior account checkpoint after a successful explicit login", async () => {
+    await act(async () => root.render(<AppShell />));
+    window.sessionStorage.setItem(refreshKey("A"), "prior account checkpoint");
+    window.sessionStorage.setItem("exam-import-progress", "keep import");
+    state.login.mockResolvedValueOnce(response("B"));
+    await act(async () => state.loginProps!.onLogin(form("B")));
+    expect(host.textContent).toBe("B");
+    expect(window.sessionStorage.getItem(refreshKey("A"))).toBeNull();
+    expect(window.sessionStorage.getItem("exam-import-progress")).toBe("keep import");
+  });
+
+  it("keeps failed logout isolated across refresh and retries before restoring any cookie session", async () => {
+    state.me.mockResolvedValue({ user: authUser("A") });
+    await act(async () => root.render(<AppShell />));
+    state.logout.mockRejectedValue(new Error("offline"));
+    await act(async () => state.layoutProps!.onLogout());
+    expect(host.textContent).toContain("退出尚未完成");
+    expect(host.textContent).not.toContain("Login");
+    expect(getBusinessCommandSession().scope).toBe("");
+    window.sessionStorage.setItem(refreshKey("A"), "checkpoint written before the next page load");
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    state.me.mockClear();
+    await act(async () => root.render(<AppShell />));
+    expect(state.me).not.toHaveBeenCalled();
+    expect(host.textContent).toContain("退出尚未完成");
+    expect(window.sessionStorage.getItem(refreshKey("A"))).toBeNull();
+    state.logout.mockResolvedValue({ status: "logged_out" });
+    await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());
+    expect(host.textContent).toContain("Login");
+    expect(window.localStorage.getItem("edugrade.web.logout-pending")).toBeNull();
+  });
+
+  it("does not restore the old cookie after failed logout when both storage types become unwritable", async () => {
+    state.me.mockResolvedValue({ user: authUser("A") });
+    await act(async () => root.render(<AppShell />));
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("quota", "QuotaExceededError"); });
+    state.logout.mockRejectedValue(new Error("offline"));
+    await act(async () => state.layoutProps!.onLogout());
+    expect(host.textContent).toContain("退出尚未完成");
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    state.me.mockClear();
+    await act(async () => root.render(<AppShell />));
+    expect(state.me).not.toHaveBeenCalled();
+    expect(host.textContent).toContain("退出尚未完成");
+    expect(getBusinessCommandSession().scope).toBe("");
   });
 
   it("keeps the current page visible while the next navigation module loads", async () => {

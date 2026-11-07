@@ -80,6 +80,8 @@ export function StepUpProvider({ children, onReauthenticate }: Readonly<{ childr
         fallbackTimerRef.current = undefined;
       }
       return await new Promise<T>((resolve, reject) => {
+        // 新验证替代旧验证时，必须结束旧操作，避免旧页面一直停在提交中。
+        pendingRef.current?.reject(new StepUpCancelledError());
         pendingRef.current = { reason: nextReason, description: nextDescription, action, resolve, reject } as PendingStepUp;
         setReason(nextReason);
         setCanResume(true);
@@ -90,6 +92,11 @@ export function StepUpProvider({ children, onReauthenticate }: Readonly<{ childr
         setOpen(true);
       });
     }
+  }, []);
+
+  useEffect(() => () => {
+    pendingRef.current?.reject(new StepUpCancelledError());
+    pendingRef.current = undefined;
   }, []);
 
   useEffect(() => {
@@ -181,8 +188,10 @@ export function StepUpDialog({ accountLabel, hidden = false }: Readonly<{ accoun
   return (
     <>
     {stepUp.feedback && !hidden ? <Alert type="info" showIcon closable message={stepUp.feedback} /> : null}
+    {/* 验证窗口必须高于发起操作的业务弹窗，避免等待一个被遮挡的密码框。 */}
     <Modal
       open={stepUp.open && !hidden}
+      zIndex={2000}
       title="确认你的身份"
       closable={!stepUp.loading}
       keyboard={!stepUp.loading}

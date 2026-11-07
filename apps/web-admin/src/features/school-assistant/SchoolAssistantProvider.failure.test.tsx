@@ -6,6 +6,7 @@ import type { SessionUser } from "../../auth/session";
 import { SchoolAssistantProvider, useSchoolAssistantContext } from "./SchoolAssistantProvider";
 
 const mocks = vi.hoisted(() => ({ cancel: vi.fn() }));
+vi.mock("./useAccountConversation", () => ({ useAccountConversation: () => ({ threads: [], activeCount: 0 }) }));
 vi.mock("./SchoolConversation", async () => { throw new Error("chunk download failed"); });
 vi.mock("antd", () => ({
   Drawer: ({ open, children }: { open: boolean; children: ReactNode }) => open ? <aside>{children}</aside> : null,

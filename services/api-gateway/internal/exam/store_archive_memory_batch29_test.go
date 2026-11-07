@@ -228,10 +228,10 @@ func assertExamBatch29Script(t *testing.T, script *examBatch29Script, end string
 func examBatch29LoadSteps() []examBatch29Step {
 	now := time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC)
 	return []examBatch29Step{
-		{kind: "query", fragment: "FROM exam e WHERE", columns: 23, args: map[int]any{0: "tenant", 5: "exam"}, rows: [][]driver.Value{{
+		{kind: "query", fragment: "FROM exam e WHERE", columns: 24, args: map[int]any{0: "tenant", 5: "exam"}, rows: [][]driver.Value{{
 			"exam", "tenant", "school", "current restored exam", "math", "midterm_exam", float64(100),
 			"draft", "ai_assisted", true, "manual", "actor", int64(9), now, now,
-			"{class}", "", false, true, true, nil, "", "",
+			"{class}", "", false, true, true, nil, "", "", false,
 		}}},
 		{kind: "query", fragment: "count(DISTINCT c.grade_id)", columns: 1, args: map[int]any{0: "tenant", 1: "exam"}, rows: [][]driver.Value{{"grade"}}},
 	}

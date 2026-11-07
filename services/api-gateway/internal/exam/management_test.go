@@ -61,6 +61,30 @@ func TestManagementListPagesWholeGroupsAndFilterDoesNotTrimSubjects(t *testing.T
 	if err != nil || len(second) != 1 || second[0].ID != parent.ID || len(second[0].Exams) != 3 {
 		t.Fatalf("second page: %#v %v", second, err)
 	}
+	for _, subject := range parent.Exams {
+		if err := s.SetStatusForTest(scope.TenantID, subject.ID, "finalized"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// 内存仓库不计算题分；手动定稿不能替代评分事实，测试须显式注入核对结果。
+	withoutProof, err := s.ListManagementExams(context.Background(), scope, ManagementListFilter{Status: "completed", Archive: "active", Limit: 1})
+	if err != nil || len(withoutProof) != 0 {
+		t.Fatalf("manual phase must not prove completion: %#v %v", withoutProof, err)
+	}
+	s.mu.Lock()
+	for _, subject := range parent.Exams {
+		s.managementFacts[subject.ID] = managementSubjectFacts{Available: true, GradingComplete: true}
+	}
+	s.mu.Unlock()
+	// 较新的进行中考试占满首个候选页时，已结束筛选仍须找到后面的整场，不能先截断再过滤。
+	completed, err := s.ListManagementExams(context.Background(), scope, ManagementListFilter{Status: "completed", Archive: "active", Limit: 1})
+	if err != nil || len(completed) != 1 || completed[0].ID != parent.ID || completed[0].Progress.GradingCompleteCount != 3 {
+		t.Fatalf("completed group must be filtered before pagination: %#v %v", completed, err)
+	}
+	active, err := s.ListManagementExams(context.Background(), scope, ManagementListFilter{Status: "active", Archive: "active", Limit: 1})
+	if err != nil || len(active) != 1 || active[0].ID != standalone.ID {
+		t.Fatalf("active group must exclude completed session: %#v %v", active, err)
+	}
 }
 
 func TestManagementPartialScopeCannotSeeSiblingsOrMutateWholeExam(t *testing.T) {

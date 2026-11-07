@@ -15,6 +15,11 @@ function notFoundErrorMessage(context: PortalErrorContext) {
 export function friendlyError(reason: unknown, context: PortalErrorContext = "result") {
   if (reason instanceof PortalApiError) {
     switch (reason.code) {
+      case "password_change_required": return "首次登录需要先修改学校发放的初始密码。";
+      case "current_password_invalid": return "当前初始密码不正确，请重新输入。";
+      case "password_unchanged": return "新密码不能与初始密码相同。";
+      case "weak_password": return "新密码至少8个字符，且不能全部为空格或超过长度上限。";
+      case "password_changed_concurrently": return "密码已在其他会话修改，请退出后使用新密码重新登录。";
       case "invalid_credentials": return "学校代码、账号或密码不正确，请核对学校发放的登录信息。";
       case "login_rate_limited": return "登录尝试过于频繁，请稍后再试；如忘记密码，请联系学校管理员。";
       case "student_score_scope_required":

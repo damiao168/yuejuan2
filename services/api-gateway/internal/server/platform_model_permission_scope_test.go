@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/files"
@@ -84,8 +85,10 @@ func TestPlatformModelFinePermissionsSelectOnlyAuthorizedSchoolOperation(t *test
 				method, path, body := http.MethodGet, "/api/v1/platform/model-api-configs?tenant_id="+school, ""
 				if action == "managed" {
 					method, path = http.MethodPatch, "/api/v1/platform/model-api-configs/"+item.ID+"?tenant_id="+school
+					// 先满足配置版本前提；授权对照不能因为缺失并发令牌而返回输入错误。
 					raw, err := json.Marshal(modelgovernance.ManagedAPIConfigUpdateInput{DisplayName: "改名对照", AdapterType: item.AdapterType,
-						BaseURL: item.BaseURL, ModelName: item.ModelName, ModelVersion: item.ModelVersion, Region: item.Region, Status: "active"})
+						BaseURL: item.BaseURL, ModelName: item.ModelName, ModelVersion: item.ModelVersion, Region: item.Region, Status: "active",
+						ClientExpectedUpdatedAt: item.UpdatedAt.Format(time.RFC3339Nano)})
 					if err != nil {
 						t.Fatal(err)
 					}

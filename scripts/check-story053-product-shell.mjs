@@ -22,7 +22,7 @@ const checks = [
   },
   {
     name: "tenant-safe user store",
-    file: "services/api-gateway/internal/auth/store_postgres.go",
+    file: "services/api-gateway/internal/auth/store_postgres_managed_users.go",
     includes: ["ListManagedUsers", "ListAssignableRoles", "CreateManagedUser", "tenant_id = $1::uuid", "code NOT IN ('platform_admin', 'tenant_admin')"]
   },
   {
@@ -38,12 +38,14 @@ const checks = [
   {
     name: "school operations workbench",
     file: "apps/web-admin/src/features/dashboard/SchoolDashboard.tsx",
-    includes: ["成员管理", "考试管理", "阅卷与成绩", "organizationStatistics", "workItems"]
+    // STORY-080 起首页按待办与进度排列，不再按菜单模块分区；成员缺口经 organizationStatistics 进入待办。
+    includes: ["需要我处理", "考试进度", "阅卷进度", "最近动态", "organizationStatistics", "workItems"]
   },
   {
     name: "organization activation",
     file: "apps/web-admin/src/pages/OrganizationSetupPage.tsx",
-    includes: ["机构信息", "学年与年级", "Papa.parse", "字段", "createManagedUser", "createExam"]
+    // 初始化第二步已按届别管理年级，文案从“学年与年级”改为“届别与年级”。
+    includes: ["机构信息", "届别与年级", "Papa.parse", "字段", "createManagedUser", "createExam"]
   },
   {
     name: "exam workspace",

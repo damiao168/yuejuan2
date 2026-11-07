@@ -210,6 +210,7 @@ func TestLoadRejectsUnsafePostgresCapacityConfiguration(t *testing.T) {
 func TestLoadReadsGovernedAIServiceConfiguration(t *testing.T) {
 	t.Setenv("EDUGRADE_AI_GRADING_ENABLED", "true")
 	t.Setenv("EDUGRADE_MATH_GRADING_V2_ENABLED", "true")
+	t.Setenv("EDUGRADE_AI_IMAGE_PREFIX_CACHE_ENABLED", "true")
 	t.Setenv("EDUGRADE_AI_SERVICE_URL", "http://grading-agent:8100")
 	t.Setenv("EDUGRADE_GRADING_AGENT_TOKEN", "test-service-token-with-at-least-32-characters")
 	t.Setenv("EDUGRADE_AI_SERVICE_TIMEOUT", "240s")
@@ -227,7 +228,7 @@ func TestLoadReadsGovernedAIServiceConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !cfg.AIService.MathGradingV2 ||
+	if !cfg.AIService.MathGradingV2 || !cfg.AIService.ImagePrefixCache ||
 		cfg.AIService.URL != "http://grading-agent:8100" ||
 		cfg.AIService.Timeout != 240*time.Second ||
 		cfg.AIService.MaxRetries != 0 ||

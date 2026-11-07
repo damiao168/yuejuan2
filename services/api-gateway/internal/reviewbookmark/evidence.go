@@ -82,7 +82,7 @@ type EvidenceService struct {
 	secret   []byte
 }
 
-// NewEvidenceService 的密钥与模型密钥使用不同 HMAC 域；缺失密钥时只读内容失败关闭。
+// NewEvidenceService 使用独立的证据密钥及专用 HMAC 域；缺失密钥时证据读取失败关闭。
 func NewEvidenceService(provider SourceProvider, images segment.VersionedCropImageReader, secret []byte) *EvidenceService {
 	return &EvidenceService{provider: provider, images: images, secret: append([]byte(nil), secret...)}
 }

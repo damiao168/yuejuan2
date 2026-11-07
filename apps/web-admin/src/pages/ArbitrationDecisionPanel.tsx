@@ -56,7 +56,7 @@ export function ArbitrationDecisionPanel(props: Readonly<DecisionPanelProps>) {
       <output title="自动暂存只在本次会话；服务端私有草稿需单独保存，7天后不可恢复。">{props.draftTouched ? props.memorySaved ? "未提交；本次会话已暂存，保存私有草稿后可刷新恢复。" : "未提交内容仅在本页；离开后无法恢复。" : "最终分和说明在提交仲裁后才写入服务端。"}</output>
     </p> : null}
     <div className="score-input-row">
-      <InputNumber min={0} max={props.maxScore || undefined} precision={1} value={props.draft.finalScore} placeholder="最终分" disabled={props.editingDisabled}
+      <InputNumber min={0} max={props.maxScore || undefined} precision={2} step={0.01} value={props.draft.finalScore} placeholder="最终分" disabled={props.editingDisabled}
         onChange={(value) => { props.setDraftTouched(true); props.setDraft((current) => ({ ...current, finalScore: value === null ? null : Number(value) })); }} />
       <span>/ {props.maxScore || "-"}</span>
     </div>

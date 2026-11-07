@@ -92,7 +92,7 @@ func (h *Handler) RevokeHighScorePaper(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	h.auditEvent(r, user, "score_release.high_score_paper_revoked", releaseID, nil)
+	h.auditEvent(r, user, "score_release.high_score_paper_revoked", releaseID, nil, "撤回匿名高分卷展示")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -110,7 +110,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	h.auditEvent(r, user, "score_release.created", release.ID, map[string]any{"exam_id": release.ExamID, "version": release.Version, "source": release.Source})
+	h.auditEvent(r, user, "score_release.created", release.ID, map[string]any{"exam_id": release.ExamID, "version": release.Version, "source": release.Source}, "创建成绩发布草稿")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"score_release": release})
 }
 
@@ -128,7 +128,7 @@ func (h *Handler) Rollback(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	h.auditEvent(r, user, "score_release.rollback_drafted", release.ID, map[string]any{"exam_id": release.ExamID, "version": release.Version, "source_release_id": release.SourceReleaseID})
+	h.auditEvent(r, user, "score_release.rollback_drafted", release.ID, map[string]any{"exam_id": release.ExamID, "version": release.Version, "source_release_id": release.SourceReleaseID}, "创建恢复历史发布版本的草稿")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"score_release": release})
 }
 
@@ -247,7 +247,7 @@ func (h *Handler) Publish(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	h.auditEvent(r, user, "score_release.published", release.ID, map[string]any{"exam_id": release.ExamID, "version": release.Version, "supersedes_release_id": release.SupersedesReleaseID})
+	h.auditEvent(r, user, "score_release.published", release.ID, map[string]any{"exam_id": release.ExamID, "version": release.Version, "supersedes_release_id": release.SupersedesReleaseID}, "向学生端发布成绩")
 	httpx.JSON(w, http.StatusOK, map[string]any{"score_release": release})
 }
 
@@ -321,7 +321,18 @@ func (h *Handler) StudentPaperPageImage(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	highScore := r.URL.Query().Get("variant") == "high_score"
-	source, err := h.service.StudentPaperPageImage(r.Context(), user.TenantID, r.PathValue("examId"), studentID, r.PathValue("questionId"), highScore, r.URL.Query().Get("expected_release_id"))
+	paperID := strings.TrimSpace(r.URL.Query().Get("paper_id"))
+	if paperID != "" && !highScore {
+		writeError(w, r, ErrInvalidInput)
+		return
+	}
+	var source StudentQuestionImageSource
+	var err error
+	if paperID != "" {
+		source, err = h.service.StudentSelectedHighScorePaperPageImage(r.Context(), user.TenantID, r.PathValue("examId"), studentID, r.PathValue("questionId"), paperID, r.URL.Query().Get("expected_release_id"))
+	} else {
+		source, err = h.service.StudentPaperPageImage(r.Context(), user.TenantID, r.PathValue("examId"), studentID, r.PathValue("questionId"), highScore, r.URL.Query().Get("expected_release_id"))
+	}
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -410,9 +421,10 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
-func (h *Handler) auditEvent(r *http.Request, user auth.User, action, targetID string, after map[string]any) {
+// auditEvent 的 reason 是在统一审计页“说明”列显示的中文说明；旧记录把动作代码写在说明里，由前端兼容显示。
+func (h *Handler) auditEvent(r *http.Request, user auth.User, action, targetID string, after map[string]any, reason string) {
 	if h.audit == nil {
 		return
 	}
-	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "score_release", TargetID: targetID, AfterValue: after, Reason: action, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
+	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "score_release", TargetID: targetID, AfterValue: after, Reason: reason, IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
 }

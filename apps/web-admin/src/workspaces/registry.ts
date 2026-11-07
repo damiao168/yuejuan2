@@ -23,7 +23,7 @@ export const workspaceRegistry: Record<Workspace, WorkspaceDefinition> = {
   tenant_admin: { key: "tenant_admin", label: "机构管理台", purpose: "管理租户内学校和学校级管理员" },
   school_admin: { key: "school_admin", label: "学校管理台", purpose: "组织学校考试并处理阻断事项" },
   exam_owner: { key: "exam_owner", label: "考试负责人", purpose: "配置和推进本人获授权的考试" },
-  teacher: { key: "teacher", label: "教师工作台", purpose: "处理本人班级、考试和反馈任务" },
+  teacher: { key: "teacher", label: "教师工作台", purpose: "处理分配给本人的阅卷和反馈任务" },
   grader: { key: "grader", label: "阅卷工作台", purpose: "处理分配给本人的匿名阅卷任务" },
   arbitrator: { key: "arbitrator", label: "仲裁工作台", purpose: "处理分配给本人的评分差异" },
   auditor: { key: "auditor", label: "审计工作台", purpose: "查看授权范围内的操作审计" },

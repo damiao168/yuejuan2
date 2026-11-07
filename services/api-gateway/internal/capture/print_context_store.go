@@ -20,17 +20,15 @@ WHERE tenant_id=$1 AND id=$2::uuid AND status='locked' AND deleted_at IS NULL
 		return StudentPrintContext{}, mapNotFound(err)
 	}
 
-	// 名册取考试冻结快照；活动打印只看同一模板和内容哈希的最新未撤销纸张。
+	// 打印覆盖完整冻结名册，不能按历史人工缺考或尚未收卷排除学生。expected 仅保留旧响应兼容。
+	// 活动打印只看同一模板和内容哈希的最新未撤销纸张。
 	candidateRows, err := s.db.QueryContext(ctx, `
 SELECT
   candidate.student_id::text,candidate.student_no_snapshot,candidate.student_name_snapshot,
   candidate.class_id_snapshot::text,candidate.class_name_snapshot,
-  COALESCE(att.status,'expected'),
+  'expected'::text,
   active_sheet.id::text,active_sheet.status,active_sheet.print_batch_id::text
 FROM exam_candidate_snapshot candidate
-LEFT JOIN exam_student_attendance att
-  ON att.tenant_id=candidate.tenant_id AND att.exam_id=candidate.exam_id
-  AND att.student_id=candidate.student_id AND att.deleted_at IS NULL
 LEFT JOIN LATERAL (
   SELECT sh.id,sh.status,sh.print_batch_id
   FROM answer_sheet_print_sheet sh

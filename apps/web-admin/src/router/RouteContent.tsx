@@ -31,13 +31,14 @@ function RouteStage({ slot, hidden, disabled, onReady }: Readonly<{
   }, [readiness, onReady, slot.id]);
 
   return <div className={`route-content-stage${hidden ? " route-content-stage-pending" : ""}`} inert={disabled} aria-hidden={hidden || undefined}>
-    <PageReadinessContext.Provider value={readiness}>
-      <PageVisibilityContext.Provider value={!hidden}>
-        <ErrorBoundary resetKey={slot.locationKey}>
-          <Suspense fallback={<LoadingState label="正在加载页面" />}>{slot.children}</Suspense>
-        </ErrorBoundary>
-      </PageVisibilityContext.Provider>
-    </PageReadinessContext.Provider>
+    <PageVisibilityContext.Provider value={!hidden}>
+      <ErrorBoundary resetKey={slot.locationKey}>
+        {/* 只等模块加载，数据由目标页自己的加载状态承接；慢接口不能继续把新栏目藏在旧画面后。 */}
+        <Suspense fallback={<PageReadinessContext.Provider value={readiness}><LoadingState label="正在加载页面" /></PageReadinessContext.Provider>}>
+          <PageReadinessContext.Provider value={null}>{slot.children}</PageReadinessContext.Provider>
+        </Suspense>
+      </ErrorBoundary>
+    </PageVisibilityContext.Provider>
   </div>;
 }
 

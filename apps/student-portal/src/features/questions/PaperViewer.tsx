@@ -10,15 +10,24 @@ type ScoreMark = Pick<StudentQuestion, "question_id" | "question_no" | "score" |
 export function PaperViewer({ examID, result, onViewCurrent, onViewTextFeedback }: Readonly<{ examID: string; result: StudentResult; onViewCurrent: () => void; onViewTextFeedback?: () => void }>) {
   const { submitting, isSubmitting } = useStudentSession();
   const ownPages = useMemo(() => result.paper_pages?.length ? result.paper_pages : fallbackPaperPages(result.questions ?? []), [result.paper_pages, result.questions]);
-  const highPages = result.high_score_paper?.pages ?? [];
-  const [highScore, setHighScore] = useState(false);
+  const highPapers = useMemo(() => {
+    // 新集合的空列表表示没有可查看的分享，不能再借旧单份字段恢复已撤回内容。
+    if (result.high_score_papers !== undefined) return result.high_score_papers.filter(paper => paper.available && paper.paper_id);
+    return result.high_score_paper?.available ? [result.high_score_paper] : [];
+  }, [result.high_score_paper, result.high_score_papers]);
+  const [highScoreRequested, setHighScore] = useState(false);
+  const [highScorePaperID, setHighScorePaperID] = useState("");
+  const highScore = highScoreRequested && highPapers.length > 0;
+  const highPaperIndex = Math.max(0, highPapers.findIndex(paper => paper.paper_id === highScorePaperID));
+  const highPaper = highPapers[highPaperIndex];
+  const highPages = highPaper?.pages ?? [];
   const [pageIndex, setPageIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [releaseChanged, setReleaseChanged] = useState(false);
   const pages = highScore ? highPages : ownPages;
   const page = pages[Math.min(pageIndex, Math.max(0, pages.length - 1))];
   const pageQuestions = useMemo(() => (result.questions ?? []).filter((question) => question.page_no === page?.page_no), [page?.page_no, result.questions]);
-  const scoreMarks = highScore ? (result.high_score_paper?.score_marks ?? []).filter((mark) => mark.page_no === page?.page_no) : pageQuestions;
+  const scoreMarks = highScore ? (highPaper?.score_marks ?? []).filter((mark) => mark.page_no === page?.page_no) : pageQuestions;
   const markReleaseChanged = useCallback(() => setReleaseChanged(true), []);
 
   let pageContent: ReactNode;
@@ -26,7 +35,7 @@ export function PaperViewer({ examID, result, onViewCurrent, onViewTextFeedback 
     pageContent = <div className="paper-empty"><div><p role="alert">学校已更新当前成绩，请重新核对后查看答卷。未提交的复核草稿仍按原版本保留。</p><button type="button" className="secondary-button" disabled={submitting} onClick={() => { if (!submitting && !isSubmitting?.()) onViewCurrent(); }}>查看当前成绩并重新核对</button></div></div>;
   } else if (page) {
     // 页码、视图或发布改变时卸载旧读取，旧图片和批注的迟到结果不能提示新页失败。
-    pageContent = <PaperPageEvidence key={`${result.release_id}:${highScore}:${page.page_no}:${page.question_id}`} examID={examID} releaseID={result.release_id} page={page} highScore={highScore} pageQuestions={pageQuestions} scoreMarks={scoreMarks} zoom={zoom} onReleaseChanged={markReleaseChanged} />;
+    pageContent = <PaperPageEvidence key={`${result.release_id}:${highScore}:${highScore ? highPaper?.paper_id ?? "legacy" : "own"}:${page.page_no}:${page.question_id}`} examID={examID} releaseID={result.release_id} page={page} highScore={highScore} paperID={highScore ? highPaper?.paper_id : undefined} paperLabel={highPaper?.paper_id ? `优秀答卷 ${highPaperIndex + 1}` : undefined} pageQuestions={pageQuestions} scoreMarks={scoreMarks} zoom={zoom} onReleaseChanged={markReleaseChanged} />;
   } else {
     pageContent = <PaperEmptyState hasQuestions={Boolean(result.questions?.length)} submitting={submitting} isSubmitting={isSubmitting} onViewTextFeedback={onViewTextFeedback} />;
   }
@@ -38,7 +47,11 @@ export function PaperViewer({ examID, result, onViewCurrent, onViewTextFeedback 
       <div className="zoom-controls"><button type="button" disabled={releaseChanged} onClick={() => setZoom((value) => Math.min(1.6, value + .15))}>放大</button><button type="button" disabled={releaseChanged} onClick={() => setZoom(1)}>默认</button><button type="button" disabled={releaseChanged} onClick={() => setZoom((value) => Math.max(.7, value - .15))}>缩小</button></div>
       <div className="page-controls"><button type="button" disabled={releaseChanged || pageIndex <= 0} onClick={() => setPageIndex((value) => value - 1)}>上一页</button><label>第 <select disabled={releaseChanged} value={pageIndex} onChange={(event) => setPageIndex(Number(event.target.value))}>{pages.map((item, index) => <option key={`${item.page_no}-${index}`} value={index}>{item.page_no}</option>)}</select> 页</label><button type="button" disabled={releaseChanged || pageIndex >= pages.length - 1} onClick={() => setPageIndex((value) => value + 1)}>下一页</button></div>
       </> : null}
-      <div className="paper-actions">{result.high_score_paper?.available ? <button type="button" className={highScore ? "high-score active" : "high-score"} disabled={releaseChanged} onClick={() => { setPageIndex(0); setHighScore((value) => !value); }}>{highScore ? "查看我的试卷" : "查看高分试卷"}</button> : <p>学校尚未提供可查看的优秀答卷。</p>}{page && !releaseChanged ? <a href={studentPaperPageImageURL(examID, page.question_id, highScore, result.release_id)} download>下载当前页</a> : null}</div>
+      <div className="paper-actions">{highPapers.length ? <button type="button" className={highScore ? "high-score active" : "high-score"} disabled={releaseChanged} onClick={() => { setPageIndex(0); setHighScore((value) => !value); }}>{highScore ? "查看我的试卷" : "查看高分试卷"}</button> : <p>学校尚未提供可查看的优秀答卷。</p>}
+        {highScore && highPapers.length > 1 ? <label className="excellent-paper-select">优秀答卷 <select aria-label="选择优秀答卷" disabled={releaseChanged} value={highPaper?.paper_id ?? ""} onChange={event => { setHighScorePaperID(event.target.value); setPageIndex(0); }}>
+          {highPapers.map((paper, index) => <option key={paper.paper_id} value={paper.paper_id}>答卷 {index + 1}</option>)}
+        </select></label> : null}
+        {page && !releaseChanged ? <a href={studentPaperPageImageURL(examID, page.question_id, highScore, result.release_id, highScore ? highPaper?.paper_id : undefined)} download>下载当前页</a> : null}</div>
     </div>
     <div className="paper-stage">
       {pageContent}
@@ -54,8 +67,8 @@ function PaperEmptyState({ hasQuestions, submitting, isSubmitting, onViewTextFee
   return <div className="paper-empty"><div><p>暂无可查看的答卷图像。可先查看题目文字反馈；需要原卷时请联系学校考试负责人。</p>{hasQuestions && onViewTextFeedback ? <button type="button" className="text-button" disabled={submitting} onClick={() => { if (!submitting && !isSubmitting?.()) onViewTextFeedback(); }}>查看题目文字反馈</button> : null}</div></div>;
 }
 
-function PaperPageEvidence({ examID, releaseID, page, highScore, pageQuestions, scoreMarks, zoom, onReleaseChanged }: Readonly<{
-  examID: string; releaseID: string; page: PaperPage; highScore: boolean; pageQuestions: StudentQuestion[]; scoreMarks: ScoreMark[]; zoom: number; onReleaseChanged: () => void;
+function PaperPageEvidence({ examID, releaseID, page, highScore, paperID, paperLabel, pageQuestions, scoreMarks, zoom, onReleaseChanged }: Readonly<{
+  examID: string; releaseID: string; page: PaperPage; highScore: boolean; paperID?: string; paperLabel?: string; pageQuestions: StudentQuestion[]; scoreMarks: ScoreMark[]; zoom: number; onReleaseChanged: () => void;
 }>) {
   const { submitting, isSubmitting, reauthenticate } = useStudentSession();
   const [annotations, setAnnotations] = useState<StudentQuestionAnnotation[]>([]);
@@ -152,7 +165,7 @@ function PaperPageEvidence({ examID, releaseID, page, highScore, pageQuestions, 
       setImageAttempt((value) => value + 1);
     }}>重试答卷图像</button></div></div> :
       <div className="paper-page" style={{ width: `${zoom * 100}%` }}>
-        <img key={imageAttempt} src={studentPaperPageImageURL(examID, page.question_id, highScore, releaseID)} alt={`${highScore ? "高分" : "本人"}试卷第 ${page.page_no} 页`} onError={() => void verifyFailedImage()} />
+        <img key={imageAttempt} src={studentPaperPageImageURL(examID, page.question_id, highScore, releaseID, paperID)} alt={highScore && paperLabel ? `${paperLabel}第 ${page.page_no} 页` : `${highScore ? "高分" : "本人"}试卷第 ${page.page_no} 页`} onError={() => void verifyFailedImage()} />
         {scoreMarks.map((question) => question.answer_geometry ? <span className={`paper-score-mark ${question.score < question.max_score ? "lost" : ""}`} key={question.question_id} style={{ left: `${Math.min(.96, question.answer_geometry.x + question.answer_geometry.width) * 100}%`, top: `${question.answer_geometry.y * 100}%` }}>{question.question_no}：{formatScore(question.score)}分（满分{formatScore(question.max_score)}分）</span> : null)}
         {!highScore ? annotations.map((annotation) => <span className={`paper-annotation ${annotation.type}`} key={annotation.id} title={annotation.content} style={{ left: `${annotation.geometry.x * 100}%`, top: `${annotation.geometry.y * 100}%`, width: `${annotation.geometry.width * 100}%`, height: `${annotation.geometry.height * 100}%` }}><span className="paper-annotation-text">{annotation.content}</span></span>) : null}
       </div>}

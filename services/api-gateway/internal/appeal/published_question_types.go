@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
 
 // PublishedQuestionAppeal 是独立版本化的申诉记录。
@@ -13,28 +15,33 @@ type PublishedQuestionAppeal struct {
 	TenantID string `json:"tenant_id"`
 	ExamID   string `json:"exam_id"`
 	// 仅在教职工已获授权的任务投影中补充当前考试摘要；不参与冻结成绩或申诉版本校验。
-	ExamName             string                       `json:"exam_name,omitempty"`
-	ExamSubject          string                       `json:"exam_subject,omitempty"`
-	StudentID            string                       `json:"student_id,omitempty"`
-	SubmissionID         string                       `json:"submission_id"`
-	SourceReleaseID      string                       `json:"source_release_id"`
-	SourceReleaseVersion int                          `json:"source_release_version"`
-	QuestionID           string                       `json:"question_id"`
-	QuestionNo           string                       `json:"question_no"`
-	SourceFinalGradeID   string                       `json:"-"`
-	SourceScore          float64                      `json:"source_score"`
-	SourceMaxScore       float64                      `json:"source_max_score"`
-	ReasonCode           string                       `json:"reason_code"`
-	Reason               string                       `json:"reason"`
-	SelectedRegion       map[string]any               `json:"selected_region,omitempty"`
-	Status               string                       `json:"status"`
-	AssignedTo           string                       `json:"assigned_to,omitempty"`
-	ReviewOpinion        *QuestionAppealReviewOpinion `json:"review_opinion,omitempty"`
-	Decision             string                       `json:"decision,omitempty"`
-	PublicResponse       string                       `json:"public_response,omitempty"`
-	PrivateNote          string                       `json:"-"`
-	RegradeJobID         string                       `json:"regrade_job_id,omitempty"`
-	NewReleaseID         string                       `json:"new_release_id,omitempty"`
+	ExamName             string  `json:"exam_name,omitempty"`
+	ExamSubject          string  `json:"exam_subject,omitempty"`
+	StudentID            string  `json:"student_id,omitempty"`
+	SubmissionID         string  `json:"submission_id"`
+	SourceReleaseID      string  `json:"source_release_id"`
+	SourceReleaseVersion int     `json:"source_release_version"`
+	QuestionID           string  `json:"question_id"`
+	QuestionNo           string  `json:"question_no"`
+	SourceFinalGradeID   string  `json:"-"`
+	SourceScore          float64 `json:"source_score"`
+	SourceMaxScore       float64 `json:"source_max_score"`
+	// 本轮重新处理的来源单独记录；原申诉字段始终表示学生最初看到的成绩。
+	ReviewSourceReleaseID    string                       `json:"review_source_release_id,omitempty"`
+	ReviewSourceFinalGradeID string                       `json:"-"`
+	ReviewSourceScore        *float64                     `json:"review_source_score,omitempty"`
+	ReviewSourceMaxScore     *float64                     `json:"review_source_max_score,omitempty"`
+	ReasonCode               string                       `json:"reason_code"`
+	Reason                   string                       `json:"reason"`
+	SelectedRegion           map[string]any               `json:"selected_region,omitempty"`
+	Status                   string                       `json:"status"`
+	AssignedTo               string                       `json:"assigned_to,omitempty"`
+	ReviewOpinion            *QuestionAppealReviewOpinion `json:"review_opinion,omitempty"`
+	Decision                 string                       `json:"decision,omitempty"`
+	PublicResponse           string                       `json:"public_response,omitempty"`
+	PrivateNote              string                       `json:"-"`
+	RegradeJobID             string                       `json:"regrade_job_id,omitempty"`
+	NewReleaseID             string                       `json:"new_release_id,omitempty"`
 	// 版本来自关联的已发布成绩；仅学生公开投影使用，不能据此推断它仍是当前生效版本。
 	NewReleaseVersion int        `json:"-"`
 	ReviewedScore     *float64   `json:"-"`
@@ -164,6 +171,7 @@ type QuestionAppealFilter struct {
 	StudentID  string
 	AssignedTo string
 	Status     string
+	Access     auth.ExamCollectionAccess
 }
 
 const (

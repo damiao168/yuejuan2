@@ -3,18 +3,16 @@ package mathunderstanding
 import (
 	"context"
 	"crypto/sha256"
+	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/httpx"
+	"edugrade-enterprise/services/api-gateway/internal/logger"
+	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
-
-	"edugrade-enterprise/services/api-gateway/internal/auth"
-	"edugrade-enterprise/services/api-gateway/internal/httpx"
-	"edugrade-enterprise/services/api-gateway/internal/logger"
-	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
 const (
@@ -61,406 +59,6 @@ func RegisterRoutes(mux *http.ServeMux, handler *Handler, requireWork, requireMa
 	mux.Handle("GET /api/v1/math-understanding/training-export", requireManage(handler.ExportTraining))
 	mux.Handle("GET /api/v1/math-pilot-gates", requireManage(handler.ListPilotGates))
 	mux.Handle("POST /api/v1/math-pilot-gates/evaluate", requireManage(handler.EvaluatePilotGate))
-}
-
-func RegisterRuntimeRoutes(mux *http.ServeMux, handler *Handler, requireWorker func(http.HandlerFunc) http.Handler) {
-	mux.Handle("GET /api/v1/internal/math-understanding/tasks/{taskId}/input", requireWorker(handler.GetRuntimeInput))
-	mux.Handle("POST /api/v1/internal/math-understanding/tasks/{taskId}/complete", requireWorker(handler.CompleteRuntimeTask))
-	mux.Handle("GET /api/v1/internal/math-verification/tasks/{taskId}/input", requireWorker(handler.GetVerificationRuntimeInput))
-	mux.Handle("POST /api/v1/internal/math-verification/tasks/{taskId}/complete", requireWorker(handler.CompleteVerificationRuntimeTask))
-	mux.Handle("POST /api/v1/internal/math-verification/tasks/{taskId}/fail", requireWorker(handler.FailVerificationRuntimeTask))
-}
-
-type completeRuntimeRequest struct {
-	LeaseToken string              `json:"lease_token"`
-	DurationMS int                 `json:"duration_ms"`
-	Artifact   CreateArtifactInput `json:"artifact"`
-}
-
-type completeVerificationRuntimeRequest struct {
-	LeaseToken         string             `json:"lease_token"`
-	DurationMS         int                `json:"duration_ms"`
-	ArtifactID         string             `json:"artifact_id"`
-	ArtifactVersion    int64              `json:"artifact_version"`
-	CorrectionRevision int64              `json:"correction_revision"`
-	Verifications      []MathVerification `json:"verifications"`
-}
-
-const runtimeSolutionBuilderVersion = "math-runtime-step-segmenter-v2"
-
-func (h *Handler) GetRuntimeInput(w http.ResponseWriter, r *http.Request) {
-	user, ok := currentMathUser(w, r)
-	if !ok || h.runtime == nil {
-		return
-	}
-	task, err := h.runtime.Get(r.Context(), user.TenantID, r.PathValue("taskId"))
-	if err != nil || task.QueueName != "math-understanding" || task.SourceType != "answer_segment" || task.SourceID == "" {
-		httpx.Error(w, r, http.StatusNotFound, "math_runtime_task_not_found", "math understanding task was not found")
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{
-		"task": map[string]any{
-			"id": task.ID, "answer_segment_id": task.SourceID,
-			"exam_question_snapshot_id": task.Payload["exam_question_snapshot_id"],
-			"subject_code":              task.Payload["subject_code"], "region_kind": task.Payload["region_kind"],
-			"input_hash": task.Payload["input_hash"],
-		},
-		"image_url": "/api/v1/internal/answer-segments/" + task.SourceID + "/image",
-	})
-}
-
-func (h *Handler) CompleteRuntimeTask(w http.ResponseWriter, r *http.Request) {
-	user, ok := currentMathUser(w, r)
-	if !ok || h.runtime == nil {
-		return
-	}
-	var input completeRuntimeRequest
-	if !decodeMathJSON(w, r, &input) {
-		return
-	}
-	task, err := h.runtime.Get(r.Context(), user.TenantID, r.PathValue("taskId"))
-	if err != nil || task.QueueName != "math-understanding" || task.SourceType != "answer_segment" {
-		httpx.Error(w, r, http.StatusNotFound, "math_runtime_task_not_found", "math understanding task was not found")
-		return
-	}
-	if strings.TrimSpace(input.LeaseToken) == "" || input.DurationMS < 0 || input.Artifact.AnswerSegmentID != task.SourceID ||
-		input.Artifact.ExamQuestionSnapshotID != stringPayload(task.Payload, "exam_question_snapshot_id") ||
-		input.Artifact.SubjectCode != stringPayload(task.Payload, "subject_code") ||
-		input.Artifact.InputHash != stringPayload(task.Payload, "input_hash") {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_math_runtime_result", "math runtime result does not match its immutable task input")
-		return
-	}
-	// 服务端重新构建解题步骤和连线；worker 已给出的空间关系会保留，缺失时才根据几何位置补算。
-	preparedArtifact, err := prepareRuntimeArtifact(input.Artifact)
-	if err != nil {
-		writeMathError(w, r, err)
-		return
-	}
-	artifact, verificationTaskID, err := h.completeRuntimeArtifact(r.Context(), recognitionRuntimeCompletion{
-		Task: task, ActorID: user.ID, Input: preparedArtifact, LeaseToken: input.LeaseToken, DurationMS: input.DurationMS,
-	})
-	if err != nil {
-		if errors.Is(err, workerruntime.ErrConflict) || errors.Is(err, workerruntime.ErrLeaseExpired) || errors.Is(err, workerruntime.ErrLeaseMismatch) || errors.Is(err, workerruntime.ErrInvalidTransition) {
-			httpx.Error(w, r, http.StatusConflict, "math_runtime_completion_failed", "math runtime lease or accepted result no longer matches")
-		} else {
-			writeMathError(w, r, err)
-		}
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"artifact": artifact, "verification_task_id": verificationTaskID})
-}
-
-func (h *Handler) GetVerificationRuntimeInput(w http.ResponseWriter, r *http.Request) {
-	user, ok := currentMathUser(w, r)
-	if !ok || h.runtime == nil {
-		return
-	}
-	task, err := h.runtime.Get(r.Context(), user.TenantID, r.PathValue("taskId"))
-	if err != nil || !isVerificationTask(task) {
-		httpx.Error(w, r, http.StatusNotFound, "math_verification_task_not_found", verificationTaskNotFound)
-		return
-	}
-	artifact, contract, correctionRevision, err := h.verificationTaskContract(r.Context(), user.TenantID, task)
-	if err != nil {
-		writeMathError(w, r, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{
-		"task": map[string]any{
-			"id": task.ID, "artifact_id": artifact.ID, "artifact_version": artifact.Version,
-			"input_hash": artifact.InputHash, "correction_revision": correctionRevision,
-		},
-		"contract": contract,
-	})
-}
-
-func (h *Handler) CompleteVerificationRuntimeTask(w http.ResponseWriter, r *http.Request) {
-	user, ok := currentMathUser(w, r)
-	if !ok || h.runtime == nil {
-		return
-	}
-	var input completeVerificationRuntimeRequest
-	if !decodeMathJSON(w, r, &input) {
-		return
-	}
-	task, err := h.runtime.Get(r.Context(), user.TenantID, r.PathValue("taskId"))
-	if err != nil || !isVerificationTask(task) {
-		httpx.Error(w, r, http.StatusNotFound, "math_verification_task_not_found", verificationTaskNotFound)
-		return
-	}
-	artifact, contract, correctionRevision, err := h.verificationTaskContract(r.Context(), user.TenantID, task)
-	if err != nil {
-		writeMathError(w, r, err)
-		return
-	}
-	if strings.TrimSpace(input.LeaseToken) == "" || input.DurationMS < 0 || input.ArtifactID != artifact.ID ||
-		input.ArtifactVersion != artifact.Version || input.CorrectionRevision != correctionRevision {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_math_verification_result", "math verification result does not match its immutable task input")
-		return
-	}
-	verifiedContract, quality, err := applySymbolicVerifications(contract, input.Verifications, correctionRevision)
-	if err != nil {
-		writeMathError(w, r, err)
-		return
-	}
-	derived, superseded, err := h.completeVerifiedRuntime(r.Context(), verifiedRuntimeCompletion{
-		Task: task, Parent: artifact, CorrectionRevision: correctionRevision, Contract: verifiedContract,
-		Quality: quality, LeaseToken: input.LeaseToken, DurationMS: input.DurationMS,
-	})
-	if err != nil {
-		httpx.Error(w, r, http.StatusConflict, "math_verification_completion_failed", "math verification lease is no longer valid")
-		return
-	}
-	if superseded {
-		httpx.JSON(w, http.StatusOK, map[string]any{"superseded": true})
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"artifact": derived, "superseded": false})
-}
-
-func (h *Handler) FailVerificationRuntimeTask(w http.ResponseWriter, r *http.Request) {
-	user, ok := currentMathUser(w, r)
-	if !ok || h.runtime == nil {
-		return
-	}
-	var input workerruntime.FailInput
-	if !decodeMathJSON(w, r, &input) {
-		return
-	}
-	task, err := h.runtime.Get(r.Context(), user.TenantID, r.PathValue("taskId"))
-	if err != nil || !isVerificationTask(task) {
-		httpx.Error(w, r, http.StatusNotFound, "math_verification_task_not_found", verificationTaskNotFound)
-		return
-	}
-	updated, err := h.runtime.Fail(r.Context(), user.TenantID, task.ID, input)
-	if err != nil {
-		httpx.Error(w, r, http.StatusConflict, "math_verification_failure_rejected", "math verification lease is no longer valid")
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"task": updated})
-}
-
-func (h *Handler) verificationTaskContract(ctx context.Context, tenantID string, task workerruntime.Task) (Artifact, CreateArtifactInput, int64, error) {
-	artifact, err := h.artifacts.GetArtifact(ctx, tenantID, task.SourceID)
-	if err != nil {
-		return Artifact{}, CreateArtifactInput{}, 0, err
-	}
-	version, versionOK := int64Payload(task.Payload, "artifact_version")
-	revision, revisionOK := int64Payload(task.Payload, "correction_revision")
-	if !versionOK || !revisionOK || revision < 0 || stringPayload(task.Payload, "artifact_id") != artifact.ID || version != artifact.Version ||
-		stringPayload(task.Payload, "input_hash") != artifact.InputHash {
-		return Artifact{}, CreateArtifactInput{}, 0, ErrInvalidInput
-	}
-	// 任务绑定的是创建时的修订号，不能改读“最新修订”；否则相同任务重试会得到不同输入。
-	contract := cloneInput(artifact.CreateArtifactInput)
-	if revision > 0 {
-		correction, correctionErr := h.corrections.GetCorrection(ctx, tenantID, artifact.ID, revision)
-		if correctionErr != nil {
-			return Artifact{}, CreateArtifactInput{}, 0, correctionErr
-		}
-		if !correctionMatchesArtifact(correction.CorrectedContract, artifact) {
-			return Artifact{}, CreateArtifactInput{}, 0, ErrInvalidInput
-		}
-		contract = cloneInput(correction.CorrectedContract)
-	}
-	return artifact, contract, revision, nil
-}
-
-func (h *Handler) enqueueVerificationTask(ctx context.Context, actorID string, artifact Artifact, correctionRevision int64) (workerruntime.Task, error) {
-	key := "math-verification:" + artifact.ID + ":" + strconv.FormatInt(artifact.Version, 10) + ":" + strconv.FormatInt(correctionRevision, 10)
-	return h.runtime.CreateTask(ctx, artifact.TenantID, actorID, workerruntime.CreateTaskInput{
-		TaskType: "evidence_verify", QueueName: "math-verification", SourceType: "math_understanding_artifact", SourceID: artifact.ID,
-		Priority: 75, PayloadSchemaVersion: "math-verification-task-v1", IdempotencyKey: key, DedupeKey: key,
-		MaxAttempts: 3, RetryBackoffSeconds: 30,
-		Payload: map[string]any{
-			"artifact_id": artifact.ID, "artifact_version": artifact.Version, "input_hash": artifact.InputHash,
-			"correction_revision": correctionRevision,
-		},
-	})
-}
-
-func isVerificationTask(task workerruntime.Task) bool {
-	return task.QueueName == "math-verification" && task.TaskType == "evidence_verify" &&
-		task.SourceType == "math_understanding_artifact" && task.SourceID != "" &&
-		task.PayloadSchemaVersion == "math-verification-task-v1"
-}
-
-func int64Payload(payload map[string]any, key string) (int64, bool) {
-	switch value := payload[key].(type) {
-	case int:
-		return int64(value), true
-	case int64:
-		return value, true
-	case float64:
-		converted := int64(value)
-		return converted, float64(converted) == value
-	case json.Number:
-		converted, err := value.Int64()
-		return converted, err == nil
-	default:
-		return 0, false
-	}
-}
-
-func applySymbolicVerifications(contract CreateArtifactInput, checks []MathVerification, correctionRevision int64) (CreateArtifactInput, map[string]any, error) {
-	// 先限制已有记录，避免在拒绝过量结果前深拷贝整个历史契约。
-	if len(checks) == 0 || len(checks) > 2048 || len(contract.Verifications) > maxArtifactVerificationCount {
-		return CreateArtifactInput{}, nil, ErrInvalidInput
-	}
-	contract = cloneInput(contract)
-	retained, knownIDs, criticalConfidence, requiresReview, err := retainSyntaxVerifications(contract, len(checks))
-	if err != nil {
-		return CreateArtifactInput{}, nil, err
-	}
-	statusCounts := map[string]int{"verified": 0, "contradicted": 0, "uncertain": 0, "not_applicable": 0}
-	activeFormulas := activeSolutionFormulas(contract.SolutionGraph)
-	checkedFormulas := map[string]bool{}
-	for _, check := range checks {
-		if check.Engine != "sympy" || !set("equivalence", "constraint")[check.Kind] || knownIDs[check.ID] || !validSymbolicBinding(contract, check) {
-			return CreateArtifactInput{}, nil, ErrInvalidInput
-		}
-		knownIDs[check.ID] = true
-		recordCheckedFormula(check, activeFormulas, checkedFormulas)
-		statusCounts[check.Status]++
-		criticalConfidence, requiresReview = updateSymbolicConfidence(check, criticalConfidence, requiresReview)
-		retained = append(retained, check)
-	}
-	contract.Verifications = retained
-	contract.SolutionGraph.RequiresHumanReview = contract.SolutionGraph.RequiresHumanReview || requiresReview
-	if err := ValidateCreateArtifact(contract); err != nil {
-		return CreateArtifactInput{}, nil, err
-	}
-	quality := map[string]any{
-		"verification_count": len(checks), "verified_count": statusCounts["verified"],
-		"contradicted_count": statusCounts["contradicted"], "uncertain_count": statusCounts["uncertain"],
-		"not_applicable_count": statusCounts["not_applicable"], "critical_confidence": criticalConfidence,
-		"engine": "sympy", "correction_revision": correctionRevision,
-		"formula_count": len(contract.Formulas), "active_formula_count": len(activeFormulas), "checked_formula_count": len(checkedFormulas),
-		"unchecked_formula_count": len(activeFormulas) - len(checkedFormulas),
-	}
-	return contract, quality, nil
-}
-
-func retainSyntaxVerifications(contract CreateArtifactInput, incomingCount int) ([]MathVerification, map[string]bool, float64, bool, error) {
-	if len(contract.Verifications) > maxArtifactVerificationCount || incomingCount < 0 || incomingCount > 2048 {
-		return nil, nil, 0, false, ErrInvalidInput
-	}
-	syntaxCount := 0
-	for _, check := range contract.Verifications {
-		if check.Kind == "syntax" {
-			syntaxCount++
-		}
-	}
-	// 旧符号结果会被替换；只为保留的语法记录和本轮结果计预算，减法检查在容量相加前执行。
-	if incomingCount > maxArtifactVerificationCount-syntaxCount {
-		return nil, nil, 0, false, ErrInvalidInput
-	}
-	retained, knownIDs, criticalConfidence, requiresReview := collectRetainedSyntaxEvidence(contract, syntaxCount+incomingCount)
-	return retained, knownIDs, criticalConfidence, requiresReview, nil
-}
-
-func activeSolutionFormulas(graph SolutionGraph) map[string]bool {
-	active := map[string]bool{}
-	for _, step := range graph.Steps {
-		for _, id := range step.FormulaIDs {
-			active[id] = true
-		}
-	}
-	return active
-}
-
-func recordCheckedFormula(check MathVerification, active, checked map[string]bool) {
-	if active[check.FormulaID] {
-		checked[check.FormulaID] = true
-	}
-	if fromID, ok := check.Details["from_formula_id"].(string); ok {
-		if active[fromID] {
-			checked[fromID] = true
-		}
-	}
-}
-
-func updateSymbolicConfidence(check MathVerification, confidence float64, requiresReview bool) (float64, bool) {
-	if check.Status == "contradicted" {
-		confidence = 0
-		requiresReview = true
-	} else if check.Status == "uncertain" {
-		if check.Confidence < confidence {
-			confidence = check.Confidence
-		}
-		requiresReview = true
-	}
-	return confidence, requiresReview
-}
-
-func validSymbolicBinding(contract CreateArtifactInput, check MathVerification) bool {
-	steps := map[string]SolutionStep{}
-	for _, step := range contract.SolutionGraph.Steps {
-		steps[step.ID] = step
-	}
-	contains := func(ids []string, id string) bool {
-		for _, candidate := range ids {
-			if candidate == id {
-				return true
-			}
-		}
-		return false
-	}
-	if check.StepID != "" && !contains(steps[check.StepID].FormulaIDs, check.FormulaID) {
-		return false
-	}
-	if check.Kind != "equivalence" {
-		return true
-	}
-	fromStep, _ := check.Details["from_step_id"].(string)
-	fromFormula, _ := check.Details["from_formula_id"].(string)
-	if fromStep == "" || fromFormula == "" || check.StepID == "" || check.FormulaID == "" || !contains(steps[fromStep].FormulaIDs, fromFormula) {
-		return false
-	}
-	for _, edge := range contract.SolutionGraph.Edges {
-		if edge.Kind == "derives" && edge.FromStepID == fromStep && edge.ToStepID == check.StepID {
-			return true
-		}
-	}
-	return false
-}
-
-func prepareRuntimeArtifact(input CreateArtifactInput) (CreateArtifactInput, error) {
-	relations := input.Relations
-	if len(relations) == 0 {
-		relations = BuildSpatialRelations(input.Blocks, SpatialGraphOptions{})
-	}
-
-	formulaModelVersion := "text-only"
-	if len(input.Formulas) > 0 {
-		formulaModelVersion = strings.TrimSpace(input.SolutionGraph.FormulaModelVersion)
-		for index := 0; formulaModelVersion == "" && index < len(input.Formulas); index++ {
-			formulaModelVersion = strings.TrimSpace(input.Formulas[index].RecognitionVersion)
-		}
-	}
-
-	graph, err := BuildSolutionGraph(SolutionBuildInput{
-		AnswerSegmentID:     input.AnswerSegmentID,
-		Blocks:              input.Blocks,
-		Formulas:            input.Formulas,
-		Relations:           relations,
-		Verifications:       input.Verifications,
-		BuilderVersion:      runtimeSolutionBuilderVersion,
-		FormulaModelVersion: formulaModelVersion,
-	})
-	if err != nil {
-		return CreateArtifactInput{}, err
-	}
-	graph.RequiresHumanReview = graph.RequiresHumanReview || input.SolutionGraph.RequiresHumanReview
-
-	input.Relations = relations
-	input.SolutionGraph = graph
-	return input, nil
-}
-
-func stringPayload(payload map[string]any, key string) string {
-	value, _ := payload[key].(string)
-	return value
 }
 
 type evaluatePilotGateRequest struct {
@@ -539,6 +137,7 @@ func (h *Handler) GetLatest(w http.ResponseWriter, r *http.Request) {
 		"corrections":         corrections,
 	})
 }
+
 func (h *Handler) ListCorrections(w http.ResponseWriter, r *http.Request) {
 	user, ok := currentMathUser(w, r)
 	if !ok {
@@ -560,6 +159,7 @@ func (h *Handler) ListCorrections(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"corrections": items})
 }
+
 func (h *Handler) CreateCorrection(w http.ResponseWriter, r *http.Request) {
 	user, ok := currentMathUser(w, r)
 	if !ok {
@@ -602,6 +202,7 @@ func (h *Handler) CreateCorrection(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusCreated, response)
 }
+
 func (h *Handler) ExportTraining(w http.ResponseWriter, r *http.Request) {
 	user, ok := currentMathUser(w, r)
 	if !ok {
@@ -643,12 +244,14 @@ func (h *Handler) canAccess(r *http.Request, user auth.User, segmentID string) b
 	allowed, err := h.reviews.HasActiveAssignment(r.Context(), user.TenantID, user.ID, segmentID)
 	return err == nil && allowed
 }
+
 func (h *Handler) auditEvent(r *http.Request, user auth.User, action, targetID string, after map[string]any) {
 	if h.audit == nil {
 		return
 	}
-	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "math_understanding", TargetID: targetID, AfterValue: after, Reason: action, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
+	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "math_understanding", TargetID: targetID, AfterValue: after, Reason: action, IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
 }
+
 func currentMathUser(w http.ResponseWriter, r *http.Request) (auth.User, bool) {
 	user, ok := auth.UserFromContext(r.Context())
 	if !ok {
@@ -656,6 +259,7 @@ func currentMathUser(w http.ResponseWriter, r *http.Request) (auth.User, bool) {
 	}
 	return user, ok
 }
+
 func decodeMathJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2<<20))
 	decoder.DisallowUnknownFields()
@@ -669,6 +273,7 @@ func decodeMathJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	}
 	return true
 }
+
 func writeMathError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, ErrNotFound):
@@ -682,27 +287,4 @@ func writeMathError(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		httpx.Error(w, r, http.StatusInternalServerError, "math_understanding_failed", "math understanding operation failed")
 	}
-}
-
-// 容量由调用方在分配前检查；收集保留的语法证据同时累积识别疑点，不能由后续符号验证抹掉。
-func collectRetainedSyntaxEvidence(contract CreateArtifactInput, capacity int) ([]MathVerification, map[string]bool, float64, bool) {
-	retained := make([]MathVerification, 0, capacity)
-	knownIDs := map[string]bool{}
-	criticalConfidence := contract.SolutionGraph.OverallConfidence
-	requiresReview := false
-	// 保留识别阶段的语法检查，再替换符号验证结果；后续计算成功不能抹掉原先的识别疑点。
-	for _, check := range contract.Verifications {
-		if check.Kind == "syntax" {
-			retained = append(retained, check)
-			knownIDs[check.ID] = true
-			if check.Status == "uncertain" || check.Status == "contradicted" {
-				criticalConfidence = min(criticalConfidence, check.Confidence)
-				if check.Status == "contradicted" {
-					criticalConfidence = 0
-				}
-				requiresReview = true
-			}
-		}
-	}
-	return retained, knownIDs, criticalConfidence, requiresReview
 }

@@ -9,7 +9,6 @@ type RoleAssignmentPolicy struct {
 	ManagedAssignable bool
 	CanonicalScope    string
 	SchoolRequired    bool
-	ClassBinding      bool
 	AssignableBy      []string
 }
 
@@ -17,7 +16,7 @@ var roleAssignmentPolicies = map[string]RoleAssignmentPolicy{
 	"platform_admin":            {Code: "platform_admin", Human: true, CanonicalScope: "platform"},
 	"tenant_admin":              {Code: "tenant_admin", Human: true, CanonicalScope: "tenant"},
 	"school_admin":              {Code: "school_admin", Human: true, ManagedAssignable: true, CanonicalScope: "school", SchoolRequired: true, AssignableBy: []string{"tenant_admin"}},
-	"teacher":                   {Code: "teacher", Human: true, ManagedAssignable: true, CanonicalScope: "class", SchoolRequired: true, ClassBinding: true, AssignableBy: []string{"tenant_admin", "school_admin"}},
+	"teacher":                   {Code: "teacher", Human: true, ManagedAssignable: true, CanonicalScope: "exam_task", SchoolRequired: true, AssignableBy: []string{"tenant_admin", "school_admin"}},
 	"grader":                    {Code: "grader", Human: true, ManagedAssignable: true, CanonicalScope: "exam_task", SchoolRequired: true, AssignableBy: []string{"tenant_admin", "school_admin"}},
 	"arbitrator":                {Code: "arbitrator", Human: true, ManagedAssignable: true, CanonicalScope: "exam_task", SchoolRequired: true, AssignableBy: []string{"tenant_admin", "school_admin"}},
 	"auditor":                   {Code: "auditor", Human: true, ManagedAssignable: true, CanonicalScope: "tenant", AssignableBy: []string{"tenant_admin"}},

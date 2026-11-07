@@ -9,7 +9,7 @@ import (
 func TestManagedAccessNoOpKeepsEpochAndCredentials(t *testing.T) {
 	store, actor, scope := managedAccessFixture(t)
 	ctx, now := context.Background(), time.Now()
-	store.AddUser(UserWithPassword{User: User{ID: "teacher", TenantID: actor.TenantID, TenantCode: "demo", Username: "teacher", Status: "active", Roles: []string{"teacher"}}, SchoolID: "school-1", ManagedClassIDs: []string{"class-1"}})
+	store.AddUser(UserWithPassword{User: User{ID: "teacher", TenantID: actor.TenantID, TenantCode: "demo", Username: "teacher", Status: "active", Roles: []string{"teacher"}}, SchoolID: "school-1", TeachingSubjects: []string{"mathematics"}})
 	user, err := store.FindUserByLogin(ctx, "demo", "teacher")
 	if err != nil {
 		t.Fatal(err)
@@ -18,11 +18,9 @@ func TestManagedAccessNoOpKeepsEpochAndCredentials(t *testing.T) {
 		t.Fatal(err)
 	}
 	store.devices["device"] = memoryDeviceBinding{TenantID: actor.TenantID, UserID: user.ID, ExpiresAt: now.Add(time.Hour)}
-	// 重复职责和班级归一化后仍是同一授权，不能让管理员重试撤销现有凭据。
+	// 重复职责归一化后仍是同一授权，不能让管理员重试撤销现有凭据。
 	_, err = store.UpdateManagedUserAccess(ctx, actor, scope, user.ID, UpdateManagedUserAccessInput{
-		RoleCodes: []string{"teacher", "teacher"}, ClassIDs: []string{"class-1", "class-1"},
-		ExpectedRoles: []string{"teacher"}, ExpectedClassIDs: []string{"class-1"},
-	})
+		RoleCodes: []string{"teacher", "teacher"}, ExpectedRoles: []string{"teacher"}})
 	if err != nil {
 		t.Fatal(err)
 	}

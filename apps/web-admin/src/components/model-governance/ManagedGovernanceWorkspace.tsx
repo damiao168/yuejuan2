@@ -3,7 +3,7 @@ import { Alert, App, Button, Empty, Form, Input, InputNumber, Segmented, Select,
 import { RefreshCw } from "lucide-react";
 import type { ManagedModelAPIConfig } from "../../api/modelApiConfig";
 import { capabilityVerified, modelConfigOptionLabel } from "../../features/platform-model-config/lib/modelConfig";
-import { getUserErrorMessage } from "../../api/client";
+import { ApiClientError, getUserErrorMessage } from "../../api/client";
 import {
   getModelPolicy, listModelApprovals, listModelEvaluationRuns, updateModelPolicy,
   type EvaluationRun, type ModelApproval, type TenantModelPolicy, type UpdatePolicyInput
@@ -54,11 +54,15 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
   };
   const requestRef = useRef(0);
   const [runs, setRuns] = useState<EvaluationRun[]>([]);
+  const [runsCursor, setRunsCursor] = useState("");
+  const [loadingMoreRuns, setLoadingMoreRuns] = useState(false);
+  const runPageRequest = useRef(0);
   const [approvals, setApprovals] = useState<ModelApproval[]>([]);
   const [policy, setPolicy] = useState<TenantModelPolicy>();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [policyConflict, setPolicyConflict] = useState(false);
   const [form] = Form.useForm<PolicyFormValues>();
   const savingScopesRef = useRef({ policy: false, evaluation: false, assurance: false });
   // 保存开始时同步通知外层学校选择器；不能等重绘，否则同一轮排队的切校可卸载原范围请求。
@@ -74,6 +78,8 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
   const load = useCallback(async () => {
     if (!tenantID) return;
     const requestID = ++requestRef.current;
+    runPageRequest.current += 1;
+    setLoadingMoreRuns(false);
     setLoading(true);
     setError("");
     try {
@@ -85,6 +91,7 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
       // 学校或组件已切换时，旧范围的策略和表单不能回填到新学校。
       if (requestID !== requestRef.current) return;
       setRuns(runResult.evaluation_runs);
+      setRunsCursor(runResult.has_more ? runResult.next_cursor : "");
       setApprovals(approvalResult.model_approvals);
       // 另一评测保存后的列表刷新不能覆盖正在编辑的策略及其原expected_version。
       if (!policyDirtyRef.current) {
@@ -102,6 +109,7 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
         reason: ""
       });
       setDirty(false);
+      setPolicyConflict(false);
       }
     } catch (nextError) {
       if (requestID !== requestRef.current) return;
@@ -112,6 +120,30 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
   }, [form, tenantID]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const loadMoreRuns = async () => {
+    if (!runsCursor || loadingMoreRuns || loading) return;
+    const request = ++runPageRequest.current;
+    const scope = requestRef.current;
+    setLoadingMoreRuns(true);
+    try {
+      const result = await listModelEvaluationRuns(tenantID, { limit: 100, cursor: runsCursor });
+      if (scope !== requestRef.current || request !== runPageRequest.current) return;
+      setRuns(current => [...new Map([...current, ...result.evaluation_runs].map(run => [run.id, run])).values()]);
+      setRunsCursor(result.has_more ? result.next_cursor : "");
+    } catch (cause) {
+      if (scope === requestRef.current && request === runPageRequest.current) message.error(getUserErrorMessage(cause, "无法读取更多评测记录"));
+    } finally {
+      if (scope === requestRef.current && request === runPageRequest.current) setLoadingMoreRuns(false);
+    }
+  };
+
+  const discardPolicyChanges = async () => {
+    // 只有明确放弃草稿才替换策略版本；其他证据刷新继续保留正在编辑的表单。
+    policyDirtyRef.current = false;
+    setDirty(false);
+    await load();
+  };
 
   const savePolicy = async () => {
     if (!policy) return;
@@ -132,6 +164,7 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
       policyDirtyRef.current = false;
       await load();
     } catch (nextError) {
+      if (nextError instanceof ApiClientError && nextError.status === 409) setPolicyConflict(true);
       message.error(getUserErrorMessage(nextError, "更新使用策略失败"));
     } finally {
       setSaving(false); markSaving("policy", false);
@@ -155,6 +188,8 @@ export function ManagedGovernanceWorkspace({ tenantID, schoolName, configs, onDi
       <GovernanceMaterialIntake tenantID={tenantID} disabled={dirty || saving || evaluationDirty || assuranceDirty || evaluationSaving || assuranceSaving} onReady={acceptMaterial} onDirtyChange={setMaterialDirty} />
     </Space>
     {error ? <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} /> : null}
+    {policyConflict ? <div role="alert"><p>策略已被他人修改，请载入最新版本后重新填写。</p><Button disabled={saving || loading} onClick={() => void discardPolicyChanges()}>放弃修改并载入最新版本</Button></div> : null}
+    {(view === "evaluations" || view === "approvals") && runsCursor ? <Button disabled={loading} loading={loadingMoreRuns} onClick={() => void loadMoreRuns()}>加载更多评测记录</Button> : null}
     <div hidden={view !== "evaluations"}><ModelEvaluationWorkspace tenantID={tenantID} configs={configs} runs={runs} loading={loading} canManage onRefresh={load} onDirtyChange={setEvaluationDirty} onSavingChange={handleEvaluationSaving} materialDelivery={candidateMaterial} onMaterialReceived={candidateReceived} /></div>
     {view === "approvals" ? <ModelApprovalWorkspace tenantID={tenantID} approvals={approvals} evaluationRuns={runs} canManage onRefresh={load} /> : null}
     <div hidden={view !== "assurance"}><ScoringAssuranceWorkspace tenantID={tenantID} initialAxis={initialEligibilityAxis} canReadEligibility canManageEligibility canManageEvaluations canReadDisagreements canManageDisagreements onDirtyChange={setAssuranceDirty} onSavingChange={handleAssuranceSaving} materialDelivery={scoringMaterial} onMaterialReceived={scoringReceived} /></div>

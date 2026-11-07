@@ -72,7 +72,7 @@ func (h *Handler) ListObservations(w http.ResponseWriter, r *http.Request) {
 	}
 	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
 	items, err := h.service.ListObservations(r.Context(), user.TenantID, ObservationFilter{
-		Access: auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver},
+		Access: auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver, Management: true},
 		ExamID: strings.TrimSpace(r.URL.Query().Get("exam_id")), QuestionID: strings.TrimSpace(r.URL.Query().Get("question_id")),
 		GraderID: strings.TrimSpace(r.URL.Query().Get("grader_id")),
 	})
@@ -128,5 +128,5 @@ func (h *Handler) record(r *http.Request, user auth.User, action, targetID strin
 	}
 	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID,
 		Action: action, TargetType: "seed_sampling_policy", TargetID: targetID, Reason: action,
-		IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
+		IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
 }

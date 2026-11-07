@@ -79,14 +79,16 @@ func diagnosticsPostgresDB(t *testing.T) (*sql.DB, *sql.DB, string) {
 	if err := owner.QueryRow(`SELECT id::text FROM tenant WHERE code='demo'`).Scan(&tenantID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := owner.Exec(`CREATE ROLE ` + quotedRole + ` LOGIN NOSUPERUSER NOBYPASSRLS`); err != nil {
+	// 测试角色也设置随机合成密码，兼容要求 SCRAM 的隔离实例，不依赖 trust 放行。
+	rolePassword := "ai-diagnostics-test-only-" + suffix
+	if _, err := owner.Exec(`CREATE ROLE ` + quotedRole + ` LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '` + rolePassword + `'`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(`GRANT edugrade_tenant_runtime TO ` + quotedRole); err != nil {
 		t.Fatal(err)
 	}
 	runtimeCfg := ownerCfg.Copy()
-	runtimeCfg.User, runtimeCfg.Password = roleName, ""
+	runtimeCfg.User, runtimeCfg.Password = roleName, rolePassword
 	runtimeCfg.RuntimeParams["edugrade.tenant_id"] = tenantID
 	runtimeCfg.RuntimeParams["statement_timeout"] = "10000"
 	runtimeCfg.RuntimeParams["lock_timeout"] = "3000"
@@ -109,7 +111,7 @@ func TestPostgresExecutionDiagnosticsWorkerFailureAtomic(t *testing.T) {
 		if _, err := store.UpdateRun(ctx, tenantID, prepared.Run.ID, UpdateRunInput{Status: RunFailed, ExecutionDiagnostics: truncatedDiagnostics()}); err != nil {
 			t.Fatal(err)
 		}
-		// 运行表当前依赖显式 tenant 条件，未启用表级 RLS；本断言只证明 Store 的查询隔离。
+		// Store 的显式租户条件与数据库强制 RLS 同时生效；错误租户不能取得运行诊断。
 		if _, err := store.GetRun(ctx, uuid.NewString(), prepared.Run.ID); !errors.Is(err, ErrNotFound) {
 			t.Fatalf("another tenant read diagnostics through Store: %v", err)
 		}

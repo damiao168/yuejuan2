@@ -144,7 +144,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
-	filter.Access = auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver}
+	filter.Access = auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver, Management: true}
 	items, err := h.store.List(r.Context(), user.TenantID, filter)
 	if err != nil {
 		writeError(w, r, err)
@@ -202,5 +202,5 @@ func (h *Handler) auditAction(r *http.Request, user auth.User, action, targetID 
 	if h.audit == nil {
 		return
 	}
-	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "grading_gold_paper", TargetID: targetID, Reason: action, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
+	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "grading_gold_paper", TargetID: targetID, Reason: action, IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
 }

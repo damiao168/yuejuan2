@@ -1,0 +1,240 @@
+
+
+.ai-empty-state {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 10px;
+  color: var(--text-muted);
+  background: var(--surface-soft);
+  border-radius: var(--radius);
+}
+
+.ai-empty-state strong {
+  color: var(--text);
+}
+
+.ai-score-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.ai-score-strip div {
+  min-width: 0;
+}
+
+.ai-score-strip span {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.ai-score-strip strong {
+  font-size: var(--eg-font-section);
+  letter-spacing: 0;
+}
+
+.ai-evidence-details {
+  border-top: 1px solid var(--border);
+}
+
+.ai-evidence-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 2px;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: var(--eg-font-body);
+  font-weight: 600;
+}
+
+.ai-evidence-details .ant-tabs-nav {
+  margin-bottom: 6px;
+}
+
+.point-result-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.evidence-item {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.evidence-item > span,
+.evidence-item > code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.evidence-item code {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.score-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.score-input-row .ant-input-number {
+  width: 100%;
+}
+
+.score-input-row input {
+  font-size: 1.75rem !important;
+  font-weight: 700;
+}
+
+.rubric-score-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 0;
+  overflow: auto;
+}
+
+.rubric-score-head,
+.rubric-score-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 82px;
+  align-items: center;
+  gap: 8px;
+}
+
+.rubric-score-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  color: var(--text-muted);
+}
+
+.rubric-score-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rubric-score-item .ant-input-number {
+  width: 82px;
+}
+
+.grading-inline-note,
+.grading-submit-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--eg-font-body);
+  line-height: 1.4;
+}
+
+.draft-save-status {
+  font-size: var(--eg-font-caption);
+  color: var(--text-muted);
+}
+
+.draft-save-status.error,
+.draft-save-status.conflict {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.draft-save-status.offline {
+  color: var(--warning);
+}
+
+.draft-save-status.saved {
+  color: var(--success-text);
+}
+
+.grading-submit-note {
+  flex: 0 0 auto;
+}
+
+.grading-submit-bar {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+.grading-bottom {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.grading-bottom > div {
+  min-width: 0;
+  padding: 12px;
+}
+
+@media (max-width: 1360px) {
+  .grading-workspace,
+  .grading-panels,
+  .grading-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .grading-panels {
+    grid-template-areas:
+      "answer"
+      "inspector";
+  }
+
+  .grading-task-rail {
+    position: static;
+    max-height: none;
+  }
+
+  .grading-task-list {
+    max-height: 240px;
+  }
+}
+
+@media (max-width: 760px) {
+  .grading-topbar {
+    flex-direction: column;
+    padding: 14px;
+  }
+
+  .grading-taskbar,
+  .point-result-list {
+    grid-template-columns: 1fr;
+  }
+
+  .answer-viewer {
+    height: 480px;
+    min-height: 360px;
+  }
+
+  .answer-viewer-stage img,
+  .answer-viewer-stage iframe {
+    max-width: 320px;
+    max-height: 430px;
+  }
+
+  .answer-viewer-stage iframe {
+    width: 320px;
+    height: 420px;
+  }
+
+  .ai-score-strip {
+    grid-template-columns: 1fr;
+  }
+}

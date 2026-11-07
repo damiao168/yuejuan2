@@ -110,6 +110,7 @@ func NewGradingQualityModule(cfg config.Config, stores GradingQualityStores, dep
 
 	subjectiveHandler := subjective.NewHandler(stores.Subjective, newSubjectiveAdapter(cfg, dependencies.AIRequestObserver), dependencies.Auth).
 		WithImageModelResolver(dependencies.ImageModelResolver).
+		WithImagePrefixCaching(cfg.AIService.ImagePrefixCache).
 		WithImageModelByIDResolver(dependencies.ImageModelByIDResolver).
 		WithImageCropResolver(activeCrops).
 		WithReferenceMaterials(paper.NewReferenceMaterialsService(dependencies.DB, dependencies.Files, dependencies.Objects, cfg.Files.Bucket)).

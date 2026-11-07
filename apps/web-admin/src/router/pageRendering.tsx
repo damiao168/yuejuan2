@@ -2,7 +2,6 @@ import { lazy, type ReactNode } from "react";
 import type { QueryClient } from "@tanstack/react-query";
 import { hasAnyPermission, hasEveryPermission, type SessionUser } from "../auth/session";
 import { canWorkTeacherAppeals } from "../auth/capabilities";
-import { passwordMinimumForRoles } from "../auth/loginSecurity";
 import { ForbiddenState, NotFoundState } from "../components/PageState";
 import { invalidateExamWorkspace } from "../query/examWorkspace";
 import { managementExamWorkspaceRoute } from "../features/exams/management/managementPresentation";
@@ -42,7 +41,7 @@ const QualityDashboardPage = lazy(() => import("../pages/QualityDashboardPage").
 const ScoreManagementPage = lazy(() => import("../pages/ScoreManagementPage").then((module) => ({ default: module.ScoreManagementPage })));
 const SubmissionCapturePage = lazy(() => import("../pages/SubmissionCapturePage").then((module) => ({ default: module.SubmissionCapturePage })));
 const SystemStatusPage = lazy(() => import("../pages/SystemStatusPage").then((module) => ({ default: module.SystemStatusPage })));
-const SessionManagementPage = lazy(() => import("../pages/SessionManagementPage").then((module) => ({ default: module.SessionManagementPage })));
+const AccountProfilePage = lazy(() => import("../pages/AccountProfilePage").then((module) => ({ default: module.AccountProfilePage })));
 const IdentityLandingPage = lazy(() => import("../pages/IdentityLandingPage").then((module) => ({ default: module.IdentityLandingPage })));
 
 export interface RouteRenderingContext {
@@ -107,7 +106,7 @@ function renderExamWorkspaceModule(context: Readonly<RouteRenderingContext>, rea
       case "grading":
         return <GradingWorkbenchPage canWork={writeAllows(["review:work"])} canManageTasks={adminAllows(["review:manage"])} canViewOriginalImage={experience === "admin"} canGrade={adminAllows(["grading:manage"])} canVerifyEvidence={adminAllows(["evidence:manage"])} canReturn={writeAllows(["review:work"])} currentUserId={user.id} currentTenantId={user.tenant} initialExamId={examId} personalScope={experience === "teacher"} canManageScores={adminPermission(["score:manage", "exam:manage", "submission:manage"])} onNavigate={navigate} />;
       case "quality":
-        return <QualityDashboardPage examId={examId} canManage={adminAllows(["review:manage"])} currentUserId={user.id} onNavigate={navigate} />;
+        return <QualityDashboardPage examId={examId} canManage={adminAllows(["review:manage"])} canManageScores={adminAllows(["score:manage"])} currentUserId={user.id} onNavigate={navigate} />;
       case "scores":
         return <ScoreManagementPage mode={experience} canManage={adminAllows(["score:manage", "exam:manage", "submission:manage"])} canReadStudentNames={adminPermission(["org:manage"])} canReadAudit={adminPermission(["audit:read"])} initialExamId={examId} onNavigate={navigate} canHandleCapture={hasEveryPermission(user,["capture:manage","file:manage"])} canHandleReview={hasAnyPermission(user,["review:work","review:manage"])} canHandleArbitration={hasAnyPermission(user,["arbitration:work","arbitration:manage"])} />;
       case "appeals":
@@ -162,9 +161,9 @@ export function renderAppRouteContent(context: Readonly<RouteRenderingContext>):
     case "/organization/setup":
       return <OrganizationSetupPage onNavigate={navigate} />;
     case "/members/students":
-      return <StudentManagementPage />;
+      return <StudentManagementPage currentUser={user} />;
     case "/members/classes":
-      return <ClassManagementPage />;
+      return <ClassManagementPage currentUser={user} />;
     case "/members/teachers":
       return <TeacherManagementPage currentUser={user} />;
     case "/platform/schools":
@@ -200,6 +199,9 @@ export function renderAppRouteContent(context: Readonly<RouteRenderingContext>):
       />;
     case "/scores":
       return <ScoreManagementPage
+        key={`${user.tenant}:${user.id}:${experience}`}
+        selectionScope={`${user.tenant}:${user.id}:${experience}`}
+        resetUnavailableRememberedSelection={user.roles.includes("school_admin") && !user.roles.some(role => ["platform_admin", "tenant_admin"].includes(role))}
         mode={experience}
         canManage={adminAllows(["score:manage", "exam:manage", "submission:manage"])}
         onNavigate={navigate}
@@ -232,7 +234,9 @@ export function renderAppRouteContent(context: Readonly<RouteRenderingContext>):
     case "/system/models":
       return <PlatformModelConfigPage />;
     case "/account/sessions":
-      return <SessionManagementPage key={`${user.tenant}:${user.id}`} onLoggedOut={logout} minimumPasswordLength={passwordMinimumForRoles(user.roles)} />;
+    case "/account/profile":
+      // 旧安全链接继续打开同一账户页，避免已保存的链接失效或出现两套设置界面。
+      return <AccountProfilePage key={`${user.tenant}:${user.id}`} currentUser={user} onNavigate={navigate} onLoggedOut={logout} />;
     case "/grading/subjective-batches":
       return <SubjectiveGradingBatchPage key={`${user.tenant}:${user.id}`} scopeKey={`${user.tenant}:${user.id}`} />;
     default:

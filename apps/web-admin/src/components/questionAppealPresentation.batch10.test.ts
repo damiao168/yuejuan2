@@ -12,7 +12,7 @@ describe("题目申诉展示纯决策", () => {
     expect(["submitted", "resolved", "under_review", "other"].map(questionAppealStatusColor)).toEqual(["orange", "green", "blue", "blue"]);
     expect(["initial", "regrade", "other"].map(questionAppealReleaseSource)).toEqual(["首次发布", "重评发布", "其他来源"]);
     expect(["published", "superseded", "other"].map(questionAppealReleaseStatus)).toEqual(["已发布", "已被替代", "未知状态"]);
-    expect([0, 1, 2.25, NaN, Infinity].map(formatQuestionAppealScore)).toEqual(["0", "1", "2.3", "NaN", "Infinity"]);
+    expect([0, 1, 2.25, NaN, Infinity].map(formatQuestionAppealScore)).toEqual(["0", "1", "2.25", "NaN", "Infinity"]);
   });
 
   it("rubric 跳过非法点，保留原索引、字段优先级和非有限 number", () => {

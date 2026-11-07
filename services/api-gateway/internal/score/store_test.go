@@ -88,6 +88,8 @@ func TestPublishBlocksUntilGradesConfirmedAndQualityPasses(t *testing.T) {
 	}
 }
 
+// 发布前读取按“创建草稿自动准备之后”判断：待确认总分会在准备时确认，所以不阻断；
+// 旧版发布接口没有自动准备，仍必须拒绝未确认成绩。
 func TestCheckQualityReadOnlyForPublishGate(t *testing.T) {
 	store := seededScoreStore()
 	if _, err := store.FinalizeExam(context.Background(), tenantID, "exam-1", "manager-1"); err != nil {
@@ -97,8 +99,11 @@ func TestCheckQualityReadOnlyForPublishGate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("check quality: %v", err)
 	}
-	if quality.Passed {
-		t.Fatalf("publish quality should fail before confirmation: %#v", quality)
+	if !quality.Passed {
+		t.Fatalf("publish read should treat pending totals as confirmed by automatic preparation: %#v", quality)
+	}
+	if result, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "too early"}); !errors.Is(err, ErrQualityGateFailed) || !hasIssue(result.Quality.Issues, "grades_not_confirmed") {
+		t.Fatalf("legacy publish must still require confirmation: %#v %v", result, err)
 	}
 	if _, err := store.ConfirmGrades(context.Background(), tenantID, "exam-1", "leader-1", ConfirmInput{Reason: "checked"}); err != nil {
 		t.Fatalf("confirm grades: %v", err)
@@ -112,7 +117,7 @@ func TestCheckQualityReadOnlyForPublishGate(t *testing.T) {
 	}
 }
 
-func TestRosterReconciliationRequiresExplicitAbsenceAndBlocksUnknownSubmissions(t *testing.T) {
+func TestRosterReconciliationDerivesAbsenceAndBlocksUnknownSubmissions(t *testing.T) {
 	store := NewMemoryStore()
 	for _, student := range []RosterSeed{
 		{ExamID: "exam-roster", StudentID: "student-1", StudentNo: "001", StudentName: "Alice", ClassID: "class-1", ClassName: "Class 1"},
@@ -132,14 +137,11 @@ func TestRosterReconciliationRequiresExplicitAbsenceAndBlocksUnknownSubmissions(
 	if err != nil {
 		t.Fatalf("list roster: %v", err)
 	}
-	if report.Summary.Expected != 2 || report.Summary.Received != 2 || report.Summary.Graded != 1 || report.Summary.Unidentified != 1 {
+	if report.Summary.Expected != 2 || report.Summary.Received != 2 || report.Summary.Graded != 1 || report.Summary.Unidentified != 1 || report.Summary.Absent != 1 {
 		t.Fatalf("unexpected roster summary: %#v", report.Summary)
 	}
-	if _, err := store.SetAttendance(context.Background(), tenantID, "exam-roster", "student-2", "manager-1", AttendanceInput{Status: " ABSENT ", Reason: " verified by invigilator "}); err != nil {
-		t.Fatalf("mark absent: %v", err)
-	}
-	if _, err := store.SetAttendance(context.Background(), tenantID, "exam-roster", "student-2", "manager-1", AttendanceInput{Status: "absent", Reason: strings.Repeat("缺", 301)}); !errors.Is(err, ErrInvalidInput) {
-		t.Fatalf("overlong attendance reason must be rejected, got %v", err)
+	if _, err := store.SetAttendance(context.Background(), tenantID, "exam-roster", "student-2", "manager-1", AttendanceInput{Status: "absent", Reason: "old client"}); !errors.Is(err, ErrManualAttendanceRetired) {
+		t.Fatalf("manual attendance must be retired, got %v", err)
 	}
 	quality, err := store.CheckQuality(context.Background(), tenantID, "exam-roster", true)
 	if err != nil {

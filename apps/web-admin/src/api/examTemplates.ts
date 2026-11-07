@@ -33,6 +33,6 @@ export interface ExamTemplate {
   subjects: ExamTemplateSubject[];
 }
 
-export function listExamTemplates(filter: { educationStage?: "junior" | "senior"; examType?: string } = {}) {
-  return apiClient.request<{ exam_templates: ExamTemplate[] }>(`/api/v1/exam-templates${buildQueryString({ education_stage: filter.educationStage, exam_type: filter.examType })}`);
+export function listExamTemplates(filter: { educationStage?: "junior" | "senior" } = {}) {
+  return apiClient.request<{ exam_templates: ExamTemplate[] }>(`/api/v1/exam-templates${buildQueryString({ education_stage: filter.educationStage })}`);
 }

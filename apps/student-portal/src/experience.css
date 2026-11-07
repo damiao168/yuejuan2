@@ -4,6 +4,8 @@ button, input, select, textarea { font-family: inherit; }
 .portal-header { height: auto; min-height: 68px; padding-block: 12px; }
 .account-area { flex-wrap: wrap; gap: 8px 16px; justify-content: flex-end; }
 .text-button, .back-button, .question-cell-link, .zoom-controls button, .page-controls button, .paper-actions button { min-height: var(--eg-touch-height); }
+.paper-actions .excellent-paper-select { display: inline-flex; align-items: center; gap: 8px; }
+.paper-actions .excellent-paper-select select { min-height: var(--eg-touch-height); }
 .page-heading h1, .result-heading h1 { font-size: var(--eg-font-title); line-height: 1.4; overflow-wrap: anywhere; }
 .question-detail, .question-detail p, .question-drilldown, .question-appeal-form, .question-appeal-form label { font-size: var(--eg-font-reading); line-height: var(--eg-line-reading); }
 .question-detail h3, .question-appeal-form > p, .appeal-region-selector p, .question-section p { font-size: var(--eg-font-body); line-height: 1.6; }
@@ -15,8 +17,19 @@ button, input, select, textarea { font-family: inherit; }
 .question-cell-link { white-space: normal; display: grid; align-content: center; width: 100%; gap: 2px; }
 .question-cell-link small { font-size: var(--eg-font-caption); }
 .paper-score-table { font-size: var(--eg-font-body); }
+.paper-score-table.has-comparisons { min-width: 1120px; }
+.paper-score-table.has-comparisons th:first-child { width: 100px; }
+.paper-score-table.has-comparisons th:nth-child(2), .paper-score-table.has-comparisons th:nth-child(3) { width: 18%; }
+.paper-score-table th { white-space: nowrap; }
 .paper-score-table th:first-child { width: 130px; }
 .paper-score-table td { height: 56px; white-space: normal; overflow-wrap: anywhere; }
+.paper-score-table .question-statistic { width: 100px; white-space: nowrap; overflow-wrap: normal; }
+.paper-score-table .student-cell { white-space: nowrap; overflow-wrap: normal; }
+.paper-score-table .question-answer { text-align: left; }
+.paper-score-table .question-answer .student-public-text { white-space: pre-wrap; }
+.question-number { display: inline-block; padding: 4px; font-weight: 600; }
+.question-number:focus-visible, .paper-score-table tr.is-located { outline: 2px solid var(--eg-color-action); outline-offset: -2px; }
+.paper-score-table .question-appeal-cell { width: 140px; }
 .mastery { white-space: normal; font-size: var(--eg-font-body); }
 .question-drilldown { scroll-margin-top: 16px; padding: 20px 0; }
 .question-drilldown h3 { font-size: var(--eg-font-section); }
@@ -44,15 +57,17 @@ button, input, select, textarea { font-family: inherit; }
   .account-area { font-size: var(--eg-font-body); }
   .paper-table-scroll { border: 0; overflow: visible; }
   /* 窄屏把每行成绩改为独立区块；列标题由单元格的 data-label 提供，需和表格组件保持对应。 */
-  .paper-score-table { min-width: 0; display: block; }
+  .paper-score-table, .paper-score-table.has-comparisons { min-width: 0; display: block; }
   .paper-score-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .paper-score-table tbody { display: grid; gap: 0; }
   .paper-score-table tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 16px 0; border-bottom: 1px solid var(--eg-color-border); }
   .paper-score-table td { width: auto; height: auto; min-width: 0; padding: 8px; border: 0; text-align: left; }
+  .paper-score-table .question-statistic { width: auto; }
   .paper-score-table td::before { content: attr(data-label); display: block; font-size: var(--eg-font-body); color: var(--eg-color-muted); margin-bottom: 4px; }
   .paper-score-table td:first-child { grid-column: 1 / -1; background: transparent; }
   .paper-score-table td:first-child::before { display: none; }
-  .paper-score-table td:nth-child(2), .paper-score-table td:nth-child(3) { display: none; }
+  .paper-score-table .question-answer { grid-column: 1 / -1; }
+  .paper-score-table .student-cell { grid-column: 1 / -1; }
   .question-cell-link { text-align: left; font-size: var(--eg-font-reading); grid-template-columns: 1fr auto; align-items: center; }
   .question-cell-link small { font-size: var(--eg-font-body); }
   .paper-score-table td:last-child { grid-column: 1 / -1; }

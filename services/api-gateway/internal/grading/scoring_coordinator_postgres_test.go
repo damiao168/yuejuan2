@@ -155,15 +155,21 @@ func TestPostgresDurableScoringCoordinatorStartObserveResume(t *testing.T) {
 	}
 }
 
-func newDurableScoringFixture(t *testing.T) (context.Context, *sql.DB) {
+func newDurableScoringFixture(t *testing.T, configs ...*pgx.ConnConfig) (context.Context, *sql.DB) {
 	t.Helper()
-	dsn := os.Getenv("YUEJUAN_BINDING_TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("YUEJUAN_BINDING_TEST_DATABASE_URL is not configured")
-	}
-	cfg, err := pgx.ParseConfig(dsn)
-	if err != nil {
-		t.Fatal(err)
+	var cfg *pgx.ConnConfig
+	var err error
+	if len(configs) > 0 {
+		cfg = configs[0].Copy()
+	} else {
+		dsn := os.Getenv("YUEJUAN_BINDING_TEST_DATABASE_URL")
+		if dsn == "" {
+			t.Skip("YUEJUAN_BINDING_TEST_DATABASE_URL is not configured")
+		}
+		cfg, err = pgx.ParseConfig(dsn)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
 	t.Cleanup(cancel)

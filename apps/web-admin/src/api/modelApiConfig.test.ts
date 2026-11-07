@@ -1,8 +1,15 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiClientError } from "./client";
-import { listAvailableManagedModels, listPanelModelRoleBindings, managedModelDiscoveryErrorMessage, probeManagedModelAPIConfig, saveAnswerSheetModelSelection, savePanelModelRoleBinding } from "./modelApiConfig";
+import { listAvailableManagedModels, listPanelModelRoleBindings, managedModelDiscoveryErrorMessage, probeManagedModelAPIConfig, saveAnswerSheetModelSelection, savePanelModelRoleBinding, updateManagedModelAPIConfig } from "./modelApiConfig";
 
 afterEach(() => vi.unstubAllGlobals());
+
+it("模型普通编辑请求保留打开表单时的精确版本", async () => {
+  const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ config: {} })));
+  vi.stubGlobal("fetch", fetch);
+  await updateManagedModelAPIConfig("config", "school", { display_name: "模型", adapter_type: "openai_compatible", base_url: "https://model.example/v1", model_name: "model", model_version: "v1", region: "test", api_key: "", status: "active", is_default: false, expected_updated_at: "2026-10-30T01:02:03.123456Z" });
+  expect(JSON.parse(fetch.mock.calls[0][1].body).expected_updated_at).toBe("2026-10-30T01:02:03.123456Z");
+});
 
 it.each(["quick", "text", "structured", "capability"] as const)("探测 %s 保留学校和模式，结构化兼容旧模式调用", async (mode) => {
   const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ result: {}, config: {} })));

@@ -15,6 +15,9 @@ from unittest.mock import patch
 
 from grading_agent.errors import AgentError
 from grading_agent.image_protocol import (
+    COMPARE_PREFIX_PROMPT,
+    COMPARE_PROMPT,
+    OBSERVE_PROMPT,
     VERSION,
     ImageGradingApplication,
     _probe_png,
@@ -144,6 +147,7 @@ class ImageProtocolTests(unittest.TestCase):
             self.assertNotIn("rubric", json.dumps(observation_messages))
             self.assertEqual(observation_messages[1]["content"][1]["type"], "image_url")
             self.assertEqual(result["observation"]["members"][0]["answer"]["value"], "-1/2 m")
+            self.assertEqual(result["prompt_version"], COMPARE_PROMPT)
             self.assertTrue(result["needs_human_review"])
             self.assertNotIn("suggested_score", result)
             self.assertEqual(result["telemetry"]["attempts"], 2)
@@ -152,6 +156,73 @@ class ImageProtocolTests(unittest.TestCase):
             self.assertTrue(replay)
             self.assertEqual(result2, result)
             self.assertEqual(len(model.calls), 3)
+
+    def test_new_comparison_keeps_frozen_prefix_on_both_provider_transports(self):
+        # 使用真实适配器转换，只替换网络出口；不同答卷仍分别生成可核对的证据。
+        for adapter in ("openai_compatible", "dashscope_native"):
+            with self.subTest(adapter=adapter):
+                native = adapter == "dashscope_native"
+                config = dict(CONFIG, adapter_type=adapter)
+                if native:
+                    config["base_url"] = "https://dashscope.aliyuncs.com/api/v1"
+                calls = []
+
+                def transport(_url, payload, _headers, _timeout, native=native, calls=calls):
+                    messages = payload["input"]["messages"] if native else payload["messages"]
+                    parts = messages[1]["content"]
+                    calls.append((copy.deepcopy(messages[0]), copy.deepcopy(parts)))
+                    evidence_id = json.loads(parts[1]["text"])["student_observation"]["members"][0]["evidence"][0]["evidence_id"]
+                    content = json.dumps(comparison(evidence_id))
+                    choice = {"finish_reason": "stop", "message": {"role": "assistant", "content": [{"text": content}] if native else content}}
+                    return {"output": {"choices": [choice]}} if native else {"choices": [choice]}
+
+                app = ImageGradingApplication(settings(), object())
+                binding = app._model_binding(config)
+                app._visual_capabilities[binding] = {"visual_supported": True}
+                with patch("grading_agent.managed_model.public_json_transport", side_effect=transport):
+                    for index, color in enumerate(("red", "blue", "green", "red")):
+                        with patch("grading_agent.image_protocol.secrets.choice", return_value=color):
+                            payload = request()
+                        identity = f"synthetic-student-{index}"
+                        observed = member()
+                        observed["evidence"][0]["evidence_id"] = identity
+                        observed["answer"]["value"] = str(index)
+                        payload.update(request_id=f"fixed-prefix-req-{index}", input_version_id=identity, managed_model=config,
+                                       rubric={"points": [{"score": 3, "id": "p1"}], "version": "v1" if index != 3 else "v2"},
+                                       frozen_reference={"standard_answer": "synthetic-frozen-answer"},
+                                       agent_role="arbiter" if index == 2 else "primary_a")
+                        if index == 1:
+                            payload["rubric"] = {"version": "v1", "points": [{"id": "p1", "score": 3}]}
+                        payload["model_policy"]["prompt_version"] = COMPARE_PREFIX_PROMPT
+                        payload["observation"] = {"members": [observed], "schema_version": VERSION, "prompt_version": OBSERVE_PROMPT,
+                                                  "input_version_id": identity, "crop_sha256": payload["student_image"]["sha256"], "model_binding": binding}
+                        result, replay = app.execute(payload, payload["request_id"], "grade")
+                        self.assertFalse(replay)
+                        self.assertEqual(result["prompt_version"], COMPARE_PREFIX_PROMPT)
+                        self.assertEqual(result["judgments"][0]["evidence_ids"], [identity])
+                        self.assertEqual(app.execute(payload, payload["request_id"], "grade"), (result, True))
+
+                self.assertEqual(len(calls), 4)
+                first, second = calls[:2]
+                self.assertEqual(first[0], second[0])
+                self.assertEqual(first[1][0], second[1][0])
+                self.assertNotEqual(first[1][1], second[1][1])
+                self.assertNotEqual(first[1][2], second[1][2])
+                self.assertNotIn("synthetic-student-", first[1][0]["text"])
+                self.assertNotIn("student_observation", first[1][0]["text"])
+                self.assertEqual(set(json.loads(first[1][0]["text"])), {"review_role", "question", "frozen_reference", "frozen_rubric"})
+                self.assertNotEqual(calls[2][1][0], first[1][0])
+                self.assertNotEqual(calls[3][1][0], first[1][0])
+
+    def test_unrecognized_comparison_prompt_rejected_before_visual_probe(self):
+        app = ImageGradingApplication(settings(), object())
+        payload = request()
+        payload["rubric"] = {"version": "v1", "points": [{"id": "p1", "score": 3}]}
+        payload["model_policy"]["prompt_version"] = "unknown-image-comparison"
+        with patch("grading_agent.image_protocol.create_managed_model") as managed, self.assertRaises(AgentError) as raised:
+            app.execute(payload, payload["request_id"], "grade")
+        self.assertEqual(raised.exception.code, "invalid_request")
+        managed.assert_not_called()
 
     def test_shared_crop_observed_once_and_single_member_grade_reuses_immutable_observation(self):
         model = StructuredModel([{"members": [member("q12"), member("q13", "blank"), member("q14", "uncertain")]}, comparison("student-q12")])

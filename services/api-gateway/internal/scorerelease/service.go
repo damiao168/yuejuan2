@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/google/uuid"
 )
 
 type Service struct {
@@ -161,7 +163,45 @@ func (s *Service) StudentPaperPageImage(ctx context.Context, tenantID, examID, s
 	return s.store.StudentPaperPageImage(ctx, tenantID, examID, studentID, questionID, highScore, expectedReleaseID...)
 }
 
+type selectedHighScorePaperReader interface {
+	StudentSelectedHighScorePaperPageImage(context.Context, string, string, string, string, string, string) (StudentQuestionImageSource, error)
+}
+
+// StudentSelectedHighScorePaperPageImage 只接受本次匿名集合返回的纸卷标识；不把同学 submission ID 作为公开参数。
+// 原图片方法保留旧客户端的首份答卷行为，选择器使用独立方法，避免混入发布版本变参。
+func (s *Service) StudentSelectedHighScorePaperPageImage(ctx context.Context, tenantID, examID, studentID, questionID, paperID, expectedReleaseID string) (StudentQuestionImageSource, error) {
+	if !validIDs(tenantID, examID, studentID, questionID, paperID) {
+		return StudentQuestionImageSource{}, ErrInvalidInput
+	}
+	parsedPaperID, err := uuid.Parse(paperID)
+	if err != nil {
+		return StudentQuestionImageSource{}, ErrInvalidInput
+	}
+	reader, ok := s.store.(selectedHighScorePaperReader)
+	if !ok {
+		return StudentQuestionImageSource{}, ErrNotFound
+	}
+	// 将解析器接受的 UUID 格式规范化，避免数据库把同一标识的其他写法当作非法参数。
+	return reader.StudentSelectedHighScorePaperPageImage(ctx, tenantID, examID, studentID, questionID, parsedPaperID.String(), expectedReleaseID)
+}
+
+// 答案属于公开题目的固定内容；旧字段保留接口兼容，新版本不再接受单独关闭。
+// 新建时启用优秀答卷但未提供名次范围则采用 10；历史发布读取不调用本函数，保留单份兼容。
+func normalizeReleaseVisibility(policy VisibilityPolicy) VisibilityPolicy {
+	policy.ShowAnswers = true
+	if !policy.ShowHighScorePaper {
+		policy.HighScorePaperTopN = nil
+	} else if policy.HighScorePaperTopN == nil {
+		policy.HighScorePaperTopN = new(10)
+	}
+	return policy
+}
+
 func normalizeCreate(input *CreateInput) bool {
+	if topN := input.VisibilityPolicy.HighScorePaperTopN; topN != nil && (*topN < 1 || *topN > 100) {
+		return false
+	}
+	input.VisibilityPolicy = normalizeReleaseVisibility(input.VisibilityPolicy)
 	input.Source = strings.ToLower(strings.TrimSpace(input.Source))
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)

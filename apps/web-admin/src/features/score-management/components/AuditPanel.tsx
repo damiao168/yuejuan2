@@ -6,7 +6,9 @@ const auditActionLabels: Record<string, string> = {
   "score.finalized": "成绩汇总",
   "score.confirmed": "成绩确认",
   "score.published": "成绩发布",
-  "score.exported": "成绩导出",
+  "score.exported": "内部原始数据导出",
+  "score.report_exported": "内部核验表导出",
+  "score_release.formal_exported": "正式成绩表导出",
   "score.roster_attendance_updated": "名册出勤状态调整"
 };
 

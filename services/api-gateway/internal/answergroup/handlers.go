@@ -280,7 +280,7 @@ func (h *Handler) auditEvent(r *http.Request, user auth.User, action, targetID s
 	}
 	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{
 		TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "answer_group", TargetID: targetID,
-		AfterValue: after, Reason: action, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+		AfterValue: after, Reason: action, IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 }
 

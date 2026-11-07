@@ -1,0 +1,66 @@
+/* 学生页只保留一组可见条件；宽屏同一工具行，窄屏自然换行，避免折叠条件在后台继续过滤。 */
+.student-management-page {
+  container: student-management / inline-size;
+}
+
+.student-management-page .student-management-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  padding: 12px 16px;
+}
+
+.student-management-page .student-filter-field {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.student-management-page .student-filter-search {
+  flex: 1 1 210px;
+  max-width: 360px;
+}
+
+.student-management-page .student-filter-cohort .ant-select {
+  width: 180px;
+}
+
+.student-management-page .student-filter-class .ant-select {
+  width: 150px;
+}
+
+.student-management-page .student-filter-status {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.student-management-page .student-management-table .section-head {
+  padding: 4px 4px 0;
+}
+
+.student-management-page .student-row-actions { row-gap: 2px; }
+.student-management-page .student-row-actions .ant-btn { padding-inline: 4px; white-space: nowrap; }
+
+.student-account-state { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.student-account-meta { color: var(--text-secondary, #64748b); font-size: 12px; line-height: 1.45; }
+.student-form-account { border-top: 1px solid var(--border-color, #e2e8f0); margin-top: 8px; padding-top: 18px; }
+.student-form-account h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
+.student-form-account > p, .student-account-intro { margin: 0 0 18px; color: var(--text-secondary, #64748b); line-height: 1.6; }
+
+@container student-management (max-width: 900px) {
+  .student-management-page .student-filter-status { margin-left: 0; }
+  .student-management-page .student-filter-search { max-width: none; }
+}
+
+@container student-management (max-width: 520px) {
+  .student-management-page .student-filter-field { flex: 1 1 100%; }
+  .student-management-page .student-filter-field > span:first-child { flex: 0 0 76px; }
+  .student-management-page .student-filter-search .ant-input-affix-wrapper { flex: 1; min-width: 0; }
+  .student-management-page .student-filter-field .ant-select { width: auto; flex: 1; }
+  .student-management-page .student-filter-status { width: 100%; }
+  .student-management-page .student-filter-status .ant-segmented-group { display: flex; }
+  .student-management-page .student-filter-status .ant-segmented-item { flex: 1; text-align: center; }
+}

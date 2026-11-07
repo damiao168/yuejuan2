@@ -38,7 +38,7 @@ func TestOrganizationTeacherCountsKeepUnassignedSchoolMembers(t *testing.T) {
 	defer db.Close()
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
-	for _, table := range []string{"app_user", "role", "user_role", "teacher_class", "school_class", "student", "grade"} {
+	for _, table := range []string{"app_user", "role", "user_role", "school_class", "student", "grade"} {
 		if _, err = db.ExecContext(ctx, "CREATE TABLE "+table+" (LIKE public."+table+" INCLUDING ALL)"); err != nil {
 			t.Fatal(err)
 		}
@@ -51,7 +51,7 @@ func TestOrganizationTeacherCountsKeepUnassignedSchoolMembers(t *testing.T) {
 	}
 	roles := map[string]string{"teacher": uuid.NewString(), "grader": uuid.NewString()}
 	for code, id := range roles {
-		if _, err = db.ExecContext(ctx, `INSERT INTO role(id,tenant_id,code,name,scope_type) VALUES($1,$2,$3,$3,'class')`, id, tenant, code); err != nil {
+		if _, err = db.ExecContext(ctx, `INSERT INTO role(id,tenant_id,code,name,scope_type) VALUES($1,$2,$3,$3,'exam_task')`, id, tenant, code); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -70,7 +70,7 @@ func TestOrganizationTeacherCountsKeepUnassignedSchoolMembers(t *testing.T) {
 			t.Fatal(err)
 		}
 		if row.class != "" {
-			if _, err = db.ExecContext(ctx, `INSERT INTO teacher_class(tenant_id,teacher_id,class_id) VALUES($1,$2,$3)`, tenant, user, row.class); err != nil {
+			if _, err = db.ExecContext(ctx, `UPDATE app_user SET teaching_subjects='{mathematics}' WHERE id=$1`, user); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -84,7 +84,7 @@ func TestOrganizationTeacherCountsKeepUnassignedSchoolMembers(t *testing.T) {
 	}
 	expanded := schoolScope(schoolA)
 	expanded.GradeIDs, expanded.ClassIDs = []string{gradeA}, []string{classA}
-	// 学校角色的列表来自认证展开；同一批 ID 对班级角色则仍是实际收窄条件。
+	// 管理员按学校统计教师；普通班级或年级投影不再授予人员统计权限。
 	for _, test := range []struct {
 		name              string
 		scope             auth.AccessScope
@@ -95,8 +95,8 @@ func TestOrganizationTeacherCountsKeepUnassignedSchoolMembers(t *testing.T) {
 		{"school_without_projection", schoolScope(schoolA), 2, 1, 1},
 		{"other_school", schoolScope(schoolB), 1, 0, 0},
 		{"tenant_with_projection", auth.AccessScope{TenantID: tenant, TenantWide: true, SchoolIDs: []string{schoolA}, ClassIDs: []string{classA}}, 3, 1, 1},
-		{"class", auth.AccessScope{TenantID: tenant, SchoolIDs: []string{schoolA}, ClassIDs: []string{classA}}, 1, 0, 1},
-		{"grade", auth.AccessScope{TenantID: tenant, SchoolIDs: []string{schoolA}, GradeIDs: []string{gradeA}}, 1, 0, 1},
+		{"class", auth.AccessScope{TenantID: tenant, SchoolIDs: []string{schoolA}, ClassIDs: []string{classA}}, 0, 0, 0},
+		{"grade", auth.AccessScope{TenantID: tenant, SchoolIDs: []string{schoolA}, GradeIDs: []string{gradeA}}, 0, 0, 0},
 		{"mismatched_class", auth.AccessScope{TenantID: tenant, SchoolIDs: []string{schoolA}, ClassIDs: []string{classB}}, 0, 0, 0},
 	} {
 		t.Run(test.name, func(t *testing.T) {

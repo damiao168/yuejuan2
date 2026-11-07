@@ -215,7 +215,7 @@ func TestAuthorizationHardeningDefinesFinalRoleMatrix(t *testing.T) {
 	}
 	wantScopes := map[string]string{
 		"platform_admin": "platform", "tenant_admin": "tenant", "school_admin": "school",
-		"teacher": "class", "grader": "exam_task", "arbitrator": "exam_task",
+		"teacher": "exam_task", "grader": "exam_task", "arbitrator": "exam_task",
 		"student": "self", "auditor": "tenant", "page_processing_worker": "service",
 	}
 	for role, scope := range wantScopes {

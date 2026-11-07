@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 )
@@ -139,7 +140,7 @@ func TestManagedUpdateKeepsKeyForPathChangeAndRequiresInputForNewOrigin(t *testi
 			}
 			prober := &originManagedProber{result: &result}
 			handler := NewHandler(store, nil, NewEnvironmentSecretResolver(t.TempDir()), testBaseline()).WithManagedAPIProber(prober)
-			input := ManagedAPIConfigUpdateInput{DisplayName: source.DisplayName, AdapterType: source.AdapterType,
+			input := ManagedAPIConfigUpdateInput{ClientExpectedUpdatedAt: source.UpdatedAt.Format(time.RFC3339Nano), DisplayName: source.DisplayName, AdapterType: source.AdapterType,
 				BaseURL: test.target, APIKey: test.explicitKey, ModelName: source.ModelName, ModelVersion: source.ModelVersion,
 				Region: source.Region, Status: source.Status}
 			body, _ := json.Marshal(input)

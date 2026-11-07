@@ -49,7 +49,7 @@ WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid`, fixture.TenantID, segmentID, 
 	}
 
 	overlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, omrRunID, 0)
-	response := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, e2eStory056OMRResultPayload(t, lease, item, overlay, "story056-confirmation-fallback-v1-"+omrRunID, []map[string]any{{"option": "A", "fill_ratio": 0.93}}, false)), http.StatusOK)
+	response := e2ePostWorkerJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, e2eStory056OMRResultPayload(t, lease, item, overlay, "story056-confirmation-fallback-v1-"+omrRunID, []map[string]any{{"option": "A", "fill_ratio": 0.93}}, false)), http.StatusOK)
 	if _, found := response["question_grade"]; found {
 		t.Fatalf("confirmation failure must not return a question grade: %#v", response)
 	}
@@ -113,7 +113,7 @@ func TestStory056DefaultOMRProfileUsesServerEligibilityE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 	overlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, omrRunID, 1)
-	response := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, e2eStory056OMRResultPayload(t, lease, item, overlay, "story056-manual-only-v1-"+omrRunID, []map[string]any{{"option": "A", "fill_ratio": 0.93}}, false)), http.StatusOK)
+	response := e2ePostWorkerJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, e2eStory056OMRResultPayload(t, lease, item, overlay, "story056-manual-only-v1-"+omrRunID, []map[string]any{{"option": "A", "fill_ratio": 0.93}}, false)), http.StatusOK)
 	if _, found := response["question_grade"]; !found {
 		t.Fatalf("clear OMR under a locked template must return an automatic grade: %#v", response)
 	}
@@ -161,7 +161,7 @@ func TestStory056RejectsMismatchedOMRProfileBeforeCompletingTaskE2E(t *testing.T
 	overlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, omrRunID, 1)
 	payload := e2eStory056OMRResultPayload(t, lease, item, overlay, "story056-profile-mismatch-v1-"+omrRunID, []map[string]any{{"option": "A", "fill_ratio": 0.93}}, false)
 	payload["profile_hash"] = "sha256:unexpected-profile"
-	response := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, payload), http.StatusBadRequest)
+	response := e2ePostWorkerJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, payload), http.StatusBadRequest)
 	errorBody, ok := response["error"].(map[string]any)
 	if !ok || errorBody["code"] != "invalid_grading_input" {
 		t.Fatalf("mismatched worker profile must be rejected as invalid input: %#v", response)
@@ -226,7 +226,7 @@ func TestStory056TemplateDifferenceReferenceSnapshotE2E(t *testing.T) {
 	wrongReference["profile_version"] = profileVersion
 	wrongReference["profile_hash"] = profileHash
 	wrongReference["reference_sha256"] = "sha256:replacement-reference"
-	response := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, wrongReference), http.StatusBadRequest)
+	response := e2ePostWorkerJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, wrongReference), http.StatusBadRequest)
 	errorBody, ok := response["error"].(map[string]any)
 	if !ok || errorBody["code"] != "invalid_grading_input" {
 		t.Fatalf("reference substitution must be rejected as invalid input: %#v", response)
@@ -246,7 +246,7 @@ func TestStory056TemplateDifferenceReferenceSnapshotE2E(t *testing.T) {
 	accepted["profile_version"] = profileVersion
 	accepted["profile_hash"] = profileHash
 	accepted["reference_sha256"] = referenceSHA256
-	completed := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, accepted), http.StatusOK)
+	completed := e2ePostWorkerJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, accepted), http.StatusOK)
 	if _, found := completed["question_grade"]; found {
 		t.Fatalf("uncalibrated template-difference OMR must remain manual-only: %#v", completed)
 	}
@@ -352,7 +352,7 @@ func TestStory056OMRSameVersionChangedMeasurementsIsConflictE2E(t *testing.T) {
 	overlay := e2eCreateStory056Overlay(t, files.NewPostgresStore(db), fixture, omrRunID, 1)
 	version := "story056-semantic-replay-v1-" + omrRunID
 	initial := e2eStory056OMRResultPayload(t, lease, item, overlay, version, []map[string]any{{"option": "A", "fill_ratio": 0.93}}, false)
-	first := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, initial), http.StatusOK)
+	first := e2ePostWorkerJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, initial), http.StatusOK)
 	if _, found := first["question_grade"]; !found {
 		t.Fatalf("normal one-answer OMR completion should auto-confirm a grade: %#v", first)
 	}
@@ -362,7 +362,7 @@ func TestStory056OMRSameVersionChangedMeasurementsIsConflictE2E(t *testing.T) {
 	}
 
 	replayed := e2eStory056OMRResultPayload(t, lease, item, overlay, version, []map[string]any{{"option": "A", "fill_ratio": 0.11}}, false)
-	conflict := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, replayed), http.StatusConflict)
+	conflict := e2ePostWorkerJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, replayed), http.StatusConflict)
 	errorBody, ok := conflict["error"].(map[string]any)
 	if !ok || errorBody["code"] != "omr_task_completion_failed" {
 		t.Fatalf("same-version semantic replay must be rejected by the completion gate: %#v", conflict)
@@ -515,7 +515,7 @@ func TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E(t *testing.T) {
 		t.Fatalf("expire OMR lease: %v", err)
 	}
 
-	response := e2ePostJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, map[string]any{
+	response := e2ePostWorkerJSON(t, router, http.MethodPost, "/api/v1/internal/omr-runs/"+omrRunID+"/result", adminToken, story056JSON(t, map[string]any{
 		"task_id":               lease.TaskID,
 		"lease_token":           lease.Token,
 		"result_version":        "story056-stale-lease-v1-" + omrRunID,
@@ -530,10 +530,10 @@ func TestStory056ExpiredOMRLeaseLeavesScoringFactsUntouchedE2E(t *testing.T) {
 		"thresholds":            map[string]any{"marked_threshold": 0.18, "minimum_margin": 0.06},
 		"overlay_file_asset_id": overlay.ID,
 		"overlay_sha256":        overlay.HashSHA256,
-	}), http.StatusConflict)
+	}), http.StatusForbidden)
 	errorBody, ok := response["error"].(map[string]any)
-	if !ok || errorBody["code"] != "omr_task_completion_failed" {
-		t.Fatalf("expired OMR lease should fail through the task completion gate: %#v", response)
+	if !ok || errorBody["code"] != "worker_scope_forbidden" {
+		t.Fatalf("expired OMR lease must be rejected before entering the scoring handler: %#v", response)
 	}
 
 	var omrStatus, taskStatus string

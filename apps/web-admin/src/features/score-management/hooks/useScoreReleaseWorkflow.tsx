@@ -1,15 +1,18 @@
-import { useReducer, useState } from "react";
+import { useReducer, useRef, useState } from "react";
 import { App } from "antd";
 import type { Exam } from "../../../api/exams";
 import {
+  createRegradeScoreRelease,
   createScoreRelease,
   publishScoreRelease,
   revokeHighScorePaper,
-  type ScoreRelease,
-  type ScoreReleaseGate
+  type ScoreRelease
 } from "../../../api/scoreReleases";
+import { getBusinessCommandSession, isBusinessCommandSessionCurrent } from "../../../api/businessCommand";
+import { isStepUpCancelledError, useStepUp } from "../../../auth/stepUpContext";
+import type { PendingCorrection } from "../releaseStatus";
+import type { ExamEducationStage } from "./useExamEducationStage";
 import { closedWorkflowModal, workflowModalReducer } from "./workflowModal";
-import { useStepUp } from "../../../auth/stepUpContext";
 
 export const defaultReleaseVisibility = {
   show_question_scores: true,
@@ -26,18 +29,32 @@ export const defaultReleaseVisibility = {
   show_high_score_paper: false
 };
 
+export type ReleaseVisibility = typeof defaultReleaseVisibility;
+
 export function releaseVisibilityPreset(kind: "basic" | "question", appealEnabled: boolean) {
   if (kind === "question") return { ...defaultReleaseVisibility, show_feedback: true, show_rubric_summary: true, show_question_stem: true, show_exact_rank: false, show_high_score_paper: false };
-  // 基础模板只公开成绩；开放逐题复核的考试仍保留逐题得分，但不顺带公开答案和反馈。
-  return { ...Object.fromEntries(Object.keys(defaultReleaseVisibility).map(key => [key, false])) as typeof defaultReleaseVisibility, show_question_scores: appealEnabled };
+  // 答案随已公开的逐题成绩固定提供；基础模板仍可只显示总分，不顺带公开反馈或其它逐题内容。
+  return { ...Object.fromEntries(Object.keys(defaultReleaseVisibility).map(key => [key, false])) as typeof defaultReleaseVisibility, show_question_scores: appealEnabled, show_answers: true };
+}
+
+/** 会显示学生名次或相对位置的公开项。义务教育学校考试结果不排名、不公布（教基厅函〔2021〕34号）。 */
+export const rankVisibilityKeys = ["show_exact_rank", "show_percentile"] as const;
+
+export function revealsRank(policy: Pick<ReleaseVisibility, (typeof rankVisibilityKeys)[number]>) {
+  return rankVisibilityKeys.some(key => policy[key]);
+}
+
+/** 发布弹窗的两个预设都不公开排名和百分位；确需公开时在“自定义”里单独勾选。 */
+export function presetVisibility(kind: "basic" | "question", appealEnabled: boolean): ReleaseVisibility {
+  return { ...releaseVisibilityPreset(kind, appealEnabled), show_exact_rank: false, show_percentile: false };
 }
 
 export const questionReleaseContent = new Set<keyof typeof releaseVisibilityLabels>(["show_feedback", "show_rubric_summary", "show_question_statistics", "show_question_stem", "show_knowledge_analysis", "show_answers", "show_high_score_paper"]);
 
 export function visibleReleaseContent(policy: ScoreRelease["visibility_policy"]) {
-  // 逐题详情关闭时，后端不返回这些子内容；确认摘要也只列实际会生效的公开项。
+  // 答案不再单独配置，旧版策略中的false也不隐藏答案；逐题详情未公开时仍不能承诺可见。
   return (Object.keys(releaseVisibilityLabels) as Array<keyof typeof releaseVisibilityLabels>)
-    .filter((key) => policy[key] && (policy.show_question_scores || !questionReleaseContent.has(key)))
+    .filter((key) => (key === "show_answers" || policy[key]) && (policy.show_question_scores || !questionReleaseContent.has(key)))
     .map((key) => releaseVisibilityLabels[key]);
 }
 
@@ -53,91 +70,210 @@ export const releaseVisibilityLabels: Record<keyof typeof defaultReleaseVisibili
   show_knowledge_analysis: "知识点分析",
   show_score_distribution: "成绩分布",
   show_answers: "参考答案与本人答案",
-  show_high_score_paper: "匿名高分范例卷"
+  show_high_score_paper: "匿名优秀答卷"
 };
+
+export type PublishPreset = "basic" | "question" | "custom";
+export const defaultHighScoreTopN = 10;
+export const maxHighScoreTopN = 100;
 
 type RunAction = (key: string, action: () => Promise<void>, successText: string) => Promise<void>;
 
+// 名次范围决定草稿冻结的优秀答卷集合，修改范围也须生成新草稿；固定公开的答案标记不参与区分。
+function draftKey(examId: string, policy: ReleaseVisibility, appealEnabled: boolean, reason: string, highScoreTopN: number | null) {
+  const normalized = { ...policy, show_answers: true };
+  const ordered = Object.keys(normalized).sort().map(key => `${key}=${normalized[key as keyof ReleaseVisibility]}`);
+  return JSON.stringify([examId, ordered, appealEnabled, reason, policy.show_high_score_paper ? highScoreTopN : null]);
+}
+
+/**
+ * 发布页的三条写路径：一步发布（先生成草稿再发布）、发布复评更正、发布记录里已有的草稿。
+ * 正式发布都经过近期身份验证；身份验证取消时保留已生成的草稿，重试复用同一份，不重复占用版本号。
+ */
 export function useScoreReleaseWorkflow({
   selectedExamId,
   selectedExam,
-  releaseGate,
   currentPublishedRelease,
-  runAction
+  educationStage,
+  runAction,
+  reload,
+  onPreview
 }: {
   selectedExamId: string;
   selectedExam?: Exam;
-  gradeTotal: number;
-  releaseGate: ScoreReleaseGate | null;
   currentPublishedRelease?: ScoreRelease;
+  educationStage: ExamEducationStage;
   runAction: RunAction;
+  reload: () => Promise<void>;
+  onPreview: (release: ScoreRelease) => void;
 }) {
   const { message, modal } = App.useApp();
-  const { runWithStepUp } = useStepUp();
-  const [releaseReason, setReleaseReason] = useState("");
-  const [releaseVisibility, setReleaseVisibility] = useState(defaultReleaseVisibility);
-  const [releaseModal, dispatchReleaseModal] = useReducer(workflowModalReducer, closedWorkflowModal);
-
-  const createRelease = () => {
-    if (!selectedExamId) {
-      message.error("请先选择考试");
-      return;
-    }
-    if (!releaseReason.trim()) {
-      message.error("请填写本次发布版本的说明");
-      return;
-    }
-    // 现有申请绑定单题发布事实；只公开总分时没有可操作的申请对象，不能开放空入口。
-    if (selectedExam?.appeal_enabled && !releaseVisibility.show_question_scores) {
-      message.error("允许学生申请成绩复核时，必须公开逐题得分。请开启逐题得分后创建草稿。");
-      return;
-    }
-    void runAction(
-      "release-create",
-      async () => {
-        await createScoreRelease(selectedExamId, {
-          reason: releaseReason.trim(),
-          idempotency_key: crypto.randomUUID(),
-          visibility_policy: releaseVisibility,
-          appeal_window: { enabled: selectedExam?.appeal_enabled ?? false }
-        });
-        dispatchReleaseModal({ type: "close" });
-        setReleaseReason("");
-      },
-      "已创建成绩发布草稿"
-    );
+  const { runWithStepUp, open: awaitingAuthentication } = useStepUp();
+  const [publishModal, dispatchPublishModal] = useReducer(workflowModalReducer, closedWorkflowModal);
+  const [preset, setPreset] = useState<PublishPreset>("basic");
+  const [visibility, setVisibility] = useState<ReleaseVisibility>(() => presetVisibility("basic", false));
+  const [highScoreTopN, setHighScoreTopN] = useState<number | null>(defaultHighScoreTopN);
+  const [rankReason, setRankReason] = useState("");
+  const [correctionNote, setCorrectionNote] = useState("");
+  const [correction, setCorrection] = useState<PendingCorrection | null>(null);
+  // 本次弹窗已生成的草稿。键覆盖考试、公开策略和说明；幂等键让请求重试时服务端返回同一份草稿。
+  const attemptRef = useRef<{ key: string; idempotencyKey: string; release?: ScoreRelease } | null>(null);
+  const appealEnabled = Boolean(selectedExam?.appeal_enabled);
+  const republish = Boolean(currentPublishedRelease);
+  const examRef = useRef(selectedExamId);
+  examRef.current = selectedExamId;
+  // 预览回执可能在切换考试或重新登录后才返回；只在发起时的考试和会话仍有效时打开预览。
+  const currentGuard = () => {
+    const session = getBusinessCommandSession();
+    const examId = selectedExamId;
+    return () => isBusinessCommandSessionCurrent(session) && examRef.current === examId;
   };
 
+  const openPublish = () => {
+    attemptRef.current = null;
+    setPreset("basic");
+    setVisibility(presetVisibility("basic", appealEnabled));
+    const previousTopN = currentPublishedRelease?.visibility_policy.high_score_paper_top_n;
+    setHighScoreTopN(typeof previousTopN === "number" && Number.isInteger(previousTopN) && previousTopN >= 1 && previousTopN <= maxHighScoreTopN ? previousTopN : defaultHighScoreTopN);
+    setRankReason("");
+    setCorrectionNote("");
+    dispatchPublishModal({ type: "open" });
+  };
+  const closePublish = () => {
+    attemptRef.current = null;
+    dispatchPublishModal({ type: "close" });
+  };
+  const choosePreset = (next: PublishPreset) => {
+    setPreset(next);
+    if (next !== "custom") setVisibility(presetVisibility(next, appealEnabled));
+  };
+
+  const reasonText = () => {
+    const base = republish ? `重新发布：${correctionNote.trim()}` : "首次发布本场成绩";
+    // 义务教育学段公开排名属于例外，原因随版本保存，便于事后核对。
+    return revealsRank(visibility) && educationStage !== "senior" ? `${base}；公开排名原因：${rankReason.trim()}` : base;
+  };
+
+  const validate = () => {
+    if (!selectedExamId) return "请先选择考试";
+    // 现有申请绑定单题发布事实；只公开总分时没有可操作的申请对象，不能开放空入口。
+    if (appealEnabled && !visibility.show_question_scores) return "允许学生申请成绩复核时，必须公开逐题得分。请开启逐题得分后再发布。";
+    if (visibility.show_high_score_paper && !visibility.show_question_scores) return "提供优秀答卷时，必须公开逐题得分。";
+    if (visibility.show_high_score_paper && (highScoreTopN === null || !Number.isInteger(highScoreTopN) || highScoreTopN < 1 || highScoreTopN > maxHighScoreTopN)) return `请填写 1 至 ${maxHighScoreTopN} 之间的整数，设置优秀答卷的名次范围。`;
+    if (republish && !correctionNote.trim()) return "请写明本次重新发布的原因";
+    if (revealsRank(visibility) && educationStage !== "senior" && !rankReason.trim()) return "义务教育学段考试结果默认不排名、不公布；确需公开排名时，请填写原因";
+    return "";
+  };
+
+  const ensureDraft = async (reason: string) => {
+    const key = draftKey(selectedExamId, visibility, appealEnabled, reason, highScoreTopN);
+    if (attemptRef.current?.key !== key) attemptRef.current = { key, idempotencyKey: crypto.randomUUID() };
+    const attempt = attemptRef.current;
+    if (attempt.release) return attempt.release;
+    const response = await createScoreRelease(selectedExamId, {
+      // 保留兼容字段并固定为true；即使旧表单值仍为false，也不能再次生成隐藏答案的版本。
+      reason, idempotency_key: attempt.idempotencyKey, visibility_policy: { ...visibility, show_answers: true, ...(visibility.show_high_score_paper ? { high_score_paper_top_n: highScoreTopN ?? defaultHighScoreTopN } : {}) }, appeal_window: { enabled: appealEnabled }
+    });
+    attempt.release = response.score_release;
+    return response.score_release;
+  };
+
+  // 身份验证被取消时草稿已经存在：先重读页面，再把取消交给调用方静默结束，不当作发布失败。
+  const publishWithStepUp = async (release: ScoreRelease, reason: string) => {
+    try {
+      await runWithStepUp({ reason, action: () => publishScoreRelease(release.id) });
+    } catch (error) {
+      if (isStepUpCancelledError(error)) await reload();
+      throw error;
+    }
+  };
+
+  const submitPublish = () => {
+    const invalid = validate();
+    if (invalid) { message.error(invalid); return; }
+    const reason = reasonText();
+    void runAction("release-publish", async () => {
+      const release = await ensureDraft(reason);
+      await publishWithStepUp(release, `正式发布成绩版本 V${release.version}`);
+      closePublish();
+    }, "成绩已发布，学生现在可以查看");
+  };
+
+  const previewPublish = () => {
+    const invalid = validate();
+    if (invalid) { message.error(invalid); return; }
+    const reason = reasonText();
+    const ready = attemptRef.current?.key === draftKey(selectedExamId, visibility, appealEnabled, reason, highScoreTopN) ? attemptRef.current.release : undefined;
+    if (ready) { onPreview(ready); return; }
+    // 学生视角只能读取已冻结的草稿；预览会先生成草稿，学生在正式发布前看不到它。
+    const isCurrent = currentGuard();
+    void runAction("release-preview", async () => {
+      const draft = await ensureDraft(reason);
+      if (isCurrent()) onPreview(draft);
+    }, "已按当前设置生成草稿，学生暂时看不到");
+  };
+
+  const openCorrection = (item: PendingCorrection) => setCorrection(item);
+  const closeCorrection = () => setCorrection(null);
+
+  // 服务端按复评任务只保留一份结果草稿；重复点击或回执丢失都返回同一份，不会复制版本。
+  const ensureCorrectionDraft = async (item: PendingCorrection) => item.draft ?? (await createRegradeScoreRelease(item.job.id, {
+    reason: `题目复评完成：${item.job.reason_text}`, idempotency_key: crypto.randomUUID()
+  })).score_release;
+
+  const publishCorrection = () => {
+    const item = correction;
+    if (!item) return;
+    void runAction("release-publish", async () => {
+      const release = await ensureCorrectionDraft(item);
+      // 服务端按复评任务复用结果版本；另一位管理员或丢失回执的上一次操作可能已经发布，不能再次发布同一版本。
+      if (release.status !== "published") await publishWithStepUp(release, `发布成绩更正 V${release.version}`);
+      setCorrection(null);
+    }, "更正已发布，学生现在看到新成绩");
+  };
+
+  const previewCorrection = () => {
+    const item = correction;
+    if (!item) return;
+    if (item.draft) { onPreview(item.draft); return; }
+    const isCurrent = currentGuard();
+    void runAction("release-preview", async () => {
+      const draft = await ensureCorrectionDraft(item);
+      if (!isCurrent()) return;
+      // 记住已生成的草稿，确认发布时直接使用，不再重复请求生成。
+      setCorrection(current => current?.job.id === item.job.id ? { ...current, draft } : current);
+      onPreview(draft);
+    }, "已生成更正草稿，学生暂时看不到");
+  };
+
+  // 发布记录里已有的草稿：校验冻结的策略，不读取仍可编辑的发布表单。
   const publishRelease = (release: ScoreRelease) => {
-    // 校验冻结草稿，旧草稿也不能绕过当前表单的依赖。
     if (release.appeal_window.enabled && !release.visibility_policy.show_question_scores) {
-      message.error("此草稿开放复核但未公开逐题得分，学生无法申请。请重新创建公开逐题得分的草稿。");
+      message.error("此草稿开放复核但未公开逐题得分，学生无法申请。请重新发布并公开逐题得分。");
       return;
     }
-    if (!releaseGate?.passed) {
-      message.error("发布门禁尚未通过，请先处理阻断项");
-      return;
-    }
-    // 正式发布展示草稿版本已冻结的策略，不能读取仍可编辑的新建发布表单。
     const visibleItems = visibleReleaseContent(release.visibility_policy).join("、") || "总分";
     modal.confirm({
-      title: `发布门户成绩版本 V${release.version}`,
+      title: `发布 V${release.version}`,
       content: (
         <div>
-          <p>考试：{selectedExam?.name} · 第 {release.version} 版 · 发布内容以此草稿冻结的成绩为准</p>
+          <p>考试：{selectedExam?.name} · 发布内容以此草稿冻结的成绩为准</p>
           <p>向学生公开：{visibleItems}</p>
           <p>成绩复核：{release.appeal_window.enabled ? "此版本启用逐题复核；学生可在开放时段内从逐题详情申请。" : "此版本未开放学生复核申请。"}</p>
           {currentPublishedRelease && release.version < currentPublishedRelease.version
-            ? <p role="alert">门户当前为 V{currentPublishedRelease.version}；此次发布较早创建的 V{release.version}，学生看到的版本号会变小。请核对草稿内容。</p>
+            ? <p role="alert">学生端当前为 V{currentPublishedRelease.version}；此次发布较早生成的 V{release.version}，学生看到的版本号会变小。请核对草稿内容。</p>
             : null}
-          {release.visibility_policy.show_high_score_paper ? <p>发布前将生成匿名范例卷；如答卷缺少已确认的版面和身份区域，发布会被阻断。</p> : null}
-          <p>请先核对学生预览。发布后，学生门户将展示此版本；学校原查询入口状态不变。更正须创建新版本。</p>
+          {release.visibility_policy.show_high_score_paper ? <p>{release.visibility_policy.high_score_paper_top_n === undefined
+            ? "此草稿沿用旧版规则，仅选取本校一份最高分答卷。"
+            : `选取本场本学科本校前 ${release.visibility_policy.high_score_paper_top_n} 名的优秀答卷，截止名次同分全部纳入。`}
+            发布前生成匿名副本。如答卷缺少已确认的版面和身份区域，发布会被阻断。</p> : null}
+          <p>发布后学生立即看到此版本；之后需要更正时，再发布新版本。</p>
         </div>
       ),
-      okText: "发布到学生门户",
+      okText: "发布到学生端",
       cancelText: "取消",
       onOk: () => runAction("release-publish", async () => {
-        await runWithStepUp({ reason: `正式发布成绩版本 V${release.version}`, action: () => publishScoreRelease(release.id) });
+        await publishWithStepUp(release, `正式发布成绩版本 V${release.version}`);
       }, "成绩版本已发布")
     });
   };
@@ -155,21 +291,11 @@ export function useScoreReleaseWorkflow({
     });
   };
 
-  const closeReleaseModal = () => {
-    dispatchReleaseModal({ type: "close" });
-    setReleaseReason("");
-  };
-
   return {
-    releaseReason,
-    setReleaseReason,
-    releaseVisibility,
-    setReleaseVisibility,
-    releaseModalOpen: releaseModal.status === "open",
-    openReleaseModal: () => dispatchReleaseModal({ type: "open" }),
-    closeReleaseModal,
-    createRelease,
-    publishRelease,
-    revokeSharedPaper
+    publishOpen: publishModal.status === "open", openPublish, closePublish, republish, awaitingAuthentication,
+    preset, choosePreset, visibility, setVisibility, highScoreTopN, setHighScoreTopN, rankReason, setRankReason,
+    correctionNote, setCorrectionNote, submitPublish, previewPublish,
+    correction, openCorrection, closeCorrection, publishCorrection, previewCorrection,
+    publishRelease, revokeSharedPaper
   };
 }

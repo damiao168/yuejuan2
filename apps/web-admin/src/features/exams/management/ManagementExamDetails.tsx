@@ -2,7 +2,6 @@ import { Alert, Descriptions, Table, type TableColumnsType } from "antd";
 import type { Exam, ManagementExam } from "../../../api/exams";
 import { StatusTag } from "../../../components/StatusTag";
 import { examSubjectLabel, examStatusLabels, examStatusTone } from "../../../constants/examStatus";
-import { examTypeOptions } from "../../../constants/examCatalog";
 import { formatExamTime, isManagementExamArchived } from "./managementPresentation";
 
 export function ManagementSubjectTable({ exam, classNames, onOpenSubject }: Readonly<{
@@ -35,7 +34,6 @@ export function ManagementExamDetails({ exam, gradeName, classNames, creatorName
 }>) {
   const information = <Descriptions bordered column={1} size="small">
       <Descriptions.Item label="考试名称">{exam.name}</Descriptions.Item>
-      <Descriptions.Item label="考试类型">{examTypeOptions.find((option) => option.value === exam.exam_type)?.label ?? "其他类型"}</Descriptions.Item>
       <Descriptions.Item label="年级">{gradeName || "未关联年级"}</Descriptions.Item>
       <Descriptions.Item label="参考班级">{exam.class_ids.length} 个班级</Descriptions.Item>
       <Descriptions.Item label="学科数量">{exam.exams.length} 科{!exam.scope_complete ? "（已授权范围）" : ""}</Descriptions.Item>

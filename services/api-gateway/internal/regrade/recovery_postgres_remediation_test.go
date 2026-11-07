@@ -39,9 +39,30 @@ func TestPostgresRegradeRecovery(t *testing.T) {
 	config.RuntimeParams["search_path"] = schema
 	db := stdlib.OpenDB(*config)
 	defer db.Close()
-	for _, table := range []string{"regrade_job", "regrade_item", "regrade_event"} {
+	for _, table := range []string{"regrade_job", "regrade_item", "regrade_event", "app_user", "exam", "role", "user_role", "role_permission", "permission", "score_release", "score_release_question", "score_release_item", "exam_question_snapshot"} {
 		if _, err := db.ExecContext(ctx, `CREATE TABLE `+table+` AS TABLE public.`+table+` WITH NO DATA`); err != nil {
 			t.Fatal(err)
+		}
+		rows, err := db.QueryContext(ctx, `SELECT a.attname,pg_get_expr(d.adbin,d.adrelid) FROM pg_attribute a JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE a.attrelid=$1::regclass`, "public."+table)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defaults := map[string]string{}
+		for rows.Next() {
+			var column, expression string
+			if err := rows.Scan(&column, &expression); err != nil {
+				t.Fatal(err)
+			}
+			defaults[column] = expression
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatal(err)
+		}
+		rows.Close()
+		for column, expression := range defaults {
+			if _, err := db.ExecContext(ctx, `ALTER TABLE `+table+` ALTER COLUMN `+column+` SET DEFAULT `+expression); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	if _, err := db.ExecContext(ctx, `ALTER TABLE regrade_event ALTER COLUMN id SET DEFAULT gen_random_uuid(), ALTER COLUMN created_at SET DEFAULT now()`); err != nil {
@@ -140,6 +161,64 @@ func TestPostgresRegradeRecovery(t *testing.T) {
 			}
 		})
 	}
+	t.Run("subject-qualified creation and first claim", func(t *testing.T) {
+		school, exam, question, release, submission := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+		graderRole, permission := uuid.NewString(), uuid.NewString()
+		insert("exam", map[string]any{"id": exam, "school_id": school, "subject": "math"})
+		insert("role", map[string]any{"id": graderRole, "code": "grader"})
+		insert("permission", map[string]any{"id": permission, "code": "review:work"})
+		insert("role_permission", map[string]any{"role_id": graderRole, "permission_id": permission})
+		teacher := func(subject string) string {
+			id := uuid.NewString()
+			insert("app_user", map[string]any{"id": id, "school_id": school, "status": "active", "teaching_subjects": []string{subject}})
+			insert("user_role", map[string]any{"user_id": id, "role_id": graderRole})
+			return id
+		}
+		mathTeacher, englishTeacher := teacher("mathematics"), teacher("english")
+		insert("score_release", map[string]any{"id": release, "exam_id": exam, "status": "published"})
+		insert("score_release_question", map[string]any{"release_id": release, "question_id": question, "submission_id": submission, "final_grade_id": uuid.NewString(), "score": 1, "max_score": 5})
+		insert("exam_question_snapshot", map[string]any{"id": uuid.NewString(), "exam_id": exam, "question_id": question, "snapshot_version": 1})
+		delta := 2.0
+		input := CreateInput{SourceReleaseID: release, ReasonCode: ReasonRubricError, ReasonText: "synthetic subject qualification", Strategy: StrategyHumanRecheck, Selector: Selector{}, SeverityDelta: &delta, IdempotencyKey: uuid.NewString(), AssigneeID: englishTeacher}
+		if _, _, err := store.Create(ctx, tenant, exam, question, actor, input, nil); !errors.Is(err, ErrAssignmentForbidden) {
+			t.Fatalf("wrong-subject regrade assignment=%v", err)
+		}
+		var count int
+		if err := db.QueryRowContext(ctx, `SELECT count(*) FROM regrade_job WHERE exam_id=$1`, exam).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("failed assignment left %d jobs, error=%v", count, err)
+		}
+		input.AssigneeID = mathTeacher
+		job, items, err := store.Create(ctx, tenant, exam, question, actor, input, nil)
+		if err != nil || len(items) != 1 || items[0].AssignedTo != mathTeacher {
+			t.Fatalf("qualified regrade creation=%#v %v", items, err)
+		}
+		if _, err := db.ExecContext(ctx, `UPDATE regrade_job SET status='running' WHERE id=$1`, job.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.ExecContext(ctx, `UPDATE app_user SET teaching_subjects=ARRAY['english'] WHERE id=$1`, mathTeacher); err != nil {
+			t.Fatal(err)
+		}
+		if item, err := store.Claim(ctx, tenant, items[0].ID, mathTeacher); err != nil || item.AssignedTo != mathTeacher {
+			t.Fatalf("existing assigned reviewer must continue after subject edit: %#v %v", item, err)
+		}
+		input.IdempotencyKey, input.AssigneeID = uuid.NewString(), ""
+		job, items, err = store.Create(ctx, tenant, exam, question, actor, input, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.ExecContext(ctx, `UPDATE regrade_job SET status='running' WHERE id=$1`, job.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := store.Claim(ctx, tenant, items[0].ID, englishTeacher); !errors.Is(err, ErrAssignmentForbidden) {
+			t.Fatalf("unassigned wrong-subject first claim=%v", err)
+		}
+		if _, err := db.ExecContext(ctx, `UPDATE app_user SET teaching_subjects=ARRAY['mathematics'] WHERE id=$1`, mathTeacher); err != nil {
+			t.Fatal(err)
+		}
+		if item, err := store.Claim(ctx, tenant, items[0].ID, mathTeacher); err != nil || item.AssignedTo != mathTeacher {
+			t.Fatalf("qualified first claim=%#v %v", item, err)
+		}
+	})
 	// 事件持久化失败必须撤销异常处理，保留异常及其修订号，不能单独放行收尾。
 	t.Run("audit rollback", func(t *testing.T) {
 		jobID, ids := seed(StatusDiffReview, []Item{{Status: ItemException, CandidateScore: &score, ReviewNote: "original"}})

@@ -7,7 +7,7 @@ import { PUBLIC_COMPUTER_IDLE_LOCK_MS } from "../auth/loginSecurity";
 import { routeFromPath } from "../router/routes";
 import { AppLayout, type ShellMode } from "./AppLayout";
 
-const state = vi.hoisted(() => ({ desktop: true, cancel: vi.fn(), accountLabel: "" }));
+const state = vi.hoisted(() => ({ desktop: true, cancel: vi.fn(), accountLabel: "", accountKeys: [] as string[] }));
 vi.mock("../auth/stepUpContext", async () => {
   const { createElement } = await import("react");
   return {
@@ -22,8 +22,9 @@ vi.mock("antd", async () => {
   return {
     Alert: ({ message }: { message: ReactNode }) => createElement("div", { role: "alert" }, message),
     Avatar: wrapper, ConfigProvider: wrapper, Space: wrapper, Tag: wrapper, Tooltip: wrapper,
-    Dropdown: ({ children, menu }: { children?: ReactNode; menu?: { items?: Array<{ label?: string }> } }) => {
+    Dropdown: ({ children, menu }: { children?: ReactNode; menu?: { items?: Array<{ key?: string; label?: string }> } }) => {
       state.accountLabel = menu?.items?.[0]?.label ?? "";
+      state.accountKeys = menu?.items?.flatMap(item => item.key ? [item.key] : []) ?? [];
       return createElement("div", null, children);
     },
     Button: ({ children, htmlType, disabled, onClick, className }: {
@@ -79,6 +80,8 @@ describe("shell public-computer lock ordering", () => {
   it("explicitly identifies the current login username and omits damaged names from the menu", async () => {
     await render(async () => undefined, { ...user, publicComputer: false });
     expect(state.accountLabel).toBe("当前登录用户名：teacher-1（Teacher）");
+    expect(state.accountKeys).not.toContain("sessions");
+    expect(state.accountKeys).not.toContain("account-settings");
     await render(async () => undefined, { ...user, username: "demo_school_admin", displayName: "???????", publicComputer: false });
     expect(state.accountLabel).toBe("当前登录用户名：demo_school_admin");
   });

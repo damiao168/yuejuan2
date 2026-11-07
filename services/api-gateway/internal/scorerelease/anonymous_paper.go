@@ -63,19 +63,14 @@ func (m *PostgresHighScorePaperManager) Prepare(ctx context.Context, tenantID, r
 	if m == nil || m.db == nil || m.files == nil || m.objects == nil || m.bucket == "" {
 		return ErrAnonymousPaperUnavailable
 	}
-	var examID, submissionID, status string
+	var examID, status string
 	err := m.db.QueryRowContext(ctx, `
-SELECT release.exam_id::text, item.submission_id::text, release.status
+SELECT release.exam_id::text, release.status
 FROM score_release release
-JOIN LATERAL (
-  SELECT submission_id FROM score_release_item
-  WHERE tenant_id=release.tenant_id AND release_id=release.id AND student_id IS NOT NULL
-  ORDER BY total_score DESC, submission_id LIMIT 1
-) item ON true
 WHERE release.tenant_id=$1::uuid AND release.id=$2::uuid
   AND COALESCE((release.visibility_policy->>'show_high_score_paper')::boolean,false)
   AND COALESCE((release.visibility_policy->>'show_question_scores')::boolean,false)
-`, tenantID, releaseID).Scan(&examID, &submissionID, &status)
+`, tenantID, releaseID).Scan(&examID, &status)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrAnonymousPaperUnavailable
 	}
@@ -85,15 +80,44 @@ WHERE release.tenant_id=$1::uuid AND release.id=$2::uuid
 	if status != StatusDraft {
 		return ErrInvalidTransition
 	}
-	pages, err := m.sourcePages(ctx, tenantID, examID, submissionID)
-	if err != nil || len(pages) == 0 {
+	rows, err := m.db.QueryContext(ctx, `WITH release AS (
+  SELECT id,tenant_id,exam_id,visibility_policy FROM score_release
+  WHERE tenant_id=$1::uuid AND id=$2::uuid
+)`+excellentPaperCandidatesCTE+`
+SELECT submission_id::text FROM selected_papers ORDER BY total_score DESC,submission_id`, tenantID, releaseID)
+	if err != nil {
+		return err
+	}
+	submissionIDs := []string{}
+	for rows.Next() {
+		var submissionID string
+		if err := rows.Scan(&submissionID); err != nil {
+			rows.Close()
+			return err
+		}
+		submissionIDs = append(submissionIDs, submissionID)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	if len(submissionIDs) == 0 {
 		return ErrAnonymousPaperUnavailable
 	}
-	// 写入任何派生资源前先校验每一页。身份配置缺失或不明确时阻断整个发布。
-	for _, page := range pages {
-		if !validAnonymousLayout(page) {
+	pages := []anonymousSourcePage{}
+	// 全部候选都须先具备完整页和身份区；不能跳过有问题的高分卷，再用名次更低的答卷补位。
+	for _, submissionID := range submissionIDs {
+		candidatePages, err := m.sourcePages(ctx, tenantID, examID, submissionID)
+		if err != nil || len(candidatePages) == 0 {
 			return ErrAnonymousPaperUnavailable
 		}
+		for _, page := range candidatePages {
+			if !validAnonymousLayout(page) {
+				return ErrAnonymousPaperUnavailable
+			}
+		}
+		pages = append(pages, candidatePages...)
 	}
 	for _, page := range pages {
 		if err := m.preparePage(ctx, tenantID, examID, releaseID, actorID, page); err != nil {
@@ -217,24 +241,24 @@ WHERE tenant_id=$1::uuid AND release_id=$2::uuid AND source_submission_page_id=$
 	if err := m.objects.Put(ctx, m.bucket, key, bytes.NewReader(anonymousBytes), int64(len(anonymousBytes)), anonymousPaperContentType); err != nil {
 		return err
 	}
-	asset, err := m.files.Create(ctx, files.CreateAssetInput{
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		_ = m.objects.Remove(ctx, m.bucket, key)
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	// 资产与匿名页一同登记；业务登记失败时回滚资产，避免补偿删除被证据保护触发器拒绝。
+	asset, err := files.CreateAssetInTx(ctx, tx, files.CreateAssetInput{
 		TenantID: tenantID, ExamID: examID, OwnerType: "score_release_anonymous_page", OwnerID: pageID,
 		OriginalName: "anonymous-paper-page.png", ContentType: anonymousPaperContentType, SizeBytes: int64(len(anonymousBytes)),
 		HashSHA256: sha256Hex(anonymousBytes), StorageBucket: m.bucket, StorageKey: key,
 		Visibility: "private", UploadedBy: actorID,
 	})
 	if err != nil {
-		// 对象已写入但资产登记失败时尝试清理；清理错误不覆盖本次登记错误。
+		_ = tx.Rollback()
 		_ = m.objects.Remove(ctx, m.bucket, key)
 		return err
 	}
-	tx, err := m.db.BeginTx(ctx, nil)
-	if err != nil {
-		_, _ = m.files.Delete(ctx, tenantID, asset.ID)
-		_ = m.objects.Remove(ctx, m.bucket, key)
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
 	_, err = tx.ExecContext(ctx, `INSERT INTO score_release_anonymous_page
 (id,tenant_id,release_id,source_submission_page_id,page_no,file_asset_id,source_sha256,derived_sha256,template_id,template_content_hash,redaction_version,created_by)
 VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7,$8,$9::uuid,$10,$11,$12::uuid)`,
@@ -248,8 +272,11 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid AND lifecycle_status='active' AND delet
 		err = tx.Commit()
 	}
 	if err != nil {
-		_, _ = m.files.Delete(ctx, tenantID, asset.ID)
-		_ = m.objects.Remove(ctx, m.bucket, key)
+		// Commit 返回错误时结果可能未知，保留对象供巡检；只有已知回滚成功才清理。
+		// SQL 失败会在下方先回滚；提交失败则 Rollback 返回 ErrTxDone，不冒险删掉已提交页的对象。
+		if rollbackErr := tx.Rollback(); rollbackErr == nil {
+			_ = m.objects.Remove(ctx, m.bucket, key)
+		}
 		return err
 	}
 	return nil
@@ -350,7 +377,7 @@ WHERE ap.tenant_id=$1::uuid AND ap.release_id=$2::uuid AND ap.id=$3::uuid AND ap
 		},
 		OpenErrorMessage: "failed to read anonymous paper page",
 		AuditAction:      "student.anonymous_paper_page_viewed", AuditTargetType: "score_release_anonymous_page", AuditTargetID: pageID,
-		AuditReason: "view released anonymous high-score paper page",
+		AuditReason: "学生查看已发布的匿名高分卷页面",
 	}, nil
 }
 

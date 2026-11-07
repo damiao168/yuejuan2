@@ -273,7 +273,7 @@ services:
         BUILD_TIME: ${EDUGRADE_BUILD_TIME:-unknown}
         IMAGE_DIGEST: ${EDUGRADE_IMAGE_DIGEST:-unknown}
         RELEASE_ID: ${EDUGRADE_RELEASE_ID:-local}
-        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000220}
+        SCHEMA_VERSION: ${EDUGRADE_SCHEMA_VERSION:-000229}
         GOPROXY: ${EDUGRADE_GO_PROXY:-}
     image: ${EDUGRADE_API_GATEWAY_IMAGE:-edugrade/api-gateway:local}
     container_name: edugrade-api-gateway
@@ -282,6 +282,7 @@ services:
       EDUGRADE_SERVICE_NAME: api-gateway
       EDUGRADE_HTTP_HOST: 0.0.0.0
       EDUGRADE_HTTP_PORT: 8080
+      EDUGRADE_TRUSTED_PROXY_CIDRS: ${EDUGRADE_TRUSTED_PROXY_CIDRS:?Configure the nginx proxy address}
       EDUGRADE_LOG_LEVEL: ${EDUGRADE_LOG_LEVEL}
       EDUGRADE_READINESS_TIMEOUT: ${EDUGRADE_READINESS_TIMEOUT}
       EDUGRADE_SHUTDOWN_TIMEOUT: ${EDUGRADE_SHUTDOWN_TIMEOUT}
@@ -356,12 +357,15 @@ services:
       EDUGRADE_QDRANT_API_KEY_FILE: ${EDUGRADE_QDRANT_API_KEY_FILE:-}
       EDUGRADE_AI_GRADING_ENABLED: ${EDUGRADE_AI_GRADING_ENABLED:-false}
       EDUGRADE_MATH_GRADING_V2_ENABLED: ${EDUGRADE_MATH_GRADING_V2_ENABLED:-false}
+      EDUGRADE_AI_IMAGE_PREFIX_CACHE_ENABLED: ${EDUGRADE_AI_IMAGE_PREFIX_CACHE_ENABLED:-false}
       EDUGRADE_ALLOW_MOCK_AI: ${EDUGRADE_ALLOW_MOCK_AI:-false}
       EDUGRADE_AI_SERVICE_URL: ${EDUGRADE_AI_SERVICE_URL}
+      EDUGRADE_SCHOOL_ASSISTANT_SEARCH_URL: ${EDUGRADE_SCHOOL_ASSISTANT_SEARCH_URL:-}
       EDUGRADE_GRADING_AGENT_TOKEN: ${EDUGRADE_GRADING_AGENT_TOKEN}
       EDUGRADE_GRADING_AGENT_TOKEN_FILE: ${EDUGRADE_GRADING_AGENT_TOKEN_FILE:-}
-      EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY: ${EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY:-edugrade-local-model-credential-key-change-before-production}
+      EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY: ${EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY:?Generate a unique model credential key}
       EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY_FILE: ${EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY_FILE:-}
+      EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY: ${EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY:?Generate an independent review evidence key}
       EDUGRADE_AI_SERVICE_TIMEOUT: ${EDUGRADE_AI_SERVICE_TIMEOUT:-750s}
       EDUGRADE_AI_SERVICE_MAX_RETRIES: ${EDUGRADE_AI_SERVICE_MAX_RETRIES:-0}
       EDUGRADE_AI_MODEL_VERSION: ${EDUGRADE_AI_MODEL_VERSION}
@@ -453,6 +457,7 @@ services:
       EDUGRADE_GRADING_MODEL_MAX_OUTPUT_TOKENS: ${EDUGRADE_GRADING_MODEL_MAX_OUTPUT_TOKENS:-512}
       EDUGRADE_GRADING_MODEL_READY_TIMEOUT_SECONDS: ${EDUGRADE_GRADING_MODEL_READY_TIMEOUT_SECONDS:-3}
       EDUGRADE_GRADING_MODEL_READINESS_CACHE_SECONDS: ${EDUGRADE_GRADING_MODEL_READINESS_CACHE_SECONDS:-10}
+      EDUGRADE_GRADING_CACHE_USAGE_DIAGNOSTICS: ${EDUGRADE_GRADING_CACHE_USAGE_DIAGNOSTICS:-false}
       EDUGRADE_GRADING_MODEL_QUEUE_TIMEOUT_SECONDS: ${EDUGRADE_GRADING_MODEL_QUEUE_TIMEOUT_SECONDS:-5}
       EDUGRADE_GRADING_MODEL_MAX_RETRIES: ${EDUGRADE_GRADING_MODEL_MAX_RETRIES:-1}
       # 原始响应由独立诊断目录留存，普通日志只写摘要；生产默认关闭原文采集。
@@ -763,6 +768,9 @@ services:
 
   nginx:
     image: ${EDUGRADE_NGINX_IMAGE:-nginx:1.29-alpine}
+    networks:
+      default:
+        ipv4_address: ${EDUGRADE_PROXY_IP:-172.30.24.10}
     container_name: edugrade-nginx
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -825,7 +833,28 @@ services:
     logging: *default-logging
     restart: unless-stopped
 
+  # 供 API Gateway 通过容器网络访问，不向浏览器暴露搜索服务或发布宿主机端口。
+  searxng:
+    profiles: ["web-search"]
+    image: ${EDUGRADE_SEARXNG_IMAGE:-searxng/searxng@sha256:f4aa660c54d062dedb268be84e821ea24e39f48c7a496af8dd02cc9eedb93847}
+    environment:
+      SEARXNG_SECRET: ${EDUGRADE_SEARXNG_SECRET:-}
+      SEARXNG_SETTINGS_PATH: /etc/searxng/settings.yml
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+      - searxng_cache:/var/cache/searxng
+    mem_limit: ${EDUGRADE_SEARXNG_MEM_LIMIT:-512m}
+    logging: *default-logging
+    restart: unless-stopped
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${EDUGRADE_COMPOSE_SUBNET:-172.30.24.0/24}
+
 volumes:
+  searxng_cache:
   template_analysis_diagnostics:
   postgres_data:
   redis_data:

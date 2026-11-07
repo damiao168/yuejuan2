@@ -5,7 +5,10 @@ from collections.abc import Mapping
 
 from .errors import AgentError
 
-TOKEN_FIELDS = ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_tokens", "total_tokens")
+LEGACY_TOKEN_FIELDS = ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_tokens", "total_tokens")
+CACHE_TOKEN_FIELDS = ("cached_input_tokens", "cache_write_input_tokens", "uncached_input_tokens")
+TOKEN_FIELDS = (*LEGACY_TOKEN_FIELDS, *CACHE_TOKEN_FIELDS[1:])
+MAX_TOKEN_COUNT = 9_223_372_036_854_775_807
 FAILURE_KINDS = frozenset({
     "output_truncated", "finish_reason_missing", "finish_reason_unknown",
     "provider_refused", "content_filtered", "unsupported_generation",
@@ -71,7 +74,30 @@ def sanitize_execution_diagnostics(value):
     return result
 
 
-def usage_facts(response):
+def _optional_token_count(value):
+    return value if type(value) is int and 0 <= value <= MAX_TOKEN_COUNT else None
+
+
+def _cache_breakdown(raw, usage, details, *, native):
+    # 供应商可能省略写入计数；只有读写均已知才从输入总量拆分，不能把未知写入当零。
+    # 可选拆分缺失或自相矛盾时只省略诊断，不改变原有输出验收和结算状态。
+    written = _optional_token_count(details.get("cache_creation_input_tokens"))
+    hit, prompt = usage.get("cached_input_tokens"), usage.get("input_tokens")
+    if written is not None:
+        if prompt is not None and (written > prompt or hit is not None and written + hit > prompt):
+            return
+        usage["cache_write_input_tokens"] = written
+        if hit is not None and prompt is not None:
+            usage["uncached_input_tokens"] = prompt - hit - written
+        return
+
+    # DeepSeek 的 miss 是供应商直接上报的未命中量；没有单独的缓存写入计数。
+    missed = _optional_token_count(raw.get("prompt_cache_miss_tokens")) if not native else None
+    if missed is not None and (prompt is None or missed <= prompt and (hit is None or hit + missed == prompt)):
+        usage["uncached_input_tokens"] = missed
+
+
+def usage_facts(response, *, native=False, cache_breakdown=False):
     """缺失和非法用量保持未知；仅累计供应商明确报告的非负整数。"""
     raw = response.get("usage") if isinstance(response, Mapping) else None
     if raw is None:
@@ -99,8 +125,9 @@ def usage_facts(response):
                 invalid = True
         if values:
             usage[field] = values[0]
+    # 明细名称由实际协议决定；原生接口不把兼容接口的同名扩展当成已知事实。
     for detail, name, target in (
-        ("prompt_tokens_details", "cached_tokens", "cached_input_tokens"),
+        ("input_tokens_details" if native else "prompt_tokens_details", "cached_tokens", "cached_input_tokens"),
         ("completion_tokens_details", "reasoning_tokens", "reasoning_tokens"),
     ):
         nested = raw.get(detail)
@@ -114,6 +141,11 @@ def usage_facts(response):
                 usage[target] = max(usage.get(target, value), value)
             else:
                 invalid = True
+    detail_name = "input_tokens_details" if native else "prompt_tokens_details"
+    cache_details = raw.get(detail_name)
+    cache_details = cache_details if isinstance(cache_details, Mapping) else {}
+    if cache_breakdown:
+        _cache_breakdown(raw, usage, cache_details, native=native)
     if invalid:
         return usage, "invalid"
     if all(field in usage for field in ("input_tokens", "output_tokens", "total_tokens")):
@@ -121,8 +153,8 @@ def usage_facts(response):
     return usage, "partial" if usage else "unavailable"
 
 
-def response_diagnostics(response, output_token_limit):
-    usage, status = usage_facts(response)
+def response_diagnostics(response, output_token_limit, *, native=False, cache_breakdown=False):
+    usage, status = usage_facts(response, native=native, cache_breakdown=cache_breakdown)
     # 未收到 envelope 时只能记为未知；网络失败不能冒充模型的结束原因或结构错误。
     facts = {"finish_outcome": "unavailable" if response is None else "envelope_invalid", "attempts": 1, "provider_request_count": 1,
              "usage_status": status, "recovery_attempted": False}
@@ -217,9 +249,11 @@ def merge_attempt_diagnostics(accumulated, latest, *, attempts, fallback_usage=N
     latest = copy.deepcopy(latest or {})
     if not latest:
         usage = {key: value for key, value in (fallback_usage or {}).items()
-                 if key in TOKEN_FIELDS and type(value) is int and value >= 0}
+                 if key in TOKEN_FIELDS and _optional_token_count(value) is not None}
+        invalid = any(key in TOKEN_FIELDS and _optional_token_count(value) is None
+                      for key, value in (fallback_usage or {}).items())
         latest = {"finish_outcome": "completed", "provider_request_count": 1,
-                  "usage_status": "reported" if all(k in usage for k in ("input_tokens", "output_tokens", "total_tokens"))
+                  "usage_status": "invalid" if invalid else "reported" if all(k in usage for k in ("input_tokens", "output_tokens", "total_tokens"))
                   else "partial" if usage else "unavailable"}
         if usage:
             latest["usage"] = usage
@@ -235,7 +269,18 @@ def merge_attempt_diagnostics(accumulated, latest, *, attempts, fallback_usage=N
         else:
             status = "partial"
     usage = dict((accumulated or {}).get("usage", {}))
-    for key, value in latest.get("usage", {}).items():
+    latest_usage = latest.get("usage", {})
+    prior_count = (accumulated or {}).get("provider_request_count", 0)
+    latest_count = latest.get("provider_request_count", 1)
+    for key, value in latest_usage.items():
+        if key not in TOKEN_FIELDS:
+            continue
+        if _optional_token_count(value) is None:
+            usage.pop(key, None)
+            status = "invalid"
+            continue
+        if key in CACHE_TOKEN_FIELDS and prior_count and key not in usage:
+            continue
         total = usage.get(key, 0) + value
         if total <= 9_223_372_036_854_775_807:
             usage[key] = total
@@ -243,7 +288,12 @@ def merge_attempt_diagnostics(accumulated, latest, *, attempts, fallback_usage=N
             # 聚合值也受跨语言整数上限约束；溢出字段保持未知，不能截断或绕回负数。
             usage.pop(key, None)
             status = "invalid"
-    count = (accumulated or {}).get("provider_request_count", 0) + latest.get("provider_request_count", 1)
+    # 每次实际派发都报告某一缓存计数才能求总量，否则该计数继续省略；零仍是已知值。
+    if latest_count:
+        for key in CACHE_TOKEN_FIELDS:
+            if key not in latest_usage:
+                usage.pop(key, None)
+    count = prior_count + latest_count
     facts = {"finish_outcome": latest.get("finish_outcome", "envelope_invalid"),
              "attempts": count,
              "provider_request_count": count,

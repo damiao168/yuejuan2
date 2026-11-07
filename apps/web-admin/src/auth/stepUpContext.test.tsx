@@ -119,6 +119,20 @@ describe("StepUpProvider", () => {
     expect(reauthenticate).not.toHaveBeenCalled();
   });
 
+  it("settles the previous action when another challenge replaces it", async () => {
+    const first = vi.fn().mockRejectedValue(recentAuthError());
+    const second = vi.fn().mockRejectedValueOnce(recentAuthError()).mockResolvedValue("second done");
+    let pendingFirst!: Promise<unknown>;
+    let pendingSecond!: Promise<unknown>;
+    await act(async () => { pendingFirst = current.runWithStepUp({ reason: "第一个操作", action: first }).catch(error => error); await Promise.resolve(); });
+    await act(async () => { pendingSecond = current.runWithStepUp({ reason: "第二个操作", action: second }); await Promise.resolve(); });
+    expect(isStepUpCancelledError(await pendingFirst)).toBe(true);
+    await act(async () => current.setPassword("synthetic-password"));
+    await act(async () => current.complete());
+    await expect(pendingSecond).resolves.toBe("second done");
+    expect(first).toHaveBeenCalledTimes(1);
+  });
+
   it("stops when the single retry also returns 428", async () => {
     const action = vi.fn().mockRejectedValue(recentAuthError());
     let pending!: Promise<unknown>;

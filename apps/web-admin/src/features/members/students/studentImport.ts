@@ -21,6 +21,11 @@ function clean(value: string | undefined) {
 }
 
 export function prepareStudentImport(csv: string, classes: SchoolClass[], mapping = studentImportColumns(csv).mapping, selectedClassID = ""): PreparedStudentImport {
+  const firstRow = Papa.parse<string[]>(csv, { preview: 1 }).data[0] ?? [];
+  const normalizedHeaders = firstRow.map(value => value.replace(/^\uFEFF/, "").trim());
+  if (new Set(normalizedHeaders).size !== normalizedHeaders.length) {
+    return { csv: "", errors: [{ row: 1, message: "表头存在重名列，请先改为不同名称再导入" }], sourceRows: [] };
+  }
   const parsed = Papa.parse<Record<string, string>>(csv, {
     header: true,
     skipEmptyLines: false,
@@ -33,6 +38,9 @@ export function prepareStudentImport(csv: string, classes: SchoolClass[], mappin
     message: "该行 CSV 格式有误，请检查列数和引号"
   }));
   const malformedRows = new Set(errors.map((error) => error.row));
+  if (parsed.data.filter(record => !emptyRow(record)).length > 10000) {
+    return { csv: "", errors: [{ row: 1, message: "每次最多导入10000名学生，请分批处理" }], sourceRows: [] };
+  }
 
   if (!headers.has(mapping.studentNo) || !headers.has(mapping.name) || mapping.studentNo === mapping.name) {
     return { csv: "", errors: [{ row: 1, message: "请为学号和姓名选择不同的有效列" }, ...errors], sourceRows: [] };
@@ -96,19 +104,28 @@ export function prepareStudentImport(csv: string, classes: SchoolClass[], mappin
     sourceRows.push(row);
   });
 
+  const normalizedCSV = normalizedRows.length
+    ? Papa.unparse([["student_no", "name", "school_id", "class_id"], ...normalizedRows])
+    : "";
+  if (new TextEncoder().encode(normalizedCSV).length > 4 * 1024 * 1024) {
+    return { csv: "", errors: [{ row: 1, message: "转换后的名单超过4MB，请分批导入" }], sourceRows: [] };
+  }
   return {
-    csv: normalizedRows.length
-      ? Papa.unparse([["student_no", "name", "school_id", "class_id"], ...normalizedRows])
-      : "",
+    csv: normalizedCSV,
     errors,
     sourceRows
   };
 }
 
 export function remapStudentImportError(error: StudentImportError, sourceRows: number[]): StudentImportError {
-  // 本地预检会剔除坏行；服务端返回的是精简 CSV 行号，需映射回用户原始文件。
+  // 提交前已阻止本地坏行；空白行仍会被省略，服务端行号需要映射回用户原始文件。
   return {
     ...error,
     row: error.row > 1 ? (sourceRows[error.row - 2] ?? error.row) : error.row
   };
+}
+
+export function studentImportErrorsCSV(errors: StudentImportError[]): string {
+  // 错误说明可能包含学校文件中的输入；下载时同时引用单元格并阻止公式执行。
+  return Papa.unparse([["行号", "问题说明"], ...errors.map(issue => [String(issue.row), issue.message])], { escapeFormulae: true, newline: "\r\n" });
 }

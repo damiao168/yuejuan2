@@ -1,13 +1,20 @@
 // 规则命中仅表示可疑并触发复核；未命中不代表已穷尽提示词注入方式。
-const DEFAULT_RULES = [
-  { id: "ignore-rubric-cn", pattern: /忽略(?:之前|以上|所有)?(?:的)?(?:评分|规则|标准|指令)/i },
-  { id: "full-score-cn", pattern: /(?:给我|直接给|应该给)(?:满分|\d+(?:\.\d+)?分)/i },
-  { id: "role-override-cn", pattern: /你现在是(?:老师|教师|系统|管理员|开发者)/i },
-  { id: "schema-bypass-cn", pattern: /(?:输出.*schema.*之外|不要告诉老师)/i },
-  { id: "ignore-rubric-en", pattern: /ignore(?:all|previous|the)?(?:rules|instructions|rubric|gradingcriteria)/i },
-  { id: "full-score-en", pattern: /givemefull(?:marks|score|credit)/i },
-  { id: "role-override-en", pattern: /youarenow(?:the)?(?:teacher|system|admin|developer)/i }
-];
+import { promptInjectionRules } from "./promptInjectionRules.generated.js";
+
+const DEFAULT_RULES = promptInjectionRules.map(rule => ({
+  id: rule.id.replaceAll("_", "-"), pattern: new RegExp(rule.pattern, "i"), orderedTerms: rule.ordered_terms
+}));
+
+function containsOrderedTerms(text, terms) {
+  if (!terms?.length) return false;
+  let offset = 0;
+  for (const term of terms) {
+    const position = text.indexOf(term, offset);
+    if (position < 0) return false;
+    offset = position + term.length;
+  }
+  return true;
+}
 
 export function normalizeUntrustedInstructionText(text) {
   return String(text ?? "")
@@ -24,7 +31,7 @@ export class PromptInjectionDetector {
 
   detect(text) {
     const normalized = normalizeUntrustedInstructionText(text);
-    const matches = this.rules.filter((rule) => rule.pattern.test(normalized)).map((rule) => rule.id);
+    const matches = this.rules.filter((rule) => rule.pattern.test(normalized) || containsOrderedTerms(normalized, rule.orderedTerms)).map((rule) => rule.id);
     return {
       detected: matches.length > 0,
       matches,

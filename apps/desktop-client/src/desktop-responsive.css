@@ -1,0 +1,73 @@
+
+
+@media (max-width: 980px) {
+  .desktop-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .desktop-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .desktop-topbar,
+  .section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workspace-grid.two,
+  .capability-grid,
+  .diagnostic-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scan-toolbar,
+  .scan-context-form {
+    grid-template-columns: 1fr;
+  }
+
+  .scan-actions {
+    justify-content: flex-start;
+  }
+
+  .offline-head {
+    flex-direction: column;
+  }
+
+  .offline-toolbar,
+  .offline-grid,
+  .offline-grid.workbench {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .desktop-main {
+    padding: 16px;
+  }
+
+  .desktop-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .queue-row,
+  .log-row {
+    grid-template-columns: 1fr;
+  }
+
+  .log-row p {
+    grid-column: auto;
+  }
+}
+.selected-review-task > td {
+  background: #eaf3ff !important;
+}

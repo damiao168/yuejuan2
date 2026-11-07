@@ -169,6 +169,7 @@ func TestRuntimeHeartbeatRenewsImageQualitySourceLease(t *testing.T) {
 	qualityStore.ForceExpireLeaseForTest(job.RunID)
 	heartbeatBody := `{"lease_token":"` + job.LeaseToken + `","worker_service":"image-quality-worker","worker_instance_id":"worker-a","state":"running","lease_seconds":600}`
 	req = authedRequest(http.MethodPost, "/api/v1/internal/worker/tasks/"+job.RuntimeTaskID+"/heartbeat", bytes.NewBufferString(heartbeatBody), token)
+	qualityWorkerHeaders(req, job)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -190,17 +191,7 @@ func TestQualityResultRequiresLeaseAndActivatesPage(t *testing.T) {
 	qualityStore := imagequality.NewMemoryStore()
 	runtimeStore := workerruntime.NewMemoryStore()
 	item, page := submissionWithOriginalFile(t, fileStore, submissionStore, "source-hash-1")
-	normalized := createFile(t, fileStore, files.CreateAssetInput{
-		TenantID:     handlerTenantID,
-		SubmissionID: item.ID,
-		OwnerType:    "submission_page_normalized",
-		OwnerID:      page.ID,
-		OriginalName: "page-001-normalized.png",
-		ContentType:  "image/png",
-		SizeBytes:    128,
-		HashSHA256:   "normalized-hash-1",
-		UploadedBy:   handlerUserID,
-	})
+
 	router := testRouter(authStore, fileStore, submissionStore, qualityStore, runtimeStore)
 	token := login(t, router)
 
@@ -226,6 +217,18 @@ func TestQualityResultRequiresLeaseAndActivatesPage(t *testing.T) {
 		t.Fatalf("expected one job, got %#v", claimResponse.Jobs)
 	}
 	job := claimResponse.Jobs[0]
+	normalized := createFile(t, fileStore, files.CreateAssetInput{
+		TenantID:     handlerTenantID,
+		ExamID:       item.ExamID,
+		SubmissionID: item.ID,
+		OwnerType:    "submission_page_normalized",
+		OwnerID:      page.ID,
+		OriginalName: "page-001-normalized.png",
+		ContentType:  "image/png",
+		SizeBytes:    128,
+		HashSHA256:   "normalized-hash-1",
+		UploadedBy:   handlerUserID,
+	})
 
 	resultBody := `{
 	  "lease_token":"` + job.LeaseToken + `",
@@ -240,6 +243,7 @@ func TestQualityResultRequiresLeaseAndActivatesPage(t *testing.T) {
 	  "normalization_transform":{"source_to_normalized_matrix":[[1,0,0],[0,1,0],[0,0,1]]}
 	}`
 	req = authedRequest(http.MethodPost, "/api/v1/internal/image-quality/runs/"+job.RunID+"/result", bytes.NewBufferString(resultBody), token)
+	qualityWorkerHeaders(req, job)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"quality_status":"passed"`) {
@@ -259,6 +263,22 @@ func TestQualityResultRequiresLeaseAndActivatesPage(t *testing.T) {
 	runtimeTask, err := runtimeStore.GetBySource(context.Background(), handlerTenantID, "image_quality_run", job.RunID)
 	if err != nil || runtimeTask.Status != workerruntime.StatusSucceeded {
 		t.Fatalf("quality result should complete runtime task: %v %#v", err, runtimeTask)
+	}
+	// 完成响应丢失后只可重放同一结果；成功租约不能用于改写已有质量结论。
+	for _, retry := range []struct {
+		body string
+		want int
+	}{
+		{resultBody, http.StatusOK},
+		{strings.Replace(resultBody, `"sharpness_score":0.91`, `"sharpness_score":0.21`, 1), http.StatusConflict},
+	} {
+		req = authedRequest(http.MethodPost, "/api/v1/internal/image-quality/runs/"+job.RunID+"/result", bytes.NewBufferString(retry.body), token)
+		qualityWorkerHeaders(req, job)
+		rec = httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != retry.want {
+			t.Fatalf("quality result retry expected %d, got %d %s", retry.want, rec.Code, rec.Body.String())
+		}
 	}
 }
 
@@ -287,6 +307,7 @@ func TestQualityResultRejectsMissingLease(t *testing.T) {
 	}
 
 	req = authedRequest(http.MethodPost, "/api/v1/internal/image-quality/runs/"+claimResponse.Jobs[0].RunID+"/result", bytes.NewBufferString(`{"attempt_no":1,"result_version":"result-v1","processing_status":"completed","quality_status":"passed","normalized_file_asset_id":"file-normalized"}`), token)
+	qualityWorkerHeaders(req, claimResponse.Jobs[0])
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid_image_quality_input") {
@@ -325,7 +346,7 @@ func authStoreWithPermissions(t *testing.T, permissions []string) *auth.MemorySt
 			Username:    "quality_admin",
 			DisplayName: "Quality Admin",
 			Status:      "active",
-			Roles:       []string{"teacher"},
+			Roles:       []string{"page_processing_worker"},
 			Permissions: permissions,
 			DataScope:   map[string]any{"scope": "school", "synthetic": true},
 		},
@@ -336,7 +357,7 @@ func authStoreWithPermissions(t *testing.T, permissions []string) *auth.MemorySt
 
 func login(t *testing.T, router http.Handler) string {
 	t.Helper()
-	raw, _ := json.Marshal(map[string]string{"tenant_code": "demo", "username": "quality_admin", "password": "ChangeMe123!"})
+	raw, _ := json.Marshal(map[string]string{"tenant_code": "demo", "username": "quality_admin", "password": "ChangeMe123!", "client_type": "service"})
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/token", bytes.NewReader(raw))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -404,4 +425,11 @@ func authedRequest(method string, path string, body *bytes.Buffer, token string)
 
 func intString(value int) string {
 	return strconv.Itoa(value)
+}
+
+func qualityWorkerHeaders(req *http.Request, job imagequality.ClaimedJob) {
+	req.Header.Set(workerruntime.TaskIDHeader, job.RuntimeTaskID)
+	req.Header.Set(workerruntime.TaskLeaseHeader, job.LeaseToken)
+	req.Header.Set(workerruntime.WorkerServiceHeader, "image-quality-worker")
+	req.Header.Set(workerruntime.WorkerInstanceIDHeader, "worker-a")
 }

@@ -67,6 +67,12 @@ func (s *Service) PutPolicy(ctx context.Context, tenantID, examID, questionID, a
 		return Policy{}, err
 	}
 	_, fingerprint := activeSamples(items)
+	// 即使标准卷已全部退役，管理员仍应能暂停已有策略；保留旧绑定只用于记录，不恢复抽样。
+	if fingerprint == "" && input.Status == PolicyPaused {
+		if existing, err := s.store.GetPolicy(ctx, tenantID, examID, questionID); err == nil {
+			fingerprint = existing.ActiveGoldFingerprint
+		}
+	}
 	if fingerprint == "" {
 		return Policy{}, ErrGoldSetMissing
 	}
@@ -74,7 +80,23 @@ func (s *Service) PutPolicy(ctx context.Context, tenantID, examID, questionID, a
 }
 
 func (s *Service) GetPolicy(ctx context.Context, tenantID, examID, questionID string) (Policy, error) {
-	return s.store.GetPolicy(ctx, tenantID, examID, questionID)
+	policy, err := s.store.GetPolicy(ctx, tenantID, examID, questionID)
+	if err != nil || policy.Status != PolicyActive {
+		return policy, err
+	}
+	items, err := s.gold.ListActiveApproved(ctx, tenantID, examID, questionID)
+	if err != nil {
+		return Policy{}, err
+	}
+	_, fingerprint := activeSamples(items)
+	if fingerprint == "" {
+		policy.NeedsConfirmation, policy.ConfirmationReason = true, "gold_set_missing"
+		return policy, nil
+	}
+	if fingerprint != policy.ActiveGoldFingerprint {
+		policy.NeedsConfirmation, policy.ConfirmationReason = true, "gold_set_changed"
+	}
+	return policy, nil
 }
 
 // MaybeIssue 是领取钩子，须在领取普通复核任务前调用。
@@ -91,20 +113,17 @@ func (s *Service) MaybeIssue(ctx context.Context, tenantID, examID, questionID, 
 	if err != nil {
 		return Task{}, false, err
 	}
-	if s.qualification == nil || s.qualification.RequireQualification(ctx, tenantID, examID, questionID, graderID) != nil {
-		return Task{}, false, ErrQualificationNeeded
-	}
 	items, err := s.gold.ListActiveApproved(ctx, tenantID, examID, questionID)
 	if err != nil {
 		return Task{}, false, err
 	}
 	samples, fingerprint := activeSamples(items)
-	if fingerprint == "" {
-		return Task{}, false, ErrGoldSetMissing
+	// 标准卷缺失或变化时只停发盲投，普通阅卷仍继续；管理员读取策略时收到需要重新确认的状态及原修订号。
+	if fingerprint == "" || fingerprint != policy.ActiveGoldFingerprint {
+		return Task{}, false, nil
 	}
-	// Gold 集合发生变化时拒绝继续抽样，避免同一策略混用不同版本的参考答案。
-	if fingerprint != policy.ActiveGoldFingerprint {
-		return Task{}, false, ErrGoldSetChanged
+	if s.qualification == nil || s.qualification.RequireQualification(ctx, tenantID, examID, questionID, graderID) != nil {
+		return Task{}, false, ErrQualificationNeeded
 	}
 	gold := samples[s.random.Intn(len(samples))]
 	next := policy.MinInterval
@@ -189,6 +208,9 @@ func (s *Service) GetTaskForGrader(ctx context.Context, tenantID, taskID, grader
 func activeSamples(items []goldpaper.GoldPaper) ([]GoldSample, string) {
 	samples := make([]GoldSample, 0, len(items))
 	for _, item := range items {
+		if item.QualityPool != goldpaper.PoolBlind {
+			continue
+		}
 		if item.Status != goldpaper.StatusActive || item.ActiveVersion <= 0 {
 			continue
 		}

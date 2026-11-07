@@ -128,7 +128,14 @@ func TestQuestionMaterialUsesExactTaskSnapshotAndHistoricalReferences(t *testing
 	}
 }
 func TestWorkflowDirectoryScopesSchoolActiveStatusAndActualPermission(t *testing.T) {
-	db := openDB(t, sqlStep{required: []string{"e.school_id=u.school_id", "e.id=$2::uuid", "u.tenant_id=$1::uuid", "u.status='active'", "r.deleted_at IS NULL", "p.code=$3"}, args: []any{tenant, exam, "review:work"}, rows: [][]driver.Value{{"worker", "teacher-account", "复核教师"}}})
+	db := openDB(t, sqlStep{
+		required: []string{"e.school_id=u.school_id", "e.id=$2::uuid", "u.tenant_id=$1::uuid", "u.status='active'", "r.deleted_at IS NULL", "p.code=$3", "r.code=$4"},
+		args:     []any{tenant, exam, "review:work", "grader"},
+		rows: [][]driver.Value{
+			{"worker", "teacher-account", "复核教师", "math", `["math"]`, `["grader"]`},
+			{"other-subject", "other-account", "其他学科教师", "math", `["chinese"]`, `["grader"]`},
+		},
+	})
 	values, err := workflowactors.List(context.Background(), db, tenant, exam, "review:work")
 	if err != nil || len(values) != 1 || values[0].DisplayName != "复核教师" {
 		t.Fatalf("actors=%#v %v", values, err)

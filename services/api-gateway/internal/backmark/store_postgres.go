@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/workflowactors"
 )
 
 type PostgresStore struct{ db *sql.DB }
@@ -126,6 +128,13 @@ func (s *PostgresStore) CreateBatch(ctx context.Context, tenantID, examID, quest
 		return Batch{}, nil, err
 	}
 	defer tx.Rollback()
+	// 回评会新授予答案访问权，不能因来源是旧成绩就沿用来源阅卷人的资格或只相信前端候选。
+	if err := workflowactors.ValidateReviewAssignee(ctx, tx, tenantID, examID, input.ReassignedTo, "review:work"); err != nil {
+		if errors.Is(err, workflowactors.ErrAssigneeIneligible) {
+			return Batch{}, nil, errors.Join(ErrAssigneeForbidden, err)
+		}
+		return Batch{}, nil, err
+	}
 	selectorJSON, err := json.Marshal(input.Selector)
 	if err != nil {
 		return Batch{}, nil, err

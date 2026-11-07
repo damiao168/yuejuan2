@@ -10,14 +10,15 @@ import (
 )
 
 type MemoryStore struct {
-	mu      sync.RWMutex
-	next    int
-	sources map[string]Source
-	items   map[string]GoldPaper
+	mu         sync.RWMutex
+	next       int
+	sources    map[string]Source
+	items      map[string]GoldPaper
+	imagePools map[string]string
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{next: 1, sources: map[string]Source{}, items: map[string]GoldPaper{}}
+	return &MemoryStore{next: 1, sources: map[string]Source{}, items: map[string]GoldPaper{}, imagePools: map[string]string{}}
 }
 
 // SetSource 在集成内存服务和测试中植入 submission、assessment、grading 所有的事实；生产始终通过 SQL 派生这些事实。
@@ -55,7 +56,8 @@ func (s *MemoryStore) Nominate(_ context.Context, tenantID, examID, questionID, 
 	}
 	now := time.Now().UTC()
 	item := GoldPaper{
-		ID: s.id("gold"), ExamID: examID, QuestionID: questionID, QuestionNo: source.QuestionNo, SubmissionID: input.SubmissionID,
+		QualityPool: s.registerImagePoolLocked(tenantID, source.ImageBinding.SHA256, ""),
+		ID:          s.id("gold"), ExamID: examID, QuestionID: questionID, QuestionNo: source.QuestionNo, SubmissionID: input.SubmissionID,
 		Status: StatusPendingApproval, SubjectCode: source.SubjectCode, ArchetypeCode: source.ArchetypeCode,
 		RiskTier: source.RiskTier, NominatedBy: actorID, CreatedAt: now, UpdatedAt: now,
 	}
@@ -98,6 +100,9 @@ func (s *MemoryStore) CreateVersion(_ context.Context, tenantID, goldID, actorID
 	}
 	if !containsAll(source.AvailableGradeIDs, input.SourceGradeIDs) {
 		return GoldPaper{}, ErrSourceGradeMissing
+	}
+	if s.registerImagePoolLocked(tenantID, source.ImageBinding.SHA256, item.QualityPool) != item.QualityPool {
+		return GoldPaper{}, ErrConflict
 	}
 	now := time.Now().UTC()
 	item.Versions = append(item.Versions, s.newVersion(source, actorID, len(item.Versions)+1, input, now))

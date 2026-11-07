@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Button, Space } from "antd";
 import { motion } from "framer-motion";
 import { BrainCircuit, Building2, Plus, RefreshCw, ScrollText, ServerCog } from "lucide-react";
@@ -6,10 +6,10 @@ import { getSafeUserText, getUserErrorMessage } from "../api/client";
 import { getDashboardSummary, type DashboardSummary } from "../api/dashboard";
 import { listPlatformSchools } from "../api/platformSchools";
 import { getSystemStatus, type SystemStatus } from "../api/system";
-import { hasAnyPermission, hasEveryPermission, type SessionUser } from "../auth/session";
+import { hasAnyPermission, hasEveryPermission, sessionAuthorizationKey, type SessionUser } from "../auth/session";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
 import { StatusTag } from "../components/StatusTag";
-import { SchoolDashboard, type DashboardWorkItem } from "../features/dashboard/SchoolDashboard";
+import { SchoolDashboard } from "../features/dashboard/SchoolDashboard";
 import { ReadinessBanner } from "../features/onboarding/ReadinessBanner";
 import { useOnboardingReadiness } from "../features/onboarding/queries";
 import type { StatusTone } from "../types";
@@ -137,44 +137,49 @@ function PlatformDashboard({
 
 export function DashboardPage({ user, onNavigate }: Readonly<{ user: SessionUser; onNavigate: (path: string) => void }>) {
   const isPlatform = user.roles.includes("platform_admin");
+  const canViewReviewTeachers = user.roles.includes("school_admin") && !user.roles.some(role => ["platform_admin", "tenant_admin"].includes(role));
   const canReadOnboarding = user.roles.some((role) => ["platform_admin", "tenant_admin", "school_admin"].includes(role));
   const readiness = useOnboardingReadiness(canReadOnboarding);
   const canCreateExam = hasEveryPermission(user, ["exam:manage"]);
-  const [data, setData] = useState<DashboardSummary>();
+  const canManageOrganization = hasEveryPermission(user, ["org:manage"]);
+  const identity = sessionAuthorizationKey(user);
+  const identityRef = useRef(identity);
+  identityRef.current = identity;
+  const requestVersion = useRef(0);
+  const pendingRequest = useRef<{ identity: string; version: number } | undefined>(undefined);
+  const [snapshot, setSnapshot] = useState<{ identity: string; data: DashboardSummary }>();
+  const data = snapshot?.identity === identity ? snapshot.data : undefined;
   const [loading, setLoading] = useState(!isPlatform);
   const [error, setError] = useState<string>();
 
   const load = useCallback(async () => {
-    if (isPlatform) return;
+    if (isPlatform || pendingRequest.current?.identity === identity) return;
+    const version = ++requestVersion.current;
+    pendingRequest.current = { identity, version };
     setLoading(true);
     setError(undefined);
     try {
-      setData(await getDashboardSummary());
+      const result = await getDashboardSummary();
+      if (version === requestVersion.current && identityRef.current === identity) setSnapshot({ identity, data: result });
     } catch (loadError) {
-      setError(getUserErrorMessage(loadError, "工作台加载失败"));
+      if (version === requestVersion.current && identityRef.current === identity) setError(getUserErrorMessage(loadError, "工作台加载失败"));
     } finally {
-      setLoading(false);
+      if (pendingRequest.current?.version === version) pendingRequest.current = undefined;
+      if (version === requestVersion.current && identityRef.current === identity) setLoading(false);
     }
-  }, [isPlatform]);
+  }, [identity, isPlatform]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    if (isPlatform) return;
+    const refreshVisible = () => { if (document.visibilityState === "visible") void load(); };
+    const timer = canViewReviewTeachers ? window.setInterval(refreshVisible, 30_000) : undefined;
+    if (canViewReviewTeachers) document.addEventListener("visibilitychange", refreshVisible);
+    // 页面卸载或身份改变后作废旧响应；隐藏页面不定时请求，回到页面时补读最新在线状态。
+    return () => { requestVersion.current += 1; pendingRequest.current = undefined; window.clearInterval(timer); document.removeEventListener("visibilitychange", refreshVisible); };
+  }, [canViewReviewTeachers, isPlatform, load]);
 
   const stats = data?.statistics;
-  const todo = useMemo<DashboardWorkItem[]>(() => {
-    if (!stats || !data) return [];
-    const blockerByCode = new Map(data.blocking_issues.map((issue) => [issue.code, issue]));
-    const withBlocker = (code: string, fallback: { detail: string; action: string; path: string }) => {
-      const issue = blockerByCode.get(code);
-      return issue ? { detail: issue.impact, action: issue.action, path: issue.drilldown_path } : fallback;
-    };
-    return [
-      ...(stats.failed_submission_count ? [{ label: "答卷处理失败", value: stats.failed_submission_count, unit: "份", tone: "danger" as StatusTone, ...withBlocker("failed_submissions", { detail: "会阻断后续阅卷", action: "查看异常", path: "/capture?issue=failed" }) }] : []),
-      ...(stats.unmatched_submission_count ? [{ label: "学生身份待确认", value: stats.unmatched_submission_count, unit: "份", tone: "warning" as StatusTone, ...withBlocker("unmatched_submissions", { detail: "答卷尚未匹配学生", action: "立即确认", path: "/capture?issue=unmatched" }) }] : []),
-      ...(stats.pending_arbitration_submission_count ? [{ label: "待人工复核", value: stats.pending_arbitration_count, unit: "项", tone: "danger" as StatusTone, ...withBlocker("pending_arbitration", { detail: `来自 ${stats.pending_arbitration_submission_count} 份答卷`, action: "开始复核", path: "/arbitration?status=pending" }) }] : []),
-      ...(stats.pending_review_question_count ? [{ label: "主观题等待确认", detail: `来自 ${stats.pending_review_submission_count} 份答题卡`, value: stats.pending_review_question_count, unit: "题", action: "继续阅卷", path: "/grading?status=pending", tone: "processing" as StatusTone }] : []),
-      ...(stats.finalized_exam_count ? [{ label: "成绩等待发布", detail: "阅卷已完成，检查后即可发布", value: stats.finalized_exam_count, unit: "场", action: "去发布", path: "/scores?status=finalized", tone: "warning" as StatusTone }] : [])
-    ];
-  }, [data, stats]);
 
   if (isPlatform) return <PlatformDashboard user={user} onNavigate={onNavigate} readiness={readiness} />;
   if (!data && loading) return <LoadingState label="正在加载工作台" />;
@@ -197,13 +202,16 @@ export function DashboardPage({ user, onNavigate }: Readonly<{ user: SessionUser
       {data.warnings.map((warning) => <Alert key={warning} type="warning" showIcon message={getSafeUserText(warning, "部分统计暂时不可用")} description="其他统计仍可使用，请稍后刷新。" />)}
 
       <SchoolDashboard
-        schoolName={user.school}
-        organizationStatistics={data.organization_statistics}
         statistics={stats}
-        activeExamCount={stats.active_exam_count}
+        organizationStatistics={data.organization_statistics}
         exams={data.active_exams}
-        workItems={todo}
+        gradingProgress={data.grading_progress}
+        appealStatistics={data.appeal_statistics}
+        warnings={data.warnings}
         activities={data.recent_activities}
+        canManageOrganization={canManageOrganization}
+        reviewTeachers={canViewReviewTeachers ? data.review_teachers : undefined}
+        reviewTeacherSummary={canViewReviewTeachers ? data.review_teacher_summary : undefined}
         onNavigate={onNavigate}
       />
     </div>

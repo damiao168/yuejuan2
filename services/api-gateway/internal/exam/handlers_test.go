@@ -48,6 +48,40 @@ func TestCreateListDetailExam(t *testing.T) {
 	if detailRec.Code != http.StatusOK || !strings.Contains(detailRec.Body.String(), `"name":"高二物理期末考试"`) {
 		t.Fatalf("expected exam detail, got %d %s", detailRec.Code, detailRec.Body.String())
 	}
+	for _, status := range []string{"active", "completed"} {
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, authedRequest(http.MethodGet, "/api/v1/exam-management?status="+status+"&archive=active&limit=1", nil, token))
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("simple management filter %s: %d %s", status, recorder.Code, recorder.Body.String())
+		}
+		if strings.Contains(recorder.Body.String(), created.ID) != (status == "active") {
+			t.Fatalf("draft exam matched wrong management group %s: %s", status, recorder.Body.String())
+		}
+	}
+}
+
+func TestCreateExamWithoutExamType(t *testing.T) {
+	for _, session := range []bool{false, true} {
+		t.Run(fmt.Sprintf("session_%t", session), func(t *testing.T) {
+			router := testRouter(authStoreWithPermissions(t, []string{"exam:manage"}), exam.NewMemoryStore())
+			token := login(t, router)
+			path := "/api/v1/exams"
+			payload := `{"school_id":"school-1","name":"无分类考试","subject":"math","total_score":100,"grading_mode":"ai_assisted","publish_policy":"after_admin_approval","class_ids":["class-1"]}`
+			if session {
+				path = "/api/v1/exam-sessions"
+				payload = `{"school_id":"school-1","grade_id":"grade-1","name":"无分类考试","grading_mode":"ai_assisted","publish_policy":"after_admin_approval","class_ids":["class-1"],"subjects":[{"subject":"math","total_score":100,"duration_minutes":60,"sections":[]}]}`
+			}
+			recorder := httptest.NewRecorder()
+			router.ServeHTTP(recorder, authedRequest(http.MethodPost, path, bytes.NewBufferString(payload), token))
+			if recorder.Code != http.StatusCreated {
+				t.Fatalf("create without exam type: %d %s", recorder.Code, recorder.Body.String())
+			}
+			// 新入口不再收集类型，也不能把省略字段悄悄归成期中、联考等已有分类。
+			if !strings.Contains(recorder.Body.String(), `"exam_type":""`) {
+				t.Fatalf("unexpected implicit exam type: %s", recorder.Body.String())
+			}
+		})
+	}
 }
 
 func TestRefreshCandidateSnapshotOnlyWhileExamIsEditable(t *testing.T) {

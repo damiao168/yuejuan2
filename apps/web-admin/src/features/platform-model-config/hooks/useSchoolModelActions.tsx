@@ -205,6 +205,7 @@ export function useSchoolModelActions({ selectedTenantID, configs, configLoading
     if (changesDefault && !releaseDefault) { release(); return; }
     try {
       const response = await updateManagedModelAPIConfig(config.id, tenantID, {
+        expected_updated_at: config.updated_at,
         display_name: config.display_name,
         adapter_type: config.adapter_type,
         base_url: config.base_url,

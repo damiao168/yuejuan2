@@ -18,6 +18,10 @@ type Handler struct {
 }
 
 func NewHandler(deps Dependencies) *Handler {
+	// 公开搜索由同一 HTTP 入口编排正文读取；低层测试或其他调用方仍可显式注入读取器。
+	if deps.Conversation.Search != nil && deps.Conversation.Reader == nil {
+		deps.Conversation.Reader = NewPublicWebPageReader()
+	}
 	service := NewService(deps)
 	return &Handler{service: service, conversation: NewConversationService(service, deps.Conversation)}
 }

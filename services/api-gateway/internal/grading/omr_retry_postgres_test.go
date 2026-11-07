@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
-// 仅在审查专用本机库的独立 schema 执行生产方法；复制真实表的列/默认值/检查和索引，
+// 仅在显式测试连接的独立 schema 执行生产方法；复制真实表的列/默认值/检查和索引，
 // 不复制外键、触发器或 RLS，所以这里验证的是状态恢复和同事务回滚，不代表完整迁移验收。
 func TestPostgresOMRAutomaticRetryCanCompleteAndRejectsStaleOrTerminalCallbacks(t *testing.T) {
 	ctx, db := newOMRRetryFixture(t)
@@ -107,7 +107,12 @@ func TestPostgresOMRAutomaticRetryCanCompleteAndRejectsStaleOrTerminalCallbacks(
 			} else {
 				mustExec("UPDATE omr_run SET status='terminal_error' WHERE id=$1", omr)
 			}
-			if _, _, err := store.ApplyOMRResult(ctx, tenant, omr, actor, inputFor(first), nil); !errors.Is(err, ErrRevisionConflict) {
+			wantError := ErrRevisionConflict
+			if blocked == "cancelled scoring run" {
+				// 父运行先于子 OMR 检查，取消在运行状态边界拒绝，且不能消费当前租约。
+				wantError = ErrInvalidTransition
+			}
+			if _, _, err := store.ApplyOMRResult(ctx, tenant, omr, actor, inputFor(first), nil); !errors.Is(err, wantError) {
 				t.Fatalf("terminal callback accepted: %v", err)
 			}
 			assertNoFacts(t, tenant)
@@ -126,9 +131,10 @@ func newOMRRetryFixture(t *testing.T) (context.Context, *sql.DB) {
 		t.Skip("EDUGRADE_REVIEW_PG_DSN is not configured")
 	}
 	cfg, err := pgx.ParseConfig(dsn)
-	if err != nil || cfg.Host != "127.0.0.1" || cfg.Port != 55983 || cfg.Database != "review_root_round10_grading_test" {
-		t.Fatal("refuse a database outside the isolated review fixture")
+	if err != nil {
+		t.Fatal(err)
 	}
+	// 连接由测试调用者显式提供；所有写入仍限制在下方随机 schema，不能绑定一次审查的固定端口和库名。
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	t.Cleanup(cancel)
 	admin := stdlib.OpenDB(*cfg)
@@ -142,12 +148,15 @@ func newOMRRetryFixture(t *testing.T) (context.Context, *sql.DB) {
 	db.SetMaxOpenConns(1)
 	t.Cleanup(func() {
 		db.Close()
-		if _, err := admin.ExecContext(context.Background(), "DROP SCHEMA "+schema+" CASCADE"); err != nil {
+		cleanup, stop := context.WithTimeout(context.Background(), 30*time.Second)
+		defer stop()
+		if _, err := admin.ExecContext(cleanup, "DROP SCHEMA "+schema+" CASCADE"); err != nil {
 			t.Errorf("clean isolated schema: %v", err)
 		}
 		admin.Close()
 	})
-	for _, table := range []string{"tenant", "question", "submission", "answer_segment", "exam_question_snapshot", "scoring_run", "omr_run", "omr_calibration_session", "answer_candidate", "answer_segment_answer", "review_task", "question_grade", "arbitration_task", "double_mark_session", "agent_worker_task", "agent_worker_task_attempt", "agent_worker_heartbeat"} {
+	// OMR 失败和恢复同样刷新统一评分投影；即使该场景没有 AI 条目，也必须提供投影查询的空表。
+	for _, table := range []string{"tenant", "question", "submission", "answer_segment", "exam_question_snapshot", "scoring_run", "scoring_run_item", "answer_input_version", "subjective_grading_run", "ai_grade", "omr_run", "omr_calibration_session", "answer_candidate", "answer_segment_answer", "review_task", "question_grade", "arbitration_task", "double_mark_session", "agent_worker_task", "agent_worker_task_attempt", "agent_worker_heartbeat"} {
 		if _, err := db.ExecContext(ctx, "CREATE TABLE "+table+" (LIKE public."+table+" INCLUDING ALL)"); err != nil {
 			t.Fatal(err)
 		}

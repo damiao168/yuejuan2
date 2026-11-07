@@ -74,14 +74,16 @@ func gradingAIPlanTestDB(t *testing.T) (*sql.DB, *sql.DB, string) {
 	if err := owner.QueryRow(`SELECT id::text FROM tenant WHERE code='demo'`).Scan(&tenant); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := owner.Exec("CREATE ROLE " + quotedRole + " LOGIN NOSUPERUSER NOBYPASSRLS"); err != nil {
+	// 专用测试实例也可能要求 SCRAM；随机合成密码避免把“能使用运行角色”测试绑定到 trust 认证。
+	rolePassword := "grading-plan-test-only-" + suffix
+	if _, err := owner.Exec("CREATE ROLE " + quotedRole + " LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '" + rolePassword + "'"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec("GRANT edugrade_tenant_runtime TO " + quotedRole); err != nil {
 		t.Fatal(err)
 	}
 	runtimeConfig := ownerConfig.Copy()
-	runtimeConfig.User, runtimeConfig.Password = roleName, ""
+	runtimeConfig.User, runtimeConfig.Password = roleName, rolePassword
 	runtimeConfig.RuntimeParams["edugrade.tenant_id"] = tenant
 	runtime = stdlib.OpenDB(*runtimeConfig)
 	runtime.SetMaxOpenConns(2)

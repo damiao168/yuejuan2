@@ -75,7 +75,7 @@ func TestSeedPolicySamplingAndHiddenTraitObservation(t *testing.T) {
 		t.Fatalf("first slot must remain ordinary: issued=%v err=%v", issued, err)
 	}
 	task, issued, err := service.MaybeIssue(context.Background(), "tenant-a", "exam-a", "question-a", "Q12", "grader-a")
-	if err != nil || !issued || task.Source != "manual" || task.Status != "in_progress" || task.AnonymousCode == "" {
+	if err != nil || !issued || task.Source != "manual_sample" || task.Status != "in_progress" || task.AnonymousCode == "" || strings.HasPrefix(task.AnonymousCode, "ANON-") {
 		t.Fatalf("hidden task=%+v issued=%v err=%v", task, issued, err)
 	}
 	payload, _ := json.Marshal(task)
@@ -143,8 +143,27 @@ func TestSeedRequiresCurrentQualificationAndConfiguredGoldFingerprint(t *testing
 	}
 	service.qualification = fakeQualification{}
 	reader.items = []goldpaper.GoldPaper{activeGold("gold-2", 1, "short_constructed", map[string]any{})}
-	if _, _, err := service.MaybeIssue(context.Background(), "tenant-a", "exam-a", "question-a", "Q1", "grader-a"); !errors.Is(err, ErrGoldSetChanged) {
-		t.Fatalf("gold set error=%v", err)
+	if _, issued, err := service.MaybeIssue(context.Background(), "tenant-a", "exam-a", "question-a", "Q1", "grader-a"); err != nil || issued {
+		t.Fatalf("changed gold set must fall through: issued=%v err=%v", issued, err)
+	}
+	if policy, err := service.GetPolicy(context.Background(), "tenant-a", "exam-a", "question-a"); err != nil || !policy.NeedsConfirmation || policy.ConfirmationReason != "gold_set_changed" || policy.Revision < 1 {
+		t.Fatalf("administrator must see changed gold set and usable revision: %+v %v", policy, err)
+	}
+	if _, err := service.PutPolicy(context.Background(), "tenant-a", "exam-a", "question-a", "manager-a", PutPolicyInput{Rate: .1, MinInterval: 2, MaxInterval: 5, Status: PolicyActive, ExpectedRevision: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if policy, err := service.GetPolicy(context.Background(), "tenant-a", "exam-a", "question-a"); err != nil || policy.NeedsConfirmation || policy.ConfirmationReason != "" {
+		t.Fatalf("reconfirmed policy is still stale: %+v %v", policy, err)
+	}
+	reader.items = nil
+	if _, issued, err := service.MaybeIssue(context.Background(), "tenant-a", "exam-a", "question-a", "Q1", "grader-a"); err != nil || issued {
+		t.Fatalf("missing gold set must fall through: issued=%v err=%v", issued, err)
+	}
+	if policy, err := service.GetPolicy(context.Background(), "tenant-a", "exam-a", "question-a"); err != nil || !policy.NeedsConfirmation || policy.ConfirmationReason != "gold_set_missing" {
+		t.Fatalf("administrator must see missing gold set: %+v %v", policy, err)
+	}
+	if _, err := service.PutPolicy(context.Background(), "tenant-a", "exam-a", "question-a", "manager-a", PutPolicyInput{Rate: .1, MinInterval: 2, MaxInterval: 5, Status: PolicyPaused, ExpectedRevision: 2}); err != nil {
+		t.Fatalf("missing gold blocked pausing policy: %v", err)
 	}
 }
 
@@ -214,7 +233,7 @@ func TestSeedContextUsesNormalWorkbenchShapeWithoutGoldDisclosure(t *testing.T) 
 
 func activeGold(id string, version int, archetype string, criteria map[string]any) goldpaper.GoldPaper {
 	now := time.Now().UTC()
-	return goldpaper.GoldPaper{ID: id, ExamID: "exam-a", QuestionID: "question-a", SubmissionID: "hidden-submission",
+	return goldpaper.GoldPaper{ID: id, QualityPool: goldpaper.PoolBlind, ExamID: "exam-a", QuestionID: "question-a", SubmissionID: "hidden-submission",
 		AnswerImageURL: goldpaper.VersionImageURL(id, version), ActiveVersion: version, Status: goldpaper.StatusActive,
 		ArchetypeCode: archetype, Versions: []goldpaper.Version{{Version: version, ExamQuestionSnapshotID: "snapshot-a",
 			ReferenceScore: 4, MaxScore: 5, TraitScores: criteria, ApprovedAt: &now}}}

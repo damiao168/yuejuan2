@@ -16,6 +16,7 @@ const workspaceClasses: Record<ShellMode, string> = {
 };
 
 export function selectedNavigationPath(route: AppRoute, examWorkspaceSection?: string): string {
+  if (route.path === "/account/sessions") return "/account/profile";
   if (route.key === "examWorkspace") return examWorkspaceNavigationPath(examWorkspaceSection ?? "overview");
   if (route.key === "examCreate") return "/exams";
   return route.path;

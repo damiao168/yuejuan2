@@ -44,7 +44,7 @@ func Serve(w http.ResponseWriter, r *http.Request, resource binaryresource.Resou
 		TenantID: user.TenantID, ActorID: user.ID,
 		Action: resource.AuditAction, TargetType: resource.AuditTargetType,
 		TargetID: resource.AuditTargetID, Reason: resource.AuditReason,
-		IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+		IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 	if resource.ETag == "" {
 		w.Header().Set("X-Content-Type-Options", "nosniff")

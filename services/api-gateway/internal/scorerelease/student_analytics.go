@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-// 少于该人数时不返回统计和排名，避免学生从聚合值推断同学成绩。
+// 旧 Cohort 分析和排名少于该人数时不返回；逐题四项分数比较随已公开题分展示，不共用此门槛。
 const privacyMinCohortSize = 10
 
 func scoreRate(score, maxScore float64) float64 {
@@ -91,7 +91,8 @@ func studentQuestionView(question ReleaseQuestion, all []ReleaseQuestion, policy
 			view.CohortUnavailableReason = ""
 		}
 	}
-	if policy.ShowAnswers {
+	// 答案随已公开的逐题成绩展示；旧版本的独立开关不再隐藏答案，但仍只读取该版本冻结的解释。
+	if policy.ShowQuestionScores {
 		view.CorrectAnswer = question.Explanation.CorrectAnswer
 		view.ActualAnswer = question.Explanation.ActualAnswer
 	}
@@ -120,15 +121,14 @@ func buildQuestionReference(questionID string, all []ReleaseQuestion) *StudentQu
 		return nil
 	}
 	sort.Float64s(scores)
-	meanScore := mean(scores)
 	medianScore := quantile(scores, .5)
+	// 纯发布详情没有冻结班级归属，只能提供考试总体统计，不能把跨校发布均分冒充本校均分。
 	return &StudentQuestionReference{
 		SampleSize:             count,
 		MeanScoreRate:          math.Round(totalRate/float64(count)*1000) / 1000,
 		FullScoreRate:          math.Round(float64(full)/float64(count)*1000) / 1000,
 		ZeroScoreRate:          math.Round(float64(zero)/float64(count)*1000) / 1000,
 		ClassUnavailableReason: "scope_unavailable",
-		SchoolMeanScore:        &meanScore,
 		MedianScore:            &medianScore,
 	}
 }

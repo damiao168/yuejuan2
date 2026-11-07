@@ -8,13 +8,13 @@ import pytest
 from grading_agent.errors import AgentError
 from grading_agent.template_analysis import (
     _align_existing_discovered_barcodes,
-    _align_verified_barcode_boundaries,
     _barcode_repair_hints,
     _normalize,
     _review_region_conflicts,
     _semantic_failure_reason,
 )
 from grading_agent.template_analysis_barcode_discovery import discover_barcode_regions
+from grading_agent.template_analysis_barcodes import _align_verified_barcode_boundaries
 from grading_agent.template_analysis_semantics import LocalContentEvidence
 
 

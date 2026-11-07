@@ -99,6 +99,9 @@ func (s *PostgresStore) insertReviewTaskTx(ctx context.Context, tx *sql.Tx, tena
 	}
 	status := "pending"
 	if input.AssignedTo != "" {
+		if err := validateReviewAssigneeTx(ctx, tx, tenantID, taskContext.ExamID, input.AssignedTo, "review:work"); err != nil {
+			return ReviewTask{}, err
+		}
 		status = "assigned"
 	}
 	return scanTask(tx.QueryRowContext(ctx, `

@@ -33,7 +33,6 @@ export function initialCreateExamDraft(schoolId = "", grade?: Grade): CreateExam
     creationMode: "materials",
     schoolId,
     name: "",
-    examType: "",
     gradeId: grade?.id ?? "",
     templateId: "",
     classIds: [],

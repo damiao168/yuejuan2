@@ -113,7 +113,7 @@ func (s *MemoryStore) AdvanceAndMaybeCreate(_ context.Context, tenantID string, 
 	id := uuid.NewString()
 	task := Task{ID: id, ExamID: decision.Policy.ExamID, QuestionID: decision.Policy.QuestionID,
 		QuestionNo: decision.QuestionNo, AnonymousCode: anonymousCode(id),
-		AnswerImageURL: "/api/v1/review-tasks/" + id + "/segment-image", Source: "manual",
+		AnswerImageURL: "/api/v1/review-tasks/" + id + "/segment-image", Source: "manual_sample",
 		Status: "in_progress", Priority: 0, AssignedTo: decision.GraderID, MaxScore: decision.Gold.MaxScore,
 		Revision: 1, CreatedAt: now, UpdatedAt: now, GoldPaperID: decision.Gold.GoldPaperID,
 		GoldVersion: decision.Gold.GoldVersion, SnapshotID: decision.Gold.SnapshotID,
@@ -203,18 +203,14 @@ func cursorKey(tenantID, examID, questionID, graderID string) string {
 }
 func taskKey(tenantID, id string) string { return tenantID + "\x00" + id }
 func anonymousCode(id string) string {
-	compact := ""
-	for _, value := range id {
-		if value != '-' {
-			compact += string(value)
-		}
-	}
-	if len(compact) > 10 {
-		compact = compact[:10]
-	}
-	return "ANON-" + compact
+	// 普通答卷缺少考号时使用题块 UUID；保持同一关系，不能把任务 ID 本身作为盲投专属特征。
+	return opaqueID(id, "answer-artifact")
 }
 func cloneTask(value Task) Task {
+	if value.ID != "" {
+		value.AnonymousCode = anonymousCode(value.ID)
+		value.Source = "manual_sample"
+	}
 	value.ExpectedCriteria = cloneObject(value.ExpectedCriteria)
 	return value
 }

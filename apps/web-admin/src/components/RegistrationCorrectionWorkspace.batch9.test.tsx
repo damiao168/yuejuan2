@@ -132,6 +132,14 @@ describe("人工版面对齐重构边界", () => {
     }
   }
 
+  it("答卷导入入口的精确坐标直接显示，其他入口保留原折叠", async () => {
+    await render({ showCoordinates: true });
+    expect(host.querySelector(".correction-exact-coordinates")?.tagName).toBe("SECTION");
+    expect(host.querySelector(".correction-exact-coordinates summary")).toBeNull();
+    await render({ showCoordinates: false });
+    expect(host.querySelector(".correction-exact-coordinates")?.tagName).toBe("DETAILS");
+  });
+
   it("初始上下文失败显示持久错误，同页重读后恢复当前页材料", async () => {
     mocks.context.mockRejectedValueOnce(new Error("校正上下文暂不可读"));
     await render();

@@ -18,6 +18,7 @@ export async function loginAsSchoolAdmin(
   await page.getByLabel("学校代码").fill(schoolCode);
   await page.getByLabel("用户名").fill(identifier);
   await page.getByRole("textbox", { name: /密码/ }).fill(password);
-  await page.getByRole("button", { name: "登录" }).click();
+  // 登录页另有“公共电脑登录”按钮，名称包含“登录”；必须精确匹配，否则严格模式下同时命中两个按钮。
+  await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page.getByRole("heading", { name: "考试工作台" })).toBeVisible({ timeout: 30_000 });
 }

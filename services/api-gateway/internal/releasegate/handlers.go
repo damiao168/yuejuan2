@@ -44,7 +44,7 @@ func (h *Handler) CreatePolicy(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	h.auditEvent(r, user, "release_gate.policy_created", policy.ID, map[string]any{"exam_id": policy.ExamID, "version": policy.Version})
+	h.auditEvent(r, user, "release_gate.policy_created", policy.ID, map[string]any{"exam_id": policy.ExamID, "version": policy.Version}, "创建发布检查策略")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"release_gate_policy": policy})
 }
 func (h *Handler) Preview(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +63,7 @@ func (h *Handler) Preview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	h.auditEvent(r, user, "release_gate.previewed", evidence.ID, map[string]any{"exam_id": evidence.ExamID, "release_id": evidence.ReleaseID, "passed": evidence.Evaluation.Passed})
+	h.auditEvent(r, user, "release_gate.previewed", evidence.ID, map[string]any{"exam_id": evidence.ExamID, "release_id": evidence.ReleaseID, "passed": evidence.Evaluation.Passed}, "预检发布条件")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"release_gate_evidence": evidence})
 }
 func (h *Handler) GetEvidence(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +92,7 @@ func (h *Handler) RequestWaiver(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	h.auditEvent(r, user, "release_gate.waiver_requested", waiver.ID, map[string]any{"exam_id": waiver.ExamID, "issue_code": waiver.IssueCode, "evidence_id": waiver.EvidenceID})
+	h.auditEvent(r, user, "release_gate.waiver_requested", waiver.ID, map[string]any{"exam_id": waiver.ExamID, "issue_code": waiver.IssueCode, "evidence_id": waiver.EvidenceID}, "申请豁免发布提醒")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"release_gate_waiver": waiver})
 }
 func (h *Handler) DecideWaiver(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +109,7 @@ func (h *Handler) DecideWaiver(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	h.auditEvent(r, user, "release_gate.waiver_decided", waiver.ID, map[string]any{"exam_id": waiver.ExamID, "issue_code": waiver.IssueCode, "status": waiver.Status})
+	h.auditEvent(r, user, "release_gate.waiver_decided", waiver.ID, map[string]any{"exam_id": waiver.ExamID, "issue_code": waiver.IssueCode, "status": waiver.Status}, "审批发布提醒豁免")
 	httpx.JSON(w, http.StatusOK, map[string]any{"release_gate_waiver": waiver})
 }
 
@@ -147,9 +147,11 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_release_gate_input", "release gate input is invalid")
 	}
 }
-func (h *Handler) auditEvent(r *http.Request, user auth.User, action, targetID string, detail map[string]any) {
+
+// auditEvent 的 reason 是在统一审计页“说明”列显示的中文说明；旧记录把动作代码写在说明里，由前端兼容显示。
+func (h *Handler) auditEvent(r *http.Request, user auth.User, action, targetID string, detail map[string]any, reason string) {
 	if h.audit == nil {
 		return
 	}
-	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "release_gate", TargetID: targetID, AfterValue: detail, Reason: action, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
+	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "release_gate", TargetID: targetID, AfterValue: detail, Reason: reason, IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
 }

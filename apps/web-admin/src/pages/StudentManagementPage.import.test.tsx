@@ -16,7 +16,7 @@ vi.mock("../api/org", () => ({
   listGrades: async () => ({ grades: [] }), listClasses: async () => ({ classes: [
     { id: "class-a", school_id: "school-a", code: "C1", name: "一班", status: "active" },
     { id: "class-b", school_id: "school-a", code: "C2", name: "二班", status: "active" }
-  ] }), createStudent: vi.fn(), deleteStudent: vi.fn(), updateStudentStatus: vi.fn(), updateStudent: vi.fn(), transferStudent: vi.fn()
+  ] }), createStudent: vi.fn(), openStudentAccount: vi.fn(), deleteStudent: vi.fn(), updateStudentStatus: vi.fn(), updateStudent: vi.fn(), transferStudent: vi.fn()
 }));
 vi.mock("../features/members/students/studentImportWorkbook", () => ({ readStudentImportWorkbook: mocks.workbook }));
 vi.mock("../auth/stepUpContext", () => ({ useStepUp: () => ({ runWithStepUp: vi.fn() }), isStepUpCancelledError: () => false }));
@@ -28,6 +28,7 @@ vi.mock("antd", () => {
   const Input = ({ value, onChange }: { value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement> }) => <input value={value ?? ""} onChange={onChange} />;
   return {
     App: { useApp: () => app }, Space: Box, Dropdown: Box,
+    Alert: ({ message, description }: { message: string; description?: string }) => <div role="status"><strong>{message}</strong>{description ? <p>{description}</p> : null}</div>,
     Form: Object.assign(Box, { Item: Box, useForm: () => [{ resetFields: vi.fn(), setFieldsValue: vi.fn(), submit: vi.fn() }] }),
     Input: Object.assign(Input, { Password: Input }),
     Button: ({ children, disabled, loading, onClick }: { children?: ReactNode; disabled?: boolean; loading?: boolean; onClick?: () => void }) => <button type="button" disabled={disabled || loading} onClick={onClick}>{children}</button>,
@@ -66,7 +67,7 @@ async function chooseFile(source: File) {
 beforeEach(() => {
   vi.resetAllMocks(); mocks.modals.clear(); mocks.beforeUpload = undefined; mocks.onRemove = undefined; mocks.uploadDisabled = false;
   mocks.listStudents.mockResolvedValue({ students: [{ id: "existing", name: "已在籍学生", student_no: "existing", class_id: "class-a", status: "active" }], has_more: false });
-  mocks.importCSV.mockResolvedValue({ result: { created: 1, errors: [] } });
+  mocks.importCSV.mockResolvedValue({ result: { created: 1, skipped: 0, committed: true, errors: [] } });
 });
 afterEach(cleanup);
 
@@ -79,7 +80,7 @@ describe("学生名单导入页面的文件与提交边界", () => {
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "开始导入" }).disabled).toBe(true);
     await chooseFile(file("new.csv", csv("002", "新名单")));
     await act(async () => { old.resolve(csv("001", "旧名单")); await oldRead; });
-    expect(screen.getByText(/预检：1 行可提交，0 行有问题/)).toBeTruthy();
+    expect(screen.getByText(/本地预检：1 行格式通过，0 处问题/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "开始导入" }));
     await waitFor(() => expect(mocks.importCSV).toHaveBeenCalledOnce());
     expect(mocks.importCSV.mock.calls[0][0]).toContain("002,新名单,school-a,class-a");
@@ -113,7 +114,7 @@ describe("学生名单导入页面的文件与提交边界", () => {
     expect(sheets.value).toBe("0");
     fireEvent.change(sheets, { target: { value: "1" } });
     expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "学号列" }).value).toBe("学号");
-    expect(screen.getByText(/预检：1 行可提交，0 行有问题/)).toBeTruthy();
+    expect(screen.getByText(/本地预检：1 行格式通过，0 处问题/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "开始导入" }));
     await waitFor(() => expect(mocks.importCSV).toHaveBeenCalledOnce());
     expect(mocks.importCSV.mock.calls[0][0]).toContain("0002,乙同学,school-a,class-b");
@@ -121,7 +122,7 @@ describe("学生名单导入页面的文件与提交边界", () => {
   });
 
   it("POST期间同步锁拒绝重复提交和旧取消/换文件回调，控件冻结直到本次回执", async () => {
-    const pending = deferred<{ result: { created: number; errors: { row: number; message: string }[] } }>();
+    const pending = deferred<{ result: { created: number; skipped: number; committed: boolean; errors: { row: number; message: string }[] } }>();
     mocks.importCSV.mockReturnValue(pending.promise);
     mocks.workbook.mockResolvedValue([{ name: "一班", csv: csv("001", "原表甲") }, { name: "二班", csv: csv("002", "其他表乙", "C2") }]);
     await openImport(); await chooseFile(file("students.xlsx", ""));
@@ -141,13 +142,58 @@ describe("学生名单导入页面的文件与提交边界", () => {
     fireEvent.change(within(modal).getByRole("combobox", { name: "学号列" }), { target: { value: "姓名" } });
     expect(within(modal).getByRole<HTMLSelectElement>("combobox", { name: "导入工作表" }).value).toBe("0");
     expect(within(modal).getByRole<HTMLSelectElement>("combobox", { name: "学号列" }).value).toBe("学号");
-    await act(async () => pending.resolve({ result: { created: 1, errors: [{ row: 2, message: "本次原表待核对" }] } }));
-    expect(screen.getByText("本次已创建 1 名；未导入 1 行")).toBeTruthy();
+    await act(async () => pending.resolve({ result: { created: 0, skipped: 0, committed: false, errors: [{ row: 2, message: "本次原表待核对" }] } }));
+    expect(screen.getByText("本次整批未导入，新增 0 名学生")).toBeTruthy();
     expect(screen.getByText("第 2 行：本次原表待核对")).toBeTruthy();
     expect(mocks.importCSV).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole("button", { name: "完成" }));
+    fireEvent.click(screen.getByRole("button", { name: "取消" }));
     fireEvent.click(screen.getByRole("button", { name: "导入学生" }));
-    expect(screen.queryByText("本次已创建 1 名；未导入 1 行")).toBeNull();
+    expect(screen.queryByText("本次整批未导入，新增 0 名学生")).toBeNull();
     expect(screen.queryByRole("combobox", { name: "导入工作表" })).toBeNull();
+  });
+
+  it("本地存在坏行时不把其他正确行部分提交，并允许保留文件返回调整", async () => {
+    await openImport();
+    await chooseFile(file("mixed.csv", "学号,姓名,班级\n001,可用学生,C1\n002,,C1\n"));
+    fireEvent.click(screen.getByRole("button", { name: "开始导入" }));
+    await screen.findByText("本次整批未导入，新增 0 名学生");
+    expect(screen.getByText("第 3 行：学号和姓名不能为空")).toBeTruthy();
+    expect(mocks.importCSV).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "返回调整" }));
+    expect(screen.getByRole("combobox", { name: "学号列" })).toBeTruthy();
+    expect(screen.getByText(/1 行格式通过，1 处问题/)).toBeTruthy();
+  });
+
+  it("服务端冲突映射回空白行之后的原行，不把整批失败解释成部分成功", async () => {
+    mocks.importCSV.mockResolvedValue({ result: { created: 0, skipped: 0, committed: false, errors: [{ row: 3, message: "学号对应的姓名或班级不同" }] } });
+    await openImport();
+    await chooseFile(file("conflict.csv", "学号,姓名,班级\n001,甲,C1\n,,\n002,乙,C2\n"));
+    fireEvent.click(screen.getByRole("button", { name: "开始导入" }));
+    await screen.findByText("第 4 行：学号对应的姓名或班级不同");
+    expect(screen.getByText("本次整批未导入，新增 0 名学生")).toBeTruthy();
+    expect(mocks.success).not.toHaveBeenCalled();
+    expect(mocks.listStudents).toHaveBeenCalledTimes(1);
+  });
+
+  it("重复上传相同名单显示跳过数量，不提示需要再次创建或重试失败行", async () => {
+    mocks.importCSV.mockResolvedValue({ result: { created: 0, skipped: 2, committed: true, errors: [] } });
+    await openImport();
+    await chooseFile(file("same.csv", "学号,姓名,班级\n001,甲,C1\n002,乙,C2\n"));
+    fireEvent.click(screen.getByRole("button", { name: "开始导入" }));
+    await screen.findByText("本次新增 0 名学生，跳过 2 条相同记录");
+    expect(screen.queryByText(/部分成功|重试失败行/)).toBeNull();
+    expect(screen.getByRole("button", { name: "完成" })).toBeTruthy();
+  });
+
+  it("请求响应丢失后保留原内容和重试键，避免结果不明时发起不同操作", async () => {
+    mocks.importCSV.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await openImport(); await chooseFile(file("retry.csv", csv("001", "甲")));
+    fireEvent.click(screen.getByRole("button", { name: "开始导入" }));
+    await waitFor(() => expect(mocks.error).toHaveBeenCalledOnce());
+    fireEvent.click(screen.getByRole("button", { name: "开始导入" }));
+    await screen.findByText("本次新增 1 名学生，跳过 0 条相同记录");
+    expect(mocks.importCSV).toHaveBeenCalledTimes(2);
+    expect(mocks.importCSV.mock.calls[0]).toEqual(mocks.importCSV.mock.calls[1]);
+    expect(mocks.importCSV.mock.calls[0][1]).toMatch(/^[0-9a-f-]{36}$/);
   });
 });

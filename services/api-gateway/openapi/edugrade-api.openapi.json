@@ -20,6 +20,85 @@
     }
   ],
   "paths": {
+    "/api/v1/exams/{examId}/roster": {
+      "get": {
+        "operationId": "getExamRosterReport",
+        "description": "Requires authorized exam roster access and the authenticated exam scope. Attendance is derived from active submissions; no manual attendance write endpoint is provided.",
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ScoreRosterResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreRosterResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Exam not found or outside the authorized scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard/summary": {
+      "get": {
+        "operationId": "getDashboardSummary",
+        "description": "Requires dashboard:read. Uses the authenticated data scope. Review teacher progress and online activity are returned only for a school administrator managing that school; ordinary teachers receive no staff directory.",
+        "responses": {
+          "200": {
+            "description": "DashboardSummary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "description": "Dashboard unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/exams/{examId}/grading-ai-plan": {
       "get": {
         "tags": [
@@ -19417,7 +19496,7 @@
       },
       "post": {
         "operationId": "createManagedOrganizationUser",
-        "description": "Requires org:manage. role_codes creates several assignable human duties atomically; role_code remains compatible. Each role retains its canonical scope. Class roles require authorized classes within the same school. With no password the user receives one-time activation delivery.",
+        "description": "Requires org:manage. role_codes creates several assignable human duties atomically; role_code remains compatible. Each role retains its canonical scope. Class roles require authorized classes within the same school. With no password the user receives one-time activation delivery. New review-teacher accounts require username, teaching_subjects, password and matching password_confirm; the server enforces initial-password change before business access. Existing administrator invitations remain supported.",
         "requestBody": {
           "required": true,
           "content": {
@@ -19718,6 +19797,16 @@
             "description": "学生页面已加载的发布版本 ID。仅返回同一实际发布版本的题目或证据；当前发布变化时返回 409 student_release_changed，客户端应保留原版本草稿并重新核对成绩。",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "paper_id",
+            "in": "query",
+            "required": false,
+            "description": "仅variant=high_score时使用，指定本版优秀答卷集合中的匿名paper_id；省略时兼容查看首份优秀答卷。不能请求其他发布或未选入范围的答卷。",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -21015,7 +21104,7 @@
     "/api/v1/grades/{id}": {
       "patch": {
         "operationId": "updateOrganizationGrade",
-        "description": "Requires org:manage and the resource organization scope. Only supplied editable fields are changed. Only the name is editable; school, academic year and cohort relations are preserved.",
+        "description": "Requires org:manage and the managed school boundary. Supplied name and current level_no are editable; cohort entry year, school, stored academic year and historical relations are preserved. If level_no is supplied, only the latest annual representative of this cohort may be changed, and the level must match this school authoritative current school year, fixed entry year and education stage using the same three-year rule as creation. January does not itself advance a grade; the Shanghai September school-year fallback applies only when no school year is configured. Correcting an existing wrong level to its own expected level is allowed even if another legacy record also has a wrong raw level, so incorrectly swapped cohort levels can be repaired without a mutual lockout. This never silently updates the other record. Name-only patches retain existing behavior without changing grade progression. Standard grade names follow a valid level change when no explicit name is supplied. Same-school grade writes are serialized to prevent concurrent validation bypass.",
         "parameters": [
           {
             "name": "id",
@@ -21048,11 +21137,40 @@
             }
           },
           "400": {
-            "description": "Invalid or unsupported editable fields",
+            "description": "Invalid or unsupported editable fields; grade_level_year_mismatch if the proposed level does not match the current school year and entry year, grade_entry_year_future or grade_cohort_graduated for a non-current cohort.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "levelYearMismatch": {
+                    "summary": "grade_level_year_mismatch",
+                    "value": {
+                      "error": {
+                        "code": "grade_level_year_mismatch",
+                        "message": "当前年级与入学届别、学校当前学年不一致，请按入学年份重新核对"
+                      }
+                    }
+                  },
+                  "futureCohort": {
+                    "summary": "grade_entry_year_future",
+                    "value": {
+                      "error": {
+                        "code": "grade_entry_year_future",
+                        "message": "该入学届别尚未开始，不能创建为当前在读年级"
+                      }
+                    }
+                  },
+                  "graduatedCohort": {
+                    "summary": "grade_cohort_graduated",
+                    "value": {
+                      "error": {
+                        "code": "grade_cohort_graduated",
+                        "message": "该届别已超出三年在读范围，不能再创建或调整为当前在读年级"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -21074,7 +21192,82 @@
             }
           },
           "409": {
-            "description": "Duplicate organization identifier",
+            "description": "grade_historical_record_immutable when a historical annual record is targeted for level adjustment, or grade_level_conflict for an incompatible occupied current level. Existing identifier conflicts remain possible.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "historicalGrade": {
+                    "summary": "grade_historical_record_immutable",
+                    "value": {
+                      "error": {
+                        "code": "grade_historical_record_immutable",
+                        "message": "历史学年年级不能调整当前级数，请编辑该届别的最新年级记录"
+                      }
+                    }
+                  },
+                  "levelOccupied": {
+                    "summary": "grade_level_conflict",
+                    "value": {
+                      "error": {
+                        "code": "grade_level_conflict",
+                        "message": "该学校同学段已有其他届别使用这个当前年级，请先校正现有年级配置"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteOrganizationGrade",
+        "description": "Soft deletes all non-deleted annual grade records in the same cohort only when none has non-deleted classes. Requires org:manage and managed school scope. Historical cohort, academic year, class, enrollment and examination evidence are retained. Concurrent child creation is serialized by shared parent locking.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Empty organization removed; no response body"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Organization not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "grade_has_classes: cohort still contains classes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Organization could not be deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -21149,6 +21342,61 @@
           },
           "409": {
             "description": "Duplicate organization identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteOrganizationClass",
+        "description": "Soft deletes an empty class. Any non-deleted student, including inactive students, blocks deletion with class_has_students (409). Historical enrollment and examination evidence is retained. Requires org:manage and managed school scope; student creation and transfer lock the same parent.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Empty organization removed; no response body"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Organization not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "class_has_students: class still contains students",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Organization could not be deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -21299,7 +21547,7 @@
     "/api/v1/users/{id}/profile": {
       "patch": {
         "operationId": "updateManagedUserProfile",
-        "description": "Requires org:manage and recent authentication. Updates the name, employee number and optionally the phone of a manageable user in the existing school. Expected visible profile fields must match; changes between two phone numbers with an identical mask cannot be distinguished by this check. Login identity changes revoke sessions, trusted devices, recovery links and activation links in the same transaction. Name-only changes retain credentials. Returns only a masked phone. Own-account and higher-role edits are rejected.",
+        "description": "Requires an active authenticated session and org:manage without a repeated password challenge. Updates the name, employee number and optionally the phone of a manageable user in the existing school. Expected visible profile fields must match; changes between two phone numbers with an identical mask cannot be distinguished by this check. Login identity changes revoke sessions, trusted devices, recovery links and activation links in the same transaction. Name-only changes retain credentials. Returns only a masked phone. Own-account and higher-role edits are rejected.",
         "parameters": [
           {
             "name": "id",
@@ -21369,16 +21617,6 @@
           },
           "413": {
             "description": "Request body too large",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "428": {
-            "description": "Recent authentication required",
             "content": {
               "application/json": {
                 "schema": {
@@ -25534,7 +25772,7 @@
         "tags": [
           "Audit"
         ],
-        "description": "Requires audit export permission, tenant-wide scope and recent authentication. Uses the same scoped keyword and metadata filters as list; cursor is ignored. Redacts sensitive fields and records an export audit event. Maximum 200 rows.",
+        "description": "Requires audit export permission, tenant-wide scope and recent authentication. Exports all matching rows using a stable cursor and fixed end time; UI limit and cursor are ignored. Redacts sensitive fields and records an export audit event. More than 10000 rows returns 413 without a partial CSV.",
         "parameters": [
           {
             "name": "action",
@@ -25606,14 +25844,14 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "description": "Positive requested count, clamped to 200 by the store.",
+              "description": "Compatibility parameter; positive values are accepted and ignored by the full export.",
               "default": 200
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "CSV with redacted records and watermark. Export is capped at 200 rows.",
+            "description": "CSV with all matching redacted records and watermark, up to 10000 rows.",
             "headers": {
               "X-EduGrade-Watermark": {
                 "schema": {
@@ -25681,7 +25919,7 @@
             }
           },
           "413": {
-            "description": "Request too large",
+            "description": "More than 10000 matching audit records; narrow the time range and retry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -25812,6 +26050,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Authorized source page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectiveGradingSourcePage"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid request",
             "content": {
@@ -25878,16 +26126,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Authorized source page",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectiveGradingSourcePage"
                 }
               }
             }
@@ -25914,6 +26152,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid request",
             "content": {
@@ -25980,16 +26228,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current resource source, tombstone revision and optional private draft",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
                 }
               }
             }
@@ -26014,6 +26252,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid request",
             "content": {
@@ -26080,16 +26328,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current resource source, tombstone revision and optional private draft",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
                 }
               }
             }
@@ -26124,6 +26362,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid request",
             "content": {
@@ -26190,16 +26438,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current resource source, tombstone revision and optional private draft",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
                 }
               }
             }
@@ -26236,6 +26474,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid request",
             "content": {
@@ -26302,16 +26550,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current resource source, tombstone revision and optional private draft",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
                 }
               }
             }
@@ -26336,6 +26574,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid request",
             "content": {
@@ -26402,16 +26650,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current resource source, tombstone revision and optional private draft",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
                 }
               }
             }
@@ -26446,6 +26684,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid request",
             "content": {
@@ -26512,16 +26760,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current resource source, tombstone revision and optional private draft",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
                 }
               }
             }
@@ -26558,6 +26796,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid request",
             "content": {
@@ -26624,16 +26872,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current resource source, tombstone revision and optional private draft",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
                 }
               }
             }
@@ -26658,6 +26896,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid request",
             "content": {
@@ -26724,16 +26972,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current resource source, tombstone revision and optional private draft",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
                 }
               }
             }
@@ -26768,6 +27006,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current resource source, tombstone revision and optional private draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid request",
             "content": {
@@ -26834,16 +27082,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current resource source, tombstone revision and optional private draft",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PrivateOpinionDraftResponse"
                 }
               }
             }
@@ -26889,6 +27127,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current authorized result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationSchoolTemplateDirectory"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid input",
             "content": {
@@ -26955,16 +27203,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current authorized result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CalibrationSchoolTemplateDirectory"
                 }
               }
             }
@@ -26998,6 +27236,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current authorized result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationSchoolTemplateResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid input",
             "content": {
@@ -27064,16 +27312,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Current authorized result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CalibrationSchoolTemplateResponse"
                 }
               }
             }
@@ -27128,6 +27366,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Current authorized result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationSchoolTemplateResponse"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid input",
             "content": {
@@ -27197,16 +27445,6 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Current authorized result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CalibrationSchoolTemplateResponse"
-                }
-              }
-            }
           }
         },
         "requestBody": {
@@ -27215,6 +27453,962 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/WithdrawCalibrationSchoolTemplateRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/grades": {
+      "get": {
+        "operationId": "listOrganizationGrades",
+        "description": "Requires org:manage and authorized school scope. Historical annual grade identifiers remain available for their cohort and enrollment relationships.",
+        "parameters": [
+          {
+            "name": "school_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OrganizationGradeListResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationGradeListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid organization filter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createOrganizationGrade",
+        "description": "Requires org:manage and a managed school. Creates a current cohort grade, not another annual record for an existing live cohort. The same tenant, school, education stage and entry year may have only one non-deleted cohort group. The authoritative school year is the greatest non-deleted academic_year.start_year marked is_current for this school, otherwise the school year containing the current date in Asia/Shanghai (September through August). Expected level_no is 7 + school_year_start - entry_year for junior or 10 + school_year_start - entry_year for senior. Future cohorts and cohorts outside the three-year range are rejected. Omitted or zero entry_year/level_no retain supported legacy normalization, but normalized values must satisfy the same rules. Explicit academic_year must equal the authoritative current school year. Canonical current grade records of other cohorts cannot occupy the requested level; old annual records of the same cohort do not create false conflicts. A completely soft-deleted empty cohort may be created again without rewriting its historical records. Checks and insertion are serialized per school, so concurrent duplicate requests cannot both succeed. Retained records of already graduated or not-yet-started cohorts do not occupy a current grade level and do not prevent creation of an otherwise valid current cohort.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrganizationGradeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OrganizationGradeResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationGradeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or parent; grade_level_year_mismatch, grade_entry_year_future, grade_cohort_graduated or grade_academic_year_mismatch. Existing grade_level_invalid and grade_entry_year_invalid validation still applies.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "levelYearMismatch": {
+                    "summary": "grade_level_year_mismatch",
+                    "value": {
+                      "error": {
+                        "code": "grade_level_year_mismatch",
+                        "message": "当前年级与入学届别、学校当前学年不一致，请按入学年份重新核对"
+                      }
+                    }
+                  },
+                  "futureCohort": {
+                    "summary": "grade_entry_year_future",
+                    "value": {
+                      "error": {
+                        "code": "grade_entry_year_future",
+                        "message": "该入学届别尚未开始，不能创建为当前在读年级"
+                      }
+                    }
+                  },
+                  "graduatedCohort": {
+                    "summary": "grade_cohort_graduated",
+                    "value": {
+                      "error": {
+                        "code": "grade_cohort_graduated",
+                        "message": "该届别已超出三年在读范围，不能再创建或调整为当前在读年级"
+                      }
+                    }
+                  },
+                  "otherAcademicYear": {
+                    "summary": "grade_academic_year_mismatch",
+                    "value": {
+                      "error": {
+                        "code": "grade_academic_year_mismatch",
+                        "message": "新建年级必须使用学校当前学年，不能通过历史或未来学年绕过届别检查"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "grade_cohort_exists for any non-deleted grade of the same school/stage/entry year, including a different requested current level; grade_level_conflict if a different cohort current representative already uses the level. The caller must edit or correct existing records rather than create another duplicate.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "cohortExists": {
+                    "summary": "grade_cohort_exists",
+                    "value": {
+                      "error": {
+                        "code": "grade_cohort_exists",
+                        "message": "该学校的同学段入学届别已存在，请直接编辑现有年级，不要重复新增"
+                      }
+                    }
+                  },
+                  "levelOccupied": {
+                    "summary": "grade_level_conflict",
+                    "value": {
+                      "error": {
+                        "code": "grade_level_conflict",
+                        "message": "该学校同学段已有其他届别使用这个当前年级，请先校正现有年级配置"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classes": {
+      "get": {
+        "operationId": "listOrganizationClasses",
+        "description": "Requires org:manage and authorized school scope. Historical annual grade identifiers remain available for their cohort and enrollment relationships.",
+        "parameters": [
+          {
+            "name": "grade_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OrganizationClassListResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationClassListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid organization filter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createOrganizationClass",
+        "description": "Requires org:manage and a managed school. The selected grade must be active in the same school. Parent locking serializes creation with empty-grade deletion.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrganizationClassRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OrganizationClassResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationClassResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or unavailable parent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "Organization identifier already used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/students/{id}/enrollment": {
+      "put": {
+        "operationId": "transferOrganizationStudent",
+        "description": "Requires org:manage and both the source student and target class managed school boundaries. Atomically ends current open enrollments, retains historical rows and creates the target enrollment; current student projection follows the active relationship even across academic years. class_id is checked under the same parent lock used by empty-class deletion.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOrganizationStudentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current enrollment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOrganizationStudentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid target or student_transfer_date_invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Student or target class unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/exams/{examId}/questions/{questionId}/seed-policy": {
+      "get": {
+        "operationId": "getSeedSamplingPolicy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ExamId"
+          },
+          {
+            "$ref": "#/components/parameters/QuestionId"
+          }
+        ],
+        "description": "Quality managers may read policies only for exams they manage. A stale active policy retains its revision and editable settings and reports computed confirmation requirements.",
+        "responses": {
+          "200": {
+            "description": "Current blind sampling policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeedSamplingPolicyResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Exam management scope required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Policy not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putSeedSamplingPolicy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ExamId"
+          },
+          {
+            "$ref": "#/components/parameters/QuestionId"
+          }
+        ],
+        "description": "Saves policy using expected_revision and validates the current approved blind pool fingerprint. Read-only confirmation fields are not accepted.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutSeedSamplingPolicyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Policy saved and current sample set confirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeedSamplingPolicyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid sampling settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Exam management scope required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Policy revision or sample set conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Approved blind samples unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/profile": {
+      "get": {
+        "operationId": "getAccountProfile",
+        "description": "Reads only the authenticated account personal profile. Tenant and user IDs come from the session, never request parameters. The response exposes a masked phone number and teaching subjects without any profile or authorization write operation.",
+        "responses": {
+          "200": {
+            "description": "Authenticated account profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "description": "Personal profile temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exams/{examId}/grades/export/report": {
+      "get": {
+        "operationId": "exportExamGradeReport",
+        "description": "Exports an INTERNAL NON-OFFICIAL verification CSV, including pending and other unpublished final grades. This is not a school official transcript. Uses frozen candidate identities and whole-school scope for the complete exam session. Use exportPublishedExamGrades for immutable published grades.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "examId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Whole-exam student score report",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-EduGrade-Watermark": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Whole-exam school management scope required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Exam not found in the authenticated scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Report temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exams/{examId}/score-releases/export": {
+      "get": {
+        "operationId": "exportPublishedExamGrades",
+        "description": "Exports the complete exam session using only the current published immutable release of each subject. Requires score management and full school management scope. Pins all subject release IDs in one repeatable-read snapshot, uses frozen candidate identities, and applies release visibility policies to statistics. Pending or mutable grades are never a source. Every successful download records release IDs, template version and content SHA256 in the existing audit log.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "examId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "default": "csv"
+            },
+            "description": "xlsx produces one teacher score sheet per frozen class: exam and class shown once at the top, one score column per subject, class means in the last row. csv retains the existing detailed published export."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published scores as the existing detailed CSV or a compact teacher Excel workbook. Workbook student numbers are text, class means exclude unavailable scores, and incomparable totals are not averaged. Version IDs are stored in workbook properties and the audit log.",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-EduGrade-Watermark": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-EduGrade-Content-SHA256": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid exam identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Full school management scope required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Exam not found in the authenticated scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A subject lacks a published release or its frozen candidate roster is incomplete",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Teacher workbook exceeds 10000 students or 200 frozen classes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Export or mandatory audit recording temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/question-appeals/{id}/restart-review": {
+      "post": {
+        "operationId": "restartQuestionAppealReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestartQuestionAppealReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PublishedQuestionAppealResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedQuestionAppealResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "Version conflict or review cannot be restarted from the current source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires appeal:manage and the managed school boundary. Restarts only an outdated, unpublished regrade after an explicit reason and revision check. Preserves original student appeal evidence; records the current published review source, cancels old regrade work, discards its unpublished draft and clears old private drafts atomically. Published corrections are never cancelled."
+      }
+    },
+    "/api/v1/students": {
+      "get": {
+        "operationId": "listOrganizationStudents",
+        "description": "Organization-scoped student roster with login account status; no password material is returned.",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Student roster",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationStudentPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or password mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createOrganizationStudent",
+        "description": "Requires org:manage and managed school/class. Atomically creates an active student, enrollment, login account and self-only student role. Initial password must be changed at first login. CSV import remains roster-only.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrganizationStudentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Student and account created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationStudentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or password mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "Student number or account already exists, or student is inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Atomic account provisioning unavailable; nothing was created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/students/{id}/account": {
+      "post": {
+        "operationId": "openOrganizationStudentAccount",
+        "description": "Requires org:manage and the student managed school boundary. Opens an account for an active existing student without changing historical grades. Existing accounts cannot be overwritten.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenOrganizationStudentAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Student account opened",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationStudentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or password mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Student not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Student number or account already exists, or student is inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Atomic account provisioning unavailable; nothing was created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
@@ -27450,6 +28644,698 @@
       }
     },
     "schemas": {
+      "ScoreRosterEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "status",
+          "resolution_code",
+          "expected_page_count",
+          "actual_page_count"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "student_id": {
+            "type": "string"
+          },
+          "student_no": {
+            "type": "string"
+          },
+          "student_name": {
+            "type": "string"
+          },
+          "class_id": {
+            "type": "string"
+          },
+          "class_name": {
+            "type": "string"
+          },
+          "submission_id": {
+            "type": "string"
+          },
+          "candidate_no": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "graded",
+              "submitted",
+              "absent",
+              "unmatched",
+              "missing_pages"
+            ],
+            "description": "无有效关联答卷自动缺考；有答卷但未汇总为submitted。身份冲突、未识别和页数异常继续显示待处理，不能作为缺考忽略。"
+          },
+          "resolution_code": {
+            "type": "string"
+          },
+          "expected_page_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "actual_page_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_score": {
+            "type": "number"
+          },
+          "max_score": {
+            "type": "number"
+          },
+          "attendance_reason": {
+            "type": "string",
+            "description": "历史兼容字段，当前自动缺考不再使用人工登记原因。"
+          },
+          "marked_by": {
+            "type": "string"
+          },
+          "marked_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ScoreRosterSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expected",
+          "received",
+          "graded",
+          "absent",
+          "unresolved",
+          "missing_pages",
+          "unidentified"
+        ],
+        "properties": {
+          "expected": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "received": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "graded": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "absent": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unresolved": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "missing_pages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unidentified": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ScoreRosterReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entries",
+          "summary"
+        ],
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScoreRosterEntry"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ScoreRosterSummary"
+          }
+        },
+        "description": "使用冻结考试名册和未删除答卷实时派生；没有有效学生答卷关联为自动缺考，匹配成功后自动重算，历史人工标记不覆盖当前事实。"
+      },
+      "ScoreRosterResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "roster"
+        ],
+        "properties": {
+          "roster": {
+            "$ref": "#/components/schemas/ScoreRosterReport"
+          }
+        }
+      },
+      "DashboardScope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ],
+        "properties": {
+          "tenant_id": {
+            "type": "string"
+          },
+          "school_id": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardStatistics": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "active_exam_count",
+          "collecting_exam_count",
+          "pending_review_question_count",
+          "pending_review_submission_count",
+          "pending_arbitration_count",
+          "pending_arbitration_submission_count",
+          "failed_submission_count",
+          "unmatched_submission_count",
+          "quality_issue_submission_count",
+          "finalized_exam_count"
+        ],
+        "properties": {
+          "active_exam_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "collecting_exam_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending_review_question_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending_review_submission_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending_arbitration_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending_arbitration_submission_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed_submission_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unmatched_submission_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "quality_issue_submission_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "finalized_exam_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "preparing_exam_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "准备阶段（draft、configured、ready）的考试数；与 active_exam_count 同为未发布、未归档范围。"
+          },
+          "grading_exam_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "grading、reviewing 的考试数；与 active_exam_count 同为未发布、未归档范围。"
+          }
+        }
+      },
+      "DashboardOrganizationStatistics": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "active_student_count",
+          "grade_count",
+          "class_count",
+          "teacher_count",
+          "grader_count",
+          "empty_class_count",
+          "unassigned_teacher_count"
+        ],
+        "properties": {
+          "active_student_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "grade_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "class_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "teacher_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "grader_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "empty_class_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unassigned_teacher_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "DashboardBlockingIssue": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "label",
+          "count",
+          "unit",
+          "impact",
+          "action",
+          "drilldown_path"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unit": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "drilldown_path": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardActiveExam": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "subject",
+          "status",
+          "submission_count",
+          "failed_count",
+          "quality_issue_count",
+          "unmatched_count",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "submission_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "quality_issue_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unmatched_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "pending_arbitration_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "本场待人工复核项数（pending、assigned）。仲裁任务来源失败时省略。"
+          },
+          "review_task_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "本场小题阅卷任务数，排除 cancelled。阅卷任务来源失败时省略。"
+          },
+          "review_done_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "本场已交小题阅卷任务数（submitted、completed）。阅卷任务来源失败时省略。"
+          },
+          "roster_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "冻结名册人数。名册来源不可用时为 null 并返回告警；本场尚无冻结名册时为 0。"
+          },
+          "roster_submitted_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "冻结名册中已有未删除答卷的人数；名册来源不可用时为 null。"
+          }
+        }
+      },
+      "DashboardRecentActivity": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "action",
+          "target_type",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "drilldown_path": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardReviewTeacher": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "user_id",
+          "username",
+          "display_name",
+          "teaching_subjects",
+          "assigned_count",
+          "in_progress_count",
+          "returned_count",
+          "submitted_count",
+          "remaining_count",
+          "is_online"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "teaching_subjects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubjectCode"
+            }
+          },
+          "assigned_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "in_progress_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "returned_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "submitted_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "remaining_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "is_online": {
+            "type": "boolean"
+          },
+          "last_active_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "仅学校管理员可见本校启用的普通阅卷教师，管理员不计入。取消任务不计；双评按每位教师的小题任务分别计数。"
+      },
+      "DashboardReviewTeacherSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "teacher_count",
+          "online_count",
+          "online_window_seconds",
+          "task_counting_note",
+          "online_note"
+        ],
+        "properties": {
+          "teacher_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "online_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "online_window_seconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "task_counting_note": {
+            "type": "string"
+          },
+          "online_note": {
+            "type": "string"
+          }
+        },
+        "description": "在线依据最近5分钟有效、未过期、未撤销且未锁定的会话活动判断；状态会随工作台刷新更新。"
+      },
+      "DashboardSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scope",
+          "updated_at",
+          "organization_statistics",
+          "statistics",
+          "blocking_issues",
+          "active_exams",
+          "recent_activities",
+          "warnings",
+          "review_teachers",
+          "review_teacher_summary"
+        ],
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/DashboardScope"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "organization_statistics": {
+            "$ref": "#/components/schemas/DashboardOrganizationStatistics"
+          },
+          "statistics": {
+            "$ref": "#/components/schemas/DashboardStatistics"
+          },
+          "blocking_issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardBlockingIssue"
+            }
+          },
+          "active_exams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardActiveExam"
+            }
+          },
+          "recent_activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardRecentActivity"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "review_teachers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardReviewTeacher"
+            }
+          },
+          "review_teacher_summary": {
+            "$ref": "#/components/schemas/DashboardReviewTeacherSummary"
+          },
+          "grading_progress": {
+            "description": "按题阅卷进度；阅卷任务来源失败时为 null，并返回告警：阅卷待办暂时无法统计。",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardGradingProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "appeal_statistics": {
+            "$ref": "#/components/schemas/DashboardAppealStatistics"
+          }
+        }
+      },
+      "DashboardGradingProgress": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "window_seconds",
+          "questions"
+        ],
+        "properties": {
+          "window_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "recent_done_count 的时窗，单位秒，固定 3600。"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardGradingQuestionProgress"
+            }
+          }
+        },
+        "description": "按小题阅卷任务计数，双评时每位教师各计一项；只含未发布、未归档考试中至少有一项未取消任务的小题。"
+      },
+      "DashboardGradingQuestionProgress": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "exam_id",
+          "question_id",
+          "question_no",
+          "task_count",
+          "done_count",
+          "remaining_count",
+          "recent_done_count"
+        ],
+        "properties": {
+          "exam_id": {
+            "type": "string"
+          },
+          "question_id": {
+            "type": "string"
+          },
+          "question_no": {
+            "type": "string"
+          },
+          "task_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "done_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "remaining_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "recent_done_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "最后更新时间落在时窗内的已交任务数；交卷后再次变更的任务按最近一次更新时间计入，是近似值。"
+          }
+        }
+      },
+      "DashboardAppealStatistics": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pending_assignment_count",
+          "pending_decision_count"
+        ],
+        "properties": {
+          "pending_assignment_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "status=submitted，等待分派复核教师。"
+          },
+          "pending_decision_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "status=under_review 且复核教师已提交意见，等待管理员裁决。"
+          }
+        },
+        "description": "没有 appeal:manage 时省略；来源失败时省略并返回告警。范围与教职工申诉管理列表一致，不受未发布考试口径限制。"
+      },
       "GradingAIRoleSelectionInput": {
         "type": "object",
         "additionalProperties": false,
@@ -28467,6 +30353,23 @@
             "items": {
               "$ref": "#/components/schemas/SchoolAssistantCapability"
             }
+          },
+          "web_search": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "available",
+              "message"
+            ],
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "description": "Whether a server-side public search provider is configured. This is not a live network-health probe."
           }
         },
         "required": [
@@ -28515,6 +30418,11 @@
             "type": "string",
             "format": "uuid",
             "description": "Optional platform-approved model in the caller's school; fixed for this request including tool and answer rounds."
+          },
+          "web_search": {
+            "type": "boolean",
+            "default": false,
+            "description": "Explicitly search the current user text as a public query (1-500 characters). This round does not expose school tools; attachments are rejected. No history, context, or files are sent to the search engine."
           }
         }
       },
@@ -28544,6 +30452,41 @@
               },
               "model": {
                 "$ref": "#/components/schemas/ManagedChatModelStatus"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "request_id",
+              "seq",
+              "phase"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "progress"
+              },
+              "request_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "phase": {
+                "type": "string",
+                "enum": [
+                  "understanding",
+                  "searching",
+                  "reading",
+                  "reviewing",
+                  "answering"
+                ],
+                "description": "当前请求实际进入的处理阶段，不含模型内部规划文字；不表示完成比例。"
               }
             }
           },
@@ -28818,7 +30761,8 @@
               "workspace",
               "release_gate",
               "current_release",
-              "exam_search"
+              "exam_search",
+              "web"
             ]
           },
           "status": {
@@ -28858,6 +30802,19 @@
           },
           "note": {
             "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Validated public HTTP(S) source URL from search, or the validated public redirect destination read by the page loader; absent on school business sources."
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "Bounded supporting passages from a search snippet or extracted webpage text; note identifies whether the page was read. This is not a full-page archive."
+          },
+          "site_name": {
+            "type": "string",
+            "description": "Host of the validated source URL."
           }
         },
         "required": [
@@ -31237,6 +33194,10 @@
               "desktop_device",
               "service"
             ]
+          },
+          "must_change_password": {
+            "type": "boolean",
+            "description": "管理员分配的初始密码必须由本人修改；完成前仅能读取自身会话、改密或退出。"
           }
         }
       },
@@ -36568,15 +38529,7 @@
           "gold_paper_id",
           "gold_version",
           "submitted_score",
-          "reference_score",
           "rubric_selections",
-          "absolute_error",
-          "exact_match",
-          "within_one",
-          "severe_disagreement",
-          "criterion_correct",
-          "criterion_count",
-          "criterion_differences",
           "created_at"
         ],
         "properties": {
@@ -36595,42 +38548,16 @@
           "submitted_score": {
             "type": "number"
           },
-          "reference_score": {
-            "type": "number"
-          },
           "rubric_selections": {
             "type": "object",
             "additionalProperties": true
-          },
-          "absolute_error": {
-            "type": "number"
-          },
-          "exact_match": {
-            "type": "boolean"
-          },
-          "within_one": {
-            "type": "boolean"
-          },
-          "severe_disagreement": {
-            "type": "boolean"
-          },
-          "criterion_correct": {
-            "type": "integer"
-          },
-          "criterion_count": {
-            "type": "integer"
-          },
-          "criterion_differences": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CalibrationCriterionDifference"
-            }
           },
           "created_at": {
             "type": "string",
             "format": "date-time"
           }
-        }
+        },
+        "description": "校准提交记录不返回逐题参考分、偏差或细则答案，避免通过重试记忆答案。"
       },
       "GraderQualification": {
         "type": "object",
@@ -39621,6 +41548,12 @@
           },
           "show_high_score_paper": {
             "type": "boolean"
+          },
+          "high_score_paper_top_n": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "学校管理员设置本场考试、本学科、本校优秀答卷的排名截止值；第N名同分全部纳入，实际份数可超过N。新建分享未指定时取10；历史未配置的单卷分享保持兼容。"
           }
         }
       },
@@ -39802,6 +41735,9 @@
             "type": "string"
           },
           "supersedes_release_id": {
+            "type": "string"
+          },
+          "regrade_job_id": {
             "type": "string"
           },
           "created_by": {
@@ -40277,6 +42213,11 @@
             "items": {
               "$ref": "#/components/schemas/StudentPaperScoreMark"
             }
+          },
+          "paper_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "该份优秀答卷的匿名标识，仅用于同一发布版本中的页图请求，不是学生或原始答卷标识。旧单卷响应可省略。"
           }
         }
       },
@@ -40422,6 +42363,13 @@
           },
           "high_score_paper": {
             "$ref": "#/components/schemas/StudentHighScorePaper"
+          },
+          "high_score_papers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentHighScorePaper"
+            },
+            "description": "已授权的本校匿名优秀答卷集合；按本次发布的排名范围选取，包含截止名次同分答卷。"
           }
         }
       },
@@ -40476,6 +42424,9 @@
           },
           "cohort": {
             "$ref": "#/components/schemas/StudentScorePreviewQuestionReference"
+          },
+          "score_comparison": {
+            "$ref": "#/components/schemas/StudentQuestionScoreComparison"
           },
           "correct_answer": {
             "type": "string"
@@ -41947,6 +43898,17 @@
           "exam_subject": {
             "type": "string",
             "description": "对应考试的学科，来自同一考试摘要。"
+          },
+          "review_source_release_id": {
+            "type": "string"
+          },
+          "review_source_score": {
+            "type": "number",
+            "minimum": 0
+          },
+          "review_source_max_score": {
+            "type": "number",
+            "minimum": 0
           }
         }
       },
@@ -44076,7 +46038,6 @@
           "school_id",
           "grade_id",
           "name",
-          "exam_type",
           "grading_mode",
           "publish_policy",
           "subjects",
@@ -44100,7 +46061,9 @@
             "minLength": 1
           },
           "exam_type": {
-            "type": "string"
+            "type": "string",
+            "deprecated": true,
+            "description": "Legacy compatibility field. New exam creation omits exam type; an omitted value is stored as an empty string."
           },
           "grading_mode": {
             "type": "string"
@@ -47761,6 +49724,18 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9223372036854775807
+          },
+          "cache_write_input_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807,
+            "description": "供应商明确报告的缓存写入输入 token 数；缺失表示未知。"
+          },
+          "uncached_input_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807,
+            "description": "供应商明确报告的未命中量，或已知缓存读写后拆出的普通输入 token 数；缺失表示未知。"
           },
           "output_tokens": {
             "type": "integer",
@@ -51999,6 +53974,11 @@
           },
           "facts_available": {
             "type": "boolean"
+          },
+          "grading_complete_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of authorized subjects with verified complete grading facts or a formal publication; each subject is counted once."
           }
         }
       },
@@ -52333,8 +54313,7 @@
           "username",
           "display_name",
           "status",
-          "roles",
-          "class_ids"
+          "roles"
         ],
         "properties": {
           "id": {
@@ -52355,11 +54334,14 @@
               "type": "string"
             }
           },
-          "class_ids": {
+          "teaching_subjects": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "$ref": "#/components/schemas/SubjectCode"
+            },
+            "uniqueItems": true,
+            "maxItems": 9,
+            "description": "阅卷教师的任教学科；管理员不要求填写。学科仅用于分配资格，访问仍受学校和实际任务范围约束。"
           },
           "school_id": {
             "type": "string"
@@ -52381,6 +54363,10 @@
           "last_login_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "must_change_password": {
+            "type": "boolean",
+            "description": "管理员分配的初始密码必须由本人修改；完成前仅能读取自身会话、改密或退出。"
           }
         }
       },
@@ -52454,11 +54440,19 @@
           "school_id": {
             "type": "string"
           },
-          "class_ids": {
+          "teaching_subjects": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "$ref": "#/components/schemas/SubjectCode"
+            },
+            "uniqueItems": true,
+            "maxItems": 9,
+            "description": "普通阅卷教师必须选择至少一门任教学科；学校管理员、机构管理员、平台管理员不要求此字段。"
+          },
+          "password_confirm": {
+            "type": "string",
+            "writeOnly": true,
+            "description": "普通阅卷教师新增账号时必填，必须与初始密码一致；学校管理员邀请不要求此字段。"
           }
         }
       },
@@ -52482,9 +54476,7 @@
         "additionalProperties": false,
         "required": [
           "role_codes",
-          "class_ids",
           "expected_roles",
-          "expected_class_ids",
           "reason"
         ],
         "properties": {
@@ -52494,19 +54486,7 @@
               "type": "string"
             }
           },
-          "class_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "expected_roles": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "expected_class_ids": {
             "type": "array",
             "items": {
               "type": "string"
@@ -52696,6 +54676,28 @@
           },
           "class_unavailable_reason": {
             "type": "string"
+          }
+        }
+      },
+      "StudentQuestionScoreComparison": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "class_max_score": {
+            "type": "number",
+            "description": "本版成绩中，本题已发布得分在学生考试时所属班级内的最高分。"
+          },
+          "school_max_score": {
+            "type": "number",
+            "description": "本版成绩中，本题已发布得分在学生考试时所属学校内的最高分。"
+          },
+          "class_mean_score": {
+            "type": "number",
+            "description": "本版成绩中本班本题已发布得分的平均值，缺考及没有本题成绩的学生不计入。"
+          },
+          "school_mean_score": {
+            "type": "number",
+            "description": "本版成绩中本校本题已发布得分的平均值，缺考及没有本题成绩的学生不计入。"
           }
         }
       },
@@ -55674,6 +57676,10 @@
           },
           "level_no": {
             "type": "integer"
+          },
+          "entry_year": {
+            "type": "integer",
+            "description": "固定入学年份，来自grade_cohort；调整当前level_no时保持不变。"
           }
         }
       },
@@ -55767,22 +57773,52 @@
           },
           "admission_year": {
             "type": "integer"
+          },
+          "must_change_password": {
+            "type": "boolean",
+            "description": "管理员分配的初始密码必须由本人修改；完成前仅能读取自身会话、改密或退出。"
+          },
+          "account_status": {
+            "type": "string",
+            "enum": [
+              "not_provisioned",
+              "active",
+              "disabled"
+            ]
+          },
+          "login_account": {
+            "type": "string",
+            "description": "已开通学生的当前学号"
+          },
+          "login_school_code": {
+            "type": "string",
+            "description": "学生登录使用的学校代码"
           }
         }
       },
       "UpdateOrganizationGradeRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "name"
-        ],
         "properties": {
           "name": {
             "type": "string",
             "minLength": 1,
             "maxLength": 120
+          },
+          "level_no": {
+            "type": "integer",
+            "enum": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12
+            ],
+            "description": "当前年级，仅允许本记录学段，且必须符合学校当前学年与固定入学年。只能修改该届别最新年度代表；不改变入学届别、学校、存档学年或历史学籍。"
           }
-        }
+        },
+        "minProperties": 1
       },
       "UpdateOrganizationClassRequest": {
         "type": "object",
@@ -55873,6 +57909,14 @@
       "UpdateManagedUserProfileRequest": {
         "type": "object",
         "additionalProperties": false,
+        "dependentRequired": {
+          "teaching_subjects": [
+            "expected_teaching_subjects"
+          ],
+          "expected_teaching_subjects": [
+            "teaching_subjects"
+          ]
+        },
         "required": [
           "display_name",
           "employee_no",
@@ -55907,6 +57951,24 @@
           "expected_phone_masked": {
             "type": "string",
             "maxLength": 32
+          },
+          "teaching_subjects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubjectCode"
+            },
+            "uniqueItems": true,
+            "maxItems": 9,
+            "description": "阅卷教师的任教学科；修改时必须同时提交原学科快照。管理员资料不使用此字段。"
+          },
+          "expected_teaching_subjects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubjectCode"
+            },
+            "uniqueItems": true,
+            "maxItems": 9,
+            "description": "编辑前读取的学科快照，按集合比较，拒绝并发覆盖。"
           }
         }
       },
@@ -57357,6 +59419,7 @@
       },
       "CaptureCollectionEntry": {
         "type": "object",
+        "description": "基于冻结名册和有效答卷关联实时派生：无关联答卷时自动缺考，手动匹配答卷后自动重新核对。旧的人工缺考标记不参与判断；有关联但身份、页数或质检异常的答卷继续待处理。",
         "required": [
           "student_id",
           "student_no",
@@ -57453,6 +59516,7 @@
       },
       "CaptureCollectionSummary": {
         "type": "object",
+        "description": "缺考按名册学生没有有效关联答卷自动统计，无需人工标记或恢复。匿名、名册外、重复或不完整材料仍单独阻断结束导入，不能按缺考跳过。",
         "required": [
           "exam_id",
           "exam_status",
@@ -57782,6 +59846,9 @@
               }
             }
           }
+        ],
+        "required": [
+          "expected_updated_at"
         ]
       },
       "ManagedModelAPIConfig": {
@@ -58757,6 +60824,485 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "CreateOrganizationGradeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "school_id",
+          "name"
+        ],
+        "properties": {
+          "school_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "level_no": {
+            "type": "integer",
+            "description": "7–9初中，10–12高中；必须与固定入学年和学校当前学年对应。省略或0时仅允许现有兼容规则归一，不能以省略值绕过冲突校验。"
+          },
+          "education_stage": {
+            "type": "string",
+            "enum": [
+              "junior",
+              "senior"
+            ]
+          },
+          "academic_year": {
+            "type": "string",
+            "description": "当前学校学年，格式YYYY-YYYY。可省略，服务端按学校is_current记录或上海九月学年选择；显式值与当前学年不符时返回400，不作为历史导入入口。"
+          },
+          "entry_year": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2100,
+            "description": "固定入学年1900–2100；省略或0时兼容从当前学年和明确级数推导。同校同学段未删除的该届别已存在时返回409，不能再追加另一年度记录。"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "description": "Create one current cohort grade for a school and education stage. In school year 2026-2027, senior entry years 2026, 2025 and 2024 map to levels 10, 11 and 12 respectively. This request is not a historical annual-record import."
+      },
+      "OrganizationGradeListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "grades"
+        ],
+        "properties": {
+          "grades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrganizationGrade"
+            }
+          }
+        }
+      },
+      "CreateOrganizationClassRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "school_id",
+          "grade_id",
+          "name",
+          "code"
+        ],
+        "properties": {
+          "school_id": {
+            "type": "string"
+          },
+          "grade_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "OrganizationClassListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "classes"
+        ],
+        "properties": {
+          "classes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrganizationClass"
+            }
+          }
+        }
+      },
+      "OrganizationStudentEnrollment": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "student_id",
+          "school_id",
+          "academic_year_id",
+          "academic_year_name",
+          "grade_cohort_id",
+          "grade_cohort_name",
+          "class_id",
+          "class_name",
+          "status",
+          "start_date"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "student_id": {
+            "type": "string"
+          },
+          "school_id": {
+            "type": "string"
+          },
+          "academic_year_id": {
+            "type": "string"
+          },
+          "academic_year_name": {
+            "type": "string"
+          },
+          "grade_cohort_id": {
+            "type": "string"
+          },
+          "grade_cohort_name": {
+            "type": "string"
+          },
+          "class_id": {
+            "type": "string"
+          },
+          "class_name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          }
+        }
+      },
+      "TransferOrganizationStudentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "class_id"
+        ],
+        "properties": {
+          "class_id": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "description": "可省略。若指定不得早于任何当前在籍记录的开始日期。"
+          }
+        }
+      },
+      "TransferOrganizationStudentResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "enrollment"
+        ],
+        "properties": {
+          "enrollment": {
+            "$ref": "#/components/schemas/OrganizationStudentEnrollment"
+          }
+        }
+      },
+      "SeedSamplingPolicy": {
+        "type": "object",
+        "required": [
+          "id",
+          "exam_id",
+          "question_id",
+          "rate",
+          "min_interval",
+          "max_interval",
+          "active_gold_fingerprint",
+          "status",
+          "revision",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "exam_id": {
+            "type": "string"
+          },
+          "question_id": {
+            "type": "string"
+          },
+          "rate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "min_interval": {
+            "type": "integer"
+          },
+          "max_interval": {
+            "type": "integer"
+          },
+          "active_gold_fingerprint": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused"
+            ]
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "needs_confirmation": {
+            "type": "boolean",
+            "readOnly": true,
+            "description": "Computed on read. An active policy with changed or unavailable blind samples requires administrator confirmation. Ordinary grading claims remain available."
+          },
+          "confirmation_reason": {
+            "type": "string",
+            "enum": [
+              "gold_set_changed",
+              "gold_set_missing"
+            ],
+            "readOnly": true
+          }
+        }
+      },
+      "SeedSamplingPolicyResponse": {
+        "type": "object",
+        "required": [
+          "policy"
+        ],
+        "properties": {
+          "policy": {
+            "$ref": "#/components/schemas/SeedSamplingPolicy"
+          }
+        }
+      },
+      "PutSeedSamplingPolicyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rate",
+          "min_interval",
+          "max_interval",
+          "status",
+          "expected_revision"
+        ],
+        "properties": {
+          "rate": {
+            "type": "number",
+            "maximum": 1,
+            "exclusiveMinimum": 0
+          },
+          "min_interval": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "max_interval": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused"
+            ]
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "AccountProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "username",
+          "display_name",
+          "phone_masked",
+          "employee_no",
+          "school_id",
+          "teaching_subjects",
+          "roles"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "phone_masked": {
+            "type": "string",
+            "description": "Masked phone number; never the complete login phone."
+          },
+          "employee_no": {
+            "type": "string"
+          },
+          "school_id": {
+            "type": "string"
+          },
+          "teaching_subjects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AccountProfileResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "profile"
+        ],
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/AccountProfile"
+          }
+        }
+      },
+      "RestartQuestionAppealReviewRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expected_revision",
+          "reason"
+        ],
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        }
+      },
+      "CreateOrganizationStudentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "school_id",
+          "class_id",
+          "student_no",
+          "name",
+          "password",
+          "password_confirm"
+        ],
+        "properties": {
+          "school_id": {
+            "type": "string"
+          },
+          "class_id": {
+            "type": "string"
+          },
+          "student_no": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "",
+              "male",
+              "female",
+              "unknown"
+            ]
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "writeOnly": true
+          },
+          "password_confirm": {
+            "type": "string",
+            "writeOnly": true
+          }
+        }
+      },
+      "OpenOrganizationStudentAccountRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "password",
+          "password_confirm"
+        ],
+        "properties": {
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "writeOnly": true
+          },
+          "password_confirm": {
+            "type": "string",
+            "writeOnly": true
+          }
+        }
+      },
+      "OrganizationStudentPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "students",
+          "next_cursor",
+          "has_more"
+        ],
+        "properties": {
+          "students": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrganizationStudent"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          },
+          "has_more": {
+            "type": "boolean"
           }
         }
       }

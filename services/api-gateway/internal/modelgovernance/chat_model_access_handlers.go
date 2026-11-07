@@ -125,7 +125,7 @@ func (h *Handler) getChatModels(w http.ResponseWriter, r *http.Request) {
 		if config.TenantID != tenantID || !contains(access.ModelIDs, config.ID) {
 			continue
 		}
-		status := ManagedChatModelStatus{ID: config.ID, DisplayName: config.DisplayName, ModelName: config.ModelName, ProviderKey: config.ProviderKey, Available: chatConfigEligible(config), Message: "模型暂不可用，请联系平台管理员"}
+		status := ManagedChatModelStatus{ID: config.ID, DisplayName: config.DisplayName, ModelName: config.ModelName, ProviderKey: config.ProviderKey, Available: chatConfigEligible(config), Message: chatConfigUnavailableMessage(config)}
 		if status.Available {
 			status.Message = "当前模型可用"
 		}
@@ -135,4 +135,24 @@ func (h *Handler) getChatModels(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"model": selected, "models": models})
+}
+
+// 学校只需知道哪项资格尚未满足；供应商原始报错可能包含端点或凭据，不能用作公开提示。
+func chatConfigUnavailableMessage(config ManagedAPIConfig) string {
+	switch {
+	case config.DeletedAt != nil:
+		return "模型配置已删除，请联系平台管理员"
+	case config.Status != "active":
+		return "模型已停用，请联系平台管理员"
+	case !config.CredentialConfigured:
+		return "模型未配置密钥，请联系平台管理员"
+	case config.LastTextStatus == "failed":
+		return "普通回复检测未通过，请联系平台管理员重新检测"
+	case config.LastTextStatus == "temporary_unavailable":
+		return "普通回复检测暂未完成，请联系平台管理员重新检测"
+	case !managedTextVerified(config):
+		return "普通回复尚未验证，请联系平台管理员检测"
+	default:
+		return "模型暂不可用，请联系平台管理员"
+	}
 }

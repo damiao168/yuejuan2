@@ -90,8 +90,28 @@ export function hookWarnings(source, filename, lineThreshold = 350, stateThresho
 export const MAX_BROAD_AUTH_STORE_CONSUMERS = 11;
 
 export function countBroadAuthStoreConsumers(sources) {
-  return sources.reduce((count, source) => count
-    + [...source.matchAll(/^[ \t]*(?:audit|Audit)[ \t]+auth\.Store\b/gm)].length, 0);
+  // 按结构体字段的类型计数，字段改名不能绕过预算；参数和注释不构成持有依赖。
+  // 这仍是约定源码写法的检查，不替代 Go 的完整类型与 import 别名分析。
+  return sources.reduce((count, source) => {
+    const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\r\n]*|"(?:\\.|[^"\\])*"|`[^`]*`/g, "");
+    let fields = 0;
+    for (const match of code.matchAll(/\bstruct\s*\{/g)) {
+      let depth = 1;
+      let fieldStart = match.index + match[0].length;
+      for (let index = fieldStart; index < code.length && depth > 0; index++) {
+        const char = code[index];
+        if (depth === 1 && (char === "\n" || char === ";" || char === "}")) {
+          const field = code.slice(fieldStart, index).trim();
+          const typed = field.match(/^(?:(\w+(?:\s*,\s*\w+)*)\s+)?\*?auth\.Store$/);
+          if (typed) fields += typed[1] ? typed[1].split(",").length : 1;
+          fieldStart = index + 1;
+        }
+        if (char === "{") depth++;
+        if (char === "}") depth--;
+      }
+    }
+    return count + fields;
+  }, 0);
 }
 
 function frontendSources() {
@@ -127,7 +147,8 @@ function goSourceSignals() {
   for (const path of walk(goDirectory, ".go")) {
     if (!path.endsWith("_test.go")) {
       const source = readFileSync(path, "utf8");
-      goSources.push(source);
+      // server 是组合根，负责把身份能力传给各模块；预算约束业务模块持有的宽依赖。
+      if (!relative(goDirectory, path).startsWith(`server${sep}`)) goSources.push(source);
       warnings.push(...findLargeInterfaces(source, relative(root, path)));
     }
   }

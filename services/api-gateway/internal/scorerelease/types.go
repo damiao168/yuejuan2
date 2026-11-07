@@ -1,10 +1,11 @@
 // Package scorerelease 管理不可变的公开成绩边界。
-// 它不重新计算成绩，而是为已确认的最终事实建立快照、应用服务器端发布门禁，并公开面向学生的受限视图。
+// 建快照时可由同事务的成绩准备器补齐并确认最终事实；本包冻结事实、应用发布门禁并公开受限视图。
 package scorerelease
 
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -50,8 +51,11 @@ type VisibilityPolicy struct {
 	ShowQuestionStatistics bool `json:"show_question_statistics"`
 	ShowKnowledgeAnalysis  bool `json:"show_knowledge_analysis"`
 	ShowQuestionStem       bool `json:"show_question_stem"`
-	ShowAnswers            bool `json:"show_answers"`
-	ShowHighScorePaper     bool `json:"show_high_score_paper"`
+	// 兼容历史记录和旧客户端；新版本固定为 true，旧 false 不再隐藏已公开题目的冻结答案。
+	ShowAnswers        bool `json:"show_answers"`
+	ShowHighScorePaper bool `json:"show_high_score_paper"`
+	// 新发布按本校该科成绩取前 N 名，截止处并列全部纳入；旧发布缺省值保留单份兼容。
+	HighScorePaperTopN *int `json:"high_score_paper_top_n,omitempty"`
 }
 
 type GateIssue struct {
@@ -115,10 +119,24 @@ type Release struct {
 	GateSnapshot        Gate             `json:"gate_snapshot"`
 	SourceReleaseID     string           `json:"source_release_id,omitempty"`
 	SupersedesReleaseID string           `json:"supersedes_release_id,omitempty"`
-	CreatedBy           string           `json:"created_by"`
-	CreatedAt           time.Time        `json:"created_at"`
-	PublishedBy         string           `json:"published_by,omitempty"`
-	PublishedAt         *time.Time       `json:"published_at,omitempty"`
+	// RegradeJobID 由 IdempotencyKey 派生，不单独存储：只有复评任务生成的版本有值。复评任务发布后状态仍是
+	// ready_for_release，前端靠它把“更正已发布”和“待发布”区分开；幂等键本身不对外输出。
+	RegradeJobID string     `json:"regrade_job_id,omitempty"`
+	CreatedBy    string     `json:"created_by"`
+	CreatedAt    time.Time  `json:"created_at"`
+	PublishedBy  string     `json:"published_by,omitempty"`
+	PublishedAt  *time.Time `json:"published_at,omitempty"`
+}
+
+// regradeJobKeyPrefix 是 regraderelease 为复评任务生成版本时使用的幂等键前缀，键的其余部分是任务 ID。
+const regradeJobKeyPrefix = "regrade-job:"
+
+// regradeJobID 从幂等键取复评任务 ID；不是复评任务生成的版本返回空字符串。
+func regradeJobID(idempotencyKey string) string {
+	if jobID, ok := strings.CutPrefix(idempotencyKey, regradeJobKeyPrefix); ok {
+		return jobID
+	}
+	return ""
 }
 
 type ReleaseItem struct {
@@ -211,6 +229,7 @@ type StudentResult struct {
 	Rankings          *StudentRankings        `json:"rankings,omitempty"`
 	PaperPages        []StudentPaperPage      `json:"paper_pages,omitempty"`
 	HighScorePaper    *StudentHighScorePaper  `json:"high_score_paper,omitempty"`
+	HighScorePapers   []StudentHighScorePaper `json:"high_score_papers,omitempty"`
 	SubjectBalance    []StudentSubjectBalance `json:"subject_balance,omitempty"`
 	SessionSummary    *StudentSessionSummary  `json:"session_summary,omitempty"`
 	Questions         []StudentQuestion       `json:"questions,omitempty"`
@@ -285,6 +304,7 @@ type StudentPaperPage struct {
 }
 
 type StudentHighScorePaper struct {
+	PaperID    string                  `json:"paper_id,omitempty"`
 	Available  bool                    `json:"available"`
 	TotalScore float64                 `json:"total_score,omitempty"`
 	MaxScore   float64                 `json:"max_score,omitempty"`
@@ -302,35 +322,46 @@ type StudentPaperScoreMark struct {
 }
 
 type StudentQuestion struct {
-	QuestionID              string                    `json:"question_id"`
-	QuestionNo              string                    `json:"question_no"`
-	Subject                 string                    `json:"subject,omitempty"`
-	QuestionType            string                    `json:"question_type,omitempty"`
-	Stem                    string                    `json:"stem,omitempty"`
-	Score                   float64                   `json:"score"`
-	MaxScore                float64                   `json:"max_score"`
-	ScoreRate               float64                   `json:"score_rate"`
-	KnowledgePoints         []string                  `json:"knowledge_points,omitempty"`
-	Cohort                  *StudentQuestionReference `json:"cohort,omitempty"`
-	CohortUnavailableReason string                    `json:"cohort_unavailable_reason,omitempty"`
-	CorrectAnswer           string                    `json:"correct_answer,omitempty"`
-	ActualAnswer            string                    `json:"actual_answer,omitempty"`
-	PageNo                  int                       `json:"page_no,omitempty"`
-	SubmissionPageID        string                    `json:"submission_page_id,omitempty"`
-	AnswerGeometry          *StudentImageGeometry     `json:"answer_geometry,omitempty"`
-	Feedback                string                    `json:"feedback,omitempty"`
-	RubricSummary           []string                  `json:"rubric_summary,omitempty"`
+	QuestionID              string                          `json:"question_id"`
+	QuestionNo              string                          `json:"question_no"`
+	Subject                 string                          `json:"subject,omitempty"`
+	QuestionType            string                          `json:"question_type,omitempty"`
+	Stem                    string                          `json:"stem,omitempty"`
+	Score                   float64                         `json:"score"`
+	MaxScore                float64                         `json:"max_score"`
+	ScoreRate               float64                         `json:"score_rate"`
+	KnowledgePoints         []string                        `json:"knowledge_points,omitempty"`
+	ScoreComparison         *StudentQuestionScoreComparison `json:"score_comparison,omitempty"`
+	Cohort                  *StudentQuestionReference       `json:"cohort,omitempty"`
+	CohortUnavailableReason string                          `json:"cohort_unavailable_reason,omitempty"`
+	CorrectAnswer           string                          `json:"correct_answer,omitempty"`
+	ActualAnswer            string                          `json:"actual_answer,omitempty"`
+	PageNo                  int                             `json:"page_no,omitempty"`
+	SubmissionPageID        string                          `json:"submission_page_id,omitempty"`
+	AnswerGeometry          *StudentImageGeometry           `json:"answer_geometry,omitempty"`
+	Feedback                string                          `json:"feedback,omitempty"`
+	RubricSummary           []string                        `json:"rubric_summary,omitempty"`
+}
+
+// StudentQuestionScoreComparison 按考试冻结班级确定本班和本校，只读取同一发布版本的该题分数。
+// 已公开逐题成绩且对应组至少有一份有效成绩即可返回；缺少冻结归属时留空，真实零分仍返回。
+type StudentQuestionScoreComparison struct {
+	ClassMeanScore  *float64 `json:"class_mean_score,omitempty"`
+	ClassMaxScore   *float64 `json:"class_max_score,omitempty"`
+	SchoolMeanScore *float64 `json:"school_mean_score,omitempty"`
+	SchoolMaxScore  *float64 `json:"school_max_score,omitempty"`
 }
 
 type StudentQuestionReference struct {
-	ClassUnavailableReason string   `json:"class_unavailable_reason,omitempty"`
-	SampleSize             int      `json:"sample_size"`
-	MeanScoreRate          float64  `json:"mean_score_rate"`
-	FullScoreRate          float64  `json:"full_score_rate"`
-	ZeroScoreRate          float64  `json:"zero_score_rate"`
-	ClassMeanScore         *float64 `json:"class_mean_score,omitempty"`
-	SchoolMeanScore        *float64 `json:"school_mean_score,omitempty"`
-	MedianScore            *float64 `json:"median_score,omitempty"`
+	ClassUnavailableReason string  `json:"class_unavailable_reason,omitempty"`
+	SampleSize             int     `json:"sample_size"`
+	MeanScoreRate          float64 `json:"mean_score_rate"`
+	FullScoreRate          float64 `json:"full_score_rate"`
+	ZeroScoreRate          float64 `json:"zero_score_rate"`
+	// 班级和学校分数只在能确定考试时归属且该组达到隐私人数时返回；真实零分保留为非空指针。
+	ClassMeanScore  *float64 `json:"class_mean_score,omitempty"`
+	SchoolMeanScore *float64 `json:"school_mean_score,omitempty"`
+	MedianScore     *float64 `json:"median_score,omitempty"`
 }
 
 type StudentImageGeometry struct {

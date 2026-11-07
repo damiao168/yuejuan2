@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, App, Button, Descriptions, Divider, Drawer, Empty, Form, Input, InputNumber, List, Progress, Select, Space, Tag } from "antd";
-import { apiClient, getUserErrorMessage } from "../../api/client";
+import { ApiClientError, apiClient, getUserErrorMessage } from "../../api/client";
 import {
   createCalibrationSession,
   getCalibrationPolicy,
@@ -16,7 +16,7 @@ import {
 import { SharedScoreControl, type SharedScoreValue } from "../grading/SharedScoreControl";
 import { rubricPointsFromSnapshot } from "../gold-papers/goldPaperPresentation";
 import { TaskScoringReference } from "../../components/TaskScoringReference";
-import { calibrationThresholdChecks, formatCriterionValue, formatMetric } from "./calibrationPresentation";
+import { calibrationThresholdChecks, formatMetric } from "./calibrationPresentation";
 import "./calibration.css";
 import { CalibrationPolicyReuse } from "./CalibrationPolicyReuse";
 import { CalibrationSchoolTemplates } from "./CalibrationSchoolTemplates";
@@ -43,26 +43,20 @@ function renderCalibrationQualification(qualification?: GraderQualification) {
     showIcon
     type={qualification?.status === "qualified" ? "success" : "warning"}
     message={qualification?.status === "qualified" ? "试评已通过" : "高风险题需先通过试评，再领取正式任务"}
-    description={qualification?.status === "qualified" ? `有效至 ${new Date(qualification.valid_until).toLocaleDateString()}；标准卷变化后需重新确认资格。` : "独立完成全部样本；每份提交后才显示参考分，完成后判定是否通过。"}
+    description={qualification?.status === "qualified" ? `有效至 ${new Date(qualification.valid_until).toLocaleDateString()}；标准卷变化后需重新确认资格。` : "独立完成全部样本，完成后查看整体一致性并判定是否通过。"}
   />;
 }
 
-function renderCalibrationResult(session: CalibrationSession | undefined, complete: boolean, checks: ReturnType<typeof calibrationThresholdChecks>, acting: boolean, start: () => Promise<void>) {
+function renderCalibrationResult(session: CalibrationSession | undefined, complete: boolean, checks: ReturnType<typeof calibrationThresholdChecks>, acting: boolean, cooling: boolean, start: () => Promise<void>) {
   if (!complete || !session?.metrics) return null;
   return <>
     <Divider />
-    <Alert type={session.status === "passed" ? "success" : "error"} showIcon message={session.status === "passed" ? "试评通过，已达到本题阅卷要求" : "试评未通过，请对照参考结果后重新试评"} />
+    <Alert type={session.status === "passed" ? "success" : "error"} showIcon message={session.status === "passed" ? "试评通过，已达到本题阅卷要求" : "试评未通过，请核对整体一致性结果并按重考要求重新试评"} />
     <Descriptions bordered size="small" column={2}>
       {checks.map((check) => <Descriptions.Item key={check.key} label={check.label}><Tag color={check.passed ? "green" : "red"}>{formatMetric(check.key, check.value)}</Tag></Descriptions.Item>)}
     </Descriptions>
-    {session.status !== "passed" ? <Button onClick={() => void start()} loading={acting}>重新试评</Button> : null}
+    {session.status !== "passed" ? <Button onClick={() => void start()} loading={acting} disabled={cooling}>重新试评</Button> : null}
   </>;
-}
-
-function attemptSeverityColor(attempt: CalibrationAttempt) {
-  if (attempt.severe_disagreement) return "red";
-  if (attempt.exact_match) return "green";
-  return "orange";
 }
 
 export function CalibrationDrawer(props: Parameters<typeof ScopedCalibrationDrawer>[0]) {
@@ -102,6 +96,8 @@ function ScopedCalibrationDrawer({
   const [policy, setPolicy] = useState<CalibrationPolicy>();
   const [qualification, setQualification] = useState<GraderQualification>();
   const [session, setSession] = useState<CalibrationSession>();
+  const [serverRetakeAt, setServerRetakeAt] = useState<number>();
+  const [now, setNow] = useState(Date.now);
   const [score, setScore] = useState<SharedScoreValue>(emptyScore);
   const [attempts, setAttempts] = useState<CalibrationAttempt[]>([]);
   const mountedRef = useRef(true);
@@ -110,6 +106,15 @@ function ScopedCalibrationDrawer({
   const actionPendingRef = useRef(false);
   const policyEditRef = useRef(0);
   const templateWorkingRef = useRef(false);
+  const sessionRetakeAt = session?.status === "failed" && session.completed_at ? Date.parse(session.completed_at) + 24 * 60 * 60 * 1000 : 0;
+  const retakeAt = Math.max(Number.isFinite(sessionRetakeAt) ? sessionRetakeAt : 0, serverRetakeAt ?? 0);
+  const cooling = retakeAt > now;
+
+  useEffect(() => {
+    if (!cooling) return;
+    const timer = window.setTimeout(() => setNow(Date.now()), Math.max(1, retakeAt - Date.now() + 1));
+    return () => window.clearTimeout(timer);
+  }, [cooling, retakeAt]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -176,6 +181,8 @@ function ScopedCalibrationDrawer({
   useEffect(() => {
     if (!open) return;
     setSession(undefined);
+    setServerRetakeAt(undefined);
+    setNow(Date.now());
     setAttempts([]);
     setScore(emptyScore);
     void load();
@@ -207,7 +214,7 @@ function ScopedCalibrationDrawer({
   };
 
   const start = async () => {
-    if (!open || !policy || actionPendingRef.current || templateWorkingRef.current) return;
+    if (!open || !policy || cooling || actionPendingRef.current || templateWorkingRef.current) return;
     const requestId = ++actionRequestRef.current;
     actionPendingRef.current = true;
     setActing(true);
@@ -218,7 +225,14 @@ function ScopedCalibrationDrawer({
       setAttempts([]);
       setScore(emptyScore);
     } catch (error) {
-      if (mountedRef.current && requestId === actionRequestRef.current) message.error(getUserErrorMessage(error, "无法开始试评，请检查通过标准与已批准的标准卷是否齐备"));
+      if (mountedRef.current && requestId === actionRequestRef.current) {
+        // 重开页面时以服务端剩余间隔恢复禁用状态，不能从本次点击重新计满24小时。
+        if (error instanceof ApiClientError && error.code === "calibration_retake_cooldown" && error.retryAfterSeconds) {
+          setNow(Date.now());
+          setServerRetakeAt(Date.now() + error.retryAfterSeconds * 1000);
+        }
+        message.error(getUserErrorMessage(error, "无法开始试评，请检查通过标准与已批准的标准卷是否齐备"));
+      }
     } finally {
       if (mountedRef.current && requestId === actionRequestRef.current) {
         actionPendingRef.current = false;
@@ -267,6 +281,7 @@ function ScopedCalibrationDrawer({
     <Drawer title="阅卷前试评" className="grader-trial-drawer" width="min(860px, 100vw)" open={open} onClose={onClose} extra={<Button loading={loading} disabled={acting || templateWorking} onClick={() => void load()}>刷新</Button>}>
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         {renderCalibrationQualification(qualification)}
+        {cooling ? <Alert type="warning" showIcon message="本题试评未通过，暂不能重新参加" description={`上次试评完成24小时后可重考；可重新参加时间：${new Date(retakeAt).toLocaleString("zh-CN", { hour12: false })}。`} /> : null}
 
         {canManagePolicy ? (
           <details className="grader-trial-settings">
@@ -307,7 +322,7 @@ function ScopedCalibrationDrawer({
 
         {!session ? (
           <div>
-            <Button type="primary" loading={acting} disabled={!policy || templateWorking} onClick={() => void start()}>开始本题试评</Button>
+            <Button type="primary" loading={acting} disabled={!policy || templateWorking || cooling} onClick={() => void start()}>开始本题试评</Button>
             {!policy ? <p className="muted">{canManagePolicy ? "暂未读到本题通过标准。请核对并保存标准，同时准备已批准的标准卷。" : "暂未读到本题通过标准，当前不能开始试评。请联系管理员核对。"}</p> : <p className="muted">本题至少需 {policy.minimum_samples} 份标准卷；开始后请完成系统提供的全部样本。</p>}
           </div>
         ) : (
@@ -321,7 +336,7 @@ function ScopedCalibrationDrawer({
                   ? <img src={apiClient.url(currentSample.answer_image_url)} alt="试评样本答题原图" style={{ display: "block", maxWidth: "100%", maxHeight: 430, margin: "12px auto", objectFit: "contain" }} />
                   : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`答题图暂不可预览 · 匿名样本 ${currentSample.submission_id.slice(0, 8)}`} />}
                 <SharedScoreControl value={score} maxScore={currentSample.max_score} rubricPoints={rubricPoints} onChange={setScore} disabled={acting} />
-                <Button type="primary" loading={acting} disabled={score.score === null} onClick={() => void submit()}>提交本份并查看分差</Button>
+                <Button type="primary" loading={acting} disabled={score.score === null} onClick={() => void submit()}>提交本份试评</Button>
               </section>
             ) : null}
           </>
@@ -329,22 +344,19 @@ function ScopedCalibrationDrawer({
 
         {attempts.length ? (
           <List
-            header="试评记录 · 提交后显示参考结果"
+            header="已提交的试评记录"
             dataSource={attempts}
             renderItem={(attempt, index) => (
               <List.Item>
                 <div style={{ width: "100%" }}>
-                  <Space wrap><strong>样本 {index + 1}</strong><span>你的评分 {attempt.submitted_score} / 参考分 {attempt.reference_score}</span><Tag color={attemptSeverityColor(attempt)}>相差 {attempt.absolute_error} 分</Tag></Space>
-                  {attempt.criterion_differences.length ? (
-                    <List size="small" dataSource={attempt.criterion_differences} renderItem={(difference) => <List.Item>{difference.criterion}：提交 {formatCriterionValue(difference.submitted)}，参考 {formatCriterionValue(difference.expected)}</List.Item>} />
-                  ) : <p className="muted">采分点与参考一致</p>}
+                  <Space wrap><strong>样本 {index + 1}</strong><span>你的评分 {attempt.submitted_score}</span><Tag>已提交</Tag></Space>
                 </div>
               </List.Item>
             )}
           />
         ) : null}
 
-        {renderCalibrationResult(session, complete, checks, acting, start)}
+        {renderCalibrationResult(session, complete, checks, acting, cooling, start)}
       </Space>
     </Drawer>
   );

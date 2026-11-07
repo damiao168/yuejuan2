@@ -13,6 +13,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/segment"
+	"edugrade-enterprise/services/api-gateway/internal/workflowactors"
 )
 
 type Handler struct {
@@ -139,7 +140,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
-	jobs, err := h.service.List(r.Context(), user.TenantID, strings.TrimSpace(r.URL.Query().Get("exam_id")), strings.TrimSpace(r.URL.Query().Get("question_id")), auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver})
+	jobs, err := h.service.List(r.Context(), user.TenantID, strings.TrimSpace(r.URL.Query().Get("exam_id")), strings.TrimSpace(r.URL.Query().Get("question_id")), auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver, Management: true})
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -299,7 +300,7 @@ func (h *Handler) record(r *http.Request, user auth.User, action, target string,
 	}
 	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{
 		TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "regrade", TargetID: target,
-		AfterValue: detail, Reason: action, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+		AfterValue: detail, Reason: action, IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 }
 func currentUser(w http.ResponseWriter, r *http.Request) (auth.User, bool) {
@@ -330,6 +331,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusUnprocessableEntity, "regrade_source_release_invalid", "source release must be a published release for this exam")
 	case errors.Is(err, ErrNoAffectedItems):
 		httpx.Error(w, r, http.StatusUnprocessableEntity, "regrade_no_affected_items", "selector matched no frozen source-release question facts")
+	case errors.Is(err, workflowactors.ErrAssigneeIneligible):
+		httpx.Error(w, r, http.StatusForbidden, "regrade_assignee_ineligible", "请选择本校任教该考试学科的有效阅卷教师（学校管理员除外）。")
 	case errors.Is(err, ErrAssignmentForbidden):
 		httpx.Error(w, r, http.StatusForbidden, "regrade_assignment_forbidden", "regrade item is assigned to another reviewer")
 	case errors.Is(err, ErrRevisionConflict):

@@ -30,9 +30,7 @@ func reportVisibilityPG(t *testing.T) (*sql.DB, *sql.DB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Host != "127.0.0.1" || cfg.Port != 55983 || cfg.User != "review_actor" || !strings.HasPrefix(cfg.Database, "review_") {
-		t.Fatal("integration fixture requires the owned review cluster and database")
-	}
+	// 连接由调用者显式提供；报告和并发发布切换都只写下方唯一 schema，不触碰 public。
 	admin := stdlib.OpenDB(*cfg)
 	schema := "review_report_scope_" + strings.ReplaceAll(uuid.NewString(), "-", "")
 	quoted := pgx.Identifier{schema}.Sanitize()

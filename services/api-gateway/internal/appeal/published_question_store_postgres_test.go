@@ -20,7 +20,7 @@ func TestPublishedQuestionPostgresAssignmentRejectsOriginalReviewerBeforeAnyWrit
 	item := publishedQuestionPostgresAppealFixture()
 	scenario := &publishedQuestionPostgresScenario{queries: []publishedQuestionPostgresQuery{
 		{fragments: []string{"FOR UPDATE", "tenant_id = $1 AND id = $2::uuid"}, args: []any{item.TenantID, item.ID}, row: publishedQuestionPostgresAppealRow(item)},
-		{fragments: []string{"user_row.tenant_id = $1", "user_row.id = $2::uuid", "user_row.status = 'active'", "permission_row.code = 'appeal:work'"}, args: []any{item.TenantID, "original-reviewer"}, row: []driver.Value{true}},
+		{fragments: []string{"e.school_id=u.school_id", "p.code=$3", "r.code=$4", "FOR SHARE OF u"}, args: []any{item.TenantID, item.ExamID, "appeal:work", "teacher", "original-reviewer"}, row: []driver.Value{"math", `["mathematics"]`, `["teacher"]`}},
 		{fragments: []string{"grade.tenant_id = human.tenant_id", "grade.answer_segment_id = human.answer_segment_id", "grade.tenant_id = $1", "grade.id = $2::uuid", "human.reviewer_id = $3::uuid", "grade.deleted_at IS NULL", "human.deleted_at IS NULL"}, args: []any{item.TenantID, item.SourceFinalGradeID, "original-reviewer"}, row: []driver.Value{true}},
 	}}
 	db := sql.OpenDB(publishedQuestionPostgresConnector{scenario})
@@ -112,7 +112,7 @@ func publishedQuestionPostgresAppealRow(item PublishedQuestionAppeal) []driver.V
 		item.Status, item.AssignedTo, item.Decision, item.PublicResponse, item.PrivateNote,
 		item.RegradeJobID, item.NewReleaseID, item.CreatedBy, item.DecidedBy, nil,
 		item.CreatedAt, item.UpdatedAt, item.Revision, int64(item.NewReleaseVersion),
-		nil, nil, opinion,
+		nil, nil, opinion, nil,
 	}
 }
 

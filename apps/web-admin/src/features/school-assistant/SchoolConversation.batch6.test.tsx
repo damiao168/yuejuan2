@@ -7,13 +7,15 @@ import type { SchoolChatMessage, SchoolConversationEvent } from "../../api/schoo
 import { SchoolConversation } from "./SchoolConversation";
 import { conversationAccountKey } from "./conversationState";
 import { conversationModelPreferenceKey } from "./conversationModelPreference";
+import { CONVERSATION_REFRESH_PREFIX } from "./conversationRefresh";
 
 const mocks = vi.hoisted(() => ({
-  model: vi.fn(), stream: vi.fn(), attachment: vi.fn(),
+  model: vi.fn(), stream: vi.fn(), attachment: vi.fn(), capabilities: vi.fn(),
   warning: vi.fn(), success: vi.fn(), error: vi.fn(), confirm: vi.fn(), markdownId: 0,
 }));
 
 vi.mock("../../api/schoolAiChat", () => ({ getSchoolChatModel: mocks.model, streamSchoolConversation: mocks.stream }));
+vi.mock("../../api/schoolAssistant", () => ({ getSchoolAssistantCapabilities: mocks.capabilities }));
 vi.mock("./conversationAttachments", () => ({ readChatAttachment: mocks.attachment }));
 vi.mock("antd", async () => {
   const { forwardRef } = await import("react");
@@ -76,9 +78,11 @@ describe("school conversation account, stream, and presentation boundaries", () 
     vi.clearAllMocks();
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     window.localStorage.clear();
+    window.sessionStorage.clear();
     sessions = [];
     mocks.markdownId = 0;
     mocks.model.mockResolvedValue({ model: readyModel });
+    mocks.capabilities.mockResolvedValue({ web_search: { available: false, message: "联网搜索尚未配置" } });
     mocks.attachment.mockImplementation(async (file: File) => ({ name: file.name, media_type: "text/plain", size: file.size, content: "private attachment" }));
     // 只模拟传输边界：回调和 Promise 可分别延迟，用于验证流事件与 finally 的先后约束。
     mocks.stream.mockImplementation((_messages: SchoolChatMessage[], _context: unknown, signal: AbortSignal, callback: StreamSession["callback"]) => new Promise<void>((resolve, reject) => {
@@ -123,6 +127,24 @@ describe("school conversation account, stream, and presentation boundaries", () 
     });
   }
   async function finish(index = sessions.length - 1) { await act(async () => sessions[index]!.resolve()); }
+
+  it("keeps progress with its background thread and removes it when that reply completes", async () => {
+    await render(); await send("first progress question");
+    await emit({ type: "progress", request_id: "request", seq: 1, phase: "reading" }, 0);
+    expect(host.querySelector("output")?.textContent).toBe("正在读取网页");
+    await click("开启新对话"); await send("second progress question");
+    await emit({ type: "progress", request_id: "request", seq: 1, phase: "understanding" }, 1);
+    await emit({ type: "progress", request_id: "request", seq: 2, phase: "answering" }, 0);
+    expect(host.querySelector("output")?.textContent).toBe("正在理解问题");
+    await click("first progress question");
+    expect(host.querySelector("output")?.textContent).toBe("正在生成回答");
+    await emit(done(3, "first completed result"), 0); await finish(0);
+    expect(host.querySelector("output")).toBeNull();
+    await click("second progress question");
+    expect(host.querySelector("output")?.textContent).toBe("正在理解问题");
+    await emit(done(2, "second completed result"), 1); await finish(1);
+    expect(host.querySelector("output")).toBeNull();
+  });
   async function chooseModel(id: string) {
     await act(async () => {
       const selector = host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')!;
@@ -136,6 +158,8 @@ describe("school conversation account, stream, and presentation boundaries", () 
     mocks.model.mockResolvedValue({ model: first, models: [first, second] });
     await render();
     const selector = host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')!;
+    expect(host.querySelector(".school-chat-composer-tools")?.contains(selector)).toBe(true);
+    expect(host.querySelector(".school-chat-topbar select")).toBeNull();
     await act(async () => { selector.value = "second"; selector.dispatchEvent(new Event("change", { bubbles: true })); });
     await send();
     expect(mocks.stream.mock.calls[0][4]).toBe("second");
@@ -172,7 +196,7 @@ describe("school conversation account, stream, and presentation boundaries", () 
     expect(window.localStorage.getItem(preference)).toBe("second");
     expect(host.querySelector(".school-chat-live-body")?.textContent).toContain("parallel partial");
     expect(host.querySelector(".school-chat-messages")?.textContent).not.toContain("original final");
-    expect(host.querySelector(".school-chat-model-status")?.textContent).toContain("1/5 个对话进行中");
+    expect(host.querySelector(".school-chat-activity")?.textContent).toContain("1/5 个对话进行中");
 
     await emit(done(2, "parallel final"), 1); await finish(1);
     await click("original provider question");
@@ -423,7 +447,7 @@ describe("school conversation account, stream, and presentation boundaries", () 
     scroll.mockClear();
     // 流增量可能紧跟滚轮事件到达；此时浏览器尚未来得及改变 scrollTop 或派发 scroll。
     await act(async () => flow.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaY: -8 })));
-    await emit(delta(2, "继续生成"));
+    await emit(delta(2, "重新生成"));
     await emit(done(3, "回复结束")); await finish();
     expect(scroll).not.toHaveBeenCalled();
     expect(flow.scrollTop).toBe(800);
@@ -524,7 +548,7 @@ describe("school conversation account, stream, and presentation boundaries", () 
     await render({ onNavigate: vi.fn() }); await send();
     await emit({ type: "tool_started", request_id: "request", seq: 1, call_id: "tool", tool_name: "exam_progress", label: "查询考试" });
     await emit({ type: "error", request_id: "request", seq: 2, code: "unavailable", message: "synthetic failure" });
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain("发送失败，请重试");
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain("操作失败，请稍后重试");
     expect(host.textContent).not.toContain("synthetic failure");
     expect(host.querySelector(".school-conversation-failure")?.textContent).toContain("查询考试:failed");
   });
@@ -536,7 +560,7 @@ describe("school conversation account, stream, and presentation boundaries", () 
       for (let index = 0; index < 6; index += 1) form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     });
     expect(sessions).toHaveLength(5);
-    expect(host.querySelector(".school-chat-model-status")?.textContent).toContain("5/5 个对话进行中");
+    expect(host.querySelector(".school-chat-activity")?.textContent).toContain("5/5 个对话进行中");
     await click("开启新对话");
     expect(host.querySelector("textarea")?.placeholder).toBe("已达到 5 个并行对话上限");
     await emit(done(1, "finished"), 0); await finish(0);
@@ -658,7 +682,7 @@ describe("school conversation account, stream, and presentation boundaries", () 
     mocks.model.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }));
     await render(); await render({ user: { ...user, id: "new-owner" } });
     await act(async () => resolveOld({ model: { ...readyModel, display_name: "旧账户模型" } }));
-    expect(host.querySelector(".school-chat-model-status")?.textContent).toContain("测试模型");
+    expect(host.querySelector(".school-chat-model-status")?.textContent).toContain("synthetic");
     expect(host.textContent).not.toContain("旧账户模型");
   });
 
@@ -685,14 +709,60 @@ describe("school conversation account, stream, and presentation boundaries", () 
     await render(); await send("已完成的一般问题");
     await emit(done(1, "已完成的回复", "已返回的思考")); await finish();
     await send("尚未完成的追问");
-    // 卸载模拟用户在流返回前刷新；缓存须保留此前的问答，也不能保存尚未确定业务范围的追问。
+    // 完整历史沿用长期缓存；未完成纯文字追问只在当前标签页恢复，不能自动重发。
     await act(async () => root.unmount());
     root = createRoot(host);
     await render(); await click("已完成的一般问题");
     expect(host.querySelector(".is-assistant")?.textContent).toContain("已完成的回复");
-    expect(host.textContent).not.toContain("尚未完成的追问");
+    expect(host.textContent).toContain("尚未完成的追问");
+    expect(host.textContent).toContain("上次回复未完成");
     await click("思考过程");
     expect(host.querySelector(".school-chat-reasoning-content")?.textContent).toBe("已返回的思考");
+  });
+
+  it("restores the first unanswered question on refresh and waits for an explicit continue", async () => {
+    mocks.capabilities.mockResolvedValue({ web_search: { available: true, message: "已配置" } });
+    await render(); await click("联网搜索"); await send("联网搜索北京的天气");
+    const firstSignal = sessions[0]!.signal;
+    expect(window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(user)}`)).not.toContain("联网搜索北京的天气");
+    await act(async () => root.unmount()); root = createRoot(host); await render();
+    expect(firstSignal.aborted).toBe(true);
+    expect(host.querySelector(".is-user")?.textContent).toBe("联网搜索北京的天气");
+    expect(host.textContent).toContain("上次回复未完成");
+    expect(host.querySelector(".school-chat-waiting")).toBeNull();
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
+    await click("重新生成");
+    expect(mocks.stream).toHaveBeenCalledTimes(2);
+    expect(mocks.stream.mock.calls[1]?.[0]).toEqual([{ role: "user", content: "联网搜索北京的天气", web_search: true }]);
+    expect(mocks.stream.mock.calls[1]?.[5]).toBe(true);
+  });
+
+  it("shows the recovered partial reply separately and never sends it or reasoning back as verified history", async () => {
+    await render(); await send("查找公开资料");
+    await emit(delta(1, "临时推理不得恢复", "reasoning"));
+    await emit(delta(2, "已经收到的部分正文"));
+    await act(async () => window.dispatchEvent(new Event("pagehide")));
+    const stored = window.sessionStorage.getItem(`${CONVERSATION_REFRESH_PREFIX}${conversationAccountKey(user)}`)!;
+    expect(stored).toContain("已经收到的部分正文");
+    expect(stored).not.toContain("临时推理不得恢复");
+    await act(async () => root.unmount()); root = createRoot(host); await render();
+    expect(host.textContent).toContain("上次未完成的回复");
+    expect(host.textContent).toContain("已经收到的部分正文");
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
+    await click("重新生成");
+    expect(mocks.stream.mock.calls[1]?.[0]).toEqual([{ role: "user", content: "查找公开资料" }]);
+    expect(host.textContent).not.toContain("已经收到的部分正文");
+  });
+
+  it("removes a temporary unanswered checkpoint as soon as the request enters a business tool", async () => {
+    await render(); await send("查看本校考试");
+    const key = `${CONVERSATION_REFRESH_PREFIX}${conversationAccountKey(user)}`;
+    expect(window.sessionStorage.getItem(key)).toContain("查看本校考试");
+    await emit({ type: "tool_started", request_id: "request", seq: 1, call_id: "private", tool_name: "exam_progress", label: "业务工具" });
+    expect(window.sessionStorage.getItem(key)).not.toContain("查看本校考试");
+    await act(async () => root.unmount()); root = createRoot(host); await render();
+    expect(host.textContent).not.toContain("查看本校考试");
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
   });
 
   it("preserves initial thinking text and switches to partial markdown without inventing reply text", async () => {
@@ -701,5 +771,101 @@ describe("school conversation account, stream, and presentation boundaries", () 
     await emit(delta(1, "partial body"));
     expect(host.querySelector(".school-chat-thinking")).toBeNull();
     expect(host.querySelector(".school-chat-live-body [data-markdown-instance]")?.textContent).toBe("partial body");
+  });
+
+  it("enables explicit web search only after the server exposes the capability", async () => {
+    await render();
+    expect(button("联网搜索").disabled).toBe(true);
+    await send("普通问题");
+    expect(mocks.stream.mock.calls[0]?.[5]).toBe(false);
+  });
+
+  it("captures web search for retry and preserves mode tags until the API filters public history", async () => {
+    mocks.capabilities.mockResolvedValue({ web_search: { available: true, message: "已配置" } });
+    await render(); await click("联网搜索"); await send("公开的教育政策");
+    expect(mocks.stream.mock.calls[0]?.[5]).toBe(true);
+    expect(mocks.stream.mock.calls[0]?.[0]).toEqual([expect.objectContaining({ role: "user", content: "公开的教育政策", web_search: true })]);
+    expect(button("联网搜索").disabled).toBe(true);
+    await act(async () => sessions[0]!.reject(new Error("搜索超时")));
+    await click("联网搜索");
+    expect(button("联网搜索").getAttribute("aria-pressed")).toBe("false");
+    await click("重试");
+    expect(mocks.stream.mock.calls[1]?.[5]).toBe(true);
+  });
+
+  it.each([false, true])("联网请求转校内问答后，后续公开追问不能携带业务正文，中断=%s", async interrupted => {
+    mocks.capabilities.mockResolvedValue({ web_search: { available: true, message: "已配置" } });
+    await render(); await click("联网搜索"); await send("查看本场考试进度");
+    await emit({ type: "tool_started", request_id: "request", seq: 1, call_id: "school-business", tool_name: "school_business", label: "切换校内只读问答" });
+    await emit(delta(2, "只属于本校的私有考试进度"));
+    if (interrupted) await click("中断当前对话");
+    else { await emit(done(3, "只属于本校的私有考试进度")); await finish(); }
+
+    expect(host.querySelector(".is-assistant")?.textContent).toContain("只属于本校的私有考试进度");
+    expect(window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(user)}`) ?? "").not.toContain("私有考试进度");
+    await send("北京今天的天气");
+    const sent = mocks.stream.mock.calls[1]?.[0] as SchoolChatMessage[];
+    expect(sent.find(message => message.role === "assistant")?.web_search).not.toBe(true);
+    expect(sent.find(message => message.role === "assistant")?.web_sources).toBeUndefined();
+    const { publicSearchMessages } = await vi.importActual<typeof import("../../api/schoolAiChat")>("../../api/schoolAiChat");
+    expect(publicSearchMessages(sent)).toEqual([{ role: "user", content: "北京今天的天气" }]);
+  });
+
+  it.each([
+    ["invalid_web_search_assessment", "本次搜索结果未能核实，请补充问题或稍后重试。"],
+    ["invalid_web_search_selection", "暂时无法选择需要读取的网页，请补充具体问题后重试。"],
+    ["invalid_web_search_citation", "回答中的引用未通过核验，请重试。"],
+  ])("按受控错误码展示搜索失败说明 %s", async (code, message) => {
+    await render(); await send();
+    await emit({ type: "error", request_id: "request", seq: 1, code, message: "internal=private-provider-detail" });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(message);
+    expect(host.textContent).not.toContain("private-provider-detail");
+  });
+
+  it("keeps public web sources and the exam context without classifying a web-only reply as business", async () => {
+    mocks.capabilities.mockResolvedValue({ web_search: { available: true, message: "已配置" } });
+    await render({ initialContext: { exam_id: "exam", exam_name: "本场考试" } });
+    await click("联网搜索"); await send("教育部公开通知");
+    const source = { id: "web-1", kind: "web" as const, status: "available" as const, label: "公开通知", read_at: "2026-11-01T00:00:00Z", consistency: "source_local" as const, scope_label: "公开网页", url: "https://www.moe.gov.cn/notice", excerpt: "公开的通知摘要" };
+    await emit({ type: "tool_started", request_id: "request", seq: 1, call_id: "search", tool_name: "web_search", label: "联网搜索" });
+    await emit({ type: "sources", request_id: "request", seq: 2, sources: [source], actions: [] });
+    await emit({ type: "tool_finished", request_id: "request", seq: 3, call_id: "search", tool_name: "web_search", label: "联网搜索", status: "completed" });
+    await emit(done(4, "根据公开通知回答")); await finish();
+    expect(host.querySelector(".school-conversation-context")?.textContent).toContain("本场考试");
+    const serialized = window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(user)}`)!;
+    expect(serialized).toContain("https://www.moe.gov.cn/notice");
+    expect(serialized).not.toContain("exam_id");
+    await act(async () => root.unmount()); root = createRoot(host);
+    await render(); await click("教育部公开通知");
+    expect(host.querySelector(".is-assistant [data-evidence]")?.textContent).toContain("web-1");
+    await click("联网搜索"); await send("继续写作");
+    expect(JSON.stringify(mocks.stream.mock.calls[1]?.[0])).not.toContain("web_sources");
+    expect(JSON.stringify(mocks.stream.mock.calls[1]?.[0])).not.toContain("www.moe.gov.cn");
+  });
+
+  it("网页正文读取后仍保留公开追问上下文，不因读取工具误判业务而截断", async () => {
+    mocks.capabilities.mockResolvedValue({ web_search: { available: true, message: "已配置" } });
+    await render(); await click("联网搜索"); await send("北京今天的天气");
+    await emit({ type: "tool_started", request_id: "request", seq: 1, call_id: "fetch", tool_name: "web_fetch", label: "读取网页正文" });
+    await emit({ type: "tool_finished", request_id: "request", seq: 2, call_id: "fetch", tool_name: "web_fetch", label: "读取网页正文", status: "completed" });
+    const source = { id: "web-1", kind: "web" as const, status: "available" as const, label: "天气来源", read_at: "2026-11-02T03:04:05Z", consistency: "source_local" as const, scope_label: "公开网页", url: "https://example.org/weather", excerpt: "选中的天气片段", note: "已读取网页正文。" };
+    await emit({ type: "sources", request_id: "request", seq: 3, sources: [source], actions: [] });
+    await emit(done(4, "已读取北京今天的天气资料。[1]")); await finish();
+    await send("明天呢");
+    const { publicSearchMessages } = await vi.importActual<typeof import("../../api/schoolAiChat")>("../../api/schoolAiChat");
+    const request = publicSearchMessages(mocks.stream.mock.calls[1]?.[0] as SchoolChatMessage[]);
+    expect(request.map(message => message.content)).toEqual(["北京今天的天气", "已读取北京今天的天气资料。[1]", "明天呢"]);
+    expect(JSON.stringify(request)).not.toContain("已读取网页正文");
+    expect(JSON.stringify(request)).not.toContain("example.org");
+    expect(window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(user)}`)).toContain("已读取网页正文。");
+  });
+
+  it("blocks files and oversized questions in web-search mode", async () => {
+    mocks.capabilities.mockResolvedValue({ web_search: { available: true, message: "已配置" } });
+    await render(); await click("联网搜索");
+    expect(button("上传文件").disabled).toBe(true);
+    await send("问".repeat(501));
+    expect(sessions).toHaveLength(0);
+    expect(mocks.warning).toHaveBeenCalledWith("联网搜索请单独发送 500 字以内的公开问题，不附带文件");
   });
 });

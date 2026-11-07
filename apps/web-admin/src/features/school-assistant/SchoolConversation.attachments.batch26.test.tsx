@@ -8,6 +8,7 @@ import { SchoolConversation } from "./SchoolConversation";
 
 const mocks = vi.hoisted(() => ({ model: vi.fn(), stream: vi.fn(), attachment: vi.fn(), warning: vi.fn(), error: vi.fn() }));
 vi.mock("../../api/schoolAiChat", () => ({ getSchoolChatModel: mocks.model, streamSchoolConversation: mocks.stream }));
+vi.mock("../../api/schoolAssistant", () => ({ getSchoolAssistantCapabilities: async () => ({ web_search: { available: false, message: "联网搜索尚未配置" } }) }));
 vi.mock("./conversationAttachments", () => ({ readChatAttachment: mocks.attachment }));
 vi.mock("../../api/client", () => ({ getUserErrorMessage: (error: Error, fallback: string) => error.message || fallback }));
 // 附件测试只核对读取与发送参数，消息展示和流传输使用薄替身。

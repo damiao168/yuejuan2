@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -43,6 +44,7 @@ func (h *Handler) ListAudits(w http.ResponseWriter, r *http.Request) {
 	filter.CursorID = cursor.ID
 	if scope, ok := AccessScopeFromContext(r.Context()); ok {
 		filter.ScopeMode = scope.QueryMode()
+		filter.SchoolIDs = scope.ManagedSchoolIDs()
 	}
 	records, err := h.store.ListAudits(r.Context(), user.TenantID, filter)
 	if err != nil {
@@ -74,9 +76,14 @@ func (h *Handler) ExportAudits(w http.ResponseWriter, r *http.Request) {
 	}
 	if scope, ok := AccessScopeFromContext(r.Context()); ok {
 		filter.ScopeMode = scope.QueryMode()
+		filter.SchoolIDs = scope.ManagedSchoolIDs()
 	}
-	records, err := h.store.ListAudits(r.Context(), user.TenantID, filter)
+	records, err := h.auditExportRecords(r, user.TenantID, filter)
 	if err != nil {
+		if errors.Is(err, errAuditExportTooLarge) {
+			httpx.Error(w, r, http.StatusRequestEntityTooLarge, "audit_export_too_large", "审计记录超过 10000 条，请缩小时间范围后导出")
+			return
+		}
 		httpx.Error(w, r, http.StatusInternalServerError, "audit_export_failed", "failed to export audit logs")
 		return
 	}
@@ -125,6 +132,41 @@ func (h *Handler) ExportAudits(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-EduGrade-Watermark", watermark)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(buffer.Bytes())
+}
+
+const maxAuditExportRecords = 10_000
+
+var errAuditExportTooLarge = errors.New("audit export exceeds record limit")
+
+func (h *Handler) auditExportRecords(r *http.Request, tenantID string, filter AuditFilter) ([]AuditRecord, error) {
+	// 导出不受列表页大小限制；固定截止时间并按稳定游标取完，超限时整次拒绝，不能返回貌似完整的部分 CSV。
+	if filter.CreatedTo.IsZero() || filter.CreatedTo.After(time.Now().UTC()) {
+		filter.CreatedTo = time.Now().UTC()
+	}
+	filter.Limit, filter.IncludeNext = 200, true
+	var out []AuditRecord
+	for {
+		page, err := h.store.ListAudits(r.Context(), tenantID, filter)
+		if err != nil {
+			return nil, err
+		}
+		hasMore := len(page) > filter.Limit
+		if hasMore {
+			page = page[:filter.Limit]
+		}
+		if len(out)+len(page) > maxAuditExportRecords || hasMore && len(out)+len(page) == maxAuditExportRecords {
+			return nil, errAuditExportTooLarge
+		}
+		out = append(out, page...)
+		if !hasMore {
+			return out, nil
+		}
+		last := page[len(page)-1]
+		if last.ID == "" || last.ID == filter.CursorID {
+			return nil, errors.New("audit export cursor did not advance")
+		}
+		filter.CursorCreatedAt, filter.CursorID = last.CreatedAt, last.ID
+	}
 }
 
 func (h *Handler) auditFilterFromRequest(w http.ResponseWriter, r *http.Request, defaultLimit int) (AuditFilter, bool) {

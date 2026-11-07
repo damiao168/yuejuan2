@@ -72,10 +72,16 @@ const productionRouteDefinitions: AppRoute[] = [
     experiences: { admin: { title: "学校 AI 助手", group: "工作台" } }
   },
   {
-    key: "sessions", path: "/account/sessions", title: "账户安全", group: "账号", icon: <LockKeyhole size={18} />, permissions: [],
+    key: "profile", path: "/account/profile", title: "个人信息与账户安全", group: "设置", icon: <UserCog size={18} />, permissions: [],
+    mock: false, productionReady: true,
+    workspaces: ["platform", "tenant_admin", "school_admin", "exam_owner", "teacher", "grader", "arbitrator", "auditor", "student"],
+    experiences: { admin: { title: "个人信息与账户安全", group: "设置" }, teacher: { title: "个人信息与账户安全", group: "设置" }, auditor: { title: "个人信息与账户安全", group: "设置" }, student: { title: "个人信息与账户安全", group: "设置" } }
+  },
+  {
+    key: "sessions", path: "/account/sessions", title: "个人信息与账户安全", group: "设置", icon: <LockKeyhole size={18} />, permissions: [],
     navigation: false, mock: false, productionReady: true,
     workspaces: ["platform", "tenant_admin", "school_admin", "exam_owner", "teacher", "grader", "arbitrator", "auditor", "student"],
-    experiences: { admin: { title: "账户安全", group: "账号" }, teacher: { title: "账户安全", group: "账号" }, auditor: { title: "账户安全", group: "账号" }, student: { title: "账户安全", group: "账号" } }
+    experiences: { admin: { title: "个人信息与账户安全", group: "设置" }, teacher: { title: "个人信息与账户安全", group: "设置" }, auditor: { title: "个人信息与账户安全", group: "设置" }, student: { title: "个人信息与账户安全", group: "设置" } }
   },
   {
     key: "platformGettingStarted", path: "/platform/getting-started", title: "首次启用", group: "平台管理", icon: <Rocket size={18} />, permissions: ["tenant:manage"], allowedRoles: ["platform_admin"], navigation: false, mock: false, productionReady: true,

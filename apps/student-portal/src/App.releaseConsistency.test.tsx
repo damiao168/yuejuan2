@@ -25,18 +25,18 @@ describe("学生证据发布版本与草稿保存状态", () => {
       return resultRoute(call, oldResult);
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
     expect(document.querySelector(".answer-image-stage img")?.getAttribute("src")).toContain("expected_release_id=release-7");
     fireEvent.click(screen.getByRole("button", { name: "返回题目列表" }));
     current = "release-8";
-    fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((screen.getByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const verify = await screen.findByRole("button", { name: "查看当前成绩并重新核对" });
     expect(screen.queryByText("第八版反馈")).toBeNull();
     expect(screen.queryByRole("textbox", { name: "具体说明" })).toBeNull();
     expect(readAppealDraft(oldDraftKey())?.reason).toBe(explanation);
     fireEvent.click(verify);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，18/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，18/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("第八版反馈");
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" }).value).toBe("");
     fireEvent.change(screen.getByRole("textbox", { name: "具体说明" }), { target: { value: "已经重新核对第八版公开的评分反馈。" } });
@@ -51,7 +51,7 @@ describe("学生证据发布版本与草稿保存状态", () => {
   it("题目读取成功但批注遇到发布切换时，不展示成功证据或申诉表单", async () => {
     installApi((call) => call.url.pathname.endsWith("/annotations") ? changed() : resultRoute(call, makeResult()));
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByRole("button", { name: "查看当前成绩并重新核对" });
     expect(screen.queryByRole("textbox", { name: "具体说明" })).toBeNull();
     expect(screen.queryByText("第一题公开评分依据")).toBeNull();
@@ -61,7 +61,7 @@ describe("学生证据发布版本与草稿保存状态", () => {
     let attempts = 0;
     installApi((call) => call.url.pathname.endsWith("/annotations") ? ++attempts === 1 ? jsonResponse({ error: { code: "failed" } }, 503) : changed() : resultRoute(call, makeResult()));
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
     fireEvent.click(screen.getByRole("button", { name: "重试批注" }));
     await screen.findByRole("button", { name: "查看当前成绩并重新核对" });
@@ -76,7 +76,7 @@ describe("学生证据发布版本与草稿保存状态", () => {
       return resultRoute(call, makeResult());
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
     current = "release-8";
     const selector = image === "我的原始答卷" ? ".answer-image-stage img" : ".appeal-region-image-wrap img";
@@ -99,7 +99,7 @@ describe("学生证据发布版本与草稿保存状态", () => {
       return resultRoute(call, makeResult());
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
     fireEvent.error(document.querySelector(".answer-image-stage img")!);
     await waitFor(() => expect(reads).toBe(2));
@@ -122,7 +122,7 @@ describe("学生证据发布版本与草稿保存状态", () => {
       return resultRoute(call, makeResult());
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
     await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(false));
     const form = document.querySelector(".question-appeal-form")!;
@@ -158,7 +158,7 @@ describe("学生证据发布版本与草稿保存状态", () => {
       return resultRoute(call, result);
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByRole("textbox", { name: "具体说明" });
     fireEvent.error(document.querySelector(".answer-image-stage img")!);
     fireEvent.click(screen.getByRole("button", { name: "下一失分题" }));
@@ -167,7 +167,7 @@ describe("学生证据发布版本与草稿保存状态", () => {
     fireEvent.error(document.querySelector(".answer-image-stage img")!);
     await act(async () => oldPending.resolve(changed()));
     expect(screen.queryByRole("button", { name: "查看当前成绩并重新核对" })).toBeNull();
-    expect(screen.getByRole("heading", { name: "第 2 题 · 作答与评分依据" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "第 2 题 · 成绩复核申请" })).toBeTruthy();
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(true);
     fireEvent.submit(document.querySelector(".question-appeal-form")!);
     expect(calls.some((call) => call.init.method === "POST")).toBe(false);
@@ -178,19 +178,24 @@ describe("学生证据发布版本与草稿保存状态", () => {
   it("会话存储拒绝写入时，切题和重新挂载后仍提示仅内存保存", async () => {
     const result = makeResult([makeQuestion(), makeQuestion({ question_id: "question-2", question_no: "2" })]);
     installApi((call) => resultRoute(call, result));
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("quota", "QuotaExceededError"); });
+    // 这里只模拟复核草稿所用的会话存储拒写；保留本地存储，避免触发另一个“无法持久化退出意图”的启动保护。
+    const setItem = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+      if (this === window.sessionStorage) throw new DOMException("quota", "QuotaExceededError");
+      setItem.call(this, key, value);
+    });
     const view = render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
     const warning = "草稿未能保存，仅在本页保留。刷新或关闭前，请先复制说明。";
     await screen.findByText(warning);
     fireEvent.click(screen.getByRole("button", { name: "下一失分题" }));
-    await screen.findByRole("heading", { name: "第 2 题 · 作答与评分依据" });
+    await screen.findByRole("heading", { name: "第 2 题 · 成绩复核申请" });
     fireEvent.click(screen.getByRole("button", { name: "上一失分题" }));
     await screen.findByText(warning);
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" }).value).toBe(explanation);
     view.unmount(); render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText(warning);
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" }).value).toBe(explanation);
   });

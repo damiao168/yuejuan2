@@ -45,10 +45,11 @@ describe("考试学科表展示边界", () => {
     }
   });
 
-  it("考试信息移除学校，保留年级和归档事实", () => {
+  it("考试信息移除学校和考试类型，保留年级和归档事实", () => {
     const record = { ...exam([subject("archived")], false), archived_at: "2026-10-05T00:00:00Z", archive_reason: "学年结束" };
     const html = renderToStaticMarkup(<ManagementExamDetails exam={record} layout="columns" gradeName="高一年级" />);
     expect(html).not.toContain(">学校<");
+    expect(html).not.toContain("考试类型");
     expect(html).toContain("高一年级");
     expect(html).toContain("归档时间");
     expect(html).toContain("学年结束");

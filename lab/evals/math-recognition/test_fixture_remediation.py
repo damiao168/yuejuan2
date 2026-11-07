@@ -15,6 +15,7 @@ def load_module(filename: str, name: str):
 
 GEN = load_module("generate_synthetic_fixtures.py", "fixture_remediation_generator")
 BENCH = load_module("run_math_bench.py", "fixture_remediation_bench")
+SPECS = load_module("synthetic_fixture_specs.py", "fixture_remediation_specs")
 FIXTURES = Path(__file__).with_name("fixtures")
 
 
@@ -62,7 +63,7 @@ def test_limit_semantics_and_evaluator_distinguish_radians_from_degrees():
     degrees["formulas"][0]["ast"]["children"][2]["children"][0]["unit"] = "deg"
     assert BENCH.score_item(expected, correct)["ast_exact"] == 1
     assert BENCH.score_item(expected, degrees)["ast_exact"] == 0
-    assert GEN.trig("sin", GEN.num("30"))["unit"] == "deg"
+    assert SPECS.trig("sin", SPECS.num("30"))["unit"] == "deg"
     stored_truth = json.loads((FIXTURES / "ground-truth/synthetic-limit-001.json").read_text(encoding="utf-8"))
     stored_prediction = json.loads((FIXTURES / "predictions/synthetic-v2/synthetic-limit-001.json").read_text(encoding="utf-8"))
     assert stored_truth == expected

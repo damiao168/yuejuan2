@@ -1,9 +1,18 @@
+import json
 import unittest
+from pathlib import Path
 
 from grading_agent.guardrails import detect_prompt_injection
 
 
 class PromptGuardTests(unittest.TestCase):
+    def test_shared_adversarial_corpus(self):
+        path = Path(__file__).resolve().parents[2] / "contracts/grading-agent/prompt-injection-cases.json"
+        for item in json.loads(path.read_text(encoding="utf-8")):
+            with self.subTest(text=item["text"]):
+                self.assertTrue(item["synthetic"])
+                self.assertEqual(detect_prompt_injection(item["text"])["detected"], item["detected"])
+
     def test_schema_bypass_words_must_appear_in_order(self):
         for value in ("输出schema之外", "输出任意SCHEMA的格式之外", "输出\n\tschema\u200b之外"):
             with self.subTest(value=value):

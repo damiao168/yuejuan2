@@ -7,28 +7,31 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 type MemoryStore struct {
-	mu       sync.RWMutex
-	next     int
-	tenants  map[string]Tenant
-	schools  map[string]School
-	grades   map[string]Grade
-	classes  map[string]Class
-	students map[string]Student
-	bindings map[string]bool
+	mu             sync.RWMutex
+	next           int
+	tenants        map[string]Tenant
+	schools        map[string]School
+	grades         map[string]Grade
+	classes        map[string]Class
+	students       map[string]Student
+	deletedGrades  map[string]bool
+	deletedClasses map[string]bool
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		next:     1,
-		tenants:  map[string]Tenant{},
-		schools:  map[string]School{},
-		grades:   map[string]Grade{},
-		classes:  map[string]Class{},
-		students: map[string]Student{},
-		bindings: map[string]bool{},
+		next:           1,
+		tenants:        map[string]Tenant{},
+		schools:        map[string]School{},
+		grades:         map[string]Grade{},
+		classes:        map[string]Class{},
+		students:       map[string]Student{},
+		deletedGrades:  map[string]bool{},
+		deletedClasses: map[string]bool{},
 	}
 }
 
@@ -152,7 +155,7 @@ func (s *MemoryStore) ListGradeCohorts(_ context.Context, tenantID, schoolID str
 			continue
 		}
 		seen[key] = true
-		out = append(out, GradeCohort{ID: grade.GradeCohortID, TenantID: tenantID, SchoolID: grade.SchoolID, EducationStage: grade.EducationStage, Name: grade.Name, Status: "active"})
+		out = append(out, GradeCohort{ID: grade.GradeCohortID, TenantID: tenantID, SchoolID: grade.SchoolID, EducationStage: grade.EducationStage, EntryYear: grade.EntryYear, ExpectedGraduationYear: grade.EntryYear + 3, Name: fmt.Sprintf("%d级", grade.EntryYear), Status: "active"})
 	}
 	return out, nil
 }
@@ -160,6 +163,21 @@ func (s *MemoryStore) ListGradeCohorts(_ context.Context, tenantID, schoolID str
 func (s *MemoryStore) CreateGrade(_ context.Context, tenantID string, input Grade) (Grade, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	schoolYear := currentSchoolYearStart(time.Now())
+	var err error
+	input, err = normalizeCurrentGrade(input, schoolYear)
+	if err != nil {
+		return Grade{}, err
+	}
+	rows := []Grade{}
+	for _, grade := range s.grades {
+		if grade.TenantID == tenantID && grade.SchoolID == input.SchoolID && !s.deletedGrades[grade.ID] {
+			rows = append(rows, grade)
+		}
+	}
+	if err = validateCurrentGradeConflict(input, rows, schoolYear, true); err != nil {
+		return Grade{}, err
+	}
 	input.ID = s.id("grade")
 	input.TenantID = tenantID
 	if input.Status == "" {
@@ -168,6 +186,13 @@ func (s *MemoryStore) CreateGrade(_ context.Context, tenantID string, input Grad
 	if input.EducationStage == "" {
 		input.EducationStage = educationStageForLevel(input.LevelNo)
 	}
+	if input.AcademicYear == "" {
+		start := currentSchoolYearStart(time.Now())
+		input.AcademicYear = fmt.Sprintf("%d-%d", start, start+1)
+	}
+	input.EntryYear = legacyGradeEntryYear(input)
+	// 届别身份由学校、学段、入学年决定，不能接受请求携带的其他届别ID。
+	input.GradeCohortID = fmt.Sprintf("cohort-%s-%s-%d", input.SchoolID, input.EducationStage, input.EntryYear)
 	s.grades[input.ID] = input
 	return input, nil
 }
@@ -184,7 +209,7 @@ func (s *MemoryStore) ListGrades(_ context.Context, tenantID string, schoolID st
 	defer s.mu.RUnlock()
 	out := []Grade{}
 	for _, item := range s.grades {
-		if item.TenantID == tenantID && (schoolID == "" || item.SchoolID == schoolID) {
+		if !s.deletedGrades[item.ID] && item.TenantID == tenantID && (schoolID == "" || item.SchoolID == schoolID) {
 			out = append(out, item)
 		}
 	}
@@ -194,6 +219,13 @@ func (s *MemoryStore) ListGrades(_ context.Context, tenantID string, schoolID st
 func (s *MemoryStore) CreateClass(_ context.Context, tenantID string, input Class) (Class, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.deletedGrades[input.GradeID] {
+		return Class{}, ErrInvalidParent
+	}
+	if parent, ok := s.grades[input.GradeID]; ok {
+		input.AcademicYearID = parent.AcademicYearID
+		input.GradeCohortID = parent.GradeCohortID
+	}
 	for _, current := range s.classes {
 		if current.TenantID == tenantID && current.GradeID == input.GradeID && current.Code == input.Code {
 			return Class{}, ErrClassCodeConflict
@@ -213,7 +245,7 @@ func (s *MemoryStore) ListClasses(_ context.Context, tenantID string, gradeID st
 	defer s.mu.RUnlock()
 	out := []Class{}
 	for _, item := range s.classes {
-		if item.TenantID == tenantID && (gradeID == "" || item.GradeID == gradeID) {
+		if !s.deletedClasses[item.ID] && item.TenantID == tenantID && (gradeID == "" || item.GradeID == gradeID) {
 			out = append(out, item)
 		}
 	}
@@ -223,6 +255,9 @@ func (s *MemoryStore) ListClasses(_ context.Context, tenantID string, gradeID st
 func (s *MemoryStore) CreateStudent(_ context.Context, tenantID string, input Student) (Student, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.deletedClasses[input.ClassID] {
+		return Student{}, ErrInvalidParent
+	}
 	for _, current := range s.students {
 		if current.TenantID == tenantID && current.SchoolID == input.SchoolID && current.StudentNo == input.StudentNo {
 			return Student{}, ErrStudentNoConflict
@@ -235,6 +270,7 @@ func (s *MemoryStore) CreateStudent(_ context.Context, tenantID string, input St
 	if input.Status == "" {
 		input.Status = "active"
 	}
+	input.AccountStatus = "not_provisioned"
 	s.students[input.ID] = input
 	return input, nil
 }
@@ -321,7 +357,7 @@ func (s *MemoryStore) TransferStudent(_ context.Context, tenantID, studentID, cl
 		return StudentEnrollment{}, fmt.Errorf("student not found")
 	}
 	class, ok := s.classes[classID]
-	if !ok || class.TenantID != tenantID || class.SchoolID != student.SchoolID {
+	if !ok || s.deletedClasses[classID] || class.TenantID != tenantID || class.SchoolID != student.SchoolID {
 		return StudentEnrollment{}, ErrInvalidParent
 	}
 	student.ClassID = classID
@@ -340,13 +376,6 @@ func (s *MemoryStore) ListStudentEnrollments(_ context.Context, tenantID, studen
 	}
 	class := s.classes[student.ClassID]
 	return []StudentEnrollment{{StudentID: studentID, SchoolID: student.SchoolID, AcademicYearID: class.AcademicYearID, GradeCohortID: class.GradeCohortID, ClassID: class.ID, ClassName: class.Name, Status: "enrolled"}}, nil
-}
-
-func (s *MemoryStore) BindTeacherClass(_ context.Context, tenantID string, teacherID string, classID string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.bindings[tenantID+"|"+teacherID+"|"+classID] = true
-	return nil
 }
 
 func (s *MemoryStore) id(prefix string) string {

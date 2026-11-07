@@ -27,6 +27,8 @@ func seedCompletedObservationFixture(t *testing.T) completedObservationFixture {
 	if err := f.db.QueryRowContext(f.ctx, `SELECT item.id::text,item.question_id::text,item.assessment_snapshot_id::text,sr.exam_id::text,seg.submission_id::text FROM scoring_run_item item JOIN scoring_run sr ON sr.id=item.scoring_run_id JOIN answer_segment seg ON seg.id=item.answer_segment_id WHERE item.answer_segment_id=$1::uuid`, f.segment).Scan(&f.item, &f.question, &snapshot, &exam, &submission); err != nil {
 		t.Fatal(err)
 	}
+	// 冻结规则同时读取本轮考试的 AI 计划；隔离的 OMR 基础夹具尚未建立考试行。
+	f.exec(t, `INSERT INTO exam(id,tenant_id,school_id,name,subject,exam_type,total_score,status,grading_mode,publish_policy,created_by) VALUES($1,$2,$3,'Synthetic observation reprocess','math','quiz',10,'grading','ai_assisted','manual_after_confirmation',$4)`, exam, f.tenant, uuid.NewString(), f.actor)
 	f.exec(t, `UPDATE question SET question_type='fill_blank' WHERE id=$1::uuid`, f.question)
 	f.exec(t, `UPDATE exam_question_snapshot SET scoring_policy_snapshot_json='{"mode":"RULE_AUTO"}' WHERE id=$1::uuid`, snapshot)
 	_, ruleHash, err := marshalRule("fill_blank", map[string]any{"answer": "1/2", "max_score": 5.0})

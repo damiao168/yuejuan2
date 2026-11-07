@@ -2,7 +2,9 @@ import type { SchoolChatModel } from "../../api/schoolAiChat";
 import type { ConversationEvidence } from "./conversationState";
 
 export interface PendingConversation {
+  readonly startedAt?: number;
   readonly modelConfigID?: string;
+  readonly webSearch?: boolean;
   readonly content: string;
   readonly reasoning: string;
   readonly evidence: ConversationEvidence;

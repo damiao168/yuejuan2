@@ -34,6 +34,8 @@ func TestComposeApplicationBootstrapAndLoginWithPostgres(t *testing.T) {
 			t.Setenv(key, value)
 		}
 	}
+	t.Setenv("EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY", "synthetic-compose-bootstrap-model-key-32-chars")
+	t.Setenv("EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY", "synthetic-compose-bootstrap-review-key-32-chars")
 	cfg, err := config.Load("")
 	if err != nil {
 		t.Fatal(err)

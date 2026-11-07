@@ -12,6 +12,7 @@ export interface SessionUser {
   currentExam: string;
   permissions: string[];
   publicComputer: boolean;
+  mustChangePassword?: boolean;
   organizationScope: {
     resolved: boolean;
     tenantWide: boolean;
@@ -30,6 +31,12 @@ export function hasEveryPermission(user: SessionUser | null, permissions: string
 
 export function hasAnyPermission(user: SessionUser | null, permissions: string[]): boolean {
   return Boolean(user && permissions.some((permission) => user.permissions.includes(permission)));
+}
+
+/** 同账号的授权或学校边界变化也必须换缓存，不能只用用户 ID 保留旧考试投影。 */
+export function sessionAuthorizationKey(user: SessionUser): string {
+  return JSON.stringify([user.tenant, user.id, [...(user.roles ?? [])].sort(), [...(user.permissions ?? [])].sort(),
+    user.organizationScope, user.publicComputer]);
 }
 
 export function productIdentityLabel(user: SessionUser): string {
@@ -59,6 +66,7 @@ export function sessionFromAuthUser(user: AuthUser): SessionUser {
     currentExam: "未选择考试",
     permissions: user.permissions,
     publicComputer: user.current_session_type === "public_device",
+    mustChangePassword: user.must_change_password ?? false,
     // 缺失组织范围表示尚未解析，不能把空数组解释为机构内全部可见。
     organizationScope: {
       resolved: Boolean(user.organization_scope),

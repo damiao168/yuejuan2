@@ -22,6 +22,7 @@ import {
 import { listManagedUsers, type ManagedUser } from "../api/users";
 import { ErrorState } from "../components/PageState";
 import { examSubjectLabel } from "../constants/examStatus";
+import { canAssignSubjectTask } from "../constants/teachingSubjects";
 import type { ProductExperience } from "../router/experience";
 import { useUnsavedChangesGuard } from "../router/useUnsavedChangesGuard";
 import { loadOpinionDraft, removeOpinionDraft, saveOpinionDraft, useOpinionDraftReloadWarning } from "../auth/reviewOpinionDraft";
@@ -278,11 +279,11 @@ export function AppealCenterPage({
   );
   const workerOptions = useMemo(
     () =>
-      workers.map((worker) => ({
+      workers.filter(worker => canAssignSubjectTask(worker, selected?.subject || (selected ? identities.exams[selected.exam_id]?.subject : undefined), "teacher", selected ? identities.exams[selected.exam_id]?.school_id : undefined)).map((worker) => ({
         value: worker.id,
         label: worker.display_name || worker.username,
       })),
-    [workers],
+    [identities.exams, selected, workers],
   );
   const examOptions = useMemo(
     () =>
@@ -307,13 +308,19 @@ export function AppealCenterPage({
       : appeals;
   }, [appeals, identities.students, keyword]);
   const refreshSelected = async (id: string) => {
-    await load();
     if (selectedIdRef.current !== id) return;
     const requestId = ++detailRequestRef.current;
     setDetailLoading(true);
     try {
-      const response = await getAppeal(id);
-      if (requestId !== detailRequestRef.current || selectedIdRef.current !== id) return;
+      const [response, refreshedStatistics] = await Promise.all([
+        getAppeal(id),
+        canManage ? getAppealStatistics(examFilter === "all" ? undefined : examFilter).catch(() => null) : Promise.resolve(null),
+      ]);
+      if (requestId !== detailRequestRef.current || selectedIdRef.current !== id || listScopeRef.current !== listScope) return;
+      setStatistics(refreshedStatistics?.statistics ?? null);
+      // 操作后只替换本条，保留已加载页及选中对象；移出筛选也不静默跳到另一名学生。
+      setAppeals(current => current.flatMap(item => item.id !== id ? [item] :
+        (statusFilter === "all" || response.appeal.status === statusFilter) ? [response.appeal] : []));
       setSelected(response.appeal);
       setAssignedTo(response.appeal.assigned_to ?? "");
       setRecommendation(
@@ -334,7 +341,7 @@ export function AppealCenterPage({
     }
   };
   const reassign = async (discardOpinion = false) => {
-    if (selected?.id !== selectedIdRef.current || detailLoading || actioning || !assignedTo) return;
+    if (!canManage || selected?.id !== selectedIdRef.current || detailLoading || actioning || !workerOptions.some(option => option.value === assignedTo)) return;
     // 重新分派会重读详情并清空终审表单；填写的结论不能因为保存分派人而静默丢失。
     const initialDecision = ["accepted", "rejected", "score_adjusted", "need_more_info"].includes(selected.status)
       ? selected.status
@@ -551,7 +558,7 @@ export function AppealCenterPage({
                 mode={mode} selected={selected} terminal={terminal} draftTouched={draftTouched} memorySaved={memorySaved}
                 actioning={actioning} score={score} maxScore={maxScore} reason={reason}
                 recommendation={recommendation} canSubmit={canSubmitTeacherRecommendation}
-                workerNames={workerNames} workerOptions={workerOptions} assignedTo={assignedTo}
+                workerNames={workerNames} workerOptions={workerOptions} assignedTo={workerOptions.some(option => option.value === assignedTo) ? assignedTo : ""}
                 decision={decision} canManage={canManage}
                 onScoreChange={(value) => { setDraftTouched(true); setScore(value); }}
                 onReasonChange={(value) => { setDraftTouched(true); setReason(value); }}

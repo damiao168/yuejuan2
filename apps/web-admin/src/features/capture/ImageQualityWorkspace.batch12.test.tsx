@@ -75,6 +75,26 @@ describe("图像质量工作区展示职责回归", () => {
   }
   async function click(label: string) { await act(async () => button(label).click()); }
 
+  it("轮询重建同一页面对象时保留历史记录选择和进行中的重检", async () => {
+    mocks.runs.mockResolvedValue({ runs: [run("latest"), run("older")] });
+    await render([page()]);
+    await act(async () => {
+      const select = host.querySelector<HTMLSelectElement>('select[aria-label="检测记录"]')!;
+      select.value = "older"; select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await render([{ ...page() }]);
+    expect(mocks.runs).toHaveBeenCalledTimes(1);
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="检测记录"]')!.value).toBe("older");
+    const pending = deferred<{ runs: ImageQualityRun[] }>();
+    mocks.rerun.mockReturnValueOnce(pending.promise);
+    await click("重检本份答卷");
+    await render([{ ...page(), revision: 2 }]);
+    expect(button("重检本份答卷").disabled).toBe(true);
+    expect(mocks.rerun).toHaveBeenCalledTimes(1);
+    await act(async () => pending.resolve({ runs: [run("rerun")] }));
+    expect(mocks.message.success).toHaveBeenCalled();
+  });
+
   it("新页下载失败清除旧图，重试并实际显示当前原图后才可放行", async () => {
     const first = page("p1", { decoded_file_asset_id: "source-1" });
     const second = page("p2", { sequence_no: 2, decoded_file_asset_id: "source-2" });

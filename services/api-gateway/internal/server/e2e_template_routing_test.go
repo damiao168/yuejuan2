@@ -38,22 +38,22 @@ WITH created_submission AS (
     tenant_id,exam_id,source_type,status,expected_page_count,actual_page_count,
     quality_status,collected_by,identity_status
   ) VALUES ($1::uuid,$2::uuid,'pdf_upload','pages_uploaded',1,1,'passed',$3::uuid,'matched')
-  RETURNING id
+  RETURNING id,gen_random_uuid() AS page_id
 ), created_normalized_asset AS (
   INSERT INTO file_asset (
     tenant_id,school_id,exam_id,submission_id,owner_type,owner_id,original_name,content_type,
     size_bytes,hash_sha256,storage_bucket,storage_key,visibility,uploaded_by
   )
-  SELECT $1::uuid,fa.school_id,$2::uuid,created_submission.id,'submission',created_submission.id,
+  SELECT $1::uuid,fa.school_id,$2::uuid,created_submission.id,'submission_page_normalized',created_submission.page_id,
          'template-routing-normalized.png','image/png',fa.size_bytes,
          md5(created_submission.id::text) || md5(created_submission.id::text || '-template-routing'),
          fa.storage_bucket,fa.storage_key || '/template-routing-normalized','private',$3::uuid
   FROM created_submission JOIN file_asset fa ON fa.tenant_id=$1::uuid AND fa.id=$4::uuid
-  RETURNING id,submission_id,original_name,content_type,size_bytes,hash_sha256
+  RETURNING id,submission_id,owner_id,original_name,content_type,size_bytes,hash_sha256
 ), created_submission_page AS (
   INSERT INTO submission_page (
-    tenant_id,submission_id,file_asset_id,page_no,status,normalized_file_asset_id,quality_status
-  ) SELECT $1::uuid,submission_id,id,1,'accepted',id,'passed' FROM created_normalized_asset
+    id,tenant_id,submission_id,file_asset_id,page_no,status,normalized_file_asset_id,quality_status
+  ) SELECT owner_id,$1::uuid,submission_id,id,1,'accepted',id,'passed' FROM created_normalized_asset
   RETURNING id,submission_id
 ), created_batch AS (
   INSERT INTO capture_batch (tenant_id,exam_id,name,source_type,status,operator_id)

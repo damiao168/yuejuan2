@@ -6,6 +6,7 @@ import pytest
 from ocr_worker import recognition_router as module
 from ocr_worker.engine import OCRBlock
 from ocr_worker.math_layout import FormulaRegion
+from ocr_worker.math_runner import _build_artifact
 from ocr_worker.recognition_router import (
     FormulaRecognitionResult,
     PaddleFormulaNetEngine,
@@ -52,6 +53,18 @@ def test_empty_region_returns_before_text_or_formula_calls(kind: RegionKind) -> 
     text.recognize.assert_not_called()
     engine.recognize_formula.assert_not_called()
     engine.recognize_formulas.assert_not_called()
+
+
+@pytest.mark.parametrize("confidence", [float("nan"), float("inf"), float("-inf")])
+def test_mixed_text_fragments_with_nonfinite_confidence_require_review(monkeypatch: pytest.MonkeyPatch, confidence: float) -> None:
+    engine = SimpleNamespace(recognize_formulas=Mock(return_value=[formula()]))
+    router = mixed_router(monkeypatch, engine, [region()])
+    router.text_engine = SimpleNamespace(recognize=Mock(return_value=[OCRBlock("abcdefghij", [0, 10, 100, 20], confidence)]))
+    result = router.recognize("mathematics", RegionKind.MIXED, png())
+    assert result.text_blocks
+    assert all(block.confidence == 0 for block in result.text_blocks)
+    artifact = _build_artifact({"answer_segment_id": "segment", "exam_question_snapshot_id": "snapshot", "subject_code": "mathematics", "input_hash": "hash"}, result, SimpleNamespace(normalize=lambda _latex: {"ast": {"kind": "equation"}}))
+    assert artifact["solution_graph"]["requires_human_review"]
 
 
 @pytest.mark.parametrize("error_type", [RuntimeError, ValueError])

@@ -75,7 +75,7 @@ API 会再次执行相同安全校验；不安全配置会拒绝启动。
 .\scripts\init.ps1
 ```
 
-执行顺序：依赖健康检查、migration、MinIO private bucket、应用构建、应用健康检查、HTTP smoke test。
+执行顺序：依赖健康检查、构建本次镜像、停止旧应用与 worker、migration、MinIO private bucket、启动匹配版本应用、恢复原先运行的 worker、应用健康检查、HTTP smoke test。升级前必须验证数据库和配置备份；迁移失败后不自动启动旧镜像，先修复同一发布或恢复旧备份。网关在启动后台任务前核对迁移账本与编译版本，不匹配时拒绝启动。未来删除结构优先拆成兼容、切换、清理多次发布，详见 Compose 升级说明。
 
 初始化脚本可重复执行：已记录的 migration 会按 SHA-256 校验后跳过，bucket 会保持 private，现有 volume 和管理员不会被删除或覆盖。
 

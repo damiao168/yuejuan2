@@ -27,6 +27,7 @@ export type ViewKey =
   | "platformModelConfig"
   | "schoolAiChat"
   | "sessions"
+  | "profile"
   | "examWorkspace";
 
 export type StatusTone = "success" | "warning" | "danger" | "info" | "processing" | "neutral";

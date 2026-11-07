@@ -99,28 +99,21 @@ func (s *PostgresOrganizationSummaryStore) countUsersWithRole(ctx context.Contex
 	base := `SELECT COUNT(DISTINCT u.id) FROM app_user u JOIN user_role ur ON ur.tenant_id=u.tenant_id AND ur.user_id=u.id AND ur.deleted_at IS NULL JOIN role r ON r.tenant_id=ur.tenant_id AND r.id=ur.role_id AND r.deleted_at IS NULL WHERE u.tenant_id=$1::uuid AND u.deleted_at IS NULL AND u.status='active' AND r.code=$2`
 	args := []any{tenantID, role}
 	if unassignedOnly {
-		base += ` AND NOT EXISTS (SELECT 1 FROM teacher_class utc WHERE utc.tenant_id=u.tenant_id AND utc.teacher_id=u.id AND utc.deleted_at IS NULL)`
+		base += ` AND cardinality(u.teaching_subjects)=0 AND NOT EXISTS (SELECT 1 FROM user_role aur JOIN role ar ON ar.tenant_id=aur.tenant_id AND ar.id=aur.role_id AND ar.deleted_at IS NULL WHERE aur.tenant_id=u.tenant_id AND aur.user_id=u.id AND aur.deleted_at IS NULL AND ar.code IN ('platform_admin','tenant_admin','school_admin'))`
 	}
 
-	classScope := scopedColumns{classSchoolScopeColumn, classGradeScopeColumn, "c.id"}
 	if scope.IsPlatform || scope.TenantWide {
 		// 租户级统计不受导航投影出的学校/班级列表收窄。
 	} else if scope.IsSchoolWide() {
-		// 学校管理员的年级/班级列表只是展开结果；教师归属按管理学校统计，未绑定班级也计入。
+		// 学校管理员的年级/班级列表只是展开结果；教师归属按管理学校统计，按学科维护资料的教师也计入。
 		schools := scope.ManagedSchoolIDs()
 		if len(schools) == 0 {
 			return 0, auth.ErrAccessScopeInvalid
 		}
 		base += " AND " + inClause("u.school_id", schools, &args)
-	} else if len(scope.GradeIDs) > 0 || len(scope.ClassIDs) > 0 {
-		inner, scopedArgs := appendScope(`SELECT 1 FROM teacher_class tc JOIN school_class c ON c.tenant_id=tc.tenant_id AND c.id=tc.class_id WHERE tc.tenant_id=u.tenant_id AND tc.teacher_id=u.id AND tc.deleted_at IS NULL AND c.deleted_at IS NULL`, scope, classScope, args)
-		args = scopedArgs
-		base += " AND EXISTS (" + inner + ")"
-	} else if len(scope.SchoolIDs) > 0 {
-		schoolUser := inClause("u.school_id", scope.SchoolIDs, &args)
-		inner, scopedArgs := appendScope(`SELECT 1 FROM teacher_class tc JOIN school_class c ON c.tenant_id=tc.tenant_id AND c.id=tc.class_id WHERE tc.tenant_id=u.tenant_id AND tc.teacher_id=u.id AND tc.deleted_at IS NULL AND c.deleted_at IS NULL`, scope, classScope, args)
-		args = scopedArgs
-		base += " AND (" + schoolUser + " OR EXISTS (" + inner + "))"
+	} else {
+		// 普通阅卷任务授权不能用于枚举同校人员，班级投影也不再决定教师归属。
+		return 0, nil
 	}
 
 	var count int

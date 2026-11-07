@@ -8,8 +8,9 @@ export interface ManagedUser {
   phone_masked?: string;
   employee_no?: string;
   status: string;
+  must_change_password?: boolean;
   roles: string[];
-  class_ids?: string[];
+  teaching_subjects?: string[];
   school_id?: string;
   created_at?: string;
   activated_at?: string;
@@ -30,10 +31,11 @@ export interface CreateManagedUserPayload {
   employee_no?: string;
   display_name: string;
   password?: string;
+  password_confirm?: string;
   role_code?: string;
   role_codes?: string[];
   school_id?: string;
-  class_ids?: string[];
+  teaching_subjects?: string[];
 }
 
 export interface ManagedUserActivation {
@@ -69,9 +71,7 @@ export async function listAllManagedUsers(filter: { q?: string; role?: string } 
 
 export interface UpdateManagedUserAccessPayload {
   role_codes: string[];
-  class_ids: string[];
   expected_roles: string[];
-  expected_class_ids: string[];
   reason: string;
 }
 
@@ -89,6 +89,8 @@ export interface UpdateManagedUserProfilePayload {
   expected_display_name: string;
   expected_employee_no: string;
   expected_phone_masked: string;
+  teaching_subjects?: string[];
+  expected_teaching_subjects?: string[];
 }
 
 export function updateManagedUserProfile(id: string, payload: UpdateManagedUserProfilePayload) {

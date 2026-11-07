@@ -120,7 +120,7 @@ func assertAuthBatch49Script(t *testing.T, script *authBatch49Script, end string
 
 func authBatch49AccountStep() authBatch49Step {
 	now := time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC)
-	return authBatch49Step{kind: "query", fragment: "FOR UPDATE", args: []any{"tenant", "target"}, columns: 10, rows: [][]driver.Value{{"target", "target-login", "target-name", "active", "school", "13800138000", "employee", nil, nil, now}}}
+	return authBatch49Step{kind: "query", fragment: "FOR UPDATE", args: []any{"tenant", "target"}, columns: 11, rows: [][]driver.Value{{"target", "target-login", "target-name", "active", "school", "13800138000", "employee", nil, nil, now, false}}}
 }
 
 func authBatch49RoleStep(roles [][]driver.Value) authBatch49Step {

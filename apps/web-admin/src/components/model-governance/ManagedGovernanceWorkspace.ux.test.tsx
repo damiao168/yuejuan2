@@ -4,9 +4,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TenantModelPolicy } from "../../api/modelGovernance";
 import { ManagedGovernanceWorkspace } from "./ManagedGovernanceWorkspace";
+import { ApiClientError } from "../../api/client";
 
-const mocks = vi.hoisted(() => ({ policy: vi.fn(), update: vi.fn(), form: { values: {} as Record<string, unknown>, setFieldsValue: vi.fn(), validateFields: vi.fn() } }));
-vi.mock("../../api/modelGovernance", () => ({ getModelPolicy: mocks.policy, updateModelPolicy: mocks.update, listModelEvaluationRuns: async () => ({ evaluation_runs: [] }), listModelApprovals: async () => ({ model_approvals: [] }) }));
+const mocks = vi.hoisted(() => ({ policy: vi.fn(), update: vi.fn(), runs: vi.fn(), form: { values: {} as Record<string, unknown>, setFieldsValue: vi.fn(), validateFields: vi.fn() } }));
+vi.mock("../../api/modelGovernance", () => ({ getModelPolicy: mocks.policy, updateModelPolicy: mocks.update, listModelEvaluationRuns: mocks.runs, listModelApprovals: async () => ({ model_approvals: [] }) }));
 vi.mock("./ModelEvaluationWorkspace", () => ({ ModelEvaluationWorkspace: ({ onRefresh }: { onRefresh: () => Promise<void> }) => <button type="button" onClick={() => void onRefresh()}>刷新证据列表</button> }));
 vi.mock("./ScoringAssuranceWorkspace", () => ({ ScoringAssuranceWorkspace: () => null }));
 vi.mock("./ModelApprovalWorkspace", () => ({ ModelApprovalWorkspace: () => null }));
@@ -32,10 +33,34 @@ beforeEach(() => {
   mocks.form.setFieldsValue.mockImplementation((values: Record<string, unknown>) => Object.assign(mocks.form.values, values));
   mocks.form.validateFields.mockImplementation(async () => ({ ...mocks.form.values }));
   mocks.policy.mockResolvedValue({ policy: policy(7) }); mocks.update.mockResolvedValue({});
+  mocks.runs.mockResolvedValue({ evaluation_runs: [], has_more: false, next_cursor: "" });
 });
 afterEach(cleanup);
 
 describe("学校使用策略实际提交", () => {
+  it("策略冲突后可明确放弃草稿并载入最新版本", async () => {
+    render(<ManagedGovernanceWorkspace tenantID="school-a" configs={[]} />);
+    await screen.findByText("学校使用策略");
+    fireEvent.change(screen.getByLabelText("编辑策略"), { target: { value: "changed" } });
+    mocks.update.mockRejectedValueOnce(new ApiClientError(409, "model_policy_conflict", "conflict"));
+    fireEvent.submit(screen.getByRole("form", { name: "使用策略" }));
+    const reload = await screen.findByRole("button", { name: "放弃修改并载入最新版本" });
+    mocks.policy.mockResolvedValue({ policy: policy(8) });
+    fireEvent.click(reload);
+    await screen.findByText("当前生效策略 · 版本 8");
+    expect((screen.getByRole("button", { name: "刷新" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole("button", { name: "放弃修改并载入最新版本" })).toBeNull();
+  });
+
+  it("评测记录超过一页时提供后续证据加载入口", async () => {
+    mocks.runs.mockResolvedValueOnce({ evaluation_runs: [{ id: "first" }], has_more: true, next_cursor: "page-2" })
+      .mockResolvedValueOnce({ evaluation_runs: [{ id: "later" }], has_more: false, next_cursor: "" });
+    render(<ManagedGovernanceWorkspace tenantID="school-a" configs={[]} />);
+    fireEvent.change(screen.getByLabelText("治理视图"), { target: { value: "evaluations" } });
+    fireEvent.click(await screen.findByRole("button", { name: "加载更多评测记录" }));
+    await waitFor(() => expect(mocks.runs).toHaveBeenLastCalledWith("school-a", { limit: 100, cursor: "page-2" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "加载更多评测记录" })).toBeNull());
+  });
   it("切换治理视图保留学校、范围参数和浏览历史状态，地址不含 #", async () => {
     window.history.replaceState({ preserved: true }, "", "/admin/platform/model-config?tenant_id=school-a&tab=governance&view=policy&subject=english");
     render(<ManagedGovernanceWorkspace tenantID="school-a" configs={[]} />);

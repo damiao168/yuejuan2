@@ -71,6 +71,7 @@ function Wait-ComposeService([string]$Service, [int]$TimeoutSeconds = 180) {
 }
 
 Push-Location $composeDir
+$applicationsStoppedForMigration = $false
 try {
   & (Join-Path $scriptRoot "prepare-internal-tls.ps1") -EnvFile $envPath -ComposeDirectory $composeDir
   & (Join-Path $scriptRoot "preflight.ps1") -ComposeFile $composePath -EnvFile $envPath
@@ -78,15 +79,31 @@ try {
   Invoke-Compose -Arguments @("up", "-d", "postgres", "redis", "minio", "qdrant")
   foreach ($service in @("postgres", "redis", "minio", "qdrant")) { Wait-ComposeService $service }
 
-  # 先完成迁移和对象桶初始化再启动应用，防止服务连接到尚未准备好的存储结构。
+  $workerServices = @('ocr-worker', 'image-quality-worker', 'page-processing-worker', 'math-recognition-worker', 'paper-formula-worker', 'subjective-grading-worker')
+  $runningServices = @(& docker compose --env-file $envPath -f $composePath --profile '*' ps --services --status running)
+  if ($LASTEXITCODE -ne 0) { throw 'Cannot determine running services before migration; no migration was started.' }
+  $previousWorkers = @($runningServices | Where-Object { $_ -in $workerServices })
+  $buildServices = @('grading-agent', 'api-gateway', 'web-admin') + $previousWorkers
+  if ($EnableOcr) { $buildServices += 'ocr-worker' }
+  if ($EnableQuality) { $buildServices += 'image-quality-worker' }
+  if ($EnableProcessing) { $buildServices += 'page-processing-worker' }
+  $buildServices = @($buildServices | Select-Object -Unique)
+  # 构建失败时旧服务仍可用；停机后不再构建，缩短结构迁移期间的不可用窗口。
+  if (-not $SkipBuild) { Invoke-Compose -Arguments (@('--profile', '*', 'build') + $buildServices) }
+  elseif ($BuildWorkers) {
+    $buildWorkersOnly = @($buildServices | Where-Object { $_ -in $workerServices })
+    if ($buildWorkersOnly.Count) { Invoke-Compose -Arguments (@('--profile', '*', 'build') + $buildWorkersOnly) }
+  }
+  # 删列迁移不能与旧网关、worker 或后台作业并行；停止失败时禁止进入迁移。
+  Invoke-Compose -Arguments (@('--profile', '*', 'stop', 'api-gateway', 'grading-agent') + $workerServices)
+  $applicationsStoppedForMigration = $true
   $migrationArgs = @("--profile", "tools", "run", "--rm")
   if ($MigrationBaselineVersion) { $migrationArgs += @("-e", "EDUGRADE_MIGRATION_BASELINE_VERSION=$MigrationBaselineVersion") }
   $migrationArgs += "db-migrate"
   Invoke-Compose -Arguments $migrationArgs
   Invoke-Compose -Arguments @("--profile", "tools", "run", "--rm", "minio-init")
 
-  $appArgs = @("up", "-d")
-  if (-not $SkipBuild) { $appArgs += "--build" }
+  $appArgs = @("up", "-d", "--no-build")
   $appArgs += @("grading-agent", "api-gateway", "web-admin", "nginx")
   Invoke-Compose -Arguments $appArgs
   foreach ($service in @("grading-agent", "api-gateway", "web-admin", "nginx")) { Wait-ComposeService $service 300 }
@@ -131,7 +148,7 @@ try {
   if ($EnableOcr) {
     Assert-WorkerCredentials "OCR worker" "EDUGRADE_OCR_WORKER"
     $workerArgs = @("--profile", "ocr", "up", "-d")
-    if (-not $SkipBuild -or $BuildWorkers) { $workerArgs += "--build" }
+    $workerArgs += "--no-build"
     $workerArgs += "ocr-worker"
     Invoke-Compose -Arguments $workerArgs
     Wait-ComposeService "ocr-worker"
@@ -139,7 +156,7 @@ try {
   if ($EnableQuality) {
     Assert-WorkerCredentials "image-quality worker" "EDUGRADE_IMAGE_QUALITY"
     $workerArgs = @("--profile", "quality", "up", "-d")
-    if (-not $SkipBuild -or $BuildWorkers) { $workerArgs += "--build" }
+    $workerArgs += "--no-build"
     $workerArgs += "image-quality-worker"
     Invoke-Compose -Arguments $workerArgs
     Wait-ComposeService "image-quality-worker"
@@ -147,10 +164,15 @@ try {
   if ($EnableProcessing) {
     Assert-WorkerCredentials "page-processing worker" "EDUGRADE_PAGE_PROCESSING"
     $workerArgs = @("--profile", "processing", "up", "-d")
-    if (-not $SkipBuild -or $BuildWorkers) { $workerArgs += "--build" }
+    $workerArgs += "--no-build"
     $workerArgs += "page-processing-worker"
     Invoke-Compose -Arguments $workerArgs
     Wait-ComposeService "page-processing-worker"
+  }
+  # 未重传开关的既有 worker 也恢复到本次镜像，不能迁移成功后一直留在停止状态。
+  if ($previousWorkers.Count) {
+    Invoke-Compose -Arguments (@('--profile', '*', 'up', '-d', '--no-build') + $previousWorkers)
+    foreach ($service in $previousWorkers) { Wait-ComposeService $service }
   }
   if ($EnableObservability) {
     Invoke-Compose -Arguments @("--profile", "observability", "up", "-d", "prometheus", "grafana")
@@ -168,6 +190,11 @@ try {
   }
   Invoke-Compose -Arguments @("ps")
   Write-Host "EduGrade private deployment initialized."
+} catch {
+  if ($applicationsStoppedForMigration) {
+    Write-Warning 'Upgrade failed after application services were stopped. Do not restart old images against a changed schema; correct the matching release and rerun, or restore the verified pre-upgrade backup before starting the old release.'
+  }
+  throw
 } finally {
   Pop-Location
 }

@@ -465,7 +465,7 @@ func (s *PostgresStore) SearchItems(ctx context.Context, scope auth.AccessScope,
 	}
 	// 总数与明细共用范围条件：先过滤学校及读权限，默认展示当前发布版和本人草稿。
 	where := ` FROM question_bank_item_version v JOIN question_bank_item i ON i.tenant_id=v.tenant_id AND i.id=v.item_id JOIN question_bank b ON b.tenant_id=i.tenant_id AND b.id=i.bank_id
-WHERE v.tenant_id=$1::uuid AND ($2 OR b.school_id::text=ANY($3::text[])) AND question_bank_actor_has_action(b.tenant_id,b.id,$4::uuid,'read') AND b.status='active' AND i.status='active' AND i.kind='question'
+WHERE v.tenant_id=$1::uuid AND ` + bankSchoolScopeSQL("b.school_id", "$1", "$4", "$2", "$3") + ` AND question_bank_actor_has_action(b.tenant_id,b.id,$4::uuid,'read') AND b.status='active' AND i.status='active' AND i.kind='question'
 AND (($5='default' AND (v.id=i.current_published_version_id OR (v.workflow_status='draft' AND v.author_id=$4::uuid))) OR ($5='published' AND v.id=i.current_published_version_id) OR ($5='my_drafts' AND v.workflow_status='draft' AND v.author_id=$4::uuid) OR $5='all')
 AND ($6='' OR i.item_code ILIKE '%'||$6||'%' OR v.content->>'stem' ILIKE '%'||$6||'%') AND ($7='' OR i.bank_id::text=$7) AND ($8='' OR i.subject_code=$8)
 AND ($9='' OR v.content->'knowledge_points' ? $9) AND ($10='' OR v.content->>'question_type'=$10) AND ($11='' OR v.content->>'assessment_archetype'=$11) AND ($12='' OR v.workflow_status=$12)

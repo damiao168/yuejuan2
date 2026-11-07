@@ -1,7 +1,6 @@
 package org
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -237,7 +236,7 @@ func (h *Handler) CreateGrade(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "school_id and name are required")
 		return
 	}
-	if scope, _ := auth.AccessScopeFromContext(r.Context()); !allowsSchool(scope, input.SchoolID) {
+	if scope, _ := auth.AccessScopeFromContext(r.Context()); !scope.ManagesSchool(input.SchoolID) {
 		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", schoolScopeForbidden)
 		return
 	}
@@ -286,7 +285,7 @@ func (h *Handler) CreateClass(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "school_id, grade_id, name and code are required")
 		return
 	}
-	if scope, _ := auth.AccessScopeFromContext(r.Context()); !allowsSchool(scope, input.SchoolID) {
+	if scope, _ := auth.AccessScopeFromContext(r.Context()); !scope.ManagesSchool(input.SchoolID) {
 		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", schoolScopeForbidden)
 		return
 	}
@@ -319,21 +318,53 @@ func (h *Handler) ListClasses(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateStudent(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
-	var input Student
-	if !decodeJSON(w, r, &input) {
+	var input struct {
+		SchoolID  string `json:"school_id"`
+		ClassID   string `json:"class_id"`
+		StudentNo string `json:"student_no"`
+		Name      string `json:"name"`
+		Gender    string `json:"gender"`
+		studentPasswordInput
+	}
+	// 输入类型不接收用户 ID、角色或作用域，学生账号只能绑定本次新建的名册。
+	if !decodeOrganizationPatch(w, r, &input) {
 		return
 	}
-	if input.SchoolID == "" || input.ClassID == "" || input.StudentNo == "" || input.Name == "" {
+	input.SchoolID, input.ClassID = strings.TrimSpace(input.SchoolID), strings.TrimSpace(input.ClassID)
+	if input.SchoolID == "" || input.ClassID == "" {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "school_id, class_id, student_no and name are required")
 		return
 	}
-	if scope, _ := auth.AccessScopeFromContext(r.Context()); !allowsSchool(scope, input.SchoolID) || !h.allowsResource(r, scope, "school_class", input.ClassID) {
+	if !normalizePatchText(w, r, &input.StudentNo, "student_no", 64, false) ||
+		!normalizePatchText(w, r, &input.Name, "name", 120, false) {
+		return
+	}
+	if input.Gender != "" && input.Gender != "male" && input.Gender != "female" && input.Gender != "unknown" {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_gender", "gender must be male, female, unknown or empty")
+		return
+	}
+	if !validateStudentPassword(w, r, input.studentPasswordInput) {
+		return
+	}
+	if scope, _ := auth.AccessScopeFromContext(r.Context()); !scope.ManagesSchool(input.SchoolID) || !h.allowsResource(r, scope, "school_class", input.ClassID) {
 		httpx.Error(w, r, http.StatusForbidden, "organization_scope_forbidden", "student organization is outside the current data access scope")
 		return
 	}
-	out, err := h.store.CreateStudent(r.Context(), user.TenantID, input)
+	store, ok := h.studentAccountStore(w, r)
+	if !ok {
+		return
+	}
+	hash, err := auth.HashPassword(input.Password)
 	if err != nil {
-		writeStoreError(w, r, err, "student_create_failed", "failed to create student")
+		httpx.Error(w, r, http.StatusInternalServerError, "password_hash_failed", "暂时无法添加学生，请稍后重试")
+		return
+	}
+	out, err := store.CreateStudentWithAccount(r.Context(), user.TenantID, StudentAccountProvision{
+		Student:      Student{SchoolID: input.SchoolID, ClassID: input.ClassID, StudentNo: input.StudentNo, Name: input.Name, Gender: input.Gender, Status: "active"},
+		PasswordHash: hash,
+	})
+	if err != nil {
+		writeStudentAccountError(w, r, err, "student_create_failed")
 		return
 	}
 	h.auditAction(r, "org.student_created", "student", out.ID, "create student")
@@ -463,77 +494,6 @@ func (h *Handler) ListStudentEnrollments(w http.ResponseWriter, r *http.Request)
 	httpx.JSON(w, http.StatusOK, map[string]any{"enrollments": out})
 }
 
-// CSV 导入逐行报告错误并继续处理，已成功的行不因单行格式问题回滚。
-func (h *Handler) ImportStudentsCSV(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	reader := csv.NewReader(r.Body)
-	reader.FieldsPerRecord = -1
-	rows, err := reader.ReadAll()
-	if err != nil {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_csv", "failed to parse csv")
-		return
-	}
-	result := CSVImportResult{Errors: []CSVImportError{}}
-	for i, row := range rows {
-		if i == 0 && len(row) >= 3 && strings.EqualFold(row[0], "student_no") {
-			continue
-		}
-		if len(row) < 4 {
-			result.Errors = append(result.Errors, CSVImportError{Row: i + 1, Message: "列不完整，请使用学生导入模板重新填写"})
-			continue
-		}
-		student := Student{StudentNo: strings.TrimSpace(row[0]), Name: strings.TrimSpace(row[1]), SchoolID: strings.TrimSpace(row[2]), ClassID: strings.TrimSpace(row[3])}
-		if student.StudentNo == "" || student.Name == "" || student.SchoolID == "" || student.ClassID == "" {
-			result.Errors = append(result.Errors, CSVImportError{Row: i + 1, Message: "学号、姓名、学校和班级不能为空"})
-			continue
-		}
-		scope, _ := auth.AccessScopeFromContext(r.Context())
-		if !allowsSchool(scope, student.SchoolID) || !h.allowsResource(r, scope, "school_class", student.ClassID) {
-			result.Errors = append(result.Errors, CSVImportError{Row: i + 1, Message: "所选学校或班级不在你的管理范围内"})
-			continue
-		}
-		if _, err := h.store.CreateStudent(r.Context(), user.TenantID, student); err != nil {
-			message := "该行暂时无法导入，请稍后重试"
-			switch {
-			case errors.Is(err, ErrStudentNoConflict):
-				message = "该学号已存在"
-			case errors.Is(err, ErrInvalidParent):
-				message = "所选学校或班级不存在，请重新选择"
-			}
-			result.Errors = append(result.Errors, CSVImportError{Row: i + 1, Message: message})
-			continue
-		}
-		result.Created++
-	}
-	h.auditAction(r, "org.students_imported", "student", "", "import students csv")
-	httpx.JSON(w, http.StatusOK, map[string]any{"result": result})
-}
-
-func (h *Handler) BindTeacherClass(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	var input struct {
-		TeacherID string `json:"teacher_id"`
-	}
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	if input.TeacherID == "" {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "teacher_id is required")
-		return
-	}
-	classID := r.PathValue("id")
-	if err := h.store.BindTeacherClass(r.Context(), user.TenantID, input.TeacherID, classID); err != nil {
-		if errors.Is(err, ErrInvalidTeacherBinding) {
-			httpx.Error(w, r, http.StatusBadRequest, "invalid_teacher_binding", "target user must have an active teacher role")
-			return
-		}
-		httpx.Error(w, r, http.StatusInternalServerError, "teacher_bind_failed", "failed to bind teacher to class")
-		return
-	}
-	h.auditAction(r, "org.teacher_bound_to_class", "class", classID, "bind teacher to class")
-	httpx.JSON(w, http.StatusOK, map[string]any{"status": "bound"})
-}
-
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	if err := json.NewDecoder(r.Body).Decode(target); err != nil {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "invalid json body")
@@ -543,16 +503,35 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 }
 
 func writeStoreError(w http.ResponseWriter, r *http.Request, err error, code string, message string) {
+	if writeGradeConflictError(w, r, err) {
+		return
+	}
+	if errors.Is(err, ErrInvalidGradeLevel) {
+		httpx.Error(w, r, http.StatusBadRequest, "grade_level_invalid", "当前年级必须属于原学段：初中为初一至初三，高中为高一至高三")
+		return
+	}
+	if errors.Is(err, ErrInvalidEntryYear) {
+		httpx.Error(w, r, http.StatusBadRequest, "grade_entry_year_invalid", "入学年份必须在1900至2100年之间")
+		return
+	}
+	if errors.Is(err, ErrInvalidEnrollmentDate) {
+		httpx.Error(w, r, http.StatusBadRequest, "student_transfer_date_invalid", "调整班级日期不能早于现有在读关系的开始日期，请先核对学籍日期")
+		return
+	}
 	if errors.Is(err, ErrSchoolCodeConflict) {
 		httpx.Error(w, r, http.StatusConflict, "school_code_conflict", "school code already exists")
 		return
 	}
 	if errors.Is(err, ErrClassCodeConflict) {
-		httpx.Error(w, r, http.StatusConflict, "class_code_conflict", "class code already exists in this grade")
+		httpx.Error(w, r, http.StatusConflict, "class_code_conflict", "该班级代码已被现有或历史班级使用，请更换班级代码")
 		return
 	}
 	if errors.Is(err, ErrStudentNoConflict) {
 		httpx.Error(w, r, http.StatusConflict, "student_no_conflict", "student number already exists in this school")
+		return
+	}
+	if errors.Is(err, ErrStudentAccountLegacyConflict) {
+		httpx.Error(w, r, http.StatusConflict, "student_account_legacy_conflict", "该学生存在尚未核对的历史账号关联，请联系管理员处理后再修改或开通")
 		return
 	}
 	if errors.Is(err, ErrInvalidParent) {
@@ -596,7 +575,7 @@ func (h *Handler) auditAction(r *http.Request, action string, targetType string,
 		TargetType: targetType,
 		TargetID:   targetID,
 		Reason:     reason,
-		IPAddress:  r.RemoteAddr,
+		IPAddress:  httpx.ClientIP(r),
 		UserAgent:  r.UserAgent(),
 		RequestID:  logger.RequestID(r.Context()),
 	})
@@ -612,5 +591,8 @@ func (h *Handler) allowsResource(r *http.Request, scope auth.AccessScope, resour
 		return false
 	}
 	boundary, err := resolver.ResolveResourceBoundary(r.Context(), scope, resourceType, strings.TrimSpace(resourceID))
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return err == nil && auth.AllowsManagedResourceBoundary(scope, boundary)
+	}
 	return err == nil && auth.AllowsResourceBoundary(scope, boundary)
 }

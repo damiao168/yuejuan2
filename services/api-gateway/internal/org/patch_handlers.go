@@ -17,8 +17,8 @@ func (h *Handler) UpdateGrade(w http.ResponseWriter, r *http.Request) {
 	if !decodeOrganizationPatch(w, r, &input) {
 		return
 	}
-	if input.Name == nil {
-		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "name is required")
+	if input.Name == nil && input.LevelNo == nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_request", "name or level_no is required")
 		return
 	}
 	if !normalizePatchText(w, r, input.Name, "name", 120, false) {
@@ -86,6 +86,9 @@ func normalizePatchText(w http.ResponseWriter, r *http.Request, value *string, f
 }
 
 func writeOrganizationPatchError(w http.ResponseWriter, r *http.Request, err error, resource string) {
+	if writeGradeConflictError(w, r, err) {
+		return
+	}
 	if errors.Is(err, ErrNotFound) {
 		httpx.Error(w, r, http.StatusNotFound, resource+"_not_found", resource+" not found")
 		return

@@ -118,6 +118,11 @@ func (h *Handler) buildAdapterInput(ctx context.Context, tenantID, requestID str
 		if value.Observation == nil || imageModelBinding(model) != value.Observation.ModelBinding || adapter.Policy().ModelVersion != policy.ModelVersion {
 			return AdapterInput{}, nil, false, ErrWorkerResultVersionConflict
 		}
+		if !supportedImageComparisonPrompt(policy.PromptVersion) {
+			return AdapterInput{}, nil, false, ErrWorkerResultVersionConflict
+		}
+		// 当前开关只影响新任务；执行阶段使用数据库中该任务冻结的比较版本。
+		adapter.policy.PromptVersion = policy.PromptVersion
 		crop, err := h.activeCrops.ResolveForObservation(ctx, tenantID, value.SegmentID, value.Question.ID)
 		if err != nil {
 			return AdapterInput{}, nil, false, err

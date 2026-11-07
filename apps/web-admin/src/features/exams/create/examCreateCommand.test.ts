@@ -3,7 +3,7 @@ import { ApiClientError } from "../../../api/client";
 import { beginExamCreateCommand, commandAfterFailure, commandAfterSuccess, commandRecoveryDelayMS, createExamCreateSubmissionGate, loadExamCreateCommand, nextCommandRecovery, persistExamCreateCommand, recordExamCreateSuccess } from "./examCreateCommand";
 
 const payload = {
-  school_id: "school-1", grade_id: "grade-1", name: "期中考试", exam_type: "formal_exam",
+  school_id: "school-1", grade_id: "grade-1", name: "期中考试",
   grading_mode: "ai_assisted", appeal_enabled: true, publish_policy: "after_admin_approval",
   class_ids: ["class-1"], subjects: [{ subject: "math", total_score: 100, duration_minutes: 90, candidate_rule: "all_selected_classes", class_ids: [], sections: [] }]
 };
@@ -20,6 +20,18 @@ describe("exam create command recovery", () => {
     persistExamCreateCommand(target, "key", command);
     expect(loadExamCreateCommand(target, "key")).toEqual(command);
     expect(loadExamCreateCommand(target, "key:operation:command-1234")).toEqual(command);
+    expect(command.payload).not.toHaveProperty("exam_type");
+  });
+
+  it("保留旧版结果未知命令的考试类型，重试不改变原请求正文", () => {
+    const legacyPayload = { ...payload, exam_type: "formal_exam" };
+    const command = beginExamCreateCommand(legacyPayload, "legacy-command");
+    const unknown = commandAfterFailure(command, new Error("response lost"))!;
+    const target = storage();
+    persistExamCreateCommand(target, "key", unknown);
+    expect(loadExamCreateCommand(target, "key")).toMatchObject({
+      commandId: "legacy-command", state: "unknown", payload: legacyPayload
+    });
   });
 
   it("persists the creation mode so recovery keeps the original destination", () => {

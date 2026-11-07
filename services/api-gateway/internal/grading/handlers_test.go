@@ -31,11 +31,14 @@ func TestRecordAnswerRuleGradeListAndAudit(t *testing.T) {
 	router := testRouter(authStore, gradingStore)
 	token := login(t, router)
 
-	req := authedRequest(http.MethodPut, "/api/v1/answer-segments/segment-1/answer", bytes.NewBufferString(`{"answer_text":"B","source":"manual_entry","confidence":0.99}`), token)
+	req := authedRequest(http.MethodPut, "/api/v1/answer-segments/segment-1/answer", bytes.NewBufferString(`{"answer_text":"B","source":"ocr_text","confidence":0.99}`), token)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"answer_text":"B"`) {
 		t.Fatalf("record answer expected 200, got %d %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"source":"manual_entry"`) || strings.Contains(rec.Body.String(), `"confidence":0.99`) {
+		t.Fatalf("manual endpoint accepted forged OCR provenance: %s", rec.Body.String())
 	}
 
 	req = authedRequest(http.MethodPost, "/api/v1/answer-segments/segment-1/rule-grade", nil, token)

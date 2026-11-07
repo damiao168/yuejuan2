@@ -40,6 +40,44 @@ describe("task query and complete selection", () => {
     await act(async () => { queue.setKeyword(value); });
     await act(async () => { await vi.advanceTimersByTimeAsync(300); });
   }
+  it("所选任务只显示能任教全部学科的教师，数学别名同科且清除不再匹配的旧选择", async () => {
+    const english = { ...task("english", "english-q"), exam_id: "english-exam", subject: "english" };
+    api.list.mockResolvedValue({ tasks: [task("math"), english], aggregate: aggregate(2), has_more: false });
+    api.graders.mockResolvedValue([
+      { id: "math-teacher", username: "math", display_name: "数学老师", roles: ["grader"], teaching_subjects: ["mathematics"] },
+      { id: "english-teacher", username: "english", display_name: "英语老师", roles: ["grader"], teaching_subjects: ["english"] },
+      { id: "both", username: "both", display_name: "多科老师", roles: ["grader"], teaching_subjects: ["数学", " ENGLISH "] },
+      { id: "unset", username: "unset", display_name: "未设置", roles: ["grader"] }
+    ]);
+    await mount();
+    await act(async () => { await queue.loadGraders(); queue.setAssignmentTaskIds(["math"]); });
+    expect(queue.graderOptions.map(option => option.value)).toEqual(["math-teacher", "both"]);
+    await act(async () => { queue.setAssignmentUserId("math-teacher"); });
+    await act(async () => { queue.setAssignmentTaskIds(["math", "english"]); });
+    expect(queue.graderOptions.map(option => option.value)).toEqual(["both"]);
+    expect(queue.assignmentUserId).toBe("");
+    expect(queue.gradersError).toBeNull();
+  });
+  it("跨学科任务没有共同教师时提示分科分配，管理员资格保持豁免", async () => {
+    api.list.mockResolvedValue({ tasks: [task("math"), { ...task("english"), subject: "english" }], aggregate: aggregate(2), has_more: false });
+    api.graders.mockResolvedValue([{ id: "math-teacher", username: "math", display_name: "数学老师", roles: ["grader"], teaching_subjects: ["mathematics"] }]);
+    await mount();
+    await act(async () => { await queue.loadGraders(); queue.setAssignmentTaskIds(["math", "english"]); });
+    expect(queue.graderOptions).toEqual([]);
+    expect(queue.gradersError).toContain("按学科分别选择任务并分配");
+    api.graders.mockResolvedValue([{ id: "admin", username: "admin", display_name: "学校管理员", roles: ["school_admin", "grader"] }]);
+    await act(async () => { await queue.loadGraders(); });
+    expect(queue.graderOptions.map(option => option.value)).toEqual(["admin"]);
+    expect(queue.gradersError).toBeNull();
+  });
+  it("缺少任务学科时不推测教师资格，未设置任教学科的教师也不能获得任务", async () => {
+    api.list.mockResolvedValue({ tasks: [{ ...task("unknown"), subject: undefined }], aggregate: aggregate(1), has_more: false });
+    api.graders.mockResolvedValue([{ id: "unset", username: "unset", display_name: "未设置", roles: ["grader"] }]);
+    await mount();
+    await act(async () => { await queue.loadGraders(); queue.setAssignmentTaskIds(["unknown"]); });
+    expect(queue.graderOptions).toEqual([]);
+    expect(queue.gradersError).toContain("缺少考试学科");
+  });
   it("首页历史入口按reviewed请求本人记录，打开指定历史任务后仍保持历史队列", async () => {
     window.location.hash = "#/grading?status=reviewed&task=history%2Fcompleted";
     const completed = { ...task("history/completed"), status: "completed", assigned_to: "admin" };

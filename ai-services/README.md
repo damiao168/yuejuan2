@@ -6,6 +6,8 @@
 
 ## 本地测试
 
+阅卷固定上下文前缀的新旧版本、缓存诊断字段和部署顺序见[上下文前缀说明](../docs/architecture/grading-question-context-cache.md)。默认保留现有布局；切换消息版本不等于通过模型质量评测，也不保证供应商实际命中。
+
 在仓库根目录运行：
 
 ```powershell

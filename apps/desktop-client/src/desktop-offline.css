@@ -1,0 +1,140 @@
+
+
+.offline-workbench {
+  display: grid;
+  gap: 16px;
+}
+
+.offline-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.offline-head h3,
+.package-view h4 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.offline-head p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+}
+
+.offline-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.offline-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: 16px;
+}
+
+.offline-grid.workbench {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+
+.section-head.compact {
+  margin-bottom: 12px;
+}
+
+.package-view {
+  display: grid;
+  gap: 14px;
+}
+
+.package-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.answer-preview {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.answer-document-viewer { width: 100%; }
+.answer-document-tools { padding: 10px; }
+.answer-document-viewport {
+  height: 560px;
+  overflow: auto;
+  cursor: grab;
+  touch-action: none;
+}
+.answer-document-canvas { position: relative; margin-inline: auto; }
+.answer-document-viewport img {
+  position: absolute;
+  display: block;
+  max-width: none;
+  max-height: none;
+  height: auto;
+  transform-origin: center;
+}
+.answer-document-viewport iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.package-view pre {
+  max-height: 160px;
+  overflow: auto;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--surface-soft);
+  white-space: pre-wrap;
+}
+
+.offline-draft-form .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.rubric-edit-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rubric-edit-list label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.offline-actions {
+  margin-top: 4px;
+}
+
+.file-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.file-picker input {
+  display: none;
+}

@@ -50,23 +50,95 @@ func TestCaptureCollectionCompletionWithPostgresTestDatabase(t *testing.T) {
 		}
 		return fileID, subID
 	}
+	assertCannotComplete := func(summary capture.CollectionSummary, command string) {
+		t.Helper()
+		if _, err := store.CompleteCollection(ctx, f.TenantID, f.ExamID, f.AdminID, capture.CompleteCollectionInput{Revision: summary.Revision, IdempotencyKey: command}); !errors.Is(err, capture.ErrInvalidTransition) {
+			t.Fatalf("incomplete input must reject collection completion: %v", err)
+		}
+	}
+
 	seed(f.StudentIDs[0])
 	summary, err := store.GetCollectionSummary(ctx, f.TenantID, f.ExamID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if summary.ReadyCount != 1 || summary.PendingCount != 1 || summary.CanComplete {
-		t.Fatalf("missing student must block: %+v", summary)
+	if summary.ReadyCount != 1 || summary.PendingCount != 0 || summary.AbsentCount != 1 || !summary.CanComplete {
+		t.Fatalf("no linked answer sheet must derive absence: %+v", summary)
 	}
-	e2ePostJSON(t, router, http.MethodPut, "/api/v1/exams/"+f.ExamID+"/roster/"+f.StudentIDs[1]+"/attendance", token, `{"status":"absent","reason":"核对监考记录，学生确实缺考"}`, http.StatusOK)
-	absent, err := store.GetCollectionSummary(ctx, f.TenantID, f.ExamID)
+	// 历史人工缺考行保留，但不能让有答卷的学生继续被当作缺考，也不需要恢复应考操作。
+	for _, studentID := range f.StudentIDs {
+		if _, err := db.Exec(`INSERT INTO exam_student_attendance(tenant_id,exam_id,student_id,status,reason,marked_by) VALUES($1,$2::uuid,$3::uuid,'absent','Synthetic legacy attendance',$4::uuid)`, f.TenantID, f.ExamID, studentID, f.AdminID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	printed, err := store.GetStudentPrintContext(ctx, f.TenantID, f.TemplateID)
+	if err != nil || len(printed.Candidates) != 2 {
+		t.Fatalf("legacy absence must not filter the frozen print roster: count=%d error=%v", len(printed.Candidates), err)
+	}
+	for _, candidate := range printed.Candidates {
+		if candidate.AttendanceStatus != "expected" {
+			t.Fatal("printing still used a manual absence flag")
+		}
+	}
+
+	e2ePostJSON(t, router, http.MethodPut, "/api/v1/exams/"+f.ExamID+"/roster/"+f.StudentIDs[1]+"/attendance", token, `{"status":"expected","reason":"retired operation"}`, http.StatusNotFound)
+	_, anonymousSubmission := seed("")
+	if _, err := db.Exec(`UPDATE submission SET identity_status='unassigned' WHERE id=$1::uuid`, anonymousSubmission); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := store.GetCollectionSummary(ctx, f.TenantID, f.ExamID)
+	if err != nil || pending.CanComplete || pending.AbsentCount != 1 || len(pending.Issues) == 0 {
+		t.Fatalf("unidentified sheet cannot be hidden by automatic absence: %+v error=%v", pending, err)
+	}
+	assertCannotComplete(pending, "unidentified-still-blocks")
+	matched, err := store.ConfirmStudentMatch(ctx, f.TenantID, anonymousSubmission, f.AdminID, capture.ConfirmStudentMatchInput{StudentID: f.StudentIDs[1], Revision: 1, Reason: "Synthetic roster confirmation"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !absent.CanComplete || absent.AbsentCount != 1 || absent.RequiredCount != 1 {
-		t.Fatalf("explicit absence should resolve missing sheet: %+v", absent)
+	matchedSummary, err := store.GetCollectionSummary(ctx, f.TenantID, f.ExamID)
+	if err != nil || matchedSummary.AbsentCount != 0 || matchedSummary.ReadyCount != 2 || !matchedSummary.CanComplete {
+		t.Fatalf("matching must automatically replace absence with received sheet: %+v error=%v", matchedSummary, err)
 	}
-	e2ePostJSON(t, router, http.MethodPut, "/api/v1/exams/"+f.ExamID+"/roster/"+f.StudentIDs[1]+"/attendance", token, `{"status":"expected","reason":"已找到该生答卷，恢复应考并导入"}`, http.StatusOK)
+	// 有卷后的缺页或质检失败仍是待处理，不能重新归入缺考后绕过导入门禁。
+	if _, err := db.Exec(`UPDATE capture_page SET assigned_page_no=2 WHERE submission_id=$1::uuid`, anonymousSubmission); err != nil {
+		t.Fatal(err)
+	}
+	pagesPending, err := store.GetCollectionSummary(ctx, f.TenantID, f.ExamID)
+	if err != nil || pagesPending.AbsentCount != 0 || pagesPending.CanComplete || pagesPending.PendingCount != 1 {
+		t.Fatalf("missing page became absence or bypassed gate: %+v error=%v", pagesPending, err)
+	}
+	assertCannotComplete(pagesPending, "missing-page-still-blocks")
+	if _, err := db.Exec(`UPDATE capture_page SET assigned_page_no=1 WHERE submission_id=$1::uuid`, anonymousSubmission); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE submission SET quality_status='failed' WHERE id=$1::uuid`, anonymousSubmission); err != nil {
+		t.Fatal(err)
+	}
+	qualityPending, err := store.GetCollectionSummary(ctx, f.TenantID, f.ExamID)
+	if err != nil || qualityPending.AbsentCount != 0 || qualityPending.CanComplete || qualityPending.PendingCount != 1 {
+		t.Fatalf("quality failure became absence or bypassed gate: %+v error=%v", qualityPending, err)
+	}
+	assertCannotComplete(qualityPending, "quality-still-blocks")
+	if _, err := db.Exec(`UPDATE submission SET quality_status='passed' WHERE id=$1::uuid`, anonymousSubmission); err != nil {
+		t.Fatal(err)
+	}
+
+	unknown, err := store.MarkStudentUnknown(ctx, f.TenantID, anonymousSubmission, f.AdminID, capture.MarkStudentUnknownInput{Revision: matched.IdentityRevision, Reason: "Synthetic identity recheck"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pending, err = store.GetCollectionSummary(ctx, f.TenantID, f.ExamID)
+	if err != nil || pending.CanComplete || pending.AbsentCount != 1 || len(pending.Issues) == 0 {
+		t.Fatalf("unknown identity must restore absence while remaining unresolved: %+v error=%v", pending, err)
+	}
+	if _, err = store.ConfirmStudentMatch(ctx, f.TenantID, anonymousSubmission, f.AdminID, capture.ConfirmStudentMatchInput{StudentID: f.StudentIDs[1], Revision: unknown.IdentityRevision, Reason: "Synthetic final roster confirmation"}); err != nil {
+		t.Fatal(err)
+	}
+	var legacyAbsent int
+	if err := db.QueryRow(`SELECT count(*) FROM exam_student_attendance WHERE tenant_id=$1 AND exam_id=$2::uuid AND status='absent'`, f.TenantID, f.ExamID).Scan(&legacyAbsent); err != nil || legacyAbsent != 2 {
+		t.Fatalf("automatic classification rewrote legacy attendance: count=%d error=%v", legacyAbsent, err)
+	}
+
 	var failedID string
 	err = db.QueryRow(`INSERT INTO capture_file(tenant_id,capture_batch_id,file_asset_id,original_name,content_type,sha256,byte_size,status,idempotency_key,uploaded_by) VALUES($1,$2::uuid,$3::uuid,'broken.pdf','application/pdf',repeat('b',64),1,'failed','broken',$4::uuid) RETURNING id::text`, f.TenantID, batch.ID, f.PaperFileAssetID, f.AdminID).Scan(&failedID)
 	if err != nil {
@@ -101,7 +173,6 @@ func TestCaptureCollectionCompletionWithPostgresTestDatabase(t *testing.T) {
 	// 已排除文件仍按原考试授权恢复相同命令；其他租户或班级不能借恢复入口取得访问权限。
 	checkFileBoundary()
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/capture-files/"+failedID+"/exclude", token, `{"reason":"误传文件，经核对不计入本次导入"}`, http.StatusOK)
-	seed(f.StudentIDs[1])
 	summary, err = store.GetCollectionSummary(ctx, f.TenantID, f.ExamID)
 	if err != nil {
 		t.Fatal(err)

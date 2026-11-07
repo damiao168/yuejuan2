@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strings"
 )
 
 type PostgresStore struct{ db *sql.DB }
@@ -35,26 +36,38 @@ func (s *PostgresStore) createArtifactInTx(ctx context.Context, tx *sql.Tx, tena
 		return Artifact{}, ErrInvalidInput
 	}
 	var err error
-	var lockedSegmentID string
+	var lockedSegmentID, cropHash string
 	// 先核实题块与考试快照的归属，并锁住题块；并发写入同一题块时串行分配版本、切换当前记录。
 	if err = tx.QueryRowContext(ctx, `
-SELECT seg.id::text
+SELECT seg.id::text, COALESCE(seg.crop_sha256,'')
 FROM answer_segment seg
 JOIN question q ON q.tenant_id=seg.tenant_id AND q.id=seg.question_id AND q.deleted_at IS NULL
 JOIN exam_question_snapshot snap ON snap.tenant_id=q.tenant_id AND snap.exam_id=q.exam_id AND snap.question_id=q.id
 WHERE seg.tenant_id=$1::uuid AND seg.id=$2::uuid AND snap.id=$3::uuid
+  AND snap.id=(SELECT current_snapshot.id FROM exam_question_snapshot current_snapshot
+    WHERE current_snapshot.tenant_id=q.tenant_id AND current_snapshot.exam_id=q.exam_id AND current_snapshot.question_id=q.id
+    ORDER BY current_snapshot.snapshot_version DESC,current_snapshot.id DESC LIMIT 1)
   AND snap.profile_snapshot_json->>'subject_code'=$4
   AND snap.profile_snapshot_json->>'subject_code' IN ('mathematics','physics','chemistry')
   AND seg.deleted_at IS NULL
-	FOR UPDATE OF seg`, tenantID, input.AnswerSegmentID, input.ExamQuestionSnapshotID, input.SubjectCode).Scan(&lockedSegmentID); err != nil {
+	FOR UPDATE OF seg`, tenantID, input.AnswerSegmentID, input.ExamQuestionSnapshotID, input.SubjectCode).Scan(&lockedSegmentID, &cropHash); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Artifact{}, ErrInvalidInput
 		}
 		return Artifact{}, err
 	}
+	// 裁切与产物指针在同一题块锁下校验；迟到的旧任务不能把当前新裁切产物替换为旧哈希。
+	if !sameCropHash(input.InputHash, cropHash) {
+		return Artifact{}, ErrRevisionConflict
+	}
 	var existingID string
-	err = tx.QueryRowContext(ctx, `SELECT id::text FROM math_understanding_artifact WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND input_hash=$3 AND stage='recognition' ORDER BY version DESC LIMIT 1`, tenantID, input.AnswerSegmentID, input.InputHash).Scan(&existingID)
+	err = tx.QueryRowContext(ctx, `SELECT id::text FROM math_understanding_artifact WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid AND input_hash=$3 AND exam_question_snapshot_id=$4::uuid AND stage='recognition' ORDER BY version DESC LIMIT 1`, tenantID, input.AnswerSegmentID, input.InputHash, input.ExamQuestionSnapshotID).Scan(&existingID)
 	if err == nil {
+		// 旧任务可复用识别结果，但当前指针应保留同哈希最新的核验、校正产物。
+		// 上面的题块锁和实体哈希核对先排除了迟到的旧裁切，不能无条件按历史任务恢复指针。
+		if _, err := tx.ExecContext(ctx, `SELECT restore_current_math_artifact_for_crop($1::uuid,$2::uuid)`, tenantID, input.AnswerSegmentID); err != nil {
+			return Artifact{}, err
+		}
 		return s.getArtifact(ctx, tx, tenantID, "id=$2::uuid", existingID)
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
@@ -108,9 +121,12 @@ func (s *PostgresStore) createDerivedArtifactInTx(ctx context.Context, tx *sql.T
 	if err != nil {
 		return Artifact{}, ErrInvalidInput
 	}
-	var segmentID string
-	if err := tx.QueryRowContext(ctx, `SELECT id::text FROM answer_segment WHERE tenant_id=$1::uuid AND id=$2::uuid FOR UPDATE`, tenantID, input.AnswerSegmentID).Scan(&segmentID); err != nil {
+	var segmentID, cropHash string
+	if err := tx.QueryRowContext(ctx, `SELECT id::text, COALESCE(crop_sha256,'') FROM answer_segment WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, input.AnswerSegmentID).Scan(&segmentID, &cropHash); err != nil {
 		return Artifact{}, err
+	}
+	if !sameCropHash(input.InputHash, cropHash) {
+		return Artifact{}, ErrRevisionConflict
 	}
 	var parent Artifact
 	err = tx.QueryRowContext(ctx, `
@@ -152,9 +168,14 @@ WHERE tenant_id=$1::uuid AND parent_artifact_id=$2::uuid AND stage='verified' AN
 	graph, _ := json.Marshal(input.SolutionGraph)
 	checks, _ := json.Marshal(input.Verifications)
 	evidence, _ := json.Marshal(input.RubricEvidence)
+	var nextVersion int64
+	// 回到旧哈希可能恢复较早版本；新派生产物仍按整个题块历史分配版本，不能与另一裁切已有版本冲突。
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(max(version),0)+1 FROM math_understanding_artifact WHERE tenant_id=$1::uuid AND answer_segment_id=$2::uuid`, tenantID, input.AnswerSegmentID).Scan(&nextVersion); err != nil {
+		return Artifact{}, err
+	}
 	item := Artifact{
 		TenantID: tenantID, AnswerSegmentID: input.AnswerSegmentID, ExamQuestionSnapshotID: input.ExamQuestionSnapshotID,
-		Version: parent.Version + 1, InputHash: input.InputHash, EngineVersion: input.EngineVersion,
+		Version: nextVersion, InputHash: input.InputHash, EngineVersion: input.EngineVersion,
 		IsCurrent: true, Stage: "verified", ParentArtifactID: parent.ID, CorrectionRevision: correctionRevision,
 		QualitySummary: cloneMap(qualitySummary), CreateArtifactInput: cloneInput(input),
 	}
@@ -172,6 +193,13 @@ RETURNING id::text,created_at`, tenantID, input.SubjectCode, input.AnswerSegment
 		return Artifact{}, err
 	}
 	return item, nil
+}
+
+func sameCropHash(first, second string) bool {
+	normalize := func(value string) string {
+		return strings.TrimPrefix(strings.ToLower(strings.TrimSpace(value)), "sha256:")
+	}
+	return normalize(first) != "" && normalize(first) == normalize(second)
 }
 
 func (s *PostgresStore) GetLatestArtifact(ctx context.Context, tenantID string, answerSegmentID string) (Artifact, error) {

@@ -7,23 +7,21 @@ import type { ManagementExam } from "../api/exams";
 import type { SessionUser } from "../auth/session";
 import { ExamManagementPage } from "./ExamManagementPage";
 
-const mocks = vi.hoisted(() => ({ list: vi.fn(), get: vi.fn(), schools: vi.fn(), grades: vi.fn(), classes: vi.fn(), warning: vi.fn(), error: vi.fn(), details: vi.fn(), edit: vi.fn(), archive: vi.fn() }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), get: vi.fn(), schools: vi.fn(), grades: vi.fn(), classes: vi.fn(), warning: vi.fn(), error: vi.fn(), details: vi.fn(), edit: vi.fn() }));
 vi.mock("../api/exams", async (original) => ({ ...await original<typeof import("../api/exams")>(), listAllManagementExams: mocks.list, getManagementExam: mocks.get }));
 vi.mock("../api/org", () => ({ listSchools: mocks.schools, listGrades: mocks.grades, listClasses: mocks.classes }));
 vi.mock("../features/exams/management/ManagementExamDetails", () => ({ ManagementExamDetails: (props: { exam: ManagementExam }) => { mocks.details(props); return <div data-details>{props.exam.exams.map((subject) => subject.id).join(",")}</div>; } }));
 vi.mock("../features/exams/management/ManagementExamEditDrawer", () => ({ ManagementExamEditDrawer: (props: unknown) => { mocks.edit(props); return null; } }));
-vi.mock("../features/exams/management/ManagementExamArchiveDialog", () => ({ ManagementExamArchiveDialog: (props: unknown) => { mocks.archive(props); return null; } }));
 vi.mock("../components/StatusTag", () => ({ StatusTag: ({ children }: { children: ReactNode }) => <span>{children}</span> }));
 vi.mock("antd", () => {
   const pass = ({ children }: { children?: ReactNode }) => <>{children}</>;
   return {
     App: { useApp: () => ({ message: { warning: mocks.warning, error: mocks.error } }) },
-    Button: ({ children, onClick, disabled, loading, "aria-label": label }: { children?: ReactNode; onClick?: () => void; disabled?: boolean; loading?: boolean; "aria-label"?: string }) => <button disabled={disabled || loading} onClick={onClick} aria-label={label}>{children}</button>,
+    Button: ({ children, onClick, disabled, loading, "aria-label": label }: { children?: ReactNode; onClick?: React.MouseEventHandler<HTMLButtonElement>; disabled?: boolean; loading?: boolean; "aria-label"?: string }) => <button disabled={disabled || loading} onClick={onClick} aria-label={label}>{children}</button>,
     Input: ({ placeholder, value, onChange }: { placeholder?: string; value: string; onChange: (event: unknown) => void }) => <input placeholder={placeholder} value={value} onChange={onChange} />,
     Select: ({ options, value, onChange, "aria-label": label }: { options: { label: string; value: string }[]; value?: string; onChange: (value: string) => void; "aria-label"?: string }) => <select aria-label={label} value={value ?? ""} onChange={(event) => onChange(event.target.value)}><option value="">全部</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>,
-    Dropdown: ({ children, menu }: { children: ReactNode; menu: { items: { key: string; label: string; disabled?: boolean }[]; onClick: (item: { key: string; domEvent: { stopPropagation: () => void } }) => void } }) => <div>{children}<div role="menu">{menu.items.map((item) => <button key={item.key} role="menuitem" disabled={item.disabled} onClick={(domEvent) => menu.onClick({ key: item.key, domEvent })}>{item.label}</button>)}</div></div>,
     Drawer: ({ children, open, onClose }: { children: ReactNode; open: boolean; onClose: () => void }) => open ? <div role="dialog"><button onClick={onClose}>关闭详情</button>{children}</div> : null,
-    Table: ({ columns, dataSource, onRow }: { columns: TableColumnsType<ManagementExam>; dataSource: ManagementExam[]; onRow?: TableProps<ManagementExam>["onRow"] }) => <div>{dataSource.map((exam, index) => <div {...onRow?.(exam, index)} data-exam-id={exam.id} key={exam.id}>{columns.map((column, columnIndex) => "render" in column && column.render ? <div {...column.onCell?.(exam, index)} key={columnIndex}>{column.render("dataIndex" in column && column.dataIndex === "name" ? exam.name : undefined, exam, index) as ReactNode}</div> : null)}</div>)}</div>,
+    Table: ({ columns, dataSource, onRow }: { columns: TableColumnsType<ManagementExam>; dataSource: ManagementExam[]; onRow?: TableProps<ManagementExam>["onRow"] }) => <div><div>{columns.map((column, index) => <span role="columnheader" key={index}>{typeof column.title === "function" ? null : column.title}</span>)}</div>{dataSource.map((exam, index) => <div {...onRow?.(exam, index)} data-exam-id={exam.id} key={exam.id}>{columns.map((column, columnIndex) => "render" in column && column.render ? <div {...column.onCell?.(exam, index)} key={columnIndex}>{column.render("dataIndex" in column && column.dataIndex === "name" ? exam.name : undefined, exam, index) as ReactNode}</div> : null)}</div>)}</div>,
     Space: pass, Tooltip: pass, Spin: () => null, Empty: () => null, Alert: ({ message }: { message: ReactNode }) => <p role="alert">{message}</p>
   };
 });
@@ -52,8 +50,8 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
 
-async function mount(onOpenWorkspace = vi.fn()) {
-  await act(async () => root.render(<ExamManagementPage mode="admin" canManage currentUser={user} onOpenWorkspace={onOpenWorkspace} onCreateExam={vi.fn()} />));
+async function mount(onOpenWorkspace = vi.fn(), canManage = true) {
+  await act(async () => root.render(<ExamManagementPage mode="admin" canManage={canManage} currentUser={user} onOpenWorkspace={onOpenWorkspace} onCreateExam={vi.fn()} />));
   return onOpenWorkspace;
 }
 async function click(text: string) {
@@ -82,7 +80,9 @@ describe("考试列表整场操作", () => {
   });
   it("点击整行或考试名称都打开完整整场对象，名称点击只跳转一次", async () => {
     const open = await mount();
-    expect(container.textContent).toContain("查看考试详情");
+    expect(container.textContent).not.toMatch(/查看考试详情|归档考试|恢复考试/);
+    expect(container.textContent).not.toContain("考试类型");
+    expect([...container.querySelectorAll("select option")].map(option => option.textContent)).not.toContain("正式考试");
     const tableRegion = container.querySelector("section[aria-label='考试列表表格']");
     expect(tableRegion).not.toBeNull();
     expect(tableRegion?.getAttribute("tabindex")).toBeNull();
@@ -96,63 +96,87 @@ describe("考试列表整场操作", () => {
     expect(open.mock.calls[0][0].exams).toHaveLength(2);
   });
 
-  it("详情读取最新整场数据，归档始终提交整场选择而非默认科目", async () => {
+  it("直接编辑读取最新整场数据，保持全部学科而非默认科目", async () => {
     const latest = exam();
     latest.exams.push({ ...latest.exams[0], id: "chinese", subject: "chinese" });
     mocks.get.mockResolvedValue({ exam: latest });
     await mount();
-    await click("查看考试详情");
+    await click("编辑");
     expect(mocks.get).toHaveBeenCalledWith("session", "session-1");
-    expect(container.querySelector("[data-details]")?.textContent).toBe("math,physics,chinese");
-    await click("归档考试");
-    expect(mocks.archive.mock.lastCall?.[0].selection).toMatchObject({ action: "archive", exam: { id: "session-1", kind: "session" } });
-    expect(mocks.archive.mock.lastCall?.[0].selection.exam.exams).toHaveLength(2);
+    expect(mocks.edit.mock.lastCall?.[0].exam).toMatchObject({ id: "session-1", kind: "session" });
+    expect(mocks.edit.mock.lastCall?.[0].exam.exams.map((subject: { id: string }) => subject.id)).toEqual(["math", "physics", "chinese"]);
   });
 
   it("筛选只决定整场行是否出现，操作对象保持全部学科", async () => {
     const open = await mount();
     const select = container.querySelector<HTMLSelectElement>("select[aria-label='考试进度筛选']")!;
-    await act(async () => { select.value = "configured"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+    await act(async () => { select.value = "active"; select.dispatchEvent(new Event("change", { bubbles: true })); });
     await click("期中考试");
     expect(open.mock.lastCall?.[0].exams.map((subject: { id: string }) => subject.id)).toEqual(["math", "physics"]);
-    expect(mocks.list).toHaveBeenCalledTimes(1);
+    expect(mocks.list).toHaveBeenLastCalledWith({ school_id: undefined, status: "active", archive: "active" });
+    expect(mocks.list).toHaveBeenCalledTimes(2);
   });
 
-  it("完整范围与服务端写能力一起约束整场写菜单", async () => {
+  it("完整范围与服务端写能力一起约束直接编辑按钮", async () => {
     mocks.list.mockResolvedValue({ exams: [{ ...exam(), scope_complete: false, can_manage: false }] });
     await mount();
-    expect([...container.querySelectorAll("button")].find((item) => item.textContent === "归档考试")?.disabled).toBe(true);
-    expect([...container.querySelectorAll("button")].find((item) => item.textContent === "编辑考试")?.disabled).toBe(true);
+    expect(container.querySelector<HTMLButtonElement>('button[aria-label="编辑期中考试"]')?.disabled).toBe(true);
+    await click("编辑");
+    expect(mocks.get).not.toHaveBeenCalled();
   });
 
-  it("更多按钮和菜单不会触发行跳转，详情编辑和归档仍执行各自操作", async () => {
+  it("编辑独立成列且点击不会触发行跳转，不再提供更多菜单", async () => {
     const open = await mount();
-    const more = container.querySelector<HTMLButtonElement>('button[aria-label="期中考试更多操作"]')!;
-    await act(async () => more.click());
-    await click("查看考试详情");
-    await click("编辑考试");
-    await click("归档考试");
+    expect([...container.querySelectorAll('[role="columnheader"]')].map(item => item.textContent)).toContain("编辑");
+    expect([...container.querySelectorAll('[role="columnheader"]')].map(item => item.textContent)).not.toContain("操作");
+    expect(container.querySelector('[role="menu"]')).toBeNull();
+    expect(container.querySelector('[aria-label="期中考试更多操作"]')).toBeNull();
+    expect(container.textContent).not.toMatch(/查看考试详情|归档考试|恢复考试/);
+    await click("编辑");
     expect(open).not.toHaveBeenCalled();
-    expect(mocks.get).toHaveBeenCalledTimes(2);
+    expect(mocks.get).toHaveBeenCalledOnce();
     expect(mocks.edit.mock.lastCall?.[0].exam.id).toBe("session-1");
-    expect(mocks.archive.mock.lastCall?.[0].selection.action).toBe("archive");
   });
 
   it("最新权限拒绝不会打开编辑抽屉", async () => {
     mocks.get.mockResolvedValue({ exam: { ...exam(), can_edit: false } });
     await mount();
-    await click("编辑考试");
+    await click("编辑");
     expect(mocks.warning).toHaveBeenCalled();
     expect(mocks.edit.mock.lastCall?.[0].exam).toBeNull();
   });
 
-  it("关闭详情后，迟到响应不会重新打开旧考试", async () => {
+  it("读取设置时禁用编辑按钮，避免重复读取和触发行跳转", async () => {
     let resolve!: (value: { exam: ManagementExam }) => void;
     mocks.get.mockReturnValue(new Promise<{ exam: ManagementExam }>((done) => { resolve = done; }));
-    await mount();
-    await click("查看考试详情");
-    await click("关闭详情");
+    const open = await mount();
+    await click("编辑");
+    expect(container.querySelector<HTMLButtonElement>('button[aria-label="编辑期中考试"]')?.disabled).toBe(true);
+    await click("编辑");
+    expect(mocks.get).toHaveBeenCalledOnce();
     await act(async () => resolve({ exam: exam() }));
-    expect(container.querySelector("[role='dialog']")).toBeNull();
+    expect(container.querySelector<HTMLButtonElement>('button[aria-label="编辑期中考试"]')?.disabled).toBe(false);
+    expect(mocks.edit.mock.lastCall?.[0].exam.id).toBe("session-1");
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it("无整场管理权限时不显示编辑列，考试名称仍可进入工作区", async () => {
+    const open = await mount(vi.fn(), false);
+    expect([...container.querySelectorAll('[role="columnheader"]')].map(item => item.textContent)).not.toContain("编辑");
+    expect(container.querySelector('[aria-label="编辑期中考试"]')).toBeNull();
+    await click("期中考试");
+    expect(open).toHaveBeenCalledOnce();
+    expect(mocks.get).not.toHaveBeenCalled();
+  });
+
+  it("进度筛选只保留三项且请求服务端大类，页面不再显示归档筛选", async () => {
+    await mount();
+    const select = container.querySelector<HTMLSelectElement>("select[aria-label='考试进度筛选']")!;
+    expect([...select.options].filter(option => option.value || option.textContent !== "全部").map(option => option.textContent)).toEqual(["全部进度", "正在进行", "阅卷结束"]);
+    expect(container.querySelector("select[aria-label='归档范围筛选']")).toBeNull();
+    expect(container.textContent).toContain("正在进行");
+    await act(async () => { select.value = "completed"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(mocks.list).toHaveBeenLastCalledWith({ school_id: undefined, status: "completed", archive: "active" });
+    expect(container.querySelector('[data-exam-id="session-1"]')).toBeNull();
   });
 });

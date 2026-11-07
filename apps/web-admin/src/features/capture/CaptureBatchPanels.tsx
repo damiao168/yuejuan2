@@ -1,5 +1,6 @@
 // 批次详情只负责展示；异步命令和当前批次校验仍由页面统一持有，避免面板切换改变操作范围。
 import { Alert, Button, Empty, Progress, Select, Space, Tabs, Upload, type TableColumnsType, type UploadProps } from "antd";
+import type { ReactNode } from "react";
 import { FileUp, RefreshCw, ScanLine, SlidersHorizontal, Undo2, Workflow } from "lucide-react";
 import type { CaptureBatchDetail, CapturePage, ProcessingSummary } from "../../api/capture";
 import { ErrorState, LoadingState } from "../../components/PageState";
@@ -67,7 +68,7 @@ function CaptureIssueQueue({ detail, issuePages, pageColumns, actioning, batchCa
           <Space><Button icon={<RefreshCw size={15} />} loading={actioning} disabled={!batchCanManage} onClick={() => void startProcessing()}>重试原文件</Button><Button icon={<FileUp size={15} />} disabled={!batchCanManage} onClick={uploadRepair}>上传修复文件</Button></Space>
         </div>
       ))}
-      {issuePages.length > 0 ? <ResponsiveTable className="dense-data-table" rowKey="id" columns={pageColumns} dataSource={issuePages} pagination={false} size="small" /> : null}
+      {issuePages.length > 0 ? <ResponsiveTable className="dense-data-table" rowKey="id" columns={pageColumns} mobilePrimaryCount={pageColumns.length} dataSource={issuePages} pagination={false} size="small" /> : null}
     </div>
   );
 }
@@ -184,6 +185,7 @@ export function CaptureBatchWorkspace({
   onOverride, processingProps, matchingProps,
   pagesPerStudent, setPagesPerStudent, pendingUpload, retryUpload, discardUpload,
   uploadLabel = "导入文件",
+  collectionPanel, batchListPanel, batchListState,
 }: Readonly<{
   detail?: CaptureBatchDetail;
   detailError?: string;
@@ -214,11 +216,15 @@ export function CaptureBatchWorkspace({
   onOverride: (page: CapturePage) => void;
   processingProps: Omit<Parameters<typeof CaptureProcessingList>[0], "detail" | "actioning" | "batchCanManage">;
   matchingProps: Parameters<typeof CaptureMatchingContent>[0];
+  collectionPanel: ReactNode;
+  batchListPanel: ReactNode;
+  batchListState?: ReactNode;
 }>) {
-  // 首次读取失败时没有可展示事实；同批次刷新失败仍保留原详情，只在就绪面板提示错误。
-  if (detailError && !detail) return <ErrorState message={detailError} onRetry={() => void loadDetail(selectedId)} />;
-  if (detailLoading || !detail) return <LoadingState label="正在读取批次" />;
-  return <>
+  // 全场核对不依赖某个批次详情；批次读取失败时仍保留该标签，不能把全场结束操作绑到单批次数据。
+  const batchState = batchListState ?? (detailError && !detail
+    ? <ErrorState message={detailError} onRetry={() => void loadDetail(selectedId)} />
+    : detailLoading || !detail ? <LoadingState label="正在读取批次" /> : null);
+  const batchHeader = (tabKey: string) => detail && !batchState ? <>
     {detailError ? <Alert type="warning" showIcon message={detailError} action={<Button onClick={() => void loadDetail(selectedId)}>重试读取批次</Button>} /> : null}
     <header className="capture-batch-header">
       <div>
@@ -230,8 +236,8 @@ export function CaptureBatchWorkspace({
         <CaptureProgress percent={progressPercent} />
       </div>
       <Space wrap>
-        <label htmlFor="capture-pages-per-student">每名学生答题卡页数</label>
-        <Select id="capture-pages-per-student" aria-label="每名学生答题卡页数" placeholder="请先选择页数" value={pagesPerStudent}
+        <label htmlFor={`capture-pages-per-student-${tabKey}`}>每名学生答题卡页数</label>
+        <Select id={`capture-pages-per-student-${tabKey}`} aria-label="每名学生答题卡页数" placeholder="请先选择页数" value={pagesPerStudent}
           style={{ width: 200 }} disabled={!batchCanManage || Boolean(pendingUpload)} onChange={setPagesPerStudent}
           options={Array.from({ length: 20 }, (_, index) => ({ value: index + 1, label: index === 0 ? "1 页（单面）" : index === 1 ? "2 页（正反面）" : `${index + 1} 页` }))} />
         <Upload {...uploadProps}>
@@ -247,7 +253,7 @@ export function CaptureBatchWorkspace({
       </Space>
     </header>
     <p>每人{pagesPerStudent ?? "待选择"}页，按学生连续排列；每次须选择完整答卷。</p>
-    <details><summary>查看页序与分组规则</summary><p>按文件选择顺序及文件内页序，每N页组成一份答卷。支持每人1–20页；PDF/TIFF按解码页数计算。每次选择独立分组，不能跨两次选择补页；缺页须处理后才能继续。</p></details>
+    <section aria-label="页序与分组规则"><h3>页序与分组规则</h3><p>按文件选择顺序及文件内页序，每N页组成一份答卷。支持每人1–20页；PDF/TIFF按解码页数计算。每次选择独立分组，不能跨两次选择补页；缺页须处理后才能继续。</p></section>
     {pendingUpload ? <Alert type={pendingUpload.error ? "warning" : "info"} showIcon message={`${uploading ? "正在上传" : "本次上传未完成"}：已登记 ${pendingUpload.completedFiles}/${pendingUpload.totalFiles} 个文件，每名学生 ${pendingUpload.pagesPerStudent} 页`}
       description={pendingUpload.error || "请等待本次选择的文件按顺序上传和登记。"}
       action={!uploading ? <Space><Button onClick={() => void retryUpload()} disabled={!batchCanManage}>重试本次上传</Button><Button onClick={discardUpload}>结束本次上传</Button></Space> : undefined} /> : null}
@@ -255,36 +261,45 @@ export function CaptureBatchWorkspace({
     <div className="capture-summary-strip">
       {summary.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}
     </div>
-    <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
+  </> : null;
+  const batchItems = [
       {
         key: "issues",
-        label: `需要处理 (${issuePages.length + detail.batch.failed_count})`,
-        children: <CaptureIssueQueue detail={detail} issuePages={issuePages} pageColumns={pageColumns} actioning={actioning} batchCanManage={batchCanManage} startProcessing={startProcessing} uploadRepair={uploadRepair} />,
+        label: `需要处理 (${issuePages.length + (detail?.batch.failed_count ?? 0)})`,
+        children: detail ? <CaptureIssueQueue detail={detail} issuePages={issuePages} pageColumns={pageColumns} actioning={actioning} batchCanManage={batchCanManage} startProcessing={startProcessing} uploadRepair={uploadRepair} /> : null,
       },
       {
         key: "files",
         label: "全部文件与页面",
-        children: <div className="capture-detail-stack">
-          <ResponsiveTable className="dense-data-table" rowKey="id" columns={fileColumns} dataSource={detail.files} pagination={false} size="small" />
-          <ResponsiveTable className="dense-data-table" rowKey="id" columns={pageColumns} dataSource={detail.pages} pagination={{ pageSize: 20 }} size="small" />
-        </div>,
+        children: detail ? <div className="capture-detail-stack">
+          <ResponsiveTable className="dense-data-table" rowKey="id" columns={fileColumns} mobilePrimaryCount={fileColumns.length} dataSource={detail.files} pagination={false} size="small" />
+          <ResponsiveTable className="dense-data-table" rowKey="id" columns={pageColumns} mobilePrimaryCount={pageColumns.length} dataSource={detail.pages} pagination={{ pageSize: 20 }} size="small" />
+        </div> : null,
       },
       {
         key: "image-quality",
-        label: `图像质检 (${detail.pages.filter((page) => page.status !== "deleted").length})`,
-        children: <ImageQualityWorkspace key={selectedId} initialPageId={hashQueryParam("page")} pages={detail.pages}
-          canManage={batchCanManage} onRefresh={() => loadDetail(detail.batch.id, true)} onOverride={onOverride} />,
+        label: `图像质检 (${detail?.pages.filter((page) => page.status !== "deleted").length ?? 0})`,
+        children: detail ? <ImageQualityWorkspace key={selectedId} initialPageId={hashQueryParam("page")} pages={detail.pages}
+          canManage={batchCanManage} onRefresh={() => loadDetail(detail.batch.id, true)} onOverride={onOverride} /> : null,
       },
       {
         key: "processing",
         label: `页面处理 (${processingProps.submissions.length})`,
-        children: <CaptureProcessingList detail={detail} actioning={actioning} batchCanManage={batchCanManage} {...processingProps} />,
+        children: detail ? <CaptureProcessingList detail={detail} actioning={actioning} batchCanManage={batchCanManage} {...processingProps} /> : null,
       },
       {
         key: "matching",
         label: `学生匹配（待确认 ${matchingProps.queue?.submissions.filter((item) => item.identity_status !== "matched").length ?? 0}）`,
         children: <CaptureMatchingContent {...matchingProps} />,
       },
-    ]} />
-  </>;
+  ];
+  return <Tabs className="capture-workspace-tabs" activeKey={activeTab} onChange={setActiveTab}
+      items={[
+        ...batchItems.map(item => ({ ...item, children: <div className="capture-batch-layout" aria-label="批次与材料详情">
+          {batchListPanel}
+          <main className="capture-batch-workspace">{batchHeader(item.key)}<div className="capture-tab-content">{batchState ?? item.children}</div></main>
+        </div> })),
+        // 全场核对持续挂载；切回批次时不丢失筛选、未完成命令或确认框的生命周期。
+        { key: "students", label: "全场学生核对", forceRender: true, children: <div className="capture-collection-tab">{collectionPanel}</div> },
+      ]} />
 }

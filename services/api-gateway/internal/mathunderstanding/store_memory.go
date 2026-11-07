@@ -35,7 +35,7 @@ func (s *MemoryStore) createArtifactLocked(tenantID string, input CreateArtifact
 	}
 	key := tenantID + ":" + input.AnswerSegmentID
 	for _, existing := range s.artifacts {
-		if existing.TenantID == tenantID && existing.AnswerSegmentID == input.AnswerSegmentID && existing.InputHash == input.InputHash && existing.Stage == "recognition" {
+		if existing.TenantID == tenantID && existing.AnswerSegmentID == input.AnswerSegmentID && existing.ExamQuestionSnapshotID == input.ExamQuestionSnapshotID && existing.InputHash == input.InputHash && existing.Stage == "recognition" {
 			return cloneArtifact(existing), nil
 		}
 	}

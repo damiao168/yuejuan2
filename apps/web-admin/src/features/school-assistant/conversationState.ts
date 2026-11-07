@@ -10,6 +10,7 @@ export interface ConversationTool {
   message?: string;
 }
 export interface ConversationEvidence {
+  phase?: Extract<SchoolConversationEvent, { type: "progress" }>["phase"];
   tools: ConversationTool[];
   sources: SchoolAssistantSource[];
   actions: SchoolAssistantAction[];
@@ -20,7 +21,8 @@ export interface ConversationStreamIdentity { requestId?: string; sequence: numb
 export function emptyConversationEvidence(): ConversationEvidence { return { tools: [], sources: [], actions: [] }; }
 
 export function interruptedConversationEvidence(evidence: ConversationEvidence): ConversationEvidence {
-  return { ...evidence, actions: [], tools: evidence.tools.map((tool) => tool.status === "running" ? { ...tool, status: "failed", message: "已停止" } : tool) };
+  const { phase: _phase, ...settled } = evidence;
+  return { ...settled, actions: [], tools: evidence.tools.map((tool) => tool.status === "running" ? { ...tool, status: "failed", message: "已停止" } : tool) };
 }
 
 export function conversationAccountKey(user: SessionUser) {
@@ -45,6 +47,12 @@ export function acceptConversationEvent(identity: ConversationStreamIdentity, ev
 }
 
 export function mergeConversationEvidence(evidence: ConversationEvidence, event: SchoolConversationEvent): ConversationEvidence {
+  // 阶段只属于当前在途请求；完成后的来源和历史不应继续带有“正在处理”状态。
+  if (event.type === "progress") return { ...evidence, phase: event.phase };
+  if (event.type === "done" || event.type === "error") {
+    const { phase: _phase, ...settled } = evidence;
+    return settled;
+  }
   if (event.type === "sources") return { ...evidence, sources: event.sources, actions: event.actions, scope: event.scope };
   if (event.type !== "tool_started" && event.type !== "tool_finished") return evidence;
   const tool: ConversationTool = {
@@ -58,6 +66,6 @@ export function mergeConversationEvidence(evidence: ConversationEvidence, event:
 
 export function contextFromEvidence(evidence: ConversationEvidence, current?: SchoolConversationContext): SchoolConversationContext | undefined {
   // 多场考试结果没有单一范围，后续追问需要重新确认，不能沿用最后读到的考试。
-  if (!evidence.scope?.exam_id) return evidence.sources.length ? undefined : current;
+  if (!evidence.scope?.exam_id) return evidence.sources.some(source => source.kind !== "web") ? undefined : current;
   return { ...current, exam_id: evidence.scope.exam_id, exam_name: evidence.scope.exam_name ?? evidence.scope.scope_label };
 }

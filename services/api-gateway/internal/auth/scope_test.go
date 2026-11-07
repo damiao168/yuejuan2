@@ -54,8 +54,8 @@ func TestResolveDeclaredAccessScopeCombinesRoleKeyedScopes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scope.TenantWide || !scope.AssignedOnly || !scope.AllowsSchool("school-1") ||
-		!scope.AllowsClass("class-1") || !scope.AllowsReviewTask("task-1") {
+	if scope.TenantWide || !scope.AssignedOnly || scope.AllowsSchool("school-1") ||
+		scope.AllowsClass("class-1") || !scope.AllowsReviewTask("task-1") {
 		t.Fatalf("unexpected combined access scope: %#v", scope)
 	}
 }
@@ -72,7 +72,7 @@ func TestResolveDeclaredAccessScopeCombinesSchoolAdminAndGraderWithoutTenantUpgr
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scope.TenantWide || !scope.schoolWide || !scope.AssignedOnly || !scope.AllowsSchool("school-1") || !scope.AllowsReviewTask("task-1") {
+	if scope.TenantWide || !scope.schoolWide || !scope.AssignedOnly || !scope.AllowsSchool("school-1") || scope.AllowsReviewTask("task-1") || !scope.RestrictsToManagedSchools() {
 		t.Fatalf("unexpected school administrator + grader union: %#v", scope)
 	}
 }

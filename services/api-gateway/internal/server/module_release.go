@@ -60,6 +60,11 @@ func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *R
 		privateDrafts = opiniondraft.NewPostgresStore(dependencies.DB)
 	}
 	scoreReleaseService := scorerelease.NewService(stores.ScoreRelease)
+	if releases, ok := stores.ScoreRelease.(*scorerelease.PostgresStore); ok {
+		if preparer, ok := stores.Score.(scorerelease.GradePreparer); ok {
+			releases.WithGradePreparer(preparer)
+		}
+	}
 	var highScorePaper scorerelease.HighScorePaperManager
 	if dependencies.DB != nil && dependencies.FileStore != nil && dependencies.ObjectStore != nil && dependencies.FileBucket != "" {
 		highScorePaper = scorerelease.NewPostgresHighScorePaperManager(dependencies.DB, dependencies.FileStore, dependencies.ObjectStore, dependencies.FileBucket)

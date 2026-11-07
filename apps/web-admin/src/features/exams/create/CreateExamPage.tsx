@@ -67,7 +67,9 @@ export function CreateExamPage({ user, onNavigate }: Readonly<{ user: SessionUse
       const fallback = initialCreateExamDraft(school?.id ?? "", defaultGrade);
       try {
         const stored = localStorage.getItem(draftKey);
-        const restored = stored ? JSON.parse(stored) as CreateExamDraft : null;
+        const restored = stored ? JSON.parse(stored) as CreateExamDraft & { examType?: unknown } : null;
+        // 只移除旧编辑草稿的废弃字段；已提交命令仍保留原正文，用于查询和重试同一次创建。
+        if (restored) delete restored.examType;
         setDraft(restored?.version === 2 && scopedSchools.some((item) => item.id === restored.schoolId) && scopedGrades.some((item) => item.id === restored.gradeId)
           ? { ...fallback, ...restored, templateId: restored.templateId ?? "" }
           : fallback);
@@ -178,7 +180,6 @@ export function CreateExamPage({ user, onNavigate }: Readonly<{ user: SessionUse
       grade_id: draft.gradeId,
       template_id: draft.creationMode!=="template" || draft.templateId === "custom" ? undefined : draft.templateId,
       name: draft.name.trim(),
-      exam_type: draft.examType,
       grading_mode: draft.gradingMode,
       appeal_enabled: draft.appealEnabled,
       publish_policy: draft.publishPolicy,

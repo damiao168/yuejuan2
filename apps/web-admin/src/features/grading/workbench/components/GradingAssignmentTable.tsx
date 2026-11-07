@@ -58,9 +58,10 @@ export function GradingAssignmentTable(props: Readonly<TaskRailProps>) {
     else setViewingGroupKey(group.key);
   };
   return <section className="grading-assignment-workspace" aria-label="阅卷任务分配">
-    <header><div><h1>安排教师</h1><p>按题选择答卷，再指定教师与分配份数。</p></div><Button icon={<RefreshCw size={15} />} loading={props.loadingTasks} disabled={Boolean(actioning) || scope.selectingAll} onClick={() => void props.onLoadTasks()}>刷新</Button></header>
+    <header><div><h1>安排教师</h1><p>按考试学科选择答卷，再指定对应学科的教师与分配份数。</p></div><Button icon={<RefreshCw size={15} />} loading={props.loadingTasks} disabled={Boolean(actioning) || scope.selectingAll} onClick={() => void props.onLoadTasks()}>刷新</Button></header>
     <div className="grading-assignment-filters">
       {!fixedExam ? <Select allowClear value={scope.effectiveExamId || undefined} placeholder="选择考试" options={scope.examOptions} onChange={value => props.onExamChange(value || "")} disabled={busy} /> : null}
+      {!fixedExam ? <Select aria-label="按考试学科筛选" allowClear value={scope.subjectFilter || undefined} placeholder="全部学科" options={scope.subjectOptions} onChange={value => props.onSubjectChange(value || "")} disabled={busy} /> : null}
       <Select aria-label="按题目筛选" allowClear value={scope.questionFilter || undefined} placeholder="全部题目" options={scope.questionOptions} onChange={value => props.onQuestionChange(value || "")} disabled={busy} />
       <Select aria-label="任务状态" value={props.taskFilter} options={taskFilterOptions} onChange={props.onTaskFilterChange} disabled={busy} />
       <Input allowClear prefix={<Search size={15} />} value={props.keyword} placeholder="搜索题号或答卷" onChange={event => props.onKeywordChange(event.target.value)} disabled={busy} />

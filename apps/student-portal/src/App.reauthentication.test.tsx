@@ -1,3 +1,4 @@
+import { reenterAfterUnifiedLogin } from "./test/unifiedLogin";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -32,7 +33,7 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 async function prepareAppeal() {
-  fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+  fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
   fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
   const submit = screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" });
   await waitFor(() => expect(submit.disabled).toBe(false));
@@ -40,12 +41,9 @@ async function prepareAppeal() {
 }
 
 async function loginAgain() {
-  await screen.findByRole("heading", { name: "查看已发布成绩" });
-  fireEvent.change(screen.getByRole("textbox", { name: "学校代码" }), { target: { value: "school-a" } });
-  fireEvent.change(screen.getByRole("textbox", { name: "账号" }), { target: { value: "student-001" } });
-  fireEvent.change(screen.getByLabelText("密码"), { target: { value: "testing" } });
-  fireEvent.click(screen.getByRole("button", { name: "登录" }));
-  fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+  await screen.findByText("正在前往登录…");
+  await reenterAfterUnifiedLogin();
+  fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
 }
 
 describe("复核回执与重新登录的顺序保护", () => {
@@ -55,7 +53,6 @@ describe("复核回执与重新登录的顺序保护", () => {
     let annotationReads = 0;
     let accepted = false;
     const calls = installApi((call) => {
-      if (call.url.pathname === "/api/v1/auth/login") return jsonResponse({ user: studentUser });
       if (isAppeal(call.url.pathname) && call.init.method === "POST") return receipt.promise;
       if (isAppeal(call.url.pathname)) return jsonResponse({ appeals: accepted ? [makeAppeal()] : [] });
       if (isAnnotation(call.url.pathname)) return ++annotationReads === 1 ? failed() : annotation.promise;
@@ -70,7 +67,7 @@ describe("复核回执与重新登录的顺序保护", () => {
     const reauthenticate = await screen.findByRole<HTMLButtonElement>("button", { name: "重新登录" });
     expect(reauthenticate.disabled).toBe(true);
     fireEvent.click(reauthenticate);
-    expect(screen.queryByRole("heading", { name: "查看已发布成绩" })).toBeNull();
+    expect(screen.queryByText("正在前往登录…")).toBeNull();
     expect(screen.getByRole("textbox", { name: "具体说明" })).toBeTruthy();
     expect(readAppealDraft(draftKey)?.reason).toBe(explanation);
     accepted = true;
@@ -90,7 +87,6 @@ describe("复核回执与重新登录的顺序保护", () => {
     const receipt = deferredResponse();
     let annotationReads = 0;
     const calls = installApi((call) => {
-      if (call.url.pathname === "/api/v1/auth/login") return jsonResponse({ user: studentUser });
       if (isAppeal(call.url.pathname) && call.init.method === "POST") return receipt.promise;
       if (isAnnotation(call.url.pathname)) return ++annotationReads === 1 ? failed() : annotationReads === 2 ? annotation.promise : jsonResponse({ annotations: [] });
       return resultRoute(call, makeResult());
@@ -126,13 +122,13 @@ describe("复核回执与重新登录的顺序保护", () => {
       expect(session?.isSubmitting?.()).toBe(true);
       session?.reauthenticate();
     });
-    expect(screen.queryByRole("heading", { name: "查看已发布成绩" })).toBeNull();
+    expect(screen.queryByText("正在前往登录…")).toBeNull();
     expect(screen.getByRole("button", { name: "正在提交…" })).toBeTruthy();
     await act(async () => receipt.resolve(jsonResponse({ appeal: makeAppeal() })));
     await screen.findByText(confirmation);
     expect(calls.filter((call) => isAppeal(call.url.pathname) && call.init.method === "POST")).toHaveLength(1);
     act(() => session?.reauthenticate());
-    await screen.findByRole("heading", { name: "查看已发布成绩" });
+    await screen.findByText("正在前往登录…");
   });
 
   it("申请记录迟到401的重登入口在本题提交中禁用，成功回执后恢复", async () => {
@@ -152,7 +148,7 @@ describe("复核回执与重新登录的顺序保护", () => {
     const reauthenticate = within(status as HTMLElement).getByRole<HTMLButtonElement>("button", { name: "重新登录" });
     expect(reauthenticate.disabled).toBe(true);
     fireEvent.click(reauthenticate);
-    expect(screen.queryByRole("heading", { name: "查看已发布成绩" })).toBeNull();
+    expect(screen.queryByText("正在前往登录…")).toBeNull();
     await act(async () => receipt.resolve(jsonResponse({ appeal: makeAppeal() })));
     await screen.findByText(confirmation);
     expect(screen.queryByText("正在提交复核申请，请等待回执后再切换题目或离开。")).toBeNull();
@@ -182,7 +178,7 @@ describe("复核回执与重新登录的顺序保护", () => {
     await act(async () => receipt.resolve(failed()));
     await waitFor(() => expect(reauthenticate.disabled).toBe(false));
     fireEvent.click(reauthenticate);
-    await screen.findByRole("heading", { name: "查看已发布成绩" });
+    await screen.findByText("正在前往登录…");
     expect(readAppealDraft(draftKey)?.reason).toBe(explanation);
   });
 
@@ -205,7 +201,7 @@ describe("复核回执与重新登录的顺序保护", () => {
     const reauthenticate = within(paper as HTMLElement).getByRole<HTMLButtonElement>("button", { name: "重新登录" });
     expect(reauthenticate.disabled).toBe(true);
     fireEvent.click(reauthenticate);
-    expect(screen.queryByRole("heading", { name: "查看已发布成绩" })).toBeNull();
+    expect(screen.queryByText("正在前往登录…")).toBeNull();
     await act(async () => receipt.resolve(jsonResponse({ appeal: makeAppeal() })));
     await screen.findByText(confirmation);
     await waitFor(() => expect(reauthenticate.disabled).toBe(false));
@@ -214,7 +210,6 @@ describe("复核回执与重新登录的顺序保护", () => {
   it("POST本身401后解除保护，表单重登恢复未提交草稿", async () => {
     const receipt = deferredResponse();
     installApi((call) => {
-      if (call.url.pathname === "/api/v1/auth/login") return jsonResponse({ user: studentUser });
       if (isAppeal(call.url.pathname) && call.init.method === "POST") return receipt.promise;
       return resultRoute(call, makeResult());
     });

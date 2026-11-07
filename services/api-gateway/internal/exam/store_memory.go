@@ -249,6 +249,9 @@ func (s *MemoryStore) SetStatusForTest(tenantID string, id string, status string
 }
 
 func scopeAllowsExam(scope auth.AccessScope, item Exam) bool {
+	if scope.RestrictsToManagedSchools() {
+		return scope.ManagesSchool(item.SchoolID)
+	}
 	if scope.TenantWide || scope.AllowsExam(item.ID) || scope.AllowsSchool(item.SchoolID) {
 		return true
 	}

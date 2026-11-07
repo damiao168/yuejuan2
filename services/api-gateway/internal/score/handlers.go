@@ -30,7 +30,7 @@ func (h *Handler) FinalizeExam(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	h.auditAction(r, "score.finalized", "exam", r.PathValue("examId"), "finalize exam grades")
+	h.auditAction(r, "score.finalized", "exam", r.PathValue("examId"), "汇总考试成绩")
 	httpx.JSON(w, http.StatusCreated, result)
 }
 
@@ -122,35 +122,9 @@ func (h *Handler) ListRoster(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"roster": report})
 }
 
+// SetAttendance 不再接受人工覆盖；旧调用明确失败，当前缺考状态始终从冻结名册与答卷关系派生。
 func (h *Handler) SetAttendance(w http.ResponseWriter, r *http.Request) {
-	user := mustUser(r)
-	examID := r.PathValue("examId")
-	studentID := r.PathValue("studentId")
-	if _, err := uuid.Parse(examID); err != nil {
-		writeStoreError(w, r, ErrInvalidInput)
-		return
-	}
-	if _, err := uuid.Parse(studentID); err != nil {
-		writeStoreError(w, r, ErrInvalidInput)
-		return
-	}
-	var input AttendanceInput
-	if !decodeJSON(w, r, &input) {
-		return
-	}
-	var valid bool
-	input, valid = normalizeAttendanceInput(input)
-	if !valid {
-		writeStoreError(w, r, ErrInvalidInput)
-		return
-	}
-	report, err := h.store.SetAttendance(r.Context(), user.TenantID, examID, studentID, user.ID, input)
-	if err != nil {
-		writeStoreError(w, r, err)
-		return
-	}
-	h.auditAction(r, "score.roster_attendance_updated", "student", studentID, input.Reason)
-	httpx.JSON(w, http.StatusOK, map[string]any{"roster": report})
+	httpx.Error(w, r, http.StatusGone, "manual_attendance_retired", "出勤状态已改为根据答卷匹配自动判断，无需手动标记缺考或恢复应考。")
 }
 
 func (h *Handler) ConfirmGrades(w http.ResponseWriter, r *http.Request) {
@@ -165,7 +139,7 @@ func (h *Handler) ConfirmGrades(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	h.auditAction(r, "score.confirmed", "exam", r.PathValue("examId"), "confirm exam grades")
+	h.auditAction(r, "score.confirmed", "exam", r.PathValue("examId"), "确认考试成绩")
 	httpx.JSON(w, http.StatusOK, map[string]any{"grades": grades})
 }
 
@@ -185,7 +159,7 @@ func (h *Handler) PublishGrades(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	h.auditAction(r, "score.published", "exam", r.PathValue("examId"), "publish exam grades")
+	h.auditAction(r, "score.published", "exam", r.PathValue("examId"), "发布考试成绩（旧流程）")
 	httpx.JSON(w, http.StatusOK, result)
 }
 
@@ -214,10 +188,39 @@ func (h *Handler) ExportGrades(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	h.auditAction(r, "score.exported", "exam", r.PathValue("examId"), "export exam grades")
+	h.auditAction(r, "score.exported", "exam", r.PathValue("examId"), "导出内部核对成绩（非正式版本）")
 	w.Header().Set("Content-Type", result.ContentType)
 	w.Header().Set("Content-Disposition", `attachment; filename="`+result.Filename+`"`)
 	w.Header().Set("X-EduGrade-Watermark", result.Watermark)
+	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("X-EduGrade-Score-Source", "internal-draft")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(result.Content)
+}
+
+func (h *Handler) ExportGradesReport(w http.ResponseWriter, r *http.Request) {
+	user := mustUser(r)
+	scope, scoped := auth.AccessScopeFromContext(r.Context())
+	exporter, supported := h.store.(scopedScoreReportExporter)
+	if !scoped || !supported || scope.TenantID != user.TenantID {
+		httpx.Error(w, r, http.StatusForbidden, "score_report_scope_required", "导出整场考试成绩需要本校完整的成绩管理权限。")
+		return
+	}
+	result, err := exporter.ExportExamReport(r.Context(), scope, r.PathValue("examId"), user.ID)
+	if errors.Is(err, errReportScope) {
+		httpx.Error(w, r, http.StatusForbidden, "score_report_scope_required", "只有本校完整成绩管理权限可导出整场考试及各科排名；单科阅卷分派不包含此权限。")
+		return
+	}
+	if err != nil {
+		writeStoreError(w, r, err)
+		return
+	}
+	h.auditAction(r, "score.report_exported", "exam", r.PathValue("examId"), "导出整场考试内部成绩报表（非正式版本）")
+	w.Header().Set("Content-Type", result.ContentType)
+	w.Header().Set("Content-Disposition", `attachment; filename="`+result.Filename+`"`)
+	w.Header().Set("X-EduGrade-Watermark", result.Watermark)
+	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("X-EduGrade-Score-Source", "internal-draft")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(result.Content)
 }
@@ -261,6 +264,7 @@ func scopedStudentID(user auth.User) (string, bool) {
 	return auth.ScopedStudentID(user)
 }
 
+// auditAction 的 reason 是系统写入、在统一审计页“说明”列原样显示的中文说明；旧记录的英文说明由前端兼容显示。
 func (h *Handler) auditAction(r *http.Request, action string, targetType string, targetID string, reason string) {
 	user := mustUser(r)
 	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{
@@ -270,7 +274,7 @@ func (h *Handler) auditAction(r *http.Request, action string, targetType string,
 		TargetType: targetType,
 		TargetID:   targetID,
 		Reason:     reason,
-		IPAddress:  r.RemoteAddr,
+		IPAddress:  httpx.ClientIP(r),
 		UserAgent:  r.UserAgent(),
 		RequestID:  logger.RequestID(r.Context()),
 	})

@@ -20,10 +20,22 @@ func authScopePostgresFixture(t *testing.T) (context.Context, *sql.DB) {
 	if dsn == "" {
 		t.Skip("YUEJUAN_BINDING_TEST_DATABASE_URL is not set; requires a migrated isolated test database")
 	}
+	return authScopePostgresFixtureDSN(t, dsn)
+}
+
+func authScopePostgresFixtureDSN(t *testing.T, dsn string) (context.Context, *sql.DB) {
+	t.Helper()
 	cfg, err := pgx.ParseConfig(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
+	return authScopePostgresFixtureConfig(t, cfg)
+}
+
+func authScopePostgresFixtureConfig(t *testing.T, config *pgx.ConnConfig) (context.Context, *sql.DB) {
+	t.Helper()
+	// 随机 schema 只修改连接副本，不能改变调用方迁移和清理使用的数据库配置。
+	cfg := config.Copy()
 	admin := stdlib.OpenDB(*cfg)
 	schema := "auth_scope_fix_" + strings.ReplaceAll(uuid.NewString(), "-", "")
 	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
@@ -79,13 +91,13 @@ func TestPostgresSchoolManagerAssignedForeignExamKeepsSubmissionIsolation(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !scope.managesSchool(schoolA) || scope.managesSchool(schoolB) || !scope.AllowsExam(examB) {
+	if !scope.managesSchool(schoolA) || scope.managesSchool(schoolB) || scope.AllowsExam(examB) || scope.AllowsSubmission(assigned) || scope.AllowsReviewTask(taskID) {
 		t.Fatalf("unexpected actual scope: %#v", scope)
 	}
 	for _, tc := range []struct {
 		id   string
 		want bool
-	}{{own, true}, {assigned, true}, {sibling, false}} {
+	}{{own, true}, {assigned, false}, {sibling, false}} {
 		boundary, err := store.ResolveResourceBoundary(ctx, scope, "submission", tc.id)
 		if err != nil {
 			t.Fatal(err)

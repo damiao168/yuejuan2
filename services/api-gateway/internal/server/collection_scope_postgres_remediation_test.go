@@ -44,7 +44,7 @@ func TestPostgresCollectionScopeRemediation(t *testing.T) {
 	config.RuntimeParams["search_path"] = schema
 	db := stdlib.OpenDB(*config)
 	defer db.Close()
-	for _, table := range []string{"exam", "exam_class", "submission", "ai_human_disagreement", "regrade_job", "grading_gold_paper", "grading_gold_paper_version", "exam_question_snapshot", "answer_segment"} {
+	for _, table := range []string{"exam", "exam_class", "submission", "ai_human_disagreement", "regrade_job", "grading_gold_paper", "grading_gold_paper_version", "exam_question_snapshot", "answer_segment", "question"} {
 		if _, err := db.ExecContext(ctx, `CREATE TABLE `+table+` AS TABLE public.`+table+` WITH NO DATA`); err != nil {
 			t.Fatal(err)
 		}
@@ -102,7 +102,7 @@ func TestPostgresCollectionScopeRemediation(t *testing.T) {
 		insert("submission", map[string]any{"id": submissionID, "exam_id": examID, "student_id": studentID})
 		insert("ai_human_disagreement", map[string]any{"id": issueID, "exam_id": examID, "question_id": questionID, "submission_id": submissionID, "answer_segment_id": segmentID, "ai_candidate_id": uuid.NewString(), "human_grade_id": uuid.NewString(), "ai_candidate_score": 5, "human_score": 1, "max_score": 5, "delta": 4, "absolute_delta": 4, "difference_type": "score", "severity": "severe", "risk_tier": "R3", "trigger_rules_json": []any{}, "evidence_summary_json": map[string]any{}, "status": "classified", "taxonomy": "ocr_error", "notes": "", "revision": 1})
 		insert("regrade_job", map[string]any{"exam_id": examID, "question_id": questionID, "source_release_id": uuid.NewString(), "reason_code": "answer_key_error", "reason_text": "synthetic", "strategy": "human_recheck", "selector_json": map[string]any{}, "severity_delta": 2, "idempotency_key": uuid.NewString(), "status": "awaiting_approval", "affected_count": 1, "created_by": actor})
-		insert("grading_gold_paper", map[string]any{"id": goldID, "exam_id": examID, "question_id": questionID, "submission_id": submissionID, "active_version": 1, "status": "active", "nominated_by": actor, "retirement_reason": ""})
+		insert("grading_gold_paper", map[string]any{"id": goldID, "exam_id": examID, "question_id": questionID, "submission_id": submissionID, "quality_pool": goldpaper.PoolCalibration, "active_version": 1, "status": "active", "nominated_by": actor, "retirement_reason": ""})
 		insert("exam_question_snapshot", map[string]any{"id": snapshotID, "profile_snapshot_json": map[string]any{"subject_code": "math"}, "archetype_code": "exact_text", "risk_tier": "R2"})
 		insert("answer_segment", map[string]any{"id": segmentID, "submission_id": submissionID, "question_id": questionID})
 		insert("grading_gold_paper_version", map[string]any{"gold_paper_id": goldID, "version": 1, "exam_question_snapshot_id": snapshotID, "reference_score": 3, "max_score": 5, "rubric_snapshot_json": map[string]any{}, "explanation": "synthetic", "trait_scores_json": map[string]any{}, "error_tags_json": []any{}, "source_grade_ids_json": []any{}, "nominated_by": actor,

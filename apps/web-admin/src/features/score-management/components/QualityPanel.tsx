@@ -26,7 +26,7 @@ export function QualityPanel({ quality, publishedOrLocked, actionFor }: Readonly
       <ShieldCheck size={22} />
       <div>
         <strong>基础成绩检查通过</strong>
-        <span>{publishedOrLocked ? "基础成绩已锁定；本项检查通过。门户发布状态见版本区域。" : "本项检查通过；请继续核对门户发布检查。"}</span>
+        <span>{publishedOrLocked ? "基础成绩已锁定；本项检查通过。学生端发布状态见成绩发布页。" : "本项检查通过；学生端发布检查以成绩发布页为准。"}</span>
       </div>
     </div>;
   }

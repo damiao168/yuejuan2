@@ -136,11 +136,6 @@
 }
 
 @media (max-width: 640px) {
-  .login-options {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .public-computer-banner {
     align-items: flex-start;
     padding-inline: 12px;

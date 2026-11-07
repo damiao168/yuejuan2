@@ -5,13 +5,20 @@
 }
 
 .capture-records { border: 1px solid var(--border); background: var(--surface); }
-.capture-records-toggle { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 18px; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
-.capture-records-toggle > span:first-child { display: grid; gap: 4px; }
-.capture-records-toggle small, .capture-records-toggle > span:last-child { color: var(--text-muted); }
-.capture-records-toggle:hover { background: var(--hover-bg); }
-.capture-records-toggle:disabled { cursor: default; }
-.capture-records-body[hidden] { display: none; }
+.capture-records-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 18px; }
+.capture-records-heading h2 { margin: 0; font-size: 1rem; }
+.capture-records-heading p { margin: 4px 0 0; }
+.capture-records-heading p, .capture-records-heading > span { color: var(--text-muted); }
 .capture-records .capture-batch-layout { border: 0; border-top: 1px solid var(--border); }
+.capture-records > .ant-alert { margin: 0 18px 16px; }
+.capture-workspace-tabs > .ant-tabs-nav { margin: 0; padding: 0 18px; border-top: 1px solid var(--border); }
+.capture-collection-tab { padding: 18px; }
+.capture-records .capture-collection { border: 0; padding: 0; }
+.capture-records .capture-collection-heading h2 { font-size: 1rem; }
+.capture-records .capture-collection-stats { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 14px 0; border: 0; }
+.capture-records .capture-collection-stats > div { display: flex; align-items: baseline; gap: 8px; padding: 0; border: 0; }
+.capture-records .capture-collection-stats strong { font-size: 1rem; margin: 0; }
+.capture-records .capture-collection-filter { margin-top: 14px; }
 
 .capture-collection { border: 1px solid var(--border); background: var(--surface); padding: 20px; }
 .capture-collection-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
@@ -31,6 +38,8 @@
 .capture-collection-material > div:first-child { display: grid; gap: 4px; }
 .capture-collection-material span { color: var(--text-muted); }
 @media (max-width: 760px) {
+  .capture-workspace-tabs > .ant-tabs-nav { padding-inline: 14px; }
+  .capture-collection-tab { padding: 14px; }
   .capture-collection { padding: 14px; }
   .capture-collection-heading, .capture-collection-material { flex-direction: column; align-items: stretch; }
   .capture-collection-stats > div { padding: 12px 8px; }

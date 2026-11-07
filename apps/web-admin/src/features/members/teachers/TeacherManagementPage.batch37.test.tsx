@@ -36,8 +36,8 @@ vi.mock("./MemberProfileDialog", () => ({
 vi.mock("../../../components/ResponsiveTable", () => ({
   ResponsiveTable: ({ dataSource, columns }: {
     dataSource: ManagedUser[];
-    columns: Array<{ key?: string; render?: (value: undefined, user: ManagedUser) => ReactNode }>;
-  }) => <div>{dataSource.map((user) => <div key={user.id} data-user-id={user.id}>{columns.find((column) => column.key === "actions")?.render?.(undefined, user)}</div>)}</div>
+    columns: Array<{ key?: string; dataIndex?: keyof ManagedUser; render?: (value: unknown, user: ManagedUser) => ReactNode }>;
+  }) => <div>{dataSource.map((user) => <div key={user.id} data-user-id={user.id}>{columns.filter(column => column.key === "actions" || column.dataIndex === "teaching_subjects").map(column => <div key={column.key || column.dataIndex}>{column.render?.(column.dataIndex ? user[column.dataIndex] : undefined, user)}</div>)}</div>)}</div>
 }));
 vi.mock("antd", async () => {
   const React = await import("react");
@@ -60,6 +60,7 @@ vi.mock("antd", async () => {
     <input value={value ?? ""} onChange={onChange} readOnly={!onChange} placeholder={placeholder} />, {
     Search: ({ value, onChange }: { value: string; onChange: React.ChangeEventHandler<HTMLInputElement> }) => <input value={value} onChange={onChange} />
   });
+  Object.assign(Input, { Password: Input });
   return {
     App: { useApp: () => ({ message: { success: mocks.success, error: mocks.error }, modal: mocks.modal }) },
     Form, Input,
@@ -82,7 +83,7 @@ const currentUser: SessionUser = {
   tenant: "tenant-a", school: "学校甲", currentExam: "", permissions: [], publicComputer: false,
   organizationScope: { resolved: true, tenantWide: true, schoolIds: [], gradeIds: [], classIds: [] }
 };
-const teacher: ManagedUser = { id: "teacher-a", username: "teacher-name", display_name: "教师甲", roles: ["teacher"], class_ids: [], school_id: "school-a", status: "active" };
+const teacher: ManagedUser = { id: "teacher-a", username: "teacher-name", display_name: "教师甲", roles: ["teacher"], teaching_subjects: ["mathematics"], school_id: "school-a", status: "active" };
 
 describe("人员管理弹窗文案优先级", () => {
   let host: HTMLDivElement;
@@ -113,12 +114,12 @@ describe("人员管理弹窗文案优先级", () => {
     await act(async () => { host.querySelector<HTMLButtonElement>(`[data-tab="${key}"]`)!.click(); });
   }
 
-  it("新增教师显示教师标题和邀请按钮", async () => {
+  it("新增教师显示教师标题和账号创建按钮", async () => {
     await render();
     await click("新增教师");
     const dialog = host.querySelector('[role="dialog"]')!;
     expect(dialog.querySelector("h2")?.textContent).toBe("新增教师");
-    expect(dialog.querySelector('button[type="submit"]')?.textContent).toBe("创建并生成邀请");
+    expect(dialog.querySelector('button[type="submit"]')?.textContent).toBe("创建教师账号");
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
@@ -132,7 +133,7 @@ describe("人员管理弹窗文案优先级", () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
-  it.each(["教师甲", ""])("新增管理员取消后编辑人员，名称“%s”仍只打开资料编辑", async (displayName) => {
+  it.each([["教师甲", "修改学科"], ["", "编辑资料"]])("新增管理员取消后编辑人员，名称“%s”的%s仍只打开资料编辑", async (displayName, actionLabel) => {
     // 切换过管理员新增模式后，编辑资料也只能传给原人员，不能误走创建或授权修改。
     const target = { ...teacher, display_name: displayName };
     mocks.users.mockResolvedValue([target]);
@@ -142,7 +143,7 @@ describe("人员管理弹窗文案优先级", () => {
     await click("新增管理员");
     await click("取消", host.querySelector('[role="dialog"]')!);
     await changeTab("teachers");
-    await click("编辑资料", host.querySelector('[data-user-id="teacher-a"]')!);
+    await click(actionLabel, host.querySelector('[data-user-id="teacher-a"]')!);
     const dialog = host.querySelector('[role="dialog"]')!;
     expect(dialog.querySelector("h2")?.textContent).toBe(`编辑资料 · ${displayName}`);
     await click("保存资料", dialog);

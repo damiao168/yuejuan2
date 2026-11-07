@@ -68,7 +68,7 @@ class GradingAgentHandler(BaseHTTPRequestHandler):
                 from .material_runtime import math_wrapper_hash
                 settings = self.server.application.settings
                 enabled = settings.adapter_type == "local_llama_cpp" and bool(settings.material_callback_base_url)
-                self._json(200, {"features": ["material-input-v1"] if enabled else [], "math_wrapper_hash": math_wrapper_hash(),
+                self._json(200, {"features": ["material-input-v1"] if enabled else [], "math_wrapper_hash": math_wrapper_hash(settings.prompt_version),
                                  "max_reference_images": 4, "adapter": settings.adapter_type, "provider": settings.provider_key,
                                  "deployment": settings.deployment_key, "region": settings.deployment_region})
             except AgentError as exc:

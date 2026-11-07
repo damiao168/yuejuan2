@@ -1,0 +1,141 @@
+
+
+.capability-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.capability-tile {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.capability-tile > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  color: var(--info);
+  background: rgba(19, 194, 194, 0.1);
+}
+
+.capability-tile h4 {
+  margin: 12px 0 6px;
+  font-size: 0.9375rem;
+  letter-spacing: 0;
+}
+
+.capability-list,
+.queue-list,
+.diagnostic-list,
+.log-list {
+  display: grid;
+  gap: 10px;
+}
+
+.dependency-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.diagnostic-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.diagnostic-summary-grid > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.diagnostic-summary-grid span,
+.diagnostic-summary-grid small {
+  color: var(--text-muted);
+}
+
+.diagnostic-summary-grid strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--eg-font-title);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.local-cache-security {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.local-cache-security p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.capability-row,
+.queue-row,
+.log-row {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.capability-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+}
+
+.capability-row strong,
+.queue-row strong,
+.log-row strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.queue-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 32%);
+  gap: 16px;
+  align-items: center;
+}
+
+.queue-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.log-row p {
+  grid-column: 3;
+  overflow-wrap: anywhere;
+}

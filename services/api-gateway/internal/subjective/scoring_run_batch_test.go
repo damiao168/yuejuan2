@@ -63,7 +63,9 @@ func TestScoringRunBatchIdentityAndRetryCandidates(t *testing.T) {
 func TestCreateBatchRejectsScoringRunChangeOnReplay(t *testing.T) {
 	store := NewMemoryStore()
 	store.AddContext("tenant-1", "segment-1", ContextForTest("short_answer", 5, "answer", nil))
-	handler := NewHandler(store, nil, nil)
+	identities := auth.NewMemoryStore()
+	identities.AddResourceBoundary("answer_segment", "segment-1", auth.ResourceBoundary{TenantID: "tenant-1", SchoolID: "school-1"})
+	handler := NewHandler(store, nil, identities)
 	create := func(runID string) *httptest.ResponseRecorder {
 		body, err := json.Marshal(CreateBatchInput{
 			IdempotencyKey: "batch-command-1", ScoringRunID: runID, SegmentIDs: []string{"segment-1"},
@@ -73,6 +75,7 @@ func TestCreateBatchRejectsScoringRunChangeOnReplay(t *testing.T) {
 		}
 		req := httptest.NewRequest(http.MethodPost, "/subjective-grading-batches", bytes.NewReader(body))
 		req = req.WithContext(auth.WithUser(req.Context(), auth.User{ID: "actor-1", TenantID: "tenant-1"}))
+		req = req.WithContext(auth.WithAccessScope(req.Context(), auth.AccessScope{ActorID: "actor-1", TenantID: "tenant-1", TenantWide: true}))
 		rec := httptest.NewRecorder()
 		handler.CreateBatch(rec, req)
 		return rec

@@ -94,7 +94,7 @@ COALESCE((SELECT array_agg(ec.class_id::text ORDER BY ec.class_id) FROM exam_cla
 e.candidate_rule, EXISTS(SELECT 1 FROM exam_readiness_snapshot rs WHERE rs.tenant_id=e.tenant_id AND rs.exam_id=e.id AND rs.status='passed' AND rs.invalidated_at IS NULL),
 EXISTS(SELECT 1 FROM score_release_current sc JOIN score_release sr ON sr.tenant_id=sc.tenant_id AND sr.id=sc.release_id AND sr.exam_id=sc.exam_id
  WHERE sc.tenant_id=e.tenant_id AND sc.exam_id=e.id AND sr.status='published' AND sr.published_at IS NOT NULL),
-(` + managementScopeSQL("e") + `),e.archived_at,COALESCE(e.archived_by::text,''),COALESCE(e.archive_reason,'')
+(` + managementScopeSQL("e") + `),e.archived_at,COALESCE(e.archived_by::text,''),COALESCE(e.archive_reason,''),` + managementGradingCompleteSQL + `
 FROM exam e WHERE e.tenant_id=$1 AND e.deleted_at IS NULL`
 	if kind == "session" {
 		query += ` AND e.exam_session_id::text=$6`
@@ -115,9 +115,9 @@ FROM exam e WHERE e.tenant_id=$1 AND e.deleted_at IS NULL`
 	for rows.Next() {
 		var child Exam
 		var rule string
-		var ready, published, allowed bool
+		var ready, published, allowed, gradingComplete bool
 		var archive ManagementArchiveMetadata
-		if err := rows.Scan(&child.ID, &child.TenantID, &child.SchoolID, &child.Name, &child.Subject, &child.ExamType, &child.TotalScore, &child.Status, &child.GradingMode, &child.AppealEnabled, &child.PublishPolicy, &child.CreatedBy, &child.Revision, &child.CreatedAt, &child.UpdatedAt, examTextArray(&child.ClassIDs), &rule, &ready, &published, &allowed, &archive.ArchivedAt, &archive.ArchivedBy, &archive.ArchiveReason); err != nil {
+		if err := rows.Scan(&child.ID, &child.TenantID, &child.SchoolID, &child.Name, &child.Subject, &child.ExamType, &child.TotalScore, &child.Status, &child.GradingMode, &child.AppealEnabled, &child.PublishPolicy, &child.CreatedBy, &child.Revision, &child.CreatedAt, &child.UpdatedAt, examTextArray(&child.ClassIDs), &rule, &ready, &published, &allowed, &archive.ArchivedAt, &archive.ArchivedBy, &archive.ArchiveReason, &gradingComplete); err != nil {
 			return 0, nil, nil, err
 		}
 		// 不可见子科仍计入整场总数，完整范围判断不能只依赖返回的授权集合。
@@ -127,7 +127,7 @@ FROM exam e WHERE e.tenant_id=$1 AND e.deleted_at IS NULL`
 		}
 		appendManagementSubject(out, child, archive)
 		rules[child.ID] = rule
-		facts[child.ID] = managementSubjectFacts{Ready: ready, Published: published, Available: true}
+		facts[child.ID] = managementSubjectFacts{Ready: ready, Published: published, GradingComplete: gradingComplete, Available: true}
 	}
 	if err := rows.Err(); err != nil {
 		return 0, nil, nil, err

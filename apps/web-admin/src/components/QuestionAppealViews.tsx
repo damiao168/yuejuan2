@@ -145,7 +145,7 @@ interface AppealActionsProps {
 
 export function QuestionAppealActions(props: Readonly<AppealActionsProps>) {
   // 教师意见由独立面板移交；分派和最终公开答复仅显示给管理端。
-  if (props.status === "submitted" && props.canManage) return <section className="question-appeal-actions"><h3>分派处理</h3><p>请选择未参与本题原批阅的独立教师。服务端会检查人员工作权限与原评记录。</p><Space wrap>
+  if (props.status === "submitted" && props.canManage) return <section className="question-appeal-actions"><h3>分派处理</h3><p>请选择任教本场学科、未参与本题原批阅的独立教师。服务端会检查人员工作权限与原评记录。</p>{!props.reviewers.length ? <p>暂无符合本场学科的复核教师，请先核对教师岗位、任教学科和账号状态。</p> : null}<Space wrap>
     <Select className="question-appeal-reviewer" placeholder="选择阅卷教师" value={props.assignedTo || undefined} options={props.reviewers.map((user) => ({ value: user.id, label: user.display_name || user.username }))} onChange={props.onAssignedToChange} />
     <Button type="primary" loading={props.actioning} disabled={!props.assignedTo} onClick={props.onAssign}>开始复核</Button>
   </Space></section>;

@@ -178,6 +178,10 @@ func (h *Handler) OverridePageQuality(w http.ResponseWriter, r *http.Request) {
 // 质量运行租约同步失败会尝试标记任务失败并跳过；心跳失败则直接返回错误。
 func (h *Handler) ClaimJobs(w http.ResponseWriter, r *http.Request) {
 	user := mustUser(r)
+	if !auth.HasRole(user, "page_processing_worker") {
+		httpx.Error(w, r, http.StatusForbidden, "worker_identity_required", "page processing worker identity is required")
+		return
+	}
 	var input ClaimInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -340,6 +344,21 @@ func (h *Handler) validateNormalizedResultAsset(w http.ResponseWriter, r *http.R
 		httpx.Error(w, r, http.StatusBadRequest, "normalized_file_asset_invalid", "normalized file asset must be image/png")
 		return false
 	}
+	run, err := h.store.GetRun(r.Context(), user.TenantID, r.PathValue("runId"))
+	if err != nil {
+		writeStoreError(w, r, err)
+		return false
+	}
+	item, err := h.submissions.Get(r.Context(), user.TenantID, run.SubmissionID)
+	// worker 自报的文件 ID 不是归属凭据；只接受本考试本答卷页的规范化图。
+	// 同页重复上传会返回已有哈希文件，因此允许复用旧文件；不能要求创建时间晚于本次重检。
+	if err != nil || asset.OwnerType != "submission_page_normalized" || asset.OwnerID != run.SubmissionPageID ||
+		asset.ExamID != item.ExamID || (asset.SubmissionID != "" && asset.SubmissionID != run.SubmissionID) ||
+		strings.TrimSpace(asset.HashSHA256) == "" ||
+		(run.LeaseExpiresAt != nil && asset.CreatedAt.After(*run.LeaseExpiresAt)) {
+		httpx.Error(w, r, http.StatusBadRequest, "normalized_file_asset_invalid", "normalized file asset does not belong to this page and run")
+		return false
+	}
 	return true
 }
 
@@ -491,7 +510,7 @@ func (h *Handler) auditAction(r *http.Request, action string, targetType string,
 		TargetType: targetType,
 		TargetID:   targetID,
 		Reason:     reason,
-		IPAddress:  r.RemoteAddr,
+		IPAddress:  httpx.ClientIP(r),
 		UserAgent:  r.UserAgent(),
 		RequestID:  logger.RequestID(r.Context()),
 	})

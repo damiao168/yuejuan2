@@ -89,6 +89,22 @@ describe("app route rendering access", () => {
 });
 
 describe("route permission props and identity keys", () => {
+  it("通用成绩入口按租户、用户和工作区隔离选择，考试内页只使用路径考试", () => {
+    const actor = user(["school_admin", "teacher"], ["score:manage", "exam:manage", "submission:manage", "report:read"]);
+    const admin = element(renderAppRouteContent(context("/scores", actor)));
+    expect(admin.props.selectionScope).toBe("school-1:user-1:admin");
+    expect(admin.key).toBe("school-1:user-1:admin");
+    const nextUser = element(renderAppRouteContent(context("/scores", { ...actor, id: "user-2" })));
+    const nextSchool = element(renderAppRouteContent(context("/scores", { ...actor, tenant: "school-2" })));
+    const teacher = element(renderAppRouteContent(context("/scores", actor, "teacher")));
+    expect(nextUser.key).not.toBe(admin.key);
+    expect(nextSchool.key).not.toBe(admin.key);
+    expect(teacher.type).toBe(ForbiddenState);
+    const embedded = workspaceModule(context("/exams/exam-b/scores", actor));
+    expect(embedded.props.initialExamId).toBe("exam-b");
+    expect(embedded.props.selectionScope).toBeUndefined();
+  });
+
   it("采集上传权限不替代异常处理权限，两种入口分别传 capture:manage", () => {
     const uploadOnly = user(["school_admin"], ["exam:manage", "submission:manage", "file:manage", "ocr:manage", "segment:manage"]);
     const captureEnabled = { ...uploadOnly, permissions: [...uploadOnly.permissions, "capture:manage"] };
@@ -162,6 +178,18 @@ describe("route permission props and identity keys", () => {
     if (path === "/account/sessions") {
       expect(page.props.onLoggedOut).toBe(renderContext.logout);
     }
+  });
+  it("个人信息和旧安全链接使用同一账户页及登出回调", () => {
+    const actor = user(["school_admin"], []);
+    const profileContext = context("/account/profile", actor);
+    const securityContext = context("/account/sessions", actor);
+    const profile = element(renderAppRouteContent(profileContext));
+    const security = element(renderAppRouteContent(securityContext));
+    expect(profile.type).toBe(security.type);
+    expect(profile.props.currentUser).toBe(actor);
+    expect(security.props.currentUser).toBe(actor);
+    expect(profile.props.onLoggedOut).toBe(profileContext.logout);
+    expect(security.props.onLoggedOut).toBe(securityContext.logout);
   });
 
   it("different question-bank draft deep links receive different page keys", () => {

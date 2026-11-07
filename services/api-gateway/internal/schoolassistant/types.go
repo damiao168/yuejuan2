@@ -45,9 +45,15 @@ type Capability struct {
 }
 
 type Capabilities struct {
-	Mode          string       `json:"mode"`
-	ModelRequired bool         `json:"model_required"`
-	Intents       []Capability `json:"intents"`
+	Mode          string               `json:"mode"`
+	ModelRequired bool                 `json:"model_required"`
+	Intents       []Capability         `json:"intents"`
+	WebSearch     *WebSearchCapability `json:"web_search,omitempty"`
+}
+
+type WebSearchCapability struct {
+	Available bool   `json:"available"`
+	Message   string `json:"message"`
 }
 
 type Scope struct {
@@ -72,6 +78,9 @@ type Source struct {
 	Consistency    string    `json:"consistency"`
 	ScopeLabel     string    `json:"scope_label"`
 	Note           string    `json:"note,omitempty"`
+	URL            string    `json:"url,omitempty"`
+	Excerpt        string    `json:"excerpt,omitempty"`
+	SiteName       string    `json:"site_name,omitempty"`
 }
 
 // Fact 的不可用值使用 null；不把来源故障转换为正常的零值。

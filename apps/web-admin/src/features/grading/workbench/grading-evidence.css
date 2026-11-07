@@ -1,0 +1,317 @@
+
+
+.math-evidence-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 96%, var(--primary) 4%);
+}
+
+.math-evidence-head,
+.math-evidence-meta,
+.math-formula-label,
+.math-step-row,
+.math-evidence-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.math-evidence-head h3,
+.math-evidence-head p {
+  margin: 0;
+}
+
+.math-evidence-head p,
+.math-evidence-meta,
+.math-formula-label span,
+.math-edge-summary,
+.math-evidence-actions span {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.math-evidence-body,
+.math-step-list,
+.math-rubric-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.math-formula-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.32fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.math-formula-label {
+  justify-content: flex-start;
+}
+
+.math-step-row,
+.math-rubric-evidence > div {
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--eg-radius-sm);
+  background: var(--surface);
+}
+
+.math-edge-row,
+.math-crossed-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--primary);
+  background: var(--surface);
+  font-size: var(--eg-font-caption);
+}
+
+.math-step-row span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.math-rubric-evidence > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.math-evidence-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.score-panel {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.score-ai-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+  font-size: var(--eg-font-body);
+}
+
+.score-ai-result {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.score-ai-result strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.score-ai-basis.ant-btn {
+  padding-inline: 0;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.panel-head h2,
+.grading-bottom h2 {
+  font-size: var(--eg-font-reading);
+}
+
+.answer-viewer {
+  height: min(64vh, 720px);
+  min-height: 440px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(90deg, rgba(31, 35, 41, 0.04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(31, 35, 41, 0.04) 1px, transparent 1px),
+    var(--surface-soft);
+  background-size: 28px 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.answer-viewer.dragging {
+  cursor: grabbing;
+}
+
+.answer-viewer-stage {
+  position: relative;
+  max-width: 100%;
+  transform-origin: center;
+  transition: width 120ms ease, height 120ms ease, transform 120ms ease;
+}
+
+.answer-viewer-stage img,
+.answer-viewer-stage iframe {
+  display: block;
+  max-width: 100%;
+  max-height: 680px;
+  border: 1px solid var(--border);
+  background: var(--eg-color-surface);
+}
+
+.answer-viewer-stage.image-stage {
+  max-width: none;
+  max-height: none;
+}
+
+.answer-viewer-stage.image-stage img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+
+.answer-viewer-stage iframe {
+  width: min(720px, 100%);
+  height: 640px;
+}
+
+.ocr-overlay-text.grading-math-markdown {
+  width: min(720px, 70vw);
+  min-height: 420px;
+  max-height: 640px;
+  margin: 0;
+  padding: 18px;
+  overflow: auto;
+  white-space: normal;
+  font-family: inherit;
+  font-size: var(--eg-font-body);
+  line-height: 1.6;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--border);
+}
+
+.ocr-overlay-text.grading-math-markdown p {
+  white-space: pre-wrap;
+}
+
+.ocr-bbox {
+  position: absolute;
+  border: 2px solid rgba(22, 119, 255, 0.75);
+  background: rgba(22, 119, 255, 0.12);
+  pointer-events: none;
+}
+
+.evidence-stack,
+.evidence-job {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ocr-snippet {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  padding: 7px 9px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.ocr-snippet > span,
+.ai-evidence-details small {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.ocr-snippet > .grading-math-markdown {
+  max-height: 160px;
+  margin: 0;
+  overflow: auto;
+  line-height: 1.45;
+}
+
+.task-automation-result {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px 9px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.task-automation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 10px;
+}
+
+.task-automation-grid > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* 标签样式只作用于直属文本，避免覆盖 KaTeX 内部 span 的字号和颜色。 */
+.task-automation-grid > div > span,
+.task-automation-note span {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.task-automation-grid strong {
+  overflow: hidden;
+  font-size: var(--eg-font-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-automation-answer {
+  font-size: var(--eg-font-body);
+  font-weight: 600;
+}
+
+.task-automation-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 760px) {
+  .automation-results-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .automation-result-metrics {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .automation-result-metrics span {
+    padding: 0 7px;
+  }
+
+  .automation-result-filters {
+    grid-template-columns: 1fr;
+  }
+}

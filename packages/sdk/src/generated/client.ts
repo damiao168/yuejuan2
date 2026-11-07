@@ -3,6 +3,8 @@
 import type { ApiTransport } from "../runtime";
 import { appendQuery, fillPath } from "../runtime";
 import type {
+  ScoreRosterResponse,
+  DashboardSummary,
   GradingAIPlanInput,
   GradingAIPlanDetail,
   ProbeGradingAIModelRequest,
@@ -389,10 +391,25 @@ import type {
   CalibrationSchoolTemplateDirectory,
   ApproveCalibrationSchoolTemplateRequest,
   WithdrawCalibrationSchoolTemplateRequest,
-  CalibrationSchoolTemplateResponse
+  CalibrationSchoolTemplateResponse,
+  CreateOrganizationGradeRequest,
+  OrganizationGradeListResponse,
+  CreateOrganizationClassRequest,
+  OrganizationClassListResponse,
+  TransferOrganizationStudentRequest,
+  TransferOrganizationStudentResponse,
+  SeedSamplingPolicyResponse,
+  PutSeedSamplingPolicyRequest,
+  AccountProfileResponse,
+  RestartQuestionAppealReviewRequest,
+  CreateOrganizationStudentRequest,
+  OpenOrganizationStudentAccountRequest,
+  OrganizationStudentPage
 } from "./types";
 
 export interface operations {
+  "getExamRosterReport": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ScoreRosterResponse; };
+  "getDashboardSummary": { args: { signal?: AbortSignal; }; response: DashboardSummary; };
   "getExamGradingAIPlan": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: GradingAIPlanDetail; };
   "saveExamGradingAIPlan": { args: { path: { "examId": string; }; body: GradingAIPlanInput; signal?: AbortSignal; }; response: GradingAIPlanDetail; };
   "probeExamGradingAIModel": { args: { path: { "examId": string; }; body: ProbeGradingAIModelRequest; signal?: AbortSignal; }; response: GradingVisionProbe; };
@@ -685,7 +702,7 @@ export interface operations {
   "updateManagedUserAccess": { args: { path: { "id": string; }; body: UpdateManagedUserAccessRequest; signal?: AbortSignal; }; response: ManagedOrganizationUserResponse; };
   "getScoreReleaseStudentPreview": { args: { path: { "id": string; }; query: { "student_id": string; }; signal?: AbortSignal; }; response: StudentScorePreviewResponse; };
   "confirmExamReadiness": { args: { path: { "examId": string; }; body?: ConfirmExamReadinessRequest; signal?: AbortSignal; }; response: ExamReadinessConfirmationResponse; };
-  "getStudentPublishedPaperPageImage": { args: { path: { "examId": string; "questionId": string; }; query?: { "variant"?: "high_score"; "expected_release_id"?: string; }; signal?: AbortSignal; }; response: unknown; };
+  "getStudentPublishedPaperPageImage": { args: { path: { "examId": string; "questionId": string; }; query?: { "variant"?: "high_score"; "expected_release_id"?: string; "paper_id"?: string; }; signal?: AbortSignal; }; response: unknown; };
   "submitQuestionAppealReviewOpinion": { args: { path: { "id": string; }; body: QuestionAppealReviewOpinionRequest; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
   "getCaptureScanContext": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: CaptureScanContextResponse; };
   "getExamTemplateBinding": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ExamTemplateBindingState; };
@@ -708,7 +725,9 @@ export interface operations {
   "getPlatformChatModelAccess": { args: { query: { "tenant_id": string; }; signal?: AbortSignal; }; response: { "access": ChatModelAccess; }; };
   "savePlatformChatModelAccess": { args: { body: ChatModelAccessInput; signal?: AbortSignal; }; response: { "access": ChatModelAccess; }; };
   "updateOrganizationGrade": { args: { path: { "id": string; }; body: UpdateOrganizationGradeRequest; signal?: AbortSignal; }; response: OrganizationGradeResponse; };
+  "deleteOrganizationGrade": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: void; };
   "updateOrganizationClass": { args: { path: { "id": string; }; body: UpdateOrganizationClassRequest; signal?: AbortSignal; }; response: OrganizationClassResponse; };
+  "deleteOrganizationClass": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: void; };
   "updateOrganizationStudent": { args: { path: { "id": string; }; body: UpdateOrganizationStudentRequest; signal?: AbortSignal; }; response: OrganizationStudentResponse; };
   "deleteOrganizationStudent": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: DeleteOrganizationStudentResponse; };
   "updateManagedUserProfile": { args: { path: { "id": string; }; body: UpdateManagedUserProfileRequest; signal?: AbortSignal; }; response: ManagedUserProfileResponse; };
@@ -765,10 +784,34 @@ export interface operations {
   "listCalibrationSchoolTemplates": { args: { path: { "examId": string; "questionId": string; }; signal?: AbortSignal; }; response: CalibrationSchoolTemplateDirectory; };
   "approveCalibrationSchoolTemplate": { args: { path: { "examId": string; "questionId": string; }; body: ApproveCalibrationSchoolTemplateRequest; signal?: AbortSignal; }; response: CalibrationSchoolTemplateResponse; };
   "withdrawCalibrationSchoolTemplate": { args: { path: { "examId": string; "questionId": string; "templateId": string; }; body: WithdrawCalibrationSchoolTemplateRequest; signal?: AbortSignal; }; response: CalibrationSchoolTemplateResponse; };
+  "listOrganizationGrades": { args: { query?: { "school_id"?: string; }; signal?: AbortSignal; }; response: OrganizationGradeListResponse; };
+  "createOrganizationGrade": { args: { body: CreateOrganizationGradeRequest; signal?: AbortSignal; }; response: OrganizationGradeResponse; };
+  "listOrganizationClasses": { args: { query?: { "grade_id"?: string; }; signal?: AbortSignal; }; response: OrganizationClassListResponse; };
+  "createOrganizationClass": { args: { body: CreateOrganizationClassRequest; signal?: AbortSignal; }; response: OrganizationClassResponse; };
+  "transferOrganizationStudent": { args: { path: { "id": string; }; body: TransferOrganizationStudentRequest; signal?: AbortSignal; }; response: TransferOrganizationStudentResponse; };
+  "getSeedSamplingPolicy": { args: { path: { "examId": string; "questionId": string; }; signal?: AbortSignal; }; response: SeedSamplingPolicyResponse; };
+  "putSeedSamplingPolicy": { args: { path: { "examId": string; "questionId": string; }; body: PutSeedSamplingPolicyRequest; signal?: AbortSignal; }; response: SeedSamplingPolicyResponse; };
+  "getAccountProfile": { args: { signal?: AbortSignal; }; response: AccountProfileResponse; };
+  "exportExamGradeReport": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "exportPublishedExamGrades": { args: { path: { "examId": string; }; query?: { "format"?: "csv" | "xlsx"; }; signal?: AbortSignal; }; response: unknown; };
+  "restartQuestionAppealReview": { args: { path: { "id": string; }; body: RestartQuestionAppealReviewRequest; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
+  "listOrganizationStudents": { args: { query?: { "class_id"?: string; "q"?: string; "ids"?: string; "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: OrganizationStudentPage; };
+  "createOrganizationStudent": { args: { body: CreateOrganizationStudentRequest; signal?: AbortSignal; }; response: OrganizationStudentResponse; };
+  "openOrganizationStudentAccount": { args: { path: { "id": string; }; body: OpenOrganizationStudentAccountRequest; signal?: AbortSignal; }; response: OrganizationStudentResponse; };
 }
 
 export class EduGradeApi {
   constructor(private readonly transport: ApiTransport) {}
+
+  getExamRosterReport(args: operations["getExamRosterReport"]["args"]): Promise<operations["getExamRosterReport"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/roster", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  getDashboardSummary(args: operations["getDashboardSummary"]["args"] = {}): Promise<operations["getDashboardSummary"]["response"]> {
+    const requestPath = "/api/v1/dashboard/summary";
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
 
   getExamGradingAIPlan(args: operations["getExamGradingAIPlan"]["args"]): Promise<operations["getExamGradingAIPlan"]["response"]> {
     const requestPath = fillPath("/api/v1/exams/{examId}/grading-ai-plan", args.path);
@@ -2345,9 +2388,19 @@ export class EduGradeApi {
     return this.transport.request(requestPath, { method: "PATCH", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 
+  deleteOrganizationGrade(args: operations["deleteOrganizationGrade"]["args"]): Promise<operations["deleteOrganizationGrade"]["response"]> {
+    const requestPath = fillPath("/api/v1/grades/{id}", args.path);
+    return this.transport.request(requestPath, { method: "DELETE", signal: args.signal });
+  }
+
   updateOrganizationClass(args: operations["updateOrganizationClass"]["args"]): Promise<operations["updateOrganizationClass"]["response"]> {
     const requestPath = fillPath("/api/v1/classes/{id}", args.path);
     return this.transport.request(requestPath, { method: "PATCH", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  deleteOrganizationClass(args: operations["deleteOrganizationClass"]["args"]): Promise<operations["deleteOrganizationClass"]["response"]> {
+    const requestPath = fillPath("/api/v1/classes/{id}", args.path);
+    return this.transport.request(requestPath, { method: "DELETE", signal: args.signal });
   }
 
   updateOrganizationStudent(args: operations["updateOrganizationStudent"]["args"]): Promise<operations["updateOrganizationStudent"]["response"]> {
@@ -2627,6 +2680,76 @@ export class EduGradeApi {
 
   withdrawCalibrationSchoolTemplate(args: operations["withdrawCalibrationSchoolTemplate"]["args"]): Promise<operations["withdrawCalibrationSchoolTemplate"]["response"]> {
     const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/calibration-templates/{templateId}/withdraw", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  listOrganizationGrades(args: operations["listOrganizationGrades"]["args"] = {}): Promise<operations["listOrganizationGrades"]["response"]> {
+    const requestPath = appendQuery("/api/v1/grades", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  createOrganizationGrade(args: operations["createOrganizationGrade"]["args"]): Promise<operations["createOrganizationGrade"]["response"]> {
+    const requestPath = "/api/v1/grades";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  listOrganizationClasses(args: operations["listOrganizationClasses"]["args"] = {}): Promise<operations["listOrganizationClasses"]["response"]> {
+    const requestPath = appendQuery("/api/v1/classes", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  createOrganizationClass(args: operations["createOrganizationClass"]["args"]): Promise<operations["createOrganizationClass"]["response"]> {
+    const requestPath = "/api/v1/classes";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  transferOrganizationStudent(args: operations["transferOrganizationStudent"]["args"]): Promise<operations["transferOrganizationStudent"]["response"]> {
+    const requestPath = fillPath("/api/v1/students/{id}/enrollment", args.path);
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getSeedSamplingPolicy(args: operations["getSeedSamplingPolicy"]["args"]): Promise<operations["getSeedSamplingPolicy"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/seed-policy", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  putSeedSamplingPolicy(args: operations["putSeedSamplingPolicy"]["args"]): Promise<operations["putSeedSamplingPolicy"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/seed-policy", args.path);
+    return this.transport.request(requestPath, { method: "PUT", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  getAccountProfile(args: operations["getAccountProfile"]["args"] = {}): Promise<operations["getAccountProfile"]["response"]> {
+    const requestPath = "/api/v1/auth/profile";
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  exportExamGradeReport(args: operations["exportExamGradeReport"]["args"]): Promise<operations["exportExamGradeReport"]["response"]> {
+    const requestPath = fillPath("/api/v1/exams/{examId}/grades/export/report", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  exportPublishedExamGrades(args: operations["exportPublishedExamGrades"]["args"]): Promise<operations["exportPublishedExamGrades"]["response"]> {
+    const requestPath = appendQuery(fillPath("/api/v1/exams/{examId}/score-releases/export", args.path), args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  restartQuestionAppealReview(args: operations["restartQuestionAppealReview"]["args"]): Promise<operations["restartQuestionAppealReview"]["response"]> {
+    const requestPath = fillPath("/api/v1/question-appeals/{id}/restart-review", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  listOrganizationStudents(args: operations["listOrganizationStudents"]["args"] = {}): Promise<operations["listOrganizationStudents"]["response"]> {
+    const requestPath = appendQuery("/api/v1/students", args.query);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  createOrganizationStudent(args: operations["createOrganizationStudent"]["args"]): Promise<operations["createOrganizationStudent"]["response"]> {
+    const requestPath = "/api/v1/students";
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  openOrganizationStudentAccount(args: operations["openOrganizationStudentAccount"]["args"]): Promise<operations["openOrganizationStudentAccount"]["response"]> {
+    const requestPath = fillPath("/api/v1/students/{id}/account", args.path);
     return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 }

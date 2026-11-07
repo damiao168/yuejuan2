@@ -24,7 +24,6 @@ export interface CreateExamDraft {
   creationMode: ExamCreationMode;
   schoolId: string;
   name: string;
-  examType: string;
   gradeId: string;
   templateId: string;
   classIds: string[];

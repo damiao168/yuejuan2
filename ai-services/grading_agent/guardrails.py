@@ -1,18 +1,12 @@
 import re
 import unicodedata
 
+from .prompt_injection_rules_generated import INJECTION_RULES
+
 _ZERO_WIDTH = re.compile(r"[\u200B-\u200D\uFEFF]")
 _SPACE = re.compile(r"\s+")
 
-_INJECTION_RULES = (
-    ("ignore_rubric_cn", re.compile(r"忽略(?:之前|以上|所有)?(?:的)?(?:评分|规则|标准|指令)", re.IGNORECASE)),
-    ("full_score_cn", re.compile(r"(?:给我|直接给|应该给)(?:满分|\d+(?:\.\d+)?分)", re.IGNORECASE)),
-    ("role_override_cn", re.compile(r"你现在是(?:老师|教师|系统|管理员|开发者)", re.IGNORECASE)),
-    ("schema_bypass_cn", re.compile(r"不要告诉老师", re.IGNORECASE)),
-    ("ignore_rubric_en", re.compile(r"ignore(?:all|previous|the)?(?:rules|instructions|rubric|gradingcriteria)", re.IGNORECASE)),
-    ("full_score_en", re.compile(r"givemefull(?:marks|score|credit)", re.IGNORECASE)),
-    ("role_override_en", re.compile(r"youarenow(?:the)?(?:teacher|system|admin|developer)", re.IGNORECASE)),
-)
+_INJECTION_RULES = tuple((rule["id"], re.compile(rule["pattern"], re.IGNORECASE), rule.get("ordered_terms", ())) for rule in INJECTION_RULES)
 
 
 def normalize_evidence_text(value):
@@ -21,13 +15,17 @@ def normalize_evidence_text(value):
     return _SPACE.sub("", text)
 
 
-def _contains_schema_bypass(text):
+def _contains_ordered_terms(text, terms):
     # 固定词组只需按顺序出现；不用连续通配符，避免学生长文本触发回溯。
-    output_position = text.find("输出")
-    if output_position < 0:
+    if not terms:
         return False
-    schema_position = text.find("schema", output_position + len("输出"))
-    return schema_position >= 0 and text.find("之外", schema_position + len("schema")) >= 0
+    position = 0
+    for term in terms:
+        position = text.find(term, position)
+        if position < 0:
+            return False
+        position += len(term)
+    return True
 
 
 # 规则命中只提供风险信号；未命中不代表学生文本可信，后续仍按不可信证据处理。
@@ -37,7 +35,7 @@ def detect_prompt_injection(value):
     text = _SPACE.sub("", text)
     matches = [
         name
-        for name, pattern in _INJECTION_RULES
-        if pattern.search(text) or (name == "schema_bypass_cn" and _contains_schema_bypass(text))
+        for name, pattern, terms in _INJECTION_RULES
+        if pattern.search(text) or _contains_ordered_terms(text, terms)
     ]
     return {"detected": bool(matches), "signals": matches}

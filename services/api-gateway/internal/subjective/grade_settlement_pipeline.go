@@ -49,7 +49,7 @@ func NewGradeSettlementPipeline(settleMath mathSettlementFunc, recordCalibration
 func (p *GradeSettlementPipeline) Settle(ctx context.Context, input GradeSettlementInput, output *AdapterOutput) error {
 	if input.Context.InputVersionID != "" {
 		// 回调携带的分数、正文和观察都不可信；只能用已保存观察重建冻结量规的建议。
-		if output == nil || output.SchemaVersion != ImageProtocolVersion {
+		if output == nil || output.SchemaVersion != ImageProtocolVersion || !supportedImageComparisonPrompt(input.Policy.PromptVersion) || output.PromptVersion != input.Policy.PromptVersion {
 			return ErrInvalidModelOutput
 		}
 		if input.Context.AIPlan != nil {
@@ -65,7 +65,7 @@ func (p *GradeSettlementPipeline) Settle(ctx context.Context, input GradeSettlem
 		if err := projectImageJudgments(output, AdapterInput{SegmentID: input.Context.SegmentID, Question: input.Context.Question, Rubric: input.Context.Rubric, CropSHA256: input.Context.CropSHA256, Observation: input.Context.Observation}); err != nil {
 			return err
 		}
-		output.RawOutput = imageRawOutput(input.Context, output.ImageJudgments)
+		output.RawOutput = imageRawOutput(input.Context, output.ImageJudgments, input.Policy.PromptVersion)
 	}
 	if input.MathRun {
 		if p.settleMath == nil {

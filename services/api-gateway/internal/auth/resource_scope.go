@@ -30,6 +30,11 @@ type ResourceBoundaryResolver interface {
 	ResolveResourceBoundary(ctx context.Context, scope AccessScope, resourceType, resourceID string) (ResourceBoundary, error)
 }
 
+// AllowsManagedResourceBoundary 用于整校业务管理，不能用考试可见或具体任务分派代替管理授权。
+func AllowsManagedResourceBoundary(scope AccessScope, boundary ResourceBoundary) bool {
+	return boundary.TenantID != "" && boundary.TenantID == scope.TenantID && scope.ManagesSchool(boundary.SchoolID)
+}
+
 // SubmittedReviewTaskReader 核验本人已提交的评分事实，只供任务只读路由使用。
 // 历史任务不加入活动分派或 submission 作用域，避免回看权限扩散为写入或其他答卷访问权。
 type SubmittedReviewTaskReader interface {
@@ -38,6 +43,11 @@ type SubmittedReviewTaskReader interface {
 
 func AllowsResourceBoundary(scope AccessScope, boundary ResourceBoundary) bool {
 	if strings.TrimSpace(boundary.TenantID) == "" || boundary.TenantID != scope.TenantID {
+		return false
+	}
+	// 学校管理员即使兼任阅卷或持有旧外校任务白名单，也不能读取校外考试、答卷或图像。
+	// 先判断学校再进入个人分派和显式资源分支，避免后者重新放宽范围。
+	if scope.RestrictsToManagedSchools() && (boundary.SchoolID != "" || boundary.ExamID != "") && !scope.ManagesSchool(boundary.SchoolID) {
 		return false
 	}
 	if allowed, decided := allowsSpecialBoundary(scope, boundary); decided {
@@ -55,7 +65,7 @@ func AllowsResourceBoundary(scope AccessScope, boundary ResourceBoundary) bool {
 	if boundary.StudentID != "" && scope.StudentID != "" && boundary.StudentID == scope.StudentID {
 		return true
 	}
-	// 外校任务允许读取考试材料，但同场其他答卷仍须具体分派；兼任本校管理员不能放宽外校范围。
+	// 普通阅卷人员可按外校任务读取材料，同场其他答卷仍须具体分派；学校管理员已在上方受本校限制。
 	if scope.AssignedOnly && !scope.managesSchool(boundary.SchoolID) && isSubmissionDescendant(boundary.ResourceType) {
 		return false
 	}
@@ -89,6 +99,16 @@ func allowsAssignedTaskBoundary(scope AccessScope, boundary ResourceBoundary) (a
 			return boundary.AssignedTo == scope.ActorID, true
 		}
 		return false, !scope.managesSchool(boundary.SchoolID)
+	case "appeal", "question_appeal":
+		// 申诉分派只授权这条申诉，不把整场考试或答卷加入教师范围；同场其它任务也不能替代它。
+		if scope.ActorID != "" && boundary.AssignedTo == scope.ActorID {
+			return true, true
+		}
+		// 学生查看本人的申诉沿用本人边界，不能因申诉已派给教师而失去查询权。
+		if scope.StudentID != "" && boundary.StudentID == scope.StudentID {
+			return true, true
+		}
+		return false, scope.AssignedOnly && !scope.managesSchool(boundary.SchoolID)
 	default:
 		return false, false
 	}
@@ -204,6 +224,9 @@ func checkRequestResourceBoundaries(resolver ResourceBoundaryResolver, w http.Re
 			return false
 		}
 		allowed := AllowsResourceBoundary(scope, boundary)
+		if requestNeedsManagement(r, boundary) {
+			allowed = AllowsManagedResourceBoundary(scope, boundary)
+		}
 		if !allowed {
 			var historyErr error
 			allowed, historyErr = allowsSubmittedReviewTaskRead(resolver, r, scope, boundary)
@@ -226,7 +249,8 @@ func checkRequestResourceBoundaries(resolver ResourceBoundaryResolver, w http.Re
 
 func allowsSubmittedReviewTaskRead(resolver ResourceBoundaryResolver, r *http.Request, scope AccessScope, boundary ResourceBoundary) (bool, error) {
 	if (r.Method != http.MethodGet && r.Method != http.MethodHead) || boundary.ResourceType != "review_task" ||
-		boundary.TenantID != scope.TenantID || scope.ActorID == "" || boundary.AssignedTo != scope.ActorID {
+		boundary.TenantID != scope.TenantID || scope.ActorID == "" || boundary.AssignedTo != scope.ActorID ||
+		(scope.RestrictsToManagedSchools() && !scope.ManagesSchool(boundary.SchoolID)) {
 		return false, nil
 	}
 	reader, supported := resolver.(SubmittedReviewTaskReader)
@@ -234,6 +258,47 @@ func allowsSubmittedReviewTaskRead(resolver ResourceBoundaryResolver, r *http.Re
 		return false, nil
 	}
 	return reader.CanReadSubmittedReviewTask(r.Context(), scope.TenantID, boundary.ResourceID, scope.ActorID)
+}
+
+// 本人阅卷、仲裁和申诉处理有独立分派边界；其余对象写操作必须管理所属学校。
+func requestNeedsManagement(r *http.Request, boundary ResourceBoundary) bool {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
+		return false
+	}
+	// 学生申诉只作用于本人已发布成绩，不能要求学生持有整校管理权限。
+	if strings.HasPrefix(r.URL.Path, "/api/v1/student/") {
+		return false
+	}
+	switch boundary.ResourceType {
+	case "review_task", "arbitration_task", "review_annotation", "backmark_item", "regrade_item", "appeal", "seed_task", "grader_calibration_session":
+		return false
+	case "question_appeal":
+		// 教师只能维护分派给本人的独立意见和私有草稿；分派、裁定等操作仍要求学校管理权。
+		return !strings.HasSuffix(r.URL.Path, "/review-opinion") && !strings.HasSuffix(r.URL.Path, "/private-draft")
+	default:
+		return true
+	}
+}
+
+// RequireManagedRequestResourceBoundary 为管理型读取和写入复用学校边界，不改变普通教学读取规则。
+func RequireManagedRequestResourceBoundary(resolver ResourceBoundaryResolver) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			scope, ok := AccessScopeFromContext(r.Context())
+			if !ok || resolver == nil {
+				httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "management scope is required")
+				return
+			}
+			for _, target := range requestBoundaryTargets(r) {
+				boundary, err := resolver.ResolveResourceBoundary(r.Context(), scope, target.resourceType, target.resourceID)
+				if err != nil || !AllowsManagedResourceBoundary(scope, boundary) {
+					httpx.Error(w, r, http.StatusForbidden, "access_scope_forbidden", "resource is outside the current management scope")
+					return
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 type requestBoundaryTarget struct{ resourceType, resourceID string }
@@ -388,7 +453,7 @@ func gradingResourceBoundaryQuery(resourceType string) string {
 	case "appeal":
 		return `SELECT a.tenant_id::text,e.school_id::text,''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),a.exam_id::text,a.student_id::text,a.submission_id::text,COALESCE(a.assigned_to::text,'') FROM appeal a JOIN exam e ON e.tenant_id=a.tenant_id AND e.id=a.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE a.tenant_id=$1::uuid AND a.id=$2::uuid AND a.deleted_at IS NULL GROUP BY a.id,e.id`
 	case "question_appeal":
-		return `SELECT qa.tenant_id::text,e.school_id::text,''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),qa.exam_id::text,qa.student_id::text,qa.submission_id::text,''::text FROM question_appeal qa JOIN exam e ON e.tenant_id=qa.tenant_id AND e.id=qa.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE qa.tenant_id=$1::uuid AND qa.id=$2::uuid AND qa.deleted_at IS NULL GROUP BY qa.id,e.id`
+		return `SELECT qa.tenant_id::text,e.school_id::text,''::text,COALESCE(array_agg(DISTINCT ec.class_id::text) FILTER(WHERE ec.class_id IS NOT NULL),'{}'),qa.exam_id::text,qa.student_id::text,qa.submission_id::text,COALESCE(qa.assigned_to::text,'') FROM question_appeal qa JOIN exam e ON e.tenant_id=qa.tenant_id AND e.id=qa.exam_id LEFT JOIN exam_class ec ON ec.tenant_id=e.tenant_id AND ec.exam_id=e.id AND ec.deleted_at IS NULL WHERE qa.tenant_id=$1::uuid AND qa.id=$2::uuid AND qa.deleted_at IS NULL GROUP BY qa.id,e.id`
 	case "score_release":
 		return examOwnedBoundaryQueryWithoutSoftDelete("score_release")
 	case "subjective_grading_batch":

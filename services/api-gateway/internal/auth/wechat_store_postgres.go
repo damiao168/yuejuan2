@@ -71,42 +71,33 @@ WHERE id=$1::uuid AND poll_token_hash=$2
 }
 
 func (s *PostgresStore) FindUserByWechatIdentity(ctx context.Context, tenantCode, appID, unionID, openID string) (UserWithPassword, error) {
-	// 微信身份必须在发起挑战的租户和应用内已有绑定；回调不会自动建号或跨租户匹配。
-	var username string
+	// 微信身份须已绑定到输入代码对应的学校或租户及应用；多个账号候选时拒绝，不能按返回顺序登录。
+	var tenantID, userID string
 	err := s.db.QueryRowContext(ctx, `
-SELECT u.username
-FROM wechat_identity wi
-JOIN tenant t ON t.id=wi.tenant_id AND t.status='active' AND t.deleted_at IS NULL
-JOIN app_user u ON u.tenant_id=wi.tenant_id AND u.id=wi.user_id AND u.status='active' AND u.deleted_at IS NULL
-WHERE t.code=$1 AND wi.app_id=$2 AND wi.deleted_at IS NULL
-  AND (($3 <> '' AND wi.union_id=$3) OR ($4 <> '' AND wi.open_id=$4))
-ORDER BY CASE WHEN $3 <> '' AND wi.union_id=$3 THEN 0 ELSE 1 END
-LIMIT 1
-`, tenantCode, appID, unionID, openID).Scan(&username)
+WITH candidates AS (
+  SELECT DISTINCT u.tenant_id, u.id
+  FROM wechat_identity wi
+  JOIN tenant t ON t.id=wi.tenant_id AND t.status='active' AND t.deleted_at IS NULL
+  JOIN app_user u ON u.tenant_id=wi.tenant_id AND u.id=wi.user_id AND u.status='active' AND u.deleted_at IS NULL
+  LEFT JOIN school sc ON sc.tenant_id=u.tenant_id AND sc.id=u.school_id
+  WHERE (t.code=$1 OR (sc.code=$1 AND $1<>'platform' AND sc.status='active' AND sc.deleted_at IS NULL))
+    AND wi.app_id=$2 AND wi.deleted_at IS NULL
+    AND (($3 <> '' AND wi.union_id=$3) OR ($4 <> '' AND wi.open_id=$4))
+)
+SELECT tenant_id::text, id::text FROM candidates WHERE (SELECT count(*) FROM candidates)=1
+`, tenantCode, appID, unionID, openID).Scan(&tenantID, &userID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return UserWithPassword{}, ErrWechatIdentityUnbound
 	}
 	if err != nil {
 		return UserWithPassword{}, err
 	}
-	return s.FindUserByLogin(ctx, tenantCode, username)
+	return s.FindUserByID(ctx, tenantID, userID)
 }
 
 func (s *PostgresStore) FindUserByID(ctx context.Context, tenantID, userID string) (UserWithPassword, error) {
-	var tenantCode, username string
-	err := s.db.QueryRowContext(ctx, `
-SELECT t.code, u.username
-FROM app_user u JOIN tenant t ON t.id=u.tenant_id
-WHERE u.tenant_id=$1::uuid AND u.id=$2::uuid AND u.status='active' AND u.deleted_at IS NULL
-  AND t.status='active' AND t.deleted_at IS NULL
-`, tenantID, userID).Scan(&tenantCode, &username)
-	if errors.Is(err, sql.ErrNoRows) {
-		return UserWithPassword{}, ErrInvalidCredentials
-	}
-	if err != nil {
-		return UserWithPassword{}, err
-	}
-	return s.FindUserByLogin(ctx, tenantCode, username)
+	// 内部主键查找不经过可变的学号或公开登录别名。
+	return s.findUserByIdentity(ctx, tenantID, "", userID)
 }
 
 func (s *PostgresStore) AuthorizeWechatLoginChallenge(ctx context.Context, id, tenantID, userID string, now time.Time) error {

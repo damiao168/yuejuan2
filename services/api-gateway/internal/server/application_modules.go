@@ -105,11 +105,18 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 	resourceResolver, _ := identity.AuthStore.(auth.ResourceBoundaryResolver)
 	managedModels, _ := stores.AIGovernance.ModelGovernance.(modelgovernance.ManagedAPIConfigStore)
 	modelUsage, _ := stores.AIGovernance.ModelGovernance.(modelgovernance.UsageLedger)
+	var publicSearch schoolassistant.SearchProvider
+	if dependencies.Config.SchoolAssistantSearchURL != "" {
+		publicSearch, err = schoolassistant.NewSearXNGSearch(dependencies.Config.SchoolAssistantSearchURL)
+		if err != nil {
+			return ApplicationModules{}, err
+		}
+	}
 	assistant := NewSchoolAssistantModule(schoolassistant.Dependencies{
 		Exams: examModule.ExamStore, Workspaces: examModule.WorkspaceService,
 		Gates: releaseModule.ReleaseGateService, CurrentReleases: releaseModule.ScoreReleaseService,
 		Resources: resourceResolver, Audit: identity.AuthStore,
-		Conversation: schoolassistant.ConversationDependencies{Models: managedModels, Usage: modelUsage},
+		Conversation: schoolassistant.ConversationDependencies{Models: managedModels, Usage: modelUsage, Search: publicSearch},
 	})
 	return ApplicationModules{
 		Identity: identity, Exam: examModule, Capture: captureModule, Grading: gradingQuality,

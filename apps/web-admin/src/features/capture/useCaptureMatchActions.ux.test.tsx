@@ -10,6 +10,23 @@ vi.mock("../../api/capture", () => ({ mergeCaptureSubmissions: mocks.merge }));
 vi.mock("../../api/client", () => ({ getUserErrorMessage: (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback }));
 
 describe("合并答卷提交与批次刷新结果", () => {
+  it("确认框的旧批次操作不能返回假成功", async () => {
+    vi.resetAllMocks(); Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    let actions!: ReturnType<typeof useCaptureMatchActions>;
+    const setActioning = vi.fn();
+    function Harness({ batch }: { batch: string }) {
+      actions = useCaptureMatchActions({ selectedId: batch, loadMatching: vi.fn(), loadDetail: vi.fn(), setMatching: vi.fn(), setActioning });
+      return null;
+    }
+    const root = createRoot(document.createElement("div"));
+    await act(async () => root.render(<Harness batch="old" />));
+    const confirmOldBatch = actions.mergeSubmissions;
+    await act(async () => root.render(<Harness batch="new" />));
+    await expect(confirmOldBatch("target", "source")).rejects.toThrow("合并未执行");
+    expect(mocks.merge).not.toHaveBeenCalled();
+    expect(mocks.message.success).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
   it("远端合并失败传回面板；合并成功但刷新失败保留成功事实", async () => {
     vi.resetAllMocks(); Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const refresh = vi.fn(); const setMatching = vi.fn(); const setActioning = vi.fn();

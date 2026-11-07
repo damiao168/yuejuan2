@@ -4,6 +4,8 @@ import (
 	"net"
 	"net/http"
 	"strings"
+
+	"edugrade-enterprise/services/api-gateway/internal/httpx"
 )
 
 func bearerToken(r *http.Request) string {
@@ -19,25 +21,7 @@ func bearerToken(r *http.Request) string {
 }
 
 func (h *Handler) remoteIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		host = r.RemoteAddr
-	}
-	peer := net.ParseIP(strings.TrimSpace(host))
-	if peer == nil || !trustedIP(peer, h.trustedProxies) {
-		return host
-	}
-	forwarded := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
-	// 仅沿可信代理从右向左追溯，遇到首个不可信节点就停止，不能直接相信最左端地址。
-	current := peer
-	for index := len(forwarded) - 1; index >= 0 && trustedIP(current, h.trustedProxies); index-- {
-		next := net.ParseIP(strings.TrimSpace(forwarded[index]))
-		if next == nil {
-			return host
-		}
-		current = next
-	}
-	return current.String()
+	return httpx.ResolveClientIP(r, h.trustedProxies)
 }
 
 func parseTrustedProxyCIDRs(values []string) []*net.IPNet {

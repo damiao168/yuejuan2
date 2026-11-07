@@ -239,6 +239,20 @@ describe("学校模型库操作", () => {
     await act(async () => root.render(<PlatformModelConfigPage />));
   }
 
+  it("对话开放三项但一项普通回复未通过时只统计两项可用，连接和结构化成功不能替代", async () => {
+    configs = [
+      { ...config("custom-v4"), last_text_status: "success", model_name: "deepseek-v4.1-flash" },
+      { ...config("custom-flash"), last_text_status: "success", model_name: "deepseek-flash" },
+      { ...config("official-flash"), last_text_status: "failed", last_test_status: "success", last_capability_status: "success", model_name: "deepseek-flash" },
+    ];
+    mocks.getChatAccess.mockResolvedValue({ access: { revision: "three-opened", model_ids: configs.map(item => item.id) } });
+    await render();
+    expect(host.textContent).toContain("对话已开放 3 项 · 可用 2 项 · 不可用 1 项");
+    expect(conversationChoice("official-flash").checked).toBe(true);
+    expect(conversationChoice("official-flash").disabled).toBe(false);
+    expect(mocks.saveChatAccess).not.toHaveBeenCalled();
+  });
+
   it("应用用途始终显示四个入口，阅卷允许先配置模型且解析保留结构化门槛", async () => {
     configs[1] = { ...configs[1], last_text_status: "success" };
     configs[3] = { ...configs[3], last_capability_status: "success", last_capability_probe_version: "structured-json-v4" };
@@ -363,7 +377,7 @@ describe("学校模型库操作", () => {
     expect(mocks.saveDocument).toHaveBeenLastCalledWith("school-a", { mode: "model", model_config_id: "OpenAI", expected_revision: "new-revision" });
   });
 
-  it("三种检测各自在对应列发出请求，列表只有七列且无更多操作菜单", async () => {
+  it("三种检测各自在独立列发出请求，设置直显且无更多操作菜单", async () => {
     configs[1] = { ...configs[1], last_test_status: "temporary_unavailable", last_test_message: "模型服务连接超时，请稍后重试", last_successful_tested_at: "2026-10-15T06:04:00Z", last_text_status: "success", last_capability_status: "failed" };
     mocks.probe.mockImplementation(async (id: string) => ({ config: configs.find((item) => item.id === id), result: { ok: true, message: "检测完成" } }));
     await render();
@@ -371,9 +385,8 @@ describe("学校模型库操作", () => {
     expect(column("OpenAI", "text").textContent).toContain("通过");
     expect(column("OpenAI", "structured").textContent).toContain("未通过");
     expect(row("OpenAI").textContent).not.toContain("暂时无法验证");
-    expect([...row("OpenAI").children].map((item) => item.getAttribute("data-column-key"))).toEqual(["model-name", "provider", "availability", "usage-summary", "settings"]);
-    expect(row("OpenAI").querySelector<HTMLDetailsElement>("details.platform-model-settings")?.open).toBe(false);
-    expect([...column("OpenAI", "settings").querySelectorAll("[data-column-key]")].map(item => item.getAttribute("data-column-key"))).toEqual(["connection", "text", "structured", "assignment", "actions"]);
+    expect([...row("OpenAI").children].map((item) => item.getAttribute("data-column-key"))).toEqual(["model-name", "provider", "connection", "text", "structured", "assignment", "actions"]);
+    expect(row("OpenAI").querySelector("details")).toBeNull();
     expect(column("OpenAI", "actions").querySelector('[aria-label$="：检测连接"]')).toBeNull();
     expect(row("OpenAI").querySelector('[aria-label="OpenAI更多操作"]')).toBeNull();
     expect([...column("OpenAI", "actions").querySelectorAll("button")].map((item) => item.textContent)).toEqual(["编辑", "停用", "删除"]);
@@ -450,7 +463,7 @@ describe("学校模型库操作", () => {
     expect(mocks.update).toHaveBeenLastCalledWith("DeepSeek", "school-a", expect.objectContaining({ status: "active", is_default: false }));
     expect(conversationChoice("DeepSeek").checked).toBe(true);
     expect(host.textContent).toContain("默认配置：未指定");
-    expect(host.textContent).toContain("对话已开放 1 个");
+    expect(host.textContent).toContain("对话已开放 1 项");
     expect([...host.querySelectorAll("button")].some((item) => item.textContent === "清除默认")).toBe(false);
   });
 
@@ -615,7 +628,7 @@ describe("学校模型库操作", () => {
     await act(async () => pending.resolve({ access: { revision: "saved-chat", model_ids: ["DeepSeek", "OpenAI"] } }));
     expect(conversationChoice("DeepSeek").checked).toBe(true);
     expect(conversationChoice("OpenAI").checked).toBe(true);
-    expect(host.textContent).toContain("对话已开放 2 个");
+    expect(host.textContent).toContain("对话已开放 2 项");
     expect(conversationChoice("智谱").disabled).toBe(false);
   });
 
@@ -634,23 +647,26 @@ describe("学校模型库操作", () => {
     await act(async () => button("刷新").click());
     expect(conversationChoice("DeepSeek").checked).toBe(true);
     expect(conversationChoice("OpenAI").checked).toBe(true);
-    expect(host.textContent).toContain("对话已开放 2 个");
+    expect(host.textContent).toContain("对话已开放 2 项");
   });
 
   it("编辑期间刷新到新的启停和日常对话状态，保存连接字段时保留最新状态", async () => {
+    const originalVersion = "2026-10-30T01:00:00Z";
+    configs[0] = { ...configs[0], updated_at: originalVersion };
     const values: ConfigFormValues = { supplier: "custom", api_key: "", base_url: configs[0].base_url, model_name: "edited-model" };
     mocks.form.getFieldsValue.mockReturnValue(values);
     mocks.form.validateFields.mockResolvedValue(values);
     await render();
     await act(async () => row("DeepSeek").querySelector<HTMLButtonElement>('[aria-label="编辑DeepSeek"]')!.click());
-    configs[0] = { ...configs[0], status: "disabled", is_default: false };
+    configs[0] = { ...configs[0], status: "disabled", is_default: false, updated_at: "2026-10-30T02:00:00Z" };
     configs[1] = { ...configs[1], is_default: true, last_text_status: "success" };
     await act(async () => button("刷新").click());
     expect(host.querySelector("aside")).not.toBeNull();
     const saveButton = [...host.querySelectorAll<HTMLButtonElement>("aside button")].find((item) => item.textContent?.endsWith("更新"));
     expect(saveButton).toBeDefined();
     await act(async () => saveButton!.click());
-    expect(mocks.update).toHaveBeenLastCalledWith("DeepSeek", "school-a", expect.objectContaining({ status: "disabled", is_default: false, model_name: "edited-model" }));
+    // 刷新可以更新显示状态，但不能替旧编辑表单更换版本；真实 API 应据此拒绝冲突覆盖。
+    expect(mocks.update).toHaveBeenLastCalledWith("DeepSeek", "school-a", expect.objectContaining({ status: "disabled", is_default: false, model_name: "edited-model", expected_updated_at: originalVersion }));
     // 开放范围与默认项独立；停用后仍可取消开放，原有开放事实不会由刷新改写。
     expect(conversationChoice("DeepSeek").disabled).toBe(false);
     expect(conversationChoice("DeepSeek").checked).toBe(true);

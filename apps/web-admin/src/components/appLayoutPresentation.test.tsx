@@ -35,6 +35,7 @@ describe("shell presentation boundaries", () => {
     expect(selectedNavigationPath(route, "scores")).toBe("/scores");
     expect(selectedNavigationPath({ ...route, key: "examCreate", path: "/exams/new" })).toBe("/exams");
     expect(selectedNavigationPath({ ...route, key: "dashboard", path: "/dashboard" })).toBe("/dashboard");
+    expect(selectedNavigationPath({ ...route, key: "sessions", path: "/account/sessions" })).toBe("/account/profile");
   });
 
   it("keeps immersive modes ahead of the exam workspace class", () => {

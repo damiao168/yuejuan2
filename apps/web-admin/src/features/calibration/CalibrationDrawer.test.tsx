@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CalibrationDrawer } from "./CalibrationDrawer";
 import type { CalibrationPolicy, CalibrationSession, PutCalibrationPolicyRequest } from "../../api/calibration";
 import type { CalibrationSchoolTemplates } from "./CalibrationSchoolTemplates";
+import { ApiClientError } from "../../api/client";
 
 const mocks = vi.hoisted(() => ({
   policy: vi.fn(), qualification: vi.fn(), start: vi.fn(), submit: vi.fn(), savePolicy: vi.fn(), qualified: vi.fn(),
@@ -17,7 +18,7 @@ vi.mock("../../api/calibration", () => ({
   getCalibrationPolicy: mocks.policy, getGraderQualification: mocks.qualification,
   createCalibrationSession: mocks.start, submitCalibrationAttempt: mocks.submit, putCalibrationPolicy: mocks.savePolicy
 }));
-vi.mock("../../api/client", () => ({ apiClient: { url: (url: string) => url }, getUserErrorMessage: (_error: unknown, fallback: string) => fallback }));
+vi.mock("../../api/client", async importOriginal => ({ ...await importOriginal<typeof import("../../api/client")>(), apiClient: { url: (url: string) => url }, getUserErrorMessage: (_error: unknown, fallback: string) => fallback }));
 vi.mock("../grading/SharedScoreControl", () => ({
   SharedScoreControl: ({ value, onChange, disabled }: { value: { score: number | null }; onChange: (value: { score: number; rubricSelections: Record<string, number> }) => void; disabled: boolean }) =>
     <input aria-label="校准样本分数" type="number" disabled={disabled} value={value.score ?? ""} onChange={(event) => onChange({ score: Number(event.target.value), rubricSelections: {} })} />
@@ -80,6 +81,21 @@ describe("校准异步结果与盲评边界", () => {
     expect(target, text).toBeDefined(); return target!;
   }
   async function click(text: string) { await act(async () => button(text).click()); }
+  it("服务端冷却拒绝后显示真实可重考时间并禁止重复请求，到时自动恢复", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    try {
+      mocks.start.mockRejectedValue(new ApiClientError(429, "calibration_retake_cooldown", "cooling", {}, 90));
+      await render();
+      await click("开始本题试评");
+      expect(host.textContent).toContain("可重新参加时间");
+      expect(host.textContent).toContain("上次试评完成24小时后可重考");
+      expect(button("开始本题试评").disabled).toBe(true);
+      await click("开始本题试评");
+      expect(mocks.start).toHaveBeenCalledTimes(1);
+      await act(async () => { vi.advanceTimersByTime(90_001); });
+      expect(button("开始本题试评").disabled).toBe(false);
+    } finally { vi.useRealTimers(); }
+  });
   function schoolProps() { return mocks.school.mock.calls[mocks.school.mock.calls.length - 1]![0] as Parameters<typeof CalibrationSchoolTemplates>[0]; }
   it("新建本题标准继承已知作答类型和满分，没有同题依据时留空", async () => {
     mocks.policy.mockResolvedValue({ policy: undefined });
@@ -134,7 +150,7 @@ describe("校准异步结果与盲评边界", () => {
     mocks.submit.mockRejectedValueOnce(new Error("network"));
     await render(); await click("开始本题试评"); await score(5);
     expect(host.textContent).not.toContain("参考分 8");
-    await click("提交本份并查看分差");
+    await click("提交本份试评");
     expect(mocks.submit).toHaveBeenCalledWith("session-A", { gold_paper_id: "gold-A", submitted_score: 5, rubric_selections: {} });
     expect(host.querySelector<HTMLInputElement>('[aria-label="校准样本分数"]')?.value).toBe("5");
     expect(host.querySelector('img[src="/image-A"]')).not.toBeNull();
@@ -143,7 +159,7 @@ describe("校准异步结果与盲评边界", () => {
 
   it("切换题目后旧提交结果不能宣告新题目已具备资格", async () => {
     const pending = deferred<unknown>(); mocks.submit.mockReturnValueOnce(pending.promise);
-    await render(); await click("开始本题试评"); await score(5); await click("提交本份并查看分差"); await render({ questionId: "B" });
+    await render(); await click("开始本题试评"); await score(5); await click("提交本份试评"); await render({ questionId: "B" });
     await act(async () => pending.resolve({ session: { ...session(), status: "passed" },
       attempt: { submitted_score: 5, reference_score: 8, absolute_error: 3, criterion_differences: [] },
       qualification: { status: "qualified", valid_until: "2099-01-01" } }));
@@ -218,30 +234,35 @@ describe("校准异步结果与盲评边界", () => {
     expect(button("保存通过标准").disabled).toBe(false);
   });
 
-  it("同一份提交不并发发送，当前提交成功后才显示参考结果", async () => {
+  it("同一份提交不并发发送，提交后只显示本人评分而不泄露参考答案", async () => {
     const pending = deferred<unknown>(); mocks.submit.mockReturnValueOnce(pending.promise);
     await render(); await click("开始本题试评"); await score(5);
-    await act(async () => { button("提交本份并查看分差").click(); button("提交本份并查看分差").click(); });
+    await act(async () => { button("提交本份试评").click(); button("提交本份试评").click(); });
     expect(mocks.submit).toHaveBeenCalledOnce(); expect(host.textContent).not.toContain("参考分 8");
     await act(async () => pending.resolve({ session: { ...session(), status: "passed", submitted_count: 1 },
       attempt: { submitted_score: 5, reference_score: 8, absolute_error: 3, criterion_differences: [] },
       qualification: { status: "qualified", valid_until: "2099-01-01" } }));
-    expect(host.textContent).toContain("你的评分 5 / 参考分 8"); expect(mocks.qualified).toHaveBeenCalledOnce();
+    expect(host.textContent).toContain("你的评分 5"); expect(host.textContent).not.toContain("参考分 8"); expect(host.textContent).not.toContain("相差 3 分"); expect(mocks.qualified).toHaveBeenCalledOnce();
   });
 
   it.each(["passed", "failed"] as const)("完成且有统计数据的 %s 校准显示结果，并只允许失败场景重做", async (status) => {
     mocks.submit.mockResolvedValueOnce({
-      session: { ...session(), status, submitted_count: 1, metrics: { sample_count: 1, criterion_sample_count: 1, mae: 0.5, exact_agreement: 1, within_one_agreement: 1, criterion_agreement: 1, severe_disagreement_rate: 0 } },
+      session: { ...session(), status, completed_at: new Date().toISOString(), submitted_count: 1, metrics: { sample_count: 1, criterion_sample_count: 1, mae: 0.5, exact_agreement: 1, within_one_agreement: 1, criterion_agreement: 1, severe_disagreement_rate: 0 } },
       attempt: { submitted_score: 5, reference_score: 5, absolute_error: 0, exact_match: true, severe_disagreement: false, criterion_differences: [] }
     });
     await render(); await click("开始本题试评"); await score(5);
     expect(host.textContent).not.toContain("参考分 5");
-    await click("提交本份并查看分差");
-    expect(host.textContent).toContain("你的评分 5 / 参考分 5");
+    await click("提交本份试评");
+    expect(host.textContent).toContain("你的评分 5");
+    expect(host.textContent).not.toContain("参考分 5");
     expect(host.textContent).toContain("0.50");
-    expect(host.textContent).toContain(status === "passed" ? "试评通过，已达到本题阅卷要求" : "试评未通过，请对照参考结果后重新试评");
+    expect(host.textContent).toContain(status === "passed" ? "试评通过，已达到本题阅卷要求" : "试评未通过，请核对整体一致性结果并按重考要求重新试评");
     const restart = [...host.querySelectorAll("button")].find((entry) => entry.textContent === "重新试评");
     expect(Boolean(restart)).toBe(status === "failed");
+    if (restart) {
+      expect(restart.disabled).toBe(true);
+      expect(host.textContent).toContain("可重新参加时间");
+    }
     expect(mocks.qualified).not.toHaveBeenCalled();
   });
 });

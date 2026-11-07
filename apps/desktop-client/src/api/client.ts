@@ -181,7 +181,10 @@ function trimTrailingSlashes(value: string): string {
 
 function isLoopbackHost(hostname: string) {
   const normalized = hostname.replace(/^\[|\]$/g, "").toLowerCase();
-  return normalized === "localhost" || normalized === "::1" || normalized.startsWith("127.");
+  if (normalized === "localhost" || normalized === "::1") return true;
+  // URL 已规范化 IP；HTTP 例外只接受完整的 127/8 地址，不能把 127. 开头的远程域名当成本机。
+  const octets = normalized.split(".");
+  return octets.length === 4 && octets[0] === "127" && octets.every(octet => /^\d{1,3}$/.test(octet) && Number(octet) <= 255);
 }
 
 export async function apiClientErrorFromResponse(response: Response): Promise<ApiClientError> {

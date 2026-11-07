@@ -23,11 +23,12 @@ export function SharedScoreControl({
   disabled?: boolean;
   onChange: (value: SharedScoreValue) => void;
 }>) {
-  const rubricTotal = Number(rubricPoints.reduce((total, point) => total + (value.rubricSelections[point.id] ?? 0), 0).toFixed(1));
+  // 题库、细则和终分按百分位保存，录分与合计也保留两位，避免 2.25 分被截成 2.2。
+  const rubricTotal = Number(rubricPoints.reduce((total, point) => total + (value.rubricSelections[point.id] ?? 0), 0).toFixed(2));
   const setPoint = (point: RubricPoint, score: number) => {
     // 调整采分点后重新合计最终分；直接填写最终分产生的人工调整不继续沿用。
     const rubricSelections = { ...value.rubricSelections, [point.id]: score };
-    onChange({ ...value, rubricSelections, score: Number(rubricPoints.reduce((total, item) => total + (rubricSelections[item.id] ?? 0), 0).toFixed(1)) });
+    onChange({ ...value, rubricSelections, score: Number(rubricPoints.reduce((total, item) => total + (rubricSelections[item.id] ?? 0), 0).toFixed(2)) });
   };
 
   return (
@@ -39,7 +40,7 @@ export function SharedScoreControl({
           disabled={disabled}
           min={0}
           max={maxScore}
-          precision={1}
+          precision={2}
           value={value.score}
           placeholder="最终分"
           onChange={(score) => onChange({ ...value, score: score === null ? null : Number(score) })}
@@ -54,7 +55,7 @@ export function SharedScoreControl({
             <Space size={8} wrap>
               <span>{rubricTotal} 分</span>
               {value.score !== null && value.score !== rubricTotal
-                ? <StatusTag tone="warning">{`人工调整：与细则合计相差 ${Number((value.score - rubricTotal).toFixed(1))} 分`}</StatusTag>
+                ? <StatusTag tone="warning">{`人工调整：与细则合计相差 ${Number((value.score - rubricTotal).toFixed(2))} 分`}</StatusTag>
                 : null}
               <Button size="small" disabled={disabled} onClick={() => onChange({ ...value, score: rubricTotal })}>
                 填入最终分
@@ -82,7 +83,7 @@ export function SharedScoreControl({
                 disabled={disabled}
                 min={0}
                 max={point.score}
-                precision={1}
+                precision={2}
                 value={value.rubricSelections[point.id] ?? 0}
                 onChange={(score) => setPoint(point, Number(score ?? 0))}
               />

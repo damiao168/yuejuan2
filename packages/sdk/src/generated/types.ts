@@ -1,5 +1,37 @@
 // Generated from services/api-gateway/openapi/edugrade-api.openapi.json. DO NOT EDIT.
 
+export type ScoreRosterEntry = { "key": string; "student_id"?: string; "student_no"?: string; "student_name"?: string; "class_id"?: string; "class_name"?: string; "submission_id"?: string; "candidate_no"?: string; "status": "graded" | "submitted" | "absent" | "unmatched" | "missing_pages"; "resolution_code": string; "expected_page_count": number; "actual_page_count": number; "total_score"?: number; "max_score"?: number; "attendance_reason"?: string; "marked_by"?: string; "marked_at"?: string; };
+
+export type ScoreRosterSummary = { "expected": number; "received": number; "graded": number; "absent": number; "unresolved": number; "missing_pages": number; "unidentified": number; };
+
+export type ScoreRosterReport = { "entries": Array<ScoreRosterEntry>; "summary": ScoreRosterSummary; };
+
+export type ScoreRosterResponse = { "roster": ScoreRosterReport; };
+
+export type DashboardScope = { "tenant_id": string; "school_id"?: string; };
+
+export type DashboardStatistics = { "active_exam_count": number; "collecting_exam_count": number; "pending_review_question_count": number; "pending_review_submission_count": number; "pending_arbitration_count": number; "pending_arbitration_submission_count": number; "failed_submission_count": number; "unmatched_submission_count": number; "quality_issue_submission_count": number; "finalized_exam_count": number; "preparing_exam_count"?: number; "grading_exam_count"?: number; };
+
+export type DashboardOrganizationStatistics = { "active_student_count": number; "grade_count": number; "class_count": number; "teacher_count": number; "grader_count": number; "empty_class_count": number; "unassigned_teacher_count": number; };
+
+export type DashboardBlockingIssue = { "code": string; "label": string; "count": number; "unit": string; "impact": string; "action": string; "drilldown_path": string; };
+
+export type DashboardActiveExam = { "id": string; "name": string; "subject": string; "status": string; "submission_count": number; "failed_count": number; "quality_issue_count": number; "unmatched_count": number; "created_at": string; "pending_arbitration_count"?: number; "review_task_count"?: number; "review_done_count"?: number; "roster_count"?: number | null; "roster_submitted_count"?: number | null; };
+
+export type DashboardRecentActivity = { "id": string; "action": string; "target_type": string; "target_id"?: string; "title"?: string; "summary"?: string; "severity"?: string; "reason"?: string; "created_at": string; "drilldown_path"?: string; };
+
+export type DashboardReviewTeacher = { "user_id": string; "username": string; "display_name": string; "teaching_subjects": Array<SubjectCode>; "assigned_count": number; "in_progress_count": number; "returned_count": number; "submitted_count": number; "remaining_count": number; "is_online": boolean; "last_active_at"?: string; };
+
+export type DashboardReviewTeacherSummary = { "teacher_count": number; "online_count": number; "online_window_seconds": number; "task_counting_note": string; "online_note": string; };
+
+export type DashboardSummary = { "scope": DashboardScope; "updated_at": string; "organization_statistics": DashboardOrganizationStatistics; "statistics": DashboardStatistics; "blocking_issues": Array<DashboardBlockingIssue>; "active_exams": Array<DashboardActiveExam>; "recent_activities": Array<DashboardRecentActivity>; "warnings": Array<string>; "review_teachers": Array<DashboardReviewTeacher>; "review_teacher_summary": DashboardReviewTeacherSummary; "grading_progress"?: DashboardGradingProgress | null; "appeal_statistics"?: DashboardAppealStatistics; };
+
+export type DashboardGradingProgress = { "window_seconds": number; "questions": Array<DashboardGradingQuestionProgress>; };
+
+export type DashboardGradingQuestionProgress = { "exam_id": string; "question_id": string; "question_no": string; "task_count": number; "done_count": number; "remaining_count": number; "recent_done_count": number; };
+
+export type DashboardAppealStatistics = { "pending_assignment_count": number; "pending_decision_count": number; };
+
 export type GradingAIRoleSelectionInput = { "model_config_id"?: string | ""; "strength_rank"?: number; };
 
 export type GradingAIRoleSelection = { "model_config_id": string | ""; "strength_rank": number; };
@@ -62,17 +94,17 @@ export type SchoolAssistantQueryRequest = { "request_id": string; "question": st
 
 export type SchoolAssistantCapability = { "intent": SchoolAssistantIntent; "label": string; "available": boolean; "required_permission": string; "reason"?: string; };
 
-export type SchoolAssistantCapabilities = { "mode": "school_business"; "model_required": false; "intents": Array<SchoolAssistantCapability>; };
+export type SchoolAssistantCapabilities = { "mode": "school_business"; "model_required": false; "intents": Array<SchoolAssistantCapability>; "web_search"?: { "available": boolean; "message": string; }; };
 
 export type SchoolConversationContext = { "exam_id"?: string; "origin_module"?: string; "origin_section"?: string; };
 
-export type SchoolConversationRequest = { "messages": Array<ManagedChatMessage>; "context"?: SchoolConversationContext; "model_config_id"?: string; };
+export type SchoolConversationRequest = { "messages": Array<ManagedChatMessage>; "context"?: SchoolConversationContext; "model_config_id"?: string; "web_search"?: boolean; };
 
-export type SchoolConversationEvent = { "type": "model"; "request_id": string; "seq": number; "model": ManagedChatModelStatus; } | { "type": "tool_started"; "request_id": string; "seq": number; "call_id": string; "tool_name": string; "label": string; } | { "type": "tool_finished"; "request_id": string; "seq": number; "call_id": string; "tool_name": string; "label": string; "status": "completed" | "failed"; "message"?: string; } | { "type": "delta"; "request_id": string; "seq": number; "channel": "content" | "reasoning"; "delta": string; } | { "type": "sources"; "request_id": string; "seq": number; "sources": Array<SchoolAssistantSource>; "actions": Array<SchoolAssistantAction>; "scope"?: SchoolAssistantScope; } | { "type": "done"; "request_id": string; "seq": number; "completion": ManagedChatCompletion; } | { "type": "error"; "request_id": string; "seq": number; "code": string; "message": string; };
+export type SchoolConversationEvent = { "type": "model"; "request_id": string; "seq": number; "model": ManagedChatModelStatus; } | { "type": "progress"; "request_id": string; "seq": number; "phase": "understanding" | "searching" | "reading" | "reviewing" | "answering"; } | { "type": "tool_started"; "request_id": string; "seq": number; "call_id": string; "tool_name": string; "label": string; } | { "type": "tool_finished"; "request_id": string; "seq": number; "call_id": string; "tool_name": string; "label": string; "status": "completed" | "failed"; "message"?: string; } | { "type": "delta"; "request_id": string; "seq": number; "channel": "content" | "reasoning"; "delta": string; } | { "type": "sources"; "request_id": string; "seq": number; "sources": Array<SchoolAssistantSource>; "actions": Array<SchoolAssistantAction>; "scope"?: SchoolAssistantScope; } | { "type": "done"; "request_id": string; "seq": number; "completion": ManagedChatCompletion; } | { "type": "error"; "request_id": string; "seq": number; "code": string; "message": string; };
 
 export type SchoolAssistantScope = { "exam_id"?: string; "exam_name"?: string; "subject"?: string; "class_ids": Array<string>; "release_channel"?: "student_portal"; "data_basis": "workspace_live" | "exam_live"; "scope_label": string; };
 
-export type SchoolAssistantSource = { "id": string; "kind": "workspace" | "release_gate" | "current_release" | "exam_search"; "status": "available" | "partial" | "empty" | "unavailable" | "forbidden"; "label": string; "read_at": string; "revision"?: string; "release_id"?: string; "release_version"?: number; "consistency": "source_local"; "scope_label": string; "note"?: string; };
+export type SchoolAssistantSource = { "id": string; "kind": "workspace" | "release_gate" | "current_release" | "exam_search" | "web"; "status": "available" | "partial" | "empty" | "unavailable" | "forbidden"; "label": string; "read_at": string; "revision"?: string; "release_id"?: string; "release_version"?: number; "consistency": "source_local"; "scope_label": string; "note"?: string; "url"?: string; "excerpt"?: string; "site_name"?: string; };
 
 export type SchoolAssistantFact = { "id": string; "source_id": string; "metric_key": string; "label": string; "available": boolean; "value": number | null; "unit": "count"; "definition_id": string; "reason"?: string; };
 
@@ -174,7 +206,7 @@ export type OnboardingReadiness = { "scope": "platform" | "school"; "ready_for_u
 
 export type OrganizationScope = { "tenant_wide": boolean; "school_ids": Array<string>; "grade_ids": Array<string>; "class_ids": Array<string>; };
 
-export type AuthUser = { "id": string; "tenant_id": string; "tenant_code": string; "username": string; "display_name": string; "status": string; "roles": Array<string>; "permissions": Array<string>; "data_scope": Record<string, unknown>; "organization_scope"?: OrganizationScope; "current_session_type"?: "standard" | "remembered_device" | "public_device" | "desktop_device" | "service"; };
+export type AuthUser = { "id": string; "tenant_id": string; "tenant_code": string; "username": string; "display_name": string; "status": string; "roles": Array<string>; "permissions": Array<string>; "data_scope": Record<string, unknown>; "organization_scope"?: OrganizationScope; "current_session_type"?: "standard" | "remembered_device" | "public_device" | "desktop_device" | "service"; "must_change_password"?: boolean; };
 
 export type AuthLoginRequest = { "tenant_code"?: string; "tenant_hint"?: string; "username"?: string; "identifier"?: string; "password": string; "remember_device"?: boolean; "public_device"?: boolean; "device_name"?: string; "client_type"?: "desktop" | "service"; };
 
@@ -470,7 +502,7 @@ export type SubmitCalibrationAttemptRequest = { "gold_paper_id": string; "submit
 
 export type CalibrationCriterionDifference = { "criterion": string; "expected"?: unknown; "submitted"?: unknown; };
 
-export type CalibrationAttempt = { "id": string; "session_id": string; "gold_paper_id": string; "gold_version": number; "submitted_score": number; "reference_score": number; "rubric_selections": Record<string, unknown>; "absolute_error": number; "exact_match": boolean; "within_one": boolean; "severe_disagreement": boolean; "criterion_correct": number; "criterion_count": number; "criterion_differences": Array<CalibrationCriterionDifference>; "created_at": string; };
+export type CalibrationAttempt = { "id": string; "session_id": string; "gold_paper_id": string; "gold_version": number; "submitted_score": number; "rubric_selections": Record<string, unknown>; "created_at": string; };
 
 export type GraderQualification = { "id": string; "exam_id": string; "question_id": string; "grader_id": string; "status": "qualified" | "expired" | "revoked"; "gold_set_hash": string; "calibration_session_id": string; "valid_until": string; "metrics": CalibrationMetrics; "created_at": string; "updated_at": string; };
 
@@ -660,7 +692,7 @@ export type ScoreReleaseStatus = "draft" | "published";
 
 export type ScoreReleaseAppealWindow = { "enabled": boolean; "opens_at"?: string | null; "closes_at"?: string | null; "allowed_reason_codes"?: Array<string>; };
 
-export type ScoreReleaseVisibilityPolicy = { "show_question_scores": boolean; "show_feedback": boolean; "show_rubric_summary": boolean; "show_cohort_statistics"?: boolean; "show_score_distribution"?: boolean; "show_percentile"?: boolean; "show_exact_rank"?: boolean; "show_question_statistics"?: boolean; "show_knowledge_analysis"?: boolean; "show_question_stem"?: boolean; "show_answers"?: boolean; "show_high_score_paper"?: boolean; };
+export type ScoreReleaseVisibilityPolicy = { "show_question_scores": boolean; "show_feedback": boolean; "show_rubric_summary": boolean; "show_cohort_statistics"?: boolean; "show_score_distribution"?: boolean; "show_percentile"?: boolean; "show_exact_rank"?: boolean; "show_question_statistics"?: boolean; "show_knowledge_analysis"?: boolean; "show_question_stem"?: boolean; "show_answers"?: boolean; "show_high_score_paper"?: boolean; "high_score_paper_top_n"?: number; };
 
 export type ScoreReleaseGateIssue = { "code": string; "message": string; "blocking": boolean; "count": number; "action_route"?: string; };
 
@@ -670,7 +702,7 @@ export type ScoreReleaseStudentExplanation = { "feedback"?: string; "rubric_summ
 
 export type ScoreReleaseQuestionFact = { "question_id": string; "question_no": string; "final_grade_id": string; "score": number; "max_score": number; "source_type": string; "source_id"?: string; "explanation": ScoreReleaseStudentExplanation; };
 
-export type ScoreRelease = { "id": string; "tenant_id": string; "exam_id": string; "version": number; "source": ScoreReleaseSource; "reason": string; "status": ScoreReleaseStatus; "visibility_policy": ScoreReleaseVisibilityPolicy; "appeal_window": ScoreReleaseAppealWindow; "gate_snapshot": ScoreReleaseGate; "source_release_id"?: string; "supersedes_release_id"?: string; "created_by": string; "created_at": string; "published_by"?: string; "published_at"?: string | null; };
+export type ScoreRelease = { "id": string; "tenant_id": string; "exam_id": string; "version": number; "source": ScoreReleaseSource; "reason": string; "status": ScoreReleaseStatus; "visibility_policy": ScoreReleaseVisibilityPolicy; "appeal_window": ScoreReleaseAppealWindow; "gate_snapshot": ScoreReleaseGate; "source_release_id"?: string; "supersedes_release_id"?: string; "regrade_job_id"?: string; "created_by": string; "created_at": string; "published_by"?: string; "published_at"?: string | null; };
 
 export type ScoreReleaseItem = { "release_id": string; "student_id"?: string; "submission_id": string; "total_score": number; "max_score": number; "status": string; "snapshot_hash": string; };
 
@@ -704,11 +736,11 @@ export type StudentPaperPage = { "page_no": number; "question_id": string; "subm
 
 export type StudentPaperScoreMark = { "question_id": string; "question_no": string; "score": number; "max_score": number; "page_no": number; "answer_geometry"?: { "x": number; "y": number; "width": number; "height": number; }; };
 
-export type StudentHighScorePaper = { "available": boolean; "total_score"?: number; "max_score"?: number; "pages"?: Array<StudentPaperPage>; "score_marks"?: Array<StudentPaperScoreMark>; };
+export type StudentHighScorePaper = { "available": boolean; "total_score"?: number; "max_score"?: number; "pages"?: Array<StudentPaperPage>; "score_marks"?: Array<StudentPaperScoreMark>; "paper_id"?: string; };
 
-export type StudentPublishedResult = { "exam_id": string; "release_id": string; "release_version": number; "total_score": number; "max_score": number; "questions": Array<StudentPublishedQuestion>; "appeal_window": StudentScoreAppealWindow; "exam"?: { "name": string; "subject": string; "exam_type": string; "published_at": string; }; "overall_total_score"?: number; "overall_max_score"?: number; "score_rate"?: number; "reference"?: StudentScorePreviewReference; "rankings"?: { "class_rank": number; "class_size": number; "grade_rank": number; "grade_size": number; "class_unavailable_reason"?: string; "grade_unavailable_reason"?: string; }; "session_summary"?: StudentSessionSummary; "subject_balance"?: Array<{ "subject": string; "student_score_rate": number; "school_mean_score_rate": number; "sample_size": number; }>; "paper_pages"?: Array<StudentPaperPage>; "high_score_paper"?: StudentHighScorePaper; };
+export type StudentPublishedResult = { "exam_id": string; "release_id": string; "release_version": number; "total_score": number; "max_score": number; "questions": Array<StudentPublishedQuestion>; "appeal_window": StudentScoreAppealWindow; "exam"?: { "name": string; "subject": string; "exam_type": string; "published_at": string; }; "overall_total_score"?: number; "overall_max_score"?: number; "score_rate"?: number; "reference"?: StudentScorePreviewReference; "rankings"?: { "class_rank": number; "class_size": number; "grade_rank": number; "grade_size": number; "class_unavailable_reason"?: string; "grade_unavailable_reason"?: string; }; "session_summary"?: StudentSessionSummary; "subject_balance"?: Array<{ "subject": string; "student_score_rate": number; "school_mean_score_rate": number; "sample_size": number; }>; "paper_pages"?: Array<StudentPaperPage>; "high_score_paper"?: StudentHighScorePaper; "high_score_papers"?: Array<StudentHighScorePaper>; };
 
-export type StudentPublishedQuestion = { "question_id": string; "question_no": string; "score": number; "max_score": number; "feedback"?: string; "rubric_summary"?: Array<string>; "subject"?: string; "question_type"?: string; "stem"?: string; "score_rate"?: number; "knowledge_points"?: Array<string>; "cohort"?: StudentScorePreviewQuestionReference; "correct_answer"?: string; "actual_answer"?: string; "page_no"?: number; "submission_page_id"?: string; "answer_geometry"?: { "x": number; "y": number; "width": number; "height": number; }; "cohort_unavailable_reason"?: string; };
+export type StudentPublishedQuestion = { "question_id": string; "question_no": string; "score": number; "max_score": number; "feedback"?: string; "rubric_summary"?: Array<string>; "subject"?: string; "question_type"?: string; "stem"?: string; "score_rate"?: number; "knowledge_points"?: Array<string>; "cohort"?: StudentScorePreviewQuestionReference; "score_comparison"?: StudentQuestionScoreComparison; "correct_answer"?: string; "actual_answer"?: string; "page_no"?: number; "submission_page_id"?: string; "answer_geometry"?: { "x": number; "y": number; "width": number; "height": number; }; "cohort_unavailable_reason"?: string; };
 
 export type StudentScoreAppealWindow = { "open": boolean; "closes_at"?: string | null; "allowed_reason_codes"?: Array<string>; "state"?: "disabled" | "upcoming" | "open" | "closed"; "opens_at"?: string; };
 
@@ -804,7 +836,7 @@ export type StudentPublishedExam = { "exam_id": string; "name": string; "subject
 
 export type StudentPublishedExamListResponse = { "exams": Array<StudentPublishedExam>; };
 
-export type PublishedQuestionAppeal = { "id": string; "tenant_id": string; "exam_id": string; "student_id"?: string; "submission_id": string; "source_release_id": string; "source_release_version": number; "question_id": string; "question_no": string; "source_score": number; "source_max_score": number; "reason_code": string; "reason": string; "selected_region"?: Record<string, unknown>; "status": string; "assigned_to"?: string; "decision"?: string; "public_response"?: string; "regrade_job_id"?: string; "new_release_id"?: string; "created_by"?: string; "decided_by"?: string; "decided_at"?: string | null; "created_at": string; "updated_at": string; "revision": number; "review_opinion"?: QuestionAppealReviewOpinion; "exam_name"?: string; "exam_subject"?: string; };
+export type PublishedQuestionAppeal = { "id": string; "tenant_id": string; "exam_id": string; "student_id"?: string; "submission_id": string; "source_release_id": string; "source_release_version": number; "question_id": string; "question_no": string; "source_score": number; "source_max_score": number; "reason_code": string; "reason": string; "selected_region"?: Record<string, unknown>; "status": string; "assigned_to"?: string; "decision"?: string; "public_response"?: string; "regrade_job_id"?: string; "new_release_id"?: string; "created_by"?: string; "decided_by"?: string; "decided_at"?: string | null; "created_at": string; "updated_at": string; "revision": number; "review_opinion"?: QuestionAppealReviewOpinion; "exam_name"?: string; "exam_subject"?: string; "review_source_release_id"?: string; "review_source_score"?: number; "review_source_max_score"?: number; };
 
 export type StudentPublishedQuestionAppeal = { "id": string; "exam_id": string; "source_release_id": string; "source_release_version": number; "question_id": string; "question_no": string; "source_score": number; "source_max_score": number; "reason_code": string; "reason": string; "selected_region"?: Record<string, unknown>; "status": string; "decision"?: string; "public_response"?: string; "new_release_id"?: string; "created_at": string; "updated_at": string; "new_release_version"?: number; "reviewed_score"?: number; "reviewed_max_score"?: number; };
 
@@ -946,7 +978,7 @@ export type ExamSessionBlueprintSectionRequest = { "title": string; "question_ty
 
 export type ExamSessionSubjectRequest = { "subject": string; "total_score": number; "duration_minutes": number; "candidate_rule"?: string; "class_ids"?: Array<string>; "sections": Array<ExamSessionBlueprintSectionRequest>; };
 
-export type CreateExamSessionRequest = { "school_id": string; "grade_id": string; "template_id"?: string; "name": string; "exam_type": string; "grading_mode": string; "appeal_enabled"?: boolean; "publish_policy": string; "class_ids"?: Array<string>; "subjects": Array<ExamSessionSubjectRequest>; "command_id": string; "creation_mode"?: "materials" | "quick" | "template"; };
+export type CreateExamSessionRequest = { "school_id": string; "grade_id": string; "template_id"?: string; "name": string; "exam_type"?: string; "grading_mode": string; "appeal_enabled"?: boolean; "publish_policy": string; "class_ids"?: Array<string>; "subjects": Array<ExamSessionSubjectRequest>; "command_id": string; "creation_mode"?: "materials" | "quick" | "template"; };
 
 export type ExamSessionChild = { "id": string; "tenant_id": string; "school_id": string; "exam_session_id"?: string; "exam_session_name"?: string; "exam_session_grade_id"?: string; "name": string; "subject": string; "exam_type": string; "total_score": number; "status": string; "grading_mode": string; "appeal_enabled": boolean; "publish_policy": string; "created_by": string; "class_ids": Array<string>; "revision": number; "created_at": string; "updated_at": string; };
 
@@ -1098,7 +1130,7 @@ export type SubjectiveAIExecutionFailure = { "request_id"?: string; "trace_id"?:
 
 export type ExecutionDiagnostics = ({ "failure_kind"?: "output_truncated" | "finish_reason_missing" | "finish_reason_unknown" | "provider_refused" | "content_filtered" | "unsupported_generation" | "response_envelope_invalid" | "schema_invalid" | "evidence_invalid" | "capability_unavailable"; "finish_outcome": "completed" | "output_limit" | "filtered_or_refused" | "unsupported_generation" | "finish_missing" | "finish_unknown" | "envelope_invalid" | "unavailable"; "attempts": number; "provider_request_count": number; "usage_status": "reported" | "partial" | "unavailable" | "invalid"; "usage"?: DiagnosticTokenUsage; "recovery_attempted": false; "recovery_blocked_reason"?: "not_enabled"; "output_token_limit"?: number; }) & (unknown) & (unknown) & (unknown) & (unknown) & (unknown) & (unknown) & (unknown) & (unknown) & (unknown) & (unknown) & (unknown) & ({ "attempts"?: 0; "provider_request_count"?: 0; } | { "attempts"?: 1; "provider_request_count"?: 1; } | { "attempts"?: 2; "provider_request_count"?: 2; });
 
-export type DiagnosticTokenUsage = { "input_tokens"?: number; "cached_input_tokens"?: number; "output_tokens"?: number; "reasoning_tokens"?: number; "total_tokens"?: number; };
+export type DiagnosticTokenUsage = { "input_tokens"?: number; "cached_input_tokens"?: number; "cache_write_input_tokens"?: number; "uncached_input_tokens"?: number; "output_tokens"?: number; "reasoning_tokens"?: number; "total_tokens"?: number; };
 
 export type BatchFailureSummary = { "failure_kind": "output_incomplete" | "output_truncated" | "finish_reason_missing" | "finish_reason_unknown" | "provider_refused" | "content_filtered" | "unsupported_generation" | "response_envelope_invalid" | "schema_invalid" | "evidence_invalid" | "capability_unavailable"; "count": number; "attempts"?: number; "provider_request_count"?: number; "usage_status": "reported" | "partial" | "unavailable" | "invalid"; };
 
@@ -1298,7 +1330,7 @@ export type QuestionBankBatchImportResultItem = { "question_id": string; "comman
 
 export type QuestionBankBatchImportResult = { "items": Array<QuestionBankBatchImportResultItem>; };
 
-export type ManagementProgress = { "status": "draft" | "configured" | "ready" | "collecting" | "grading" | "reviewing" | "finalized" | "published" | "partially_published" | "ongoing" | "unavailable" | "archived"; "label": string; "total_count": number; "ready_count": number; "published_count": number; "counts": Record<string, number>; "facts_available": boolean; };
+export type ManagementProgress = { "status": "draft" | "configured" | "ready" | "collecting" | "grading" | "reviewing" | "finalized" | "published" | "partially_published" | "ongoing" | "unavailable" | "archived"; "label": string; "total_count": number; "ready_count": number; "published_count": number; "counts": Record<string, number>; "facts_available": boolean; "grading_complete_count"?: number; };
 
 export type ManagementArchiveBlocker = { "code": string; "message": string; "exam_id"?: string; "subject"?: string; };
 
@@ -1320,17 +1352,17 @@ export type ManagementArchiveCommandResult = { "command_id": string; "status": "
 
 export type ManagementArchiveCommandResponse = { "command": ManagementArchiveCommandResult; };
 
-export type ManagedOrganizationUser = { "id": string; "username": string; "display_name": string; "status": string; "roles": Array<string>; "class_ids": Array<string>; "school_id"?: string; "phone_masked"?: string; "employee_no"?: string; "created_at"?: string; "activated_at"?: string; "last_login_at"?: string; };
+export type ManagedOrganizationUser = { "id": string; "username": string; "display_name": string; "status": string; "roles": Array<string>; "teaching_subjects"?: Array<SubjectCode>; "school_id"?: string; "phone_masked"?: string; "employee_no"?: string; "created_at"?: string; "activated_at"?: string; "last_login_at"?: string; "must_change_password"?: boolean; };
 
 export type ManagedOrganizationUserResponse = { "user": ManagedOrganizationUser; };
 
 export type ManagedOrganizationUserPage = { "users": Array<ManagedOrganizationUser>; "next_cursor": string; "has_more": boolean; };
 
-export type CreateManagedOrganizationUserRequest = { "username"?: string; "phone"?: string; "employee_no"?: string; "display_name": string; "password"?: string; "role_code"?: string; "role_codes"?: Array<string>; "school_id"?: string; "class_ids"?: Array<string>; };
+export type CreateManagedOrganizationUserRequest = { "username"?: string; "phone"?: string; "employee_no"?: string; "display_name": string; "password"?: string; "role_code"?: string; "role_codes"?: Array<string>; "school_id"?: string; "teaching_subjects"?: Array<SubjectCode>; "password_confirm"?: string; };
 
 export type CreateManagedOrganizationUserResponse = { "user": ManagedOrganizationUser; "activation"?: CreatedManagedUserActivation; };
 
-export type UpdateManagedUserAccessRequest = { "role_codes": Array<string>; "class_ids": Array<string>; "expected_roles": Array<string>; "expected_class_ids": Array<string>; "reason": string; };
+export type UpdateManagedUserAccessRequest = { "role_codes": Array<string>; "expected_roles": Array<string>; "reason": string; };
 
 export type ReviewFrozenAnswerKey = { "id": string; "question_id": string; "answer_version": string; "standard_answer": unknown; "equivalent_answers": Array<unknown>; "tolerance": unknown; "paper_import_id"?: string; "paper_import_candidate_id"?: string; "paper_import_source_refs"?: Array<PaperImportSourceRef>; };
 
@@ -1339,6 +1371,8 @@ export type ReviewFrozenSolution = { "id": string; "question_id": string; "solut
 export type StudentScorePreviewReference = { "scope": string; "sample_size": number; "statistics_available": boolean; "unavailable_reason"?: string; "mean_score"?: number; "median_score"?: number; "q1"?: number; "q3"?: number; "min_score"?: number; "max_score"?: number; "percentile"?: number; "rank"?: number; };
 
 export type StudentScorePreviewQuestionReference = { "sample_size": number; "mean_score_rate": number; "full_score_rate": number; "zero_score_rate": number; "class_mean_score"?: number; "school_mean_score"?: number; "median_score"?: number; "class_unavailable_reason"?: string; };
+
+export type StudentQuestionScoreComparison = { "class_max_score"?: number; "school_max_score"?: number; "class_mean_score"?: number; "school_mean_score"?: number; };
 
 export type StudentScorePreviewResult = { "exam_id": string; "release_id": string; "release_version": number; "total_score": number; "max_score": number; "overall_total_score": number; "overall_max_score": number; "score_rate": number; "reference"?: StudentScorePreviewReference; "questions"?: Array<StudentPublishedQuestion>; "appeal_window": StudentScoreAppealWindow; };
 
@@ -1480,13 +1514,13 @@ export type ChatModelAccess = { "revision": string; "model_ids": Array<string>; 
 
 export type ChatModelAccessInput = { "tenant_id": string; "expected_revision": string; "model_ids": Array<string>; };
 
-export type OrganizationGrade = { "id": string; "tenant_id": string; "school_id": string; "name": string; "status": string; "academic_year"?: string; "education_stage"?: string; "academic_year_id"?: string; "grade_cohort_id"?: string; "level_no"?: number; };
+export type OrganizationGrade = { "id": string; "tenant_id": string; "school_id": string; "name": string; "status": string; "academic_year"?: string; "education_stage"?: string; "academic_year_id"?: string; "grade_cohort_id"?: string; "level_no"?: number; "entry_year"?: number; };
 
 export type OrganizationClass = { "id": string; "tenant_id": string; "school_id": string; "name": string; "status": string; "grade_id": string; "academic_year_id"?: string; "grade_cohort_id"?: string; "code": string; "class_no"?: number; };
 
-export type OrganizationStudent = { "id": string; "tenant_id": string; "school_id": string; "name": string; "status": string; "class_id": string; "academic_year_id"?: string; "grade_cohort_id"?: string; "student_no": string; "gender"?: string; "admission_year"?: number; };
+export type OrganizationStudent = { "id": string; "tenant_id": string; "school_id": string; "name": string; "status": string; "class_id": string; "academic_year_id"?: string; "grade_cohort_id"?: string; "student_no": string; "gender"?: string; "admission_year"?: number; "must_change_password"?: boolean; "account_status"?: "not_provisioned" | "active" | "disabled"; "login_account"?: string; "login_school_code"?: string; };
 
-export type UpdateOrganizationGradeRequest = { "name": string; };
+export type UpdateOrganizationGradeRequest = { "name"?: string; "level_no"?: 7 | 8 | 9 | 10 | 11 | 12; };
 
 export type UpdateOrganizationClassRequest = { "name"?: string; "code"?: string; };
 
@@ -1498,7 +1532,7 @@ export type OrganizationClassResponse = { "class": OrganizationClass; };
 
 export type OrganizationStudentResponse = { "student": OrganizationStudent; };
 
-export type UpdateManagedUserProfileRequest = { "display_name": string; "employee_no": string; "phone"?: string; "expected_display_name": string; "expected_employee_no": string; "expected_phone_masked": string; };
+export type UpdateManagedUserProfileRequest = { "display_name": string; "employee_no": string; "phone"?: string; "expected_display_name": string; "expected_employee_no": string; "expected_phone_masked": string; "teaching_subjects"?: Array<SubjectCode>; "expected_teaching_subjects"?: Array<SubjectCode>; };
 
 export type ManagedUserProfileResponse = { "user": ManagedOrganizationUser; "login_identity_changed": boolean; };
 
@@ -1600,7 +1634,7 @@ export type QuestionBankReferenceMaterials = { "source_exam_id": string; "source
 
 export type QuestionBankReferenceMaterialItem = { "id": string; "crop_ref": string; "role": "question_diagram" | "reference_solution"; "ordinal": number; "required": true; "sha256": string; "width": number; "height": number; "size_bytes": number; "pixel_bbox": ReferencePixelBox; "source": ReferenceMaterialSource; };
 
-export type ManagedModelAPIConfigUpdateInput = ({ "display_name"?: string; "adapter_type"?: string; "base_url"?: string; "model_name"?: string; "model_version"?: string; "region"?: string; "api_key"?: string; "status"?: string; "is_default"?: boolean; "expected_updated_at"?: string; "credential_only"?: boolean; }) & ({ "credential_only"?: false; "display_name": string; "adapter_type": string; "base_url": string; "model_name": string; "model_version": string; "region": string; "status": string; "is_default": boolean; } | { "credential_only": true; "api_key": string; "expected_updated_at": string; });
+export type ManagedModelAPIConfigUpdateInput = ({ "display_name"?: string; "adapter_type"?: string; "base_url"?: string; "model_name"?: string; "model_version"?: string; "region"?: string; "api_key"?: string; "status"?: string; "is_default"?: boolean; "expected_updated_at": string; "credential_only"?: boolean; }) & ({ "credential_only"?: false; "display_name": string; "adapter_type": string; "base_url": string; "model_name": string; "model_version": string; "region": string; "status": string; "is_default": boolean; } | { "credential_only": true; "api_key": string; "expected_updated_at": string; });
 
 export type ManagedModelAPIConfig = ({ "id": string; "tenant_id": string; "provider_key"?: string; "display_name": string; "adapter_type": string; "base_url": string; "model_name": string; "model_version": string; "region": string; "capability_profile"?: string; "health_state"?: string; "credential_hint"?: string; "status": string; "last_test_status"?: string; "last_text_status"?: string; "last_capability_status"?: string; "config_source"?: string; "provider_registry_version"?: string; "credential_configured": boolean; "is_default": boolean; "created_at"?: string; "updated_at": string; "modalities"?: Array<string> | null; "pricing_policy"?: Record<string, unknown> | null; "data_policy"?: Record<string, unknown> | null; "last_text_usage"?: Record<string, unknown> | null; "last_text_diagnostic"?: Record<string, unknown> | null; "last_capability_usage"?: Record<string, unknown> | null; "last_capability_diagnostic"?: Record<string, unknown> | null; } & Record<string, unknown>);
 
@@ -1652,8 +1686,56 @@ export type ReviewQuestionStatistics = { "question_id": string; "question_no": s
 
 export type ReviewStatistics = { "exam_id": string; "scope": "personal" | "exam"; "graded_count": number; "full_score_count": number; "correct_rate": number | null; "average_score_rate": number | null; "questions": Array<ReviewQuestionStatistics>; "updated_at": string; };
 
+export type CreateOrganizationGradeRequest = { "school_id": string; "name": string; "level_no"?: number; "education_stage"?: "junior" | "senior"; "academic_year"?: string; "entry_year"?: number; "status"?: string; };
+
+export type OrganizationGradeListResponse = { "grades": Array<OrganizationGrade>; };
+
+export type CreateOrganizationClassRequest = { "school_id": string; "grade_id": string; "name": string; "code": string; "status"?: string; };
+
+export type OrganizationClassListResponse = { "classes": Array<OrganizationClass>; };
+
+export type OrganizationStudentEnrollment = { "id": string; "student_id": string; "school_id": string; "academic_year_id": string; "academic_year_name": string; "grade_cohort_id": string; "grade_cohort_name": string; "class_id": string; "class_name": string; "status": string; "start_date": string; "end_date"?: string; };
+
+export type TransferOrganizationStudentRequest = { "class_id": string; "start_date"?: string; };
+
+export type TransferOrganizationStudentResponse = { "enrollment": OrganizationStudentEnrollment; };
+
+export type SeedSamplingPolicy = { "id": string; "exam_id": string; "question_id": string; "rate": number; "min_interval": number; "max_interval": number; "active_gold_fingerprint": string; "status": "active" | "paused"; "revision": number; "created_by": string; "created_at": string; "updated_at": string; "needs_confirmation"?: boolean; "confirmation_reason"?: "gold_set_changed" | "gold_set_missing"; };
+
+export type SeedSamplingPolicyResponse = { "policy": SeedSamplingPolicy; };
+
+export type PutSeedSamplingPolicyRequest = { "rate": number; "min_interval": number; "max_interval": number; "status": "active" | "paused"; "expected_revision": number; };
+
+export type AccountProfile = { "id": string; "username": string; "display_name": string; "phone_masked": string; "employee_no": string; "school_id": string; "teaching_subjects": Array<string>; "roles": Array<string>; };
+
+export type AccountProfileResponse = { "profile": AccountProfile; };
+
+export type RestartQuestionAppealReviewRequest = { "expected_revision": number; "reason": string; };
+
+export type CreateOrganizationStudentRequest = { "school_id": string; "class_id": string; "student_no": string; "name": string; "gender"?: "" | "male" | "female" | "unknown"; "password": string; "password_confirm": string; };
+
+export type OpenOrganizationStudentAccountRequest = { "password": string; "password_confirm": string; };
+
+export type OrganizationStudentPage = { "students": Array<OrganizationStudent>; "next_cursor": string; "has_more": boolean; };
+
 export interface components {
   schemas: {
+    "ScoreRosterEntry": ScoreRosterEntry;
+    "ScoreRosterSummary": ScoreRosterSummary;
+    "ScoreRosterReport": ScoreRosterReport;
+    "ScoreRosterResponse": ScoreRosterResponse;
+    "DashboardScope": DashboardScope;
+    "DashboardStatistics": DashboardStatistics;
+    "DashboardOrganizationStatistics": DashboardOrganizationStatistics;
+    "DashboardBlockingIssue": DashboardBlockingIssue;
+    "DashboardActiveExam": DashboardActiveExam;
+    "DashboardRecentActivity": DashboardRecentActivity;
+    "DashboardReviewTeacher": DashboardReviewTeacher;
+    "DashboardReviewTeacherSummary": DashboardReviewTeacherSummary;
+    "DashboardSummary": DashboardSummary;
+    "DashboardGradingProgress": DashboardGradingProgress;
+    "DashboardGradingQuestionProgress": DashboardGradingQuestionProgress;
+    "DashboardAppealStatistics": DashboardAppealStatistics;
     "GradingAIRoleSelectionInput": GradingAIRoleSelectionInput;
     "GradingAIRoleSelection": GradingAIRoleSelection;
     "GradingAIDecisionConfigInput": GradingAIDecisionConfigInput;
@@ -2324,6 +2406,7 @@ export interface components {
     "ReviewFrozenSolution": ReviewFrozenSolution;
     "StudentScorePreviewReference": StudentScorePreviewReference;
     "StudentScorePreviewQuestionReference": StudentScorePreviewQuestionReference;
+    "StudentQuestionScoreComparison": StudentQuestionScoreComparison;
     "StudentScorePreviewResult": StudentScorePreviewResult;
     "StudentScorePreviewResponse": StudentScorePreviewResponse;
     "CreatedManagedUserActivation": CreatedManagedUserActivation;
@@ -2480,5 +2563,21 @@ export interface components {
     "CalibrationSchoolTemplateResponse": CalibrationSchoolTemplateResponse;
     "ReviewQuestionStatistics": ReviewQuestionStatistics;
     "ReviewStatistics": ReviewStatistics;
+    "CreateOrganizationGradeRequest": CreateOrganizationGradeRequest;
+    "OrganizationGradeListResponse": OrganizationGradeListResponse;
+    "CreateOrganizationClassRequest": CreateOrganizationClassRequest;
+    "OrganizationClassListResponse": OrganizationClassListResponse;
+    "OrganizationStudentEnrollment": OrganizationStudentEnrollment;
+    "TransferOrganizationStudentRequest": TransferOrganizationStudentRequest;
+    "TransferOrganizationStudentResponse": TransferOrganizationStudentResponse;
+    "SeedSamplingPolicy": SeedSamplingPolicy;
+    "SeedSamplingPolicyResponse": SeedSamplingPolicyResponse;
+    "PutSeedSamplingPolicyRequest": PutSeedSamplingPolicyRequest;
+    "AccountProfile": AccountProfile;
+    "AccountProfileResponse": AccountProfileResponse;
+    "RestartQuestionAppealReviewRequest": RestartQuestionAppealReviewRequest;
+    "CreateOrganizationStudentRequest": CreateOrganizationStudentRequest;
+    "OpenOrganizationStudentAccountRequest": OpenOrganizationStudentAccountRequest;
+    "OrganizationStudentPage": OrganizationStudentPage;
   };
 }

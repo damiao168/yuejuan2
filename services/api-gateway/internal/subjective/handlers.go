@@ -21,6 +21,7 @@ type referenceMaterialSource interface {
 type Handler struct {
 	imageModelResolver         func(context.Context, string) (*ImageModelConfig, error)
 	imageModelByIDResolver     func(context.Context, string, string, string) (*ImageModelConfig, error)
+	imagePrefixCaching         bool
 	referenceMaterials         referenceMaterialSource
 	referenceMaterialPreflight ReferenceMaterialPreflight
 	store                      Store

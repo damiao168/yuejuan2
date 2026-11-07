@@ -5,12 +5,15 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/goldpaper"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
+	"edugrade-enterprise/services/api-gateway/internal/workflowactors"
 )
 
 const (
@@ -220,6 +223,17 @@ func writeHandlerError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_calibration_input", "calibration input is invalid")
 	case errors.Is(err, ErrConflict):
 		httpx.Error(w, r, http.StatusConflict, "calibration_conflict", "calibration state conflicts with this operation")
+	case errors.Is(err, ErrRetakeCooldown):
+		var cooldown *RetakeCooldownError
+		if errors.As(err, &cooldown) {
+			seconds := int64(time.Until(cooldown.AvailableAt).Seconds()) + 1
+			if seconds > 0 {
+				w.Header().Set("Retry-After", strconv.FormatInt(seconds, 10))
+			}
+		}
+		httpx.Error(w, r, http.StatusTooManyRequests, "calibration_retake_cooldown", "校准未通过，请在 24 小时后重新参加。")
+	case errors.Is(err, workflowactors.ErrAssigneeIneligible):
+		httpx.Error(w, r, http.StatusForbidden, "calibration_assignee_ineligible", "请选择本校任教该考试学科的有效阅卷教师（学校管理员除外）。")
 	case errors.Is(err, ErrQualificationRequired):
 		httpx.Error(w, r, http.StatusForbidden, "grader_qualification_required", "current grader qualification is required")
 	default:
@@ -233,5 +247,5 @@ func (h *Handler) record(r *http.Request, user auth.User, action, targetID strin
 	}
 	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID,
 		Action: action, TargetType: "grader_calibration", TargetID: targetID, Reason: action,
-		IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
+		IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
 }

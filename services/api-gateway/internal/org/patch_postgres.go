@@ -7,15 +7,47 @@ import (
 )
 
 func (s *PostgresStore) UpdateGrade(ctx context.Context, tenantID, id string, input GradePatch) (Grade, error) {
-	// 租户取自认证身份；更新只涉及名称，既有学校、学年和届别关系保持不变。
-	row := s.db.QueryRowContext(ctx, `UPDATE grade SET name=COALESCE($3,name),updated_at=now()
-WHERE tenant_id=$1 AND id::text=$2 AND deleted_at IS NULL
-RETURNING id::text,tenant_id::text,school_id::text,name,COALESCE(level_no,0),COALESCE(academic_year,''),education_stage,academic_year_id::text,grade_cohort_id::text,status`, tenantID, id, input.Name)
-	var out Grade
-	if err := row.Scan(&out.ID, &out.TenantID, &out.SchoolID, &out.Name, &out.LevelNo, &out.AcademicYear, &out.EducationStage, &out.AcademicYearID, &out.GradeCohortID, &out.Status); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return Grade{}, ErrNotFound
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Grade{}, err
+	}
+	defer tx.Rollback()
+	var schoolID string
+	if err = tx.QueryRowContext(ctx, `SELECT school_id::text FROM grade WHERE tenant_id=$1 AND id::text=$2 AND deleted_at IS NULL`, tenantID, id).Scan(&schoolID); errors.Is(err, sql.ErrNoRows) {
+		return Grade{}, ErrNotFound
+	} else if err != nil {
+		return Grade{}, err
+	}
+	schoolYear, err := lockGradeSchool(ctx, tx, tenantID, schoolID)
+	if err != nil {
+		return Grade{}, err
+	}
+	var current Grade
+	err = tx.QueryRowContext(ctx, `SELECT g.id::text,g.tenant_id::text,g.school_id::text,g.name,COALESCE(g.level_no,0),COALESCE(g.academic_year,''),g.education_stage,g.academic_year_id::text,g.grade_cohort_id::text,g.status,cohort.entry_year FROM grade g JOIN grade_cohort cohort ON cohort.tenant_id=g.tenant_id AND cohort.id=g.grade_cohort_id WHERE g.tenant_id=$1 AND g.id::text=$2 AND g.deleted_at IS NULL FOR UPDATE OF g`, tenantID, id).Scan(&current.ID, &current.TenantID, &current.SchoolID, &current.Name, &current.LevelNo, &current.AcademicYear, &current.EducationStage, &current.AcademicYearID, &current.GradeCohortID, &current.Status, &current.EntryYear)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Grade{}, ErrNotFound
+	}
+	if err != nil {
+		return Grade{}, err
+	}
+	out, err := applyGradePatch(current, input)
+	if err != nil {
+		return Grade{}, err
+	}
+	if input.LevelNo != nil {
+		existing, err := schoolGradesTx(ctx, tx, tenantID, schoolID)
+		if err != nil {
+			return Grade{}, err
 		}
+		if err = validateCurrentGradeConflict(out, existing, schoolYear, false); err != nil {
+			return Grade{}, err
+		}
+	}
+	// 仅更新代表年级的当前级数和名称，不改届别、学年、班级或考试快照。
+	if _, err = tx.ExecContext(ctx, `UPDATE grade SET name=$3,level_no=$4,updated_at=now() WHERE tenant_id=$1 AND id::text=$2`, tenantID, id, out.Name, out.LevelNo); err != nil {
+		return Grade{}, err
+	}
+	if err = tx.Commit(); err != nil {
 		return Grade{}, err
 	}
 	return out, nil
@@ -39,33 +71,47 @@ RETURNING id::text,tenant_id::text,school_id::text,grade_id::text,academic_year_
 }
 
 func (s *PostgresStore) UpdateStudent(ctx context.Context, tenantID, id string, input StudentPatch) (Student, error) {
-	// COALESCE 区分未传与显式空串；空性别可以清除，其他非空限制在请求入口执行。
-	// 当前班级仍按学籍记录读取；此补丁不写 class_id，避免跳过转班历史。
-	row := s.db.QueryRowContext(ctx, `WITH updated AS (
-  UPDATE student SET name=COALESCE($3,name),student_no=COALESCE($4,student_no),
-    gender=COALESCE($5,gender),status=COALESCE($6,status),updated_at=now()
-  WHERE tenant_id=$1 AND id::text=$2 AND deleted_at IS NULL RETURNING *
-)
-SELECT st.id::text,st.tenant_id::text,st.school_id::text,COALESCE(current_enrollment.class_id::text,st.class_id::text,''),
-  COALESCE(current_enrollment.academic_year_id::text,''),COALESCE(current_enrollment.grade_cohort_id::text,''),
-  st.student_no,st.name,COALESCE(st.gender,''),st.status,COALESCE(st.admission_year,0)
-FROM updated st
-LEFT JOIN LATERAL (
-  SELECT enrollment.class_id,enrollment.academic_year_id,enrollment.grade_cohort_id
-  FROM student_enrollment enrollment
-  JOIN academic_year year ON year.tenant_id=enrollment.tenant_id AND year.id=enrollment.academic_year_id
-  WHERE enrollment.tenant_id=st.tenant_id AND enrollment.student_id=st.id AND enrollment.deleted_at IS NULL
-  ORDER BY year.is_current DESC,year.start_year DESC,(enrollment.status='enrolled' AND enrollment.end_date IS NULL) DESC,enrollment.start_date DESC,enrollment.id DESC LIMIT 1
-) current_enrollment ON true`, tenantID, id, input.Name, input.StudentNo, input.Gender, input.Status)
-	var out Student
-	if err := row.Scan(&out.ID, &out.TenantID, &out.SchoolID, &out.ClassID, &out.AcademicYearID, &out.GradeCohortID, &out.StudentNo, &out.Name, &out.Gender, &out.Status, &out.AdmissionYear); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return Student{}, ErrNotFound
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Student{}, err
+	}
+	defer tx.Rollback()
+	// 开通、改学号、停用和删除共用学生行锁，避免两个入口同时写出不同的账号身份。
+	oldNo, oldName, oldStatus, err := lockStudentAccountIdentity(ctx, tx, tenantID, id)
+	if err != nil {
+		return Student{}, err
+	}
+	statusChanged := input.Status != nil && *input.Status != oldStatus
+	identityChanged := input.StudentNo != nil && *input.StudentNo != oldNo || statusChanged
+	if identityChanged || input.Name != nil && *input.Name != oldName {
+		// 歧义旧账号不能自动决定停用或修改谁；先拒绝整次补丁，避免名册显示已停用而旧凭据仍有效。
+		legacyAccount, legacyErr := studentHasLegacyAccount(ctx, tx, tenantID, id)
+		if legacyErr != nil {
+			return Student{}, legacyErr
 		}
+		if legacyAccount {
+			return Student{}, ErrStudentAccountLegacyConflict
+		}
+	}
+	// COALESCE 区分未传与显式空串；此补丁不写 class_id，转班继续保留独立学籍历史。
+	_, err = tx.ExecContext(ctx, `UPDATE student SET name=COALESCE($3,name),student_no=COALESCE($4,student_no),
+  gender=COALESCE($5,gender),status=COALESCE($6,status),updated_at=now()
+WHERE tenant_id=$1 AND id::text=$2 AND deleted_at IS NULL`, tenantID, id, input.Name, input.StudentNo, input.Gender, input.Status)
+	if err != nil {
 		// 数据库唯一约束负责并发冲突，不能靠更新前查询排除同校重复学号。
 		if postgresConstraint(err, "23505", "student_tenant_id_school_id_student_no_key") {
 			return Student{}, ErrStudentNoConflict
 		}
+		return Student{}, err
+	}
+	if err = syncStudentLoginAccount(ctx, tx, tenantID, id, statusChanged, identityChanged); err != nil {
+		return Student{}, err
+	}
+	out, err := readStudentProjection(ctx, tx, tenantID, id)
+	if err != nil {
+		return Student{}, err
+	}
+	if err = tx.Commit(); err != nil {
 		return Student{}, err
 	}
 	return out, nil

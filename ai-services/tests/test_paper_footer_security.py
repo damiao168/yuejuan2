@@ -2,7 +2,7 @@ import copy
 from itertools import product
 
 import pytest
-from grading_agent.paper_compact import anchors, page_furniture_issues
+from grading_agent.paper_compact import furniture, page_furniture_issues
 from grading_agent.paper_compact.schema import _PAGE_FOOTER, MAX_PAGE_FOOTER_TEXT_CHARS
 
 
@@ -51,7 +51,7 @@ def test_long_ocr_blocks_never_reach_footer_regex(monkeypatch, footer):
         def fullmatch(self, text):
             raise AssertionError("oversized OCR text reached footer matching")
 
-    monkeypatch.setattr(anchors, "_PAGE_FOOTER", UnexpectedFooterRegex())
+    monkeypatch.setattr(furniture, "_PAGE_FOOTER", UnexpectedFooterRegex())
     document = _document(footer)
     original = copy.deepcopy(document)
 

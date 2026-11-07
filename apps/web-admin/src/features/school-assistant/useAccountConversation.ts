@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type SubmitEvent, type KeyboardEvent } from "react";
 import { App } from "antd";
-import { getUserErrorMessage } from "../../api/client";
+import { ApiClientError, getUserErrorMessage } from "../../api/client";
 import { getSchoolChatModel, streamSchoolConversation, type SchoolChatAttachment, type SchoolChatMessage, type SchoolChatModel, type SchoolConversationContext } from "../../api/schoolAiChat";
+import { getSchoolAssistantCapabilities } from "../../api/schoolAssistant";
 import { requestMessages } from "../../pages/schoolAiChatMessages";
 import { readChatAttachment } from "./conversationAttachments";
 import { readConversationThreads, serializeConversationThreads, type ConversationThread } from "./conversationStorage";
@@ -11,6 +12,9 @@ import { conversationRecovery } from "./conversationRecovery";
 import { conversationModelPreferenceKey, readConversationModelPreference, saveConversationModelPreference } from "./conversationModelPreference";
 import type { UIEventHandler, WheelEventHandler } from 'react';
 import type { SchoolConversationProps } from './conversationTypes';
+import { hasBusinessConversationEvent, publicConversationSources } from "./conversationWebSearch";
+import { CONVERSATION_REFRESH_PREFIX, readConversationRefresh, writeConversationRefresh } from "./conversationRefresh";
+import { buildConversationRefresh, restoreConversationRefresh, REFRESH_INTERRUPTED_MESSAGE } from "./conversationRefreshState";
 
 export const MAX_ATTACHMENTS = 3;
 export const MAX_ACTIVE_CHATS = 5;
@@ -20,15 +24,26 @@ function titleFromMessage(content: string) {
   return title.length > 28 ? `${title.slice(0, 28)}…` : title;
 }
 
-// 账户级控制器共同拥有流、附件读取和取消 ref；旧授权卸载时仍先失效回调，再终止请求。
-export function useAccountConversation({ user, initialContext, compact = false, onNavigate }: SchoolConversationProps) {
+function replyWithPublicSources(message: SchoolChatMessage, evidence: ConversationEvidence, publicReply: boolean): SchoolChatMessage {
+  const { web_search: _mode, web_sources: _sources, ...reply } = message;
+  const sources = publicReply ? publicConversationSources(evidence.sources) : [];
+  return { ...reply, ...(publicReply ? { web_search: true } : {}), ...(sources.length ? { web_sources: sources } : {}) };
+}
+
+// 控制器由账户布局持有，离开对话视图不销毁；账户或授权卸载时先失效回调，再终止请求。
+export function useAccountConversation({ user, initialContext, compact = false, onNavigate }: SchoolConversationProps, enabled = true) {
   const { message: toast, modal } = App.useApp();
   // 使用完整授权范围隔离一般聊天历史；旧 v1 没有授权信息，不能自动恢复到新的业务助手。
   const storageKey = `edugrade.ai-chat.v2:${conversationAccountKey(user)}`;
+  const refreshKey = `${CONVERSATION_REFRESH_PREFIX}${conversationAccountKey(user)}`;
   const modelPreferenceKey = conversationModelPreferenceKey(conversationAccountKey(user));
-  const [threads, setThreads] = useState<ConversationThread[]>(() => user.publicComputer ? [] : readConversationThreads(storageKey));
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const activeIdRef = useRef<string | null>(null);
+  const [restored] = useState(() => {
+    const state = restoreConversationRefresh(user.publicComputer ? [] : readConversationThreads(storageKey), readConversationRefresh(refreshKey, user.publicComputer));
+    return { ...state, activeId: Object.values(initialContext ?? {}).some(Boolean) ? null : state.activeId };
+  });
+  const [threads, setThreads] = useState<ConversationThread[]>(restored.threads);
+  const [activeId, setActiveId] = useState<string | null>(restored.activeId);
+  const activeIdRef = useRef<string | null>(restored.activeId);
   const activateThread = useCallback((id: string | null) => {
     // ref 与页面导航同步，发送和开启新对话同一帧发生时也按当前对话判断在途锁。
     activeIdRef.current = id;
@@ -42,7 +57,12 @@ export function useAccountConversation({ user, initialContext, compact = false, 
   const [selectedModelID, setSelectedModelID] = useState<string>();
   const [modelLoading, setModelLoading] = useState(true);
   const [modelError, setModelError] = useState("");
-  const [sendErrors, setSendErrors] = useState<Record<string, string>>({});
+  const [webSearch, setWebSearch] = useState(() => {
+    const messages = restored.threads.find(thread => thread.id === restored.activeId)?.messages;
+    return messages?.[messages.length - 1]?.web_search === true;
+  });
+  const [webSearchCapability, setWebSearchCapability] = useState({ available: false, message: "正在读取联网搜索状态" });
+  const [sendErrors, setSendErrors] = useState<Record<string, string>>(() => Object.fromEntries(restored.threads.filter(thread => thread.interruptedReply).map(thread => [thread.id, REFRESH_INTERRUPTED_MESSAGE])));
   const [pending, setPending] = useState<Record<string, PendingConversation>>({});
   const [replyEvidence, setReplyEvidence] = useState(new Map<SchoolChatMessage, ConversationEvidence>());
   const [failedEvidence, setFailedEvidence] = useState<Record<string, ConversationEvidence>>({});
@@ -50,6 +70,14 @@ export function useAccountConversation({ user, initialContext, compact = false, 
   const controllers = useRef(new Map<string, AbortController>());
   const attachmentRead = useRef<AbortController | null>(null);
   const live = useRef(true);
+  const businessThreads = useRef(new Set<string>());
+  const checkpointState = useRef({ threads, pending, activeId });
+  checkpointState.current = { threads, pending, activeId };
+  const persistRefresh = useCallback(() => {
+    if (!live.current) return;
+    const state = checkpointState.current;
+    writeConversationRefresh(refreshKey, buildConversationRefresh(state.threads.filter(thread => !businessThreads.current.has(thread.id)), state.pending, state.activeId), user.publicComputer);
+  }, [refreshKey, user.publicComputer]);
   const expandedReasoning = useRef(new Set<string>());
   const [historyOpen, setHistoryOpen] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState("");
@@ -74,8 +102,13 @@ export function useAccountConversation({ user, initialContext, compact = false, 
     };
   }, []);
 
+  const contextIdentity = JSON.stringify([initialContext?.exam_id, initialContext?.origin_module, initialContext?.origin_section]);
+  const previousContext = useRef(contextIdentity);
   // biome-ignore lint/correctness/useExhaustiveDependencies: 同一入口的名称或投影刷新不能清空正在写的对话；只有考试、来源模块或分区改变才重置。
   useEffect(() => {
+    // 首次挂载和StrictMode重跑保留恢复的选择；只有实际换了业务入口才开启新对话。
+    if (previousContext.current === contextIdentity) return;
+    previousContext.current = contextIdentity;
     attachmentRead.current?.abort();
     attachmentRead.current = null;
     setAttaching(false);
@@ -83,7 +116,22 @@ export function useAccountConversation({ user, initialContext, compact = false, 
     activateThread(null);
     setDraft("");
     setDraftAttachments([]);
+    setWebSearch(false);
   }, [initialContext?.exam_id, initialContext?.origin_module, initialContext?.origin_section]);
+
+  useEffect(() => {
+    if (!live.current) return;
+    writeConversationRefresh(refreshKey, buildConversationRefresh(threads.filter(thread => !businessThreads.current.has(thread.id)), pending, activeId), user.publicComputer);
+  }, [refreshKey, threads, pending, activeId, user.publicComputer]);
+  useEffect(() => {
+    // 刷新会断开原HTTP流，只保存恢复检查点；不能在卸载时清除，也不能自动重发收费请求。
+    window.addEventListener("pagehide", persistRefresh);
+    window.addEventListener("beforeunload", persistRefresh);
+    return () => {
+      window.removeEventListener("pagehide", persistRefresh);
+      window.removeEventListener("beforeunload", persistRefresh);
+    };
+  }, [persistRefresh]);
 
   useEffect(() => {
     const visibleMessages = new Set(threads.flatMap((thread) => thread.messages));
@@ -101,6 +149,8 @@ export function useAccountConversation({ user, initialContext, compact = false, 
   }, [storageKey, threads, user.publicComputer]);
 
   useEffect(() => {
+    // 其他栏目不预取模型；首次打开助手后保持控制器，后台增量才能继续归入原对话。
+    if (!enabled) return;
     let mounted = true;
     getSchoolChatModel()
       .then((response) => {
@@ -115,7 +165,21 @@ export function useAccountConversation({ user, initialContext, compact = false, 
       .catch((error: unknown) => { if (mounted) setModelError(getUserErrorMessage(error, "无法加载对话模型")); })
       .finally(() => { if (mounted) setModelLoading(false); });
     return () => { mounted = false; };
-  }, [modelPreferenceKey, user.publicComputer]);
+  }, [enabled, modelPreferenceKey, user.publicComputer]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const controller = new AbortController();
+    getSchoolAssistantCapabilities(controller.signal)
+      .then(response => {
+        if (controller.signal.aborted) return;
+        setWebSearchCapability(response.web_search ?? { available: false, message: "联网搜索尚未配置" });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setWebSearchCapability({ available: false, message: "暂时无法读取联网搜索状态" });
+      });
+    return () => controller.abort();
+  }, [enabled]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: 正文、消息数量和工具进度是滚动触发键；推理增量不能打断用户正在阅读的位置。
   useEffect(() => {
@@ -137,36 +201,46 @@ export function useAccountConversation({ user, initialContext, compact = false, 
     activateThread(null);
     setDraft("");
     setDraftAttachments([]);
+    setWebSearch(false);
     setHistoryOpen(false);
     inputRef.current?.focus();
   }, [activateThread]);
 
-  const complete = useCallback(async (threadId: string, messages: SchoolChatMessage[], context?: SchoolConversationContext) => {
+  const complete = useCallback(async (threadId: string, messages: SchoolChatMessage[], context?: SchoolConversationContext, requestWebSearch = false) => {
     if (controllers.current.has(threadId) || controllers.current.size >= MAX_ACTIVE_CHATS) return;
     const controller = new AbortController();
+    const startedAt = Date.now();
     // 每条在途对话固定本次模型；其他对话更改偏好不能改写请求或当前对话显示的模型。
     const requestModelID = selectedModelID;
     // ref 立即登记在途请求，防止 React 状态提交前连续操作突破单对话或全局并发限制。
     controllers.current.set(threadId, controller);
-    setPending((current) => ({ ...current, [threadId]: { content: "", reasoning: "", evidence: emptyConversationEvidence(), modelConfigID: requestModelID } }));
+    setThreads(current => current.map(thread => thread.id === threadId && thread.interruptedReply ? { ...thread, interruptedReply: undefined } : thread));
+    setPending((current) => ({ ...current, [threadId]: { startedAt, content: "", reasoning: "", evidence: emptyConversationEvidence(), modelConfigID: requestModelID, webSearch: requestWebSearch } }));
     setSendErrors((current) => { const next = { ...current }; delete next[threadId]; return next; });
     setFailedEvidence((current) => { const next = { ...current }; delete next[threadId]; return next; });
-    let partial: PendingConversation = { content: "", reasoning: "", evidence: emptyConversationEvidence(), modelConfigID: requestModelID };
+    let partial: PendingConversation = { startedAt, content: "", reasoning: "", evidence: emptyConversationEvidence(), modelConfigID: requestModelID, webSearch: requestWebSearch };
     const identity: ConversationStreamIdentity = { sequence: 0 };
     let completed = false;
+    // 联网开关只代表允许搜索。服务端若转入校内问答，本轮包括中断正文都不能成为下一次公开搜索的历史。
+    let businessSeen = false;
     try {
-      await streamSchoolConversation(requestMessages(messages.slice(-49)), context, controller.signal, (event) => {
+      // 公开模式在 API 边界按模式标记筛选历史，先通用规范化会丢掉这些标记，导致上下文无法承接。
+      await streamSchoolConversation(requestWebSearch ? messages.slice(-49) : requestMessages(messages.slice(-49)), context, controller.signal, (event) => {
         // 先挡住旧挂载、已停止或替换的请求，再推进序号；晚到回调不能污染当前流。
         if (!live.current || controller.signal.aborted || controllers.current.get(threadId) !== controller || completed || !acceptConversationEvent(identity, event)) return;
-        if (event.type === "error") throw new Error(event.message || "模型暂时无法回答，请稍后重试");
+        // SSE 也只按受控错误码展示；不直接透传模型或上游接口的内部说明。
+        if (event.type === "error") throw new ApiClientError(0, event.code, event.message);
         // 多模型选择是本页偏好；并行请求的元数据不能把选择器切换到其他模型。
         if (event.type === "model" && !chatModels.length) setModel(event.model);
         if (event.type === "delta") {
           partial = { ...partial, [event.channel]: partial[event.channel] + event.delta };
           setPending((current) => ({ ...current, [threadId]: partial }));
         }
-        if (event.type === "tool_started" || event.type === "tool_finished" || event.type === "sources") {
-          if (event.type !== "sources" || event.sources.length || event.actions.length) {
+        if (event.type === "progress" || event.type === "tool_started" || event.type === "tool_finished" || event.type === "sources") {
+          if (hasBusinessConversationEvent(event)) {
+            businessSeen = true;
+            businessThreads.current.add(threadId);
+            persistRefresh();
             setThreads((current) => current.map((thread) => thread.id === threadId && !thread.business ? { ...thread, business: true } : thread));
           }
           partial = { ...partial, evidence: mergeConversationEvidence(partial.evidence, event) };
@@ -174,22 +248,25 @@ export function useAccountConversation({ user, initialContext, compact = false, 
         }
         if (event.type === "done") {
           completed = true;
-          const reply = event.completion.message;
+          partial = { ...partial, evidence: mergeConversationEvidence(partial.evidence, event) };
+          // 公开历史要求问答两条都有标记；业务回复不标记，即使用户当时打开联网也会在 API 边界断开这组历史。
+          const reply = replyWithPublicSources(event.completion.message, partial.evidence, requestWebSearch && !businessSeen);
           // 证据以回复对象为键，历史裁剪或删除消息时不会把旧导航绑定到另一条回复。
           setReplyEvidence((current) => new Map(current).set(reply, partial.evidence));
           setThreads((current) => current.map((thread) => thread.id === threadId ? {
             ...thread, messages: [...thread.messages, reply].slice(-50), updatedAt: Date.now(), context: contextFromEvidence(partial.evidence, context)
           } : thread));
         }
-      }, requestModelID);
+      }, requestModelID, requestWebSearch);
       if (!completed) throw new Error("对话流意外中断");
     } catch (error) {
       if (!live.current || controllers.current.get(threadId) !== controller) return;
       const recovery = conversationRecovery(error, controller.signal.aborted, completed, partial);
       if (recovery?.kind === "reply") {
-        setReplyEvidence((current) => new Map(current).set(recovery.reply, recovery.evidence));
+        const reply = replyWithPublicSources(recovery.reply, recovery.evidence, requestWebSearch && !businessSeen);
+        setReplyEvidence((current) => new Map(current).set(reply, recovery.evidence));
         setThreads((current) => current.map((thread) => thread.id === threadId ? {
-          ...thread, messages: [...thread.messages, recovery.reply].slice(-50), updatedAt: Date.now()
+          ...thread, messages: [...thread.messages, reply].slice(-50), updatedAt: Date.now()
         } : thread));
       } else if (recovery?.kind === "failure") {
         setSendErrors((current) => ({ ...current, [threadId]: recovery.message }));
@@ -201,22 +278,26 @@ export function useAccountConversation({ user, initialContext, compact = false, 
         setPending((current) => { const next = { ...current }; delete next[threadId]; return next; });
       }
     }
-  }, [chatModels.length, selectedModelID]);
+  }, [chatModels.length, selectedModelID, persistRefresh]);
 
   const send = useCallback((event?: SubmitEvent) => {
     event?.preventDefault();
     const content = draft.trim();
     if ((!content && draftAttachments.length === 0) || (activeId && controllers.current.has(activeId)) || controllers.current.size >= MAX_ACTIVE_CHATS || attachmentRead.current || attaching || !model?.available || content.length > 20_000) return;
+    if (webSearch && (!webSearchCapability.available || !content || [...content].length > 500 || draftAttachments.length > 0)) {
+      toast.warning(webSearchCapability.available ? "联网搜索请单独发送 500 字以内的公开问题，不附带文件" : webSearchCapability.message);
+      return;
+    }
     followingReply.current = true;
     const id = activeThread?.id ?? crypto.randomUUID();
     expandedReasoning.current.delete(id);
     const messages: SchoolChatMessage[] = [...(activeThread?.messages ?? []), {
-      role: "user" as const, content, attachments: draftAttachments.length ? draftAttachments : undefined
+      role: "user" as const, content, attachments: draftAttachments.length ? draftAttachments : undefined, ...(webSearch ? { web_search: true } : {})
     }].slice(-49);
     setThreads((current) => {
       const existing = current.find((thread) => thread.id === id);
       const next: ConversationThread = {
-        id, title: existing?.title ?? titleFromMessage(content || draftAttachments[0]?.name || "附件对话"), updatedAt: Date.now(), messages, context: activeContext, business: existing?.business || Boolean(activeContext?.exam_id)
+        id, title: existing?.title ?? titleFromMessage(content || draftAttachments[0]?.name || "附件对话"), updatedAt: Date.now(), messages, context: activeContext, business: existing?.business || (!webSearch && Boolean(activeContext?.exam_id))
       };
       return [next, ...current.filter((thread) => thread.id !== id)]
         .filter((thread, index) => index < 20 || controllers.current.has(thread.id));
@@ -224,8 +305,8 @@ export function useAccountConversation({ user, initialContext, compact = false, 
     activateThread(id);
     setDraft("");
     setDraftAttachments([]);
-    void complete(id, messages, activeContext);
-  }, [activeId, activeThread, activeContext, activateThread, attaching, complete, draft, draftAttachments, model?.available]);
+    void complete(id, messages, activeContext, webSearch);
+  }, [activeId, activeThread, activeContext, activateThread, attaching, complete, draft, draftAttachments, model?.available, toast, webSearch, webSearchCapability]);
 
   const stop = () => { if (activeId) controllers.current.get(activeId)?.abort(); };
 
@@ -267,6 +348,10 @@ export function useAccountConversation({ user, initialContext, compact = false, 
   };
 
   const addFiles = async (files: File[]) => {
+    if (webSearch) {
+      toast.warning("联网搜索只使用文字问题，请先关闭联网搜索再上传文件");
+      return;
+    }
     // 粘贴与选择共用读取锁和名额；同一帧粘贴后按回车也要先等附件读取完成。
     if (!files.length || attachmentRead.current || (activeId && controllers.current.has(activeId)) || controllers.current.size >= MAX_ACTIVE_CHATS) return;
     const available = MAX_ATTACHMENTS - draftAttachments.length;
@@ -323,7 +408,8 @@ export function useAccountConversation({ user, initialContext, compact = false, 
   const retry = () => {
     if (activeThread && activeThread.messages[activeThread.messages.length - 1]?.role === "user" && !controllers.current.has(activeThread.id) && controllers.current.size < MAX_ACTIVE_CHATS) {
       followingReply.current = true;
-      void complete(activeThread.id, activeThread.messages, activeThread.context);
+      // 重试沿用原问题的模式，不能因用户切到另一条对话后修改开关而改变请求。
+      void complete(activeThread.id, activeThread.messages, activeThread.context, activeThread.messages[activeThread.messages.length - 1]?.web_search === true);
     }
   };
 
@@ -336,6 +422,8 @@ export function useAccountConversation({ user, initialContext, compact = false, 
 
   const selectThread: (id: string) => void = (id) => {
       attachmentRead.current?.abort(); attachmentRead.current = null; setAttaching(false);
+      const questions = threads.find(thread => thread.id === id)?.messages.filter(message => message.role === "user") ?? [];
+      setWebSearch(questions[questions.length - 1]?.web_search === true);
       activateThread(id); setHistoryOpen(false);
     };
 
@@ -367,7 +455,7 @@ export function useAccountConversation({ user, initialContext, compact = false, 
         };
 
   const reasoningExpanded = Boolean(activeId && expandedReasoning.current.has(activeId));
-  return { compact, onNavigate, user, threads, activeId, pending, openNew, deleteThread, selectThread, historyOpen, setHistoryOpen, model, chatModels, activePending, selectedModelID, modelLoading, selectModel, activeCount, activeContext, clearContext, activeThread, replyEvidence, failedEvidence, sendErrors, reasoningExpanded, toggleReasoning, copiedMessage, copyReply, retry, modelError, suggestQuestion, scrollFlow, scrollConversation, wheelConversation, send, draftAttachments, setDraftAttachments, inputRef, draft, setDraft, onInputKeyDown, pasteImages, fileInputRef, selectFiles, attaching, stop };
+  return { compact, onNavigate, user, threads, activeId, pending, openNew, deleteThread, selectThread, historyOpen, setHistoryOpen, model, chatModels, activePending, selectedModelID, modelLoading, selectModel, activeCount, activeContext, clearContext, activeThread, replyEvidence, failedEvidence, sendErrors, reasoningExpanded, toggleReasoning, copiedMessage, copyReply, retry, modelError, suggestQuestion, scrollFlow, scrollConversation, wheelConversation, send, draftAttachments, setDraftAttachments, inputRef, draft, setDraft, onInputKeyDown, pasteImages, fileInputRef, selectFiles, attaching, stop, webSearch, setWebSearch, webSearchCapability };
 }
 
 export type AccountConversationModel = ReturnType<typeof useAccountConversation>;

@@ -1,0 +1,79 @@
+
+
+.scan-form {
+  margin-top: 14px;
+}
+
+.scan-workstation {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.scan-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: end;
+  margin-top: 16px;
+}
+
+.scan-context-form {
+  display: grid;
+  grid-template-columns: minmax(260px, 2fr) minmax(220px, 1fr) 120px;
+  gap: 14px;
+  align-items: end;
+}
+
+.scan-context-form .ant-form-item {
+  margin-bottom: 0;
+}
+
+.scan-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scan-actions input {
+  display: none;
+}
+
+.scan-preview {
+  width: 48px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  object-fit: cover;
+  color: var(--text-muted);
+  background: var(--surface-soft);
+  font-size: var(--eg-font-caption);
+  font-weight: 700;
+}
+
+.scan-file-cell {
+  display: grid;
+  gap: 4px;
+}
+
+.scan-file-cell span {
+  color: var(--text-muted);
+}
+
+.quality-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.quality-result {
+  display: grid;
+  gap: 8px;
+}
+
+.quality-result p {
+  margin: 0;
+  color: var(--text-muted);
+}

@@ -132,6 +132,12 @@ func (s *MemoryStore) BeginDelete(_ context.Context, scope auth.AccessScope, id 
 	if !AllowsAsset(scope, asset) {
 		return FileAsset{}, ErrForbidden
 	}
+	if !allowsGenericDelete(asset) || asset.LegalHold || (asset.RetentionUntil != nil && asset.RetentionUntil.After(time.Now().UTC())) {
+		return FileAsset{}, ErrForbidden
+	}
+	if !scope.TenantWide && asset.SchoolID != "" && !scope.ManagesSchool(asset.SchoolID) {
+		return FileAsset{}, ErrForbidden
+	}
 	return s.transition(scope.TenantID, id, expectedRevision, []string{LifecycleActive, LifecycleDeleteFailed}, LifecyclePendingDelete, "", false)
 }
 

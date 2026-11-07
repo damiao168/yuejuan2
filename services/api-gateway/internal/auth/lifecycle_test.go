@@ -15,9 +15,14 @@ func lifecycleFixture(t *testing.T) (*MemoryStore, User, AccessScope) {
 	t.Helper()
 	store := NewMemoryStore()
 	actor := User{ID: "admin", TenantID: "tenant", TenantCode: "demo", Username: "admin", Status: "active", Roles: []string{"school_admin"}}
+	actor.DataScope = map[string]any{"school_admin": map[string]any{"scope": "school"}}
 	store.AddUser(UserWithPassword{User: actor, SchoolID: "school-1", PasswordHash: "admin-hash"})
-	store.AddRole(actor.TenantID, AssignableRole{Code: "teacher", ScopeType: "class"})
-	return store, actor, AccessScope{TenantID: actor.TenantID, ActorID: actor.ID, SchoolIDs: []string{"school-1"}}
+	store.AddRole(actor.TenantID, AssignableRole{Code: "teacher", ScopeType: "exam_task"})
+	scope, err := store.ResolveAccessScope(context.Background(), actor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return store, actor, scope
 }
 
 func TestInFlightReauthenticationCannotUndoNewerPublicComputerLock(t *testing.T) {
@@ -48,7 +53,7 @@ func TestInFlightReauthenticationCannotUndoNewerPublicComputerLock(t *testing.T)
 func TestActivationTokenExpiresAndConcurrentConsumptionHasOneWinner(t *testing.T) {
 	store, actor, scope := lifecycleFixture(t)
 	now := time.Now().UTC()
-	input := CreateManagedUserInput{Username: "teacher", DisplayName: "Teacher", Phone: "+8613800138000", RoleCode: "teacher", SchoolID: "school-1", ActivationTokenHash: HashToken("expired"), ActivationExpiresAt: now.Add(-time.Minute)}
+	input := CreateManagedUserInput{TeachingSubjects: []string{"mathematics"}, Username: "teacher", DisplayName: "Teacher", Phone: "+8613800138000", RoleCode: "teacher", SchoolID: "school-1", ActivationTokenHash: HashToken("expired"), ActivationExpiresAt: now.Add(-time.Minute)}
 	user, err := store.CreateManagedUser(context.Background(), actor, scope, input, "!activation-required")
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +97,7 @@ func TestActivationTokenExpiresAndConcurrentConsumptionHasOneWinner(t *testing.T
 func TestRecoveryTokenExpiresRevokesSessionsAndIsSingleUse(t *testing.T) {
 	store, actor, scope := lifecycleFixture(t)
 	now := time.Now().UTC()
-	user, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{
+	user, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{TeachingSubjects: []string{"mathematics"},
 		Username: "teacher", DisplayName: "Teacher", RoleCode: "teacher", SchoolID: "school-1",
 	}, "old-hash")
 	if err != nil {
@@ -205,7 +210,7 @@ func TestUnassignedTeacherCanManageOwnAccountButCannotAccessBusinessData(t *test
 	}
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		scope, ok := AccessScopeFromContext(r.Context())
-		if !ok || scope.HasDataAccess() || scope.TenantWide {
+		if !ok || !scope.AssignedOnly || scope.TenantWide || len(scope.ExamIDs)+len(scope.ReviewTaskIDs)+len(scope.ClassIDs)+len(scope.SchoolIDs) != 0 {
 			t.Errorf("self-account route must retain an explicit empty business boundary: %#v", scope)
 		}
 		w.WriteHeader(http.StatusOK)
@@ -216,7 +221,9 @@ func TestUnassignedTeacherCanManageOwnAccountButCannotAccessBusinessData(t *test
 		want       int
 	}{
 		{"self-account", AccountAuthMiddleware(memory), http.StatusOK},
-		{"business", AuthMiddleware(memory), http.StatusForbidden},
+		{"business", func(next http.Handler) http.Handler {
+			return AuthMiddleware(memory)(RequireScopedResource("review_task", "id")(next))
+		}, http.StatusForbidden},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
@@ -264,7 +271,7 @@ func TestLoginCannotBypassAccountLimitBySwitchingIdentifierAliases(t *testing.T)
 func assertRecoveryGrantInvalidatedByAccountMutation(t *testing.T, mutation string) {
 	t.Helper()
 	store, actor, scope := lifecycleFixture(t)
-	user, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{
+	user, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{TeachingSubjects: []string{"mathematics"},
 		Username: "teacher", DisplayName: "Teacher", RoleCode: "teacher", SchoolID: "school-1",
 	}, "old-hash")
 	if err != nil {

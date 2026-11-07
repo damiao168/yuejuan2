@@ -237,7 +237,8 @@ func finishExamSearch(output *ToolOutput, source Source, cursor pagination.Curso
 }
 
 func (s *Service) searchExamAccessible(ctx context.Context, access auth.AccessScope, item exam.Exam) (bool, error) {
-	if item.TenantID != access.TenantID || (!access.TenantWide && !access.AllowsExam(item.ID) && (!access.IsSchoolWide() || !access.AllowsSchool(item.SchoolID))) {
+	// 检索结果会作为整场业务工具的考试候选，须与实际查询采用同一管理学校边界。
+	if item.TenantID != access.TenantID || !access.ManagesSchool(item.SchoolID) {
 		return false, nil
 	}
 	if _, err := uuid.Parse(item.ID); err != nil {
@@ -253,5 +254,5 @@ func (s *Service) searchExamAccessible(ctx context.Context, access auth.AccessSc
 	if err != nil {
 		return false, err
 	}
-	return auth.AllowsResourceBoundary(access, boundary), nil
+	return auth.AllowsManagedResourceBoundary(access, boundary), nil
 }

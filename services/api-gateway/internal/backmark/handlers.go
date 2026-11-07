@@ -14,6 +14,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/pagination"
 	"edugrade-enterprise/services/api-gateway/internal/regrade"
 	"edugrade-enterprise/services/api-gateway/internal/segment"
+	"edugrade-enterprise/services/api-gateway/internal/workflowactors"
 )
 
 type Handler struct {
@@ -109,6 +110,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	page.Access.Scope = &scope
 	page.Access.Resolver, _ = h.audit.(auth.ResourceBoundaryResolver)
+	page.Access.Management = true
 	batches, err := h.service.ListPage(r.Context(), user.TenantID, strings.TrimSpace(r.URL.Query().Get("exam_id")), strings.TrimSpace(r.URL.Query().Get("question_id")), page)
 	if err != nil {
 		writeError(w, r, err)
@@ -374,6 +376,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusUnprocessableEntity, "backmark_no_regrade_items", "backmark batch has no completed items requiring regrade")
 	case errors.Is(err, ErrTooManyItems):
 		httpx.Error(w, r, http.StatusUnprocessableEntity, "backmark_async_required", "affected population exceeds the synchronous backmark limit")
+	case errors.Is(err, workflowactors.ErrAssigneeIneligible):
+		httpx.Error(w, r, http.StatusForbidden, "backmark_assignee_ineligible", "请选择本校任教该考试学科的有效阅卷教师（学校管理员除外）。")
 	case errors.Is(err, ErrOriginalGrader), errors.Is(err, ErrAssigneeForbidden):
 		httpx.Error(w, r, http.StatusForbidden, "backmark_assignee_forbidden", "backmark must be completed by its assigned non-original grader")
 	case errors.Is(err, ErrRevisionConflict):
@@ -399,6 +403,6 @@ func (h *Handler) record(r *http.Request, user auth.User, action, targetID strin
 	}
 	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{
 		TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "backmark", TargetID: targetID,
-		AfterValue: after, Reason: action, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+		AfterValue: after, Reason: action, IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 }

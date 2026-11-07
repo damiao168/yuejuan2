@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type RefObject, type UIEventHandler, type WheelEventHandler } from "react";
+import { useEffect, useState, type CSSProperties, type RefObject, type UIEventHandler, type WheelEventHandler } from "react";
 import { Button, Tooltip } from "antd";
 import { Bot, Check, ChevronDown, Copy, FileText, MessageSquareText, Plus, RotateCcw, Trash2 } from "lucide-react";
 import type { SessionUser } from "../../auth/session";
@@ -9,6 +9,7 @@ import { canPreviewConversationImage, ConversationImage } from "./ConversationIm
 import type { ConversationEvidence } from "./conversationState";
 import type { ConversationThread } from "./conversationStorage";
 import type { PendingConversation } from "./conversationPresentation";
+import { isPublicWebTool, publicConversationEvidence } from "./conversationWebSearch";
 
 interface ReasoningProps {
   content: string;
@@ -75,7 +76,7 @@ export function ConversationMessages({ thread, evidence, user, onNavigate, reaso
     return <article className={`school-chat-message is-${message.role}`} key={messageKey}>
       {message.role === "assistant" ? <div className="school-chat-avatar"><Bot size={18} /></div> : null}
       <div className="school-chat-message-body">
-        {message.role === "assistant" ? <ConversationEvidenceView evidence={evidence.get(message)} user={user} onNavigate={onNavigate} /> : null}
+        {message.role === "assistant" ? <ConversationEvidenceView evidence={evidence.get(message) ?? publicConversationEvidence(message.web_sources)} user={user} onNavigate={onNavigate} /> : null}
         {message.attachments?.length ? <div className="school-chat-message-files">{message.attachments.map((attachment, attachmentIndex) => canPreviewConversationImage(attachment)
           ? <ConversationImage attachment={attachment} key={`${messageKey}-${attachmentIndex}`} />
           : <span title={attachment.name} key={`${messageKey}-${attachmentIndex}`}><FileText size={14} />{attachment.name}</span>)}</div> : null}
@@ -99,13 +100,30 @@ interface PendingProps {
 }
 
 export function PendingConversationView({ pending, user, onReasoningToggle }: Readonly<PendingProps>) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    if (pending.content || !pending.startedAt) return;
+    // 起点由账户控制器保留，切换栏目后重新打开也不会把长时间等待伪装成刚开始。
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [pending.content, pending.startedAt]);
+  const elapsed = pending.startedAt ? Math.max(0, Math.floor((now - pending.startedAt) / 1000)) : 0;
   const thinking = !pending.reasoning && !pending.content;
+  const runningWebTool = pending.webSearch ? pending.evidence.tools.find(tool => isPublicWebTool(tool.tool_name) && tool.status === "running") : undefined;
+  const searchRunning = Boolean(runningWebTool);
+  const searchFinished = pending.evidence.tools.some(tool => isPublicWebTool(tool.tool_name) && tool.status === "completed");
+  // 来源要等最终引用核验才返回；搜索已结束时不能因 sources 仍为空而退回“理解问题”。
+  const phaseLabels = { understanding: "正在理解问题", searching: "正在搜索公开资料", reading: "正在读取网页", reviewing: "正在核实资料", answering: "正在生成回答" };
+  const phaseLabel = pending.evidence.phase ? phaseLabels[pending.evidence.phase] : undefined;
+  const waitingLabel = phaseLabel ?? (pending.webSearch ? (searchFinished || pending.evidence.sources.length ? "正在整理回答" : "正在理解问题") : "思考中");
+  const waiting = thinking || (Boolean(phaseLabel) && !pending.content);
   return <div className="school-chat-waiting"><span className="school-chat-avatar"><Bot size={18} /></span><div className="school-chat-live-body">
     <ConversationEvidenceView evidence={pending.evidence} user={user} allowActions={false} />
     {/* output 只含短状态；富文本和证据沿用外层 flow 的播报边界，不复制到原生状态区域。 */}
-    <output className={thinking ? "school-chat-thinking" : undefined} style={thinking ? undefined : hiddenStatusStyle}>
-      {thinking ? <>思考中<span aria-hidden="true"><i /><i /><i /></span></> : "正在回复"}
+    <output className={waiting && !searchRunning ? "school-chat-thinking" : undefined} style={waiting && !searchRunning ? undefined : hiddenStatusStyle}>
+      {waiting ? <>{searchRunning ? runningWebTool?.tool_name === "web_fetch" ? "正在读取网页" : "正在搜索公开资料" : waitingLabel}<span aria-hidden="true"><i /><i /><i /></span></> : "正在回复"}
     </output>
+    {!pending.content && elapsed >= 20 ? <p className="school-chat-interrupted" aria-live="off">已用时 {elapsed} 秒，可停止后重试或切换模型。</p> : null}
     {pending.reasoning ? <ReasoningDisclosure content={pending.reasoning} onToggle={onReasoningToggle} streaming /> : null}
     {pending.content ? <MathMarkdown promoteInlineMath={false} streaming>{pending.content}</MathMarkdown> : null}
   </div></div>;
@@ -144,8 +162,14 @@ export function ConversationFlow({ thread, pending, evidence, failedEvidence, se
     </div> : <div className="school-chat-messages">
       <ConversationMessages thread={thread} evidence={evidence} user={user} onNavigate={onNavigate}
         reasoningExpanded={reasoningExpanded} copiedMessage={copiedMessage} onCopy={onCopy} onReasoningToggle={onReasoningToggle} />
+      {!pending && thread.interruptedReply?.content ? <article className="school-chat-message is-assistant">
+        <div className="school-chat-avatar"><Bot size={18} /></div>
+        <div className="school-chat-message-body"><p className="school-chat-interrupted">上次未完成的回复</p>
+          <MathMarkdown promoteInlineMath={false}>{thread.interruptedReply.content}</MathMarkdown>
+        </div>
+      </article> : null}
       {pending ? <PendingConversationView pending={pending} user={user} onReasoningToggle={onReasoningToggle} /> : null}
-      {sendError ? <div className="school-conversation-failure"><ConversationEvidenceView evidence={failedEvidence} user={user} allowActions={false} /><div className="school-chat-send-error" role="alert"><span>{sendError}</span><Button type="link" size="small" icon={<RotateCcw size={14} />} disabled={retryDisabled} onClick={onRetry}>重试</Button></div></div> : null}
+      {sendError ? <div className="school-conversation-failure"><ConversationEvidenceView evidence={failedEvidence} user={user} allowActions={false} /><div className="school-chat-send-error" role="alert"><span>{sendError}</span><Button type="link" size="small" icon={<RotateCcw size={14} />} disabled={retryDisabled} onClick={onRetry}>{thread.interruptedReply ? "重新生成" : "重试"}</Button></div></div> : null}
     </div>}
   </div>;
 }

@@ -19,6 +19,7 @@ export function useCaptureMatchActions({ selectedId, loadMatching, loadDetail, s
   const inFlight = useRef<string | null>(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; operation.current += 1; }; }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 批次身份变化本身就是取消旧操作的信号，即使 effect 不读取它也必须重置互斥状态。
   useEffect(() => { operation.current += 1; inFlight.current = null; setActioning(false); }, [selectedId, setActioning]);
   function begin() {
     if (!mounted.current || currentBatch.current !== selectedId || inFlight.current === selectedId) return undefined;
@@ -134,7 +135,7 @@ export function useCaptureMatchActions({ selectedId, loadMatching, loadDetail, s
   }
   async function mergeSubmissions(targetId: string, sourceId: string) {
     const isCurrent = begin();
-    if (!isCurrent) return;
+    if (!isCurrent) throw new Error("当前批次已切换或正在处理其他操作，合并未执行，请重新核对答卷。");
     try {
       const queue = await mergeCaptureSubmissions(
           selectedId,

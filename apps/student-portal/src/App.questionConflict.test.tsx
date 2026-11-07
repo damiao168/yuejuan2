@@ -28,7 +28,7 @@ describe("逐题证据即时冲突恢复", () => {
       return resultRoute(call, result);
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     // 另一份请求仍挂起；恢复入口必须独立于 allSettled 的收尾出现。
     await screen.findByRole("button", { name: recovery });
     expect(screen.queryByText("正在加载本题…")).toBeNull();
@@ -49,7 +49,7 @@ describe("逐题证据即时冲突恢复", () => {
       return resultRoute(call, makeResult());
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByRole("button", { name: recovery });
     await act(async () => pending.resolve(failed()));
     expect(screen.getByRole("button", { name: recovery })).toBeTruthy();
@@ -67,8 +67,8 @@ describe("逐题证据即时冲突恢复", () => {
       return resultRoute(call, result);
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
-    fireEvent.click((screen.getByRole("button", { name: /^第 2 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((screen.getByLabelText(/^第 2 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("第二题当前评分依据");
     await act(async () => oldQuestion.resolve(changed()));
     expect(screen.queryByRole("button", { name: recovery })).toBeNull();
@@ -87,13 +87,13 @@ describe("逐题证据即时冲突恢复", () => {
       return resultRoute(call, makeResult());
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.click(screen.getByRole("button", { name: "返回题目列表" }));
     await act(async () => oldQuestion.resolve(changed()));
     await act(async () => oldAnnotations.resolve(jsonResponse({ annotations: [] })));
     expect(screen.queryByRole("button", { name: recovery })).toBeNull();
     expect(screen.queryByText("正在加载本题…")).toBeNull();
-    expect(screen.queryByRole("heading", { name: "第 1 题 · 作答与评分依据" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "第 1 题 · 成绩复核申请" })).toBeNull();
   });
 
   it("离开成绩页面后旧题的迟到冲突不能污染考试列表", async () => {
@@ -105,7 +105,7 @@ describe("逐题证据即时冲突恢复", () => {
       return resultRoute(call, makeResult());
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.click(screen.getByRole("button", { name: "← 返回我的考试" }));
     await waitFor(() => expect(document.querySelector(".exam-list-page")).toBeTruthy());
     await act(async () => oldAnnotations.resolve(changed()));
@@ -127,18 +127,18 @@ describe("逐题证据即时冲突恢复", () => {
       return resultRoute(call, phase === "new" ? newResult : oldResult);
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
     const key = appealDraftKey(studentDraftOwner(studentUser), "exam-1", "release-7", "question-1");
     fireEvent.click(screen.getByRole("button", { name: "返回题目列表" }));
     phase = "conflict";
-    fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((screen.getByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const reload = await screen.findByRole("button", { name: recovery });
     expect(readAppealDraft(key)?.reason).toBe(explanation);
     expect(calls.filter((call) => call.url.pathname.endsWith("/result"))).toHaveLength(1);
     phase = "new";
     fireEvent.click(reload);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，18/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，18/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("第八版评分依据");
     await act(async () => lateAnnotations.resolve(changed()));
     expect(screen.queryByRole("button", { name: recovery })).toBeNull();
@@ -153,7 +153,7 @@ describe("逐题证据即时冲突恢复", () => {
     let reads = 0;
     installApi((call) => isQuestion(call.url.pathname) && ++reads === 1 ? failed() : resultRoute(call, makeResult()));
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const retry = await screen.findByRole("button", { name: "重试本题" });
     expect(screen.queryByRole("button", { name: recovery })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "具体说明" })).toBeNull();
@@ -166,7 +166,7 @@ describe("逐题证据即时冲突恢复", () => {
     let reads = 0;
     const calls = installApi((call) => isAnnotation(call.url.pathname) && ++reads === 1 ? failed() : resultRoute(call, makeResult()));
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const reason = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
     fireEvent.change(reason, { target: { value: explanation } });
     fireEvent.click(screen.getByRole("button", { name: "重试批注" }));
@@ -187,7 +187,7 @@ describe("逐题证据即时冲突恢复", () => {
       return resultRoute(call, makeResult());
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: explanation } });
     await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "重试批注" }));

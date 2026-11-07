@@ -1,4 +1,5 @@
 import type { SchoolChatAttachment, SchoolChatMessage, SchoolConversationContext } from "../../api/schoolAiChat";
+import { publicConversationSources } from "./conversationWebSearch";
 
 export interface ConversationThread {
   id: string;
@@ -7,6 +8,8 @@ export interface ConversationThread {
   messages: SchoolChatMessage[];
   context?: SchoolConversationContext;
   business?: boolean;
+  // 刷新恢复的片段仅用于显示；未完成的正文不能作为下一轮模型历史或已核实证据。
+  interruptedReply?: { content: string; modelConfigID?: string };
 }
 
 function validAttachment(value: unknown): value is SchoolChatAttachment {
@@ -24,9 +27,12 @@ function validMessage(value: unknown): value is SchoolChatMessage {
 }
 
 function storedMessage(message: SchoolChatMessage): SchoolChatMessage {
-  // 工具证据和考试范围只保留在当前授权下的内存；历史文本恢复后仍须重新查询业务事实。
+  // 业务证据与考试范围不落盘；公开网页仅恢复受控字段，后续请求仍须重新搜索。
+  const sources = message.role === "assistant" ? publicConversationSources(message.web_sources) : [];
   return {
     role: message.role, content: message.content,
+    ...(message.web_search === true ? { web_search: true } : {}),
+    ...(sources.length ? { web_sources: sources } : {}),
     ...(message.reasoning_content ? { reasoning_content: message.reasoning_content } : {}),
     ...(message.attachments?.length ? { attachments: message.attachments.map(({ name, media_type, size }) => ({ name, media_type, size, content: "" })) } : {})
   };

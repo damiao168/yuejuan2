@@ -1,0 +1,28 @@
+# 这是现有网关专用的内网服务；启用 JSON 后才能供应用读取结构化结果。
+# 上游引擎由 SearXNG 默认配置维护，中文覆盖与可达性需在部署网络下验证。
+use_default_settings:
+  engines:
+    # 学校助手检索网页，避免百科、翻译等无关引擎拖住整批返回。
+    keep_only:
+      - duckduckgo
+      - brave
+      - google cse
+general:
+  debug: false
+  instance_name: "EduGrade Search"
+search:
+  formats:
+    - json
+  default_lang: "zh-CN"
+  safe_search: 1
+# 给上游引擎保留有限响应时间；最大等待仍小于网关的 10 秒搜索预算。
+outgoing:
+  request_timeout: 2.5
+  # 查询语法可覆盖表单超时；实例上限也必须约束，不能只依赖客户端timeout_limit。
+  max_request_timeout: 3
+server:
+  # 运行时由 SEARXNG_SECRET 覆盖；空密钥会使 SearXNG 拒绝启动。
+  secret_key: ""
+  limiter: false
+  public_instance: false
+  image_proxy: false

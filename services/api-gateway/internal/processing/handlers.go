@@ -68,7 +68,8 @@ func (h *Handler) ListExceptions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resolver, _ := h.audit.(auth.ResourceBoundaryResolver)
-	filter.Access = auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver}
+	// 异常队列列出整场考试的答卷证据，只能使用管理学校，不能沿任课班级扩展到外校。
+	filter.Access = auth.ExamCollectionAccess{Scope: &scope, Resolver: resolver, Management: true}
 	out, err := h.service.ListExceptions(r.Context(), user.TenantID, filter)
 	if err != nil {
 		writeError(w, r, err)
@@ -207,5 +208,5 @@ func (h *Handler) auditAction(r *http.Request, user auth.User, action, targetID 
 	if h.audit == nil {
 		return
 	}
-	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "operational_exception", TargetID: targetID, Reason: action, AfterValue: after, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
+	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "operational_exception", TargetID: targetID, Reason: action, AfterValue: after, IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
 }

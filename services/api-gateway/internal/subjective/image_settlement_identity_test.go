@@ -101,7 +101,9 @@ func TestWorkerImageSettlementResolvesOnlyTheLeasedTenantAndPreservesLegacyPath(
 func TestCompleteWorkerImageSettlementUsesTrustedIdentityAndRejectsChangedBinding(t *testing.T) {
 	for _, changed := range []bool{false, true} {
 		t.Run(map[bool]string{false: "current binding", true: "changed binding"}[changed], func(t *testing.T) {
-			fixture := newWorkerServiceFixture(t, CreateRunInput{}, "")
+			runInput := serviceTestRunInput(serviceTestContext())
+			runInput.PromptVersion = ImageComparisonPromptVersion
+			fixture := newWorkerServiceFixture(t, runInput, "")
 			value, _ := fixture.store.LoadContext(t.Context(), workerServiceTenant, fixture.run.AnswerSegmentID)
 			model := settlementIdentityModel()
 			model.ModelVersion = fixture.run.ModelVersion

@@ -34,9 +34,9 @@ describe("Batch8 intentional native output semantics", () => {
     expect(status.tagName).toBe("OUTPUT");
     expect(screen.getAllByRole("status")).toContain(status);
     expect(status.parentElement?.tagName).toBe("P");
-    expect(screen.queryByRole("button", { name: /^第 1 题，/ })).toBeNull();
+    expect(screen.queryByLabelText(/^第 1 题，/)).toBeNull();
     fireEvent.click(screen.getByRole("checkbox", { name: "只看有失分的题目" }));
-    expect(screen.getByRole("button", { name: /^第 1 题，/ })).toBeTruthy();
+    expect(screen.getByLabelText(/^第 1 题，/)).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
   });
 
@@ -46,7 +46,7 @@ describe("Batch8 intentional native output semantics", () => {
     installApi((call) => call.url.pathname.endsWith("/questions/question-1") ? pending.promise : resultRoute(call, result));
     render(<App />);
     await screen.findByLabelText("总分");
-    fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((screen.getByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const status = screen.getByText("正在加载本题…");
     expect(status.tagName).toBe("OUTPUT");
     expect(screen.getAllByRole("status")).toContain(status);

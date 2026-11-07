@@ -159,6 +159,9 @@ FOR UPDATE
 	if !arbitratorAllowed(task, input.AssignedTo) {
 		return ArbitrationTask{}, ErrForbidden
 	}
+	if err := validateReviewAssigneeTx(ctx, tx, tenantID, task.ExamID, input.AssignedTo, "arbitration:work"); err != nil {
+		return ArbitrationTask{}, err
+	}
 	task, err = scanArbitration(tx.QueryRowContext(ctx, `
 UPDATE arbitration_task
 SET assigned_to = $3::uuid, status = 'assigned', revision = revision + 1, updated_at = now()

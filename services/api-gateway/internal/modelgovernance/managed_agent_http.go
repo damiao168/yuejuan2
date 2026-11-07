@@ -119,8 +119,8 @@ func applyAgentThinkingPolicy(parameters map[string]any, config ManagedAPIConfig
 
 func agentProviderPayload(config ManagedAPIConfig, request AgentRequest, stream, dashscope bool) map[string]any {
 	parameters := map[string]any{"temperature": 0.2, "max_tokens": 4096}
-	// 规划与最终回答按是否流式区分；最终阶段不覆盖供应商的默认思考模式。
-	if !stream {
+	// 非流式规划与显式的简短动作响应使用已知供应商策略；普通最终回答沿用供应商默认模式。
+	if !stream || request.DisableThinking {
 		applyAgentThinkingPolicy(parameters, config, dashscope)
 	}
 	if len(request.Tools) > 0 {

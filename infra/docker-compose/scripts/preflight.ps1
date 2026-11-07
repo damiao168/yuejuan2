@@ -39,11 +39,20 @@ $composePath = Resolve-DeploymentPath $ComposeFile
 $envPath = Resolve-DeploymentPath $EnvFile
 $composeDir = Split-Path -Parent $composePath
 $envValues = Read-EnvFile $envPath
+# Compose 优先使用宿主机显式环境变量；预检必须验证同一份有效配置，不能只核对文件后被覆盖。
+foreach ($entry in Get-ChildItem Env:) {
+  if ($entry.Name.StartsWith('EDUGRADE_')) { $envValues[$entry.Name] = $entry.Value }
+}
 
 $requiredKeys = @(
   "EDUGRADE_ENV",
   "EDUGRADE_SESSION_COOKIE_SECURE",
   "EDUGRADE_CORS_ALLOWED_ORIGINS",
+  "EDUGRADE_TRUSTED_PROXY_CIDRS",
+  "EDUGRADE_PROXY_IP",
+  "EDUGRADE_COMPOSE_SUBNET",
+  "EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY",
+  "EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY",
   "EDUGRADE_POSTGRES_DB",
   "EDUGRADE_POSTGRES_USER",
   "EDUGRADE_POSTGRES_PASSWORD",
@@ -82,6 +91,38 @@ foreach ($key in $requiredKeys) {
     throw "Required deployment setting is missing: $key"
   }
 }
+# API 只信任固定 nginx，而不是整个容器网段；可直连网关的其他容器不能伪造来源。
+if ($envValues['EDUGRADE_TRUSTED_PROXY_CIDRS'] -ne ($envValues['EDUGRADE_PROXY_IP'] + '/32')) {
+  throw 'EDUGRADE_TRUSTED_PROXY_CIDRS must match the fixed nginx IPv4 address with /32.'
+}
+$proxyAddress = $null
+$subnetAddress = $null
+$subnetParts = $envValues['EDUGRADE_COMPOSE_SUBNET'].Split('/')
+$subnetPrefix = 0
+if (-not [Net.IPAddress]::TryParse($envValues['EDUGRADE_PROXY_IP'], [ref]$proxyAddress) -or
+    $proxyAddress.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or
+    $subnetParts.Count -ne 2 -or -not [int]::TryParse($subnetParts[1], [ref]$subnetPrefix) -or
+    $subnetPrefix -lt 1 -or $subnetPrefix -gt 30 -or
+    -not [Net.IPAddress]::TryParse($subnetParts[0], [ref]$subnetAddress) -or
+    $subnetAddress.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork) {
+  throw 'Compose proxy and subnet must be valid IPv4 addresses with a subnet prefix between 1 and 30.'
+}
+$proxyBytes = $proxyAddress.GetAddressBytes()
+$subnetBytes = $subnetAddress.GetAddressBytes()
+$isNetwork = $true
+$isBroadcast = $true
+for ($byteIndex = 0; $byteIndex -lt 4; $byteIndex++) {
+  $prefixBits = [Math]::Max(0, [Math]::Min(8, $subnetPrefix - 8 * $byteIndex))
+  $maskByte = if ($prefixBits -eq 0) { 0 } else { (255 -shl (8 - $prefixBits)) -band 255 }
+  if (($proxyBytes[$byteIndex] -band $maskByte) -ne $subnetBytes[$byteIndex]) { throw 'The nginx IPv4 address must be inside the canonical Compose subnet.' }
+  if ($proxyBytes[$byteIndex] -ne $subnetBytes[$byteIndex]) { $isNetwork = $false }
+  if ($proxyBytes[$byteIndex] -ne ($subnetBytes[$byteIndex] -bor (255 -bxor $maskByte))) { $isBroadcast = $false }
+}
+if ($isNetwork -or $isBroadcast) { throw 'The nginx IPv4 address must be an assignable address inside the Compose subnet.' }
+foreach ($key in @('EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY', 'EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY')) {
+  if ($envValues[$key].Length -lt 32 -or $envValues[$key] -match 'change_me|change-before-production|replace_with') { throw "$key must be a unique secret of at least 32 characters." }
+}
+if ($envValues['EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY'] -eq $envValues['EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY']) { throw 'Model credentials and review evidence must use independent secrets.' }
 # 即使本地部署，Compose 应用登录也使用 NOINHERIT；其权限
 # 由租户连接器在每次连接时通过 SET ROLE 激活。
 if ($envValues["EDUGRADE_POSTGRES_TENANT_RLS"] -ne "true") {

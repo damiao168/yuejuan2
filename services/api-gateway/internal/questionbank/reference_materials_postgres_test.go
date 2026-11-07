@@ -102,6 +102,14 @@ func newReferenceImportFixture(t *testing.T) referenceImportFixture {
 		t.Fatal(err)
 	}
 	exec(string(handoffMigration))
+	// 文件引用守卫固定搜索生产 schema；隔离夹具复制同一函数体并只调整搜索路径，不能查询公共业务表。
+	var fileReferenceGuard string
+	if err = admin.QueryRowContext(t.Context(), `SELECT pg_get_functiondef('public.edugrade_guard_file_reference()'::regprocedure)`).Scan(&fileReferenceGuard); err != nil {
+		t.Fatal(err)
+	}
+	fileReferenceGuard = strings.Replace(fileReferenceGuard, "FUNCTION public.edugrade_guard_file_reference(", "FUNCTION "+schema+".edugrade_guard_file_reference(", 1)
+	exec(fileReferenceGuard)
+	exec("ALTER FUNCTION " + schema + ".edugrade_guard_file_reference() SET search_path TO " + schema + ",public")
 	triggerRows, err := admin.QueryContext(t.Context(), `SELECT pg_get_triggerdef(t.oid) FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid WHERE NOT t.tgisinternal AND c.relnamespace='public'::regnamespace AND (
  c.relname IN('question_bank_item_version','question_bank_import','question_reference_manifest','question_reference_manifest_item')
  OR c.relname='file_asset' AND t.tgname='trg_reference_material_object_pin') AND t.tgname NOT IN('trg_bank_version_reference_grant','trg_reference_manifest_origin') ORDER BY c.relname,t.tgname`)
@@ -114,7 +122,10 @@ func newReferenceImportFixture(t *testing.T) referenceImportFixture {
 		if err = triggerRows.Scan(&def); err != nil {
 			t.Fatal(err)
 		}
-		triggers = append(triggers, strings.ReplaceAll(def, " ON public.", " ON "+schema+"."))
+		def = strings.ReplaceAll(def, " ON public.", " ON "+schema+".")
+		def = strings.ReplaceAll(def, "EXECUTE FUNCTION public.edugrade_guard_file_reference(", "EXECUTE FUNCTION "+schema+".edugrade_guard_file_reference(")
+		def = strings.ReplaceAll(def, "EXECUTE FUNCTION edugrade_guard_file_reference(", "EXECUTE FUNCTION "+schema+".edugrade_guard_file_reference(")
+		triggers = append(triggers, def)
 	}
 	if err = triggerRows.Err(); err != nil {
 		t.Fatal(err)
@@ -131,6 +142,8 @@ func newReferenceImportFixture(t *testing.T) referenceImportFixture {
 	for _, user := range []string{actor, f.viewer} {
 		exec(`INSERT INTO app_user(id,tenant_id,username,display_name,password_hash,status) VALUES($1,$2,$1::uuid::text,'synthetic','not-a-real-password','active')`, user, tenant)
 	}
+	// 后续复制考试需管理所属学校；可信归属由账号保存，不能靠 SchoolIDs 导航投影取得写权限。
+	exec(`UPDATE app_user SET school_id=$3 WHERE tenant_id=$1 AND id=$2`, tenant, actor, school)
 	exec(`INSERT INTO question_bank(id,tenant_id,school_id,name,created_by) VALUES($1,$2,$3,'synthetic frozen references',$4)`, f.bank, tenant, school, actor)
 	exec(`INSERT INTO question_bank_metadata_schema(tenant_id,bank_id,version,created_by) VALUES($1,$2,1,$3)`, tenant, f.bank, actor)
 	for _, action := range []string{"read", "create", "edit", "review", "publish"} {
@@ -293,9 +306,23 @@ func TestPostgresReferenceImagesImportReadTransferAndWithdraw(t *testing.T) {
 	if _, err = f.db.ExecContext(t.Context(), `INSERT INTO exam(id,tenant_id,school_id,name,subject,exam_type,total_score,status,grading_mode,publish_policy,created_by) VALUES($1,$2,$3,'synthetic target','math','quiz',2,'draft','ai_assisted','manual_after_confirmation',$4)`, target, f.scope.TenantID, f.scope.SchoolIDs[0], f.scope.ActorID); err != nil {
 		t.Fatal(err)
 	}
-	targetScope := f.scope
-	targetScope.ExamIDs = append(append([]string{}, f.scope.ExamIDs...), target)
-	materialized, err := f.store.Materialize(commandreceipt.WithID(t.Context(), "materialize-"+uuid.NewString()), targetScope, target, MaterializeInput{ExpectedRevision: 1, Selections: []MaterializeSelection{{VersionID: version.ID, QuestionNo: "1", SortOrder: 1}}})
+	materializeInput := MaterializeInput{ExpectedRevision: 1, Selections: []MaterializeSelection{{VersionID: version.ID, QuestionNo: "1", SortOrder: 1}}}
+	navigationScope := f.scope
+	navigationScope.ExamIDs = append(append([]string{}, f.scope.ExamIDs...), target)
+	if _, err = f.store.Materialize(commandreceipt.WithID(t.Context(), "navigation-only-"+uuid.NewString()), navigationScope, target, materializeInput); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("exam visibility granted materialize management: %v", err)
+	}
+	var targetRevision int64
+	var targetQuestionCount int
+	if err = f.db.QueryRowContext(t.Context(), `SELECT revision,(SELECT count(*) FROM question WHERE tenant_id=$1 AND exam_id=$2) FROM exam WHERE tenant_id=$1 AND id=$2`, f.scope.TenantID, target).Scan(&targetRevision, &targetQuestionCount); err != nil || targetRevision != 1 || targetQuestionCount != 0 {
+		t.Fatalf("rejected materialize changed target: revision=%d questions=%d err=%v", targetRevision, targetQuestionCount, err)
+	}
+	// 与认证后的仓储解析相同，从账号实际学校派生管理范围，再验证正常复制和冻结引用链。
+	targetScope, err := auth.NewPostgresStore(f.db).ResolveAccessScope(t.Context(), auth.User{TenantID: f.scope.TenantID, ID: f.scope.ActorID, Roles: []string{"school_admin"}, DataScope: map[string]any{"school_admin": map[string]any{"scope": "school"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	materialized, err := f.store.Materialize(commandreceipt.WithID(t.Context(), "materialize-"+uuid.NewString()), targetScope, target, materializeInput)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -87,7 +87,7 @@ func (h *Handler) ListManagementExams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	status := r.URL.Query().Get("status")
-	if status != "" && !IsValidStatus(status) && status != "ongoing" && status != "partially_published" && status != "unavailable" {
+	if status != "" && !IsValidStatus(status) && status != "active" && status != "completed" && status != "ongoing" && status != "partially_published" && status != "unavailable" {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_exam_filter", "考试进度筛选无效")
 		return
 	}

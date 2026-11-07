@@ -22,7 +22,7 @@ func TestStudentPreviewReadsChosenFrozenDraftWithoutPublishingOrLeaking(t *testi
 	}
 	fact := fixtureFact(5)
 	fact.Questions[0].Explanation.Stem = "冻结题干"
-	fact.Questions[0].Explanation.CorrectAnswer = "隐藏答案"
+	fact.Questions[0].Explanation.CorrectAnswer = "冻结答案"
 	store.SeedFacts(exam, []SubmissionFact{fact})
 	draft, err := service.Create(ctx, tenant, exam, actor, CreateInput{Reason: "preview", IdempotencyKey: "preview-draft-2", VisibilityPolicy: VisibilityPolicy{ShowQuestionScores: true, ShowQuestionStem: true}})
 	if err != nil {
@@ -34,8 +34,8 @@ func TestStudentPreviewReadsChosenFrozenDraftWithoutPublishingOrLeaking(t *testi
 	if err != nil || preview.TotalScore != 5 || preview.ReleaseID != draft.ID || preview.Questions[0].Stem != "冻结题干" {
 		t.Fatalf("preview=%#v err=%v", preview, err)
 	}
-	if preview.Questions[0].CorrectAnswer != "" || preview.Questions[0].Feedback != "" || len(preview.Questions[0].RubricSummary) != 0 {
-		t.Fatalf("hidden fields leaked: %#v", preview.Questions[0])
+	if preview.Questions[0].CorrectAnswer != "冻结答案" || preview.Questions[0].Feedback != "" || len(preview.Questions[0].RubricSummary) != 0 {
+		t.Fatalf("answers should follow visible questions while feedback remains restricted: %#v", preview.Questions[0])
 	}
 	encoded, _ := json.Marshal(preview)
 	for _, forbidden := range []string{"final_grade_id", "source_id", "private_note", "reviewer", "prompt", "snapshot_hash"} {

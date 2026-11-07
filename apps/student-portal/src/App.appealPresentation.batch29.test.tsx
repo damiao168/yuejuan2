@@ -110,12 +110,12 @@ describe("学生复核表单展示职责", () => {
     const result = makeResult([makeQuestion(), makeQuestion({ question_id: "question-2", question_no: "2", subject: "chinese" })]);
     const calls = installApi((call) => resultRoute(call, result));
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByRole("textbox", { name: "具体说明" });
     fireEvent.click(screen.getByRole("button", { name: "语文" }));
-    expect(screen.queryByRole("heading", { name: "第 1 题 · 作答与评分依据" })).toBeNull();
-    fireEvent.click((screen.getByRole("button", { name: /^第 2 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
-    await screen.findByRole("heading", { name: "第 2 题 · 作答与评分依据" });
+    expect(screen.queryByRole("heading", { name: "第 1 题 · 成绩复核申请" })).toBeNull();
+    fireEvent.click((screen.getByLabelText(/^第 2 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    await screen.findByRole("heading", { name: "第 2 题 · 成绩复核申请" });
     const reads = calls.filter((call) => call.url.pathname.endsWith("/questions/question-2"));
     expect(reads).toHaveLength(1);
     expect(reads[0].url.searchParams.get("expected_release_id")).toBe("release-7");

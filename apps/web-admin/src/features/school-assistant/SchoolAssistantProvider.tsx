@@ -1,10 +1,14 @@
-import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button, Drawer } from "antd";
+import { Bot, LoaderCircle } from "lucide-react";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import type { SessionUser } from "../../auth/session";
 import { canUseSchoolAssistant } from "./navigation";
 import { useSchoolAssistant, type AssistantContext } from "./useSchoolAssistant";
 import { conversationAccountKey } from "./conversationState";
+import { ConversationSessionContext } from "./ConversationSessionContext";
+import { useAccountConversation } from "./useAccountConversation";
+import { CONVERSATION_REFRESH_PREFIX, writeConversationRefresh } from "./conversationRefresh";
 import "./school-assistant.css";
 
 // 助手正文含 Markdown 等重依赖；仅打开抽屉时加载，账户与权限 key 仍控制整个挂载生命周期。
@@ -24,18 +28,30 @@ function AccountAssistant({ user, accountKey, onNavigate, locationKey, children 
 }>) {
   const assistant = useSchoolAssistant(accountKey);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [conversationEnabled, setConversationEnabled] = useState(false);
+  const [visibleViews, setVisibleViews] = useState(0);
   const { cancel } = assistant;
-  // 页面位置变化后关闭并取消本轮助手，避免旧模块的查询范围继续显示在新页面。
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 页面位置变化时关闭并取消旧助手查询，不能把旧模块范围显示在新页面。
+  // 位置变化只关闭抽屉并停止旧查询面板；自由对话由账户控制器持有，切换栏目不停止生成。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 位置变化时关闭旧模块抽屉；自由对话的生命周期不依赖 locationKey。
   useEffect(() => { setDrawerOpen(false); cancel(); }, [locationKey, cancel]);
   const close = useCallback(() => { setDrawerOpen(false); cancel(); }, [cancel]);
+  const navigate = useCallback((path: string) => { close(); onNavigate(path); }, [close, onNavigate]);
+  const activateConversation = useCallback(() => setConversationEnabled(true), []);
+  const registerConversationView = useCallback(() => {
+    setVisibleViews(count => count + 1);
+    return () => setVisibleViews(count => Math.max(0, count - 1));
+  }, []);
+  const conversation = useAccountConversation({ user, initialContext: assistant.context, onNavigate: navigate }, conversationEnabled);
+  const session = useMemo(() => ({ accountKey, model: conversation, activate: activateConversation, registerView: registerConversationView }),
+    [accountKey, conversation, activateConversation, registerConversationView]);
   const value = useMemo<AssistantValue>(() => ({
     ...assistant, user,
     // 模块入口只提示当前考试；管理员发送问题后，模型才按本轮权限选择业务工具。
-    open: (context) => { assistant.setContext(context); setDrawerOpen(true); },
-    navigate: (path) => { close(); onNavigate(path); }
-  }), [assistant, user, close, onNavigate]);
+    open: (context) => { assistant.setContext(context); activateConversation(); setDrawerOpen(true); },
+    navigate
+  }), [assistant, user, activateConversation, navigate]);
   return <AssistantState.Provider value={value}>
+    <ConversationSessionContext.Provider value={session}>
     {children}
     <Drawer title="学校 AI 助手" open={drawerOpen} onClose={close} width="min(620px, 100vw)" className="school-assistant-drawer" styles={{ body: { padding: 0 } }}>
       {/* 模块加载失败只影响助手抽屉；关闭它不能重载或丢弃主页面正在编辑的工作。 */}
@@ -43,14 +59,32 @@ function AccountAssistant({ user, accountKey, onNavigate, locationKey, children 
         <Suspense fallback={<output aria-live="polite" aria-atomic="true" className="school-assistant-loading" style={{ display: "block" }}>正在加载学校 AI 助手</output>}><SchoolConversation user={user} initialContext={assistant.context} compact onNavigate={value.navigate} /></Suspense>
       </ErrorBoundary>}
     </Drawer>
+    {conversationEnabled && visibleViews === 0 && conversation.threads.length > 0 && <Button
+      className="school-assistant-background-entry"
+      icon={conversation.activeCount > 0 ? <LoaderCircle size={16} className="school-assistant-background-spinner" /> : <Bot size={17} />}
+      aria-label="返回学校 AI 助手"
+      onClick={() => {
+        const pendingId = Object.keys(conversation.pending)[0];
+        if (!conversation.activePending && pendingId) conversation.selectThread(pendingId);
+        navigate("/ai-chat");
+      }}
+    >{conversation.activeCount > 0 ? `AI 回复中（${conversation.activeCount}）· 查看进度` : "返回 AI 对话"}</Button>}
+    </ConversationSessionContext.Provider>
   </AssistantState.Provider>;
 }
 
 export function SchoolAssistantProvider({ user, onNavigate, locationKey, children }: Readonly<{
   user: SessionUser; onNavigate: (path: string) => void; locationKey: string; children: ReactNode;
 }>) {
-  if (!canUseSchoolAssistant(user)) return children;
   // 身份或授权发生变化时整组内存重建，旧事实不能短暂显示给新账户或缩小后的权限范围。
   const accountKey = conversationAccountKey(user);
+  const previousAccount = useRef(accountKey);
+  useEffect(() => {
+    if (previousAccount.current !== accountKey) {
+      writeConversationRefresh(`${CONVERSATION_REFRESH_PREFIX}${previousAccount.current}`, null);
+      previousAccount.current = accountKey;
+    }
+  }, [accountKey]);
+  if (!canUseSchoolAssistant(user)) return children;
   return <AccountAssistant key={accountKey} user={user} accountKey={accountKey} onNavigate={onNavigate} locationKey={locationKey}>{children}</AccountAssistant>;
 }

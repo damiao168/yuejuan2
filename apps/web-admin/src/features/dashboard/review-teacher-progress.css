@@ -1,0 +1,33 @@
+.review-teacher-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.review-teacher-filters .ant-select { min-width: 132px; }
+.review-teacher-online-note { margin: -4px 0 10px; color: var(--text-muted); font-size: var(--eg-font-caption); }
+.review-teacher-table-wrap { max-height: 360px; overflow: auto; }
+.review-teacher-table { min-width: 660px; }
+.review-teacher-table thead { position: sticky; top: 0; z-index: 1; }
+.review-teacher-table th:first-child { width: 21%; }
+.review-teacher-table th:nth-child(2) { width: 19%; }
+.review-teacher-table th:nth-child(3) { width: 13%; }
+.review-teacher-table th:nth-child(4) { width: 25%; }
+.review-teacher-table th:nth-child(5), .review-teacher-table th:nth-child(6) { width: 11%; }
+.review-teacher-table td { height: 44px; padding-block: 6px; }
+.review-teacher-table td > strong { font-weight: 500; overflow-wrap: anywhere; }
+.review-teacher-username { display: block; color: var(--text-muted); font-size: var(--eg-font-caption); line-height: 17px; overflow-wrap: anywhere; }
+.review-teacher-online { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); white-space: nowrap; }
+.review-teacher-online::before { width: 6px; height: 6px; border-radius: 50%; background: #aeb4be; content: ""; }
+.review-teacher-online.is-online { color: #168157; }
+.review-teacher-online.is-online::before { background: #209c6c; }
+.review-teacher-completion { max-width: 190px; }
+.review-teacher-completion > span { display: flex; justify-content: space-between; gap: 8px; line-height: 20px; }
+.review-teacher-completion small { color: var(--text-muted); }
+.review-teacher-completion progress { display: block; width: 100%; height: 4px; border: 0; border-radius: 3px; overflow: hidden; background: #edf0f4; accent-color: #1677ff; }
+.review-teacher-completion progress::-webkit-progress-bar { background: #edf0f4; }
+.review-teacher-completion progress::-webkit-progress-value { background: #1677ff; }
+.review-teacher-counting-note { margin-top: 10px; color: var(--text-muted); font-size: var(--eg-font-caption); }
+.review-teacher-counting-note summary { cursor: pointer; }
+.review-teacher-counting-note p { margin: 5px 0 0; }
+.review-teacher-empty { margin: 0; padding: 18px 0; color: var(--text-muted); border-top: 1px solid var(--border); }
+@media (max-width: 720px) {
+  .review-teacher-progress .school-dashboard-section-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .review-teacher-filters { justify-content: space-between; }
+  .review-teacher-progress .school-dashboard-section-title p { display: block; }
+}

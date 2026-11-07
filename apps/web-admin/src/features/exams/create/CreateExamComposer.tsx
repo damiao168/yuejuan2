@@ -4,11 +4,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronDown, Gauge, LayoutTemplate, Upload, Zap } from "lucide-react";
 import type { ExamTemplate } from "../../../api/examTemplates";
 import type { Grade, School, SchoolClass } from "../../../api/org";
-import { examTypeOptions } from "../../../constants/examCatalog";
+import { gradeCohortGroups, gradeCohortKey, gradeCohortLabel } from "../../members/gradeCohortPresentation";
 import { examSubjectLabel, examSubjectOptions } from "../../../constants/examStatus";
 import { createSubjectDraft, subjectDraftFromTemplate } from "./createExamDraft";
 import { createExamFieldId, type CreateExamValidationIssue } from "./createExamValidation";
-import { examTypeLabel, gradingLabel, gradingPresentation } from "./presentation";
+import { gradingLabel, gradingPresentation } from "./presentation";
 import type { CreateExamDraft, ExamCreationMode, GradingChoice, SubjectExamDraft } from "./types";
 import "./exam-create.css";
 
@@ -131,6 +131,12 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const school = schools.find((item) => item.id === draft.schoolId);
   const grade = grades.find((item) => item.id === draft.gradeId);
+  const cohortGroups = useMemo(() => gradeCohortGroups(grades), [grades]);
+  const gradeLabel = (item: Grade) => {
+    const current = cohortGroups.find(group => group.key === gradeCohortKey(item))?.grade;
+    // 新建考试仍绑定精确年度年级；旧年度保留选择，但明确标成归档，不能悄悄扩大班级范围。
+    return `${gradeCohortLabel(item)}${current && current.id !== item.id ? `（归档 ${item.academic_year}）` : ""}`;
+  };
   const availableClasses = classes.filter((item) => item.grade_id === draft.gradeId && item.status === "active");
   const selectedClasses = availableClasses.filter((item) => draft.classIds.includes(item.id));
   const allClassesSelected = availableClasses.length > 0 && availableClasses.every((item) => draft.classIds.includes(item.id));
@@ -188,14 +194,9 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
               <FieldError message={issueFor(issues, "name")} />
             </label>
             <div className="exam-composer-field-row">
-              <label className="exam-composer-field" data-exam-field="examType" htmlFor={createExamFieldId("examType")}>
-                <span>考试类型 <em>*</em></span>
-                <Select id={createExamFieldId("examType")} value={draft.examType || undefined} placeholder="选择考试类型" status={issueFor(issues, "examType") ? "error" : undefined} options={examTypeOptions} onChange={(examType) => onChange({ examType })} />
-                <FieldError message={issueFor(issues, "examType")} />
-              </label>
               <label className="exam-composer-field" data-exam-field="gradeId" htmlFor={createExamFieldId("gradeId")}>
                 <span>年级 <em>*</em></span>
-                <Select id={createExamFieldId("gradeId")} value={draft.gradeId || undefined} placeholder="选择年级" status={issueFor(issues, "gradeId") ? "error" : undefined} options={grades.map((item) => ({ label: `${item.name} · ${item.academic_year}`, value: item.id }))} onChange={(gradeId) => onChange({ gradeId, classIds: [], subjects: draft.subjects.map((subject) => ({ ...subject, classIds: [] })) })} />
+                <Select id={createExamFieldId("gradeId")} value={draft.gradeId || undefined} placeholder="选择年级" status={issueFor(issues, "gradeId") ? "error" : undefined} options={grades.map((item) => ({ label: gradeLabel(item), value: item.id }))} onChange={(gradeId) => onChange({ gradeId, classIds: [], subjects: draft.subjects.map((subject) => ({ ...subject, classIds: [] })) })} />
                 <FieldError message={issueFor(issues, "gradeId")} />
               </label>
             </div>
@@ -243,7 +244,7 @@ export function CreateExamComposer({ draft, schools, grades, classes, templates,
           </section>
 
           <footer className="exam-composer-submit">
-            <div><strong>{draft.name.trim() || "尚未命名的考试"}</strong><span>{draft.examType ? examTypeLabel(draft.examType) : "未选择考试类型"} · {grade?.name ?? "未选择年级"} · {selectedClasses.length} 个班级 · {draft.subjects.length} 个学科</span><small>{mode.title} · 创建后按学科上传试卷、答案或评分资料。</small></div>
+            <div><strong>{draft.name.trim() || "尚未命名的考试"}</strong><span>{grade ? gradeLabel(grade) : "未选择年级"} · {selectedClasses.length} 个班级 · {draft.subjects.length} 个学科</span><small>{mode.title} · 创建后按学科上传试卷、答案或评分资料。</small></div>
             <Button type="primary" size="large" loading={submitting} onClick={onSubmit}>{cta}</Button>
           </footer>
         </main>

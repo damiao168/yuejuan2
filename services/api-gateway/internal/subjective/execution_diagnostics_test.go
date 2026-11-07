@@ -160,6 +160,61 @@ func TestUnknownUsageStaysUnknownAndNeverEntersLegacyZeroLedger(t *testing.T) {
 	}
 }
 
+func TestCacheDiagnosticsPreserveKnownZeroWithoutChangingLegacyUsage(t *testing.T) {
+	var d ExecutionDiagnostics
+	if err := json.Unmarshal([]byte(`{"finish_outcome":"completed","attempts":1,"provider_request_count":1,"usage_status":"reported","recovery_attempted":false,"usage":{"input_tokens":8,"output_tokens":2,"total_tokens":10,"cached_input_tokens":0,"cache_write_input_tokens":3,"uncached_input_tokens":5}}`), &d); err != nil {
+		t.Fatal(err)
+	}
+	clone := cloneExecutionDiagnostics(&d)
+	if clone == nil || clone.Usage.CachedInputTokens == nil || *clone.Usage.CachedInputTokens != 0 || *clone.Usage.CacheWriteInputTokens != 3 || *clone.Usage.UncachedInputTokens != 5 {
+		t.Fatalf("lost optional cache facts: %#v", clone)
+	}
+	legacy := gradingAgentTelemetry{Attempts: 1, Usage: ModelTokenUsage{InputTokens: 8, OutputTokens: 2, TotalTokens: 10}, ExecutionDiagnostics: clone}
+	if err := validateSuccessDiagnostics(legacy); err != nil {
+		t.Fatalf("cache breakdown should not need new legacy billing values: %v", err)
+	}
+	negative := int64(-1)
+	clone.Usage.CacheWriteInputTokens = &negative
+	if validateExecutionDiagnostics(clone) == nil {
+		t.Fatal("negative cache writes accepted")
+	}
+	if *d.Usage.CacheWriteInputTokens != 3 {
+		t.Fatal("clone changed the original cache facts")
+	}
+}
+
+func TestCacheDiagnosticsDecodeOnlyBoundedIntegerFacts(t *testing.T) {
+	for _, field := range []string{"cache_write_input_tokens", "uncached_input_tokens"} {
+		for _, tc := range []struct {
+			value string
+			valid bool
+		}{
+			{"0", true}, {"9223372036854775807", true},
+			{"-1", false}, {"9223372036854775808", false}, {"true", false}, {"1.5", false}, {`"2"`, false},
+		} {
+			t.Run(field+"/"+tc.value, func(t *testing.T) {
+				raw := `{"finish_outcome":"completed","attempts":1,"provider_request_count":1,"usage_status":"partial","recovery_attempted":false,"usage":{"` + field + `":` + tc.value + `}}`
+				var d ExecutionDiagnostics
+				err := json.Unmarshal([]byte(raw), &d)
+				if (err == nil) != tc.valid {
+					t.Fatalf("value=%s valid=%v err=%v", tc.value, tc.valid, err)
+				}
+				if !tc.valid {
+					return
+				}
+				encoded, err := json.Marshal(cloneExecutionDiagnostics(&d))
+				if err != nil || !strings.Contains(string(encoded), `"`+field+`":`+tc.value) || strings.Contains(string(encoded), `"cached_input_tokens"`) {
+					t.Fatalf("known zero or exact int64 was lost, or an unknown cache read was invented: %s err=%v", encoded, err)
+				}
+			})
+		}
+	}
+	var unknown ExecutionDiagnostics
+	if json.Unmarshal([]byte(`{"finish_outcome":"completed","attempts":1,"provider_request_count":1,"usage_status":"partial","recovery_attempted":false,"usage":{"cache_hit_ratio":0}}`), &unknown) == nil {
+		t.Fatal("unknown nested diagnostic field accepted")
+	}
+}
+
 func TestUnavailableDiagnosticsAreBoundedAndBlockKnownDispatchRetry(t *testing.T) {
 	d := truncatedDiagnostics()
 	d.FinishOutcome = "unavailable"

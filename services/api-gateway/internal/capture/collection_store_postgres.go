@@ -38,12 +38,12 @@ func collectionSummaryTx(ctx context.Context, q collectionQueryer, tenantID, exa
 		return out, mapNotFound(err)
 	}
 	out.Closed = out.CompletedAt != nil
-	// 冻结名册决定人数；实际页号来自有效页面，不能用文件数或 submission 的缓存页数冒充完整性。
+	// 冻结名册决定人数；没有关联未删除答卷的学生自动显示缺考，历史人工出勤不再影响本轮收卷。
+	// 有卷但身份、页码或质量未完成仍须处理，不能把这些问题当缺考跳过。实际页号来自有效页面。
 	rows, err := q.QueryContext(ctx, `SELECT c.student_id::text,c.student_no_snapshot,c.student_name_snapshot,c.class_name_snapshot,
- COALESCE(a.status,'expected'),COALESCE(a.reason,''),COALESCE(s.n,0),COALESCE(s.id::text,''),COALESCE(s.identity_status,''),COALESCE(s.quality_status,''),
+ COALESCE(s.n,0),COALESCE(s.id::text,''),COALESCE(s.identity_status,''),COALESCE(s.quality_status,''),
  COALESCE(p.batch_id,''),COALESCE(p.pages,0),COALESCE(p.ready,0),COALESCE(p.bad,0),COALESCE(p.numbers,0),COALESCE(p.min_no,0),COALESCE(p.max_no,0),COALESCE(p.group_bad,false)
  FROM exam_candidate_snapshot c
- LEFT JOIN exam_student_attendance a ON a.tenant_id=c.tenant_id AND a.exam_id=c.exam_id AND a.student_id=c.student_id AND a.deleted_at IS NULL
  LEFT JOIN LATERAL(SELECT x.*,count(*) OVER() n FROM submission x WHERE x.tenant_id=c.tenant_id AND x.exam_id=c.exam_id AND x.student_id=c.student_id AND x.deleted_at IS NULL ORDER BY x.created_at DESC,x.id LIMIT 1)s ON true
  LEFT JOIN LATERAL(SELECT min(cp.capture_batch_id::text) batch_id,count(*) pages,count(*) FILTER(WHERE cp.status='ready') ready,
  count(*) FILTER(WHERE cp.status IN ('needs_review','quality_rejected','failed')) bad,count(DISTINCT cp.assigned_page_no) numbers,min(cp.assigned_page_no) min_no,max(cp.assigned_page_no) max_no,
@@ -57,15 +57,15 @@ func collectionSummaryTx(ctx context.Context, q collectionQueryer, tenantID, exa
 	}
 	for rows.Next() {
 		var x CollectionEntry
-		var attendance, identity, quality string
+		var identity, quality string
 		var n, ready, bad, numbers, minNo, maxNo int
 		var groupBad bool
-		if err = rows.Scan(&x.StudentID, &x.StudentNo, &x.StudentName, &x.ClassName, &attendance, &x.Reason, &n, &x.SubmissionID, &identity, &quality, &x.BatchID, &x.ActualPages, &ready, &bad, &numbers, &minNo, &maxNo, &groupBad); err != nil {
+		if err = rows.Scan(&x.StudentID, &x.StudentNo, &x.StudentName, &x.ClassName, &n, &x.SubmissionID, &identity, &quality, &x.BatchID, &x.ActualPages, &ready, &bad, &numbers, &minNo, &maxNo, &groupBad); err != nil {
 			rows.Close()
 			return out, err
 		}
 		x.ExpectedPages = out.PagesPerStudent
-		x.Status, x.Code = classifyCollectionEntry(attendance, n, identity, quality, x.ActualPages, x.ExpectedPages, ready, bad, numbers, minNo, maxNo, groupBad)
+		x.Status, x.Code = classifyCollectionEntry(n, identity, quality, x.ActualPages, x.ExpectedPages, ready, bad, numbers, minNo, maxNo, groupBad)
 		out.Entries = append(out.Entries, x)
 	}
 	err = rows.Err()
@@ -102,14 +102,10 @@ func collectionSummaryTx(ctx context.Context, q collectionQueryer, tenantID, exa
 	return out, nil
 }
 
-func classifyCollectionEntry(attendance string, n int, identity, quality string, pages, expected, ready, bad, numbers, minNo, maxNo int, groupBad bool) (string, string) {
+func classifyCollectionEntry(n int, identity, quality string, pages, expected, ready, bad, numbers, minNo, maxNo int, groupBad bool) (string, string) {
 	switch {
-	case attendance == "absent" && n == 0:
-		return "absent", "absent"
-	case attendance == "absent":
-		return "needs_attention", "absent_has_submission"
 	case n == 0:
-		return "missing", "missing_submission"
+		return "absent", "absent"
 	case n > 1:
 		return "needs_attention", "duplicate_submission"
 	case identity != "matched":
@@ -146,7 +142,7 @@ func (s *PostgresStore) CompleteCollection(ctx context.Context, tenantID, examID
 		return CollectionSummary{}, err
 	}
 	defer tx.Rollback()
-	// 出勤和批次创建先锁考试；结束也采用相同顺序，避免与它们互相等待。
+	// 批次创建先锁考试；结束也采用相同顺序，避免与导入命令互相等待。
 	var lockedExam string
 	if err = tx.QueryRowContext(ctx, `SELECT id::text FROM exam WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE NOWAIT`, tenantID, examID).Scan(&lockedExam); err != nil {
 		return CollectionSummary{}, ErrConflict

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "rules": [
+    { "id": "ignore_rubric_cn", "gateway_signal": "override_rubric", "pattern": "(?:忽略|无视|覆盖|不要按)(?:之前|以上|所有|前面|这些|你的|的)*(?:评分标准|评分规则|评分|指令)|(?:忽略|无视|不要按)(?:之前|以上|所有|前面|这些|你的)(?:之前|以上|所有|前面|这些|你的|的)*(?:要求|规则|标准)" },
+    { "id": "full_score_cn", "gateway_signal": "force_full_score", "pattern": "(?:给我|直接给|应该给)(?:满分|[0-9]+(?:\\.[0-9]+)?分)" },
+    { "id": "role_override_cn", "gateway_signal": "role_override", "pattern": "你现在是(?:一名|一个|一位|位)?(?:老师|教师|系统|管理员|开发者)" },
+    { "id": "schema_bypass_cn", "gateway_signal": "schema_bypass", "pattern": "不要告诉老师", "ordered_terms": ["输出", "schema", "之外"] },
+    { "id": "ignore_rubric_en", "gateway_signal": "override_rubric", "pattern": "(?:ignore|disregard|forget|override)(?:all|previous|the|your|above|earlier|these)*(?:scoringrules|gradingcriteria|instructions|rubric)|(?:ignore|disregard|forget|override)(?:the)?(?:all|previous|your|above|earlier|these)(?:all|previous|the|your|above|earlier|these)*rules" },
+    { "id": "full_score_en", "gateway_signal": "force_full_score", "pattern": "(?:give(?:me)?|assign(?:me)?|award(?:me)?)(?:full(?:marks|score|credit))|(?:give|assign|award)(?:me|thisanswer|myanswer|thisresponse|myresponse)[0-9]+(?:\\.[0-9]+)?(?:points|marks)" },
+    { "id": "role_override_en", "gateway_signal": "role_override", "pattern": "youarenow(?:a|an|the)?(?:teacher|system|admin|developer)" },
+    { "id": "system_prompt_extraction", "gateway_signal": "system_prompt_extraction", "pattern": "systemprompt|developermessage|showyourinstructions|系统提示词|开发者指令|显示你的指令" }
+  ]
+}

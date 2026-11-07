@@ -5,9 +5,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
-	"encoding/base64"
 	"errors"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -71,7 +73,8 @@ func e2eAssertHiddenSeedAuthenticatedWorkflow(t *testing.T, ctx context.Context,
 	graderID := e2eLookupUserID(t, db, "demo", "grader")
 	graderToken := e2eLoginWithTenant(t, router, "demo", "grader", "ChangeMe123!")
 	q := f.QuestionIDs["single_choice"]
-	cropBytes := e2eMaterializeSeedReferenceImage(t, ctx, fixture, q)
+	calibrationBytes := e2eMaterializeSeedReferenceImage(t, ctx, fixture, answers[0], q, goldpaper.PoolCalibration)
+	blindBytes := e2eMaterializeSeedReferenceImage(t, ctx, fixture, answers[1], q, goldpaper.PoolBlind)
 	// 阅卷者的考试范围来自真实任务分派；先分派普通任务，再进行资格校准，不能把只有角色而无任务的账号当成已获考试授权。
 	var segmentID string
 	if err := db.QueryRowContext(ctx, `SELECT id::text FROM answer_segment WHERE tenant_id=$1 AND submission_id=$2 AND question_id=$3`, f.TenantID, answers[0].submission, q).Scan(&segmentID); err != nil {
@@ -87,6 +90,14 @@ func e2eAssertHiddenSeedAuthenticatedWorkflow(t *testing.T, ctx context.Context,
 	if err != nil {
 		t.Fatal(err)
 	}
+	blindGold, err := goldStore.Nominate(ctx, f.TenantID, f.ExamID, q, f.AdminID, goldpaper.NominateInput{SubmissionID: answers[1].submission, ReferenceScore: 0, Explanation: "verified blind reference", SourceGradeIDs: []string{answers[1].grade}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	blindGold, err = goldStore.Approve(ctx, f.TenantID, blindGold.ID, graderID, 1)
+	if err != nil || gold.QualityPool != goldpaper.PoolCalibration || blindGold.QualityPool != goldpaper.PoolBlind {
+		t.Fatalf("separate quality pools: calibration=%s blind=%s err=%v", gold.QualityPool, blindGold.QualityPool, err)
+	}
 	calib := calibration.NewService(calibration.NewPostgresStore(db), goldStore)
 	_, err = calib.PutPolicy(ctx, f.TenantID, f.ExamID, q, calibration.PutPolicyInput{ArchetypeCode: gold.ArchetypeCode, MaxScore: 1, MinimumSamples: 1, MinimumExactAgreement: 1, MinimumWithinOneAgreement: 1, SevereErrorThreshold: 1, QualificationValidityDays: 30})
 	if err != nil {
@@ -96,7 +107,7 @@ func e2eAssertHiddenSeedAuthenticatedWorkflow(t *testing.T, ctx context.Context,
 	if err != nil {
 		t.Fatal(err)
 	}
-	e2eAssertSeedReferenceImageResponse(t, router, session.Samples[0].AnswerImageURL, graderToken, http.StatusOK, cropBytes)
+	e2eAssertSeedReferenceImageResponse(t, router, session.Samples[0].AnswerImageURL, graderToken, http.StatusOK, calibrationBytes)
 	_, _, qualification, err := calib.SubmitAttempt(ctx, f.TenantID, session.ID, calibration.SubmitAttemptInput{GoldPaperID: gold.ID, SubmittedScore: 0})
 	if err != nil || qualification == nil {
 		t.Fatalf("qualification: %+v %v", qualification, err)
@@ -115,16 +126,16 @@ func e2eAssertHiddenSeedAuthenticatedWorkflow(t *testing.T, ctx context.Context,
 	}
 	e2eGetJSON(t, router, "/api/v1/review-tasks/"+id+"/context", graderToken, http.StatusOK)
 	e2eGetJSON(t, router, "/api/v1/review-tasks/"+id+"/context", adminToken, http.StatusForbidden)
-	e2eAssertSeedReferenceImageResponse(t, router, "/api/v1/review-tasks/"+id+"/segment-image", graderToken, http.StatusOK, cropBytes)
+	e2eAssertSeedReferenceImageResponse(t, router, "/api/v1/review-tasks/"+id+"/segment-image", graderToken, http.StatusOK, blindBytes)
 	e2eAssertSeedReferenceImageResponse(t, router, "/api/v1/review-tasks/"+id+"/segment-image", adminToken, http.StatusForbidden, nil)
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/review-tasks/"+id+"/submit", graderToken, `{"score":0,"expected_revision":1,"rubric_selections":[]}`, http.StatusCreated)
 
 }
 
 // 通用修复夹具只预置评分；Gold 提名另须完成的配准、单题裁图及真实对象字节，不能用裸 segment 绕过冻结身份校验。
-func e2eMaterializeSeedReferenceImage(t *testing.T, ctx context.Context, fixture reviewRepairRecoveryFixture, questionID string) []byte {
+func e2eMaterializeSeedReferenceImage(t *testing.T, ctx context.Context, fixture reviewRepairRecoveryFixture, answer repairAnswer, questionID, pool string) []byte {
 	t.Helper()
-	db, f, answer := fixture.DB, fixture.Acceptance, fixture.Answers[0]
+	db, f := fixture.DB, fixture.Acceptance
 	fileStore := files.NewPostgresStore(db)
 	source, err := fileStore.Get(ctx, f.TenantID, f.PaperFileAssetID)
 	if err != nil {
@@ -147,10 +158,7 @@ VALUES($1,$2,$3,1,$4,$5,1,1,$6,'ready') RETURNING id::text`, f.TenantID, batchID
 VALUES($1,$2,$3,$4,$5,$6,$7,1,'completed','matched',1,'feature_homography','seed-reference-fixture-v1',now()) RETURNING id::text`, f.TenantID, pageID, answer.page, source.ID, source.HashSHA256, f.TemplateID, f.TemplateContentHash).Scan(&registrationID); err != nil {
 		t.Fatal(err)
 	}
-	cropBytes, err := base64.StdEncoding.DecodeString(story061ActiveCropPNGBase64)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cropBytes := e2eSyntheticQualityPoolPNG(t, pool)
 	hash := fmt.Sprintf("%x", sha256.Sum256(cropBytes))
 	crop, err := fileStore.Create(ctx, files.CreateAssetInput{TenantID: f.TenantID, SchoolID: f.SchoolID, ExamID: f.ExamID, SubmissionID: answer.submission,
 		OwnerType: "answer_segment_crop", OwnerID: registrationID, OriginalName: "seed-reference.png", ContentType: "image/png", SizeBytes: int64(len(cropBytes)), HashSHA256: hash,
@@ -168,6 +176,29 @@ VALUES($1,$2,$3,$4,$5,$6,$7,1,'completed','matched',1,'feature_homography','seed
 		t.Fatal(err)
 	}
 	return cropBytes
+}
+
+// 两个用途使用不同的真实 PNG 字节；按生产的稳定哈希分池准备合成素材，不能让同一图像兼用两池。
+func e2eSyntheticQualityPoolPNG(t *testing.T, pool string) []byte {
+	t.Helper()
+	for variant := 0; variant < 256; variant++ {
+		img := image.NewNRGBA(image.Rect(0, 0, 64, 64))
+		for y := 0; y < 64; y++ {
+			for x := 0; x < 64; x++ {
+				img.SetNRGBA(x, y, color.NRGBA{R: byte(variant), G: byte(x), B: byte(y), A: 255})
+			}
+		}
+		var encoded bytes.Buffer
+		if err := png.Encode(&encoded, img); err != nil {
+			t.Fatal(err)
+		}
+		hash := sha256.Sum256(encoded.Bytes())
+		if (hash[0]%2 == 0) == (pool == goldpaper.PoolCalibration) {
+			return encoded.Bytes()
+		}
+	}
+	t.Fatalf("no synthetic PNG for pool %s", pool)
+	return nil
 }
 
 func e2eAssertSeedReferenceImageResponse(t *testing.T, router http.Handler, path, token string, wantStatus int, wantBytes []byte) {

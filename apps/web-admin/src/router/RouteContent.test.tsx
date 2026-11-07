@@ -145,7 +145,7 @@ describe("route content loading continuity", () => {
     return { Page, finish: (failed = false) => finish(failed), refresh: () => refresh(), mounted };
   }
 
-  it("模块完成后继续保留旧画面，等首屏数据完成再展示同一挂载节点", async () => {
+  it("模块加载后立即展示目标页的数据等待，不再把慢请求藏在旧页面后", async () => {
     const data = dataPage("学生数据");
     let finishModule!: () => void;
     const Next = lazy(() => new Promise<{ default: ComponentType }>(resolve => {
@@ -153,11 +153,15 @@ describe("route content loading continuity", () => {
     }));
     await render(<section>原页面</section>, "/old");
     await render(<Next />, "/next");
+    const candidate = host.querySelector(".route-content-stage-pending");
+    expect(visibleText()).toBe("原页面");
     await act(async () => finishModule());
     await settle();
-    expect(visibleText()).toBe("原页面");
-    expect(host.querySelector(".route-content-stage-pending")?.textContent).toContain("读取学生数据");
-    const candidate = host.querySelector(".route-content-stage-pending");
+    expect(visibleText()).toContain("读取学生数据");
+    expect(host.querySelector(".route-content-stage")).toBe(candidate);
+    expect(host.querySelector(".route-content-stage-pending")).toBeNull();
+    expect(host.querySelector(".route-content-stage")?.hasAttribute("inert")).toBe(false);
+    expect(host.querySelector("output")).toBeNull();
     await act(async () => data.finish());
     await settle();
     expect(visibleText()).toBe("学生数据");
@@ -169,7 +173,7 @@ describe("route content loading continuity", () => {
     expect(host.textContent).not.toContain("原页面");
   });
 
-  it("父加载状态交给子组件及effect发起的加载时不会提前切页", async () => {
+  it("目标模块的父子取数及effect取数都在当前页显示加载状态", async () => {
     const child = dataPage("子数据");
     let finishParent!: () => void;
     function Parent() {
@@ -179,9 +183,10 @@ describe("route content loading continuity", () => {
     }
     await render(<section>原页面</section>, "/old");
     await render(<Parent />, "/parent");
+    expect(visibleText()).toContain("父数据");
     await act(async () => finishParent());
     await settle();
-    expect(visibleText()).toBe("原页面");
+    expect(visibleText()).toContain("读取子数据");
     await act(async () => child.finish());
     await settle();
     expect(visibleText()).toBe("子数据");
@@ -192,11 +197,12 @@ describe("route content loading continuity", () => {
       return loading ? <LoadingState /> : <section>取数前一帧</section>;
     }
     await render(<EffectLoader />, "/effect");
-    expect(visibleText()).toBe("子数据");
+    expect(visibleText()).toContain("加载中");
+    expect(host.textContent).not.toContain("子数据");
   });
 
-  it("加载期间返回旧栏目保留草稿，之后晚到结果不影响显示", async () => {
-    const next = dataPage("下一页");
+  it("模块加载期间返回旧栏目保留草稿，之后晚到模块不影响显示", async () => {
+    const next = controlledPage("下一页");
     await render(<section>原页面<input defaultValue="草稿" /></section>, "/old");
     const input = host.querySelector("input")!;
     input.value = "编辑中";
@@ -205,21 +211,22 @@ describe("route content loading continuity", () => {
     expect(host.querySelector("input")).toBe(input);
     expect(input.value).toBe("编辑中");
     expect(host.querySelectorAll(".route-content-stage")).toHaveLength(1);
-    await act(async () => next.finish());
+    await act(async () => next.resolve());
     await settle();
     expect(visibleText()).toBe("原页面");
   });
 
-  it("首屏请求失败后显示错误，连续导航只保留当前候选页", async () => {
+  it("连续导航即刻显示最新页面等待，旧请求返回不能覆盖当前页面错误", async () => {
     const second = dataPage("第二页");
     const third = dataPage("第三页");
     await render(<section>原页面</section>, "/old");
     await render(<second.Page />, "/second");
     await render(<third.Page />, "/third");
-    expect(host.querySelectorAll(".route-content-stage")).toHaveLength(2);
+    expect(host.querySelectorAll(".route-content-stage")).toHaveLength(1);
+    expect(visibleText()).toContain("读取第三页");
     await act(async () => second.finish());
     await settle();
-    expect(visibleText()).toBe("原页面");
+    expect(visibleText()).toContain("读取第三页");
     await act(async () => third.finish(true));
     await settle();
     expect(visibleText()).toBe("加载失败");
@@ -242,33 +249,38 @@ describe("route content loading continuity", () => {
     expect(mounted).toHaveBeenCalledTimes(1);
   });
 
-  it("共用考试外壳但子栏目不同仍等待新栏目的数据", async () => {
+  it("共用考试外壳切换子栏目时立即显示新栏目的加载状态", async () => {
     const data = dataPage("新栏目");
     function Workspace({ next = false }: { next?: boolean }) {
       return next ? <data.Page /> : <section>旧栏目</section>;
     }
     await render(<Workspace />, "/exams/1/students");
     await render(<Workspace next />, "/exams/1/settings");
-    expect(visibleText()).toBe("旧栏目");
+    expect(visibleText()).toContain("读取新栏目");
+    expect(host.textContent).not.toContain("旧栏目");
     await act(async () => data.finish());
     await settle();
     expect(visibleText()).toBe("新栏目");
   });
 
-  it("StrictMode重复挂载清理不会漏计加载，隐藏候选页不激活浮层", async () => {
-    let finish!: () => void;
+  it("StrictMode下模块尚未展示不激活浮层，展示后不再等待业务数据", async () => {
+    let finishModule!: (module: { default: ComponentType }) => void;
+    const visibleStates = vi.fn();
     function Candidate() {
-      const [loading, setLoading] = useState(true);
-      finish = () => setLoading(false);
-      usePageLoading(loading);
-      return <section>{usePageVisible() ? "浮层可见" : "候选隐藏"}</section>;
+      const visible = usePageVisible();
+      usePageLoading(true);
+      useEffect(() => { visibleStates(visible); }, [visible]);
+      return <section>{visible ? "浮层可见" : "候选隐藏"}</section>;
     }
+    const Next = lazy(() => new Promise<{ default: ComponentType }>(resolve => { finishModule = resolve; }));
     await render(<section>原页面</section>, "/old");
-    await render(<StrictMode><Candidate /></StrictMode>, "/next");
+    await render(<StrictMode><Next /></StrictMode>, "/next");
     expect(visibleText()).toBe("原页面");
-    expect(host.querySelector(".route-content-stage-pending")?.textContent).toBe("候选隐藏");
-    await act(async () => finish());
+    expect(visibleStates).not.toHaveBeenCalled();
+    await act(async () => finishModule({ default: Candidate }));
     await settle();
+    expect(visibleStates).toHaveBeenCalledWith(false);
+    expect(visibleStates).toHaveBeenLastCalledWith(true);
     expect(visibleText()).toBe("浮层可见");
   });
 

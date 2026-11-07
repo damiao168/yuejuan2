@@ -38,7 +38,7 @@ func TestStory060RosterReconciliationAndAbsenceE2EWithPostgresTestDatabase(t *te
 	for index, name := range []string{"Roster Graded", "Roster Absent One", "Roster Absent Two"} {
 		studentNo := fmt.Sprintf("S060-%s-%d", suffix, index+1)
 		student := e2ePostJSON(t, router, http.MethodPost, "/api/v1/students", adminToken,
-			`{"school_id":"`+schoolID+`","class_id":"`+classID+`","student_no":"`+studentNo+`","name":"`+name+`"}`,
+			`{"school_id":"`+schoolID+`","class_id":"`+classID+`","student_no":"`+studentNo+`","name":"`+name+`","password":"SyntheticStudent123!","password_confirm":"SyntheticStudent123!"}`,
 			http.StatusCreated)["student"].(map[string]any)
 		studentIDs = append(studentIDs, e2eString(t, student, "id"))
 	}
@@ -69,6 +69,25 @@ VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, 88, 100, 'confirmed', false,
 `, tenantID, examID, gradedSubmissionID, studentIDs[0], "S060-GRADED-"+suffix, adminID); err != nil {
 		t.Fatalf("seed confirmed grade: %v", err)
 	}
+	// 名单场景先具备与总分一致的逐题终分；仅伪造 submission_grade 会被发布完整性检查拒绝。
+	finalFileID := e2eUploadSyntheticPDF(t, router, adminToken, "story060-roster-final-"+suffix+".pdf", "%PDF-1.4\n% synthetic roster final evidence\n")
+	var finalQuestionID, finalPageID, finalSegmentID string
+	if err := db.QueryRow(`INSERT INTO question(tenant_id,exam_id,question_no,question_type,score,sort_order,status)
+VALUES($1::uuid,$2::uuid,'Q1','short_answer',100,1,'active') RETURNING id::text`, tenantID, examID).Scan(&finalQuestionID); err != nil {
+		t.Fatalf("seed roster final question: %v", err)
+	}
+	if err := db.QueryRow(`INSERT INTO submission_page(tenant_id,submission_id,file_asset_id,page_no,status)
+VALUES($1::uuid,$2::uuid,$3::uuid,1,'accepted') RETURNING id::text`, tenantID, gradedSubmissionID, finalFileID).Scan(&finalPageID); err != nil {
+		t.Fatalf("seed roster final page: %v", err)
+	}
+	if err := db.QueryRow(`INSERT INTO answer_segment(tenant_id,submission_id,submission_page_id,question_id,question_no,bbox,source,status)
+VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,'Q1','{}','manual','accepted') RETURNING id::text`, tenantID, gradedSubmissionID, finalPageID, finalQuestionID).Scan(&finalSegmentID); err != nil {
+		t.Fatalf("seed roster final segment: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO final_grade(tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,score,max_score,source,status,created_by)
+VALUES($1::uuid,$2::uuid,$3::uuid,'Q1',$4::uuid,$5::uuid,$6,88,100,'single_review','confirmed',$7::uuid)`, tenantID, examID, finalQuestionID, finalSegmentID, gradedSubmissionID, "S060-GRADED-"+suffix, adminID); err != nil {
+		t.Fatalf("seed roster question final grade: %v", err)
+	}
 	if _, err := db.Exec(`
 UPDATE student
 SET class_id=$3::uuid, updated_at=now()
@@ -86,20 +105,19 @@ WHERE tenant_id=$1::uuid AND student_id=$2::uuid AND status='enrolled' AND delet
 
 	roster := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/roster", adminToken, http.StatusOK)["roster"].(map[string]any)
 	summary := roster["summary"].(map[string]any)
-	if e2eFloat(t, summary, "expected") != 3 || e2eFloat(t, summary, "received") != 2 || e2eFloat(t, summary, "unidentified") != 1 {
+	if e2eFloat(t, summary, "expected") != 3 || e2eFloat(t, summary, "received") != 2 || e2eFloat(t, summary, "unidentified") != 1 || e2eFloat(t, summary, "absent") != 2 || e2eFloat(t, summary, "unresolved") != 1 {
 		t.Fatalf("initial roster summary mismatch: %#v", summary)
 	}
 	quality := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=publish", adminToken, http.StatusOK)
-	e2eAssertStory060QualityIssue(t, quality, "missing_submission_unresolved", 2)
+	if story060HasQualityIssue(quality, "missing_submission_unresolved") {
+		t.Fatalf("students without linked submissions must derive absence without a manual decision: %#v", quality)
+	}
 	e2eAssertStory060QualityIssue(t, quality, "unidentified_submission", 1)
 
-	for _, studentID := range studentIDs[1:] {
-		e2ePostJSON(t, router, http.MethodPut, "/api/v1/exams/"+examID+"/roster/"+studentID+"/attendance", adminToken,
-			`{"status":"absent","reason":"STORY-060 verified absence"}`, http.StatusOK)
-	}
+	e2eAssertStory060AttendanceRetired(t, db, router, adminToken, tenantID, examID, studentIDs[1:])
 	quality = e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=publish", adminToken, http.StatusOK)
 	if story060HasQualityIssue(quality, "missing_submission_unresolved") {
-		t.Fatalf("explicit absence should resolve missing submissions: %#v", quality)
+		t.Fatalf("automatic absence must remain independent of a retired write request: %#v", quality)
 	}
 	e2eAssertStory060QualityIssue(t, quality, "unidentified_submission", 1)
 	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/publish", adminToken, `{"reason":"unknown sheet still unresolved"}`, http.StatusConflict)
@@ -113,7 +131,7 @@ WHERE tenant_id=$1::uuid AND student_id=$2::uuid AND status='enrolled' AND delet
 	}
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/publish", adminToken, `{"reason":"roster fully reconciled"}`, http.StatusOK)
 	e2eExpectStatus(t, router, http.MethodPut, "/api/v1/exams/"+examID+"/roster/"+studentIDs[1]+"/attendance", adminToken,
-		`{"status":"expected","reason":"too late after publish"}`, http.StatusConflict)
+		`{"status":"expected","reason":"retired after publish"}`, http.StatusNotFound)
 
 	var attendanceAuditCount int
 	if err := db.QueryRow(`
@@ -122,8 +140,8 @@ WHERE tenant_id=$1::uuid AND action='score.roster_attendance_updated' AND target
 `, tenantID, studentIDs[1], studentIDs[2]).Scan(&attendanceAuditCount); err != nil {
 		t.Fatalf("query attendance audit: %v", err)
 	}
-	if attendanceAuditCount != 2 {
-		t.Fatalf("expected two attendance audit events, got %d", attendanceAuditCount)
+	if attendanceAuditCount != 0 {
+		t.Fatalf("retired attendance request appended audit events: %d", attendanceAuditCount)
 	}
 }
 
@@ -265,6 +283,30 @@ FROM inserted_submissions
 `, tenantID, classID, suffix, examID, adminID); err != nil {
 		t.Fatalf("seed 497 roster submissions: %v", err)
 	}
+	// 497 份已汇总答卷各有一条对应终分，保留原 500 人名单与三人缺考的性能、发布断言。
+	finalFileID := e2eUploadSyntheticPDF(t, router, adminToken, "story060-scale-final-"+suffix+".pdf", "%PDF-1.4\n% synthetic scale roster final evidence\n")
+	var finalQuestionID string
+	if err := db.QueryRow(`INSERT INTO question(tenant_id,exam_id,question_no,question_type,score,sort_order,status)
+VALUES($1::uuid,$2::uuid,'Q1','short_answer',100,1,'active') RETURNING id::text`, tenantID, examID).Scan(&finalQuestionID); err != nil {
+		t.Fatalf("seed scale roster final question: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO submission_page(tenant_id,submission_id,file_asset_id,page_no,status)
+SELECT tenant_id,submission_id,$3::uuid,1,'accepted' FROM submission_grade
+WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND deleted_at IS NULL`, tenantID, examID, finalFileID); err != nil {
+		t.Fatalf("seed scale roster final pages: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO answer_segment(tenant_id,submission_id,submission_page_id,question_id,question_no,bbox,source,status)
+SELECT page.tenant_id,page.submission_id,page.id,$3::uuid,'Q1','{}','manual','accepted'
+FROM submission_page page JOIN submission_grade grade ON grade.tenant_id=page.tenant_id AND grade.submission_id=page.submission_id
+WHERE grade.tenant_id=$1::uuid AND grade.exam_id=$2::uuid AND grade.deleted_at IS NULL`, tenantID, examID, finalQuestionID); err != nil {
+		t.Fatalf("seed scale roster final segments: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO final_grade(tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,score,max_score,source,status,created_by)
+SELECT grade.tenant_id,grade.exam_id,segment.question_id,'Q1',segment.id,grade.submission_id,grade.anonymous_code,grade.total_score,grade.max_score,'single_review','confirmed',$3::uuid
+FROM submission_grade grade JOIN answer_segment segment ON segment.tenant_id=grade.tenant_id AND segment.submission_id=grade.submission_id
+WHERE grade.tenant_id=$1::uuid AND grade.exam_id=$2::uuid AND grade.deleted_at IS NULL`, tenantID, examID, adminID); err != nil {
+		t.Fatalf("seed scale roster question final grades: %v", err)
+	}
 
 	e2eAssertStory060RosterReadBudget(t, db, router, adminToken, tenantID, examID)
 	e2eResolveStory060ScaleAbsences(t, db, router, adminToken, story060ScaleRosterScope{TenantID: tenantID, ClassID: classID, ExamID: examID, Suffix: suffix})
@@ -291,7 +333,7 @@ func e2eAssertStory060RosterReadBudget(t *testing.T, db *sql.DB, router http.Han
 	roster := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/roster", adminToken, http.StatusOK)["roster"].(map[string]any)
 	summary := roster["summary"].(map[string]any)
 	if e2eFloat(t, summary, "expected") != 500 || e2eFloat(t, summary, "received") != 497 ||
-		e2eFloat(t, summary, "graded") != 497 || e2eFloat(t, summary, "unresolved") != 3 {
+		e2eFloat(t, summary, "graded") != 497 || e2eFloat(t, summary, "absent") != 3 || e2eFloat(t, summary, "unresolved") != 0 {
 		t.Fatalf("500-student roster summary mismatch: %#v", summary)
 	}
 	httpElapsed := time.Since(started)
@@ -300,7 +342,9 @@ func e2eAssertStory060RosterReadBudget(t *testing.T, db *sql.DB, router http.Han
 		t.Fatalf("500-student roster HTTP read exceeded performance baseline: %s > %s", httpElapsed, rosterReadBudget)
 	}
 	quality := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=publish", adminToken, http.StatusOK)
-	e2eAssertStory060QualityIssue(t, quality, "missing_submission_unresolved", 3)
+	if story060HasQualityIssue(quality, "missing_submission_unresolved") {
+		t.Fatalf("three students without submissions must automatically derive absence: %#v", quality)
+	}
 
 }
 
@@ -308,7 +352,7 @@ type story060ScaleRosterScope struct {
 	TenantID, ClassID, ExamID, Suffix string
 }
 
-// 原来缺失的三份答卷必须逐人明确缺考，之后才允许质量通过及发布。
+// 没有关联答卷的三名学生自动缺考；退役写接口不能改变结果或新增记录、审计。
 func e2eResolveStory060ScaleAbsences(t *testing.T, db *sql.DB, router http.Handler, adminToken string, scope story060ScaleRosterScope) {
 	t.Helper()
 	tenantID, classID, examID, suffix := scope.TenantID, scope.ClassID, scope.ExamID, scope.Suffix
@@ -332,20 +376,38 @@ ORDER BY student_no DESC LIMIT 3
 	if len(missingStudentIDs) != 3 {
 		t.Fatalf("expected three missing students, got %#v", missingStudentIDs)
 	}
-	for _, studentID := range missingStudentIDs {
-		e2ePostJSON(t, router, http.MethodPut, "/api/v1/exams/"+examID+"/roster/"+studentID+"/attendance", adminToken,
-			`{"status":"absent","reason":"verified absent in 500-student acceptance"}`, http.StatusOK)
-	}
+	e2eAssertStory060AttendanceRetired(t, db, router, adminToken, tenantID, examID, missingStudentIDs)
 	roster := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/roster", adminToken, http.StatusOK)["roster"].(map[string]any)
 	summary := roster["summary"].(map[string]any)
 	if e2eFloat(t, summary, "absent") != 3 || e2eFloat(t, summary, "unresolved") != 0 {
-		t.Fatalf("explicit absence should reconcile the three missing students: %#v", summary)
+		t.Fatalf("automatic absence must reconcile the three students without linked submissions: %#v", summary)
 	}
 	quality := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=publish", adminToken, http.StatusOK)
 	if quality["can_publish"] != true {
-		t.Fatalf("500-student roster should pass after three explicit absences: %#v", quality)
+		t.Fatalf("500-student roster should pass with three derived absences: %#v", quality)
 	}
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/publish", adminToken, `{"reason":"500-student roster reconciled"}`, http.StatusOK)
+}
+
+// 在独立测试库计数前后比较，既验证路由退役，也验证无出勤写入和成功审计副作用。
+func e2eAssertStory060AttendanceRetired(t *testing.T, db *sql.DB, router http.Handler, token, tenantID, examID string, students []string) {
+	t.Helper()
+	snapshot := func() (int, int) {
+		t.Helper()
+		var attendance, audits int
+		if err := db.QueryRow(`SELECT (SELECT count(*) FROM exam_student_attendance WHERE tenant_id=$1::uuid AND exam_id=$2::uuid),(SELECT count(*) FROM audit_log WHERE tenant_id=$1::uuid AND action='score.roster_attendance_updated')`, tenantID, examID).Scan(&attendance, &audits); err != nil {
+			t.Fatal(err)
+		}
+		return attendance, audits
+	}
+	beforeRows, beforeAudits := snapshot()
+	for _, studentID := range students {
+		e2ePostJSON(t, router, http.MethodPut, "/api/v1/exams/"+examID+"/roster/"+studentID+"/attendance", token, `{"status":"absent","reason":"retired attendance write must have no side effects"}`, http.StatusNotFound)
+	}
+	afterRows, afterAudits := snapshot()
+	if beforeRows != afterRows || beforeAudits != afterAudits {
+		t.Fatalf("retired attendance writes changed rows %d/%d or audit %d/%d", beforeRows, afterRows, beforeAudits, afterAudits)
+	}
 }
 
 func e2eAssertStory060QualityIssue(t *testing.T, response map[string]any, code string, count float64) {

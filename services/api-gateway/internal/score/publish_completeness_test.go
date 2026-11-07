@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestMemoryPublishBlocksMatchedSubmissionWithoutAnyGrades(t *testing.T) {
+func TestMemoryConfirmationAndPublishBlockMatchedSubmissionWithoutAnyGrades(t *testing.T) {
 	store := seededScoreStore()
 	for _, student := range []string{"student-1", "student-2"} {
 		store.AddRosterStudent(RosterSeed{ExamID: "exam-1", StudentID: student})
@@ -14,8 +14,12 @@ func TestMemoryPublishBlocksMatchedSubmissionWithoutAnyGrades(t *testing.T) {
 	if _, err := store.FinalizeExam(t.Context(), tenantID, "exam-1", "manager"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.ConfirmGrades(t.Context(), tenantID, "exam-1", "manager", ConfirmInput{Reason: "synthetic"}); err != nil {
-		t.Fatal(err)
+	if _, err := store.ConfirmGrades(t.Context(), tenantID, "exam-1", "manager", ConfirmInput{Reason: "synthetic"}); !errors.Is(err, ErrQualityGateFailed) {
+		t.Fatalf("ungraded submission allowed confirmation: %v", err)
+	}
+	grades, err := store.ListExamGrades(t.Context(), tenantID, "exam-1", GradeListFilter{})
+	if err != nil || len(grades.Grades) != 1 || grades.Grades[0].Status != "pending_confirmation" {
+		t.Fatalf("blocked confirmation changed existing grades: %#v %v", grades, err)
 	}
 	result, err := store.PublishGrades(t.Context(), tenantID, "exam-1", "manager", PublishInput{Reason: "synthetic"})
 	if !errors.Is(err, ErrQualityGateFailed) {

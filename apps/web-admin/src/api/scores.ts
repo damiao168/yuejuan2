@@ -55,7 +55,7 @@ export interface QualityReport {
   issues: QualityIssue[];
 }
 
-export type RosterStatus = "graded" | "absent" | "unmatched" | "missing_pages";
+export type RosterStatus = "graded" | "submitted" | "absent" | "unmatched" | "missing_pages";
 
 export interface RosterEntry {
   key: string;
@@ -72,9 +72,6 @@ export interface RosterEntry {
   actual_page_count: number;
   total_score?: number;
   max_score?: number;
-  attendance_reason?: string;
-  marked_by?: string;
-  marked_at?: string;
 }
 
 export interface RosterSummary {
@@ -149,16 +146,6 @@ export async function listExamRoster(examId: string) {
   return apiClient.request<{ roster: RosterReport }>(`/api/v1/exams/${encodeURIComponent(examId)}/roster`);
 }
 
-export async function setExamAttendance(examId: string, studentId: string, status: "expected" | "absent", reason: string) {
-  return apiClient.request<{ roster: RosterReport }>(
-    `/api/v1/exams/${encodeURIComponent(examId)}/roster/${encodeURIComponent(studentId)}/attendance`,
-    {
-      method: "PUT",
-      body: JSON.stringify({ status, reason })
-    }
-  );
-}
-
 export async function confirmExamGrades(examId: string, reason: string) {
   return executeBusinessCommand("score.confirm", examId, { reason }, (commandId, original) => apiClient.request<{ grades: SubmissionGrade[] }>(`/api/v1/exams/${encodeURIComponent(examId)}/confirm-grades`, {
     method: "POST",
@@ -175,6 +162,16 @@ export async function publishExamGrades(examId: string, reason: string) {
   }), result => result as PublishResult);
 }
 
-export async function exportExamGrades(examId: string): Promise<ScoreExport> {
-  return apiClient.requestBlob(`/api/v1/exams/${encodeURIComponent(examId)}/grades/export`);
+export async function exportExamGrades(examId: string, signal?: AbortSignal): Promise<ScoreExport> {
+  return apiClient.requestBlob(`/api/v1/exams/${encodeURIComponent(examId)}/grades/export`, { signal });
+}
+
+/** 内部核验表包含尚未发布的成绩；正式交付使用发布快照导出。 */
+export async function exportExamGradeReport(examId: string, signal?: AbortSignal): Promise<ScoreExport> {
+  return apiClient.requestBlob(`/api/v1/exams/${encodeURIComponent(examId)}/grades/export/report`, { signal });
+}
+
+/** 每科均已发布时，按冻结班级生成教师 Excel；旧 CSV 接口仍保持原格式。 */
+export async function exportPublishedExamGrades(examId: string, signal?: AbortSignal): Promise<ScoreExport> {
+  return apiClient.requestBlob(`/api/v1/exams/${encodeURIComponent(examId)}/score-releases/export?format=xlsx`, { signal });
 }

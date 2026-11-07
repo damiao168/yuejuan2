@@ -11,6 +11,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/opiniondraft"
 	"edugrade-enterprise/services/api-gateway/internal/pagination"
+	"edugrade-enterprise/services/api-gateway/internal/workflowactors"
 )
 
 const (
@@ -276,6 +277,8 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 
 func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, workflowactors.ErrAssigneeIneligible):
+		httpx.Error(w, r, http.StatusForbidden, "appeal_assignee_ineligible", "select an active appeal teacher of this exam subject and school")
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "appeal_resource_not_found", "appeal resource not found")
 	case errors.Is(err, ErrInvalidInput):
@@ -320,7 +323,7 @@ func (h *Handler) auditAction(r *http.Request, action string, targetType string,
 		TargetType: targetType,
 		TargetID:   targetID,
 		Reason:     reason,
-		IPAddress:  r.RemoteAddr,
+		IPAddress:  httpx.ClientIP(r),
 		UserAgent:  r.UserAgent(),
 		RequestID:  logger.RequestID(r.Context()),
 	})

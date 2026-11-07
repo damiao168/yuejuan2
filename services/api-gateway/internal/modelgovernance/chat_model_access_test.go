@@ -2,6 +2,7 @@ package modelgovernance
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -122,6 +123,122 @@ func TestSchoolChatListsApprovedMetadataOnly(t *testing.T) {
 	response = performHandlerRequest(t, schoolAdmin, http.MethodGet, "/api/v1/platform/chat-model-access?tenant_id="+school, "", handler.GetPlatformChatModelAccess)
 	if response.Code != 403 {
 		t.Fatalf("school admin cannot grant models: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestSchoolChatListsOpenedConfigurationsAndAvailability(t *testing.T) {
+	store, school, first, second := documentSelectionFixture()
+	third := uuid.NewString()
+	for index, id := range []string{first, second, third} {
+		config := store.managedConfigs[first]
+		config.ID = id
+		config.IsDefault = id == first
+		config.ModelName = "deepseek-flash"
+		config.ProviderKey = []string{"custom", "custom", "deepseek"}[index]
+		config.LastTestStatus = "success"
+		store.managedConfigs[id] = config
+		store.managedSecrets[id] = "synthetic-document-key"
+	}
+	access, err := store.SaveChatModelAccess(t.Context(), school, "actor", ChatModelAccessInput{ExpectedRevision: "absent", ModelIDs: []string{first, second, third}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 已开放项的普通回复后来失败，连接和结构化检测通过也不能替代；同名配置仍按编号保留。
+	config := store.managedConfigs[third]
+	config.LastTextStatus = "failed"
+	config.LastTextMessage = "synthetic-private-provider-error https://private.example sk-synthetic-secret"
+	config.BaseURL = "https://private.example"
+	store.managedConfigs[third] = config
+	handler := NewHandler(store, nil, nil, testBaseline())
+	user := auth.User{ID: uuid.NewString(), TenantID: school, Roles: []string{"school_admin"}}
+	readModels := func() map[string]ManagedChatModelStatus {
+		t.Helper()
+		response := performHandlerRequest(t, user, http.MethodGet, "/api/v1/ai-chat/model", "", handler.GetManagedChatModel)
+		if response.Code != http.StatusOK {
+			t.Fatalf("metadata response %d", response.Code)
+		}
+		for _, private := range []string{"synthetic-document-key", "synthetic-private-provider-error", "private.example", "sk-synthetic-secret", "base_url", "last_text_message"} {
+			if strings.Contains(response.Body.String(), private) {
+				t.Fatalf("model metadata exposed private field %q", private)
+			}
+		}
+		var payload struct {
+			Model  ManagedChatModelStatus   `json:"model"`
+			Models []ManagedChatModelStatus `json:"models"`
+		}
+		if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+			t.Fatal(err)
+		}
+		if len(payload.Models) != 3 || payload.Model.ID != first {
+			t.Fatalf("opened configurations or default changed: %+v", payload)
+		}
+		models := map[string]ManagedChatModelStatus{}
+		for _, model := range payload.Models {
+			if _, duplicate := models[model.ID]; duplicate {
+				t.Fatalf("duplicate configuration ID %q", model.ID)
+			}
+			models[model.ID] = model
+		}
+		return models
+	}
+	models := readModels()
+	if !models[first].Available || !models[second].Available || models[third].Available || models[third].Message != "普通回复检测未通过，请联系平台管理员重新检测" {
+		t.Fatalf("expected three opened and two available configurations: %+v", models)
+	}
+	if models[first].ProviderKey != "custom" || models[third].ProviderKey != "deepseek" || models[first].ModelName != models[third].ModelName {
+		t.Fatalf("same-name provider configurations were merged: %+v", models)
+	}
+	if _, err := ResolveChatManagedAPI(t.Context(), store, school, third); !errors.Is(err, ErrManagedConfigUnavailable) {
+		t.Fatalf("unavailable opened configuration remained callable: %v", err)
+	}
+	probe := successfulManagedProbe()
+	probe.ProbeMode = "text"
+	if _, err := store.RecordManagedAPIProbe(t.Context(), school, third, config.UpdatedAt, probe); err != nil {
+		t.Fatal(err)
+	}
+	models = readModels()
+	if !models[third].Available || models[third].Message != "当前模型可用" {
+		t.Fatalf("successful ordinary-reply retest did not restore availability: %+v", models[third])
+	}
+	after, err := store.GetChatModelAccess(t.Context(), school)
+	if err != nil || after.Revision != access.Revision {
+		t.Fatalf("availability change rewrote model authorization: %+v %v", after, err)
+	}
+	if connection, err := ResolveChatManagedAPI(t.Context(), store, school, third); err != nil || connection == nil || connection.Config.ID != third {
+		t.Fatalf("recovered configuration could not be selected: %v", err)
+	}
+}
+
+func TestSchoolChatUnavailableMetadataExplainsQualification(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		change func(*ManagedAPIConfig)
+		want   string
+	}{
+		{name: "disabled", change: func(config *ManagedAPIConfig) { config.Status = "disabled" }, want: "模型已停用，请联系平台管理员"},
+		{name: "missing credential", change: func(config *ManagedAPIConfig) { config.CredentialConfigured = false }, want: "模型未配置密钥，请联系平台管理员"},
+		{name: "ordinary reply failed", change: func(config *ManagedAPIConfig) { config.LastTextStatus = "failed" }, want: "普通回复检测未通过，请联系平台管理员重新检测"},
+		{name: "ordinary reply interrupted", change: func(config *ManagedAPIConfig) { config.LastTextStatus = "temporary_unavailable" }, want: "普通回复检测暂未完成，请联系平台管理员重新检测"},
+		{name: "ordinary reply untested", change: func(config *ManagedAPIConfig) { config.LastTextStatus = "untested" }, want: "普通回复尚未验证，请联系平台管理员检测"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store, school, first, _ := documentSelectionFixture()
+			config := store.managedConfigs[first]
+			test.change(&config)
+			store.managedConfigs[first] = config
+			handler := NewHandler(store, nil, nil, testBaseline())
+			user := auth.User{ID: uuid.NewString(), TenantID: school, Roles: []string{"school_admin"}}
+			response := performHandlerRequest(t, user, http.MethodGet, "/api/v1/ai-chat/model", "", handler.GetManagedChatModel)
+			var payload struct {
+				Models []ManagedChatModelStatus `json:"models"`
+			}
+			if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+				t.Fatal(err)
+			}
+			if response.Code != http.StatusOK || len(payload.Models) != 1 || payload.Models[0].Available || payload.Models[0].Message != test.want {
+				t.Fatalf("unavailable reason: status=%d models=%+v", response.Code, payload.Models)
+			}
+		})
 	}
 }
 

@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient, ApiClientError } from "./client";
 
 export interface AuthUser {
   id: string;
@@ -7,6 +7,7 @@ export interface AuthUser {
   username: string;
   display_name: string;
   status: string;
+  must_change_password?: boolean;
   roles: string[];
   permissions: string[];
   data_scope: Record<string, unknown>;
@@ -137,10 +138,29 @@ export async function getCurrentUser() {
   return apiClient.request<{ user: AuthUser }>("/api/v1/auth/me");
 }
 
+export interface AccountProfile {
+  id: string;
+  username: string;
+  display_name: string;
+  phone_masked: string;
+  employee_no: string;
+  school_id: string;
+  teaching_subjects: string[];
+  roles: string[];
+}
+
+export function getAccountProfile() {
+  return apiClient.request<{ profile: AccountProfile }>("/api/v1/auth/profile");
+}
+
 export async function logout() {
-  return apiClient.request<{ status: string }>("/api/v1/auth/logout", {
-    method: "POST"
-  });
+  try {
+    return await apiClient.request<{ status: string }>("/api/v1/auth/logout", { method: "POST" });
+  } catch (error) {
+    // 过期、已撤销或缺失的会话已无法继续使用；重试退出得到401也算结束，网络失败仍须隔离。
+    if (error instanceof ApiClientError && error.status === 401 && error.code === "unauthenticated") return { status: "logged_out" };
+    throw error;
+  }
 }
 
 export function reauthenticate(password: string) {

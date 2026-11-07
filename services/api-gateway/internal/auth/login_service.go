@@ -300,23 +300,38 @@ func normalizedLoginCommand(command LoginCommand) (LoginCommand, string, string,
 
 func (s *LoginService) authenticatePassword(ctx context.Context, command LoginCommand, tenantCode, identifier string) (UserWithPassword, LoginAttempt, bool, error) {
 	attempt := LoginAttempt{TenantCode: tenantCode, Identifier: identifier, IPAddress: command.IPAddress}
-	// 来源限流先于账号查询；找到账号后才检查账号桶，保留原来的失败优先级。
-	if err := s.checkLoginAttempt(ctx, attempt, PlatformTenantID, "", command); err != nil {
-		return UserWithPassword{}, attempt, false, err
-	}
-
 	user, findErr := s.credentials.FindUserByLogin(ctx, tenantCode, identifier)
 	// 只有明确的凭据不匹配才算认证失败。依赖错误不应污染限流器状态，也不应冒充密码错误。
 	if findErr != nil && !errors.Is(findErr, ErrInvalidCredentials) {
 		return UserWithPassword{}, attempt, false, loginServiceError(LoginFailureServiceUnavailable)
 	}
 	if findErr == nil {
+		// 学校代码和旧租户代码是同一账号的入口别名，账号限流必须共用服务端租户键。
+		attempt.TenantCode = user.TenantCode
 		attempt.AccountID = user.ID
-		if err := s.checkLoginAttempt(ctx, attempt, user.TenantID, user.ID, command); err != nil {
-			return UserWithPassword{}, attempt, false, err
-		}
+		attempt.CredentialVersion = HashToken(user.PasswordHash)
+	}
+	// 先解析稳定账号再选限流桶；不存在账号的来源封禁不能阻止同一出口的正常账号登录。
+	attemptTenantID := user.TenantID
+	if attemptTenantID == "" {
+		attemptTenantID = PlatformTenantID
+	}
+	if err := s.checkLoginAttempt(ctx, attempt, attemptTenantID, user.ID, command); err != nil {
+		return UserWithPassword{}, attempt, false, err
 	}
 
+	// 查到稳定账号身份后再原子预占，别名并发也必须共用同一账号额度。
+	if guard, ok := s.guard.(loginReservationGuard); ok {
+		limit, blocked := guard.Reserve(ctx, &attempt, s.now())
+		if !s.limiterAvailable() {
+			guard.ReleaseReservation(ctx, attempt)
+			return UserWithPassword{}, attempt, false, loginServiceError(LoginFailureLimiterUnavailable)
+		}
+		if blocked {
+			s.recordRateLimited(ctx, user.TenantID, user.ID, limit, command)
+			return UserWithPassword{}, attempt, false, rateLimitedLoginError(limit)
+		}
+	}
 	passwordHash := user.PasswordHash
 	// 账号不存在时也进行密码校验，避免直接跳过哈希计算形成明显的账号枚举时序差异。
 	if errors.Is(findErr, ErrInvalidCredentials) {
@@ -325,6 +340,10 @@ func (s *LoginService) authenticatePassword(ctx context.Context, command LoginCo
 	passwordValid, passwordNeedsRehash := VerifyPassword(passwordHash, command.Password)
 	if findErr != nil || !passwordValid {
 		return UserWithPassword{}, attempt, false, s.recordCredentialFailure(ctx, user.User, attempt, command)
+	}
+	if guard, ok := s.guard.(loginReservationGuard); ok {
+		// 密码已确认；后续客户端策略或会话依赖失败不应把正确凭据记成失败尝试。
+		guard.ReleaseReservation(ctx, attempt)
 	}
 	return user, attempt, passwordNeedsRehash, nil
 }

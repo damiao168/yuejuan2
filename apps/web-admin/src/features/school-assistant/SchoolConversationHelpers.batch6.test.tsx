@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionUser } from "../../auth/session";
 import { ConversationFlow, PendingConversationView } from "./SchoolConversationDisplay";
 import { emptyConversationEvidence, type ConversationEvidence } from "./conversationState";
@@ -66,6 +66,33 @@ describe("native pending status and real rich-text content boundaries", () => {
     expect(host.querySelector("output")).toBe(output);
     expect(output?.textContent).toBe("正在回复");
     expect(host.querySelector(".math-markdown p")?.textContent).toBe("第一段后续");
+  });
+
+  it("uses actual server progress after tools finish instead of inferring a later model phase", async () => {
+    const evidence: ConversationEvidence = { ...emptyConversationEvidence(), phase: "understanding", tools: [{ call_id: "search", tool_name: "web_search", label: "搜索资料", status: "completed" }] };
+    await act(async () => root.render(<PendingConversationView pending={{ content: "", reasoning: "", evidence, webSearch: true }} user={user} onReasoningToggle={() => undefined} />));
+    expect(host.querySelector("output")?.textContent).toBe("正在理解问题");
+    await act(async () => root.render(<PendingConversationView pending={{ content: "", reasoning: "", evidence: { ...evidence, phase: "reviewing" }, webSearch: true }} user={user} onReasoningToggle={() => undefined} />));
+    expect(host.querySelector("output")?.textContent).toBe("正在核实资料");
+    await act(async () => root.render(<PendingConversationView pending={{ content: "", reasoning: "", evidence: { ...evidence, phase: "answering" }, webSearch: true }} user={user} onReasoningToggle={() => undefined} />));
+    expect(host.querySelector("output")?.textContent).toBe("正在生成回答");
+    expect(host.textContent).not.toContain("正在整理回答");
+    await act(async () => root.render(<PendingConversationView pending={{ content: "已输出正文", reasoning: "", evidence: { ...evidence, phase: "answering" }, webSearch: true }} user={user} onReasoningToggle={() => undefined} />));
+    expect(host.querySelector("output")?.textContent).toBe("正在回复");
+  });
+
+  it("shows actual elapsed waiting across remounts and clears its interval once content starts", async () => {
+    vi.useFakeTimers();
+    try {
+      const startedAt = Date.now() - 21_000;
+      await act(async () => root.render(<PendingConversationView pending={{ startedAt, content: "", reasoning: "", evidence: emptyConversationEvidence(), webSearch: true }} user={user} onReasoningToggle={() => undefined} />));
+      expect(host.textContent).toContain("已用时 21 秒，可停止后重试或切换模型。");
+      await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+      expect(host.textContent).toContain("已用时 22 秒");
+      await act(async () => root.render(<PendingConversationView pending={{ startedAt, content: "正在返回的正文", reasoning: "", evidence: emptyConversationEvidence(), webSearch: true }} user={user} onReasoningToggle={() => undefined} />));
+      expect(host.textContent).not.toContain("已用时");
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
   });
 
   it("renders chat formulas after streamed delimiters close and preserves prices and code", async () => {

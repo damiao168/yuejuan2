@@ -131,6 +131,7 @@ func (h *Handler) GetTaskContext(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	contextValue.Task = graderTaskView(user, contextValue.Task)
 	httpx.JSON(w, http.StatusOK, map[string]any{"context": contextValue})
 }
 

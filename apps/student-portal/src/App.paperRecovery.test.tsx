@@ -15,6 +15,56 @@ const oldResult = () => makeResult([makeQuestion({ page_no: 1 }), makeQuestion({
 const pageImage = () => document.querySelector(".paper-page img") as HTMLImageElement;
 
 describe("整页答卷错误恢复", () => {
+  it("切换匿名优秀答卷时携带paper_id，回到第一页并更换本卷的评分标记和下载链接", async () => {
+    const result = makeResult([makeQuestion({ page_no: 1 })], {
+      paper_pages: [{ page_no: 1, question_id: "question-1" }],
+      high_score_papers: [
+        { paper_id: "anonymous-one", available: true, pages: [{ page_no: 1, question_id: "question-1" }, { page_no: 2, question_id: "question-2" }], score_marks: [{ question_id: "question-1", question_no: "1", page_no: 1, score: 10, max_score: 10, answer_geometry: { x: .1, y: .2, width: .2, height: .2 } }] },
+        { paper_id: "anonymous-two", available: true, pages: [{ page_no: 1, question_id: "question-1" }], score_marks: [{ question_id: "question-1", question_no: "1", page_no: 1, score: 9, max_score: 10, answer_geometry: { x: .1, y: .2, width: .2, height: .2 } }] }
+      ]
+    });
+    installApi(call => resultRoute(call, result));
+    render(<PaperViewer examID="exam-1" result={result} onViewCurrent={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "查看高分试卷" }));
+    expect(pageImage().src).toContain("paper_id=anonymous-one");
+    expect(screen.getByText("1：10分（满分10分）")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
+    expect(pageImage().alt).toBe("优秀答卷 1第 2 页");
+    fireEvent.change(screen.getByRole("combobox", { name: "选择优秀答卷" }), { target: { value: "anonymous-two" } });
+    expect(pageImage().alt).toBe("优秀答卷 2第 1 页");
+    expect(pageImage().src).toContain("paper_id=anonymous-two");
+    expect(pageImage().src).toContain("expected_release_id=release-7");
+    expect(screen.queryByText("1：10分（满分10分）")).toBeNull();
+    expect(screen.getByText("1：9分（满分10分）")).toBeTruthy();
+    expect(screen.getByRole<HTMLAnchorElement>("link", { name: "下载当前页" }).href).toContain("paper_id=anonymous-two");
+    fireEvent.click(screen.getByRole("button", { name: "查看我的试卷" }));
+    expect(pageImage().src).not.toContain("paper_id=");
+  });
+
+  it("前一份优秀答卷迟到的图片核对不能关闭新选择的答卷", async () => {
+    const pending = deferredResponse();
+    const result = { ...oldResult(), high_score_papers: [
+      { paper_id: "anonymous-one", available: true, pages: [{ page_no: 1, question_id: "question-1" }] },
+      { paper_id: "anonymous-two", available: true, pages: [{ page_no: 1, question_id: "question-1" }] }
+    ] };
+    installApi(call => call.url.pathname.endsWith("/result") ? pending.promise : resultRoute(call, result));
+    render(<PaperViewer examID="exam-1" result={result} onViewCurrent={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "查看高分试卷" }));
+    fireEvent.error(pageImage());
+    fireEvent.change(screen.getByRole("combobox", { name: "选择优秀答卷" }), { target: { value: "anonymous-two" } });
+    await act(async () => pending.resolve(jsonResponse({ result: { ...result, release_id: "release-8" } })));
+    expect(pageImage().src).toContain("paper_id=anonymous-two");
+    expect(screen.queryByRole("button", { name: "查看当前成绩并重新核对" })).toBeNull();
+  });
+
+  it("明确的空优秀答卷集合不回落到旧字段恢复分享", () => {
+    const result = { ...oldResult(), high_score_papers: [] };
+    installApi(call => resultRoute(call, result));
+    render(<PaperViewer examID="exam-1" result={result} onViewCurrent={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "查看高分试卷" })).toBeNull();
+    expect(pageImage().alt).toBe("本人试卷第 1 页");
+  });
+
   it("一题批注确认版本冲突时不等待同页另一题的挂起请求", async () => {
     const pending = deferredResponse();
     const result = makeResult([makeQuestion({ page_no: 1 }), makeQuestion({ question_id: "question-2", question_no: "2", page_no: 1 })], { paper_pages: [{ page_no: 1, question_id: "question-1" }] });
@@ -164,7 +214,7 @@ describe("整页答卷错误恢复", () => {
       return resultRoute(call, result);
     });
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     fireEvent.change(await screen.findByRole("textbox", { name: "具体说明" }), { target: { value: "请核对本题第二步已经写出的解答过程。" } });
     await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "提交复核申请" }).disabled).toBe(false));
     changedPage = true;

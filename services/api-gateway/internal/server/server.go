@@ -11,6 +11,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/deps"
 	"edugrade-enterprise/services/api-gateway/internal/exam"
 	"edugrade-enterprise/services/api-gateway/internal/files"
+	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/middleware"
 	"edugrade-enterprise/services/api-gateway/internal/modelgovernance"
@@ -168,6 +169,7 @@ func NewRouterComplete(dependencies RouterDependencies) http.Handler {
 	return middleware.Chain(
 		rootHandler,
 		middleware.RequestID(),
+		httpx.ClientIPMiddleware(ctx.cfg.Security.TrustedProxyCIDRs),
 		middleware.AccessLog(dependencies.Logger, ctx.cfg.Observability.SlowRequestThreshold),
 		// RequestID 在最外层，AccessLog 包住 Recover，确保 panic 也带关联标识并记录访问结果。
 		middleware.Recover(dependencies.Logger),
@@ -223,6 +225,11 @@ func localModelBaseline(cfg config.Config) modelgovernance.LocalBaseline {
 }
 
 func skipGlobalBodyLimit(r *http.Request) bool {
+	// 分块上传按会话协商的大小在处理器内限流，不能再受普通 JSON 的 2 MiB 上限限制。
+	if r.Method == http.MethodPut {
+		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/capture/uploads/"), "/")
+		return strings.HasPrefix(r.URL.Path, "/api/v1/capture/uploads/") && len(parts) == 2 && parts[0] != "" && parts[1] == "chunks"
+	}
 	if r.Method != http.MethodPost {
 		return false
 	}

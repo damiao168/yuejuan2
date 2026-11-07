@@ -4,15 +4,14 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RegradeSummary } from "../../../api/scoreReleases";
 import { useRegradeWorkflow } from "./useRegradeWorkflow";
-import { setBusinessCommandScope } from "../../../api/businessCommand";
 
 const mocks = vi.hoisted(() => ({
   approve: vi.fn(), create: vi.fn(), createRelease: vi.fn(), finalize: vi.fn(),
   get: vi.fn(), pause: vi.fn(), preview: vi.fn(), resume: vi.fn(), review: vi.fn(),
-  start: vi.fn(), users: vi.fn(), error: vi.fn(), confirm: vi.fn()
+  start: vi.fn(), users: vi.fn(), error: vi.fn()
 }));
 vi.mock("antd", () => ({
-  App: { useApp: () => ({ message: { error: mocks.error }, modal: { confirm: mocks.confirm } }) }
+  App: { useApp: () => ({ message: { error: mocks.error } }) }
 }));
 vi.mock("../../../api/scoreReleases", () => ({
   approveRegradeJob: mocks.approve, createRegradeJob: mocks.create,
@@ -237,21 +236,16 @@ describe("regrade review batch36 decision boundaries", () => {
     expect(mocks.get).toHaveBeenCalledTimes(1);
   });
 
-  it.each([false, true])("生成复评草稿后直接打开对应预览，会话变化=%s 时不打开迟到回执", async changed => {
-    setBusinessCommandScope("tenant-1", "manager");
-    const onReleaseCreated = vi.fn();
-    const waiting = deferred<{ score_release: { id: string } }>();
-    mocks.createRelease.mockReturnValue(waiting.promise);
-    function Probe() { current = useRegradeWorkflow({ canManage: true, selectedExamId: "exam-1", grades: [], runAction, setActioning, onReleaseCreated }); return null; }
-    await act(async () => root.render(<Probe />));
-    await act(async () => current.materializeRegradeRelease(summary.job));
-    const confirmation = mocks.confirm.mock.calls[0][0] as { onOk: () => Promise<void> };
-    let running: Promise<void>;
-    await act(async () => { running = confirmation.onOk(); });
-    if (changed) setBusinessCommandScope("tenant-1", "other-manager");
-    await act(async () => { waiting.resolve({ score_release: { id: "created-release" } }); await running; });
-    expect(mocks.createRelease).toHaveBeenCalledWith("job-1", expect.objectContaining({ reason: "题目复评完成：recheck" }));
-    if (changed) expect(onReleaseCreated).not.toHaveBeenCalled();
-    else expect(onReleaseCreated).toHaveBeenCalledWith({ id: "created-release" });
+  // 生成复评结果版本已交给成绩发布页的“发布更正”；完成复评只推进任务状态，不在这里创建版本。
+  it("完成复评只调用完成接口，提示去发布页，不生成结果版本", async () => {
+    await mount();
+    await act(async () => {
+      current.transitionRegrade(summary.job, "finalize");
+      await runAction.mock.results[0].value;
+    });
+    expect(runAction).toHaveBeenCalledWith("regrade-finalize", expect.any(Function), "复评已完成，请到成绩发布页发布更正");
+    expect(mocks.finalize).toHaveBeenCalledWith("job-1");
+    expect(mocks.createRelease).not.toHaveBeenCalled();
+    expect("materializeRegradeRelease" in current).toBe(false);
   });
 });

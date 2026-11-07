@@ -4,16 +4,15 @@ import (
 	"context"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
 	"errors"
-	"strings"
 	"time"
-	"unicode/utf8"
 )
 
 var (
-	ErrNotFound          = errors.New("score resource not found")
-	ErrInvalidInput      = errors.New("invalid score input")
-	ErrInvalidTransition = errors.New("invalid score transition")
-	ErrQualityGateFailed = errors.New("score quality gate failed")
+	ErrNotFound                = errors.New("score resource not found")
+	ErrInvalidInput            = errors.New("invalid score input")
+	ErrInvalidTransition       = errors.New("invalid score transition")
+	ErrQualityGateFailed       = errors.New("score quality gate failed")
+	ErrManualAttendanceRetired = errors.New("manual attendance is retired; attendance is derived from matched submissions")
 )
 
 type FinalGrade struct {
@@ -85,23 +84,24 @@ type QualityReport struct {
 }
 
 type RosterEntry struct {
-	Key               string     `json:"key"`
-	StudentID         string     `json:"student_id,omitempty"`
-	StudentNo         string     `json:"student_no,omitempty"`
-	StudentName       string     `json:"student_name,omitempty"`
-	ClassID           string     `json:"class_id,omitempty"`
-	ClassName         string     `json:"class_name,omitempty"`
-	SubmissionID      string     `json:"submission_id,omitempty"`
-	CandidateNo       string     `json:"candidate_no,omitempty"`
-	Status            string     `json:"status"`
-	ResolutionCode    string     `json:"resolution_code"`
-	ExpectedPageCount int        `json:"expected_page_count"`
-	ActualPageCount   int        `json:"actual_page_count"`
-	TotalScore        *float64   `json:"total_score,omitempty"`
-	MaxScore          *float64   `json:"max_score,omitempty"`
-	AttendanceReason  string     `json:"attendance_reason,omitempty"`
-	MarkedBy          string     `json:"marked_by,omitempty"`
-	MarkedAt          *time.Time `json:"marked_at,omitempty"`
+	Key               string   `json:"key"`
+	StudentID         string   `json:"student_id,omitempty"`
+	StudentNo         string   `json:"student_no,omitempty"`
+	StudentName       string   `json:"student_name,omitempty"`
+	ClassID           string   `json:"class_id,omitempty"`
+	ClassName         string   `json:"class_name,omitempty"`
+	SubmissionID      string   `json:"submission_id,omitempty"`
+	CandidateNo       string   `json:"candidate_no,omitempty"`
+	Status            string   `json:"status"`
+	ResolutionCode    string   `json:"resolution_code"`
+	ExpectedPageCount int      `json:"expected_page_count"`
+	ActualPageCount   int      `json:"actual_page_count"`
+	TotalScore        *float64 `json:"total_score,omitempty"`
+	MaxScore          *float64 `json:"max_score,omitempty"`
+	// 旧响应字段保留兼容；当前名册不再填入人工标记，出勤只从冻结名册和答卷关系派生。
+	AttendanceReason string     `json:"attendance_reason,omitempty"`
+	MarkedBy         string     `json:"marked_by,omitempty"`
+	MarkedAt         *time.Time `json:"marked_at,omitempty"`
 }
 
 type RosterSummary struct {
@@ -122,15 +122,6 @@ type RosterReport struct {
 type AttendanceInput struct {
 	Status string `json:"status"`
 	Reason string `json:"reason"`
-}
-
-func normalizeAttendanceInput(input AttendanceInput) (AttendanceInput, bool) {
-	input.Status = strings.ToLower(strings.TrimSpace(input.Status))
-	input.Reason = strings.TrimSpace(input.Reason)
-	valid := (input.Status == "expected" || input.Status == "absent") &&
-		input.Reason != "" &&
-		utf8.RuneCountInString(input.Reason) <= 300
-	return input, valid
 }
 
 type FinalizeResult struct {

@@ -104,14 +104,14 @@ describe("Student Portal released-score boundaries", () => {
       if (call.url.pathname.endsWith("/questions/question-2")) return jsonResponse({ question: second });
       return undefined;
     });
-    fireEvent.click((screen.getByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
-    fireEvent.click((screen.getByRole("button", { name: /^第 2 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((screen.getByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((screen.getByLabelText(/^第 2 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("第二题评分依据");
     resolveFirst(jsonResponse({ question: { ...releasedResult.questions[0], feedback: "过期的第一题内容" } }));
     await waitFor(() => expect(screen.queryByText("正在加载本题…")).toBeNull());
     expect(screen.getByText("第二题评分依据")).toBeTruthy();
     expect(screen.queryByText("过期的第一题内容")).toBeNull();
-    expect(screen.getByRole("heading", { name: "第 2 题 · 作答与评分依据" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "第 2 题 · 成绩复核申请" })).toBeTruthy();
   });
 
   it("does not show scores or grading details before a release exists", async () => {
@@ -162,7 +162,7 @@ describe("Student Portal released-score boundaries", () => {
     expect(screen.getByText("已发布成绩 · 第 7 版")).toBeTruthy();
     expect(screen.getByLabelText("总分").textContent).toContain("82");
     expect(screen.getByLabelText("总分").textContent).not.toContain("91");
-    expect(screen.getByRole("button", { name: /14 \/ 20 分/ }).textContent).not.toContain("19");
+    expect(screen.getByLabelText(/14 \/ 20 分/).getAttribute("aria-label")).not.toContain("19");
   });
 
   it("renders subject balance radar and grouped bar charts from released aggregates", async () => {
@@ -209,7 +209,7 @@ describe("Student Portal released-score boundaries", () => {
     expect(bars.querySelector(".subject-bar.average")).toBeTruthy();
   });
 
-  it("classifies dense question rows against each released median score", async () => {
+  it("shows released class and school statistics directly in each question row", async () => {
     await renderReleasedResult((call) => resultRoute(call, {
       ...releasedResult,
       exam: { name: "数学月考", subject: "math", exam_type: "monthly", published_at: "2026-08-30T00:00:00Z" },
@@ -217,23 +217,26 @@ describe("Student Portal released-score boundaries", () => {
         {
           question_id: "question-1", question_no: "1", score: 5, max_score: 10,
           correct_answer: "B", actual_answer: "B",
+          score_comparison: { class_max_score: 9, school_max_score: 10, class_mean_score: 4.8, school_mean_score: 4.6 },
           cohort: { sample_size: 40, mean_score_rate: .5, full_score_rate: .1, zero_score_rate: .1, class_mean_score: 4.8, school_mean_score: 4.6, median_score: 5 }
         },
         {
           question_id: "question-2", question_no: "2", score: 4.5, max_score: 10,
           correct_answer: "AC", actual_answer: "A",
+          score_comparison: { class_max_score: 8, school_max_score: 9, class_mean_score: 6.1, school_mean_score: 5.9 },
           cohort: { sample_size: 40, mean_score_rate: .6, full_score_rate: .2, zero_score_rate: .05, class_mean_score: 6.1, school_mean_score: 5.9, median_score: 5 }
         }
       ]
     }));
 
     expect(screen.getByRole("heading", { name: "数学逐题分析" })).toBeTruthy();
-    fireEvent.click(screen.getByLabelText("显示比较数据"));
     expect(screen.getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
-      "题号", "正确答案", "实际答案", "我的得分", "班级平均分", "参试学生平均分", "群体中位分对比"
+      "题号", "标准答案", "实际作答", "我的得分", "班级最高分", "全校最高分", "班级平均分", "全校平均分", "申诉"
     ]);
-    expect(screen.getByText("达到群体中位分")).toBeTruthy();
-    expect(screen.getByText("低于群体中位分")).toBeTruthy();
+    const firstRow = screen.getByLabelText(/^第 1 题，/).closest("tr")!;
+    const secondRow = screen.getByLabelText(/^第 2 题，/).closest("tr")!;
+    expect([...firstRow.querySelectorAll(".question-statistic-value")].map(cell => cell.textContent)).toEqual(["9", "10", "4.8", "4.6"]);
+    expect([...secondRow.querySelectorAll(".question-statistic-value")].map(cell => cell.textContent)).toEqual(["8", "9", "6.1", "5.9"]);
     expect(screen.queryByText("已掌握")).toBeNull();
   });
 
@@ -316,7 +319,7 @@ describe("Student Portal released-score boundaries", () => {
       return undefined;
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /14 \/ 20 分/ }).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click(screen.getByLabelText(/14 \/ 20 分/).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
 
     await screen.findByText("请复核第二步的计算过程。");
     expect(screen.getByText("公开批注内容")).toBeTruthy();
@@ -349,7 +352,7 @@ describe("Student Portal released-score boundaries", () => {
       return undefined;
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /14 \/ 20 分/ }).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click(screen.getByLabelText(/14 \/ 20 分/).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const reason = await screen.findByRole("textbox", { name: "具体说明" });
     fireEvent.change(reason, { target: { value: "第二步计算过程已正确完成，请重新核对采分点。" } });
     // 表单先核对当前版本是否已有申请；文本框出现不代表核对已完成。
@@ -401,7 +404,7 @@ describe("Student Portal released-score boundaries", () => {
       return undefined;
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /14 \/ 20 分/ }).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click(screen.getByLabelText(/14 \/ 20 分/).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
 
     await screen.findByText(/已收到第 \d+ 版的本题申请，不可重复提交。/);
     expect(screen.queryByRole("button", { name: "提交复核申请" })).toBeNull();
@@ -435,11 +438,11 @@ describe("Student Portal released-score boundaries", () => {
       return undefined;
     });
 
-    const questionButton = screen.getByRole("button", { name: /14 \/ 20 分/ });
-    fireEvent.click(questionButton);
+    const questionRow = screen.getByLabelText(/14 \/ 20 分/).closest("tr")!;
+    fireEvent.click(questionRow.querySelector<HTMLButtonElement>("button.text-button")!);
 
     await screen.findByText(/本题详情暂不可用，考试总分仍可查看。/);
-    expect(screen.getByRole("button", { name: /14 \/ 20 分/ })).toBeTruthy();
+    expect(screen.getByLabelText(/14 \/ 20 分/)).toBeTruthy();
     expect(screen.queryByText(/INTERNAL_SEGMENT/)).toBeNull();
   });
 });

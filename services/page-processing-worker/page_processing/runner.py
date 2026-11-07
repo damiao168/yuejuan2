@@ -178,7 +178,14 @@ class Runner:
 
     def run_forever(self) -> None:
         while True:
-            if self.run_once() == 0:
+            try:
+                claimed = self.run_once()
+            except Exception as exc:  # noqa: BLE001 - 领取或恢复认证失败不能终止长期运行的 worker。
+                print(f"page-processing poll failed: {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
+                wait = getattr(exc, "retry_after", None)
+                time.sleep(max(self.config.poll_interval, wait or 0))
+                continue
+            if claimed == 0:
                 time.sleep(self.config.poll_interval)
 
     def _process_capture(self, task: dict, heartbeat: _Heartbeat = _NULL_HEARTBEAT) -> None:

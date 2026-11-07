@@ -8,14 +8,17 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (...parts) => readFileSync(join(root, ...parts), "utf8");
 
 const api = read("apps", "web-admin", "src", "api", "modelGovernance.ts");
-const workspace = read(
+const readEvaluationWorkspace = (file) => read(
   "apps",
   "web-admin",
   "src",
   "components",
   "model-governance",
-  "ModelEvaluationWorkspace.tsx"
+  file
 );
+const workspace = readEvaluationWorkspace("ModelEvaluationWorkspace.tsx");
+// 指标列与证据提示由工作区的 hook 提供，验收覆盖组件和这个直接依赖。
+const workspaceSource = `${workspace}\n${readEvaluationWorkspace("useModelEvaluationWorkspace.tsx")}`;
 const routes = read("apps", "web-admin", "src", "router", "routes.tsx");
 const managedWorkspace = read("apps", "web-admin", "src", "components", "model-governance", "ManagedGovernanceWorkspace.tsx");
 const governanceRoutes = read("services", "api-gateway", "internal", "server", "routes_governance.go");
@@ -43,7 +46,7 @@ for (const invariant of [
   "不等于模型已批准",
   "不会批准模型或改变评分路由"
 ]) {
-  assert.ok(workspace.includes(invariant), `evaluation workspace missing product invariant: ${invariant}`);
+  assert.ok(workspaceSource.includes(invariant), `evaluation workspace missing product invariant: ${invariant}`);
 }
 
 assert.ok(routes.includes('anyPermissions: ["model:config:manage", "model:provider:manage"]'), "model management must be permission gated");
@@ -51,8 +54,8 @@ assert.ok(managedWorkspace.includes("<ModelEvaluationWorkspace tenantID={tenantI
 // 生命周期组件可抽取和改名；验收权限/状态的可见操作及过期弹窗提交，不依赖局部变量的字串。
 runWebContractTests(["src/components/model-governance/ModelEvaluationWorkspace.test.tsx"]);
 assert.ok(workspace.includes("至少需要两个候选；新评测请选择两个学校模型"), "completion readiness must explain the managed model gate");
-assert.equal(workspace.includes("/promote"), false, "STORY-061C2 must not expose promotion");
-assert.equal(workspace.includes("promoteModel"), false, "STORY-061C2 must not implement promotion");
+assert.equal(workspaceSource.includes("/promote"), false, "STORY-061C2 must not expose promotion");
+assert.equal(workspaceSource.includes("promoteModel"), false, "STORY-061C2 must not implement promotion");
 assert.ok(story.includes("061C2（已完成）"), "story status must record completed visible evaluation center");
 assert.ok(story.includes("061C3（下一步"), "story status must keep promotion as the next independent review");
 

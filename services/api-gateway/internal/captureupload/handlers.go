@@ -103,7 +103,7 @@ func (h *Handler) PutChunk(w http.ResponseWriter, r *http.Request) {
 	body := http.MaxBytesReader(w, r.Body, session.ChunkSize+1)
 	defer body.Close()
 	data, err := io.ReadAll(body)
-	if err != nil {
+	if err != nil || int64(len(data)) > session.ChunkSize {
 		httpx.Error(w, r, http.StatusRequestEntityTooLarge, "capture_upload_chunk_too_large", "chunk exceeds the negotiated chunk size")
 		return
 	}
@@ -189,6 +189,6 @@ func (h *Handler) auditAction(r *http.Request, action, targetID, reason string) 
 	user := mustUser(r)
 	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{
 		TenantID: user.TenantID, ActorID: user.ID, Action: action, TargetType: "capture_upload_session", TargetID: targetID,
-		Reason: reason, IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+		Reason: reason, IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 }

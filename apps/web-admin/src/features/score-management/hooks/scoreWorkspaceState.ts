@@ -50,7 +50,8 @@ export interface ScoreWorkspaceState {
 
 export type ScoreWorkspaceAction =
   | { type: "patch"; patch: Partial<ScoreWorkspaceState> }
-  | { type: "examsLoaded"; exams: Exam[]; initialExamId: string; requestedStatus: string }
+  | { type: "examsLoaded"; exams: Exam[]; initialExamId: string; requestedStatus: string; requestedExamId?: string }
+  | { type: "restoreExam"; examId: string }
   | { type: "selectExam"; examId: string }
   | { type: "selectExamUpdate"; value: SetStateAction<string> }
   | { type: "loadStarted"; examId: string }
@@ -73,6 +74,15 @@ function loadExamsIntoWorkspace(
   state: ScoreWorkspaceState,
   action: Extract<ScoreWorkspaceAction, { type: "examsLoaded" }>
 ): ScoreWorkspaceState {
+  // 恢复地址或个人记忆中的考试失去访问权时，应让用户重新选择，不能悄悄切到另一场再开放操作。
+  if (action.requestedExamId) {
+    if (!action.exams.some((exam) => exam.id === action.requestedExamId)) {
+      return { ...state, exams: action.exams, selectedExamId: "", snapshot: emptyScoreWorkspaceSnapshot(),
+        loadingScores: false, loadingMoreGrades: false, error: "指定的考试不存在或当前无权查看，请重新选择考试。" };
+    }
+    const selected = scoreWorkspaceReducer(state, { type: "selectExam", examId: action.requestedExamId });
+    return { ...selected, exams: action.exams };
+  }
   // 入口指定考试优先于状态匹配；两者不可用时保留有效的当前选择，再回退到首项。
   const requestedExam = action.requestedStatus
     ? action.exams.find((exam) => exam.status === action.requestedStatus) : undefined;
@@ -111,6 +121,13 @@ export function scoreWorkspaceReducer(state: ScoreWorkspaceState, action: ScoreW
   switch (action.type) {
     case "patch": return { ...state, ...action.patch };
     case "examsLoaded": return loadExamsIntoWorkspace(state, action);
+    case "restoreExam": {
+      if (!state.loadingExams && action.examId && !state.exams.some((exam) => exam.id === action.examId)) {
+        return { ...state, selectedExamId: "", snapshot: emptyScoreWorkspaceSnapshot(),
+          loadingScores: false, loadingMoreGrades: false, error: "指定的考试不存在或当前无权查看，请重新选择考试。" };
+      }
+      return scoreWorkspaceReducer(state, { type: "selectExam", examId: action.examId });
+    }
     case "selectExam": return action.examId === state.selectedExamId ? state : {
       ...state, selectedExamId: action.examId,
       snapshot: emptyScoreWorkspaceSnapshot(action.examId),

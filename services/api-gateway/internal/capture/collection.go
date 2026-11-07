@@ -65,7 +65,8 @@ type CollectionStore interface {
 	ExcludeFile(context.Context, string, string, string, ExcludeFileInput) (Batch, error)
 }
 
-// 每人只计入一种状态；匿名材料另列，不把“份数”混入应收人数。
+// 缺考只表示冻结名册学生尚无关联答卷；匹配成功后即重新归入应收与待核对/就绪人数。
+// 匿名材料另列并阻止结束导入，不能靠自动缺考掩盖未识别答卷。
 func finishCollectionSummary(out *CollectionSummary) {
 	out.RosterCount = len(out.Entries)
 	for _, entry := range out.Entries {

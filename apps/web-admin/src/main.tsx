@@ -23,6 +23,7 @@ import "./styles/features/dashboard-workbench.css";
 import "./styles/features/dashboard-operations.css";
 import "./features/grading/workbench/grading-workbench.css";
 import "./experience.css";
+import "./styles/feedback.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

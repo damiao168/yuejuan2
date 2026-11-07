@@ -29,8 +29,9 @@
 .member-table-section .section-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
 .member-table-section .section-head h2 { margin: 0 0 3px; font-size: var(--eg-font-reading); }
 .member-table-section .section-head p, .member-table-section .section-head > span { margin: 0; color: var(--text-muted); font-size: var(--eg-font-caption); }
-.member-management-filters { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.member-management-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-bottom: 14px; }
 .member-management-filters .ant-input-search { width: min(100%, 360px); }
+.member-management-filters > .ant-select { min-width: 160px; }
 .member-management-filters > span { color: var(--text-muted); font-size: var(--eg-font-caption); }
 .member-administrator-alert { margin-bottom: 14px; }
 /* 姓名、用户名和操作可以换行；身份列不截断，方便与左下角当前账号核对。 */

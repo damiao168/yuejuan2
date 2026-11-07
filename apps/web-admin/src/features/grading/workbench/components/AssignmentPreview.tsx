@@ -9,7 +9,9 @@ export function AssignmentPreview({ tasks, defaultGrader, options, busy, onCance
   unassignedCount: number | null; busy: boolean; onCancel: () => void; onConfirm: (plan: AssignmentBatch[]) => Promise<boolean>;
 }>) {
   const groups = useMemo(() => assignmentGroups(tasks), [tasks]);
-  const [graders, setGraders] = useState<string[]>(() => defaultGrader && options.some(option => option.value === defaultGrader) ? [defaultGrader] : []);
+  const [selectedGraders, setGraders] = useState<string[]>(() => defaultGrader && options.some(option => option.value === defaultGrader) ? [defaultGrader] : []);
+  // 预览打开后人员学科也可能被刷新；已不符合条件的教师不能留在待提交计划中。
+  const graders = useMemo(() => selectedGraders.filter(grader => options.some(option => option.value === grader)), [options, selectedGraders]);
   const [mode, setMode] = useState<"average" | "custom">("average");
   const [counts, setCounts] = useState<Record<string, number | null>>({});
   const [submitting, setSubmitting] = useState(false);

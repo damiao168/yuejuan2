@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { App } from "antd";
 import { ApiClientError, getUserErrorMessage } from "../../../api/client";
 import { isStepUpCancelledError } from "../../../auth/stepUpContext";
@@ -9,6 +9,8 @@ type ScoreActionOptions = Readonly<{
   loadScores: (examId: string) => Promise<void>;
 }>;
 type ActionMessage = ReturnType<typeof App.useApp>["message"];
+
+export type ScoreActionRunner = (key: string, action: () => Promise<void>, successText: string, isCurrent?: () => boolean) => Promise<void>;
 
 function formatError(error: unknown) {
   if (error instanceof ApiClientError) console.error("请求失败", error.status, error.code, error.message);
@@ -32,16 +34,23 @@ async function handleActionFailure(key: string, error: unknown, options: ScoreAc
 export function useScoreAction(options: ScoreActionOptions) {
   const { message } = App.useApp();
   const [actioning, setActioning] = useState<string | null>(null);
-  const runAction = async (key: string, action: () => Promise<void>, successText: string) => {
+  const running = useRef(0);
+  const runAction: ScoreActionRunner = async (key, action, successText, isCurrent) => {
+    if (isCurrent && !isCurrent()) return;
+    const operation = ++running.current;
     setActioning(key);
     try {
       await action();
+      // 导出的页面、考试或会话已变化时，空返回也不代表本页成功；不能显示提示或重读旧成绩。
+      if (isCurrent && !isCurrent()) return;
       message.success(successText);
       if (options.selectedExamId) await options.loadScores(options.selectedExamId);
     } catch (error) {
+      if (isCurrent && !isCurrent()) return;
       await handleActionFailure(key, error, options, message);
     } finally {
-      setActioning(null);
+      // 旧操作晚结束时不能清掉后来操作的忙碌状态。
+      if (operation === running.current) setActioning(null);
     }
   };
   return { actioning, setActioning, runAction };

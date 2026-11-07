@@ -8,13 +8,31 @@ from helpers import ROOT
 from jsonschema import Draft202012Validator
 
 
-def test_gateway_diagnostic_schema_matches_error_contracts():
+def test_gateway_diagnostic_schema_matches_worker_contracts():
     spec = json.loads((ROOT / "services/api-gateway/openapi/edugrade-api.openapi.json").read_text(encoding="utf-8"))
     gateway = copy.deepcopy(spec["components"]["schemas"]["ExecutionDiagnostics"])
     gateway["properties"]["usage"] = spec["components"]["schemas"]["DiagnosticTokenUsage"]
     for version in ("v1", "v2"):
-        contract = json.loads((ROOT / f"contracts/grading-agent/{version}/error.schema.json").read_text(encoding="utf-8"))
-        assert gateway == contract["$defs"]["execution_diagnostics"]
+        for filename in ("error.schema.json", "response.schema.json"):
+            contract = json.loads((ROOT / f"contracts/grading-agent/{version}/{filename}").read_text(encoding="utf-8"))
+            expected = copy.deepcopy(gateway)
+            if filename == "response.schema.json":
+                # 成功回执额外禁止失败事实；其余诊断边界须与公开接口一致。
+                expected["allOf"].append({"properties": {"finish_outcome": {"const": "completed"}},
+                                          "not": {"required": ["failure_kind"]}})
+            assert expected == contract["$defs"]["execution_diagnostics"]
+
+
+@pytest.mark.parametrize("field", ["cache_write_input_tokens", "uncached_input_tokens"])
+def test_cache_usage_contract_preserves_exact_int64_bound_and_known_zero(field):
+    spec = json.loads((ROOT / "services/api-gateway/openapi/edugrade-api.openapi.json").read_text(encoding="utf-8"))
+    schema = spec["components"]["schemas"]["DiagnosticTokenUsage"]
+    assert schema["properties"][field]["maximum"] == 2**63 - 1
+    validator = Draft202012Validator(schema)
+    for value in (0, 2**63 - 1):
+        assert validator.is_valid({field: value})
+    for value in (-1, 2**63, True, "0", None):
+        assert not validator.is_valid({field: value})
 
 
 def test_public_subjective_failure_response_contract_includes_diagnostics():

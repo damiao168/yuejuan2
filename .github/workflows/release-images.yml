@@ -221,6 +221,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: image-evidence-${{ matrix.name }}
+          retention-days: 90
           path: |
             image-${{ matrix.name }}.digest
             sbom-${{ matrix.name }}.cdx.json

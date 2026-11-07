@@ -85,7 +85,8 @@ describe("上传前页序预检", () => {
     render(<CaptureFileOrderPreview files={[new File(["pdf"], "长答卷.pdf")]} pages={2} onChange={vi.fn()} onPendingChange={pending} />);
     await screen.findByText("预计 101 份答卷，共 202 页");
     expect(screen.getByLabelText("逐份答卷分组").children).toHaveLength(100);
-    expect(screen.getByLabelText("逐份答卷分组").closest("details")?.open).toBe(false);
+    expect(screen.getByLabelText("逐份答卷分组").closest("details")).toBeNull();
+    expect(screen.getByLabelText("答卷分组预览").hidden).toBe(false);
     expect(pending).toHaveBeenLastCalledWith(true);
     fireEvent.click(screen.getByRole("checkbox"));expect(pending).toHaveBeenLastCalledWith(false);
   });

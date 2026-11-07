@@ -1,8 +1,26 @@
 import ts from "typescript";
 
-function functionSource(source, name) {
+function functionDeclaration(source, name) {
   const file = ts.createSourceFile("contract.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  return file.statements.find((node) => ts.isFunctionDeclaration(node) && node.name?.text === name)?.getText(file) ?? "";
+  return file.statements.find((node) => ts.isFunctionDeclaration(node) && node.name?.text === name);
+}
+
+function functionSource(source, name) {
+  return functionDeclaration(source, name)?.getText() ?? "";
+}
+
+function hasStagedSuspense(source) {
+  const routeStage = functionDeclaration(source, "RouteStage");
+  function containsPage(child) {
+    if (ts.isJsxExpression(child)) return child.expression?.getText() === "slot.children";
+    return (ts.isJsxElement(child) || ts.isJsxFragment(child)) && child.children.some(containsPage);
+  }
+  function visit(node) {
+    // 页面必须处于 Suspense 的子树中；fallback 的 JSX 只负责等待状态。
+    if (ts.isJsxElement(node) && node.openingElement.tagName.getText() === "Suspense" && node.children.some(containsPage)) return true;
+    return ts.forEachChild(node, visit);
+  }
+  return Boolean(routeStage && visit(routeStage));
 }
 
 function deferredPages(source) {
@@ -57,7 +75,7 @@ export function movedProductionRouteFailures({ routes, appLayout, layoutPresenta
     && /<RouteContent\b[\s\S]*?>\s*\{content\}\s*<\/RouteContent>/.test(appShell)
     && /<StagedRouteContent key=\{scopeKey\} \{\.\.\.props\}/.test(routeStaging)
     && /<RouteStage[\s\S]*?slot=\{slot\}/.test(routeStaging)
-    && /<Suspense[\s\S]*?>\{slot.children\}<\/Suspense>/.test(routeStaging),
+    && hasStagedSuspense(routeStaging),
   "Production pages must be loaded on demand.");
   return failures;
 }

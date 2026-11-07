@@ -25,23 +25,29 @@ import {
   createSchool,
   importStudentsCSV,
   listClasses,
+  listAcademicYears,
   listGrades,
   listSchools,
   listStudents,
   type Grade,
+  type AcademicYear,
   type School,
   type SchoolClass,
   type Student,
   type StudentImportError
 } from "../api/org";
 import { createManagedUser, listAssignableRoles, listManagedUsers, type AssignableRole, type ManagedUser, type ManagedUserActivation } from "../api/users";
+import { normalizeTeachingSubjects } from "../constants/teachingSubjects";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
 import { onboardingQueryKey, useOnboardingReadiness } from "../features/onboarding/queries";
 import { MemberCreationFields, taskStaffRoleCodes } from "../features/members/teachers/TeacherManagementViews";
+import { classLocalName, gradeCohortGroups, gradeCohortLabel, gradeCurrentLevelLabel, gradeLevelOptions } from "../features/members/gradeCohortPresentation";
+import { currentGradeSchoolYear, expectedGradeLevel, gradeCreationIssue, gradeSchoolYearHint } from "../features/members/gradeCreationValidation";
 
 interface SetupData {
   schools: School[];
+  academicYears: AcademicYear[];
   grades: Grade[];
   classes: SchoolClass[];
   students: Student[];
@@ -61,7 +67,7 @@ interface ImportRow {
   error?: string;
 }
 
-const setupSteps = ["机构信息", "学年与年级", "班级", "学生", "人员账号", "第一场考试", "完成"];
+const setupSteps = ["机构信息", "届别与年级", "班级", "学生", "人员账号", "第一场考试", "完成"];
 const BUSINESS_ROLES = new Set(["school_admin", "teacher", "grader", "arbitrator"]);
 
 function messageOf(error: unknown) {
@@ -100,16 +106,26 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
   const [mapping, setMapping] = useState({ studentNo: "", name: "", classCode: "" });
   const [importErrors, setImportErrors] = useState<StudentImportError[]>([]);
   const [staffForm] = Form.useForm();
+  const [gradeForm] = Form.useForm();
+  const gradeSchool = Form.useWatch("school_id", gradeForm);
+  const gradeStage = (Form.useWatch("education_stage", gradeForm) ?? "senior") as Grade["education_stage"];
+  const gradeEntry = Form.useWatch("entry_year", gradeForm);
+  const schoolForGrade = gradeSchool ?? data?.schools[0]?.id ?? "";
+  const schoolYearForGrade = currentGradeSchoolYear(data?.academicYears ?? [], schoolForGrade);
+  const entryForGrade = gradeEntry;
+  const calculatedGradeLevel = expectedGradeLevel(gradeStage, entryForGrade, schoolYearForGrade);
+  const gradeIssue = gradeCreationIssue({ schoolId: schoolForGrade, stage: gradeStage, entryYear: entryForGrade, schoolYear: schoolYearForGrade, grades: data?.grades ?? [], ready: !loading && !error && Boolean(data) });
+  useEffect(() => { if (step === 1) gradeForm.setFieldsValue({ level_no: calculatedGradeLevel }); }, [step, calculatedGradeLevel, gradeForm]);
   const [invitation, setInvitation] = useState<StaffInvitation>();
   const invitationSavingRef = useRef(false);
 
-  const inviteStaff = async (values: { display_name: string; username: string; phone?: string; employee_no?: string; school_id: string }) => {
+  const inviteStaff = async (values: { display_name: string; username: string; phone?: string; employee_no?: string; school_id: string; teaching_subjects: string[] }) => {
     if (saving || invitationSavingRef.current) return;
     // React 提交按钮更新前也可能再次收到提交；同步锁保护一次性邀请回执。
     invitationSavingRef.current = true;
     setSaving(true);
     try {
-      const result = await createManagedUser({ display_name: values.display_name.trim(), username: values.username.trim(), phone: values.phone?.trim() || undefined, employee_no: values.employee_no?.trim() || undefined, school_id: values.school_id, role_codes: taskStaffRoleCodes, class_ids: [] });
+      const result = await createManagedUser({ display_name: values.display_name.trim(), username: values.username.trim(), phone: values.phone?.trim() || undefined, employee_no: values.employee_no?.trim() || undefined, school_id: values.school_id, role_codes: taskStaffRoleCodes, teaching_subjects: normalizeTeachingSubjects(values.teaching_subjects) });
       // 一次性邀请只出现在创建响应；先保留回执，再刷新，刷新失败不能让人重新创建账号。
       setInvitation({ name: result.user.display_name, activation: result.activation });
       staffForm.resetFields();
@@ -123,17 +139,19 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
     setLoading(true);
     setError(undefined);
     try {
-      const [schools, grades, classes, students, users, roles, exams] = await Promise.all([
+      const [schools, grades, classes, students, users, roles, exams, academicYears] = await Promise.all([
         listSchools(),
         listGrades(),
         listClasses(),
         listStudents(),
         listManagedUsers({ limit: 200 }),
         listAssignableRoles(),
-        listExams()
+        listExams(),
+        listAcademicYears()
       ]);
       setData({
         schools: schools.schools,
+        academicYears: academicYears.academic_years,
         grades: grades.grades,
         classes: classes.classes,
         students: students.students,
@@ -184,6 +202,17 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveGrade = async (values: { school_id: string; education_stage: Grade["education_stage"]; entry_year: number }) => {
+    const schoolYear = currentGradeSchoolYear(data?.academicYears ?? [], values.school_id);
+    const issue = gradeCreationIssue({ schoolId: values.school_id, stage: values.education_stage, entryYear: values.entry_year, schoolYear, grades: data?.grades ?? [], ready: !loading && !error && Boolean(data) });
+    if (issue) { message.error(issue.message); return; }
+    const level = expectedGradeLevel(values.education_stage, values.entry_year, schoolYear)!;
+    await runSave(async () => {
+      try { return await createGrade({ ...values, level_no: level, name: gradeCurrentLevelLabel({ level_no: level, name: "" }) }); }
+      catch (reason) { await load(); throw reason; }
+    }, "届别与年级已保存");
   };
 
   const importRows = useMemo<ImportRow[]>(() => {
@@ -331,30 +360,29 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
         );
       case 1:
         return (
-          <Form key="grade" layout="vertical" preserve={false} onFinish={(values) => void runSave(() => createGrade({ ...values, education_stage: values.level_no < 10 ? "junior" : "senior", name: values.name?.trim() || ({ 7: "初一", 8: "初二", 9: "初三", 10: "高一", 11: "高二", 12: "高三" } as Record<number, string>)[values.level_no] }), "学年与年级已保存")} initialValues={{ academic_year: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`, education_stage: "senior", level_no: 10 }}>
-            <h2>学年与年级</h2>
-            <p className="section-copy">年级会用于班级和考试学生范围。</p>
-            {data.grades.length ? <Alert type="success" showIcon message={`已有 ${data.grades.length} 个年级`} /> : null}
+          <Form key="grade" name="setup-create-grade" form={gradeForm} layout="vertical" preserve={false} onFinish={(values) => void saveGrade(values)} initialValues={{ school_id: data.schools[0]?.id, entry_year: schoolYearForGrade, education_stage: "senior" }}>
+            <h2>届别与年级</h2>
+            <p className="section-copy">入学届别固定；当前年级由学校学年和入学年份对应计算。</p>
+            <Alert type={gradeIssue ? "warning" : "info"} showIcon message={gradeIssue ? `当前${schoolYearForGrade}—${schoolYearForGrade + 1}学年。${gradeIssue.message}` : gradeSchoolYearHint(schoolYearForGrade, gradeStage)} />
             <div className="form-grid compact-form-grid">
               <Form.Item name="school_id" label="所属机构" rules={[{ required: true }]}><Select options={data.schools.map((item) => ({ value: item.id, label: item.name }))} /></Form.Item>
-              <Form.Item name="education_stage" hidden><Input /></Form.Item>
-              <Form.Item name="academic_year" label="学年" rules={[{ required: true }]}><Input /></Form.Item>
-              <Form.Item name="level_no" label="年级" rules={[{ required: true }]}><Select options={[{ value: 7, label: "初一" }, { value: 8, label: "初二" }, { value: 9, label: "初三" }, { value: 10, label: "高一" }, { value: 11, label: "高二" }, { value: 12, label: "高三" }]} /></Form.Item>
-              <Form.Item name="name" label="自定义显示名（可选）"><Input placeholder="留空使用所选年级名称" /></Form.Item>
+              <Form.Item name="education_stage" label="学段" rules={[{ required: true }]}><Select options={[{ value: "junior", label: "初中" }, { value: "senior", label: "高中" }]} /></Form.Item>
+              <Form.Item name="entry_year" label="入学年份（届别）" rules={[{ required: true }, { type: "integer", min: 1900, max: 2100 }]}><InputNumber min={1900} max={2100} precision={0} /></Form.Item>
+              <Form.Item name="level_no" label="当前年级（自动）" rules={[{ required: true }]}><Select disabled options={gradeLevelOptions(gradeStage)} placeholder="入学年份不在当前在读范围" /></Form.Item>
             </div>
-            <Button type="primary" htmlType="submit" loading={saving}>保存并继续</Button>
+            <Button type="primary" htmlType="submit" loading={saving} disabled={Boolean(gradeIssue)}>保存并继续</Button>
           </Form>
         );
       case 2:
         return (
-          <Form key="class" layout="vertical" preserve={false} onFinish={(values) => void runSave(() => createClass(values), "班级已保存")}>
+          <Form key="class" layout="vertical" preserve={false} onFinish={(values) => void runSave(() => createClass({ ...values, name: classLocalName({ name: values.name }) }), "班级已保存")}>
             <h2>班级</h2>
             <p className="section-copy">班级代码用于学生导入匹配，请保持唯一且易识别。</p>
             {data.classes.length ? <Alert type="success" showIcon message={`已有 ${data.classes.length} 个班级`} /> : null}
             <div className="form-grid compact-form-grid">
               <Form.Item name="school_id" label="所属机构" rules={[{ required: true }]}><Select options={data.schools.map((item) => ({ value: item.id, label: item.name }))} /></Form.Item>
-              <Form.Item name="grade_id" label="所属年级" rules={[{ required: true }]}><Select options={data.grades.map((item) => ({ value: item.id, label: `${item.name} · ${item.academic_year}` }))} /></Form.Item>
-              <Form.Item name="name" label="班级名称" rules={[{ required: true }]}><Input placeholder="高一（1）班" /></Form.Item>
+              <Form.Item name="grade_id" label="所属届别年级" rules={[{ required: true }]}><Select options={gradeCohortGroups(data.grades).map(group => ({ value: group.grade.id, label: gradeCohortLabel(group.grade) }))} /></Form.Item>
+              <Form.Item name="name" label="班号或自定义班名" rules={[{ required: true, whitespace: true }]}><Input placeholder="例如：1班、实验班" /></Form.Item>
               <Form.Item name="code" label="班级代码" rules={[{ required: true }]}><Input placeholder="G10-01" /></Form.Item>
             </div>
             <Button type="primary" htmlType="submit" loading={saving}>保存并继续</Button>
@@ -376,7 +404,7 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
         );
       case 5:
         return (
-          <Form key="exam" layout="vertical" preserve={false} initialValues={{ total_score: 100, grading_mode: "human_review_required", exam_type: "school_exam", publish_policy: "manual", appeal_enabled: true }} onFinish={(values) => void runSave(() => createExam(values), "第一场考试已创建")}>
+          <Form key="exam" layout="vertical" preserve={false} initialValues={{ total_score: 100, grading_mode: "human_review_required", publish_policy: "manual", appeal_enabled: true }} onFinish={(values) => void runSave(() => createExam(values), "第一场考试已创建")}>
             <h2>创建第一场考试</h2>
             <p className="section-copy">先建立考试草稿，试卷、题目和准备检查将在考试工作区继续完成。</p>
             {data.examCount ? <Alert type="success" showIcon message={`已有 ${data.examCount} 场考试`} /> : null}
@@ -387,7 +415,7 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
               <Form.Item name="total_score" label="总分" rules={[{ required: true }]}><InputNumber min={1} max={1000} /></Form.Item>
               <Form.Item name="class_ids" label="学生范围" rules={[{ required: true }]}><Select mode="multiple" options={data.classes.map((item) => ({ value: item.id, label: item.name }))} /></Form.Item>
             </div>
-            <Form.Item name="exam_type" hidden><Input /></Form.Item><Form.Item name="grading_mode" hidden><Input /></Form.Item><Form.Item name="publish_policy" hidden><Input /></Form.Item><Form.Item name="appeal_enabled" hidden><Input /></Form.Item>
+            <Form.Item name="grading_mode" hidden><Input /></Form.Item><Form.Item name="publish_policy" hidden><Input /></Form.Item><Form.Item name="appeal_enabled" hidden><Input /></Form.Item>
             <Space wrap>
               <Button type="primary" htmlType="submit" loading={saving}>创建考试</Button>
               <Button onClick={() => onNavigate("/dashboard")}>暂不创建，进入工作台</Button>

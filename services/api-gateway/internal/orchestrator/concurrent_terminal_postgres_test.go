@@ -15,15 +15,15 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
-// 使用审查专用的本机集群与唯一 schema；实际状态转换方法和 000009 的原始表约束都参与验证。
+// 使用显式测试连接与唯一 schema；实际状态转换方法和 000009 的原始表约束都参与验证。
 func TestPostgresConcurrentTransitionsPreserveAcceptedTerminalAndRunSummary(t *testing.T) {
 	dsn := os.Getenv("EDUGRADE_REVIEW_PG_DSN")
 	if dsn == "" {
 		t.Skip("EDUGRADE_REVIEW_PG_DSN is not configured")
 	}
 	cfg, err := pgx.ParseConfig(dsn)
-	if err != nil || cfg.Host != "127.0.0.1" || cfg.Port != 55983 || cfg.Database != "review_root_round10_grading_test" {
-		t.Fatal("refuse a database outside the isolated review fixture")
+	if err != nil {
+		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
@@ -34,7 +34,9 @@ func TestPostgresConcurrentTransitionsPreserveAcceptedTerminalAndRunSummary(t *t
 		t.Fatal(err)
 	}
 	defer func() {
-		if _, err := admin.ExecContext(context.Background(), "DROP SCHEMA "+schema+" CASCADE"); err != nil {
+		cleanup, stop := context.WithTimeout(context.Background(), 30*time.Second)
+		defer stop()
+		if _, err := admin.ExecContext(cleanup, "DROP SCHEMA "+schema+" CASCADE"); err != nil {
 			t.Errorf("clean isolated schema: %v", err)
 		}
 	}()

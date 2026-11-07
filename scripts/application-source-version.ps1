@@ -1,5 +1,5 @@
 ﻿function Get-ApplicationSourceVersion([string]$RepositoryRoot) {
-    $sourcePaths = @('apps/web-admin', 'services/api-gateway', 'ai-services', 'packages', 'contracts/authorization', 'contracts/grading-agent', 'package.json', 'package-lock.json', '.dockerignore')
+    $sourcePaths = @('apps/web-admin', 'apps/student-portal', 'services/api-gateway', 'ai-services', 'packages', 'contracts/authorization', 'contracts/grading-agent', 'package.json', 'package-lock.json', '.dockerignore')
     $candidates = @(& git -C $RepositoryRoot ls-files --cached --others --exclude-standard -- @sourcePaths)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot enumerate application sources for version comparison.' }
     $hash = [Security.Cryptography.SHA256]::Create()

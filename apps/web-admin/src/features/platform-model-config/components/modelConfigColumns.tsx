@@ -82,7 +82,7 @@ function ProbeCell({ config, mode, options }: Readonly<{
         </button> : <span><StatusTag tone={presentation.tone}>{presentation.label}</StatusTag></span>}
       </Tooltip>
       <Button className="platform-model-check-action" type="link" size="small" disabled={Boolean(operation)}
-        loading={currentOperation?.phase === "running"} aria-label={`${config.model_name}：${actionLabel}`}
+        loading={currentOperation?.phase === "running"} iconPosition="end" autoInsertSpace={false} aria-label={`${config.model_name}：${actionLabel}`}
         title={mode === "quick" ? "只检查接口、密钥和模型权限，不生成回复" : "发送合成测试内容，会产生少量模型用量"}
         onClick={() => void options.probe(config, mode)}>检测</Button>
     </div>
@@ -93,10 +93,19 @@ function ConversationCell({ config, options }: Readonly<{ config: ManagedModelAP
   if (options.toggleChatAccess) {
     const selected = Boolean(options.chatModelIDs?.includes(config.id));
     const busy = options.chatAccessBusy || !options.chatModelIDs || Boolean(options.operations[modelOperationKey(options.tenantID, config.id)]);
-    return <Tooltip title={selected ? "已开放，学校管理员可在聊天页选择；点击取消开放" : "开放给学校对话使用，可同时选择多个供应商"}><span>
-      <label className={`platform-model-purpose platform-model-dialogue${selected ? " is-selected" : ""}`}>
-        <input type="checkbox" checked={selected} disabled={busy || !selected && (config.status !== "active" || !config.credential_configured || !textVerified(config))}
-          aria-label={`${config.model_name}：允许学校对话`} onChange={() => void options.toggleChatAccess?.(config.id)} />对话{selected ? " ✓" : ""}
+    const unavailableReason = config.status !== "active" ? "模型已停用"
+      : !config.credential_configured ? "尚未配置密钥"
+      : config.last_text_status === "failed" ? "普通回复未通过检测"
+      : config.last_text_status === "temporary_unavailable" ? "普通回复检测暂未完成"
+      : !textVerified(config) ? "普通回复尚未验证" : undefined;
+    // 已开放的配置检测失败后仍保留授权，方便恢复和取消；勾选本身不代表当前可用。
+    const hint = selected
+      ? unavailableReason ? `已开放对话，但当前不可用：${unavailableReason}；点击可取消开放` : "已开放且可用于学校对话；点击取消开放"
+      : unavailableReason ? `当前不能开放对话：${unavailableReason}` : "开放给学校对话使用，可同时选择多个供应商";
+    return <Tooltip title={hint}><span>
+      <label title={hint} className={`platform-model-purpose platform-model-dialogue${selected && !unavailableReason ? " is-selected" : ""}`}>
+        <input type="checkbox" checked={selected} disabled={busy || !selected && Boolean(unavailableReason)}
+          aria-label={`${config.model_name}：允许学校对话`} onChange={() => void options.toggleChatAccess?.(config.id)} />{selected && unavailableReason ? "对话·不可用" : selected ? "对话 ✓" : "对话"}
       </label>
     </span></Tooltip>;
   }

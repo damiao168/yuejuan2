@@ -2,7 +2,11 @@ package dashboard
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -110,6 +114,31 @@ func TestSchoolScopedSummaryUsesKeyProgressProjection(t *testing.T) {
 	}
 	if len(summary.RecentActivities) != 1 || summary.RecentActivities[0].ID != want.ID {
 		t.Fatalf("expected projected key progress, got %#v", summary.RecentActivities)
+	}
+}
+
+// 动态来源报错时存储返回 nil 切片；接口必须仍是 []，否则旧版首页读取 length 会崩溃。
+func TestSummaryKeepsEmptyRecentActivitiesWhenActivitySourceFails(t *testing.T) {
+	service := NewService(Dependencies{
+		Exams: exam.NewMemoryStore(), Submissions: submission.NewMemoryStore(),
+		Reviews: review.NewMemoryStore(), Audits: auth.NewMemoryStore(), Organizations: organizationSummaryStub{},
+		Activities: activityStoreStub{err: errors.New("activity source unavailable")},
+	})
+	summary, err := service.Summary(context.Background(), auth.User{
+		ID: "school-admin", TenantID: "tenant-school", Roles: []string{"school_admin"},
+	}, auth.AccessScope{TenantID: "tenant-school", ActorID: "school-admin", SchoolIDs: []string{"school-1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"recent_activities":[]`) {
+		t.Fatalf("recent_activities must stay an empty array when the source fails: %s", encoded)
+	}
+	if !slices.Contains(summary.Warnings, "关键进展暂时无法加载") {
+		t.Fatalf("activity failure must still be reported as a warning: %#v", summary.Warnings)
 	}
 }
 

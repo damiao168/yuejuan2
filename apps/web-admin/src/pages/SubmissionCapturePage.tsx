@@ -87,6 +87,10 @@ export function SubmissionCapturePage({
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [ocrDrawer, setOcrDrawer] = useState<OcrDrawerState | null>(null);
+  const ocrDrawerRequest = useRef(0);
+  useEffect(() => () => { ocrDrawerRequest.current += 1; }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 切换考试即作废旧识别请求并关闭详情，考试身份是主动取消的触发信号。
+  useEffect(() => { ocrDrawerRequest.current += 1; setOcrDrawer(null); }, [selectedExamId]);
   // 请求序号和命令互斥属于页面实例，展示分支切换不能重置这些状态。
   const captureRequestRef = useRef(new LatestRequestGate());
   const previewRequestRef = useRef(new LatestRequestGate());
@@ -314,22 +318,30 @@ export function SubmissionCapturePage({
   };
 
   const openOcrDrawer = async (row: SubmissionView) => {
+    const request = ++ocrDrawerRequest.current;
+    const scope = captureScopeRef.current;
     setOcrDrawer({ row, tasks: [], loading: true });
     try {
       const detailed = row.ocrTasks.length > 0 ? row : await buildSubmissionView(row.submission, formatError);
+      // 关闭、切换答卷或考试都会作废旧请求，迟到的识别记录不能重新打开抽屉。
+      if (request !== ocrDrawerRequest.current || scope !== captureScopeRef.current) return;
       setRows((current) => current.map((item) => item.submission.id === detailed.submission.id ? detailed : item));
       setOcrDrawer({ row: detailed, tasks: detailed.ocrTasks, loading: false });
     } catch (currentError) {
+      if (request !== ocrDrawerRequest.current || scope !== captureScopeRef.current) return;
       setOcrDrawer({ row, tasks: [], loading: false, error: formatError(currentError) });
     }
   };
 
   const loadMoreOcrTasks = async () => {
     const current = ocrDrawer;
+    const request = ocrDrawerRequest.current;
+    const scope = captureScopeRef.current;
     if (!current || current.loading || current.loadingMore || !current.row.ocrHasMore || !current.row.ocrNextCursor) return;
     setOcrDrawer({ ...current, loadingMore: true });
     try {
       const result = await listOcrTasks(current.row.submission.id, { limit: 20, cursor: current.row.ocrNextCursor });
+      if (request !== ocrDrawerRequest.current || scope !== captureScopeRef.current) return;
       const byId = new Map(current.tasks.map((task) => [task.id, task]));
       for (const task of result.tasks) byId.set(task.id, task);
       const tasks = [...byId.values()];
@@ -340,6 +352,7 @@ export function SubmissionCapturePage({
         return { ...latest, row, tasks, loadingMore: false };
       });
     } catch (currentError) {
+      if (request !== ocrDrawerRequest.current || scope !== captureScopeRef.current) return;
       message.error(formatError(currentError));
       setOcrDrawer((latest) => latest ? { ...latest, loadingMore: false } : latest);
     }
@@ -419,7 +432,7 @@ export function SubmissionCapturePage({
         ) : null}
       </Drawer>
 
-      <Drawer title="文字识别详情" open={Boolean(ocrDrawer)} width={920} onClose={() => setOcrDrawer(null)}>
+      <Drawer title="文字识别详情" open={Boolean(ocrDrawer)} width={920} onClose={() => { ocrDrawerRequest.current += 1; setOcrDrawer(null); }}>
         <SubmissionOcrDetails drawer={ocrDrawer} columns={ocrTaskColumns} loadMore={loadMoreOcrTasks} />
       </Drawer>
     </div>

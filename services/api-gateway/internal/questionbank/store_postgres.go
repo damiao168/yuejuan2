@@ -74,7 +74,7 @@ func (s *PostgresStore) bank(ctx context.Context, q queryer, scope auth.AccessSc
 	if !validScope(scope) || !validID(id) {
 		return Bank{}, ErrNotFound
 	}
-	return scanBank(q.QueryRowContext(ctx, `SELECT `+bankCols+` FROM question_bank b WHERE b.tenant_id=$1::uuid AND b.id=$2::uuid AND ($3 OR b.school_id::text=ANY($4::text[])) AND question_bank_actor_has_action(b.tenant_id,b.id,$5::uuid,$6) AND ($6='manage' OR question_bank_actor_has_action(b.tenant_id,b.id,$5::uuid,'read'))`+lock, scope.TenantID, id, scope.TenantWide, scope.SchoolIDs, scope.ActorID, action))
+	return scanBank(q.QueryRowContext(ctx, `SELECT `+bankCols+` FROM question_bank b WHERE b.tenant_id=$1::uuid AND b.id=$2::uuid AND `+bankSchoolScopeSQL("b.school_id", "$1", "$5", "$3", "$4")+` AND question_bank_actor_has_action(b.tenant_id,b.id,$5::uuid,$6) AND ($6='manage' OR question_bank_actor_has_action(b.tenant_id,b.id,$5::uuid,'read'))`+lock, scope.TenantID, id, scope.TenantWide, scope.SchoolIDs, scope.ActorID, action))
 }
 func (s *PostgresStore) GetBank(ctx context.Context, scope auth.AccessScope, id string) (Bank, error) {
 	b, err := s.bank(ctx, s.db, scope, id, "read", "")
@@ -293,11 +293,14 @@ func (s *PostgresStore) CreateBank(ctx context.Context, scope auth.AccessScope, 
 	if err != nil {
 		return Bank{}, err
 	}
-	if !validScope(scope) || !scope.AllowsSchool(in.SchoolID) {
+	if !validScope(scope) {
 		return Bank{}, auth.ErrForbidden
 	}
 	return pgMutation(ctx, s, scope, pgMutationCommand{op: "question_bank.create", input: input, action: "read"}, func(tx *sql.Tx) (Bank, error) {
-		b, err := scanBank(tx.QueryRowContext(ctx, `INSERT INTO question_bank AS b(tenant_id,school_id,name,description,created_by) SELECT $1::uuid,$2::uuid,$3,$4,$5::uuid FROM school WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='active' AND deleted_at IS NULL RETURNING `+bankCols, scope.TenantID, in.SchoolID, in.Name, in.Description, scope.ActorID))
+		b, err := scanBank(tx.QueryRowContext(ctx, `INSERT INTO question_bank AS b(tenant_id,school_id,name,description,created_by) SELECT $1::uuid,$2::uuid,$3,$4,$5::uuid FROM school s WHERE s.tenant_id=$1::uuid AND s.id=$2::uuid AND s.status='active' AND s.deleted_at IS NULL AND `+bankSchoolScopeSQL("s.id", "$1", "$5", "$6", "$7")+` RETURNING `+bankCols, scope.TenantID, in.SchoolID, in.Name, in.Description, scope.ActorID, scope.TenantWide, scope.SchoolIDs))
+		if errors.Is(err, ErrNotFound) {
+			return Bank{}, auth.ErrForbidden
+		}
 		if err != nil {
 			return b, err
 		}
@@ -496,7 +499,7 @@ func (s *PostgresStore) ListBanks(ctx context.Context, scope auth.AccessScope, f
 		return page, err
 	}
 	defer tx.Rollback()
-	where := ` FROM question_bank b WHERE b.tenant_id=$1::uuid AND ($2 OR b.school_id::text=ANY($3::text[])) AND (question_bank_actor_has_action(b.tenant_id,b.id,$4::uuid,'read') OR question_bank_actor_has_action(b.tenant_id,b.id,$4::uuid,'manage')) AND (b.name ILIKE '%'||$5||'%' OR b.description ILIKE '%'||$5||'%')`
+	where := ` FROM question_bank b WHERE b.tenant_id=$1::uuid AND ` + bankSchoolScopeSQL("b.school_id", "$1", "$4", "$2", "$3") + ` AND (question_bank_actor_has_action(b.tenant_id,b.id,$4::uuid,'read') OR question_bank_actor_has_action(b.tenant_id,b.id,$4::uuid,'manage')) AND (b.name ILIKE '%'||$5||'%' OR b.description ILIKE '%'||$5||'%')`
 	args := []any{scope.TenantID, scope.TenantWide, scope.SchoolIDs, scope.ActorID, f.Query}
 	if err = tx.QueryRowContext(ctx, `SELECT count(*)`+where, args...).Scan(&page.Total); err != nil {
 		return page, err

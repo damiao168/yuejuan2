@@ -63,6 +63,8 @@ type SubjectExam struct {
 	TotalScore float64 `json:"total_score"`
 }
 
+// Projection 是考试工作区的读模型。ExamStatus 与 Stage 是工作区展示的生命周期：
+// 学生端已有正式成绩时为 published，即使 exam 记录仍停在 finalized 等阶段。
 type Projection struct {
 	ExamID          string          `json:"exam_id"`
 	ExamName        string          `json:"exam_name"`
@@ -82,4 +84,6 @@ type Projection struct {
 	RiskTier        string          `json:"risk_tier"`
 	SubjectSummary  SubjectSummary  `json:"subject_summary"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+	// 学生端发布记录读取失败时为 true；只在本包内调整摘要和下一步，不进入接口输出。
+	releaseUnknown bool
 }

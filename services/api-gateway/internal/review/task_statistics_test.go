@@ -108,9 +108,11 @@ func TestMemoryStatisticsDoNotPromoteNavigationExamsToSchoolManagement(t *testin
 		exams                  []string
 		count                  int
 	}{
-		{"navigation cannot grant full exam", "", "school", []string{"external"}, 0},
-		{"own external review survives", "own", "school", []string{"managed-only"}, 1},
-		{"another reviewer stays private", "other", "school", []string{"external"}, 0},
+		{"navigation removed by authoritative school scope", "", "school", []string{"managed-only"}, 0},
+		{"school administrator cannot read own external review", "own", "school", []string{"managed-only"}, 0},
+		{"ordinary assigned teacher keeps own external review", "own", "assigned", nil, 1},
+		{"another external reviewer stays private", "other", "school", []string{"managed-only"}, 0},
+		{"own school remains readable", "own", "school", []string{"external"}, 1},
 		{"assigned scope cannot impersonate", "other", "assigned", nil, 0},
 		{"empty class scope cannot grant exam", "", "class", nil, 0},
 	} {

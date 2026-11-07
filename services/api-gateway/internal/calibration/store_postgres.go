@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 
+	"edugrade-enterprise/services/api-gateway/internal/workflowactors"
+
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -67,6 +69,26 @@ FROM grader_calibration_policy WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND
 }
 
 func (s *PostgresStore) CreateSession(ctx context.Context, tenantID string, session Session, policy Policy, references []goldReference) (Session, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Session{}, err
+	}
+	defer tx.Rollback()
+	// 对同一题和阅卷者串行核对冷却状态，不能通过并发重考绕开失败间隔。
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, tenantID+":"+session.ExamID+":"+session.QuestionID+":"+session.GraderID+":calibration"); err != nil {
+		return Session{}, err
+	}
+	// 校准材料也属于具体考试；首次派发在写事务核对同校岗位和任教学科，不向未合格人员开放样本。
+	if err := workflowactors.ValidateCalibrationAssignee(ctx, tx, tenantID, session.ExamID, session.GraderID); err != nil {
+		return Session{}, err
+	}
+	var availableAt sql.NullTime
+	if err = tx.QueryRowContext(ctx, `SELECT MAX(completed_at)+interval '24 hours' FROM grader_calibration_session WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$3::uuid AND grader_id=$4::uuid AND status='failed' AND completed_at>$5::timestamptz-interval '24 hours'`, tenantID, session.ExamID, session.QuestionID, session.GraderID, session.StartedAt).Scan(&availableAt); err != nil {
+		return Session{}, err
+	}
+	if availableAt.Valid {
+		return Session{}, &RetakeCooldownError{AvailableAt: availableAt.Time}
+	}
 	policyJSON, err := json.Marshal(policy)
 	if err != nil {
 		return Session{}, ErrInvalidInput
@@ -75,7 +97,7 @@ func (s *PostgresStore) CreateSession(ctx context.Context, tenantID string, sess
 	if err != nil {
 		return Session{}, ErrInvalidInput
 	}
-	_, err = s.db.ExecContext(ctx, `
+	_, err = tx.ExecContext(ctx, `
 INSERT INTO grader_calibration_session (
  id,tenant_id,exam_id,question_id,grader_id,exam_question_snapshot_id,gold_version,
  policy_snapshot_json,sample_manifest_json,status,started_at
@@ -86,6 +108,9 @@ INSERT INTO grader_calibration_session (
 		return Session{}, ErrConflict
 	}
 	if err != nil {
+		return Session{}, err
+	}
+	if err = tx.Commit(); err != nil {
 		return Session{}, err
 	}
 	return cloneSession(session), nil
@@ -181,6 +206,10 @@ func (s *PostgresStore) CompleteSession(ctx context.Context, tenantID string, se
 		return Session{}, Qualification{}, err
 	}
 	defer tx.Rollback()
+	// 与重考创建共用锁，失败落库和下一次冷却判断不能交错。
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, tenantID+":"+session.ExamID+":"+session.QuestionID+":"+session.GraderID+":calibration"); err != nil {
+		return Session{}, Qualification{}, err
+	}
 	result, err := tx.ExecContext(ctx, `
 UPDATE grader_calibration_session SET status=$3,metrics_json=$4::jsonb,completed_at=$5
 WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='in_progress'

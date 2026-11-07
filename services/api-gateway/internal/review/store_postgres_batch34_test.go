@@ -362,6 +362,11 @@ func assertReviewArbitrationSessionBinding(t *testing.T, test reviewArbitrationI
 	steps := []reviewBatch34Step{}
 	if !test.forbidden {
 		steps = reviewBatch34ContextSteps()
+		if test.assignedTo != "" {
+			steps = append([]reviewBatch34Step{{name: "arbitrator eligibility", fragment: "FOR SHARE OF u", columns: 3,
+				args: []any{"tenant", "exam", "arbitration:work", "arbitrator", test.assignedTo},
+				rows: [][]driver.Value{{"math", `["mathematics"]`, `["arbitrator"]`}}}}, steps...)
+		}
 		reason := test.reason
 		if strings.TrimSpace(reason) == "" {
 			reason = "score difference 3.50 exceeds threshold 1.25"

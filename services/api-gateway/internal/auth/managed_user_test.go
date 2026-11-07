@@ -12,22 +12,21 @@ func TestManagedUserCreationUsesCanonicalScopes(t *testing.T) {
 	store.SetTenantStatus(actor.TenantID, "active")
 	scope := AccessScope{TenantID: actor.TenantID, ActorID: actor.ID, TenantWide: true}
 	for _, role := range []AssignableRole{
-		{Code: "teacher", ScopeType: "class"}, {Code: "grader", ScopeType: "exam_task"}, {Code: "arbitrator", ScopeType: "exam_task"},
+		{Code: "teacher", ScopeType: "exam_task"}, {Code: "grader", ScopeType: "exam_task"}, {Code: "arbitrator", ScopeType: "exam_task"},
 	} {
 		store.AddRole(actor.TenantID, role)
 	}
 	tests := []struct {
 		role, wantScope string
-		classIDs        []string
 	}{
-		{role: "teacher", wantScope: "class", classIDs: []string{"class-1"}},
+		{role: "teacher", wantScope: "exam_task"},
 		{role: "grader", wantScope: "exam_task"},
 		{role: "arbitrator", wantScope: "exam_task"},
 	}
 	for _, test := range tests {
 		username := test.role + "-1"
-		_, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{
-			Username: username, DisplayName: username, RoleCode: test.role, SchoolID: "school-1", ClassIDs: test.classIDs,
+		_, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{TeachingSubjects: []string{"mathematics"},
+			Username: username, DisplayName: username, RoleCode: test.role, SchoolID: "school-1",
 		}, "hash")
 		if err != nil {
 			t.Fatalf("create %s: %v", test.role, err)
@@ -53,7 +52,7 @@ func TestManagedUserCreationRejectsPrivilegedStudentAndServiceRoles(t *testing.T
 		{Code: "page_processing_worker", ScopeType: "service"},
 	} {
 		store.AddRole(actor.TenantID, role)
-		_, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{
+		_, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{TeachingSubjects: []string{"mathematics"},
 			Username: role.Code, DisplayName: role.Code, RoleCode: role.Code, SchoolID: "school-1",
 		}, "hash")
 		if !errors.Is(err, ErrRoleAssignment) {
@@ -62,15 +61,12 @@ func TestManagedUserCreationRejectsPrivilegedStudentAndServiceRoles(t *testing.T
 	}
 }
 
-func TestManagedUserCreationRejectsClassBindingForAssignedRoles(t *testing.T) {
+func TestManagedUserCreationRequiresReviewTeachingSubjects(t *testing.T) {
 	store := NewMemoryStore()
-	actor := User{ID: "school-admin", TenantID: "tenant-1", TenantCode: "tenant", Roles: []string{"school_admin"}}
-	scope := AccessScope{TenantID: actor.TenantID, ActorID: actor.ID, SchoolIDs: []string{"school-1"}}
+	actor := User{ID: "owner", TenantID: "tenant", Roles: []string{"tenant_admin"}}
 	store.AddRole(actor.TenantID, AssignableRole{Code: "grader", ScopeType: "exam_task"})
-	_, err := store.CreateManagedUser(context.Background(), actor, scope, CreateManagedUserInput{
-		Username: "grader", DisplayName: "grader", RoleCode: "grader", SchoolID: "school-1", ClassIDs: []string{"class-1"},
-	}, "hash")
-	if !errors.Is(err, ErrInvalidRoleBinding) {
-		t.Fatalf("grader class binding expected invalid binding, got %v", err)
+	_, err := store.CreateManagedUser(context.Background(), actor, AccessScope{TenantWide: true}, CreateManagedUserInput{Username: "grader", DisplayName: "Grader", RoleCode: "grader", SchoolID: "school"}, "hash")
+	if !errors.Is(err, ErrInvalidTeachingSubjects) {
+		t.Fatalf("missing subjects error=%v", err)
 	}
 }

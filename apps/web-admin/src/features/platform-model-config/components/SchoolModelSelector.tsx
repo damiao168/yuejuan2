@@ -16,6 +16,7 @@ export function SchoolModelSelector({
   temporarilyUnavailableCount,
   capabilityCount = 0,
   chatModelCount,
+  availableChatModelCount,
   localSwitchBusy = false,
   onUseLocal,
   onFilter,
@@ -32,6 +33,7 @@ export function SchoolModelSelector({
   temporarilyUnavailableCount: number;
   capabilityCount?: number;
   chatModelCount?: number;
+  availableChatModelCount?: number;
   localSwitchBusy?: boolean;
   onUseLocal?: () => void;
   onFilter?: (filter: "enabled" | "connection" | "text" | "capability") => void;
@@ -54,7 +56,7 @@ export function SchoolModelSelector({
         />
       </div>
       <div className="platform-model-school-summary">
-        <span><Building2 size={15} /> 对话已开放 {chatModelCount ?? "—"} 个，学校管理员可切换</span>
+        <span><Building2 size={15} /> 对话已开放 {chatModelCount ?? "—"} 项 · 可用 {availableChatModelCount ?? "—"} 项{chatModelCount !== undefined && availableChatModelCount !== undefined && chatModelCount > availableChatModelCount ? ` · 不可用 ${chatModelCount - availableChatModelCount} 项` : ""}</span>
         <div className="platform-model-conversation-summary"><span>默认配置：{currentConfig ? `${currentConfig.display_name} · ${currentConfig.model_name} · 普通回复${textStatusLabel(currentConfig)}` : "未指定"}</span>
           {currentConfig && onUseLocal ? <Tooltip title="不取消已开放的对话模型；跟随默认配置的试卷解析改用本地解析"><Button type="link" size="small" disabled={disabled || localSwitchBusy} onClick={onUseLocal}>清除默认</Button></Tooltip> : null}
         </div>

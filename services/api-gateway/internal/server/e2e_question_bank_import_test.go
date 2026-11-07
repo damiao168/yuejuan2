@@ -11,7 +11,6 @@ import (
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
-	"edugrade-enterprise/services/api-gateway/internal/org"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/questionbank"
 	"github.com/google/uuid"
@@ -329,11 +328,12 @@ func publishFrozenQuestionBankImport(t *testing.T, env questionBankE2EEnvironmen
 	// 完成映射后，提交和发布由原操作者执行，批准使用独立复核者的范围。
 	// 返回发布版本供后续复制检查来源信息，保持状态转换和版本修订顺序。
 	reviewer := e2eLookupUserID(t, db, "demo", "teacher")
+	// 返回班级仅供后续复用考试设置学生范围，复核教师不再绑定该班级。
 	var classID string
 	if err = db.QueryRow(`SELECT class_id::text FROM exam_class WHERE exam_id=$1 LIMIT 1`, fixture.ExamID).Scan(&classID); err != nil {
 		t.Fatal(err)
 	}
-	if err = org.NewPostgresStore(db).BindTeacherClass(ctx, fixture.TenantID, reviewer, classID); err != nil {
+	if _, err = db.Exec(`UPDATE app_user SET school_id=$1,teaching_subjects=ARRAY['physics']::text[] WHERE tenant_id=$2 AND id=$3`, fixture.SchoolID, fixture.TenantID, reviewer); err != nil {
 		t.Fatal(err)
 	}
 	for n, actor := range []string{fixture.AdminID, reviewer} {
@@ -349,7 +349,7 @@ func publishFrozenQuestionBankImport(t *testing.T, env questionBankE2EEnvironmen
 	if err != nil {
 		t.Fatal(err)
 	}
-	reviewerScope := auth.AccessScope{TenantID: fixture.TenantID, ActorID: reviewer, SchoolIDs: []string{fixture.SchoolID}, ClassIDs: []string{classID}}
+	reviewerScope := auth.AccessScope{TenantID: fixture.TenantID, ActorID: reviewer, AssignedOnly: true}
 	for _, action := range []string{"submit-review", "approve", "publish"} {
 		actorScope := scope
 		if action == "approve" {

@@ -185,16 +185,18 @@ func AllowsCreate(scope auth.AccessScope, input CreateAssetInput) bool {
 	if scope.TenantWide {
 		return true
 	}
-	if input.SchoolID != "" && scope.AllowsSchool(input.SchoolID) {
-		return true
-	}
-	if input.ExamID != "" && scope.AllowsExam(input.ExamID) {
+	if input.SchoolID != "" && scope.ManagesSchool(input.SchoolID) {
 		return true
 	}
 	if input.SubmissionID != "" && scope.AllowsSubmission(input.SubmissionID) {
 		return true
 	}
 	return input.SchoolID == "" && input.ExamID == "" && input.SubmissionID == "" && input.UploadedBy == scope.ActorID
+}
+
+// 通用删除仅处理未绑定考试证据的临时文件；答卷、裁切图和考试材料由正式留存流程处理。
+func allowsGenericDelete(asset FileAsset) bool {
+	return asset.OwnerType == "generic" && asset.ExamID == "" && asset.SubmissionID == "" && asset.StudentID == ""
 }
 
 type ObjectStorage interface {

@@ -73,6 +73,13 @@ func (h *Handler) WithImageModelResolver(resolve func(context.Context, string) (
 	return h
 }
 
+// WithImagePrefixCaching 只为新建图像评分任务选择新版前缀布局，不改变已冻结任务或盲读观察。
+// 是否实际命中缓存仍由供应商决定；关闭开关不会把新版在途任务降级为旧版。
+func (h *Handler) WithImagePrefixCaching(enabled bool) *Handler {
+	h.imagePrefixCaching = enabled
+	return h
+}
+
 func (h *Handler) WithImageModelByIDResolver(resolve func(context.Context, string, string, string) (*ImageModelConfig, error)) *Handler {
 	h.imageModelByIDResolver = resolve
 	return h
@@ -124,6 +131,9 @@ func (h *Handler) imageAdapterForPlan(ctx context.Context, tenantID string, plan
 	selected.policy.ModelVersion = model.ModelVersion
 	// 图像比较使用独立提示词版本，不能借用旧文本提示词的评测或校准批准。
 	selected.policy.PromptVersion = ImageComparisonPromptVersion
+	if h.imagePrefixCaching {
+		selected.policy.PromptVersion = ImageComparisonPrefixPromptVersion
+	}
 	selected.adapterType, selected.providerKey, selected.deploymentKey, selected.deploymentRegion = model.AdapterType, model.ProviderKey, model.ConfigRevision, "managed"
 	return &selected, model, nil
 }

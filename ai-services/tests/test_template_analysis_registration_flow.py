@@ -5,7 +5,7 @@ import hashlib
 
 import numpy as np
 import pytest
-from grading_agent.template_analysis import _restore_registered_analysis
+from grading_agent.template_analysis_candidates import _restore_registered_analysis
 from grading_agent.template_analysis_fill_groups import discover_fill_grading_groups
 
 

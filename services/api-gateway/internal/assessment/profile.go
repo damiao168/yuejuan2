@@ -1,7 +1,7 @@
 package assessment
 
 import (
-	"strings"
+	"edugrade-enterprise/services/api-gateway/internal/subjectcode"
 	"time"
 )
 
@@ -42,29 +42,8 @@ type SubjectProfile struct {
 }
 
 func NormalizeSubjectCode(value string) (SubjectCode, bool) {
-	normalized := strings.ToLower(strings.TrimSpace(value))
-	switch normalized {
-	case "math", "数学":
-		normalized = string(SubjectMathematics)
-	case "politics", "civics", "道德与法治", "思想政治", "政治":
-		normalized = string(SubjectEthicsPolitics)
-	case "语文":
-		normalized = string(SubjectChinese)
-	case "英语":
-		normalized = string(SubjectEnglish)
-	case "物理":
-		normalized = string(SubjectPhysics)
-	case "化学":
-		normalized = string(SubjectChemistry)
-	case "生物":
-		normalized = string(SubjectBiology)
-	case "历史":
-		normalized = string(SubjectHistory)
-	case "地理":
-		normalized = string(SubjectGeography)
-	}
-	subject := SubjectCode(normalized)
-	return subject, subject.Valid()
+	code, ok := subjectcode.Normalize(value)
+	return SubjectCode(code), ok
 }
 
 func (s SubjectCode) Valid() bool {

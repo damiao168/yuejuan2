@@ -1,6 +1,32 @@
 {
   "openapi": "3.1.0",
   "operations": {
+    "GET /api/v1/exams/{examId}/roster": {
+      "operationId": "getExamRosterReport",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/ScoreRosterResponse"
+      }
+    },
+    "GET /api/v1/dashboard/summary": {
+      "operationId": "getDashboardSummary",
+      "parameters": [],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/DashboardSummary"
+      }
+    },
     "GET /api/v1/exams/{examId}/grading-ai-plan": {
       "operationId": "getExamGradingAIPlan",
       "parameters": [
@@ -7859,6 +7885,21 @@
         "$ref": "#/components/schemas/OrganizationGradeResponse"
       }
     },
+    "DELETE /api/v1/grades/{id}": {
+      "operationId": "deleteOrganizationGrade",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
+    },
     "PATCH /api/v1/classes/{id}": {
       "operationId": "updateOrganizationClass",
       "parameters": [
@@ -7880,6 +7921,21 @@
       "response": {
         "$ref": "#/components/schemas/OrganizationClassResponse"
       }
+    },
+    "DELETE /api/v1/classes/{id}": {
+      "operationId": "deleteOrganizationClass",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
     },
     "PATCH /api/v1/students/{id}": {
       "operationId": "updateOrganizationStudent",
@@ -9517,9 +9573,709 @@
       "response": {
         "$ref": "#/components/schemas/CalibrationSchoolTemplateResponse"
       }
+    },
+    "GET /api/v1/grades": {
+      "operationId": "listOrganizationGrades",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "school_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/OrganizationGradeListResponse"
+      }
+    },
+    "POST /api/v1/grades": {
+      "operationId": "createOrganizationGrade",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CreateOrganizationGradeRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/OrganizationGradeResponse"
+      }
+    },
+    "GET /api/v1/classes": {
+      "operationId": "listOrganizationClasses",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "grade_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/OrganizationClassListResponse"
+      }
+    },
+    "POST /api/v1/classes": {
+      "operationId": "createOrganizationClass",
+      "parameters": [],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CreateOrganizationClassRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/OrganizationClassResponse"
+      }
+    },
+    "PUT /api/v1/students/{id}/enrollment": {
+      "operationId": "transferOrganizationStudent",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/TransferOrganizationStudentRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/TransferOrganizationStudentResponse"
+      }
+    },
+    "GET /api/v1/exams/{examId}/questions/{questionId}/seed-policy": {
+      "operationId": "getSeedSamplingPolicy",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "path",
+          "name": "questionId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/SeedSamplingPolicyResponse"
+      }
+    },
+    "PUT /api/v1/exams/{examId}/questions/{questionId}/seed-policy": {
+      "operationId": "putSeedSamplingPolicy",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "path",
+          "name": "questionId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/PutSeedSamplingPolicyRequest"
+        }
+      },
+      "response": {
+        "$ref": "#/components/schemas/SeedSamplingPolicyResponse"
+      }
+    },
+    "GET /api/v1/auth/profile": {
+      "operationId": "getAccountProfile",
+      "parameters": [],
+      "requestBody": null,
+      "response": {
+        "$ref": "#/components/schemas/AccountProfileResponse"
+      }
+    },
+    "GET /api/v1/exams/{examId}/grades/export/report": {
+      "operationId": "exportExamGradeReport",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
+    },
+    "GET /api/v1/exams/{examId}/score-releases/export": {
+      "operationId": "exportPublishedExamGrades",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "examId",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "in": "query",
+          "name": "format",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "csv",
+              "xlsx"
+            ]
+          }
+        }
+      ],
+      "requestBody": null,
+      "response": null
     }
   },
   "schemas": {
+    "ScoreRosterEntry": {
+      "type": "object",
+      "required": [
+        "key",
+        "status",
+        "resolution_code",
+        "expected_page_count",
+        "actual_page_count"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "student_id": {
+          "type": "string"
+        },
+        "student_no": {
+          "type": "string"
+        },
+        "student_name": {
+          "type": "string"
+        },
+        "class_id": {
+          "type": "string"
+        },
+        "class_name": {
+          "type": "string"
+        },
+        "submission_id": {
+          "type": "string"
+        },
+        "candidate_no": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "graded",
+            "submitted",
+            "absent",
+            "unmatched",
+            "missing_pages"
+          ]
+        },
+        "resolution_code": {
+          "type": "string"
+        },
+        "expected_page_count": {
+          "type": "integer"
+        },
+        "actual_page_count": {
+          "type": "integer"
+        },
+        "total_score": {
+          "type": "number"
+        },
+        "max_score": {
+          "type": "number"
+        },
+        "attendance_reason": {
+          "type": "string"
+        },
+        "marked_by": {
+          "type": "string"
+        },
+        "marked_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScoreRosterSummary": {
+      "type": "object",
+      "required": [
+        "expected",
+        "received",
+        "graded",
+        "absent",
+        "unresolved",
+        "missing_pages",
+        "unidentified"
+      ],
+      "properties": {
+        "expected": {
+          "type": "integer"
+        },
+        "received": {
+          "type": "integer"
+        },
+        "graded": {
+          "type": "integer"
+        },
+        "absent": {
+          "type": "integer"
+        },
+        "unresolved": {
+          "type": "integer"
+        },
+        "missing_pages": {
+          "type": "integer"
+        },
+        "unidentified": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScoreRosterReport": {
+      "type": "object",
+      "required": [
+        "entries",
+        "summary"
+      ],
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ScoreRosterEntry"
+          }
+        },
+        "summary": {
+          "$ref": "#/components/schemas/ScoreRosterSummary"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScoreRosterResponse": {
+      "type": "object",
+      "required": [
+        "roster"
+      ],
+      "properties": {
+        "roster": {
+          "$ref": "#/components/schemas/ScoreRosterReport"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardScope": {
+      "type": "object",
+      "required": [
+        "tenant_id"
+      ],
+      "properties": {
+        "tenant_id": {
+          "type": "string"
+        },
+        "school_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardStatistics": {
+      "type": "object",
+      "required": [
+        "active_exam_count",
+        "collecting_exam_count",
+        "pending_review_question_count",
+        "pending_review_submission_count",
+        "pending_arbitration_count",
+        "pending_arbitration_submission_count",
+        "failed_submission_count",
+        "unmatched_submission_count",
+        "quality_issue_submission_count",
+        "finalized_exam_count"
+      ],
+      "properties": {
+        "active_exam_count": {
+          "type": "integer"
+        },
+        "collecting_exam_count": {
+          "type": "integer"
+        },
+        "pending_review_question_count": {
+          "type": "integer"
+        },
+        "pending_review_submission_count": {
+          "type": "integer"
+        },
+        "pending_arbitration_count": {
+          "type": "integer"
+        },
+        "pending_arbitration_submission_count": {
+          "type": "integer"
+        },
+        "failed_submission_count": {
+          "type": "integer"
+        },
+        "unmatched_submission_count": {
+          "type": "integer"
+        },
+        "quality_issue_submission_count": {
+          "type": "integer"
+        },
+        "finalized_exam_count": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardOrganizationStatistics": {
+      "type": "object",
+      "required": [
+        "active_student_count",
+        "grade_count",
+        "class_count",
+        "teacher_count",
+        "grader_count",
+        "empty_class_count",
+        "unassigned_teacher_count"
+      ],
+      "properties": {
+        "active_student_count": {
+          "type": "integer"
+        },
+        "grade_count": {
+          "type": "integer"
+        },
+        "class_count": {
+          "type": "integer"
+        },
+        "teacher_count": {
+          "type": "integer"
+        },
+        "grader_count": {
+          "type": "integer"
+        },
+        "empty_class_count": {
+          "type": "integer"
+        },
+        "unassigned_teacher_count": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardBlockingIssue": {
+      "type": "object",
+      "required": [
+        "code",
+        "label",
+        "count",
+        "unit",
+        "impact",
+        "action",
+        "drilldown_path"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "impact": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "drilldown_path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardActiveExam": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "subject",
+        "status",
+        "submission_count",
+        "failed_count",
+        "quality_issue_count",
+        "unmatched_count",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "submission_count": {
+          "type": "integer"
+        },
+        "failed_count": {
+          "type": "integer"
+        },
+        "quality_issue_count": {
+          "type": "integer"
+        },
+        "unmatched_count": {
+          "type": "integer"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardRecentActivity": {
+      "type": "object",
+      "required": [
+        "id",
+        "action",
+        "target_type",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "target_type": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "drilldown_path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardReviewTeacher": {
+      "type": "object",
+      "required": [
+        "user_id",
+        "username",
+        "display_name",
+        "teaching_subjects",
+        "assigned_count",
+        "in_progress_count",
+        "returned_count",
+        "submitted_count",
+        "remaining_count",
+        "is_online"
+      ],
+      "properties": {
+        "user_id": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "teaching_subjects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SubjectCode"
+          }
+        },
+        "assigned_count": {
+          "type": "integer"
+        },
+        "in_progress_count": {
+          "type": "integer"
+        },
+        "returned_count": {
+          "type": "integer"
+        },
+        "submitted_count": {
+          "type": "integer"
+        },
+        "remaining_count": {
+          "type": "integer"
+        },
+        "is_online": {
+          "type": "boolean"
+        },
+        "last_active_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardReviewTeacherSummary": {
+      "type": "object",
+      "required": [
+        "teacher_count",
+        "online_count",
+        "online_window_seconds",
+        "task_counting_note",
+        "online_note"
+      ],
+      "properties": {
+        "teacher_count": {
+          "type": "integer"
+        },
+        "online_count": {
+          "type": "integer"
+        },
+        "online_window_seconds": {
+          "type": "integer"
+        },
+        "task_counting_note": {
+          "type": "string"
+        },
+        "online_note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardSummary": {
+      "type": "object",
+      "required": [
+        "scope",
+        "updated_at",
+        "organization_statistics",
+        "statistics",
+        "blocking_issues",
+        "active_exams",
+        "recent_activities",
+        "warnings",
+        "review_teachers",
+        "review_teacher_summary"
+      ],
+      "properties": {
+        "scope": {
+          "$ref": "#/components/schemas/DashboardScope"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "organization_statistics": {
+          "$ref": "#/components/schemas/DashboardOrganizationStatistics"
+        },
+        "statistics": {
+          "$ref": "#/components/schemas/DashboardStatistics"
+        },
+        "blocking_issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/DashboardBlockingIssue"
+          }
+        },
+        "active_exams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/DashboardActiveExam"
+          }
+        },
+        "recent_activities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/DashboardRecentActivity"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "review_teachers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/DashboardReviewTeacher"
+          }
+        },
+        "review_teacher_summary": {
+          "$ref": "#/components/schemas/DashboardReviewTeacherSummary"
+        }
+      },
+      "additionalProperties": false
+    },
     "GradingAIRoleSelectionInput": {
       "type": "object",
       "properties": {
@@ -10543,6 +11299,39 @@
             },
             "model": {
               "$ref": "#/components/schemas/ManagedChatModelStatus"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "phase"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "progress"
+            },
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "seq": {
+              "type": "integer"
+            },
+            "phase": {
+              "type": "string",
+              "enum": [
+                "understanding",
+                "searching",
+                "reading",
+                "reviewing",
+                "answering"
+              ]
             }
           },
           "additionalProperties": false
@@ -18192,15 +18981,7 @@
         "gold_paper_id",
         "gold_version",
         "submitted_score",
-        "reference_score",
         "rubric_selections",
-        "absolute_error",
-        "exact_match",
-        "within_one",
-        "severe_disagreement",
-        "criterion_correct",
-        "criterion_count",
-        "criterion_differences",
         "created_at"
       ],
       "properties": {
@@ -18219,36 +19000,9 @@
         "submitted_score": {
           "type": "number"
         },
-        "reference_score": {
-          "type": "number"
-        },
         "rubric_selections": {
           "type": "object",
           "additionalProperties": true
-        },
-        "absolute_error": {
-          "type": "number"
-        },
-        "exact_match": {
-          "type": "boolean"
-        },
-        "within_one": {
-          "type": "boolean"
-        },
-        "severe_disagreement": {
-          "type": "boolean"
-        },
-        "criterion_correct": {
-          "type": "integer"
-        },
-        "criterion_count": {
-          "type": "integer"
-        },
-        "criterion_differences": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/CalibrationCriterionDifference"
-          }
         },
         "created_at": {
           "type": "string",
@@ -25579,7 +26333,6 @@
         "school_id",
         "grade_id",
         "name",
-        "exam_type",
         "grading_mode",
         "publish_policy",
         "subjects",
@@ -32924,6 +33677,9 @@
         },
         "facts_available": {
           "type": "boolean"
+        },
+        "grading_complete_count": {
+          "type": "integer"
         }
       },
       "additionalProperties": false
@@ -33246,8 +34002,7 @@
         "username",
         "display_name",
         "status",
-        "roles",
-        "class_ids"
+        "roles"
       ],
       "properties": {
         "id": {
@@ -33268,10 +34023,10 @@
             "type": "string"
           }
         },
-        "class_ids": {
+        "teaching_subjects": {
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/components/schemas/SubjectCode"
           }
         },
         "school_id": {
@@ -33366,10 +34121,10 @@
         "school_id": {
           "type": "string"
         },
-        "class_ids": {
+        "teaching_subjects": {
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/components/schemas/SubjectCode"
           }
         }
       },
@@ -33394,9 +34149,7 @@
       "type": "object",
       "required": [
         "role_codes",
-        "class_ids",
         "expected_roles",
-        "expected_class_ids",
         "reason"
       ],
       "properties": {
@@ -33406,19 +34159,7 @@
             "type": "string"
           }
         },
-        "class_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
         "expected_roles": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "expected_class_ids": {
           "type": "array",
           "items": {
             "type": "string"
@@ -36398,6 +37139,9 @@
         },
         "level_no": {
           "type": "integer"
+        },
+        "entry_year": {
+          "type": "integer"
         }
       },
       "additionalProperties": false
@@ -36497,12 +37241,20 @@
     },
     "UpdateOrganizationGradeRequest": {
       "type": "object",
-      "required": [
-        "name"
-      ],
       "properties": {
         "name": {
           "type": "string"
+        },
+        "level_no": {
+          "type": "integer",
+          "enum": [
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ]
         }
       },
       "additionalProperties": false
@@ -36610,6 +37362,18 @@
         },
         "expected_phone_masked": {
           "type": "string"
+        },
+        "teaching_subjects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SubjectCode"
+          }
+        },
+        "expected_teaching_subjects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SubjectCode"
+          }
         }
       },
       "additionalProperties": false
@@ -38280,6 +39044,9 @@
     },
     "ManagedModelAPIConfigUpdateInput": {
       "type": "object",
+      "required": [
+        "expected_updated_at"
+      ],
       "properties": {
         "display_name": {
           "type": "string"
@@ -39219,6 +39986,12 @@
             "number",
             "null"
           ]
+        },
+        "average_score": {
+          "type": [
+            "number",
+            "null"
+          ]
         }
       }
     },
@@ -39274,6 +40047,353 @@
           "format": "date-time"
         }
       }
+    },
+    "CreateOrganizationGradeRequest": {
+      "type": "object",
+      "required": [
+        "school_id",
+        "name"
+      ],
+      "properties": {
+        "school_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "level_no": {
+          "type": "integer"
+        },
+        "education_stage": {
+          "type": "string",
+          "enum": [
+            "junior",
+            "senior"
+          ]
+        },
+        "academic_year": {
+          "type": "string"
+        },
+        "entry_year": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "OrganizationGradeListResponse": {
+      "type": "object",
+      "required": [
+        "grades"
+      ],
+      "properties": {
+        "grades": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/OrganizationGrade"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "CreateOrganizationClassRequest": {
+      "type": "object",
+      "required": [
+        "school_id",
+        "grade_id",
+        "name",
+        "code"
+      ],
+      "properties": {
+        "school_id": {
+          "type": "string"
+        },
+        "grade_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "OrganizationClassListResponse": {
+      "type": "object",
+      "required": [
+        "classes"
+      ],
+      "properties": {
+        "classes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/OrganizationClass"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "OrganizationStudentEnrollment": {
+      "type": "object",
+      "required": [
+        "id",
+        "student_id",
+        "school_id",
+        "academic_year_id",
+        "academic_year_name",
+        "grade_cohort_id",
+        "grade_cohort_name",
+        "class_id",
+        "class_name",
+        "status",
+        "start_date"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "student_id": {
+          "type": "string"
+        },
+        "school_id": {
+          "type": "string"
+        },
+        "academic_year_id": {
+          "type": "string"
+        },
+        "academic_year_name": {
+          "type": "string"
+        },
+        "grade_cohort_id": {
+          "type": "string"
+        },
+        "grade_cohort_name": {
+          "type": "string"
+        },
+        "class_id": {
+          "type": "string"
+        },
+        "class_name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "start_date": {
+          "type": "string"
+        },
+        "end_date": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TransferOrganizationStudentRequest": {
+      "type": "object",
+      "required": [
+        "class_id"
+      ],
+      "properties": {
+        "class_id": {
+          "type": "string"
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TransferOrganizationStudentResponse": {
+      "type": "object",
+      "required": [
+        "enrollment"
+      ],
+      "properties": {
+        "enrollment": {
+          "$ref": "#/components/schemas/OrganizationStudentEnrollment"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SeedSamplingPolicy": {
+      "type": "object",
+      "required": [
+        "id",
+        "exam_id",
+        "question_id",
+        "rate",
+        "min_interval",
+        "max_interval",
+        "active_gold_fingerprint",
+        "status",
+        "revision",
+        "created_by",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "exam_id": {
+          "type": "string"
+        },
+        "question_id": {
+          "type": "string"
+        },
+        "rate": {
+          "type": "number"
+        },
+        "min_interval": {
+          "type": "integer"
+        },
+        "max_interval": {
+          "type": "integer"
+        },
+        "active_gold_fingerprint": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "paused"
+          ]
+        },
+        "revision": {
+          "type": "integer"
+        },
+        "created_by": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "needs_confirmation": {
+          "type": "boolean"
+        },
+        "confirmation_reason": {
+          "type": "string",
+          "enum": [
+            "gold_set_changed",
+            "gold_set_missing"
+          ]
+        }
+      }
+    },
+    "SeedSamplingPolicyResponse": {
+      "type": "object",
+      "required": [
+        "policy"
+      ],
+      "properties": {
+        "policy": {
+          "$ref": "#/components/schemas/SeedSamplingPolicy"
+        }
+      }
+    },
+    "PutSeedSamplingPolicyRequest": {
+      "type": "object",
+      "required": [
+        "rate",
+        "min_interval",
+        "max_interval",
+        "status",
+        "expected_revision"
+      ],
+      "properties": {
+        "rate": {
+          "type": "number"
+        },
+        "min_interval": {
+          "type": "integer"
+        },
+        "max_interval": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "paused"
+          ]
+        },
+        "expected_revision": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AccountProfile": {
+      "type": "object",
+      "required": [
+        "id",
+        "username",
+        "display_name",
+        "phone_masked",
+        "employee_no",
+        "school_id",
+        "teaching_subjects",
+        "roles"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "phone_masked": {
+          "type": "string"
+        },
+        "employee_no": {
+          "type": "string"
+        },
+        "school_id": {
+          "type": "string"
+        },
+        "teaching_subjects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "AccountProfileResponse": {
+      "type": "object",
+      "required": [
+        "profile"
+      ],
+      "properties": {
+        "profile": {
+          "$ref": "#/components/schemas/AccountProfile"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

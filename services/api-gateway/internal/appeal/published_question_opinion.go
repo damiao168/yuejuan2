@@ -43,7 +43,11 @@ func validateQuestionAppealReviewOpinion(item PublishedQuestionAppeal, actorID s
 	if item.Status != QuestionAppealUnderReview {
 		return ErrInvalidTransition
 	}
-	if input.SuggestedScore != nil && *input.SuggestedScore > item.SourceMaxScore {
+	maxScore := item.SourceMaxScore
+	if item.ReviewSourceMaxScore != nil {
+		maxScore = *item.ReviewSourceMaxScore
+	}
+	if input.SuggestedScore != nil && *input.SuggestedScore > maxScore {
 		return ErrInvalidInput
 	}
 	return nil
@@ -83,17 +87,17 @@ func (s *PublishedQuestionAppealMemoryStore) SubmitPublishedQuestionAppealReview
 	if err := validateQuestionAppealReviewOpinion(item, actorID, input); err != nil {
 		return PublishedQuestionAppeal{}, err
 	}
-	for _, reviewerID := range s.sourceReviewers[tenantID+"\x00"+item.SourceFinalGradeID] {
+	for _, reviewerID := range s.sourceReviewers[tenantID+"\x00"+effectiveReviewFinalGradeID(item)] {
 		if reviewerID == actorID {
 			return PublishedQuestionAppeal{}, ErrForbidden
 		}
 	}
-	source, exists := s.sources[publishedQuestionSourceKey(tenantID, item.ExamID, item.StudentID, item.SourceReleaseID, item.QuestionID)]
+	source, exists := s.sources[publishedQuestionSourceKey(tenantID, item.ExamID, item.StudentID, effectiveReviewSourceID(item), item.QuestionID)]
 	if !exists || !source.Published {
 		return PublishedQuestionAppeal{}, ErrSourceRelease
 	}
 	for _, release := range s.publishedReleases {
-		if release.TenantID == tenantID && release.ExamID == item.ExamID && release.Version > item.SourceReleaseVersion {
+		if release.TenantID == tenantID && release.ExamID == item.ExamID && release.Version > source.ReleaseVersion {
 			return PublishedQuestionAppeal{}, ErrSourceRelease
 		}
 	}
@@ -122,7 +126,7 @@ func (s *PublishedQuestionAppealPostgresStore) SubmitPublishedQuestionAppealRevi
 	} else if !ok {
 		return PublishedQuestionAppeal{}, ErrForbidden
 	}
-	if participated, err := publishedQuestionSourceReviewerParticipated(ctx, tx, tenantID, item.SourceFinalGradeID, actorID); err != nil {
+	if participated, err := publishedQuestionSourceReviewerParticipated(ctx, tx, tenantID, effectiveReviewFinalGradeID(item), actorID); err != nil {
 		return PublishedQuestionAppeal{}, err
 	} else if participated {
 		return PublishedQuestionAppeal{}, ErrForbidden
@@ -135,7 +139,7 @@ FROM score_release_current current_release
 JOIN score_release release ON release.tenant_id=current_release.tenant_id AND release.id=current_release.release_id
 WHERE current_release.tenant_id=$1 AND current_release.exam_id=$2::uuid AND release.status='published'
 FOR SHARE OF current_release`, tenantID, item.ExamID).Scan(&currentReleaseID)
-	if errors.Is(err, sql.ErrNoRows) || (err == nil && currentReleaseID != item.SourceReleaseID) {
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && currentReleaseID != effectiveReviewSourceID(item)) {
 		return PublishedQuestionAppeal{}, ErrSourceRelease
 	}
 	if err != nil {

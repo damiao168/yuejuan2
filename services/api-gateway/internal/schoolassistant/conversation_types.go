@@ -8,11 +8,13 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/modelgovernance"
 )
 
-// ConversationDependencies 只接入当前租户的模型解析和调用，不暴露配置修改能力。
+// ConversationDependencies 接入当前租户的模型和公开搜索，不暴露配置修改或校内写入能力。
 type ConversationDependencies struct {
 	Models modelgovernance.ManagedAPIConfigStore
 	Model  modelgovernance.AgentModel
 	Usage  modelgovernance.UsageLedger
+	Search SearchProvider
+	Reader WebPageReader
 }
 
 type ConversationContext struct {
@@ -22,6 +24,7 @@ type ConversationContext struct {
 }
 
 type ConversationRequest struct {
+	WebSearch     bool                                 `json:"web_search,omitempty"`
 	ModelConfigID string                               `json:"model_config_id,omitempty"`
 	Messages      []modelgovernance.ManagedChatMessage `json:"messages"`
 	Context       *ConversationContext                 `json:"context,omitempty"`
@@ -31,6 +34,7 @@ type ConversationEvent struct {
 	Type       string                                  `json:"type"`
 	RequestID  string                                  `json:"request_id"`
 	Seq        int                                     `json:"seq"`
+	Phase      string                                  `json:"phase,omitempty"`
 	Model      *modelgovernance.ManagedChatModelStatus `json:"model,omitempty"`
 	CallID     string                                  `json:"call_id,omitempty"`
 	ToolName   string                                  `json:"tool_name,omitempty"`

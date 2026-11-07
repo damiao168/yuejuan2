@@ -5,13 +5,15 @@ import copy
 import numpy as np
 import pytest
 from grading_agent.template_analysis import (
-    _align_verified_barcode_boundaries,
     _apply_repair_batches,
-    _barcode_frame_targets,
-    _filter_repair_duplicate_codes,
     _finalize_candidate_reasons,
     _normalize,
     _review_region_conflicts,
+)
+from grading_agent.template_analysis_barcodes import (
+    _align_verified_barcode_boundaries,
+    _barcode_frame_targets,
+    _filter_repair_duplicate_codes,
 )
 from grading_agent.template_analysis_semantics import LocalContentEvidence
 

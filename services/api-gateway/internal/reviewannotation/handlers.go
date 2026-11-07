@@ -150,6 +150,6 @@ func (h *Handler) auditAction(r *http.Request, user auth.User, action, targetTyp
 	auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{
 		TenantID: user.TenantID, ActorID: user.ID, Action: action,
 		TargetType: targetType, TargetID: targetID, Reason: action,
-		IPAddress: r.RemoteAddr, UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
+		IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context()),
 	})
 }

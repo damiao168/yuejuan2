@@ -90,7 +90,8 @@ export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, on
   const filteredPages = useMemo(() => filterQualityPages(eligiblePages, filter), [eligiblePages, filter]);
   const counts = useMemo(() => qualityPageCounts(eligiblePages), [eligiblePages]);
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
-  useEffect(() => { if (initialPageId && pages.some(page => page.id === initialPageId)) setSelectedPageId(initialPageId); }, [initialPageId, pages]);
+  const initialPageAvailable = Boolean(initialPageId && pages.some(page => page.id === initialPageId));
+  useEffect(() => { if (initialPageAvailable) setSelectedPageId(initialPageId); }, [initialPageId, initialPageAvailable]);
   const selectedPage = eligiblePages.find((page) => page.id === selectedPageId) ?? filteredPages[0];
   const [runs, setRuns] = useState<ImageQualityRun[]>([]);
   const [runsPageId, setRunsPageId] = useState("");
@@ -129,11 +130,11 @@ export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, on
     }
   }, [filteredPages, selectedPageId]);
 
-  const loadRuns = useCallback(async (page?: CapturePage) => {
+  const loadRuns = useCallback(async (pageId = "", submissionPageId?: string) => {
     const requestId = ++runRequest.current;
     setRuns([]);
-    setRunsPageId(page?.id ?? "");
-    if (!page?.submission_page_id) {
+    setRunsPageId(pageId);
+    if (!submissionPageId) {
       setRuns([]);
       setRunsLoading(false);
       return;
@@ -141,7 +142,7 @@ export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, on
     setRunsLoading(true);
     setRunsError("");
     try {
-      const result = await listPageQualityRuns(page.submission_page_id);
+      const result = await listPageQualityRuns(submissionPageId);
       if (requestId !== runRequest.current) return;
       setRuns(result.runs);
       setSelectedRunId(result.runs[0]?.id ?? "");
@@ -154,13 +155,16 @@ export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, on
     }
   }, []);
 
+  const selectedSubmissionPageId = selectedPage?.submission_page_id;
+  const selectedCapturePageId = selectedPage?.id;
   useEffect(() => {
-    void loadRuns(selectedPage);
+    // 批次轮询会重建页面对象；只有页面身份变化才清空选择和在途操作。
+    void loadRuns(selectedCapturePageId, selectedSubmissionPageId);
     actionRequest.current += 1;
     actionBusy.current = false;
     setActioning(false);
     return () => { runRequest.current += 1; actionRequest.current += 1; };
-  }, [loadRuns, selectedPage]);
+  }, [loadRuns, selectedCapturePageId, selectedSubmissionPageId]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: previewRetry 由重试按钮触发；同一文件也需要重新下载，旧请求会被代次淘汰。
   useEffect(() => {
@@ -220,7 +224,7 @@ export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, on
       const result = await runImageQualityCheck(selectedPage.submission_id);
       // 补读会成为新的历史请求；换页后不能由旧重检重新发起A页读取并覆盖B页。
       if (!isCurrent()) return;
-      await Promise.all([loadRuns(selectedPage), onRefresh()]);
+      await Promise.all([loadRuns(selectedPage?.id, selectedPage?.submission_page_id), onRefresh()]);
       if (isCurrent()) message.success(`已提交 ${result.runs.length} 页重新检测；原质检记录继续保留`);
     } catch (error) {
       if (isCurrent()) message.error(getUserErrorMessage(error, "重新检测提交失败"));
@@ -346,7 +350,7 @@ export function ImageQualityWorkspace({ pages, initialPageId = "", canManage, on
               badFocusPatchRatio={badFocusPatchRatio}
               effectiveShortEdge={effectiveShortEdge}
               onSelect={setSelectedRunId}
-              onRetry={() => void loadRuns(selectedPage)}
+              onRetry={() => void loadRuns(selectedPage?.id, selectedPage?.submission_page_id)}
             />
           </div>
         </div>
@@ -441,7 +445,7 @@ function QualityRunDetails({ run, runs, dimensions, gates, badFocusPatchRatio, e
   return (
     <>
       <IssueList issues={run.quality_issues} />
-      <details className="quality-diagnostics"><summary>检测详情</summary>
+      <section className="quality-diagnostics" aria-label="检测详情"><h3>检测详情</h3>
       <div className="quality-run-select">
         <span>检测记录</span>
         <Select
@@ -476,7 +480,7 @@ function QualityRunDetails({ run, runs, dimensions, gates, badFocusPatchRatio, e
         {badFocusPatchRatio !== undefined ? <span>局部坏块 {formatPercent(badFocusPatchRatio)}</span> : null}
         {effectiveShortEdge !== undefined ? <span>有效短边 {Math.round(effectiveShortEdge)} px</span> : null}
       </div>
-      </details>
+      </section>
     </>
   );
 }

@@ -50,7 +50,7 @@ function AdminDecision(props: AdminProps) {
     <h3>复核进度与终审</h3>
     <div className="appeal-routing">
       <span>当前分派</span><strong>{selected.assigned_to ? workerNames[selected.assigned_to] ?? "已分派教师" : "尚未分派"}</strong>
-      <small>由管理员选择独立复核教师；原阅卷人不能受派复核同一成绩。</small>
+      <small>由管理员选择任教本场学科的独立复核教师；原阅卷人不能受派复核同一成绩。</small>
     </div>
     {selected.assigned_to ? <details className="appeal-reassign">
       <summary>更换复核教师</summary>
@@ -61,6 +61,7 @@ function AdminDecision(props: AdminProps) {
       <Select disabled={!canManage || terminal || Boolean(actioning)} showSearch optionFilterProp="label" value={assignedTo || undefined} options={workerOptions} onChange={props.onAssignedToChange} placeholder="选择复核教师" />
       <Button icon={<UserRoundCheck size={16} />} disabled={!canManage || terminal || !assignedTo || Boolean(actioning)} loading={actioning === "assign"} onClick={props.onReassign}>分派复核</Button>
     </div>}
+    {!workerOptions.length && canManage && !terminal ? <p className="muted">暂无符合本场学科的复核教师，请核对教师岗位、任教学科和账号状态。</p> : null}
     <div className="appeal-decision-divider" />
     <Select value={decision} onChange={props.onDecisionChange} disabled={!canManage || terminal || Boolean(actioning)} options={[
       { value: "accepted", label: "申诉成立，维持当前分数" }, { value: "rejected", label: "申诉不成立，维持原分" },

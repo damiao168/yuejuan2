@@ -19,6 +19,22 @@ describe("desktop API origin validation", () => {
       .toThrow("不能包含用户名或密码");
   });
 
+  it.each([
+    "http://127.255.255.255:8080", "http://127.1:8080", "http://[::1]:8080",
+    "http://[0:0:0:0:0:0:0:1]:8080", "http://LOCALHOST:8080"
+  ])("allows actual loopback address %s after URL normalization", (address) => {
+    expect(normalizeBaseUrl(address)).toBe(new URL(address).origin);
+  });
+
+  it.each([
+    "http://127.review.example", "http://127.0.0.1.review.example",
+    "http://127.0.0.1.review.example.", "http://localhost.review.example",
+    "http://128.0.0.1", "http://126.255.255.255", "http://[::2]",
+    "http://[::ffff:127.0.0.1]"
+  ])("rejects plaintext non-loopback address %s", (address) => {
+    expect(() => normalizeBaseUrl(address)).toThrow("远程 API 必须使用 HTTPS");
+  });
+
   it("rejects API paths that could replace the configured origin", () => {
     const client = new DesktopApiClient({ baseUrl: "https://grading.example.edu" });
 

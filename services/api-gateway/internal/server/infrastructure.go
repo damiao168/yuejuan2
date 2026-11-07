@@ -56,6 +56,14 @@ func newInfrastructure(cfg config.Config, logg *logger.Logger) (*Infrastructure,
 	}
 	infra.DB = postgresDB
 	infra.cleanup = append(infra.cleanup, closePostgres)
+	// 先核对结构版本再装配存储和后台任务；失败时关闭连接，不启动会访问已删列的旧实例。
+	schemaContext, cancelSchemaCheck := context.WithTimeout(context.Background(), 15*time.Second)
+	err = db.VerifySchemaVersion(schemaContext, postgresDB)
+	cancelSchemaCheck()
+	if err != nil {
+		infra.Close()
+		return nil, err
+	}
 	infra.Metrics.SetDatabaseStats(func() observability.DatabaseStats {
 		stats := postgresDB.Stats()
 		return observability.DatabaseStats{

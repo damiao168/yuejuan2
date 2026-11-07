@@ -2,7 +2,7 @@
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import type { School } from "../../../api/org";
+import type { Grade, School } from "../../../api/org";
 import { createSubjectDraft, initialCreateExamDraft } from "./createExamDraft";
 import { CreateExamComposer } from "./CreateExamComposer";
 import { createExamFieldId } from "./createExamValidation";
@@ -53,9 +53,9 @@ describe("考试创建展示与学校范围", () => {
     await act(async () => { root.unmount(); });
     host.remove();
   });
-  async function render(draft = initialCreateExamDraft("school-a"), availableSchools = schools, submitting = false) {
+  async function render(draft = initialCreateExamDraft("school-a"), availableSchools = schools, submitting = false, availableGrades: Grade[] = []) {
     await act(async () => {
-      root.render(<CreateExamComposer draft={draft} schools={availableSchools} grades={[]} classes={[]} templates={[]} submitting={submitting} issues={[]} onChange={onChange} onSubmit={onSubmit} />);
+      root.render(<CreateExamComposer draft={draft} schools={availableSchools} grades={availableGrades} classes={[]} templates={[]} submitting={submitting} issues={[]} onChange={onChange} onSubmit={onSubmit} />);
     });
   }
   function submitButton() {
@@ -68,6 +68,23 @@ describe("考试创建展示与学校范围", () => {
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
   }
+
+  it("新建考试不再要求类型，底部摘要只展示年级和参考范围", async () => {
+    await render(initialCreateExamDraft("school-a"));
+    expect(host.querySelector('[data-exam-field="examType"]')).toBeNull();
+    expect(host.textContent).not.toContain("考试类型");
+    expect(host.querySelector(".exam-composer-submit span")?.textContent).toBe("未选择年级 · 0 个班级 · 0 个学科");
+  });
+
+  it("固定届别显示当前及归档年度，选项和摘要仍绑定原年级ID", async () => {
+    const common = { tenant_id: "tenant-a", school_id: "school-a", grade_cohort_id: "cohort-26", entry_year: 2026, education_stage: "senior" as const, status: "active" };
+    const availableGrades: Grade[] = [{ ...common, id: "grade-old", name: "高一", level_no: 10, academic_year: "2026-2027" }, { ...common, id: "grade-current", name: "高二", level_no: 11, academic_year: "2027-2028" }];
+    await render({ ...initialCreateExamDraft("school-a"), gradeId: "grade-current" }, schools, false, availableGrades);
+    const options = [...host.querySelectorAll<HTMLOptionElement>(`#${createExamFieldId("gradeId")} option`)];
+    expect(options.map(item => [item.value, item.textContent])).toEqual([["", ""], ["grade-old", "2026级 · 高一（归档 2026-2027）"], ["grade-current", "2026级 · 高二"]]);
+    expect(host.querySelector(".exam-composer-submit")?.textContent).toContain("2026级 · 高二");
+    expect(onChange).not.toHaveBeenCalled();
+  });
 
   it.each([
     { mode: "materials", label: "创建考试并上传试卷", mobile: "创建并上传" },

@@ -1,0 +1,68 @@
+
+
+/* 阅卷区按工作区实际宽度分段，不让任务栏与评分栏共同挤压答卷证据。 */
+@container (max-width: 1224px) {
+  .immersive-workspace .grading-workspace { grid-template-columns: 190px minmax(0, 1fr); }
+  .immersive-workspace .grading-panels { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); grid-template-areas: "answer inspector"; }
+}
+
+@container (max-width: 1050px) {
+  .immersive-workspace .grading-workspace { height: auto; grid-template-columns: minmax(0, 1fr); overflow: visible; }
+  .immersive-workspace .grading-task-rail { position: static; height: auto; max-height: none; border-width: 0 0 1px; }
+  .immersive-workspace .grading-task-list { max-height: 114px; }
+  .immersive-workspace .grading-main,
+  .immersive-workspace .grading-panels { height: auto; overflow: visible; }
+  .immersive-workspace .grading-panels { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); grid-template-areas: "answer inspector"; }
+  .immersive-workspace .grading-inspector { height: auto; overflow-y: auto; }
+}
+
+@container (max-width: 920px) {
+  .immersive-workspace .grading-panels { grid-template-columns: minmax(0, 1fr); grid-template-areas: "answer" "inspector"; }
+  .immersive-workspace .grading-inspector { overflow: visible; }
+}
+
+.grading-reason-banner { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; padding: 13px 16px; border-left: 3px solid #d48806; background: #fffaf0; }
+.grading-reason-banner > div:first-child { display: grid; gap: 3px; }
+.grading-reason-banner span { color: var(--text-muted); font-size: var(--eg-font-caption); }
+.grading-reason-banner strong { font-size: 0.9375rem; }
+.grading-reason-banner p { margin: 0; color: #5f6672; font-size: var(--eg-font-caption); line-height: 1.55; }
+.grading-reason-banner > div:last-child { min-width: 100px; text-align: right; }
+.grading-reason-banner > div:last-child strong { display: block; margin-top: 3px; font-size: var(--eg-font-section); }
+.math-evidence-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 10px 0; }
+.math-evidence-summary > span { color: var(--text-muted); font-size: var(--eg-font-caption); }
+.math-evidence-summary > strong { grid-column: 1; font-size: var(--eg-font-body); }
+.math-evidence-summary > .ant-btn { grid-column: 2; grid-row: 1 / span 2; }
+
+.math-rubric-matrix { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-bottom: 1px solid var(--border); min-width: 0; }
+.math-rubric-matrix h3, .math-rubric-matrix p { margin: 0; }
+.math-score-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 8px 0; }
+.math-score-summary span, .math-suggestion-note, .math-decision-table small, .math-suggestion-history small { display: block; color: var(--text-muted); font-size: var(--eg-font-caption); }
+.math-score-summary strong { display: block; font-size: var(--eg-font-section); font-variant-numeric: tabular-nums; }
+.math-score-summary strong small { font-weight: 400; font-size: var(--eg-font-caption); color: var(--text-muted); }
+.math-matrix-scroll { overflow-x: auto; max-width: 100%; }
+.math-decision-table { border-collapse: collapse; width: 100%; font-size: var(--eg-font-caption); text-align: left; }
+.math-decision-table caption { color: var(--text-muted); text-align: left; padding-bottom: 8px; }
+.math-decision-table td, .math-decision-table th { padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.math-decision-table thead { color: var(--text-muted); }
+.math-decision-table tbody th { font-weight: 500; width: 38%; }
+.math-decision-table tbody th > span { display: block; margin-bottom: 4px; overflow-wrap: anywhere; }
+.math-decision-table td:nth-child(2) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.math-matrix-steps { display: flex; flex-wrap: wrap; gap: 3px; }
+.math-matrix-steps .ant-btn { padding-inline: 0; height: auto; }
+.math-suggestion-history summary { cursor: pointer; font-size: var(--eg-font-caption); }
+.math-suggestion-history ul { list-style: none; padding: 0; margin: 6px 0 0; }
+.math-suggestion-history li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; border-bottom: 1px solid var(--border); padding: 8px 0; font-size: var(--eg-font-caption); }
+.math-step-highlight { position: absolute; pointer-events: none; box-sizing: border-box; border: 2px solid var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); transition: left 140ms ease, top 140ms ease, width 140ms ease, height 140ms ease; }
+.math-step-highlight > span { position: absolute; top: 0; left: 0; background: var(--primary); color: var(--surface); padding: 2px 5px; font-size: var(--eg-font-caption); }
+.math-image-selection { margin: 0; padding: 6px 12px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: var(--eg-font-caption); overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .math-step-highlight { transition: none; } }
+.grading-plan > p { color: var(--color-text-secondary, #64748b); line-height: 1.6; }
+.grading-plan-counts, .grading-ai-progress > div:first-child { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.grading-plan-counts { margin: 18px 0; padding: 14px 18px; background: #f5f8fb; border: 1px solid #e4ebf2; border-radius: 10px; }
+.grading-plan-counts strong { margin-left: 7px; font-size: 20px; color: #17324d; }
+.grading-plan-list { margin-top: 16px; max-height: 320px; overflow: auto; border-top: 1px solid #e4ebf2; }
+.grading-plan-list > div { display: grid; grid-template-columns: minmax(140px, 1.5fr) 70px 130px 42px minmax(170px, 1.8fr); align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid #edf1f5; }
+.grading-plan-list small { color: #64748b; }
+.grading-ai-progress { margin: 14px 0; padding: 14px 18px 7px; border: 1px solid #d9e7f4; border-radius: 10px; background: #f8fbff; }
+.grading-ai-progress > div:first-child { margin-bottom: 8px; color: #244467; }
+@media (max-width: 720px) { .grading-plan-list > div { grid-template-columns: 1fr auto; } .grading-plan-list > div small { grid-column: 1 / -1; } }

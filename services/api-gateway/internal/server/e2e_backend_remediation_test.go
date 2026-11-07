@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -27,9 +28,9 @@ func backendRemediationPostgres(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatal("invalid backend PostgreSQL test configuration")
 	}
-	// 定向回归只连接明确的 backend_test 库；不使用另建数据库的通用 E2E 帮助器。
-	if !strings.HasSuffix(config.Database, "_backend_test") {
-		t.Fatal("backend regressions require a dedicated database ending in _backend_test")
+	// 只连接历史独立测试库或统一门禁创建的随机库；写入仍限于本连接的 TEMP 表，不迁移传入库。
+	if !strings.HasSuffix(config.Database, "_backend_test") && !regexp.MustCompile(`^edugrade_ci_shared_[a-f0-9]{32}$`).MatchString(config.Database) {
+		t.Fatal("backend regressions require a dedicated _backend_test or CI-created random database")
 	}
 	db := stdlib.OpenDB(*config)
 	// 临时表只存在于此连接；连接关闭后自动清理，不触碰迁移表和业务数据。

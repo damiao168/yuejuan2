@@ -1,0 +1,304 @@
+
+
+.school-dashboard {
+  gap: 16px;
+}
+
+.school-dashboard .dashboard-heading {
+  align-items: center;
+  padding: 0 0 10px;
+}
+
+.school-dashboard .dashboard-heading h1 {
+  margin: 0 0 3px;
+  font-size: 1.625rem;
+  font-weight: 600;
+}
+
+.dashboard-update {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-muted);
+  font-size: var(--eg-font-body);
+}
+
+.dashboard-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.dashboard-summary button {
+  min-width: 0;
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 5px 12px;
+  padding: 13px 18px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.dashboard-summary button:last-child {
+  border-right: 0;
+}
+
+.dashboard-summary button:hover {
+  background: var(--hover-bg);
+}
+
+.dashboard-summary button:focus-visible,
+.attention-list button:focus-visible,
+.activity-list button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.dashboard-summary span {
+  align-self: end;
+  color: var(--text-muted);
+  font-size: var(--eg-font-body);
+}
+
+.dashboard-summary strong {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  align-self: center;
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.dashboard-summary strong em {
+  margin-left: 3px;
+  font-size: var(--eg-font-body);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.dashboard-summary small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.school-dashboard .dashboard-primary-grid {
+  grid-template-columns: minmax(0, 7fr) minmax(420px, 5fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.school-dashboard .dashboard-pane {
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.school-dashboard .dashboard-pane .section-head {
+  padding-bottom: 13px;
+}
+
+.school-dashboard .dashboard-pane .section-head h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.school-dashboard .todo-row {
+  grid-template-columns: minmax(0, 1fr) auto minmax(70px, auto) 18px;
+  padding: 10px 6px;
+}
+
+.todo-label {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.todo-label > small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.school-dashboard .todo-row > strong {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 1.3125rem;
+  font-weight: 600;
+}
+
+.school-dashboard .todo-row > strong small {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+  font-weight: 400;
+}
+
+.todo-action {
+  color: var(--primary);
+  font-size: var(--eg-font-body);
+  font-weight: 600;
+  text-align: right;
+}
+
+.school-dashboard .active-exam-row {
+  min-height: 104px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 7px 14px;
+  padding: 11px 6px;
+}
+
+.school-dashboard .active-exam-copy {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.school-dashboard .active-exam-copy strong {
+  overflow: visible;
+  font-size: var(--eg-font-body);
+  line-height: 1.45;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.school-dashboard .active-exam-status {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: max-content minmax(130px, 1fr) max-content;
+  align-items: center;
+  gap: 12px;
+}
+
+.school-dashboard .active-exam-status > span {
+  color: var(--text);
+}
+
+.school-dashboard .active-exam-status small {
+  color: var(--warning);
+  font-size: var(--eg-font-caption);
+}
+
+.school-dashboard .exam-progress {
+  min-width: 0;
+}
+
+.school-dashboard .exam-progress strong {
+  overflow: visible;
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+  font-weight: 400;
+}
+
+.school-dashboard .exam-next-action {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  white-space: nowrap;
+}
+
+.dashboard-secondary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.dashboard-secondary-grid.without-attention {
+  grid-template-columns: 1fr;
+}
+
+.attention-list,
+.activity-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.attention-list button,
+.activity-list button {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.attention-list button:hover,
+.activity-list button:hover {
+  background: var(--hover-bg);
+}
+
+.attention-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.75fr) 18px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 6px;
+}
+
+.attention-list button > span:nth-child(2) {
+  color: var(--text-muted);
+  font-size: var(--eg-font-body);
+}
+
+.activity-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 6px;
+}
+
+.activity-list button > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-list time {
+  color: var(--text-muted);
+  font-size: var(--eg-font-caption);
+}
+
+.operations-strip {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--primary);
+  background: #f5f8fd;
+}
+
+.operations-strip span,
+.ready-line,
+.setup-progress-line strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

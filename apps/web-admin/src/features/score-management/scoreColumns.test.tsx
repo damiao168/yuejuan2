@@ -20,26 +20,22 @@ function renderCell<T>(column: ColumnType<T>, value: unknown, record: T) {
 }
 
 describe("score table presentation", () => {
-  it.each([
-    [false, false, entry],
-    [true, true, entry],
-    [true, false, { ...entry, student_id: undefined }],
-    [true, false, { ...entry, key: "submission:1" }]
-  ] as const)("does not offer an attendance action outside an editable roster row", (canWrite, publishedOrLocked, record) => {
-    const columns = createRosterColumns({ canWrite, publishedOrLocked, openAttendanceEditor: vi.fn() });
+  it.each([entry, { ...entry, status: "absent" as const }, { ...entry, student_id: undefined }])("does not offer manual attendance actions for %j", record => {
+    const columns = createRosterColumns({});
     expect(renderCell(columns[5] as ColumnType<RosterEntry>, undefined, record)).toBe("-");
   });
 
-  it("retains absence restoration, missing-paper marking and other-row guidance", () => {
-    const columns = createRosterColumns({ canWrite: true, publishedOrLocked: false, openAttendanceEditor: vi.fn() });
+  it("自动缺考只提供漏扫匹配核查，已交卷显示待阅卷状态", () => {
+    const columns = createRosterColumns({ openSubmission: vi.fn(), canOpenSubmission: () => true });
     const action = columns[5] as ColumnType<RosterEntry>;
-    expect(renderCell<RosterEntry>(action, undefined, { ...entry, status: "absent" })).toContain("恢复应考");
-    expect(renderCell(action, undefined, entry)).toContain("标记缺考");
-    expect(renderCell(action, undefined, { ...entry, resolution_code: "missing_pages" })).toContain("请先处理答卷");
+    expect(renderCell<RosterEntry>(action, undefined, { ...entry, status: "absent" })).toContain("核查漏扫与匹配");
+    expect(renderCell(columns[3] as ColumnType<RosterEntry>, "submitted", entry)).toContain("已交卷");
+    expect(renderCell<RosterEntry>(action, undefined, { ...entry, status: "submitted", resolution_code: "grading_incomplete" })).toContain("查看阅卷任务");
+    expect(renderCell(action, undefined, { ...entry, resolution_code: "missing_pages" })).toContain("定位答卷处理");
   });
 
   it("只读名册可按答卷查看权限定位处理，但不能借阅卷权限打开采集对象", () => {
-    const options = { canWrite: false, publishedOrLocked: true, openAttendanceEditor: vi.fn(), openSubmission: vi.fn(), canOpenSubmission: (record: RosterEntry) => record.resolution_code === "grading_incomplete" };
+    const options = { openSubmission: vi.fn(), canOpenSubmission: (record: RosterEntry) => record.resolution_code === "grading_incomplete" };
     const action = createRosterColumns(options)[5] as ColumnType<RosterEntry>;
     expect(renderCell(action, undefined, { ...entry, resolution_code: "grading_incomplete" })).toContain("查看阅卷任务");
     expect(renderCell(action, undefined, { ...entry, resolution_code: "missing_pages" })).not.toContain("定位答卷处理");

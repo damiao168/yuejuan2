@@ -32,11 +32,15 @@ func TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
+	// 历史单卷没有名次字段；即使两人同分也只读取原来选中的一份。
+	if _, err = db.ExecContext(ctx, `UPDATE score_release SET visibility_policy=visibility_policy-'high_score_paper_top_n' WHERE id=$1::uuid AND status='draft'`, release.ID); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := service.Publish(ctx, f.TenantID, release.ID, f.AdminID); err != scorerelease.ErrAnonymousPaperUnavailable {
 		t.Fatalf("missing identity regions and registration must block publish: %v", err)
 	}
 	top, other := e2eSelectAnonymousShareCandidates(t, ctx, db, f, release.ID, answers)
-	sourceAssetID, imageData := e2eSeedAnonymousRegisteredPage(t, ctx, db, fileStore, objects, f, top)
+	sourceAssetID, imageData := e2eSeedAnonymousRegisteredPage(t, ctx, db, fileStore, objects, f, top, 40)
 	if _, err := service.Publish(ctx, f.TenantID, release.ID, f.AdminID); err != nil {
 		t.Fatalf("publish with verified anonymous page: %v", err)
 	}
@@ -46,29 +50,65 @@ func TestHighScorePaperShareRedactsAndRevokesWithPostgresTestDatabase(t *testing
 		t.Fatalf("student result did not expose only anonymous page metadata: %+v %v", studentView.HighScorePaper, err)
 	}
 	questionID := f.QuestionIDs["single_choice"]
-	e2eActivatePostgresDemoUsers(t, db, []string{"student"})
-	studentUsername := "anonymous_other_" + uuid.NewString()
-	e2eSeedPostgresStudentScopes(t, db, top.student, other.student, studentUsername)
-	studentToken := e2eLoginWithTenant(t, router, "demo", studentUsername, "ChangeMe123!")
-	request := func() *httptest.ResponseRecorder {
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/student/exams/"+f.ExamID+"/questions/"+questionID+"/page-image?variant=high_score", nil)
+	var schoolCode, studentNo string
+	if err := db.QueryRow(`SELECT sc.code,st.student_no FROM student st JOIN school sc ON sc.tenant_id=st.tenant_id AND sc.id=st.school_id WHERE st.tenant_id=$1 AND st.id=$2`, f.TenantID, other.student).Scan(&schoolCode, &studentNo); err != nil {
+		t.Fatal(err)
+	}
+	studentToken := e2eLoginProvisionedStudent(t, router, schoolCode, studentNo, "SyntheticStudent123!")
+	request := func(query string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/student/exams/"+f.ExamID+"/questions/"+questionID+"/page-image?variant=high_score"+query, nil)
 		req.Header.Set("Authorization", "Bearer "+studentToken)
 		res := httptest.NewRecorder()
 		router.ServeHTTP(res, req)
 		return res
 	}
-	response := request()
+	response := request("")
 	e2eAssertAnonymousIdentityMask(t, response, imageData)
 	e2eAssertAnonymousSourceAuthorization(t, ctx, db, router, store, anonymousSourceIdentity{Fixture: f, Top: top, Other: other, QuestionID: questionID, SourceAssetID: sourceAssetID, StudentToken: studentToken})
 	if err := service.RevokeHighScorePaper(ctx, f.TenantID, release.ID, f.AdminID); err != nil {
 		t.Fatal(err)
 	}
-	if response := request(); response.Code != http.StatusNotFound {
+	if response := request(""); response.Code != http.StatusNotFound {
 		t.Fatalf("revoked share status=%d, want 404", response.Code)
 	}
 	result, err := store.StudentResult(ctx, f.TenantID, f.ExamID, other.student)
 	if err != nil || result.HighScorePaper != nil {
 		t.Fatalf("revoked share still listed: %+v %v", result.HighScorePaper, err)
+	}
+
+	// 前一名同分时，两份卷的第1页必须分别登记和读取；旧发布的匿名标识不能复用。
+	_, otherImage := e2eSeedAnonymousRegisteredPage(t, ctx, db, fileStore, objects, f, other, 90)
+	next, err := service.Create(ctx, f.TenantID, f.ExamID, f.AdminID, scorerelease.CreateInput{
+		Reason: "synthetic tied excellent papers", IdempotencyKey: "anonymous-paper-release-2",
+		VisibilityPolicy: scorerelease.VisibilityPolicy{ShowQuestionScores: true, ShowHighScorePaper: true, HighScorePaperTopN: new(1)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.Publish(ctx, f.TenantID, next.ID, f.AdminID); err != nil {
+		t.Fatalf("publish complete tied candidates: %v", err)
+	}
+	result, err = store.StudentResult(ctx, f.TenantID, f.ExamID, other.student)
+	if err != nil || len(result.HighScorePapers) != 2 {
+		t.Fatalf("top one with equal scores should share both papers: count=%d, %v", len(result.HighScorePapers), err)
+	}
+	first, second := result.HighScorePapers[0], result.HighScorePapers[1]
+	if first.PaperID == "" || second.PaperID == "" || first.PaperID == second.PaperID || len(first.Pages) != 1 || len(second.Pages) != 1 || first.Pages[0].PageNo != 1 || second.Pages[0].PageNo != 1 {
+		t.Fatal("selected anonymous papers did not preserve their separate page-one images")
+	}
+	e2eAssertAnonymousIdentityMask(t, request("&expected_release_id="+next.ID+"&paper_id="+first.PaperID), imageData)
+	e2eAssertAnonymousIdentityMask(t, request("&expected_release_id="+next.ID+"&paper_id="+second.PaperID), otherImage)
+	if response := request("&expected_release_id=" + release.ID + "&paper_id=" + studentView.HighScorePaper.PaperID); response.Code != http.StatusConflict {
+		t.Fatalf("old anonymous page version status=%d, want 409", response.Code)
+	}
+	if response := request("&expected_release_id=" + next.ID + "&paper_id=" + top.submission); response.Code != http.StatusNotFound {
+		t.Fatalf("source submission ID accepted as anonymous paper: status=%d", response.Code)
+	}
+	if err = service.RevokeHighScorePaper(ctx, f.TenantID, next.ID, f.AdminID); err != nil {
+		t.Fatal(err)
+	}
+	if response := request("&expected_release_id=" + next.ID + "&paper_id=" + second.PaperID); response.Code != http.StatusNotFound {
+		t.Fatalf("revoked selected share status=%d, want 404", response.Code)
 	}
 }
 
@@ -94,9 +134,9 @@ func e2eSelectAnonymousShareCandidates(t *testing.T, ctx context.Context, db *sq
 }
 
 // 合成来源先完成身份区域模板和配准，只有这个已核对来源才能参与匿名页面发布。
-func e2eSeedAnonymousRegisteredPage(t *testing.T, ctx context.Context, db *sql.DB, fileStore *files.PostgresStore, objects *files.MemoryObjectStorage, f story056AcceptanceFixture, top repairAnswer) (string, *image.RGBA) {
+func e2eSeedAnonymousRegisteredPage(t *testing.T, ctx context.Context, db *sql.DB, fileStore *files.PostgresStore, objects *files.MemoryObjectStorage, f story056AcceptanceFixture, top repairAnswer, answerRed uint8) (string, *image.RGBA) {
 	t.Helper()
-	sourceBytes, imageData := e2eAnonymousIdentityImage(t)
+	sourceBytes, imageData := e2eAnonymousIdentityImage(t, answerRed)
 	sourceHash := fmt.Sprintf("%x", sha256.Sum256(sourceBytes))
 	sourceOwner := uuid.NewString()
 	sourceKey := "tenant/" + f.TenantID + "/synthetic-registration/" + sourceOwner + ".png"
@@ -116,9 +156,11 @@ func e2eSeedAnonymousRegisteredPage(t *testing.T, ctx context.Context, db *sql.D
 	templateHash := fmt.Sprintf("%x", sha256.Sum256([]byte("synthetic-identity-layout-v1")))
 	if err := db.QueryRowContext(ctx, `INSERT INTO answer_sheet_template
 (tenant_id,exam_id,exam_paper_id,version_no,name,status,page_count,layout,content_hash,created_by,locked_by,locked_at)
-SELECT tenant_id,exam_id,exam_paper_id,version_no+1,'Synthetic anonymous layout','locked',page_count,
+SELECT tenant_id,exam_id,exam_paper_id,
+(SELECT max(used.version_no)+1 FROM answer_sheet_template used WHERE used.tenant_id=base.tenant_id AND used.exam_id=base.exam_id),
+'Synthetic anonymous layout','locked',page_count,
 jsonb_set(layout,'{pages,0,identity_regions}','[{"id":"identity-name-number-qr","x":0,"y":0,"width":0.5,"height":0.2}]'::jsonb),
-$2,created_by,$3::uuid,now() FROM answer_sheet_template WHERE tenant_id=$1::uuid AND id=$4::uuid
+$2,created_by,$3::uuid,now() FROM answer_sheet_template base WHERE tenant_id=$1::uuid AND id=$4::uuid
 RETURNING id::text`, f.TenantID, templateHash, f.AdminID, f.TemplateID).Scan(&templateID); err != nil {
 		t.Fatal(err)
 	}
@@ -182,13 +224,13 @@ func e2eAssertAnonymousSourceAuthorization(t *testing.T, ctx context.Context, db
 }
 
 // 把彩色身份笔画、棋盘码和 PNG 尾随秘密都放进合成来源，供后续脱敏验证。
-func e2eAnonymousIdentityImage(t *testing.T) ([]byte, *image.RGBA) {
+func e2eAnonymousIdentityImage(t *testing.T, answerRed uint8) ([]byte, *image.RGBA) {
 	t.Helper()
 	// 配准图像已与模板对齐。彩色合成身份笔画和类似二维码的棋盘图案都限制在身份区域内。
 	imageData := image.NewRGBA(image.Rect(0, 0, 100, 140))
 	for y := 0; y < 140; y++ {
 		for x := 0; x < 100; x++ {
-			imageData.Set(x, y, color.RGBA{R: 40, G: 140, B: 210, A: 255})
+			imageData.Set(x, y, color.RGBA{R: answerRed, G: 140, B: 210, A: 255})
 		}
 	}
 	for y := 3; y < 24; y++ {

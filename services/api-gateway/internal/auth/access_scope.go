@@ -35,12 +35,17 @@ type AccessScope struct {
 	// 学校管理范围单独保留；班级或分派扩展出的学校、考试 ID 只供导航，不能扩大管理权限。
 	schoolWide          bool
 	schoolManagementIDs []string
+	// 学校管理员兼任阅卷角色也只可读取管理学校；租户与平台管理员保留其更高范围。
+	schoolAdminOnly bool
 	// syntheticUnbounded 仅供显式声明的内存测试夹具使用。
 	syntheticUnbounded bool
 }
 
 func (s AccessScope) OrganizationScope() OrganizationScope {
 	normalized := s.normalized()
+	if s.RestrictsToManagedSchools() {
+		normalized.SchoolIDs = s.ManagedSchoolIDs()
+	}
 	return OrganizationScope{
 		TenantWide: normalized.TenantWide || normalized.IsPlatform,
 		SchoolIDs:  normalized.SchoolIDs,
@@ -50,6 +55,9 @@ func (s AccessScope) OrganizationScope() OrganizationScope {
 }
 
 func (s AccessScope) AllowsSchool(id string) bool {
+	if s.RestrictsToManagedSchools() {
+		return s.ManagesSchool(id)
+	}
 	return s.TenantWide || containsID(s.SchoolIDs, id)
 }
 
@@ -100,8 +108,18 @@ func (s AccessScope) ManagedSchoolIDs() []string {
 	return append([]string{}, s.schoolManagementIDs...)
 }
 
+// RestrictsToManagedSchools 表示学校管理员的读取边界；个人受派任务不能突破本校限制。
+func (s AccessScope) RestrictsToManagedSchools() bool {
+	return s.schoolAdminOnly && !s.IsPlatform && !s.TenantWide
+}
+
 func (s AccessScope) managesSchool(schoolID string) bool {
 	return s.schoolWide && schoolID != "" && containsID(s.schoolManagementIDs, schoolID)
+}
+
+// ManagesSchool 只接受服务端派生的管理范围；任课和任务分派增加的导航学校不授予写权限。
+func (s AccessScope) ManagesSchool(schoolID string) bool {
+	return s.IsPlatform || s.TenantWide || s.syntheticUnbounded || s.managesSchool(strings.TrimSpace(schoolID))
 }
 
 // QueryMode 返回仓储进行集合筛选时使用的粗粒度模式。集合端点除直接资源边界中间件外，还必须应用此模式，否则受限身份仍可能从列表取得其他学校的记录。
@@ -164,11 +182,24 @@ func ResolveDeclaredAccessScope(user User) (AccessScope, error) {
 	if out.IsPlatform && (user.TenantID != PlatformTenantID || !HasRole(user, "platform_admin")) {
 		return AccessScope{}, fmt.Errorf("%w: platform scope requires platform administrator", ErrAccessScopeInvalid)
 	}
+	if HasRole(user, "school_admin") && !out.IsPlatform && !HasRole(user, "tenant_admin") {
+		out.schoolAdminOnly = true
+		// 仅实际租户/平台管理员可突破本校；兼任全租户只读 auditor 也不能扩大学校管理员的读取范围。
+		out.TenantWide = false
+		// 旧角色声明可能含外校任务和班级投影；管理员的考试及下级资源只由本校持久化关系重新派生。
+		out.SchoolIDs = out.ManagedSchoolIDs()
+		out.GradeIDs, out.ClassIDs, out.ExamIDs = nil, nil, nil
+		out.SubmissionIDs, out.FileIDs, out.ReviewTaskIDs, out.ArbitrationTaskIDs = nil, nil, nil, nil
+	}
 	return out.normalized(), nil
 }
 
 // 角色作用域只能来自账户已持有的角色，且必须符合该角色的标准作用域类型。
 func declaredRoleScopes(user User) ([]map[string]any, error) {
+	// 旧教师会话即使仍携带班级声明，也只能访问已分配任务，不能把学科资格当作学校授权。
+	if IsReviewTeacherRoles(user.Roles) && user.DataScope["scope"] == "class" {
+		return []map[string]any{{"scope": "exam_task"}}, nil
+	}
 	if _, flat := user.DataScope["scope"]; flat {
 		return []map[string]any{user.DataScope}, nil
 	}
@@ -184,6 +215,9 @@ func declaredRoleScopes(user User) ([]map[string]any, error) {
 		nested, ok := raw.(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("%w: role scope %q is not an object", ErrAccessScopeInvalid, role)
+		}
+		if role == "teacher" && nested["scope"] == "class" {
+			nested = canonicalRoleDataScope("teacher", "")
 		}
 		if !declaredRoleScopeAllowed(role, nested) {
 			return nil, fmt.Errorf("%w: role %q has non-canonical scope", ErrAccessScopeInvalid, role)

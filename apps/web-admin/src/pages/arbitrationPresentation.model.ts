@@ -20,7 +20,7 @@ export function formatScore(value?: number | null) {
   if (value === undefined || value === null || !Number.isFinite(value)) {
     return "-";
   }
-  return Number(value.toFixed(1)).toString();
+  return Number(value.toFixed(2)).toString();
 }
 
 export function taskTone(status: string): StatusTone {

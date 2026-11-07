@@ -234,7 +234,7 @@ type fileReconciliationBranchCase struct {
 
 func assertFileReconciliationBranchOrder(t *testing.T, test fileReconciliationBranchCase) {
 	t.Helper()
-	asset := FileAsset{ID: "asset", TenantID: "tenant", StorageBucket: "bucket", StorageKey: "tenant/tenant/file", SizeBytes: 1,
+	asset := FileAsset{ID: "asset", TenantID: "tenant", OwnerType: "generic", StorageBucket: "bucket", StorageKey: "tenant/tenant/file", SizeBytes: 1,
 		HashSHA256: "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881", Lifecycle: test.lifecycle, Revision: 7}
 	if test.prefixMismatch {
 		asset.StorageKey = "tenant/other/file"

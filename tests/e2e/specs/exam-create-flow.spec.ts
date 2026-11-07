@@ -22,14 +22,14 @@ test("资料优先创建允许空试卷结构并直接进入资料配置", async
   await expect(page.getByRole("textbox", { name: "考试名称 *" })).toBeFocused();
 
   await page.getByRole("textbox", { name: "考试名称 *" }).fill("高二第一学期期中考试");
-  await page.getByRole("combobox", { name: /考试类型/ }).click();
-  await page.getByTitle("期中考试").click();
   await page.getByRole("button", { name: /高二（1）班/ }).click();
   await page.getByRole("button", { name: "数学", exact: true }).click();
   await page.getByRole("button", { name: /创建考试并上传试卷/ }).click();
 
   await expect(page).toHaveURL(/exam-created-math\/paper/);
   expect(submittedBody?.subjects).toMatchObject([{ subject: "math", sections: [] }]);
+  // 建考表单已去掉“考试类型”；创建请求不再携带 exam_type，避免旧草稿残留值被提交。
+  expect(submittedBody).not.toHaveProperty("exam_type");
 });
 
 test("考试方案通过抽屉带入科目结构", async ({ page }) => {

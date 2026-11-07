@@ -11,7 +11,7 @@ describe("学生复核申请真实可用性", () => {
     const result = makeResult(undefined, { appeal_window: { open: true, allowed_reason_codes: [] } });
     const calls = installApi((call) => call.init.method === "POST" ? jsonResponse({ appeal: makeAppeal() }) : resultRoute(call, result));
     render(<App />);
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     const reasons = await screen.findByRole<HTMLSelectElement>("combobox", { name: "复核原因" });
     expect([...reasons.options].map((option) => option.value)).toEqual(["recognition_error", "missing_step_credit", "rubric_disagreement", "calculation_error", "annotation_issue", "other"]);
     fireEvent.change(reasons, { target: { value: "missing_step_credit" } });

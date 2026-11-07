@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import time
@@ -95,6 +96,10 @@ class MathUnderstandingRunner:
                 if subject not in {"mathematics", "physics", "chemistry"}:
                     raise ValueError("formula recognition is not enabled for this subject")
                 image = self.api.download(str(task_input["image_url"]))
+                # 下载与领取之间可能已重新裁切；字节必须对应任务记录的输入，不能用新图标旧哈希。
+                expected_hash = str(task["input_hash"]).removeprefix("sha256:").lower()
+                if hashlib.sha256(image).hexdigest() != expected_hash:
+                    raise ValueError("math_input_hash_changed")
                 kind = RegionKind(str(task.get("region_kind", "unknown")))
                 routed = self.router.recognize(subject, kind, image)
                 artifact = _build_artifact(task, routed, self.verifier)

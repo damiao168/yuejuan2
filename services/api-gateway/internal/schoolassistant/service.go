@@ -20,6 +20,11 @@ func (s *Service) Capabilities(ctx context.Context) (Capabilities, error) {
 		return Capabilities{}, err
 	}
 	result := Capabilities{Mode: "school_business", ModelRequired: false, Intents: []Capability{}}
+	// 已配置不代表上游始终可达；实际搜索结果仍由本轮请求核实。
+	result.WebSearch = &WebSearchCapability{Available: s.deps.Conversation.Search != nil, Message: "联网搜索暂未配置。"}
+	if result.WebSearch.Available {
+		result.WebSearch.Message = "已配置，可检索公开网页。"
+	}
 	for _, item := range []Capability{
 		{Intent: IntentExamProgress, Label: "查看考试进度", RequiredPermission: requiredPermission(IntentExamProgress)},
 		{Intent: IntentPublishDiagnosis, Label: "为什么不能向学生发布", RequiredPermission: requiredPermission(IntentPublishDiagnosis)},

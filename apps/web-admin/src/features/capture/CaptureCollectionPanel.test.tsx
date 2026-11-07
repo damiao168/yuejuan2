@@ -6,10 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CaptureCollectionEntry, CaptureCollectionSummary } from "../../api/captureCollection";
 import { CaptureCollectionPanel } from "./CaptureCollectionPanel";
 
-const mocks = vi.hoisted(() => ({ complete: vi.fn(), exclude: vi.fn(), retry: vi.fn(), cancel: vi.fn(), attendance: vi.fn(), confirm: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn() }));
+const mocks = vi.hoisted(() => ({ complete: vi.fn(), exclude: vi.fn(), retry: vi.fn(), cancel: vi.fn(), confirm: vi.fn(), success: vi.fn(), error: vi.fn(), info: vi.fn() }));
 vi.mock("../../api/captureCollection", () => ({ completeCaptureCollection: mocks.complete, excludeCaptureFile: mocks.exclude }));
 vi.mock("../../api/capture", () => ({ processCaptureBatch: mocks.retry, cancelCaptureBatch: mocks.cancel }));
-vi.mock("../../api/scores", () => ({ setExamAttendance: mocks.attendance }));
 vi.mock("../../components/StatusTag", () => ({ StatusTag: ({ children }: { children: ReactNode }) => <span>{children}</span> }));
 vi.mock("../../components/ResponsiveTable", () => ({ ResponsiveTable: ({ columns, dataSource, locale }: {
   columns: { key: string; render?: (value: undefined, entry: CaptureCollectionEntry) => ReactNode }[];
@@ -29,13 +28,13 @@ vi.mock("antd", () => ({
 export function collectionSummary(overrides: Partial<CaptureCollectionSummary> = {}): CaptureCollectionSummary {
   return {
     exam_id: "exam-a", exam_status: "collecting", revision: 12, closed: false, pages_per_student: 2,
-    roster_count: 4, required_count: 3, ready_count: 1, absent_count: 1, pending_count: 2,
-    can_complete: false, blockers: ["仍有 1 名学生未收卷", "仍有 1 份答卷需要处理"],
+    roster_count: 4, required_count: 2, ready_count: 1, absent_count: 2, pending_count: 1,
+    can_complete: false, blockers: ["仍有 1 份答卷需要处理"],
     entries: [
-      { student_id: "missing", student_no: "001", student_name: "张未收", class_name: "一班", status: "missing", code: "missing_submission", expected_pages: 2, actual_pages: 0 },
+      { student_id: "missing", student_no: "001", student_name: "张未收", class_name: "一班", status: "absent", code: "absent", expected_pages: 2, actual_pages: 0 },
       { student_id: "processing", student_no: "002", student_name: "李处理中", class_name: "一班", status: "processing", code: "processing", batch_id: "batch-a", submission_id: "sub-processing", expected_pages: 2, actual_pages: 2 },
       { student_id: "ready", student_no: "003", student_name: "王已导入", class_name: "一班", status: "ready", code: "ready", batch_id: "batch-a", submission_id: "sub-ready", expected_pages: 2, actual_pages: 2 },
-      { student_id: "absent", student_no: "004", student_name: "赵缺考", class_name: "一班", status: "absent", code: "absent", expected_pages: 2, actual_pages: 0, reason: "病假缺考" },
+      { student_id: "absent", student_no: "004", student_name: "赵缺考", class_name: "一班", status: "absent", code: "absent", expected_pages: 2, actual_pages: 0 },
     ], issues: [], ...overrides,
   };
 }
@@ -50,7 +49,7 @@ describe("考试级答卷导入核对", () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.confirm.mockReturnValue({ destroy: vi.fn() });
     mocks.complete.mockResolvedValue({ summary: collectionSummary({ closed: true, exam_status: "grading" }) });
-    mocks.attendance.mockResolvedValue({}); mocks.exclude.mockResolvedValue({}); mocks.retry.mockResolvedValue({});
+    mocks.exclude.mockResolvedValue({}); mocks.retry.mockResolvedValue({});
     props = { examId: "exam-a", actorKey: "tenant:teacher", summary: collectionSummary(), loading: false, canManage: true, localBusy: false,
       onRefresh: vi.fn().mockResolvedValue(undefined), onLocate: vi.fn(), onReplace: vi.fn().mockResolvedValue(undefined), onCompleted: vi.fn().mockResolvedValue(undefined), onMaterialChanged: vi.fn().mockResolvedValue(undefined) };
     host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -67,14 +66,14 @@ describe("考试级答卷导入核对", () => {
 
   it("默认只看待完成学生，成功与缺考可切全部查看，统计使用服务端人数", async () => {
     await render();
-    expect(host.querySelector(".capture-collection-heading p")?.textContent).toBe("名册 4 人 · 缺考 1 人 · 每人 2 页");
-    expect(host.querySelector(".capture-collection-stats")?.textContent).toBe("应收3成功导入1待完成2");
-    expect([...host.querySelectorAll("[data-student]")].map(item => item.getAttribute("data-student"))).toEqual(["missing", "processing"]);
+    expect(host.querySelector(".capture-collection-heading p")?.textContent).toBe("名册 4 人 · 缺考 2 人 · 每人 2 页");
+    expect(host.querySelector(".capture-collection-stats")?.textContent).toBe("已交卷2导入完成1待完成1");
+    expect([...host.querySelectorAll("[data-student]")].map(item => item.getAttribute("data-student"))).toEqual(["processing"]);
     expect(button("结束本场导入").disabled).toBe(true);
-    expect(host.textContent).toContain("仍有 1 名学生未收卷");
+    expect(host.textContent).toContain("仍有 1 份答卷需要处理");
     await click("全部学生");
     expect(host.querySelectorAll("[data-student]")).toHaveLength(4);
-    expect(host.textContent).toContain("病假缺考");
+    expect(host.textContent).toContain("未匹配到该生答卷，自动按缺考显示");
   });
 
   it.each([{ loading: true }, { localBusy: true }, { canManage: false }, { error: "核对读取失败" }])("%j 期间保留结束入口但不能提交", async state => {
@@ -98,7 +97,7 @@ describe("考试级答卷导入核对", () => {
     await render({ summary: collectionSummary({ can_complete: true, blockers: [], pending_count: 0, exam_status }) });
     await openFinish();
     const confirmation = mocks.confirm.mock.lastCall![0] as { content: string };
-    expect(confirmation.content).toContain("应收3人，成功导入1人，缺考1人");
+    expect(confirmation.content).toContain("已交卷2人，导入完成1人，自动缺考2人");
     expect(confirmation.content).toContain("封存已处理批次");
     expect(confirmation.content).toContain(exam_status === "collecting" ? "确认后进入阅卷" : "当前阅卷阶段保持不变");
   });
@@ -127,18 +126,30 @@ describe("考试级答卷导入核对", () => {
     expect(localStorage.length).toBe(0);
   });
 
-  it("缺卷标记缺考必须填写原因，保存后重新读取导入事实", async () => {
-    await render(); await click("标记缺考");
-    expect(button("确认并重新核对").disabled).toBe(true);
-    await fillReason("  病假已核实  "); await click("确认并重新核对");
-    expect(mocks.attendance).toHaveBeenCalledWith("exam-a", "missing", "absent", "病假已核实");
-    expect(props.onRefresh).toHaveBeenCalledOnce();
-    expect(mocks.attendance.mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(props.onRefresh).mock.invocationCallOrder[0]);
+  it("缺考由服务端事实派生，不提供标记或恢复操作", async () => {
+    await render(); await click("全部学生");
+    const row = host.querySelector('[data-student="absent"]')!;
+    expect(row.textContent).toContain("缺考");
+    expect(row.querySelector("button")).toBeNull();
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    expect(host.textContent).not.toContain("标记缺考");
+    expect(host.textContent).not.toContain("恢复应考");
+  });
+
+  it("匹配后自然显示已交卷，未识别材料仍保留处理入口并阻止结束", async () => {
+    const matched = { ...collectionSummary().entries[3], status: "ready" as const, code: "import_complete", batch_id: "batch-a", submission_id: "sub-absent", actual_pages: 2 };
+    await render({ summary: collectionSummary({ entries: [matched], issues: [{ id: "unknown", kind: "submission", code: "student_unidentified", name: "未识别答卷", batch_id: "batch-b", submission_id: "unknown-sub" }] }) });
+    await click("全部学生");
+    expect(host.querySelector('[data-student="absent"]')?.textContent).toContain("已交卷");
+    expect(host.textContent).not.toContain("恢复应考");
+    expect(button("结束本场导入").disabled).toBe(true);
+    await click("查看材料");
+    expect(props.onLocate).toHaveBeenCalledWith({ batchId: "batch-b", submissionId: "unknown-sub", tab: "matching" });
   });
 
   it("材料单列不混学生人数，重试与不计入均刷新核对", async () => {
     await render({ summary: collectionSummary({ issues: [{ id: "file-a", kind: "file", code: "file_failed", name: "错误扫描.pdf", batch_id: "batch-a", file_id: "file-a" }] }) });
-    expect(host.querySelector(".capture-collection-stats")?.textContent).toBe("应收3成功导入1待完成2");
+    expect(host.querySelector(".capture-collection-stats")?.textContent).toBe("已交卷2导入完成1待完成1");
     expect(host.querySelector(".capture-collection-materials")?.textContent).toContain("1 项，不计入学生人数");
     await click("重试原文件"); expect(mocks.retry).toHaveBeenCalledWith("batch-a");
     await click("不计入"); await fillReason("已按完整答卷重新导入"); await click("确认并重新核对");

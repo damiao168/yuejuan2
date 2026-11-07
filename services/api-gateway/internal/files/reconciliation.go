@@ -338,6 +338,17 @@ func (r *Reconciler) inspectVerifiedAsset(ctx context.Context, asset FileAsset, 
 			return err
 		}
 	case LifecyclePendingDelete, LifecycleDeleteFailed:
+		if !allowsGenericDelete(asset) {
+			// 旧版本可能把业务证据误置为待删。对象已核验完整时撤销待删，不尝试绕过证据保护。
+			repaired := false
+			if options.Repair {
+				repaired, err = r.setLifecycle(ctx, asset, LifecycleActive, "")
+				if err != nil {
+					return err
+				}
+			}
+			return add("protected_delete_cancelled", map[string]any{"lifecycle_status": asset.Lifecycle}, repaired)
+		}
 		repaired := false
 		var referencePinned bool
 		if err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM question_reference_manifest_item i JOIN file_asset f ON f.tenant_id=i.tenant_id AND f.id IN(i.source_file_asset_id,i.page_file_asset_id,i.derived_file_asset_id) WHERE f.storage_bucket=$1 AND f.storage_key=$2)`, asset.StorageBucket, asset.StorageKey).Scan(&referencePinned); err != nil {
@@ -371,6 +382,10 @@ func (r *Reconciler) inspectVerifiedAsset(ctx context.Context, asset FileAsset, 
 
 func (r *Reconciler) repairMissing(ctx context.Context, asset FileAsset) (bool, error) {
 	if asset.Lifecycle == LifecyclePendingDelete || asset.Lifecycle == LifecycleDeleteFailed {
+		if !allowsGenericDelete(asset) {
+			// 受保护对象已遗失时保留元数据和证据归属，只标记缺失；不能让一次拒删终止全轮巡检。
+			return r.setLifecycle(ctx, asset, LifecycleMissingObject, "object_missing")
+		}
 		if asset.LegalHold || (asset.RetentionUntil != nil && asset.RetentionUntil.After(time.Now().UTC())) {
 			return false, nil
 		}

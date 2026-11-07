@@ -6,14 +6,28 @@ import (
 )
 
 var (
-	ErrInvalidParent         = errors.New("organization parent does not belong to tenant")
-	ErrInvalidTeacherBinding = errors.New("target user is not an active teacher in the class tenant")
-	ErrSchoolCodeConflict    = errors.New("school code already exists")
-	ErrClassCodeConflict     = errors.New("class code already exists in this grade")
-	ErrStudentNoConflict     = errors.New("student number already exists in this school")
-	ErrNotFound              = errors.New("organization resource not found")
-	ErrStudentMustBeInactive = errors.New("student must be inactive before permanent deletion")
-	ErrStudentInUse          = errors.New("student has linked business records")
+	ErrInvalidParent                  = errors.New("organization parent does not belong to tenant")
+	ErrSchoolCodeConflict             = errors.New("school code already exists")
+	ErrClassCodeConflict              = errors.New("class code already exists in this grade")
+	ErrStudentNoConflict              = errors.New("student number already exists in this school")
+	ErrNotFound                       = errors.New("organization resource not found")
+	ErrStudentMustBeInactive          = errors.New("student must be inactive before permanent deletion")
+	ErrStudentInUse                   = errors.New("student has linked business records")
+	ErrStudentAccountExists           = errors.New("student already has a login account")
+	ErrStudentAccountInactive         = errors.New("inactive student cannot open a login account")
+	ErrStudentAccountLegacyConflict   = errors.New("student has an unresolved legacy account binding")
+	ErrGradeHasClasses                = errors.New("grade still has classes")
+	ErrClassHasStudents               = errors.New("class still has students")
+	ErrInvalidGradeLevel              = errors.New("grade level does not belong to education stage")
+	ErrInvalidEntryYear               = errors.New("grade entry year is invalid")
+	ErrInvalidEnrollmentDate          = errors.New("transfer date must not precede an active enrollment")
+	ErrGradeCohortExists              = errors.New("grade cohort already exists")
+	ErrGradeLevelYearMismatch         = errors.New("grade level does not match entry year")
+	ErrGradeLevelConflict             = errors.New("current grade level is occupied by another cohort")
+	ErrGradeEntryYearFuture           = errors.New("entry cohort has not started")
+	ErrGradeCohortGraduated           = errors.New("entry cohort is no longer a current grade")
+	ErrGradeAcademicYearMismatch      = errors.New("grade creation requires the current school year")
+	ErrGradeHistoricalRecordImmutable = errors.New("historical annual grade cannot change level")
 )
 
 type Tenant struct {
@@ -71,6 +85,7 @@ type Grade struct {
 	SchoolID       string `json:"school_id"`
 	Name           string `json:"name"`
 	LevelNo        int    `json:"level_no"`
+	EntryYear      int    `json:"entry_year"`
 	AcademicYear   string `json:"academic_year"`
 	EducationStage string `json:"education_stage"`
 	AcademicYearID string `json:"academic_year_id"`
@@ -92,22 +107,27 @@ type Class struct {
 }
 
 type Student struct {
-	ID             string `json:"id"`
-	TenantID       string `json:"tenant_id"`
-	SchoolID       string `json:"school_id"`
-	ClassID        string `json:"class_id"`
-	AcademicYearID string `json:"academic_year_id,omitempty"`
-	GradeCohortID  string `json:"grade_cohort_id,omitempty"`
-	AdmissionYear  int    `json:"admission_year,omitempty"`
-	StudentNo      string `json:"student_no"`
-	Name           string `json:"name"`
-	Gender         string `json:"gender,omitempty"`
-	Status         string `json:"status"`
+	ID                 string `json:"id"`
+	TenantID           string `json:"tenant_id"`
+	SchoolID           string `json:"school_id"`
+	ClassID            string `json:"class_id"`
+	AcademicYearID     string `json:"academic_year_id,omitempty"`
+	GradeCohortID      string `json:"grade_cohort_id,omitempty"`
+	AdmissionYear      int    `json:"admission_year,omitempty"`
+	StudentNo          string `json:"student_no"`
+	Name               string `json:"name"`
+	Gender             string `json:"gender,omitempty"`
+	Status             string `json:"status"`
+	AccountStatus      string `json:"account_status"`
+	LoginAccount       string `json:"login_account,omitempty"`
+	LoginSchoolCode    string `json:"login_school_code,omitempty"`
+	MustChangePassword bool   `json:"must_change_password"`
 }
 
-// GradePatch 不修改组织归属；升学、转班仍需通过学籍业务保留历史。
+// GradePatch 只调整显示名称和本学段的当前年级，固定届别、学校和历史学年不随之重算。
 type GradePatch struct {
-	Name *string `json:"name"`
+	Name    *string `json:"name"`
+	LevelNo *int    `json:"level_no"`
 }
 
 type ClassPatch struct {
@@ -163,8 +183,10 @@ type CSVImportError struct {
 }
 
 type CSVImportResult struct {
-	Created int              `json:"created"`
-	Errors  []CSVImportError `json:"errors"`
+	Created   int              `json:"created"`
+	Skipped   int              `json:"skipped"`
+	Committed bool             `json:"committed"`
+	Errors    []CSVImportError `json:"errors"`
 }
 
 type Store interface {
@@ -177,9 +199,11 @@ type Store interface {
 	ListGradeCohorts(ctx context.Context, tenantID string, schoolID string) ([]GradeCohort, error)
 	CreateGrade(ctx context.Context, tenantID string, input Grade) (Grade, error)
 	UpdateGrade(ctx context.Context, tenantID string, id string, input GradePatch) (Grade, error)
+	DeleteGrade(ctx context.Context, tenantID string, id string) error
 	ListGrades(ctx context.Context, tenantID string, schoolID string) ([]Grade, error)
 	CreateClass(ctx context.Context, tenantID string, input Class) (Class, error)
 	UpdateClass(ctx context.Context, tenantID string, id string, input ClassPatch) (Class, error)
+	DeleteClass(ctx context.Context, tenantID string, id string) error
 	ListClasses(ctx context.Context, tenantID string, gradeID string) ([]Class, error)
 	CreateStudent(ctx context.Context, tenantID string, input Student) (Student, error)
 	UpdateStudent(ctx context.Context, tenantID string, id string, input StudentPatch) (Student, error)
@@ -188,5 +212,4 @@ type Store interface {
 	UpdateStudentStatus(ctx context.Context, tenantID string, id string, status string) (Student, error)
 	TransferStudent(ctx context.Context, tenantID string, studentID string, classID string, startDate string) (StudentEnrollment, error)
 	ListStudentEnrollments(ctx context.Context, tenantID string, studentID string) ([]StudentEnrollment, error)
-	BindTeacherClass(ctx context.Context, tenantID string, teacherID string, classID string) error
 }

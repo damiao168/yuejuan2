@@ -2,10 +2,12 @@ package calibration
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"math"
+	"math/big"
 	"reflect"
 	"sort"
 	"strconv"
@@ -77,6 +79,16 @@ func (s *Service) CreateSession(ctx context.Context, tenantID, examID, questionI
 	if err != nil {
 		return Session{}, err
 	}
+	// 资格指纹仍绑定完整校准池；会话只随机抽取所需样本，新增样本不会让旧盲图进入校准。
+	for index := len(references) - 1; index > 0; index-- {
+		choice, randomErr := rand.Int(rand.Reader, big.NewInt(int64(index+1)))
+		if randomErr != nil {
+			return Session{}, randomErr
+		}
+		references[index], references[int(choice.Int64())] = references[int(choice.Int64())], references[index]
+	}
+	references = references[:policy.MinimumSamples]
+	sort.Slice(references, func(i, j int) bool { return references[i].GoldPaperID < references[j].GoldPaperID })
 	now := s.now()
 	session := Session{ID: uuid.NewString(), ExamID: examID, QuestionID: questionID, GraderID: graderID,
 		SnapshotID: references[0].SnapshotID, ArchetypeCode: policy.ArchetypeCode, RiskTier: references[0].RiskTier,
@@ -266,6 +278,9 @@ func (s *Service) currentReferences(ctx context.Context, tenantID, examID, quest
 	}
 	references := make([]goldReference, 0, len(items))
 	for _, item := range items {
+		if item.QualityPool == goldpaper.PoolBlind {
+			continue
+		}
 		if item.ActiveVersion <= 0 || item.ArchetypeCode != policy.ArchetypeCode || !assessment.RiskTier(item.RiskTier).Valid() {
 			continue
 		}

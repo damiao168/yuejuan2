@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   basePublicationLabel, portalPublicationLabel, qualityCheckStatus,
-  rosterReconciliationStatus, rosterStatusTone, scoreWorkspacePresentation, summaryStatus, type ScorePublicationState
+  rosterReconciliationStatus, rosterStatusTone, scoreWorkspacePresentation, scoreExamOptionLabel, summaryStatus, type ScorePublicationState
 } from "./scorePresentation";
 
 const published: ScorePublicationState = {
@@ -32,7 +32,7 @@ describe("score publication presentation", () => {
     [{ ...published, loadingExams: true }, "正在核对", "当前版本 V3"],
     [{ ...published, error: "failed" }, "状态暂不可用", "状态暂不可用"],
     [published, "已公开并锁定", "当前版本 V3"],
-    [{ ...published, examStatus: "finalized", releaseVersion: undefined }, "尚未公开", "门户无当前版本"]
+    [{ ...published, examStatus: "finalized", releaseVersion: undefined }, "尚未公开", "尚未向学生发布"]
   ] as const)("preserves selection, reload and error precedence: %j", (state, base, portal) => {
     expect(basePublicationLabel(state)).toBe(base);
     expect(portalPublicationLabel(state)).toBe(portal);
@@ -40,6 +40,13 @@ describe("score publication presentation", () => {
 
   it("uses the current portal pointer even when its version is zero", () => {
     expect(portalPublicationLabel({ ...published, releaseVersion: 0 })).toBe("当前版本 V0");
+  });
+
+  it("keeps distinct exam names while displaying the subject only once", () => {
+    expect(scoreExamOptionLabel({ name: "123 · 数学", subject: "mathematics" })).toBe("123 · 数学");
+    expect(scoreExamOptionLabel({ name: "1 · 数学", subject: "math" })).toBe("1 · 数学");
+    expect(scoreExamOptionLabel({ name: "第一场考试", subject: "math" })).toBe("第一场考试 · 数学");
+    expect(scoreExamOptionLabel({ name: "数学", subject: "math" })).toBe("数学");
   });
 
   it("keeps teacher status independent of administrator publish readiness", () => {
@@ -68,7 +75,7 @@ describe("score publication presentation", () => {
   });
 
   it.each([
-    ["graded", "success"], ["absent", "neutral"], ["unmatched", "danger"], ["missing_pages", "danger"], ["future", "danger"]
+    ["graded", "success"], ["submitted", "processing"], ["absent", "neutral"], ["unmatched", "danger"], ["missing_pages", "danger"], ["future", "danger"]
   ])("retains roster status severity for %s", (status, tone) => {
     expect(rosterStatusTone(status)).toBe(tone);
   });

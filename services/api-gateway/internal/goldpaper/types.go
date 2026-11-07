@@ -84,6 +84,8 @@ type Version struct {
 // GoldPaper 不暴露 student_id、candidate_no、学生姓名、复核者私有备注或原始 AI 提示词。
 // SubmissionID 是假名化的来源引用，供单独授权的答案图片端点使用。
 type GoldPaper struct {
+	// 样本用途仅用于服务端分流；普通阅卷响应不能据此识别盲投任务。
+	QualityPool      string     `json:"-"`
 	ID               string     `json:"id"`
 	ExamID           string     `json:"exam_id"`
 	QuestionID       string     `json:"question_id"`

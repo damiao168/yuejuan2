@@ -60,7 +60,7 @@ function installReceiptScenario(failure: Failure = "service") {
 }
 
 async function startWithAnnotationRetry(storageAllowed: boolean) {
-  fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+  fireEvent.click((await screen.findByLabelText(/^第 1 题，/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
   const input = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" });
   if (!storageAllowed) {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
@@ -128,7 +128,7 @@ describe("原版复核回执的说明取回", () => {
     }
     scenario.publishNext();
     fireEvent.click(screen.getByRole("button", { name: recovery }));
-    fireEvent.click((await screen.findByRole("button", { name: /^第 1 题，18/ })).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
+    fireEvent.click((await screen.findByLabelText(/^第 1 题，18/)).closest("tr")!.querySelector<HTMLButtonElement>("button.text-button")!);
     await screen.findByText("第八版当前评分依据");
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "具体说明" }).value).toBe("");
     expect(screen.queryByRole("region", { name: receiptName })).toBeNull();

@@ -1,14 +1,16 @@
 // 学生端会话和导航壳；身份恢复、提交回执与离开保护继续由同一入口协调。
 import { useCallback, useEffect, useRef, useState } from "react";
 import { subscribeBeforeUnload } from "@edugrade/sdk";
-import { currentUser, logout, type AuthUser } from "./api";
+import { changePassword, currentUser, logout, type AuthUser } from "./api";
 import { applyReadingSize, readReadingSize } from "@edugrade/design-tokens";
 import { clearStudentAppealDrafts, hasVolatileAppealDraft, studentDraftOwner } from "./appealDrafts";
 import { StudentSessionContext } from "./studentSession";
 import { goExam, goHome, normalizeStudentLocation, readStudentPage, studentLocation, STUDENT_NAVIGATION_EVENT } from "./navigation";
-import { AccessDenied, LoginScreen } from "./features/session/SessionScreens";
+import { AccessDenied, LoginRedirect } from "./features/session/SessionScreens";
 import { ExamList } from "./features/results/ExamList";
 import { ResultDetail } from "./features/results/ResultDetail";
+import { hasPendingLogout, rememberPendingLogout } from "./pendingLogout";
+import { FirstPasswordChange } from "./features/session/FirstPasswordChange";
 
 export default function App() {
   const [readingSize, setReadingSize] = useState(readReadingSize);
@@ -19,6 +21,8 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [exitingSession, setExitingSession] = useState(false);
+  const [logoutError, setLogoutError] = useState(false);
+  const logoutErrorRef = useRef(false);
   const exitingSessionRef = useRef(false);
   const sessionRestoreRef = useRef(0);
   const acceptedLocationRef = useRef(studentLocation());
@@ -45,19 +49,29 @@ export default function App() {
     setUser(null);
   }, []);
   const exitSession = useCallback(() => {
-    if (submittingRef.current || exitingSessionRef.current) return;
+    if (submittingRef.current || (exitingSessionRef.current && !logoutErrorRef.current)) return;
     // 先退出再提交也必须拦住：ref 关闭同批事件里的旧表单，界面隔离等待 logout 的整个过程。
     // 退出完成前不显示登录表单，避免新登录又被尚未返回的旧 logout 清掉。
     exitingSessionRef.current = true;
     setExitingSession(true);
+    setLogoutError(false);
+    logoutErrorRef.current = false;
+    setLoadingUser(false);
     sessionRestoreRef.current += 1;
     clearStudentAppealDrafts();
     draftOwnerRef.current = "";
     setLoginNotice("");
-    void logout().catch(() => undefined).finally(() => {
+    rememberPendingLogout(true);
+    void logout().then(() => {
+      rememberPendingLogout(false);
       setUser(null);
       exitingSessionRef.current = false;
       setExitingSession(false);
+    }).catch(() => {
+      // Cookie 撤销未确认时保持页面隔离，并提供可重试的明确状态。
+      setUser(null);
+      setLogoutError(true);
+      logoutErrorRef.current = true;
     });
   }, []);
 
@@ -75,11 +89,26 @@ export default function App() {
     }
   }, [acceptUser]);
 
+  const changeInitialPassword = async (input: { current_password: string; new_password: string }) => {
+    const generation = sessionRestoreRef.current;
+    setSubmissionBusy(true);
+    try {
+      await changePassword(input);
+      if (generation !== sessionRestoreRef.current) return;
+      // 改密已撤销服务端全部会话；不再用旧Cookie读取成绩，也不保留初始密码会话的草稿。
+      sessionRestoreRef.current += 1;
+      clearStudentAppealDrafts(); draftOwnerRef.current = "";
+      rememberPendingLogout(false);
+      setUser(null); setLoginNotice("密码已更新，请使用新密码重新登录。");
+    } finally { setSubmissionBusy(false); }
+  };
+
   useEffect(() => {
-    void restore();
+    if (hasPendingLogout()) exitSession();
+    else void restore();
     // StrictMode 会清理后再恢复；卸载、退出或重登后的旧响应不能重建旧会话或覆盖新登录。
     return () => { sessionRestoreRef.current += 1; };
-  }, [restore]);
+  }, [restore, exitSession]);
   useEffect(() => {
     normalizeStudentLocation();
     // 提交中阻止按钮和浏览器前进后退卸载表单；等待服务端回执，避免把成功结果误当失败。
@@ -106,10 +135,13 @@ export default function App() {
     return <main className="portal-loading">正在确认登录状态…</main>;
   }
   if (exitingSession) {
-    return <main className="portal-loading"><output aria-live="polite">正在退出登录…</output></main>;
+    return <main className="portal-loading"><output aria-live="polite">{logoutError ? "退出尚未完成，服务端会话可能仍有效。请连接网络后重试。" : "正在退出登录…"}</output>{logoutError ? <button type="button" onClick={exitSession}>重试退出登录</button> : null}</main>;
   }
   if (!user) {
-    return <LoginScreen onLoggedIn={acceptUser} notice={loginNotice} />;
+    return <LoginRedirect notice={loginNotice} />;
+  }
+  if (user.must_change_password) {
+    return <FirstPasswordChange key={`${user.tenant_id}:${user.id}`} onChangePassword={changeInitialPassword} onLogout={exitSession} />;
   }
   // 学生端同时校验角色和成绩读取权限；登录成功不代表可以查看成绩。
 const eligible = user.roles.includes("student") && user.permissions.includes("student:grade:read");
