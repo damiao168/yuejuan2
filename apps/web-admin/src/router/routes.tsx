@@ -370,7 +370,8 @@ function preferredRouteGroupOrder(experience: ProductExperience, user: SessionUs
     if (user?.roles.includes("platform_admin")) return ["工作台", "平台管理", "系统管理", "设置"];
     return ["工作台", "成员管理", "考试管理", "题库与组卷", "阅卷与成绩", "设置"];
   }
-  if (experience === "teacher") return ["工作台", "阅卷工作", "教学工作"];
+  if (experience === "teacher") return ["工作台", "阅卷工作", "教学工作", "设置"];
+  if (experience === "auditor") return ["工作台", "审计", "设置"];
   return groups;
 }
 

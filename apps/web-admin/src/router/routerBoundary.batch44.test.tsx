@@ -18,9 +18,9 @@ describe("第44批公开路由边界", () => {
     expect(routeGroups("admin", user(["school_admin"])).slice(0, 6))
       .toEqual(["工作台", "成员管理", "考试管理", "题库与组卷", "阅卷与成绩", "设置"]);
     expect(routeGroups("teacher", user(["teacher", "school_admin"])))
-      .toEqual(["工作台", "阅卷工作", "教学工作"]);
-    expect(routeGroups("auditor", user(["auditor"]))).toEqual(["工作台", "审计"]);
-    expect(routeGroups("student", user(["student"]))).toEqual(["工作台"]);
+      .toEqual(["工作台", "阅卷工作", "教学工作", "设置"]);
+    expect(routeGroups("auditor", user(["auditor"]))).toEqual(["工作台", "审计", "设置"]);
+    expect(routeGroups("student", user(["student"]))).toEqual(["工作台", "设置"]);
   });
 
   // 根路径、多斜杠和身份入口的现有返回值不同；消除正则回溯时不能顺带合并这些结果。

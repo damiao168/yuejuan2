@@ -22,15 +22,14 @@ func (s *PublishedQuestionAppealPostgresStore) RestartPublishedQuestionAppealRev
 	}
 	defer tx.Rollback()
 	// 发布命令先锁发布行、后锁考试。这里沿用顺序；NOWAIT 让并发发布先完成，不能互持锁等待。
-	publishedIDs, err := lockRestartReleaseRows(ctx, tx, tenantID, initial.ExamID, effectiveReviewSourceID(initial))
-	if err != nil {
+	if _, err := lockRestartReleaseRows(ctx, tx, tenantID, initial.ExamID, effectiveReviewSourceID(initial)); err != nil {
 		return PublishedQuestionAppeal{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))`, tenantID, initial.ExamID); err != nil {
 		return PublishedQuestionAppeal{}, err
 	}
 	// 等考试锁期间可能有新版本建成或公布；重新读当前事实。新草稿若正等待发布，用 NOWAIT 回退而非形成锁环。
-	publishedIDs, err = lockRestartReleaseRows(ctx, tx, tenantID, initial.ExamID, effectiveReviewSourceID(initial))
+	publishedIDs, err := lockRestartReleaseRows(ctx, tx, tenantID, initial.ExamID, effectiveReviewSourceID(initial))
 	if err != nil {
 		return PublishedQuestionAppeal{}, err
 	}

@@ -496,12 +496,12 @@ jobs:
           - name: infrastructure-and-tools
             package: ''
             install: python -m pip install -r docs/architecture/tools/requirements.txt
-            command: python -m pytest -q tests/infra infra/docker-compose/scripts scripts/evals scripts/test_fujian_math_batch29.py docs/architecture/tools
+            command: python -m pytest -q tests/infra infra/docker-compose/scripts scripts/test_fujian_math_batch29.py docs/architecture/tools
           - name: ai-services
             package: ''
             install: python -m pip install -e packages/worker-runtime-python
-            # 固定响应回放与提示词登记一起检查，不发起真实供应商调用。
-            command: python -m pytest -q ai-services/tests scripts/evals/test_template_analysis_prompt_manifest.py scripts/evals/test_replay_template_analysis_v7.py
+            # 回放测试导入阅卷服务和 worker runtime，在同一环境检查固定响应及提示词登记。
+            command: python -m pytest -q ai-services/tests scripts/evals
           - name: ai-evaluation
             package: ''
             install: echo "No editable package required"

@@ -8,9 +8,9 @@ import (
 )
 
 func TestUnknownAccountSourceFloodDoesNotLockKnownAccount(t *testing.T) {
-	store, service := newLoginServiceFixture(t)
+	store, _ := newLoginServiceFixture(t)
 	guard := NewMemoryLoginAttemptGuard(5, time.Hour)
-	service = newLoginServiceForTest(store, store, guard, NewStoreRiskEvaluator(store, "shadow"), false)
+	service := newLoginServiceForTest(store, store, guard, NewStoreRiskEvaluator(store, "shadow"), false)
 	command := validLoginCommand()
 	ctx, now := t.Context(), time.Now().UTC()
 	for index := range 55 {

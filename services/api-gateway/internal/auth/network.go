@@ -34,12 +34,3 @@ func parseTrustedProxyCIDRs(values []string) []*net.IPNet {
 	}
 	return out
 }
-
-func trustedIP(ip net.IP, networks []*net.IPNet) bool {
-	for _, network := range networks {
-		if network.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}

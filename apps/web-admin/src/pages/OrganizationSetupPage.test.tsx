@@ -107,7 +107,7 @@ describe("学校初始化展示", () => {
     mocks.schools.mockRejectedValueOnce(new Error("refresh failed"));
     fireEvent.submit(screen.getByRole("button",{name:"创建激活邀请"}).closest("form")!);
     await screen.findByText("王老师：邀请已创建，等待激活");
-    expect(mocks.createUser).toHaveBeenCalledWith({...mocks.staffValues,employee_no:undefined,role_codes:["grader","arbitrator"]});
+    expect(mocks.createUser).toHaveBeenCalledWith({...mocks.staffValues,employee_no:undefined,role_codes:["teacher","grader","arbitrator"]});
     expect(mocks.createUser.mock.calls[0][0]).not.toHaveProperty("class_ids");
     expect(mocks.createUser.mock.calls[0][0]).not.toHaveProperty("password");
     expect(screen.getByRole("button",{name:"复制激活链接"})).toBeTruthy();

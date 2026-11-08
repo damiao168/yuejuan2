@@ -433,7 +433,7 @@ func TestSchoolYearStartUsesSeptemberAndShanghaiTime(t *testing.T) {
 			t.Fatal(err)
 		}
 		if got := currentSchoolYearStart(now); got != tc.want {
-			t.Fatal(fmt.Sprintf("%s school year=%d want=%d", tc.date, got, tc.want))
+			t.Fatalf("%s school year=%d want=%d", tc.date, got, tc.want)
 		}
 	}
 }

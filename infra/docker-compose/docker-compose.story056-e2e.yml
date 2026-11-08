@@ -102,6 +102,8 @@ services:
       dockerfile: services/api-gateway/Dockerfile
     entrypoint: ["api-gateway", "bootstrap-admin"]
     environment:
+      EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY: synthetic-e2e-only-model-master-key-32-characters
+      EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY: synthetic-e2e-only-independent-review-key-32-characters
       EDUGRADE_ENV: test
       EDUGRADE_LOG_LEVEL: error
       EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY056_POSTGRES_PASSWORD:?run the supplied E2E PowerShell runner}@postgres:5432/edugrade?sslmode=disable

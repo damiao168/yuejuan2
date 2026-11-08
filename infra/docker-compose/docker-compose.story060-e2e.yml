@@ -1,6 +1,11 @@
 # STORY-060 隔离验收环境，不使用固定容器名、
 # 主机数据库端口或共享生产数据卷。使用唯一的
 # Compose 项目运行，验收后只移除已核实的该项目。
+x-gateway-test-secrets: &gateway-test-secrets
+  # 初始化命令和 HTTP 服务共用网关配置校验，这两个值只用于隔离测试。
+  EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY: synthetic-e2e-only-model-master-key-32-characters
+  EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY: synthetic-e2e-only-independent-review-key-32-characters
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -95,6 +100,7 @@ services:
       dockerfile: services/api-gateway/Dockerfile
     entrypoint: ["api-gateway", "bootstrap-admin"]
     environment:
+      <<: *gateway-test-secrets
       EDUGRADE_ENV: test
       EDUGRADE_LOG_LEVEL: error
       EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY060_POSTGRES_PASSWORD:?set by the STORY-060 runner}@postgres:5432/edugrade?sslmode=disable
@@ -114,6 +120,7 @@ services:
       dockerfile: services/api-gateway/Dockerfile
     entrypoint: ["api-gateway", "provision-story060-users"]
     environment:
+      <<: *gateway-test-secrets
       EDUGRADE_ENV: test
       EDUGRADE_LOG_LEVEL: error
       EDUGRADE_POSTGRES_DSN: postgres://edugrade:${EDUGRADE_STORY060_POSTGRES_PASSWORD:?set by the STORY-060 runner}@postgres:5432/edugrade?sslmode=disable
@@ -193,8 +200,7 @@ services:
       context: ../..
       dockerfile: services/api-gateway/Dockerfile
     environment:
-      EDUGRADE_MODEL_CREDENTIAL_MASTER_KEY: synthetic-e2e-only-model-master-key-32-characters
-      EDUGRADE_REVIEW_EVIDENCE_HMAC_KEY: synthetic-e2e-only-independent-review-key-32-characters
+      <<: *gateway-test-secrets
       EDUGRADE_ENV: test
       EDUGRADE_SERVICE_NAME: story060-e2e-api
       EDUGRADE_HTTP_HOST: 0.0.0.0

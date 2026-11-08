@@ -14,8 +14,7 @@ import (
 
 type policyTenantStore struct {
 	Store
-	target string
-	calls  int
+	calls int
 }
 
 func (s *policyTenantStore) GetPolicy(ctx context.Context, tenant string) (TenantPolicy, error) {

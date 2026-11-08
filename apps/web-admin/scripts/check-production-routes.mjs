@@ -10,8 +10,11 @@ function read(path) {
 
 const routes = read("src/router/routes.tsx");
 const dashboard = read("src/pages/DashboardPage.tsx");
+const schoolDashboardView = read("src/features/dashboard/SchoolDashboard.tsx");
+const schoolDashboardModel = read("src/features/dashboard/schoolDashboard.model.ts");
 const appLayout = read("src/components/AppLayout.tsx");
 const appEntry = read("src/App.tsx");
+const main = read("src/main.tsx");
 const appShell = read("src/AppShell.tsx");
 const routeStaging = read("src/router/RouteContent.tsx");
 const pageRendering = read("src/router/pageRendering.tsx");
@@ -22,7 +25,8 @@ const login = read("src/pages/LoginPage.tsx");
 const grading = read("src/features/grading/workbench/GradingWorkbench.tsx");
 const gradingQueue = read("src/features/grading/workbench/hooks/useGradingQueue.ts");
 const gradingQueuePages = read("src/features/grading/workbench/hooks/useGradingQueuePages.ts");
-const gradingStyles = read("src/features/grading/workbench/grading-workbench.css");
+const gradingStyleEntry = read("src/features/grading/workbench/grading-workbench.css");
+const gradingImmersiveStyles = read("src/features/grading/workbench/grading-immersive.css");
 const experience = read("src/router/experience.ts");
 const teacherDashboard = read("src/pages/TeacherDashboardPage.tsx");
 const responsiveTable = read("src/components/ResponsiveTable.tsx");
@@ -48,12 +52,19 @@ function assert(condition, message) {
 }
 
 assert(
-  !/from\s+["']\.\.\/data["']/.test(dashboard),
+  !/from\s+["'](?:\.\.\/)+data["']/.test(`${dashboard}\n${schoolDashboardView}\n${schoolDashboardModel}`),
   "DashboardPage must not import static demo data from src/data.ts."
 );
 
+// 首页从摘要读取统计，子视图将事项数量和单位一起展示；旧首页的统计卡片已移除。
 assert(
-  /getDashboardSummary/.test(dashboard) && /pending_review_question_count/.test(dashboard) && /active_exam_count/.test(dashboard),
+  /await getDashboardSummary\(\)/.test(dashboard)
+    && /const stats = data\?\.statistics/.test(dashboard)
+    && /<SchoolDashboard\s+statistics=\{stats\}/.test(dashboard)
+    && /buildSchoolDashboardModel\(\{\s*statistics,/.test(schoolDashboardView)
+    && /\{formatCount\(row\.count\)\}[\s\S]*?\{row\.unit\}/.test(schoolDashboardView)
+    && /statistics\.pending_arbitration_count/.test(schoolDashboardModel)
+    && /statistics\.finalized_exam_count/.test(schoolDashboardModel),
   "DashboardPage must read trusted, unit-aware business work from the dashboard summary API."
 );
 
@@ -157,9 +168,14 @@ assert(
 
 const gradingFeature = sourceFiles("src/features/grading/workbench").join("\n");
 
+// 样式规则拆到子文件后，仍需通过入口导入，否则源码里的布局规则不会生效。
+const shortDesktopStyles = gradingImmersiveStyles.split("@media (min-width: 1100px) and (max-height: 820px)")[1]?.split(/^@media\b/m)[0] ?? "";
 assert(
-  /\.immersive-workspace \.grading-inspector\s*\{[\s\S]*?overflow-y:\s*auto;/.test(gradingStyles)
-    && /@media \(min-width: 1100px\) and \(max-height: 820px\)[\s\S]*?\.immersive-workspace \.grading-workspace\s*\{[\s\S]*?overflow:\s*visible;[\s\S]*?\.immersive-workspace \.grading-inspector\s*\{[\s\S]*?overflow:\s*visible;/.test(gradingStyles),
+  /import ["']\.\/features\/grading\/workbench\/grading-workbench\.css["']/.test(main)
+    && /@import ["']\.\/grading-immersive\.css["']/.test(gradingStyleEntry)
+    && /\.immersive-workspace \.grading-inspector\s*\{[^}]*overflow-y:\s*auto;/.test(gradingImmersiveStyles)
+    && /\.immersive-workspace \.grading-workspace\s*\{[^}]*overflow:\s*visible;/.test(shortDesktopStyles)
+    && /\.immersive-workspace \.grading-inspector\s*\{[^}]*overflow:\s*visible;/.test(shortDesktopStyles),
   "Immersive grading must keep the scoring inspector scrollable and restore document flow on short desktops."
 );
 

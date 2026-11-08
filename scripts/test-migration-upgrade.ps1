@@ -54,3 +54,6 @@ try {
   if (-not $fixtureRoot.StartsWith($expectedParent, [StringComparison]::OrdinalIgnoreCase) -or (Split-Path $fixtureRoot -Leaf) -notlike 'edugrade-upgrade-test-*') { throw 'Refusing to clean an unexpected test path.' }
   Remove-Item -LiteralPath $fixtureRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
+
+# 最后一个用例故意让 Docker 桩失败。断言与清理通过后，向 CI 返回本脚本的结果。
+exit 0
