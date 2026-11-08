@@ -39,9 +39,10 @@ test("学校管理员通过真实网关登录并查看已持久化考试", async
   }
   await page.getByText("考试列表", { exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/exams$/);
-  const examLink = page.getByText(examName, { exact: true });
-  await expect(examLink).toBeVisible();
-  await examLink.click();
+  // 地址先变化，工作台同名入口仍可能显示；只点考试列表加载后的考试按钮。
+  const examButton = page.getByRole("region", { name: "考试列表表格", exact: true }).getByRole("button", { name: examName, exact: true });
+  await expect(examButton).toBeVisible();
+  await examButton.click();
   // 独立单科直接进入当前阶段；固定种子 ID 防止误读另一场同名考试。
   await expect(page).toHaveURL(new URL(`/admin/exams/${examId}/grading`, page.url()).href);
   await expect(page.getByRole("heading", { name: examName, exact: true })).toBeVisible();

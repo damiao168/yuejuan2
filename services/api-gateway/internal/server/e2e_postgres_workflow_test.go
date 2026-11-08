@@ -363,6 +363,8 @@ func e2eCompletePostgresReviewWithDraftIsolation(t *testing.T, scope postgresWor
 func e2ePublishPostgresGradeAndReviewAppeal(t *testing.T, scope postgresWorkflowScope, examID, segmentID string) {
 	t.Helper()
 	db, router, demoTenantID, studentID, otherStudentID, adminToken, studentToken, otherStudentToken, schoolAdminToken, graderID, appealReviewerID, appealReviewerToken := scope.DB, scope.Router, scope.TenantID, scope.StudentID, scope.OtherStudentID, scope.AdminToken, scope.StudentToken, scope.OtherStudentToken, scope.SchoolAdminToken, scope.GraderID, scope.AppealReviewerID, scope.AppealReviewerToken
+	// 此流程用旧答卷导入接口，补齐收卷完成事实后再验证自动缺考和成绩发布。
+	e2eSeedCompletedCollection(t, db, demoTenantID, examID, e2eLookupUserID(t, db, "demo", "tenant_admin"))
 	finalized := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/finalize", adminToken, `{}`, http.StatusCreated)
 	if finalized["status"] != "pending_confirmation" || e2eFloat(t, finalized, "created_finals") != 1 {
 		t.Fatalf("PostgreSQL finalize should create one final grade: %#v", finalized)

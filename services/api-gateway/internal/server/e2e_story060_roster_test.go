@@ -125,7 +125,7 @@ WHERE tenant_id=$1::uuid AND student_id=$2::uuid AND status='enrolled' AND delet
 	if _, err := db.Exec(`UPDATE submission SET deleted_at=now(), updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, unknownSubmissionID); err != nil {
 		t.Fatalf("resolve unidentified submission: %v", err)
 	}
-	e2eSeedStory060CompletedCollection(t, db, tenantID, examID, adminID)
+	e2eSeedCompletedCollection(t, db, tenantID, examID, adminID)
 	quality = e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=publish", adminToken, http.StatusOK)
 	if quality["can_publish"] != true {
 		t.Fatalf("resolved roster should pass publish quality gate: %#v", quality)
@@ -308,14 +308,14 @@ FROM submission_grade grade JOIN answer_segment segment ON segment.tenant_id=gra
 WHERE grade.tenant_id=$1::uuid AND grade.exam_id=$2::uuid AND grade.deleted_at IS NULL`, tenantID, examID, adminID); err != nil {
 		t.Fatalf("seed scale roster question final grades: %v", err)
 	}
-	e2eSeedStory060CompletedCollection(t, db, tenantID, examID, adminID)
+	e2eSeedCompletedCollection(t, db, tenantID, examID, adminID)
 
 	e2eAssertStory060RosterReadBudget(t, db, router, adminToken, tenantID, examID)
 	e2eResolveStory060ScaleAbsences(t, db, router, adminToken, story060ScaleRosterScope{TenantID: tenantID, ClassID: classID, ExamID: examID, Suffix: suffix})
 }
 
 // 直接预置的答卷由触发器建立收卷记录。补上结束事实时保留收卷版本，才能验证发布对自动缺考的处理。
-func e2eSeedStory060CompletedCollection(t *testing.T, db *sql.DB, tenantID, examID, actorID string) {
+func e2eSeedCompletedCollection(t *testing.T, db *sql.DB, tenantID, examID, actorID string) {
 	t.Helper()
 	result, err := db.Exec(`UPDATE capture_collection SET completed_at=now(),completed_by=$3::uuid WHERE tenant_id=$1::uuid AND exam_id=$2::uuid`, tenantID, examID, actorID)
 	if err != nil {

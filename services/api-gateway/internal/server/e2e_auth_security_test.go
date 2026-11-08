@@ -116,7 +116,7 @@ WHERE t.code='demo' AND u.username='student'`).Scan(&uniquePhone); err != nil ||
 	}
 }
 
-// 邀请状态不能由状态编辑激活；重发令牌撤销旧令牌，完成激活后分别使用手机号、工号和浏览器登录。
+// 初始密码改为本人密码后，分别验证手机号、工号和浏览器登录。
 func e2eProvisionTeacherAndLogin(t *testing.T, router http.Handler, schoolAdminToken, schoolID string) teacherAccountSecurityLogin {
 	t.Helper()
 	// 阅卷教师由学校发放初始密码，首次登录必须改密。旧邀请的并发消费仍由单独用例覆盖。
@@ -171,7 +171,8 @@ func e2eAssertTeacherLoginRiskFacts(t *testing.T, ctx context.Context, fixture t
 FROM auth_session WHERE token_hash=$1`, auth.HashToken(phoneSession)).Scan(
 		&method, &level, &risk, &riskAction, &riskScore, &riskPolicy, &riskEvidence, &epoch,
 	); err != nil || method != "password" || level != 1 || risk != "low" || riskAction != "allow" ||
-		riskScore != 0 || riskPolicy != auth.RiskPolicyVersionV1 || riskEvidence != "cold_start" || epoch != oldUser.SecurityEpoch {
+		// 初始密码登录已留下登录事实，改密后的手机号登录已有有限历史，不能按冷启动计分。
+		riskScore != 10 || riskPolicy != auth.RiskPolicyVersionV1 || riskEvidence != "limited" || epoch != oldUser.SecurityEpoch {
 		t.Fatalf("session must persist its authentication and shadow risk metadata: method=%q level=%d risk=%q action=%q score=%d policy=%q evidence=%q epoch=%d err=%v",
 			method, level, risk, riskAction, riskScore, riskPolicy, riskEvidence, epoch, err)
 	}
@@ -356,6 +357,7 @@ func e2eAssertConcurrentTeacherCredentialConsumption(t *testing.T, ctx context.C
 	activationHash := auth.HashToken("concurrent-activation")
 	invite, err := store.CreateManagedUser(ctx, actor.User, scope, auth.CreateManagedUserInput{
 		Username: "concurrent-teacher", DisplayName: "Concurrent teacher", RoleCode: "teacher", SchoolID: schoolID,
+		TeachingSubjects:    []string{"mathematics"},
 		ActivationTokenHash: activationHash, ActivationExpiresAt: now.Add(time.Hour),
 	}, "!activation-required")
 	if err != nil {
