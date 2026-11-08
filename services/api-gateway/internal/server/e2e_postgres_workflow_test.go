@@ -46,9 +46,11 @@ func TestCoreWorkflowE2EWithPostgresTestDatabase(t *testing.T) {
 	if tenant["status"] != "active" {
 		t.Fatalf("test database tenant should be active: %#v", tenant)
 	}
-	school := e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", adminToken, `{"name":"Story 041 Synthetic School","code":"story041-`+suffix+`"}`, http.StatusCreated)["school"].(map[string]any)
+	// 登录会拒绝同时指向其他租户的学校代码。这里让学校和刚创建的测试租户使用不同代码。
+	schoolCode := "story041-school-" + suffix
+	school := e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", adminToken, `{"name":"Story 041 Synthetic School","code":"`+schoolCode+`"}`, http.StatusCreated)["school"].(map[string]any)
 	schoolID := e2eString(t, school, "id")
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", adminToken, `{"name":"Duplicate School","code":"story041-`+suffix+`"}`, http.StatusConflict)
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", adminToken, `{"name":"Duplicate School","code":"`+schoolCode+`"}`, http.StatusConflict)
 	e2eBindPostgresSchoolAdmin(t, db, "school_admin", schoolID)
 	schoolAdminToken := e2eLoginWithTenant(t, router, "demo", "school_admin", "ChangeMe123!")
 	evaluationKey := "pipeline-" + strings.ReplaceAll(suffix, ".", "-")

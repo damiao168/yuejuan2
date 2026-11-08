@@ -26,7 +26,7 @@ func TestDashboardSummaryE2EWithPostgresTestDatabase(t *testing.T) {
 		`{"name":"Dashboard School","code":"dashboard-`+suffix+`"}`, http.StatusCreated)["school"].(map[string]any)
 	schoolID := e2eString(t, school, "id")
 	grade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", adminToken,
-		`{"school_id":"`+schoolID+`","name":"Dashboard Grade","level_no":11,"academic_year":"2026"}`, http.StatusCreated)["grade"].(map[string]any)
+		`{"school_id":"`+schoolID+`","name":"Dashboard Grade","level_no":11}`, http.StatusCreated)["grade"].(map[string]any)
 	gradeID := e2eString(t, grade, "id")
 	class := e2ePostJSON(t, router, http.MethodPost, "/api/v1/classes", adminToken,
 		`{"school_id":"`+schoolID+`","grade_id":"`+gradeID+`","name":"Dashboard Class","code":"dashboard-class-`+suffix+`"}`, http.StatusCreated)["class"].(map[string]any)

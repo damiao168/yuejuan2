@@ -99,13 +99,29 @@ SELECT repeat('c',64),tenant_id,id,$1::uuid,repeat('d',64),security_epoch,'mfa.d
 	for _, query := range []string{
 		`SELECT count(*) FROM event_outbox WHERE id=$1::uuid`,
 		`SELECT count(*) FROM audit_log WHERE target_id=$1::uuid AND action='auth.mfa_enabled'`,
-		`SELECT count(*) FROM auth_session WHERE id=$1::uuid AND revoked_at IS NULL`,
+		`SELECT count(*) FROM auth_session WHERE id=$1::uuid AND revoke_reason='review_teacher_scope_changed'`,
 	} {
 		id := eventID
 		if strings.Contains(query, "audit_log") {
-			id = userID
+			// 新审计表启用租户 RLS。用事务级租户设置核对历史行，避免将不可见误判为被删除。
+			tx, err := database.BeginTx(t.Context(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback()
+			if _, err := tx.ExecContext(t.Context(), `SELECT set_config('edugrade.tenant_id',$1,true)`, tenantID); err != nil {
+				t.Fatal(err)
+			}
+			if err := tx.QueryRowContext(t.Context(), query, userID).Scan(&count); err != nil || count != 1 {
+				t.Fatalf("retirement removed existing audit fact: count=%d err=%v", count, err)
+			}
+			if err := tx.Commit(); err != nil {
+				t.Fatal(err)
+			}
+			continue
 		}
 		if strings.Contains(query, "auth_session") {
+			// 后续学科权限迁移独立撤销教师会话，但应保留原有会话记录。
 			id = session.ID
 		}
 		if err := database.QueryRow(query, id).Scan(&count); err != nil || count != 1 {

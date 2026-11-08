@@ -6,7 +6,8 @@ import { OrganizationSetupPage } from "./OrganizationSetupPage";
 
 const mocks = vi.hoisted(() => ({
   schools: vi.fn(), grades: vi.fn(), classes: vi.fn(), students: vi.fn(), years: vi.fn(), users: vi.fn(), roles: vi.fn(), exams: vi.fn(),
-  queryClient: { invalidateQueries: vi.fn() }, createUser: vi.fn(), createGrade: vi.fn(), gradeValues: {} as Record<string, unknown>, staffValues: {} as Record<string, unknown>
+  queryClient: { invalidateQueries: vi.fn() }, createUser: vi.fn(), createGrade: vi.fn(), staffFormReset: vi.fn(),
+  message: { success: vi.fn(), error: vi.fn() }, gradeValues: {} as Record<string, unknown>, staffValues: {} as Record<string, unknown>
 }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => mocks.queryClient }));
 vi.mock("../features/onboarding/queries", () => ({ onboardingQueryKey: ["onboarding", "readiness"], useOnboardingReadiness: () => ({ data: undefined }) }));
@@ -22,11 +23,13 @@ vi.mock("../components/ResponsiveTable", () => ({ ResponsiveTable: ({ dataSource
 vi.mock("antd", () => {
   const passthrough = ({ children }: { children?: ReactNode }) => <>{children}</>;
   return {
-    App: { useApp: () => ({ message: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }) },
+    App: { useApp: () => ({ message: mocks.message }) },
     Button: ({ children, onClick, disabled }: { children?: ReactNode; onClick?: () => void; disabled?: boolean }) => <button type="button" onClick={onClick} disabled={disabled}>{children}</button>,
-    Form: Object.assign(({children,onFinish}: {children?:ReactNode;onFinish?:(values:Record<string,unknown>)=>void}) => <form onSubmit={(event)=>{event.preventDefault();onFinish?.(mocks.staffValues);}}>{children}</form>, { Item: passthrough, useForm: () => [{ resetFields: vi.fn(), setFieldsValue: vi.fn() }], useWatch: (name: string) => mocks.gradeValues[name] }),
+    Form: Object.assign(({children,onFinish}: {children?:ReactNode;onFinish?:(values:Record<string,unknown>)=>void}) => <form onSubmit={(event)=>{event.preventDefault();onFinish?.(mocks.staffValues);}}>{children}</form>, { Item: passthrough, useForm: () => [{ resetFields: mocks.staffFormReset, setFieldsValue: vi.fn() }], useWatch: (name: string) => mocks.gradeValues[name] }),
     Input: Object.assign(() => null, { Password: () => null }), InputNumber: () => null, Select: () => null,
-    Alert: ({ message, description }: { message?: ReactNode; description?: ReactNode }) => <div>{message}{description}</div>,
+    Alert: ({ message, description }: { message?: ReactNode; description?: ReactNode }) => (
+      <div><div>{message}</div>{description && <div>{description}</div>}</div>
+    ),
     Result: ({ title, extra }: { title: ReactNode; extra?: ReactNode }) => <section><h2>{title}</h2>{extra}</section>,
     Space: passthrough, Tag: passthrough,
     Steps: ({ items, current, onChange }: { items: Array<{ title: string; status: string; disabled?: boolean }>; current: number; onChange: (index: number) => void }) => (
@@ -97,21 +100,26 @@ describe("学校初始化展示", () => {
     const button = await screen.findByRole("button", { name: `导入 ${valid} 行` });
     expect(button.hasAttribute("disabled")).toBe(valid === 0);
   });
-  it("教师邀请不发送初始密码，刷新失败仍保留一次性激活链接与待激活事实",async()=>{
-    mocks.users.mockResolvedValue({users:[]});
-    mocks.roles.mockResolvedValue({roles:[{code:"teacher",name:"教师"}]});
-    mocks.staffValues={display_name:"王老师",username:"wang_teacher",phone:"13800000000",school_id:"school",teaching_subjects:["mathematics"]};
-    mocks.createUser.mockResolvedValue({user:{id:"invited",display_name:"王老师",status:"invited"},activation:{path:"/activate?token=one-time",expires_at:"2026-10-09T00:00:00Z"}});
-    render(<OrganizationSetupPage onNavigate={vi.fn()}/>);
-    await screen.findByRole("heading",{name:"人员账号"});
+  it("直接创建教师并提交初始密码，刷新失败仍保留回执且清除密码", async () => {
+    mocks.users.mockResolvedValue({ users: [] });
+    mocks.staffValues = {
+      display_name: "王老师", username: "wang_teacher", phone: "13800000000", school_id: "school",
+      teaching_subjects: ["mathematics"], password: "SyntheticTeacher123!", password_confirm: "SyntheticTeacher123!",
+    };
+    mocks.createUser.mockResolvedValue({ user: { id: "teacher", display_name: "王老师", username: "wang_teacher", status: "active", must_change_password: true } });
+    render(<OrganizationSetupPage onNavigate={vi.fn()} />);
+    await screen.findByRole("heading", { name: "人员账号" });
     mocks.schools.mockRejectedValueOnce(new Error("refresh failed"));
-    fireEvent.submit(screen.getByRole("button",{name:"创建激活邀请"}).closest("form")!);
-    await screen.findByText("王老师：邀请已创建，等待激活");
-    expect(mocks.createUser).toHaveBeenCalledWith({...mocks.staffValues,employee_no:undefined,role_codes:["teacher","grader","arbitrator"]});
+    const form = screen.getByRole("button", { name: "创建教师账号" }).closest("form")!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    await screen.findByText("王老师：教师账号已创建");
+    expect(mocks.createUser).toHaveBeenCalledExactlyOnceWith({ ...mocks.staffValues, employee_no: undefined, role_codes: ["teacher", "grader", "arbitrator"] });
     expect(mocks.createUser.mock.calls[0][0]).not.toHaveProperty("class_ids");
-    expect(mocks.createUser.mock.calls[0][0]).not.toHaveProperty("password");
-    expect(screen.getByRole("button",{name:"复制激活链接"})).toBeTruthy();
-    expect(screen.getByRole("button",{name:"人员账号"}).getAttribute("data-current")).toBe("true");
+    expect(mocks.staffFormReset).toHaveBeenCalledOnce();
+    expect(screen.getByText(/登录账号 wang_teacher/)).toBeTruthy();
+    expect(screen.queryByText(/SyntheticTeacher123/)).toBeNull();
+    expect(screen.getByRole("button", { name: "人员账号" }).getAttribute("data-current")).toBe("true");
   });
   it.each([
     { examCount: 0, heading: "创建第一场考试", current: "第一场考试" },
@@ -123,16 +131,16 @@ describe("学校初始化展示", () => {
     expect(screen.getByRole("button", { name: current }).getAttribute("data-current")).toBe("true");
   });
 
-  it("邀请响应缺少激活链接时保留待激活回执并提供核对提示", async () => {
+  it("创建失败时保留表单并提示错误，人员步骤可重试", async () => {
     mocks.users.mockResolvedValue({ users: [] });
     mocks.staffValues = { display_name: "王老师", username: "wang_teacher", phone: "13800000000", school_id: "school" };
-    mocks.createUser.mockResolvedValue({ user: { id: "invited", display_name: "王老师", status: "invited" } });
+    mocks.createUser.mockRejectedValueOnce(new Error("request failed"));
     render(<OrganizationSetupPage onNavigate={vi.fn()} />);
     await screen.findByRole("heading", { name: "人员账号" });
-    fireEvent.submit(screen.getByRole("button", { name: "创建激活邀请" }).closest("form")!);
-    await screen.findByText("王老师：邀请已创建，等待激活");
-    expect(screen.getByText("本次响应未提供激活链接，请进入人员管理核对该账号。")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "复制激活链接" })).toBeNull();
+    fireEvent.submit(screen.getByRole("button", { name: "创建教师账号" }).closest("form")!);
+    await waitFor(() => expect(mocks.message.error).toHaveBeenCalled());
+    expect(mocks.staffFormReset).not.toHaveBeenCalled();
+    expect(screen.queryByText("王老师：教师账号已创建")).toBeNull();
     expect(screen.getByRole("button", { name: "人员账号" }).getAttribute("data-current")).toBe("true");
   });
 

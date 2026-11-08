@@ -69,7 +69,7 @@ test("invalid DSNs fail before launching Go without echoing possible passwords",
 });
 
 test("fixture URLs cannot be redirected by database query aliases", () => {
-  const database = `edugrade_ci_shared_${"a".repeat(32)}`;
+  const database = `edugrade_ci_shared_${"a".repeat(32)}_test`;
   for (const protocol of ["postgres", "postgresql"]) {
     const source = `${protocol}://synthetic@127.0.0.1:52837/original?sslmode=disable&database=original&dbname=original&dbname=other`;
     const clean = new URL(normalizePostgresTestDsn(source));
@@ -81,7 +81,7 @@ test("fixture URLs cannot be redirected by database query aliases", () => {
     assert.equal(target.searchParams.has("dbname"), false);
     assert.equal(target.hostname, "127.0.0.1");
   }
-  for (const database of ["original", "edugrade_ci_shared_existing", `edugrade_ci_shared_${"a".repeat(31)}`, `edugrade_ci_shared_${"A".repeat(32)}`]) {
+  for (const database of ["original", "edugrade_ci_shared_existing", `edugrade_ci_shared_${"a".repeat(32)}`, `edugrade_ci_shared_${"a".repeat(31)}_test`, `edugrade_ci_shared_${"A".repeat(32)}_test`]) {
     assert.throws(() => postgresFixtureDsn("postgres://synthetic@localhost/original", database), /Unexpected database name/);
   }
 });

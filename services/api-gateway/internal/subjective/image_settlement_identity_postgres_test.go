@@ -16,6 +16,11 @@ func TestPostgresImageSettlementManagedIdentityRollbackAndReplay(t *testing.T) {
 	owner, db, tenantID := imageSettlementPostgresDB(t)
 	store, runtime, actorID, prepared, input := seedRemediationCompletion(t, db, tenantID)
 	ctx := t.Context()
+	// 共用夹具默认是文本评分；切到图像评分时，冻结运行、策略和回传版本须一致。
+	prepared.Policy.PromptVersion, prepared.Run.PromptVersion = ImageComparisonPromptVersion, ImageComparisonPromptVersion
+	if _, err := db.ExecContext(ctx, `UPDATE subjective_grading_run SET prompt_version=$2 WHERE id=$1::uuid`, prepared.Run.ID, prepared.Run.PromptVersion); err != nil {
+		t.Fatal(err)
+	}
 	model := settlementIdentityModel()
 	model.ConfigID, model.ModelVersion = uuid.NewString(), prepared.Run.ModelVersion
 	if _, err := owner.ExecContext(ctx, `INSERT INTO managed_model_api_config
@@ -29,6 +34,7 @@ VALUES($1::uuid,$2::uuid,$3,'synthetic image settlement',$4,$5,$6,$7,decode(repe
 	prepared.Context.InputVersionID, prepared.Context.CropSHA256, prepared.Context.Observation = observation.InputVersionID, observation.CropSHA256, &observation
 	output := input.Output
 	output.Mock, output.SchemaVersion, output.CapabilityProfile = false, ImageProtocolVersion, "image-comparison"
+	output.PromptVersion = prepared.Policy.PromptVersion
 	output.DeliveryMode, output.StudentFeedback, output.TeacherNote = "teacher_suggestion", "合成反馈", "合成复核说明"
 	output.Telemetry = AdapterTelemetry{Adapter: model.AdapterType, Provider: model.ProviderKey, Deployment: model.ConfigRevision, Region: "managed", Attempts: 1,
 		Usage: ModelTokenUsage{InputTokens: 10, OutputTokens: 5, TotalTokens: 15}}

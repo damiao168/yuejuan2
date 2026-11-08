@@ -26,7 +26,7 @@ test("stale explicitly confirmed human-submit command resumes after reload witho
   await expect.poll(() => requests.length, { timeout: 10_000 }).toBe(1);
   expect(JSON.parse(requests[0].body)).toMatchObject({ score: 4, expected_revision: 1, score_only: true });
   await expect(page.locator(".answer-panel")).toContainText("fixture-01");
-  await expect(score).toHaveValue("4.0");
+  await expect(score).toHaveAttribute("aria-valuenow", "4");
   await page.reload();
   // 刷新后页面自动只读回执；不抢点正在自动核对的入口，用户核对冻结内容后才重放。
   await expect(page.getByText("可以继续提交此前内容。", { exact: true })).toBeVisible();

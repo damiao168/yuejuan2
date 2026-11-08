@@ -61,8 +61,9 @@ test("桌面壳层取消空置顶栏，并固定品牌、菜单和账户区域",
   await page.getByRole("button", { name: "展开导航" }).click();
   await page.getByRole("button", { name: "账户菜单：school_admin（学校管理员）" }).click();
   await expect(page.getByText("当前登录用户名：school_admin（学校管理员）", { exact: true })).toBeVisible();
-  await expect(page.getByText("账户安全", { exact: true })).toBeVisible();
   await expect(page.getByText("退出登录", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("个人信息与账户安全", { exact: true })).toBeVisible();
 });
 
 test("移动端只保留导航触发条，账户位于抽屉底部", async ({ page }) => {

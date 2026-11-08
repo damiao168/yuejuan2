@@ -45,8 +45,9 @@ func TestStory056ObjectiveScoringRecoveryE2EWithPostgresTestDatabase(t *testing.
 	suffix := time.Now().UTC().Format("20060102150405.000000000")
 	adminToken := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
 	graderID := e2eLookupUserID(t, db, "demo", "grader")
-	graderToken := e2eLoginWithTenant(t, router, "demo", "grader", "ChangeMe123!")
 	fixture := e2eCreateStory056AcceptanceFixture(t, db, router, adminToken, suffix, story056AcceptanceAnswerCount)
+	e2eBindStory056ReviewActor(t, db, fixture, graderID)
+	graderToken := e2eLoginWithTenant(t, router, "demo", "grader", "ChangeMe123!")
 
 	missingSegments := e2eStory062ScoringReadiness(t, router, adminToken, fixture.ExamID)
 	e2eAssertStory062ScoringReadiness(t, missingSegments, false, 3, 0, 0, 0)

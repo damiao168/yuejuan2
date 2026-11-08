@@ -12,6 +12,18 @@ type story056ReviewActors struct {
 	AdminToken, GraderToken, GraderID string
 }
 
+// 夹具使用已有阅卷岗位，但每场考试创建独立学校，分派前要补齐同校和任教学科。
+func e2eBindStory056ReviewActor(t *testing.T, db *sql.DB, fixture story056AcceptanceFixture, userID string) {
+	t.Helper()
+	result, err := db.Exec(`UPDATE app_user SET school_id=$2::uuid, teaching_subjects=ARRAY['physics']::text[] WHERE tenant_id=$1::uuid AND id=$3::uuid`, fixture.TenantID, fixture.SchoolID, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count, err := result.RowsAffected(); err != nil || count != 1 {
+		t.Fatalf("bind STORY-056 review actor: affected=%d err=%v", count, err)
+	}
+}
+
 func e2eCompleteStory056HumanReviews(t *testing.T, db *sql.DB, router http.Handler, actors story056ReviewActors, fixture story056AcceptanceFixture, count int) {
 	t.Helper()
 	adminToken, graderID := actors.AdminToken, actors.GraderID

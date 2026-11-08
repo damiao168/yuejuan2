@@ -48,7 +48,7 @@ test("阅卷教师核对异常来源，录分停留不交分，点击或快捷�
   await expect(refreshConfirmation).toBeVisible();
   await refreshConfirmation.getByRole("button", { name: "继续离开", exact: true }).click();
   await expect(refreshConfirmation).toHaveCount(0);
-  await expect(score).toHaveValue("1.0");
+  await expect(score).toHaveAttribute("aria-valuenow", "1");
 
   for (let index = 0; index < taskOrder.length; index += 1) {
     const task = taskOrder[index];
@@ -159,7 +159,7 @@ test("教师核对完整冻结资料后直接采纳建议分，批注工具保�
   for (const name of ["选择批注", "打勾", "打叉", "框选批注", "删除选中批注"]) await expect(tools.getByRole("button", { name, exact: true })).toBeVisible();
   await page.getByRole("button", { name: "采纳 AI 建议分" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByRole("spinbutton", { name: "最终得分" })).toHaveValue("7.0");
+  await expect(page.getByRole("spinbutton", { name: "最终得分" })).toHaveAttribute("aria-valuenow", "7");
   await expect.poll(() => state.drafts.get(task.id)?.score, { timeout: 8_000 }).toBe(7);
   expect(state.drafts.get(task.id)).toMatchObject({ comments: "", private_note: "", student_feedback: "" });
   expect(state.submissions).toHaveLength(0);

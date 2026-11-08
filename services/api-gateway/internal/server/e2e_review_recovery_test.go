@@ -71,6 +71,7 @@ func e2eAssertHiddenSeedAuthenticatedWorkflow(t *testing.T, ctx context.Context,
 	t.Helper()
 	db, router, adminToken, f, answers := fixture.DB, fixture.Router, fixture.AdminToken, fixture.Acceptance, fixture.Answers
 	graderID := e2eLookupUserID(t, db, "demo", "grader")
+	e2eBindStory056ReviewActor(t, db, f, graderID)
 	graderToken := e2eLoginWithTenant(t, router, "demo", "grader", "ChangeMe123!")
 	q := f.QuestionIDs["single_choice"]
 	calibrationBytes := e2eMaterializeSeedReferenceImage(t, ctx, fixture, answers[0], q, goldpaper.PoolCalibration)

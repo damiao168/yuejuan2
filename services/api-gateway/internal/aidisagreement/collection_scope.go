@@ -27,14 +27,14 @@ func disagreementCollectionArgs(tenantID string, access auth.ExamCollectionAcces
 	if err != nil {
 		return nil, err
 	}
-	if access.Scope == nil {
+	if access.Scope == nil || access.Management || access.Scope.RestrictsToManagedSchools() {
 		return append(args, []string{}, "", false), nil
 	}
 	scope := *access.Scope
 	return append(args, append([]string{}, scope.SubmissionIDs...), scope.StudentID, scope.AssignedOnly), nil
 }
 
-// 与单项答卷边界一致：外校分派只授权具体答卷，不能通过考试导航或兼任本校管理员扩大到同场答卷。
+// 学校管理员的集合查询只使用管理学校。纯阅卷人员的分派只授权具体答卷。
 // 参数顺序固定为租户、全租户、管理学校、班级、考试、分派答卷、本人学生、仅分派。
 const disagreementCollectionPredicate = `($2 OR EXISTS(
  SELECT 1 FROM submission collection_submission

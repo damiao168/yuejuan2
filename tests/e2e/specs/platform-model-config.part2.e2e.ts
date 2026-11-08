@@ -1,15 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { installApiMocks } from "../fixtures/apiMocks";
-
-async function openModelSettings(page: Page, modelName: string) {
-  const row = page.getByRole("row").filter({ has: page.getByText(modelName, { exact: true }) });
-  const settings = row.locator("details.platform-model-settings");
-  // 连接、能力和编辑共用行内设置入口；重复打开侧栏时不能把已展开的设置重新收起。
-  const open = await settings.getAttribute("open");
-  await expect(settings).toBeVisible();
-  if (open === null) await settings.getByText("设置与诊断", { exact: true }).click();
-  return row;
-}
 
 test("未保存草稿超过两分钟后自动清除", async ({ page }) => {
   await installApiMocks(page, { role: "platform_admin", initiallyAuthenticated: true });
@@ -108,7 +98,6 @@ test("同 Key 草稿可恢复且保存成功后立即清除", async ({ page }) =
   // 保存后会增加同厂商模型行，始终从原模型的编辑入口复用密钥，避免选到新模型。
   const sourceRow = page.getByRole("row").filter({ hasText: "deepseek-flash" });
   const openWithSavedKey = async () => {
-    await openModelSettings(page, "deepseek-flash");
     await sourceRow.getByRole("button", { name: "编辑DeepSeek", exact: true }).click();
     await page.getByRole("button", { name: "使用此密钥添加模型", exact: true }).click();
   };
@@ -148,7 +137,6 @@ test("编辑自定义 API 域名时保存也必须提交密钥", async ({ page }
   });
 
   await page.goto("/#/platform/model-config");
-  await openModelSettings(page, "old-model");
   await page.getByLabel("编辑自定义模型").click();
   const update = page.getByRole("dialog").getByRole("button", { name: /检测连接并更新/ });
   await page.getByLabel("API 地址").fill("https://new.example.test/v1");
@@ -197,7 +185,6 @@ test("检测接口以错误响应返回超时时仍使用警告并刷新临时�
   });
 
   await page.goto("/#/platform/model-config");
-  await openModelSettings(page, "deepseek-flash");
   await page.getByRole("button", { name: "deepseek-flash：检测连接", exact: true }).click();
   await expect(page.locator(".ant-message-notice-warning")).toContainText("模型服务连接超时");
   const connection = page.getByRole("button", { name: "deepseek-flash：查看连接详情", exact: true });
@@ -242,7 +229,6 @@ test("编辑侧边栏复用已保存密钥获取模型并可更新完整配置",
   });
 
   await page.goto("/#/platform/model-config");
-  await openModelSettings(page, "ark-code-latest");
   await page.getByLabel("编辑火山方舟 Coding Plan").click();
   await expect(page.getByLabel("供应商")).toBeDisabled();
   await expect(page.getByLabel("API 地址")).toBeEditable();

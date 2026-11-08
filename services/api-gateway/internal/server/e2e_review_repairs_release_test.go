@@ -187,19 +187,20 @@ type releaseStudentReadFixture struct {
 	Answers    []repairAnswer
 }
 
-// 同一正式版本产生两个更正草稿；第一个发布后第二个来源已过期，但首个发布重放仍成功。
+// 两个草稿对同一题给出不同分数，不能像互不冲突的更正一样合并。首个发布重放仍成功。
 func e2eAssertRegradeSourceAndReceipt(t *testing.T, ctx context.Context, svc *scorerelease.Service, f story056AcceptanceFixture, answers []repairAnswer, base scorerelease.Release) {
 	t.Helper()
 	var err error
-	makeDraft := func(q, key string) scorerelease.Release {
-		r, err := svc.CreateFromRegrade(ctx, f.TenantID, f.ExamID, f.AdminID, scorerelease.CreateRegradeInput{SourceReleaseID: base.ID, QuestionID: q, Reason: "verified correction", IdempotencyKey: key, Changes: []scorerelease.RegradeChange{{SubmissionID: answers[0].submission, QuestionID: q, Score: 1, MaxScore: 1}}})
+	q := f.QuestionIDs["single_choice"]
+	makeDraft := func(key string, score float64) scorerelease.Release {
+		r, err := svc.CreateFromRegrade(ctx, f.TenantID, f.ExamID, f.AdminID, scorerelease.CreateRegradeInput{SourceReleaseID: base.ID, QuestionID: q, Reason: "verified correction", IdempotencyKey: key, Changes: []scorerelease.RegradeChange{{SubmissionID: answers[0].submission, QuestionID: q, Score: score, MaxScore: 1}}})
 		if err != nil {
 			t.Fatal(err)
 		}
 		return r
 	}
-	a := makeDraft(f.QuestionIDs["single_choice"], "repair-regrade-a")
-	b := makeDraft(f.QuestionIDs["true_false"], "repair-regrade-b")
+	a := makeDraft("repair-regrade-a", 1)
+	b := makeDraft("repair-regrade-b", 0.5)
 	if _, err = svc.Publish(ctx, f.TenantID, a.ID, f.AdminID); err != nil {
 		t.Fatal(err)
 	}

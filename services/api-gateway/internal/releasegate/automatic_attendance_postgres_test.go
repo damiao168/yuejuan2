@@ -15,6 +15,9 @@ func TestPostgresAutomaticAbsenceKeepsReceivedSubmissionPublicationGates(t *test
 	missingStudent := uuid.NewString()
 	f.exec(t, `INSERT INTO exam_candidate_snapshot(tenant_id,exam_id,student_id,student_no_snapshot,student_name_snapshot,grade_id_snapshot,grade_name_snapshot,class_id_snapshot,class_name_snapshot) VALUES($1,$2,$3::uuid,$3::uuid::text,'missing',$4,'synthetic',$4,'synthetic')`, f.tenant, f.exam, missingStudent, f.actor)
 	f.exec(t, `INSERT INTO exam_student_attendance(tenant_id,exam_id,student_id,status,reason,marked_by) VALUES($1,$2,$3,'absent','historical absent',$4),($1,$2,$5,'expected','historical expected',$4)`, f.tenant, f.exam, f.student, f.actor, missingStudent)
+	// 隔离 schema 不复制导入触发器。此场景预置已核对的导入状态，再单独验证答卷质量门禁。
+	f.exec(t, `CREATE TABLE capture_collection (LIKE public.capture_collection INCLUDING ALL)`)
+	f.exec(t, `INSERT INTO capture_collection(tenant_id,exam_id,completed_at,completed_by) VALUES($1,$2,now(),$3)`, f.tenant, f.exam, f.actor)
 	legacy := score.NewPostgresStore(f.db)
 	releases := scorerelease.NewPostgresStore(f.db, nil)
 	gates, releaseService := f.services()

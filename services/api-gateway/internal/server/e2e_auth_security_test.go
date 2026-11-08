@@ -34,7 +34,7 @@ func TestTeacherAccountSecurityE2EWithPostgres(t *testing.T) {
 	e2eBindPostgresSchoolAdmin(t, db, "school_admin", schoolID)
 	schoolAdminToken := e2eLoginWithTenant(t, router, "demo", "school_admin", "ChangeMe123!")
 
-	login := e2eActivateInvitedTeacherAndLogin(t, router, schoolAdminToken, schoolID)
+	login := e2eProvisionTeacherAndLogin(t, router, schoolAdminToken, schoolID)
 	user, userID := login.User, login.UserID
 	store := auth.NewPostgresStore(db)
 	ctx := context.Background()
@@ -117,27 +117,23 @@ WHERE t.code='demo' AND u.username='student'`).Scan(&uniquePhone); err != nil ||
 }
 
 // 邀请状态不能由状态编辑激活；重发令牌撤销旧令牌，完成激活后分别使用手机号、工号和浏览器登录。
-func e2eActivateInvitedTeacherAndLogin(t *testing.T, router http.Handler, schoolAdminToken, schoolID string) teacherAccountSecurityLogin {
+func e2eProvisionTeacherAndLogin(t *testing.T, router http.Handler, schoolAdminToken, schoolID string) teacherAccountSecurityLogin {
 	t.Helper()
+	// 阅卷教师由学校发放初始密码，首次登录必须改密。旧邀请的并发消费仍由单独用例覆盖。
+	const teacherFields = `"username":"account-security-teacher","display_name":"Account security teacher","phone":"13700137000","employee_no":"AUTH-001","role_code":"teacher","teaching_subjects":["mathematics"],"school_id":"`
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/users", schoolAdminToken,
+		`{`+teacherFields+schoolID+`"}`, http.StatusBadRequest)
 	created := e2ePostJSON(t, router, http.MethodPost, "/api/v1/users", schoolAdminToken,
-		`{"display_name":"Account security teacher","phone":"13700137000","employee_no":"AUTH-001","role_code":"teacher","school_id":"`+schoolID+`"}`, http.StatusCreated)
+		`{`+teacherFields+schoolID+`","password":"TeacherInitial123!","password_confirm":"TeacherInitial123!"}`, http.StatusCreated)
 	user := created["user"].(map[string]any)
 	userID := e2eString(t, user, "id")
-	if user["status"] != "invited" || user["activated_at"] != nil || user["phone_masked"] != "137****7000" {
-		t.Fatalf("new teacher must be invited with masked phone and no activation timestamp: %#v", user)
+	if user["status"] != "active" || user["must_change_password"] != true || user["phone_masked"] != "137****7000" {
+		t.Fatalf("new teacher must have a masked phone and be required to change the initial password: %#v", user)
 	}
-	oldToken := e2eString(t, created["activation"].(map[string]any), "token")
-	e2ePostJSON(t, router, http.MethodPatch, "/api/v1/users/"+userID+"/status", schoolAdminToken, `{"status":"active"}`, http.StatusForbidden)
-	e2ePostJSON(t, router, http.MethodPatch, "/api/v1/users/"+userID+"/status", schoolAdminToken, `{"status":"disabled"}`, http.StatusForbidden)
-	reissued := e2ePostJSON(t, router, http.MethodPost, "/api/v1/users/"+userID+"/activation", schoolAdminToken, `{}`, http.StatusCreated)
-	activationToken := e2eString(t, reissued["activation"].(map[string]any), "token")
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/activation/verify", "", `{"token":"`+oldToken+`"}`, http.StatusBadRequest)
-	activationPreview := e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/activation/verify", "", `{"token":"`+activationToken+`"}`, http.StatusOK)["activation"].(map[string]any)
-	if activationPreview["password_min_length"] != float64(8) {
-		t.Fatalf("teacher activation must advertise the 8-character minimum: %#v", activationPreview)
-	}
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/activation/complete", "", `{"token":"`+activationToken+`","password":"TeacherPrivatePassphrase"}`, http.StatusOK)
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/activation/complete", "", `{"token":"`+activationToken+`","password":"TeacherPrivatePassphrase"}`, http.StatusBadRequest)
+	initialToken := e2eLoginWithTenant(t, router, "demo", "AUTH-001", "TeacherInitial123!")
+	e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/password", initialToken,
+		`{"current_password":"TeacherInitial123!","new_password":"TeacherPrivatePassphrase"}`, http.StatusOK)
+	e2eGetJSON(t, router, "/api/v1/auth/me", initialToken, http.StatusUnauthorized)
 	phoneLogin := e2ePostJSON(t, router, http.MethodPost, "/api/v1/auth/token", "",
 		`{"tenant_hint":"demo","identifier":"+86 13700137000","password":"TeacherPrivatePassphrase","client_type":"desktop"}`, http.StatusOK)
 	phoneSession := e2eString(t, phoneLogin, "access_token")

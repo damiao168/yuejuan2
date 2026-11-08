@@ -20,7 +20,7 @@ func TestScoringDoubleMarkLifecycleWithPostgresTestDatabase(t *testing.T) {
 	}
 	db := e2eOpenPostgresTestDB(t, dsn)
 	e2eApplyPostgresMigrations(t, db)
-	e2eActivatePostgresDemoUsers(t, db, []string{"tenant_admin", "grader"})
+	e2eActivatePostgresDemoUsers(t, db, []string{"tenant_admin", "grader", "arbitrator"})
 	router := e2ePostgresRouter(db)
 	token := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
 	suffix := time.Now().UTC().Format("20060102150405.000000000")
@@ -32,9 +32,7 @@ func TestScoringDoubleMarkLifecycleWithPostgresTestDatabase(t *testing.T) {
 	e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+f.ExamID+"/start-collection", token, `{}`, http.StatusOK)
 	e2eSeedStory056AcceptanceAnswersWithQuestionTypes(t, db, f, suffix, 2, []string{"multiple_choice"})
 	first := e2eLookupUserID(t, db, "demo", "grader")
-	if _, err := db.Exec(`UPDATE app_user SET school_id=$2::uuid WHERE tenant_id=$1::uuid AND id=$3::uuid`, f.TenantID, f.SchoolID, first); err != nil {
-		t.Fatal(err)
-	}
+	e2eBindStory056ReviewActor(t, db, f, first)
 	readiness, err := grading.NewPostgresStore(db).GetScoringReadiness(context.Background(), f.TenantID, f.ExamID)
 	if err != nil || readiness.Ready {
 		t.Fatalf("one grader must block dual mark: %+v %v", readiness, err)
@@ -46,6 +44,7 @@ func TestScoringDoubleMarkLifecycleWithPostgresTestDatabase(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO user_role(tenant_id,user_id,role_id) SELECT $1::uuid,$2::uuid,id FROM role WHERE tenant_id=$1::uuid AND code='grader'`, f.TenantID, second); err != nil {
 		t.Fatal(err)
 	}
+	e2eBindStory056ReviewActor(t, db, f, second)
 	readiness, err = grading.NewPostgresStore(db).GetScoringReadiness(context.Background(), f.TenantID, f.ExamID)
 	if err != nil || !readiness.Ready {
 		t.Fatalf("two graders should be ready: %+v %v", readiness, err)
@@ -137,14 +136,16 @@ func e2eResolveAndAssertDoubleMarkArbitration(t *testing.T, db *sql.DB, reviews 
 	if err := db.QueryRow(`SELECT id::text,revision FROM arbitration_task WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND status='pending'`, f.TenantID, f.ExamID).Scan(&arbID, &arbRevision); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := reviews.SubmitArbitration(context.Background(), f.TenantID, arbID, f.AdminID, review.SubmitArbitrationInput{FinalScore: 1, ExpectedRevision: arbRevision, Reason: "resolve discrepancy"}); err == nil {
+	arbitratorID := e2eLookupUserID(t, db, "demo", "arbitrator")
+	e2eBindStory056ReviewActor(t, db, f, arbitratorID)
+	if _, _, err := reviews.SubmitArbitration(context.Background(), f.TenantID, arbID, arbitratorID, review.SubmitArbitrationInput{FinalScore: 1, ExpectedRevision: arbRevision, Reason: "resolve discrepancy"}); err == nil {
 		t.Fatal("unassigned arbitration submitted")
 	}
-	assigned, err := reviews.AssignArbitrationTask(context.Background(), f.TenantID, arbID, f.AdminID, review.AssignArbitrationTaskInput{AssignedTo: f.AdminID, ExpectedRevision: arbRevision})
+	assigned, err := reviews.AssignArbitrationTask(context.Background(), f.TenantID, arbID, f.AdminID, review.AssignArbitrationTaskInput{AssignedTo: arbitratorID, ExpectedRevision: arbRevision})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := reviews.SubmitArbitration(context.Background(), f.TenantID, arbID, f.AdminID, review.SubmitArbitrationInput{FinalScore: 1, ExpectedRevision: assigned.Revision, Reason: "resolve discrepancy"}); err != nil {
+	if _, _, err := reviews.SubmitArbitration(context.Background(), f.TenantID, arbID, arbitratorID, review.SubmitArbitrationInput{FinalScore: 1, ExpectedRevision: assigned.Revision, Reason: "resolve discrepancy"}); err != nil {
 		t.Fatal(err)
 	}
 	var status string

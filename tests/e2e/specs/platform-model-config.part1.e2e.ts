@@ -1,15 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { installApiMocks } from "../fixtures/apiMocks";
-
-async function openModelSettings(page: Page, modelName: string) {
-  const row = page.getByRole("row").filter({ has: page.getByText(modelName, { exact: true }) });
-  const settings = row.locator("details.platform-model-settings");
-  // 连接、能力和编辑共用行内设置入口；重复打开侧栏时不能把已展开的设置重新收起。
-  const open = await settings.getAttribute("open");
-  await expect(settings).toBeVisible();
-  if (open === null) await settings.getByText("设置与诊断", { exact: true }).click();
-  return row;
-}
 
 test("切换学校后忽略过期配置响应，并保留新学校的配置", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -124,14 +114,15 @@ test("只填供应商和 API Key 即可零 Token 获取模型并保存", async (
   await expect(page.getByText("DeepSeek", { exact: true })).toBeVisible();
   await expect(page.getByText("DeepSeek：密钥及模型访问权限检查通过", { exact: true })).toBeVisible();
   await expect(page.getByText(/^此次保存未生成回复，尚未验证普通回复与结构化能力/)).toBeVisible();
-  const savedModel = await openModelSettings(page, "deepseek-v4-pro");
+  const savedModel = page.getByRole("row").filter({ has: page.getByText("deepseek-v4-pro", { exact: true }) });
   const connection = savedModel.getByRole("button", { name: "deepseek-v4-pro：查看连接详情", exact: true });
   await expect(connection).toHaveText("连接正常");
   await connection.click();
   const details = page.getByRole("dialog");
   await expect(details).toContainText("18ms");
   await details.getByRole("button", { name: "知道了", exact: true }).click();
-  await expect(savedModel.locator('[data-column-key="structured"]')).toContainText("未验证");
+  const structured = savedModel.getByRole("cell").filter({ has: page.getByRole("button", { name: "deepseek-v4-pro：检测结构化输出", exact: true }) });
+  await expect(structured).toContainText("未验证");
 });
 
 test("新建模型遇到网络超时时使用警告提示并保留当前输入", async ({ page }) => {
@@ -206,7 +197,6 @@ test("普通连接检测使用零生成 Token 快速模式", async ({ page }) =>
   });
 
   await page.goto("/#/platform/model-config");
-  await openModelSettings(page, "deepseek-v4-pro");
   await page.getByRole("button", { name: "deepseek-v4-pro：检测连接", exact: true }).click();
   await expect.poll(() => quickRequestSeen).toBe(true);
   await expect(page.getByRole("button", { name: "deepseek-v4-pro：查看连接详情", exact: true })).toHaveText("连接正常");
@@ -254,7 +244,6 @@ test("连接超时仅标记暂时无法验证，保留上次成功时间，重�
   });
 
   await page.goto("/#/platform/model-config");
-  await openModelSettings(page, "deepseek-flash");
   await page.getByRole("button", { name: "deepseek-flash：检测连接", exact: true }).click();
   const connection = page.getByRole("button", { name: "deepseek-flash：查看连接详情", exact: true });
   await expect(connection).toHaveText("连接超时");
@@ -306,7 +295,6 @@ test("完整能力检测失败时保留配置并展示具体原因", async ({ pa
   } }));
 
   await page.goto("/#/platform/model-config");
-  await openModelSettings(page, "deepseek-flash");
   await page.getByRole("button", { name: "deepseek-flash：检测结构化输出", exact: true }).click();
   const structured = page.getByRole("button", { name: "deepseek-flash：查看结构化详情", exact: true });
   await expect(structured).toHaveText("未通过");

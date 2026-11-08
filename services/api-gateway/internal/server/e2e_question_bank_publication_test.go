@@ -33,7 +33,7 @@ func TestE2EPostgresQuestionBankPublication(t *testing.T) {
 		t.Fatal(err)
 	}
 	school := e2eString(t, e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", token, `{"name":"Publication school","code":"qb-pub"}`, 201)["school"].(map[string]any), "id")
-	grade := e2eString(t, e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", token, `{"school_id":"`+school+`","name":"Pub grade","level_no":8,"academic_year":"2026"}`, 201)["grade"].(map[string]any), "id")
+	grade := e2eString(t, e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", token, `{"school_id":"`+school+`","name":"Pub grade","level_no":8}`, 201)["grade"].(map[string]any), "id")
 	class := e2eString(t, e2ePostJSON(t, router, http.MethodPost, "/api/v1/classes", token, `{"school_id":"`+school+`","grade_id":"`+grade+`","name":"Pub class","code":"pub-class"}`, 201)["class"].(map[string]any), "id")
 	if _, err := db.Exec(`UPDATE app_user SET school_id=$1,teaching_subjects=ARRAY['mathematics']::text[] WHERE tenant_id=$2 AND id=$3`, school, tenant, reviewer); err != nil {
 		t.Fatal(err)

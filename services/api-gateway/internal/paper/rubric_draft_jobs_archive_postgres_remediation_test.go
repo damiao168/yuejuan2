@@ -233,7 +233,7 @@ func newRubricDraftArchivePostgresFixture(t *testing.T) (context.Context, *sql.D
 		admin.Close()
 	})
 	// 复制实际查询用到的正式列/约束和 183 的保护函数；没有复制其他业务触发器、RLS 或历史业务数据。
-	for _, table := range []string{"exam", "exam_session", "school_class", "exam_class", "exam_readiness_snapshot", "score_release_current", "score_release", "submission", "capture_batch", "capture_upload_session", "scoring_run", "review_task", "paper_import_job", "ocr_task", "arbitration_task", "double_mark_session", "regrade_job", "question_appeal", "appeal", "operational_exception", "agent_worker_task", "subjective_grading_run", "subjective_grading_batch", "orchestration_run", "agent_task", "omr_run", "page_registration_run", "page_template_match_run", "question_rubric_draft_job", "exam_management_command", "exam_archive_guarded_table"} {
+	for _, table := range []string{"exam", "exam_session", "school_class", "exam_class", "exam_question_snapshot", "exam_readiness_snapshot", "score_release_current", "score_release", "submission", "capture_batch", "capture_upload_session", "scoring_run", "review_task", "paper_import_job", "ocr_task", "arbitration_task", "double_mark_session", "regrade_job", "question_appeal", "appeal", "operational_exception", "agent_worker_task", "subjective_grading_run", "subjective_grading_batch", "orchestration_run", "agent_task", "omr_run", "page_registration_run", "page_template_match_run", "question_rubric_draft_job", "exam_management_command", "exam_archive_guarded_table"} {
 		if _, err := db.ExecContext(ctx, "CREATE TABLE "+table+" (LIKE public."+table+" INCLUDING ALL)"); err != nil {
 			t.Fatal(err)
 		}

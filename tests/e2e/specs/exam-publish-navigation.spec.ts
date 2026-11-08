@@ -15,7 +15,7 @@ test("学校管理员从答卷导入和阅卷页面直达本场成绩发布", as
   await expect(page).toHaveURL(/\/admin\/exams\/exam-1\/scores$/);
   const publication = page.getByRole("region", { name: "成绩发布任务", exact: true });
   await expect(publication).toBeVisible({ timeout: 30_000 });
-  await expect(publication.getByRole("heading", { name: "成绩发布", exact: true })).toBeVisible();
+  await expect(publication.getByRole("region", { name: "学生端发布状态", exact: true })).toBeVisible();
   // 打开发布页只展示当前考试检查与发布流程，导航本身不产生发布操作。
   expect(published).toBe(0);
 });

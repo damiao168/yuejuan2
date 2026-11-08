@@ -27,7 +27,7 @@ func TestStory060RosterReconciliationAndAbsenceE2EWithPostgresTestDatabase(t *te
 
 	school := e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", adminToken, `{"name":"STORY-060 Roster School","code":"s060-`+suffix+`"}`, http.StatusCreated)["school"].(map[string]any)
 	schoolID := e2eString(t, school, "id")
-	grade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", adminToken, `{"school_id":"`+schoolID+`","name":"STORY-060 Grade","level_no":9,"academic_year":"2026"}`, http.StatusCreated)["grade"].(map[string]any)
+	grade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", adminToken, `{"school_id":"`+schoolID+`","name":"STORY-060 Grade","level_no":9}`, http.StatusCreated)["grade"].(map[string]any)
 	gradeID := e2eString(t, grade, "id")
 	class := e2ePostJSON(t, router, http.MethodPost, "/api/v1/classes", adminToken, `{"school_id":"`+schoolID+`","grade_id":"`+gradeID+`","name":"STORY-060 Class","code":"c060-`+suffix+`"}`, http.StatusCreated)["class"].(map[string]any)
 	classID := e2eString(t, class, "id")
@@ -125,6 +125,7 @@ WHERE tenant_id=$1::uuid AND student_id=$2::uuid AND status='enrolled' AND delet
 	if _, err := db.Exec(`UPDATE submission SET deleted_at=now(), updated_at=now() WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, unknownSubmissionID); err != nil {
 		t.Fatalf("resolve unidentified submission: %v", err)
 	}
+	e2eSeedStory060CompletedCollection(t, db, tenantID, examID, adminID)
 	quality = e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=publish", adminToken, http.StatusOK)
 	if quality["can_publish"] != true {
 		t.Fatalf("resolved roster should pass publish quality gate: %#v", quality)
@@ -205,7 +206,7 @@ func TestStory060FiveHundredStudentRosterScaleE2EWithPostgresTestDatabase(t *tes
 
 	school := e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", adminToken, `{"name":"STORY-060 Scale School","code":"s060-scale-`+suffix+`"}`, http.StatusCreated)["school"].(map[string]any)
 	schoolID := e2eString(t, school, "id")
-	grade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", adminToken, `{"school_id":"`+schoolID+`","name":"STORY-060 Scale Grade","level_no":9,"academic_year":"2026"}`, http.StatusCreated)["grade"].(map[string]any)
+	grade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", adminToken, `{"school_id":"`+schoolID+`","name":"STORY-060 Scale Grade","level_no":9}`, http.StatusCreated)["grade"].(map[string]any)
 	gradeID := e2eString(t, grade, "id")
 	class := e2ePostJSON(t, router, http.MethodPost, "/api/v1/classes", adminToken, `{"school_id":"`+schoolID+`","grade_id":"`+gradeID+`","name":"STORY-060 Scale Class","code":"c060-scale-`+suffix+`"}`, http.StatusCreated)["class"].(map[string]any)
 	classID := e2eString(t, class, "id")
@@ -307,9 +308,22 @@ FROM submission_grade grade JOIN answer_segment segment ON segment.tenant_id=gra
 WHERE grade.tenant_id=$1::uuid AND grade.exam_id=$2::uuid AND grade.deleted_at IS NULL`, tenantID, examID, adminID); err != nil {
 		t.Fatalf("seed scale roster question final grades: %v", err)
 	}
+	e2eSeedStory060CompletedCollection(t, db, tenantID, examID, adminID)
 
 	e2eAssertStory060RosterReadBudget(t, db, router, adminToken, tenantID, examID)
 	e2eResolveStory060ScaleAbsences(t, db, router, adminToken, story060ScaleRosterScope{TenantID: tenantID, ClassID: classID, ExamID: examID, Suffix: suffix})
+}
+
+// 直接预置的答卷由触发器建立收卷记录。补上结束事实时保留收卷版本，才能验证发布对自动缺考的处理。
+func e2eSeedStory060CompletedCollection(t *testing.T, db *sql.DB, tenantID, examID, actorID string) {
+	t.Helper()
+	result, err := db.Exec(`UPDATE capture_collection SET completed_at=now(),completed_by=$3::uuid WHERE tenant_id=$1::uuid AND exam_id=$2::uuid`, tenantID, examID, actorID)
+	if err != nil {
+		t.Fatalf("seed completed collection: %v", err)
+	}
+	if count, err := result.RowsAffected(); err != nil || count != 1 {
+		t.Fatalf("seed completed collection: affected=%d err=%v", count, err)
+	}
 }
 
 // 同一批 500 名考生分别走存储和 HTTP 路径，原 5 秒预算从各自调用前开始计时。

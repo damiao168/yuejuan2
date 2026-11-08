@@ -29,7 +29,7 @@ func backendRemediationPostgres(t *testing.T) *sql.DB {
 		t.Fatal("invalid backend PostgreSQL test configuration")
 	}
 	// 只连接历史独立测试库或统一门禁创建的随机库；写入仍限于本连接的 TEMP 表，不迁移传入库。
-	if !strings.HasSuffix(config.Database, "_backend_test") && !regexp.MustCompile(`^edugrade_ci_shared_[a-f0-9]{32}$`).MatchString(config.Database) {
+	if !strings.HasSuffix(config.Database, "_backend_test") && !regexp.MustCompile(`^edugrade_ci_shared_[a-f0-9]{32}_test$`).MatchString(config.Database) {
 		t.Fatal("backend regressions require a dedicated _backend_test or CI-created random database")
 	}
 	db := stdlib.OpenDB(*config)

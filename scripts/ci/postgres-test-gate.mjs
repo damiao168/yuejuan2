@@ -18,7 +18,7 @@ export function normalizePostgresTestDsn(source) {
 }
 
 export function postgresFixtureDsn(source, database) {
-  if (!/^edugrade_ci_shared_[a-f0-9]{32}$/.test(database)) throw new Error("Unexpected database name from test fixture setup");
+  if (!/^edugrade_ci_shared_[a-f0-9]{32}_test$/.test(database)) throw new Error("Unexpected database name from test fixture setup");
   const url = new URL(normalizePostgresTestDsn(source));
   url.pathname = `/${database}`;
   return url.toString();

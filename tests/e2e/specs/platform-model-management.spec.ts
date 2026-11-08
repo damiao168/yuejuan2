@@ -266,8 +266,7 @@ test("从添加模型到三智能体、评测、批准和策略使用同一学�
   await page.getByRole("button", { name: "检测连接并保存" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   const savedModel = page.getByRole("row").filter({ has: page.getByText("glm-4.6v", { exact: true }) });
-  await savedModel.getByText("设置与诊断", { exact: true }).click();
-  await page.getByRole("button", { name: "glm-4.6v：检测结构化输出", exact: true }).click();
+  await savedModel.getByRole("button", { name: "glm-4.6v：检测结构化输出", exact: true }).click();
   await expect.poll(() => probed).toBe(true);
   await expect(page.getByRole("button", { name: "glm-4.6v：查看结构化详情", exact: true })).toHaveText("通过");
 

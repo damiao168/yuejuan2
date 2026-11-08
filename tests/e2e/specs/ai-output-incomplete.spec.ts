@@ -41,7 +41,7 @@ test("当前 AI 失败隐藏历史建议，教师草稿和人工提交仍可使�
   await refreshConfirmation.getByRole("button", { name: "继续离开", exact: true }).click();
   await expect(refreshConfirmation).toHaveCount(0);
   await expect(page.getByText("AI 建议未完成，请人工评分。", { exact: true })).toBeVisible();
-  await expect(score).toHaveValue("4.0");
+  await expect(score).toHaveAttribute("aria-valuenow", "4");
   expect(state.drafts.get(task.id)).toMatchObject({ comments: "教师保留的评语", student_feedback: "教师保留的学生反馈", private_note: "教师保留的内部备注" });
   await expect(page.getByRole("button", { name: "采纳 AI 建议分" })).toHaveCount(0);
   await expect(page.getByText("AI 学生反馈草稿", { exact: true })).toHaveCount(0);

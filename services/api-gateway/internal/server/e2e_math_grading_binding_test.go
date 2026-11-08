@@ -26,18 +26,20 @@ func TestPostgresMathGradingBindingsRoundTripAndRejectWrongVersion(t *testing.T)
 	}
 	db := e2eOpenPostgresTestDB(t, dsn)
 	e2eApplyPostgresMigrations(t, db)
-	e2eActivatePostgresDemoUsers(t, db, []string{"tenant_admin"})
+	e2eActivatePostgresDemoUsers(t, db, []string{"tenant_admin", "grader"})
 	router := e2ePostgresRouter(db)
 	token := e2eLoginWithTenant(t, router, "demo", "tenant_admin", "ChangeMe123!")
 	suffix := time.Now().UTC().Format("20060102150405.000000000")
 	fixture := e2ePrepareMathGradingBindingFixture(t, db, router, token, suffix)
+	graderID := e2eLookupUserID(t, db, "demo", "grader")
+	e2eBindStory056ReviewActor(t, db, fixture, graderID)
 	ctx := context.Background()
 	questionID := fixture.QuestionIDs["single_choice"]
-	var segmentID, snapshotID, rubricVersion, otherSegmentID string
-	if err := db.QueryRowContext(ctx, `SELECT seg.id::text,snapshot.id::text,snapshot.rubric_snapshot_json->>'version'
+	var segmentID, snapshotID, rubricVersion, cropHash, otherSegmentID string
+	if err := db.QueryRowContext(ctx, `SELECT seg.id::text,snapshot.id::text,snapshot.rubric_snapshot_json->>'version',seg.crop_sha256
 FROM answer_segment seg JOIN submission sub ON sub.id=seg.submission_id
 JOIN exam_question_snapshot snapshot ON snapshot.tenant_id=seg.tenant_id AND snapshot.exam_id=sub.exam_id AND snapshot.question_id=seg.question_id
-WHERE sub.exam_id=$1::uuid AND seg.question_id=$2::uuid ORDER BY sub.candidate_no LIMIT 1`, fixture.ExamID, questionID).Scan(&segmentID, &snapshotID, &rubricVersion); err != nil {
+WHERE sub.exam_id=$1::uuid AND seg.question_id=$2::uuid ORDER BY sub.candidate_no LIMIT 1`, fixture.ExamID, questionID).Scan(&segmentID, &snapshotID, &rubricVersion, &cropHash); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.QueryRowContext(ctx, `SELECT seg.id::text FROM answer_segment seg JOIN submission sub ON sub.id=seg.submission_id
@@ -50,10 +52,10 @@ WHERE sub.exam_id=$1::uuid AND seg.id<>$2::uuid LIMIT 1`, fixture.ExamID, segmen
 	}
 	artifacts := mathunderstanding.NewPostgresStore(db)
 	artifact, err := artifacts.CreateArtifact(ctx, fixture.TenantID, mathunderstanding.CreateArtifactInput{
-		// 共享夹具是一场冻结的物理考试；即使这里只测试存储绑定，产物存储也要求相同学科。
-		SubjectCode: "physics", AnswerSegmentID: segmentID, ExamQuestionSnapshotID: snapshotID, InputHash: "sha256:synthetic-binding", EngineVersion: "fixture-v1",
+		// 产物绑定冻结物理科目和题块当前裁切，才能在下游测试评分版本约束。
+		SubjectCode: "physics", AnswerSegmentID: segmentID, ExamQuestionSnapshotID: snapshotID, InputHash: cropHash, EngineVersion: "fixture-v1",
 		Blocks: []mathunderstanding.MathAnswerBlock{{ID: "b1", Kind: "text", Status: "active", BoundingBox: mathunderstanding.BoundingBox{X: .1, Y: .1, Width: .5, Height: .2},
-			RecognitionEngine: "fixture", RecognitionVersion: "v1", SourceImageHash: "sha256:synthetic-binding", RecognitionConfidence: .9, StructureConfidence: .9}},
+			RecognitionEngine: "fixture", RecognitionVersion: "v1", SourceImageHash: cropHash, RecognitionConfidence: .9, StructureConfidence: .9}},
 		Formulas: []mathunderstanding.FormulaArtifact{}, Relations: []mathunderstanding.SpatialRelation{}, Verifications: []mathunderstanding.MathVerification{}, RubricEvidence: []mathunderstanding.RubricEvidence{},
 		SolutionGraph: mathunderstanding.SolutionGraph{ID: "g1", AnswerSegmentID: segmentID, BuilderVersion: "fixture-v1", FormulaModelVersion: "fixture-v1", OverallConfidence: .9,
 			Steps: []mathunderstanding.SolutionStep{{ID: "s1", BlockIDs: []string{"b1"}, Kind: "conclusion", Confidence: .9, RecognitionConfidence: .9, StructureConfidence: .9}}, Edges: []mathunderstanding.SolutionEdge{}},
@@ -88,7 +90,7 @@ WHERE sub.exam_id=$1::uuid AND seg.id<>$2::uuid LIMIT 1`, fixture.ExamID, segmen
 	if err != nil || readGrade.ID != grade.ID || readGrade.MathArtifactID != artifact.ID || readGrade.MathArtifactVersion != artifact.Version || readGrade.MathCorrectionRevision != 3 || readGrade.MathScoringVersion != subjective.MathScoringVersionV1 {
 		t.Fatalf("grade bindings not round-tripped: %#v %v", readGrade, err)
 	}
-	binding := mathGradingBindingContext{DB: db, Store: store, Fixture: fixture}
+	binding := mathGradingBindingContext{DB: db, Store: store, Fixture: fixture, GraderID: graderID}
 	e2eAssertMathBindingReviewHistory(t, ctx, binding, gradeInput, grade, suffix)
 	e2eAssertMathBindingBatchRecovery(t, ctx, binding, input, suffix)
 	for _, scenario := range []string{"wrong_version", "wrong_segment", "missing_artifact", "incomplete_binding"} {
@@ -112,9 +114,10 @@ func e2ePrepareMathGradingBindingFixture(t *testing.T, db *sql.DB, router http.H
 }
 
 type mathGradingBindingContext struct {
-	DB      *sql.DB
-	Store   *subjective.PostgresStore
-	Fixture story056AcceptanceFixture
+	DB       *sql.DB
+	Store    *subjective.PostgresStore
+	Fixture  story056AcceptanceFixture
+	GraderID string
 }
 
 // 指定复核任务的历史投影仍保留完整数学身份、修订号和最新到最旧的次序。
@@ -145,7 +148,7 @@ func e2eAssertMathBindingReviewHistory(t *testing.T, ctx context.Context, bindin
 		t.Fatal(err)
 	}
 	reviews := review.NewPostgresStore(db)
-	task, err := reviews.CreateTask(ctx, fixture.TenantID, fixture.AdminID, review.CreateTaskInput{AnswerSegmentID: segmentID, Source: "manual_sample", AssignedTo: fixture.AdminID})
+	task, err := reviews.CreateTask(ctx, fixture.TenantID, fixture.AdminID, review.CreateTaskInput{AnswerSegmentID: segmentID, Source: "manual_sample", AssignedTo: binding.GraderID})
 	if err != nil {
 		t.Fatal(err)
 	}

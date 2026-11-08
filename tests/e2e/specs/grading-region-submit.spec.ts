@@ -35,7 +35,7 @@ test("整区录分须明确交分，部分失败保留成功回执，重试完�
   await page.reload();
   for (const [index, task] of members.entries()) {
     await expect(page.getByRole("region", { name: `第 ${task.question_no} 题评分`, exact: true })
-      .getByRole("spinbutton", { name: "最终得分" })).toHaveValue(new RegExp(`^${scores[index]}(?:\\.0)?$`));
+      .getByRole("spinbutton", { name: "最终得分" })).toHaveAttribute("aria-valuenow", String(scores[index]));
   }
   expect(state.submissions).toEqual([]);
   const next = page.getByRole("button", { name: "提交本区并下一份", exact: true });
@@ -43,7 +43,7 @@ test("整区录分须明确交分，部分失败保留成功回执，重试完�
   await expect.poll(() => state.submissions).toEqual(members.slice(0, 2).map(task => task.id));
   const failedRow = page.getByRole("region", { name: `第 ${members[2].question_no} 题评分`, exact: true });
   await expect(failedRow.getByRole("alert")).toBeVisible();
-  await expect(failedRow.getByRole("spinbutton", { name: "最终得分" })).toHaveValue(/^4(?:\.0)?$/);
+  await expect(failedRow.getByRole("spinbutton", { name: "最终得分" })).toHaveAttribute("aria-valuenow", "4");
   await expect(page.locator(".answer-panel")).toContainText(members[0].anonymous_code);
   failure = false;
   await next.click();

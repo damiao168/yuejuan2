@@ -36,7 +36,7 @@ import {
   type Student,
   type StudentImportError
 } from "../api/org";
-import { createManagedUser, listAssignableRoles, listManagedUsers, type AssignableRole, type ManagedUser, type ManagedUserActivation } from "../api/users";
+import { createManagedUser, listAssignableRoles, listManagedUsers, type AssignableRole, type ManagedUser } from "../api/users";
 import { normalizeTeachingSubjects } from "../constants/teachingSubjects";
 import { ErrorState, LoadingState } from "../components/PageState";
 import { ResponsiveTable } from "../components/ResponsiveTable";
@@ -84,13 +84,6 @@ function downloadCSV(filename: string, rows: Array<Record<string, string | numbe
   URL.revokeObjectURL(url);
 }
 
-type StaffInvitation = { name: string; activation?: ManagedUserActivation };
-
-function renderStaffInvitationNotice(invitation: StaffInvitation | undefined, message: ReturnType<typeof App.useApp>["message"]) {
-  if (!invitation) return null;
-  return <Alert type="success" showIcon message={`${invitation.name}：邀请已创建，等待激活`} description={<div>{invitation.activation ? <><p>请核对本人后交接此一次性链接。有效至 {new Date(invitation.activation.expires_at).toLocaleString("zh-CN")}。</p><Input readOnly value={`${window.location.origin}${invitation.activation.path}`} /><Button onClick={() => void Promise.resolve().then(() => navigator.clipboard.writeText(`${window.location.origin}${invitation.activation!.path}`)).then(() => message.success("邀请链接已复制")).catch(() => message.warning("复制失败，请选中链接手动复制"))}>复制激活链接</Button></> : <p>本次响应未提供激活链接，请进入人员管理核对该账号。</p>}<p>激活后刷新进度；邀请过期时，由学校人员管理员重新生成。</p></div>} />;
-}
-
 export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (path: string) => void }>) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
@@ -116,23 +109,29 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
   const calculatedGradeLevel = expectedGradeLevel(gradeStage, entryForGrade, schoolYearForGrade);
   const gradeIssue = gradeCreationIssue({ schoolId: schoolForGrade, stage: gradeStage, entryYear: entryForGrade, schoolYear: schoolYearForGrade, grades: data?.grades ?? [], ready: !loading && !error && Boolean(data) });
   useEffect(() => { if (step === 1) gradeForm.setFieldsValue({ level_no: calculatedGradeLevel }); }, [step, calculatedGradeLevel, gradeForm]);
-  const [invitation, setInvitation] = useState<StaffInvitation>();
-  const invitationSavingRef = useRef(false);
+  const [createdStaff, setCreatedStaff] = useState<{ name: string; username: string }>();
+  const staffSavingRef = useRef(false);
 
-  const inviteStaff = async (values: { display_name: string; username: string; phone?: string; employee_no?: string; school_id: string; teaching_subjects: string[] }) => {
-    if (saving || invitationSavingRef.current) return;
-    // React 提交按钮更新前也可能再次收到提交；同步锁保护一次性邀请回执。
-    invitationSavingRef.current = true;
+  const createStaff = async (values: { display_name: string; username: string; phone?: string; employee_no?: string; school_id: string; teaching_subjects: string[]; password: string; password_confirm: string }) => {
+    if (saving || staffSavingRef.current) return;
+    // React 提交按钮更新前也可能再次收到提交；同一个表单只允许一笔创建请求在途。
+    staffSavingRef.current = true;
     setSaving(true);
     try {
-      const result = await createManagedUser({ display_name: values.display_name.trim(), username: values.username.trim(), phone: values.phone?.trim() || undefined, employee_no: values.employee_no?.trim() || undefined, school_id: values.school_id, role_codes: taskStaffRoleCodes, teaching_subjects: normalizeTeachingSubjects(values.teaching_subjects) });
-      // 一次性邀请只出现在创建响应；先保留回执，再刷新，刷新失败不能让人重新创建账号。
-      setInvitation({ name: result.user.display_name, activation: result.activation });
+      const result = await createManagedUser({
+        display_name: values.display_name.trim(), username: values.username.trim(),
+        phone: values.phone?.trim() || undefined, employee_no: values.employee_no?.trim() || undefined,
+        school_id: values.school_id, role_codes: taskStaffRoleCodes,
+        teaching_subjects: normalizeTeachingSubjects(values.teaching_subjects),
+        password: values.password, password_confirm: values.password_confirm,
+      });
+      // 保留成功回执后再刷新列表。初始密码只用于创建请求，成功后从表单清除。
+      setCreatedStaff({ name: result.user.display_name, username: result.user.username });
       staffForm.resetFields();
-      message.success("人员邀请已创建，等待本人激活");
+      message.success("教师账号已创建，首次登录须修改初始密码");
       await load();
       await queryClient.invalidateQueries({ queryKey: onboardingQueryKey });
-    } catch (reason) { message.error(messageOf(reason)); } finally { invitationSavingRef.current = false; setSaving(false); }
+    } catch (reason) { message.error(messageOf(reason)); } finally { staffSavingRef.current = false; setSaving(false); }
   };
 
   const load = useCallback(async () => {
@@ -392,13 +391,13 @@ export function OrganizationSetupPage({ onNavigate }: Readonly<{ onNavigate: (pa
         return renderStudentsStep(data);
       case 4:
         return (
-          <Form key="user" form={staffForm} layout="vertical" preserve={false} initialValues={{ school_id: data.schools.length === 1 ? data.schools[0].id : undefined }} disabled={saving} onFinish={(values) => void inviteStaff(values)}>
+          <Form key="user" form={staffForm} layout="vertical" preserve={false} initialValues={{ school_id: data.schools.length === 1 ? data.schools[0].id : undefined }} disabled={saving} onFinish={(values) => void createStaff(values)}>
             <h2>人员账号</h2>
-            <p className="section-copy">创建教师激活邀请，由本人设置密码。请通过可信渠道交给本人；邀请创建后仍为待激活，学校人员就绪以启用账号为准。</p>
+            <p className="section-copy">为教师设置任教学科和初始密码。教师首次登录后必须修改密码。</p>
             {completed[4] ? <Alert type="success" showIcon message="已存在可参与学校业务的管理员或教师账号" /> : null}
             <MemberCreationFields schools={data.schools} />
-            <Button type="primary" htmlType="submit" loading={saving}>创建激活邀请</Button>
-            {renderStaffInvitationNotice(invitation, message)}
+            <Button type="primary" htmlType="submit" loading={saving}>创建教师账号</Button>
+            {createdStaff ? <Alert type="success" showIcon message={`${createdStaff.name}：教师账号已创建`} description={`登录账号 ${createdStaff.username}。请通过可信渠道将初始密码交给本人。`} /> : null}
             <Space wrap><Button onClick={() => onNavigate("/members/teachers")}>前往人员与权限管理</Button><Button disabled={saving} onClick={() => setStep(5)}>继续准备考试</Button></Space>
           </Form>
         );

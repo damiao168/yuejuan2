@@ -13,6 +13,8 @@ import (
 func TestCancelledScoringRunCannotReassignOrSubmitReview(t *testing.T) {
 	db, _, _, f, answers, _ := repairFixture(t)
 	ctx := context.Background()
+	graderID := e2eLookupUserID(t, db, "demo", "grader")
+	e2eBindStory056ReviewActor(t, db, f, graderID)
 	var segmentID, questionNo string
 	questionID := f.QuestionIDs["single_choice"]
 	if err := db.QueryRowContext(ctx, `SELECT answer_segment_id::text,question_no FROM final_grade WHERE tenant_id=$1 AND submission_id=$2::uuid AND question_id=$3::uuid AND deleted_at IS NULL`, f.TenantID, answers[0].submission, questionID).Scan(&segmentID, &questionNo); err != nil {
@@ -27,13 +29,13 @@ func TestCancelledScoringRunCannotReassignOrSubmitReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := review.NewPostgresStore(db)
-	if _, err := store.AssignTask(ctx, f.TenantID, taskID, f.AdminID, review.AssignTaskInput{AssignedTo: f.AdminID, ExpectedRevision: 1}); !errors.Is(err, review.ErrInvalidTransition) {
+	if _, err := store.AssignTask(ctx, f.TenantID, taskID, f.AdminID, review.AssignTaskInput{AssignedTo: graderID, ExpectedRevision: 1}); !errors.Is(err, review.ErrInvalidTransition) {
 		t.Fatalf("assign cancelled task: %v", err)
 	}
-	if _, err := store.BatchAssignTasks(ctx, f.TenantID, f.AdminID, review.BatchAssignInput{TaskIDs: []string{taskID}, AssignedTo: f.AdminID, ExpectedRevisions: map[string]int64{taskID: 1}}); !errors.Is(err, review.ErrInvalidTransition) {
+	if _, err := store.BatchAssignTasks(ctx, f.TenantID, f.AdminID, review.BatchAssignInput{TaskIDs: []string{taskID}, AssignedTo: graderID, ExpectedRevisions: map[string]int64{taskID: 1}}); !errors.Is(err, review.ErrInvalidTransition) {
 		t.Fatalf("batch assign cancelled task: %v", err)
 	}
-	if _, err := store.SubmitGrade(ctx, f.TenantID, taskID, f.AdminID, review.SubmitGradeInput{ExpectedRevision: 1, Score: 1}); !errors.Is(err, review.ErrInvalidTransition) {
+	if _, err := store.SubmitGrade(ctx, f.TenantID, taskID, graderID, review.SubmitGradeInput{ExpectedRevision: 1, Score: 1}); !errors.Is(err, review.ErrInvalidTransition) {
 		t.Fatalf("submit cancelled task: %v", err)
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO answer_candidate(tenant_id,answer_segment_id,scoring_run_id,source,decision,engine_version,profile_version,input_hash,is_current,created_by) VALUES($1,$2::uuid,$3::uuid,'manual','confirmed','v1','v1','1234567890abcdef',true,$4::uuid)`, f.TenantID, segmentID, runID, f.AdminID); err != nil {

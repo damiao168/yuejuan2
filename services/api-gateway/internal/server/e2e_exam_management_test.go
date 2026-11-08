@@ -29,7 +29,7 @@ func TestWholeExamManagementE2EWithPostgresTestDatabase(t *testing.T) {
 	suffix := strings.ReplaceAll(uuid.NewString(), "-", "")
 	school := e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", token, fmt.Sprintf(`{"name":"Whole Exam %s","code":"whole-%s"}`, suffix, suffix), http.StatusCreated)["school"].(map[string]any)
 	schoolID := e2eString(t, school, "id")
-	grade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", token, fmt.Sprintf(`{"school_id":"%s","name":"Whole Grade","level_no":10,"academic_year":"2026"}`, schoolID), http.StatusCreated)["grade"].(map[string]any)
+	grade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", token, fmt.Sprintf(`{"school_id":"%s","name":"Whole Grade","level_no":10}`, schoolID), http.StatusCreated)["grade"].(map[string]any)
 	gradeID := e2eString(t, grade, "id")
 	classIDs := []string{}
 	for index := range 2 {

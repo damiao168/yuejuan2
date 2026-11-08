@@ -29,7 +29,7 @@ func TestPostgresMathVerificationRuntimeAtomicActivation(t *testing.T) {
 	_, err := db.ExecContext(ctx, `
 CREATE TABLE tenant(id uuid PRIMARY KEY, status text DEFAULT 'active', deleted_at timestamptz);
 CREATE TABLE app_user(id uuid PRIMARY KEY, tenant_id uuid NOT NULL, UNIQUE(tenant_id,id));
-CREATE TABLE answer_segment(id uuid PRIMARY KEY,tenant_id uuid NOT NULL);
+CREATE TABLE answer_segment(id uuid PRIMARY KEY,tenant_id uuid NOT NULL,crop_sha256 text,deleted_at timestamptz);
 CREATE TABLE math_understanding_artifact(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),tenant_id uuid NOT NULL,subject_code text NOT NULL,
  answer_segment_id uuid NOT NULL,exam_question_snapshot_id uuid NOT NULL,version bigint NOT NULL,
@@ -139,21 +139,23 @@ func e2ePrepareMathVerificationActivation(t *testing.T, ctx context.Context, fix
 	t.Helper()
 	db := fixture.DB
 	tenantID, actorID, segmentID, snapshotID, parentID := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+	// 激活派生核验时会重新核对题块当前裁切，夹具与父产物必须绑定同一哈希。
+	const cropHash = "sha256:synthetic-crop"
 	for _, seed := range []struct {
 		query string
 		args  []any
 	}{
 		{`INSERT INTO tenant(id) VALUES($1::uuid)`, []any{tenantID}},
 		{`INSERT INTO app_user(id,tenant_id) VALUES($1::uuid,$2::uuid)`, []any{actorID, tenantID}},
-		{`INSERT INTO answer_segment(id,tenant_id) VALUES($1::uuid,$2::uuid)`, []any{segmentID, tenantID}},
+		{`INSERT INTO answer_segment(id,tenant_id,crop_sha256) VALUES($1::uuid,$2::uuid,$3)`, []any{segmentID, tenantID, cropHash}},
 	} {
 		if _, err := db.ExecContext(ctx, seed.query, seed.args...); err != nil {
 			t.Fatal(err)
 		}
 	}
 	contract := mathunderstanding.CreateArtifactInput{
-		SubjectCode: "mathematics", AnswerSegmentID: segmentID, ExamQuestionSnapshotID: snapshotID, InputHash: "sha256:synthetic-crop", EngineVersion: "fixture-v1",
-		Blocks:        []mathunderstanding.MathAnswerBlock{{ID: "b1", Kind: "formula", Status: "active", BoundingBox: mathunderstanding.BoundingBox{X: .1, Y: .1, Width: .5, Height: .2}, RecognitionEngine: "fixture", RecognitionVersion: "v1", RecognitionConfidence: .9, StructureConfidence: .9, SourceImageHash: "sha256:synthetic-crop"}},
+		SubjectCode: "mathematics", AnswerSegmentID: segmentID, ExamQuestionSnapshotID: snapshotID, InputHash: cropHash, EngineVersion: "fixture-v1",
+		Blocks:        []mathunderstanding.MathAnswerBlock{{ID: "b1", Kind: "formula", Status: "active", BoundingBox: mathunderstanding.BoundingBox{X: .1, Y: .1, Width: .5, Height: .2}, RecognitionEngine: "fixture", RecognitionVersion: "v1", RecognitionConfidence: .9, StructureConfidence: .9, SourceImageHash: cropHash}},
 		Formulas:      []mathunderstanding.FormulaArtifact{{ID: "f1", BlockID: "b1", BoundingBox: mathunderstanding.BoundingBox{X: .1, Y: .1, Width: .5, Height: .2}, CanonicalLatex: "x=2", RecognitionEngine: "fixture", RecognitionVersion: "v1", ParserVersion: "v1", ParseStatus: "parsed", Confidence: .9}},
 		SolutionGraph: mathunderstanding.SolutionGraph{ID: "g1", AnswerSegmentID: segmentID, BuilderVersion: "v1", FormulaModelVersion: "v1", OverallConfidence: .9, Steps: []mathunderstanding.SolutionStep{{ID: "s1", OrderHint: 1, BlockIDs: []string{"b1"}, FormulaIDs: []string{"f1"}, Confidence: .9}}},
 		Verifications: []mathunderstanding.MathVerification{}, RubricEvidence: []mathunderstanding.RubricEvidence{}, Relations: []mathunderstanding.SpatialRelation{},

@@ -41,13 +41,14 @@ func run() error {
 	}
 	defer admin.Close(context.Background())
 	if len(os.Args) > 1 && os.Args[1] == "cleanup" {
-		if !regexp.MustCompile(`^edugrade_ci_shared_[a-f0-9]{32}$`).MatchString(target) {
+		if !regexp.MustCompile(`^edugrade_ci_shared_[a-f0-9]{32}_test$`).MatchString(target) {
 			return fmt.Errorf("refusing to remove a database not created by this tool")
 		}
 		_, err = admin.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{target}.Sanitize()+" WITH (FORCE)")
 		return err
 	}
-	name := "edugrade_ci_shared_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	// 组织相关用例只连接以 _test 结尾的数据库，保留该保护并继续使用随机名称隔离运行。
+	name := "edugrade_ci_shared_" + strings.ReplaceAll(uuid.NewString(), "-", "") + "_test"
 	if _, err = admin.Exec(ctx, "CREATE DATABASE "+pgx.Identifier{name}.Sanitize()); err != nil {
 		return err
 	}

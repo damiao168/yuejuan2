@@ -49,6 +49,7 @@ func TestPostgresBlockedScoringCreatesAssignableManualTasks(t *testing.T) {
 	for _, task := range tasks {
 		bySegment[task.AnswerSegmentID] = task
 	}
+	seedBlockedReviewAssignee(t, ctx, db, tenant, exam, actor)
 	for _, item := range []aiReviewIdentity{fill, large} {
 		task := bySegment[item.segment]
 		if task.ID == "" || task.Status != "pending" || task.AssignedTo != "" || task.ReasonCode != "visual_model_unavailable" {
@@ -65,6 +66,21 @@ func TestPostgresBlockedScoringCreatesAssignableManualTasks(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM question_grade`).Scan(&grades); err != nil || grades != 1 {
 		t.Fatalf("manual recovery changed existing grades: %d, %v", grades, err)
 	}
+}
+
+// 恢复只补待分派任务；真正分派时仍验证同校、任教学科与实际阅卷权限。
+func seedBlockedReviewAssignee(t *testing.T, ctx context.Context, db *sql.DB, tenant, exam, grader string) {
+	t.Helper()
+	for _, table := range []string{"app_user", "user_role", "role", "role_permission", "permission"} {
+		aiReviewExec(t, ctx, db, "CREATE TABLE "+table+" (LIKE public."+table+" INCLUDING ALL)")
+	}
+	school, role, permission := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	aiReviewExec(t, ctx, db, `INSERT INTO exam(id,tenant_id,school_id,name,subject,exam_type,total_score,status,grading_mode,publish_policy,created_by) VALUES($1,$2,$3,'Synthetic recovery','mathematics','quiz',30,'grading','ai_assisted','manual_after_confirmation',$4)`, exam, tenant, school, grader)
+	aiReviewExec(t, ctx, db, `INSERT INTO app_user(id,tenant_id,school_id,username,display_name,password_hash,status,teaching_subjects) VALUES($1,$2,$3,'synthetic-grader','Synthetic grader','disabled-login','active',ARRAY['mathematics'])`, grader, tenant, school)
+	aiReviewExec(t, ctx, db, `INSERT INTO role(id,tenant_id,code,name,scope_type) VALUES($1,$2,'grader','Synthetic grader','exam_task')`, role, tenant)
+	aiReviewExec(t, ctx, db, `INSERT INTO permission(id,tenant_id,code,name,resource,action) VALUES($1,$2,'review:work','Synthetic review','review','work')`, permission, tenant)
+	aiReviewExec(t, ctx, db, `INSERT INTO user_role(tenant_id,user_id,role_id) VALUES($1,$2,$3)`, tenant, grader, role)
+	aiReviewExec(t, ctx, db, `INSERT INTO role_permission(tenant_id,role_id,permission_id) VALUES($1,$2,$3)`, tenant, role, permission)
 }
 
 func seedBlockedReviewItem(t *testing.T, ctx context.Context, db *sql.DB, tenant, actor, exam, submission, run, no, route string) aiReviewIdentity {

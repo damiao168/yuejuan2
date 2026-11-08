@@ -32,7 +32,7 @@ func TestExamArchiveCommandsE2EWithPostgresTestDatabase(t *testing.T) {
 	suffix := uuid.NewString()
 	school := e2ePostJSON(t, router, http.MethodPost, "/api/v1/schools", token, fmt.Sprintf(`{"name":"Archive commands","code":"archive-%s"}`, suffix), http.StatusCreated)["school"].(map[string]any)
 	schoolID := e2eString(t, school, "id")
-	grade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", token, fmt.Sprintf(`{"school_id":"%s","name":"Archive grade","level_no":10,"academic_year":"2026"}`, schoolID), http.StatusCreated)["grade"].(map[string]any)
+	grade := e2ePostJSON(t, router, http.MethodPost, "/api/v1/grades", token, fmt.Sprintf(`{"school_id":"%s","name":"Archive grade","level_no":10}`, schoolID), http.StatusCreated)["grade"].(map[string]any)
 	gradeID := e2eString(t, grade, "id")
 	var tenantID, actor string
 	if err := db.QueryRow(`SELECT t.id::text,u.id::text FROM tenant t JOIN app_user u ON u.tenant_id=t.id WHERE t.code='demo' AND u.username='tenant_admin'`).Scan(&tenantID, &actor); err != nil {

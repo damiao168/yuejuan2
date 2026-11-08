@@ -125,7 +125,8 @@ func TestPostgresCollectionScopeRemediation(t *testing.T) {
 		{"school", schoolScope, submissions[:1], 1},
 		{"tenant", auth.AccessScope{TenantID: tenant, ActorID: actor, TenantWide: true}, submissions, 3},
 		{"assigned", auth.AccessScope{TenantID: tenant, ActorID: actor, AssignedOnly: true, ExamIDs: []string{examB}, SubmissionIDs: submissions[1:2]}, submissions[1:2], 2},
-		{"mixed", mixed, submissions[:2], 3},
+		// 兼任阅卷的学校管理员仍只读取本校，分派的外校答卷也不能出现在集合中。
+		{"mixed", mixed, submissions[:1], 1},
 		{"class", auth.AccessScope{TenantID: tenant, ActorID: actor, ClassIDs: []string{classB}}, submissions[1:], 2},
 		{"self", auth.AccessScope{TenantID: tenant, ActorID: actor, StudentID: student}, submissions[1:2], 0},
 	} {
