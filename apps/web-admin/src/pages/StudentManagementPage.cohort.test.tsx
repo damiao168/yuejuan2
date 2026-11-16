@@ -74,6 +74,12 @@ describe("学生管理的届别与直接转班操作", () => {
     expect(screen.getByText("乙同学")).toBeTruthy();
     expect(screen.queryByText("丙同学")).toBeNull();
     expect(within(filters).getAllByText("2026级 · 高二")).toHaveLength(1);
+    const roster = screen.getByRole("table");
+    expect(within(roster).getByRole("columnheader", { name: "届别" })).toBeTruthy();
+    const firstRow = within(roster).getByRole("row", { name: /甲同学/ });
+    expect(within(firstRow).getByRole("cell", { name: "2026级" })).toBeTruthy();
+    expect(within(firstRow).getByRole("cell", { name: "高二一班" })).toBeTruthy();
+    expect(within(roster).getByRole("cell", { name: "实验班" })).toBeTruthy();
   });
 
   it("换届别清掉原班级条件，班级下拉只含新届别，切状态也不残留隐藏筛选", async () => {

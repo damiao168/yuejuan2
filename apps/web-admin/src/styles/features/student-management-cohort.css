@@ -37,18 +37,25 @@
   flex-shrink: 0;
 }
 
+.student-management-page .student-management-table { min-width: 0; }
+
 .student-management-page .student-management-table .section-head {
   padding: 4px 4px 0;
 }
 
-.student-management-page .student-row-actions { row-gap: 2px; }
+.student-roster-table .ant-table-cell { white-space: nowrap; overflow-wrap: normal; }
 .student-management-page .student-row-actions .ant-btn { padding-inline: 4px; white-space: nowrap; }
 
-.student-account-state { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.student-account-state { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.student-account-state .ant-tag { margin-inline-end: 0; }
 .student-account-meta { color: var(--text-secondary, #64748b); font-size: 12px; line-height: 1.45; }
 .student-form-account { border-top: 1px solid var(--border-color, #e2e8f0); margin-top: 8px; padding-top: 18px; }
 .student-form-account h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
 .student-form-account > p, .student-account-intro { margin: 0 0 18px; color: var(--text-secondary, #64748b); line-height: 1.6; }
+
+@container student-management (min-width: 1100px) {
+  .student-management-table .responsive-table-scroll-controls { display: none; }
+}
 
 @container student-management (max-width: 900px) {
   .student-management-page .student-filter-status { margin-left: 0; }

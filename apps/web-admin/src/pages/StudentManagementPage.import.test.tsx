@@ -20,14 +20,13 @@ vi.mock("../api/org", () => ({
 }));
 vi.mock("../features/members/students/studentImportWorkbook", () => ({ readStudentImportWorkbook: mocks.workbook }));
 vi.mock("../auth/stepUpContext", () => ({ useStepUp: () => ({ runWithStepUp: vi.fn() }), isStepUpCancelledError: () => false }));
-vi.mock("../components/ResponsiveTable", () => ({ ResponsiveTable: () => null }));
 vi.mock("../components/StatusTag", () => ({ StatusTag: () => null }));
 vi.mock("../components/PageState", () => ({ LoadingState: () => <p>名册加载中</p>, ErrorState: () => null, EmptyState: () => null }));
 vi.mock("antd", () => {
   const Box = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const Input = ({ value, onChange }: { value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement> }) => <input value={value ?? ""} onChange={onChange} />;
   return {
-    App: { useApp: () => app }, Space: Box, Dropdown: Box,
+    App: { useApp: () => app }, Space: Box, Dropdown: Box, Table: () => null,
     Alert: ({ message, description }: { message: string; description?: string }) => <div role="status"><strong>{message}</strong>{description ? <p>{description}</p> : null}</div>,
     Form: Object.assign(Box, { Item: Box, useForm: () => [{ resetFields: vi.fn(), setFieldsValue: vi.fn(), submit: vi.fn() }] }),
     Input: Object.assign(Input, { Password: Input }),

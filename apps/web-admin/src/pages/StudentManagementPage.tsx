@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, App, Button, Form, Input, Modal, Segmented, Select, Space, Upload, type TableColumnsType } from "antd";
+import { Alert, App, Button, Form, Input, Modal, Segmented, Select, Space, Table, Upload, type TableColumnsType } from "antd";
 import { Download, Plus, RefreshCw, Search, Upload as UploadIcon } from "lucide-react";
 import { getUserErrorMessage } from "../api/client";
 import {
@@ -20,11 +20,11 @@ import {
   type StudentImportError
 } from "../api/org";
 import { EmptyState, ErrorState, LoadingState } from "../components/PageState";
-import { ResponsiveTable } from "../components/ResponsiveTable";
+import { ScrollableTableRegion } from "../components/responsiveTableInteraction";
 import { StatusTag } from "../components/StatusTag";
 import { isStepUpCancelledError, useStepUp } from "../auth/stepUpContext";
 import type { SessionUser } from "../auth/session";
-import { classCohortLabel, gradeCohortGroups, gradeCohortKey, gradeCohortLabel } from "../features/members/gradeCohortPresentation";
+import { classCohortLabel, classLocalName, gradeCohortGroups, gradeCohortKey, gradeCohortLabel, gradeCurrentLevelLabel, gradeEntryYear } from "../features/members/gradeCohortPresentation";
 import { prepareStudentImport, remapStudentImportError, studentImportColumns, studentImportErrorsCSV, type StudentImportMapping } from "../features/members/students/studentImport";
 import { readStudentImportWorkbook, type StudentImportSheet } from "../features/members/students/studentImportWorkbook";
 import "../styles/features/student-management-cohort.css";
@@ -88,6 +88,22 @@ async function loadAllStudents() {
     cursor = page.has_more ? page.next_cursor : "";
   } while (cursor);
   return result;
+}
+
+function rosterClassLabel(schoolClass: SchoolClass, grade?: Grade) {
+  if (!grade) return classCohortLabel(schoolClass);
+  const localName = classLocalName(schoolClass);
+  const match = /^(\d+|[一二三四五六七八九十]+)班$/.exec(localName);
+  const level = gradeCurrentLevelLabel(grade);
+  // 届别列只显示入学年份。已知年级的编号班在班级列带年级，自定义班名和未知年级保留原样。
+  if (!match || level === "年级未设置") return localName;
+  const ordinal = match[1];
+  if (!/^[1-9]\d?$/.test(ordinal)) return `${level}${ordinal}班`;
+  const digits = "零一二三四五六七八九";
+  const number = Number(ordinal);
+  const tens = Math.floor(number / 10);
+  const units = number % 10;
+  return `${level}${tens > 1 ? digits[tens] : ""}${tens ? "十" : ""}${units ? digits[units] : ""}班`;
 }
 
 export function StudentManagementPage({ currentUser }: { currentUser?: SessionUser }) {
@@ -225,23 +241,30 @@ export function StudentManagementPage({ currentUser }: { currentUser?: SessionUs
   }), [classById, classId, cohortKey, gradeById, keyword, status, students]);
 
   const columns: TableColumnsType<Student> = [
-    { title: "学号", dataIndex: "student_no", width: 150, ellipsis: true },
-    { title: "姓名", dataIndex: "name", width: 130, ellipsis: true },
-    { title: "届别年级", width: 180, render: (_, item) => gradeCohortLabel(currentGradeForClass(classById.get(item.class_id))) },
-    { title: "班级", width: 150, render: (_, item) => { const schoolClass = classById.get(item.class_id); return schoolClass ? classCohortLabel(schoolClass, currentGradeForClass(schoolClass)) : "-"; } },
+    { title: "学号", dataIndex: "student_no", width: 150 },
+    { title: "姓名", dataIndex: "name", width: 130 },
+    { title: "届别", key: "cohort", width: 115, render: (_, item) => {
+      const grade = currentGradeForClass(classById.get(item.class_id));
+      const year = grade && gradeEntryYear(grade);
+      return year ? `${year}级` : "届别未设置";
+    } },
+    { title: "班级", key: "class", width: 150, render: (_, item) => {
+      const schoolClass = classById.get(item.class_id);
+      return schoolClass ? rosterClassLabel(schoolClass, currentGradeForClass(schoolClass)) : "-";
+    } },
     { title: "状态", dataIndex: "status", width: 100, render: (value: string) => <StatusTag tone={value === "active" ? "success" : "neutral"}>{value === "active" ? "在籍" : "已停用"}</StatusTag> },
     { title: "账号状态", width: 200, render: (_, item) => {
       const accountStatus = item.account_status ?? "not_provisioned";
-      return <div className="student-account-state">
+      return <span className="student-account-state">
         <StatusTag tone={accountStatus === "active" ? "success" : accountStatus === "disabled" ? "neutral" : "warning"}>{accountStatus === "active" ? "已启用" : accountStatus === "disabled" ? "已停用" : "未开通"}</StatusTag>
         {item.login_school_code ? <span className="student-account-meta">学校代码 {item.login_school_code}{item.must_change_password ? " · 首次登录需改密" : ""}</span> : null}
-      </div>;
+      </span>;
     } },
     {
-      title: "操作", key: "actions", width: 330, fixed: "right", render: (_, item) => {
+      title: "操作", key: "actions", width: 270, render: (_, item) => {
         const busy = loading || saving || Boolean(actioning);
         return (
-        <Space size={0} wrap className="student-row-actions">
+        <Space size={0} className="student-row-actions">
         <Button type="link" size="small" disabled={busy} onClick={() => {
           setEditingStudent(item);
           form.resetFields();
@@ -443,7 +466,10 @@ export function StudentManagementPage({ currentUser }: { currentUser?: SessionUs
 
       <section className="student-management-table">
         <div className="student-roster-toolbar"><div className="section-head"><div><h2>学生名册</h2><p>{filtered.length} 名学生</p></div></div></div>
-        <ResponsiveTable className="dense-data-table" rowKey="id" size="small" columns={columns} dataSource={filtered} scroll={{ x: 1120 }} pagination={{ size: "small", pageSize: 20, showSizeChanger: true }} locale={{ emptyText: <EmptyState title={status === "inactive" ? "暂无已停用学生" : "暂无学生"} description={status === "inactive" ? "停用学生会显示在这里，可恢复或彻底删除。" : "可新增学生，或下载模板后批量导入。"} /> }} />
+        {/* 名册窄屏也保留单行表格。操作列随表格滚动，避免固定列挡住手机上的学号和姓名。 */}
+        <ScrollableTableRegion>
+          <Table className="dense-data-table student-roster-table" rowKey="id" size="small" columns={columns} dataSource={filtered} scroll={{ x: "max-content" }} pagination={{ size: "small", pageSize: 20, showSizeChanger: true }} locale={{ emptyText: <EmptyState title={status === "inactive" ? "暂无已停用学生" : "暂无学生"} description={status === "inactive" ? "停用学生会显示在这里，可恢复或彻底删除。" : "可新增学生，或下载模板后批量导入。"} /> }} />
+        </ScrollableTableRegion>
       </section>
 
       <Modal title={editingStudent ? "编辑学生" : "新增学生"} open={createOpen} okText="保存" cancelText="取消" confirmLoading={saving} maskClosable={!saving} closable={!saving} cancelButtonProps={{ disabled: saving }} onOk={() => form.submit()} onCancel={() => { if (!saving) { setCreateOpen(false); setEditingStudent(null); form.resetFields(); } }}>
