@@ -19,6 +19,15 @@ EduGrade Enterprise 是面向学校和教育机构的智能阅卷与学情分析
 
 > 当前 AI 能力遵循“模型提供建议，教师作出决定”的原则。模型结果不能绕过复核、质量门禁和发布流程直接成为最终成绩。
 
+## 项目进度与验证
+
+截至 2026 年 11 月 16 日，`main` 已通过隔离真实环境中的**核心业务全链路验证**。验证基线为 `4a639b9`，GitHub Actions 主 CI 的 40 个作业全部通过。[CI 运行记录](https://github.com/damiao168/yuejuan2/actions/runs/43805131284)
+
+- **考试到查分**。真实 PostgreSQL 回归执行了 263 项必测用例，全部通过且无跳过。核心用例覆盖考试准备、冻结名册、答卷采集、处理任务流转、人工阅卷、成绩发布、学生查分及申诉。[数据库回归](https://github.com/damiao168/yuejuan2/actions/runs/43805131284/job/133094147075)
+- **管理端与辅助阅卷**。真实 Chromium 通过 Web 管理端和网关连接后端，验证登录、读取已保存的考试、打开阅卷工作区和跨租户访问拒绝。隔离 Compose 同时验证 API、主观题 Worker 和阅卷 Agent 的任务流转，检查教师建议、任务状态及审计记录实际写入 PostgreSQL。[真实系统端到端作业](https://github.com/damiao168/yuejuan2/actions/runs/43805131284/job/133094147103)
+
+验证使用合成数据，外部模型调用使用协议模拟器。生产试点仍需完成学校现场及扫描设备验收，用受治理的真实样本评估模型效果、教师一致性、置信度校准和公平性，并验证部署容量与备份恢复。[预生产部署 Runbook](docs/deployment/preproduction-runbook.md)
+
 ## 适用场景
 
 - 学校统一考试、阶段测评、模拟考试和日常作业阅卷。
@@ -32,7 +41,7 @@ EduGrade Enterprise 是面向学校和教育机构的智能阅卷与学情分析
 
 | 业务阶段 | 主要能力 |
 | --- | --- |
-| 考试准备 | 学校、学年、年级、班级和学生管理；分步骤创建考试；冻结考试名单 |
+| 考试准备 | 考试工作台，学校、学年、年级、班级及学生名册管理，多科考试创建，冻结考试名单 |
 | 试卷配置 | 题目蓝图、试卷与答案 AI 解析、Question 对账、AnswerKey、Rubric、答题卡模板 |
 | 答卷采集 | 受控答题卡、二维码身份、批量上传、页面质量检测、页面配准和异常处理 |
 | 智能处理 | PaddleOCR、公式识别、答案区域切分、证据提取和处理状态追踪 |
@@ -550,8 +559,8 @@ docker compose --env-file .env -f docker-compose.yml logs --tail 200 api-gateway
 1. 登录后进入“组织与用户”或首次启用向导。
 2. 创建学校，填写稳定且唯一的学校代码。
 3. 创建学年、届别/年级和班级，确认班级所属学年与年级正确。
-4. 下载学生导入模板，填写学号、姓名和班级代码后上传 CSV。
-5. 在导入预览中处理重复学号、未知班级和必填字段错误，再确认导入。
+4. 在“学生管理”下载模板，上传 Excel（`.xlsx`）或 CSV，再核对列映射。导入同一个班级时，也可以直接指定班级。
+5. 整批校验通过后新增名册。列表的“届别”与“班级”分别显示入学届别与完整班名，例如 `2026级` 和 `高二一班`。需要学生登录时，在对应行选择“开通账号”。
 6. 创建学校管理员、年级管理员和阅卷教师账号，并按岗位分配角色。
 7. 使用业务账号重新登录，确认学校、班级和学生范围符合权限预期。
 
@@ -559,13 +568,11 @@ docker compose --env-file .env -f docker-compose.yml logs --tail 200 api-gateway
 
 ### 二、创建考试
 
-1. 打开“考试”，点击“新建考试”。
-2. 填写考试名称、科目、考试类型和考试时间。
-3. 选择学校、学年、年级和参考班级。
-4. 设置总分、题型、题量及各题分值。系统会按蓝图预生成正式 Question。
-5. 选择阅卷方式、成绩发布策略和申诉策略。
-6. 在确认页检查总分、题目数量和参考范围，然后创建考试。
-7. 创建后进入考试工作区，不要重复创建同一场考试。
+1. 打开“考试列表”，点击“新建考试”。
+2. 填写考试名称并选择年级，按权限确认所属学校。
+3. 添加考试学科及统一参考班级。如各学科覆盖范围不同，可单独设置参考班级。
+4. 按需展开“阅卷与发布设置”，选择阅卷组织方式和是否允许成绩发布后申诉。成绩由管理员确认后发布。
+5. 核对年级、班级和学科后创建考试，进入工作区按学科配置试卷、答案和评分标准。
 
 ### 三、配置试卷、答案和评分标准
 
@@ -609,7 +616,7 @@ docker compose --env-file .env -f docker-compose.yml logs --tail 200 api-gateway
 
 ### 七、发布成绩
 
-1. 打开“成绩管理”，先执行发布前检查。
+1. 打开“成绩发布”，先执行发布前检查。
 2. 处理所有阻断项，包括缺少答卷、身份未确认、缺页、OCR 失败、未完成复核、题目覆盖不完整和总分不一致。
 3. 确认考试 Question 集合、每份答卷的 AnswerSegment 集合和 FinalGrade 集合一致。
 4. 生成成绩发布草稿并复核人数、总分、异常数和发布范围。
@@ -662,8 +669,8 @@ docker compose --env-file .env -f docker-compose.yml logs --tail 200 ocr-worker 
 
 ### 开发环境
 
-- Node.js 20+ 与 npm。
-- Go 1.26。
+- Node.js 20+ 与 npm。CI 使用 Node.js 24。
+- Go 1.26.11，与 CI 和 API 容器一致。
 - Python 3.11+。
 - Docker Desktop，用于依赖服务和容器验收。
 - 构建桌面端时还需要 Rust、Cargo 和 Tauri Windows 依赖。
@@ -779,19 +786,10 @@ docker compose --env-file infra\docker-compose\.env.example `
   -f infra\docker-compose\docker-compose.yml config --quiet
 ```
 
-## 当前状态
-
-- 当前能力和验证证据以[验证状态文档](docs/verification-status.md)为准。
-- AI 阅卷仍是教师建议，不具备自动发布最终成绩的权限。
-- 作文和论述题目前只允许 `shadow_only`。
-- Mock、协议模拟器和合成数据只能证明技术链路，不代表真实学校数据上的模型效果。
-- 生产 Pilot 前仍需完成真实受治理数据评测、教师一致性、置信度校准、公平性检查、容量测试和恢复演练。
-- 模型文件、运行时密钥、数据库密码和部署 `.env` 不应提交到 Git。
-
 ## 文档索引
 
 - [机构启用与考试工作区操作说明](docs/user-guides/organization-onboarding-and-exam-workspace.md)
-- [当前能力与验证状态](docs/verification-status.md)
+- [阶段能力与历史验证记录](docs/verification-status.md)
 - [私有化部署说明](infra/docker-compose/README.md)
 - [预生产部署 Runbook](docs/deployment/preproduction-runbook.md)
 - [企业验收清单](docs/deployment/enterprise-acceptance-checklist.md)
@@ -804,6 +802,8 @@ docker compose --env-file infra\docker-compose\.env.example `
 ## 安全与责任说明
 
 EduGrade 处理学生身份、答卷和成绩等敏感教育数据。经授权的部署方应根据所在地法律法规和学校制度配置访问控制、数据保留、备份、审计、网络隔离和模型使用政策。任何 AI 输出都应由具备资质的教育工作者审核，不应作为影响学生权益的唯一依据。
+
+模型文件、运行时密钥、数据库密码和部署 `.env` 应保存在 Git 仓库之外。
 
 ## License & Copyright / 授权与版权
 
