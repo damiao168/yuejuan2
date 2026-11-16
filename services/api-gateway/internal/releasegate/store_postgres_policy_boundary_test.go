@@ -63,7 +63,7 @@ func (c gateSQLConnection) Begin() (driver.Tx, error) {
 }
 func (c gateSQLConnection) BeginTx(context.Context, driver.TxOptions) (driver.Tx, error) {
 	_, err := c.script.take("begin", "", nil)
-	return gateSQLTransaction{c.script}, err
+	return gateSQLTransaction(c), err
 }
 func (c gateSQLConnection) ExecContext(_ context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	_, err := c.script.take("exec", query, args)
