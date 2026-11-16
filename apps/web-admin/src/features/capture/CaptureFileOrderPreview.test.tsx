@@ -40,11 +40,16 @@ describe("上传前页序预检", () => {
     counts.pdf.mockResolvedValue(3); counts.tiff.mockResolvedValue(3);
     const pending = vi.fn();
     const view = render(<CaptureFileOrderPreview files={[pdf,tiff]} pages={2} onChange={vi.fn()} onPendingChange={pending} />);
-    await waitFor(() => expect(screen.getByLabelText("逐份答卷分组").textContent).toContain("第 2 份答卷：前三页.pdf 第 3 页、后三页.tiff 第 1 页"));
-    expect(pending).toHaveBeenLastCalledWith(false);
+    // 分组先渲染，父级阻塞状态随后由 effect 通知；两者都完成后才验证下一次选择。
+    await waitFor(() => {
+      expect(screen.getByLabelText("逐份答卷分组").textContent).toContain("第 2 份答卷：前三页.pdf 第 3 页、后三页.tiff 第 1 页");
+      expect(pending).toHaveBeenLastCalledWith(false);
+    });
     view.rerender(<CaptureFileOrderPreview files={[pdf]} pages={2} onChange={vi.fn()} onPendingChange={pending} />);
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("还缺 1 页"));
-    expect(pending).toHaveBeenLastCalledWith(true);
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toContain("还缺 1 页");
+      expect(pending).toHaveBeenLastCalledWith(true);
+    });
     let late!: (count: number) => void;
     const old = new File(["pdf"], "旧材料.pdf"); counts.pdf.mockImplementationOnce(() => new Promise(resolve => { late = resolve; }));
     view.rerender(<CaptureFileOrderPreview files={[old]} pages={2} onChange={vi.fn()} onPendingChange={pending} />);

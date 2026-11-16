@@ -92,7 +92,8 @@ describe("来源拖框与实际裁图确认", () => {
     const register: RegisterQuestionSaveParticipant = (area, next) => { if (area === "references") participant = next; };
     const view = render(<ReferenceMaterialEditor examId="exam" questionId="question-a" editable registerSaveParticipant={register} />);
     await openEditor(); await generateCrop();
-    expect(participant!.dirty).toBe(true);
+    // 裁图显示后，整题保存参与者还需通过 effect 注册新的未核对状态。
+    await waitFor(() => expect(participant?.dirty).toBe(true));
     await expect(participant!.prepare()).rejects.toThrow("未核对"); expect(api.saveReferenceMaterials).not.toHaveBeenCalled();
     fireEvent.click(button("关闭抽屉")); fireEvent.click(button("核对本题参考图"));
     expect(await screen.findByAltText("待确认的实际裁图")).toBeTruthy();
