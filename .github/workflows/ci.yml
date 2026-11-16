@@ -224,7 +224,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache-dependency-path: services/api-gateway/go.sum
       - run: go mod verify
       - run: go mod tidy -diff
@@ -249,7 +249,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache-dependency-path: services/api-gateway/go.sum
       - run: go test ./... -count=1
 
@@ -263,7 +263,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
       - name: Race-test concurrent state machines
         run: >-
           go test -race
@@ -298,7 +298,7 @@ jobs:
       - id: coverage-go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           architecture: x64
           cache-dependency-path: services/api-gateway/go.sum
       - run: npm run test:go-coverage
@@ -321,7 +321,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
 
   go-postgres:
@@ -366,7 +366,7 @@ jobs:
         working-directory: .
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache-dependency-path: services/api-gateway/go.sum
       - name: All PostgreSQL tests must execute
         env:
@@ -640,7 +640,8 @@ jobs:
 
   # API/数据库/worker 使用隔离真实栈；模型使用协议替身，测试不证明真实模型评分质量。
   real-system-e2e:
-    runs-on: ubuntu-latest
+    # Playwright 1.55.1 的 Chromium 依赖支持 Ubuntu 24.04，固定系统以免 runner 升级后安装失败。
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       COMPOSE_PROJECT_NAME: story060-${{ github.run_id }}-${{ github.run_attempt }}

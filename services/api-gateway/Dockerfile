@@ -1,4 +1,4 @@
-ARG GO_BUILD_IMAGE=golang:1.26.10-alpine
+ARG GO_BUILD_IMAGE=golang:1.26.11-alpine
 ARG API_RUNTIME_IMAGE=alpine:3.22
 ARG APP_VERSION=dev
 ARG GIT_SHA=unknown
