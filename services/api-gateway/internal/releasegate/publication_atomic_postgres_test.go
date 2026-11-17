@@ -88,27 +88,60 @@ func (f publicationFixture) addGrades(t *testing.T, student, submission, segment
 	f.exec(t, `INSERT INTO submission_grade(tenant_id,exam_id,submission_id,student_id,anonymous_code,total_score,max_score,status,created_by) VALUES($1,$2,$3::uuid,$4,$3::uuid::text,4,5,'confirmed',$5) ON CONFLICT(tenant_id,exam_id,submission_id) DO NOTHING`, f.tenant, f.exam, submission, student, f.actor)
 }
 
+type publicationLegacyPublisher struct{ coordinator *PublicationCoordinator }
+
+func (p publicationLegacyPublisher) PublishPublication(ctx context.Context, tenantID, examID, releaseID, actorID string) (scorerelease.Release, error) {
+	release, _, err := p.coordinator.Publish(ctx, tenantID, examID, releaseID, actorID)
+	return release, err
+}
+
 func TestPostgresLegacyPublishRequiresEveryMatchedSubmission(t *testing.T) {
 	f := newPublicationFixture(t)
+	// 共用夹具默认已有历史版本。本项验证首发完整性，先移除全部版本，不能误走“恢复当前版本”分支。
+	for _, table := range []string{"score_release_current", "score_release_question", "score_release_item", "score_release"} {
+		f.exec(t, "DELETE FROM "+table+" WHERE tenant_id=$1", f.tenant)
+	}
+	f.exec(t, `CREATE TABLE capture_collection (LIKE public.capture_collection INCLUDING ALL)`)
 	store := score.NewPostgresStore(f.db)
+	releases := scorerelease.NewService(scorerelease.NewPostgresStore(f.db, nil).WithGradePreparer(store))
+	gates := NewService(NewPostgresStore(f.db), releases).WithRegradeBlockerReader(publicationRegradeReader{f.db})
+	store.WithPublication(releases, publicationLegacyPublisher{NewPublicationCoordinator(gates, releases)})
 	student, submission := uuid.NewString(), uuid.NewString()
 	f.addSubmission(t, student, submission)
 	assertBlocked := func(wantMissingTotal bool) {
 		t.Helper()
+		quality, err := store.CheckQuality(t.Context(), f.tenant, f.exam, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		codes := map[string]int{}
+		for _, issue := range quality.Issues {
+			codes[issue.Code] = issue.Count
+		}
+		if (codes["missing_submission_grades"] == 1) != wantMissingTotal || codes["question_coverage_incomplete"] != 1 {
+			t.Fatalf("wrong missing coverage before preparation: %#v", codes)
+		}
 		result, err := store.PublishGrades(t.Context(), f.tenant, f.exam, f.actor, score.PublishInput{Reason: "synthetic"})
 		if !errors.Is(err, score.ErrQualityGateFailed) {
 			t.Fatalf("incomplete matched submission published: result=%#v err=%v", result, err)
 		}
-		codes := map[string]int{}
+		codes = map[string]int{}
 		for _, issue := range result.Quality.Issues {
 			codes[issue.Code] = issue.Count
 		}
-		if (codes["missing_submission_grades"] == 1) != wantMissingTotal || codes["question_coverage_incomplete"] != 1 {
-			t.Fatalf("wrong missing coverage: %#v", codes)
+		if codes["question_coverage_incomplete"] != 1 {
+			t.Fatalf("canonical publication lost missing official question coverage: %#v", codes)
 		}
 		var status string
 		if err = f.db.QueryRowContext(t.Context(), `SELECT status FROM exam WHERE id=$1`, f.exam).Scan(&status); err != nil || status != "finalized" {
 			t.Fatalf("blocked exam mutated: %s %v", status, err)
+		}
+		var current, versions, evidence int
+		if err := f.db.QueryRowContext(t.Context(), `SELECT
+ (SELECT count(*) FROM score_release_current WHERE tenant_id=$1 AND exam_id=$2),
+ (SELECT count(*) FROM score_release WHERE tenant_id=$1 AND exam_id=$2),
+ (SELECT count(*) FROM release_gate_evidence WHERE tenant_id=$1 AND exam_id=$2)`, f.tenant, f.exam).Scan(&current, &versions, &evidence); err != nil || current != 0 || versions != 0 || evidence != 0 {
+			t.Fatalf("blocked preparation kept publication facts: current=%d versions=%d evidence=%d err=%v", current, versions, evidence, err)
 		}
 	}
 	assertBlocked(true)
@@ -117,8 +150,18 @@ func TestPostgresLegacyPublishRequiresEveryMatchedSubmission(t *testing.T) {
 	assertBlocked(false)
 	f.addGrades(t, student, submission, uuid.NewString(), uuid.NewString())
 	result, err := store.PublishGrades(t.Context(), f.tenant, f.exam, f.actor, score.PublishInput{Reason: "synthetic complete"})
-	if err != nil || result.Status != "published" || len(result.SubmissionGrades) != 2 {
+	if err != nil || result.Status != "published" || len(result.SubmissionGrades) != 2 || result.ScoreRelease == nil || result.ScoreRelease.Version != 1 {
 		t.Fatalf("complete control failed: %#v %v", result, err)
+	}
+	current, err := releases.CurrentPublished(t.Context(), f.tenant, f.exam)
+	if err != nil || current.Release.ID != result.ScoreRelease.ID || len(current.Items) != 2 || len(current.Questions) != 2 {
+		t.Fatalf("complete matched submissions missing from official snapshot: %+v %v", current, err)
+	}
+	var evidence, publiclyMarkedWorkingGrades int
+	if err := f.db.QueryRowContext(t.Context(), `SELECT
+ (SELECT count(*) FROM release_gate_evidence WHERE tenant_id=$1 AND exam_id=$2 AND release_id=$3 AND phase='publish'),
+ (SELECT count(*) FROM submission_grade WHERE tenant_id=$1 AND exam_id=$2 AND (status<>'confirmed' OR locked))`, f.tenant, f.exam, result.ScoreRelease.ID).Scan(&evidence, &publiclyMarkedWorkingGrades); err != nil || evidence != 1 || publiclyMarkedWorkingGrades != 0 {
+		t.Fatalf("canonical first publication lost evidence or changed working publication flags: evidence=%d working=%d err=%v", evidence, publiclyMarkedWorkingGrades, err)
 	}
 }
 

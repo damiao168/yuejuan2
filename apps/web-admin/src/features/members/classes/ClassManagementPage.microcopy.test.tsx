@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { SessionUser } from "../../../auth/session";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,7 +25,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn() })));
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  // Vitest 未启用全局钩子。先卸载表单，让它在 JSDOM 销毁前取消待执行的 debounce。
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("班级代码变更提示", () => {
   it("只有编辑值改变时提示后续导入需同步，改回原代码后不再提示", async () => {
