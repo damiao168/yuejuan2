@@ -160,7 +160,9 @@ FROM paper_import_run WHERE tenant_id=$1 AND actor_id=$2::uuid AND command_id=$3
 
 func ensureImportExamMutableInTx(ctx context.Context, tx *sql.Tx, tenantID, importID string) error {
 	var examID string
-	err := tx.QueryRowContext(ctx, `SELECT exam_id::text FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL`, tenantID, importID).Scan(&examID)
+	// 保存核对、采用结果和工作者回写都先锁作业，再经归档保护锁考试。
+	// 来源变更沿用相同顺序，否则会持考试锁等待作业，与核对保存互等。
+	err := tx.QueryRowContext(ctx, `SELECT exam_id::text FROM paper_import_job WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, importID).Scan(&examID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
 	}

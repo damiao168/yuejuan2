@@ -49,6 +49,7 @@ export const requiredPostgresTests = Object.freeze([
   `${moduleName}/internal/scorerelease.TestPostgresConcurrentRegradePublicationPreservesBothCorrections`,
   `${moduleName}/internal/scorerelease.TestPostgresPublicationReceiptRollsBackLateFailureAndNeverRewindsCurrent`,
   `${moduleName}/internal/server.TestLegacyScorePublicationUsesCurrentSnapshotWithPostgresTestDatabase`,
+  `${moduleName}/internal/server.TestPaperImportSourceChangesSerializeReviewWithPostgresTestDatabase`,
   `${moduleName}/internal/subjective.TestRemediationPostgresWorkerCompletionAtomicRollbackAndReplay`,
   `${moduleName}/internal/subjective.TestRemediationPostgresLeaseRotationDoesNotAcceptLateCallbacks`,
 ]);
