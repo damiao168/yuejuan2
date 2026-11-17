@@ -262,7 +262,9 @@ func bookmarkIntegrationDB(t *testing.T) (*sql.DB, *sql.DB, auth.User, string) {
 	exec(`INSERT INTO submission_page(id,tenant_id,submission_id,file_asset_id,page_no,status) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,1,'accepted')`, page, user.TenantID, submission, asset)
 	exec(`INSERT INTO answer_segment(id,tenant_id,submission_id,submission_page_id,question_id,question_no,bbox,source,status) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,'Q1','{"x":0.1,"y":0.1,"w":0.5,"h":0.5}','manual','accepted')`, segment, user.TenantID, submission, page, question)
 	exec(`INSERT INTO review_task(id,tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,source,status,priority,assigned_to,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,'Q1',$5::uuid,$6::uuid,'ANON-CONCURRENCY','manual_sample','assigned',0,$7::uuid,$7::uuid)`, task, user.TenantID, exam, question, segment, submission, user.ID)
-	exec(`CREATE ROLE ` + quotedRole + ` LOGIN NOSUPERUSER NOBYPASSRLS`)
+	// 合成角色和连接使用同一临时密码，支持本地 SCRAM 及 CI trust 两种数据库认证配置。
+	rolePassword := "bookmark-fixture-" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	exec(`CREATE ROLE ` + quotedRole + ` LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '` + rolePassword + `'`)
 	exec(`GRANT edugrade_tenant_runtime TO ` + quotedRole)
 	// ConnString 保留原始 DSN，不反映 User/Database 字段修改。
 	// 明确重写连接地址，测试池才能真正使用无 BYPASSRLS 的登录身份。
@@ -270,7 +272,7 @@ func bookmarkIntegrationDB(t *testing.T) (*sql.DB, *sql.DB, auth.User, string) {
 	if parseErr != nil {
 		t.Fatal(parseErr)
 	}
-	runtimeURL.User = url.User(roleName)
+	runtimeURL.User = url.UserPassword(roleName, rolePassword)
 	runtimeURL.Path = "/" + databaseName
 	runtimeDB, closeRuntime, err = database.OpenPostgres(config.PostgresConfig{DSN: runtimeURL.String(), TenantRLSEnabled: true, MaxOpenConns: 6, MaxIdleConns: 2, StatementTimeout: 20 * time.Second, LockTimeout: 5 * time.Second})
 	if err != nil {

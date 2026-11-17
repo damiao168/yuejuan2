@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -41,8 +42,12 @@ WHERE t.id=$1::uuid ORDER BY p.version DESC,p.id LIMIT 1`, task)
 	runID := uuid.NewString()
 	bookmarkEvidenceExec(t, admin, `INSERT INTO scoring_run(id,tenant_id,exam_id,idempotency_key,status,total_count,review_count,started_by) VALUES($1::uuid,$2::uuid,$3::uuid,$1::text,'needs_review',1,1,$4::uuid)`, runID, user.TenantID, f.exam, user.ID)
 	bookmarkEvidenceExec(t, admin, `UPDATE review_task SET scoring_run_id=$2::uuid WHERE id=$1::uuid`, task, runID)
-	ctx := auth.WithUser(context.Background(), user)
+	ctx, cancel := context.WithCancel(auth.WithUser(t.Context(), user))
+	defer cancel()
 	provider := &autoSubmitPausingPostgresSource{PostgresSourceProvider: NewPostgresSourceProvider(runtimeDB), locked: make(chan struct{}), resume: make(chan struct{})}
+	resume := sync.OnceFunc(func() { close(provider.resume) })
+	// 测试提前失败也要放行暂停点并取消数据库操作，避免清理连接池时仍有持锁协程。
+	defer resume()
 	bookmarks := NewPostgresStore(runtimeDB, provider)
 	reviews := review.NewPostgresStore(runtimeDB)
 	type markedResult struct {
@@ -56,6 +61,8 @@ WHERE t.id=$1::uuid ORDER BY p.version DESC,p.id LIMIT 1`, task)
 	}()
 	select {
 	case <-provider.locked:
+	case result := <-marked:
+		t.Fatalf("bookmark Put returned before parent/task lock signal: ack=%+v err=%v", result.ack, result.err)
 	case <-time.After(10 * time.Second):
 		t.Fatal("bookmark did not acquire parent and task locks")
 	}
@@ -66,7 +73,7 @@ WHERE t.id=$1::uuid ORDER BY p.version DESC,p.id LIMIT 1`, task)
 		_, err := reviews.SubmitGrade(submitCtx, user.TenantID, task, user.ID, input)
 		submitted <- err
 	}()
-	close(provider.resume)
+	resume()
 	mark := <-marked
 	if mark.err != nil {
 		t.Fatal(mark.err)
