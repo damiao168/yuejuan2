@@ -70,7 +70,8 @@ func TestPostgresRunCreationRequiresFrozenSnapshotAndTrialMembership(t *testing.
 		want  error
 	}{
 		{"snapshot changed", []imageSQLStep{imageQuery("FROM exam_question_snapshot", false)}, ErrIdempotencyConflict},
-		{"batch missing", []imageSQLStep{imageQuery("FROM exam_question_snapshot", true), imageQuery("subjective_grading_batch")}, ErrNotFound},
+		{"batch missing", []imageSQLStep{imageQuery("FROM exam_question_snapshot", true),
+			{kind: "query", contains: "subjective_grading_batch", check: gradingSQLArgs(run.TenantID, run.BatchID, run.AnswerSegmentID)}}, ErrNotFound},
 		{"batch cancelled", []imageSQLStep{imageQuery("FROM exam_question_snapshot", true), imageQuery("FOR SHARE", "cancelled", true)}, ErrBatchCancelled},
 		{"answer outside batch", []imageSQLStep{imageQuery("FROM exam_question_snapshot", true), imageQuery("FOR SHARE", "planned", false)}, ErrInvalidInput},
 		{"trial not approved", []imageSQLStep{imageQuery("FROM exam_question_snapshot", true), imageQuery("FOR SHARE", "planned", true), imageQuery("FROM scoring_ai_trial", true)}, ErrTrialConflict},
@@ -136,10 +137,13 @@ func TestPostgresPanelClaimNeverReexecutesAnExistingRun(t *testing.T) {
 			steps := []imageSQLStep{claim}
 			if tc.claim {
 				steps[0].values = gradingSQLRun(run)
-			} else if tc.status == "" {
-				steps = append(steps, imageQuery("FROM subjective_grading_run"))
 			} else {
-				steps = append(steps, imageQuery("FROM subjective_grading_run", gradingSQLRun(run)...))
+				lookup := imageQuery("FROM subjective_grading_run")
+				if tc.status != "" {
+					lookup.values = gradingSQLRun(run)
+				}
+				lookup.check = gradingSQLArgs(run.TenantID, run.ID)
+				steps = append(steps, lookup)
 			}
 			got, claimed, err := NewPostgresStore(imageTestDB(t, steps...)).ClaimPanelRun(t.Context(), run.TenantID, run.ID)
 			if !errors.Is(err, tc.want) || claimed != tc.claim {

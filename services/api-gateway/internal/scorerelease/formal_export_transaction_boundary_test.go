@@ -39,6 +39,9 @@ type formalExportConnection struct {
 
 func (c *formalExportConnection) BeginTx(_ context.Context, options driver.TxOptions) (driver.Tx, error) {
 	c.probe.options = options
+	if _, err := c.publicationTxConnection.Begin(); err != nil {
+		return nil, err
+	}
 	c.activeTx = true
 	return c, nil
 }
@@ -55,7 +58,9 @@ func (c *formalExportConnection) QueryContext(ctx context.Context, query string,
 
 func (c *formalExportConnection) Commit() error {
 	c.activeTx = false
-	c.probe.committed = true
+	if err := c.publicationTxConnection.Commit(); err != nil {
+		return err
+	}
 	return c.probe.commitErr
 }
 

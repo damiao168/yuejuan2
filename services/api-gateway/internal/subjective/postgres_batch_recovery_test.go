@@ -89,14 +89,17 @@ func TestPostgresBatchRecoveryScopesOriginalActorAndEnqueuePlan(t *testing.T) {
 		statement := imageQuery("AND actor_id=$3::uuid", gradingSQLCommand, gradingSQLBatchID, imageJSON(t, runs), true)
 		statement.check = gradingSQLArgs(workerServiceTenant, gradingSQLBatchID, gradingSQLActor)
 		miss := imageQuery("AND actor_id=$3::uuid")
+		// 无行返回也核对本次请求的教师，避免误用原创建人的查询仍通过负例。
+		miss.check = gradingSQLArgs(workerServiceTenant, gradingSQLBatchID, "different-teacher")
 		complete := imageSQLStep{kind: "exec", contains: "completed_at=COALESCE", check: gradingSQLArgs(workerServiceTenant, gradingSQLBatchID, gradingSQLActor)}
 		store := NewPostgresStore(imageTestDB(t, statement, miss, complete))
 		got, err := store.GetEnqueuePlan(t.Context(), workerServiceTenant, gradingSQLActor, gradingSQLBatchID)
 		if err != nil || got.CommandID != gradingSQLCommand || !got.Completed || !slices.Equal(got.Runs, runs) {
 			t.Fatalf("plan failed to retain original identities: %+v, %v", got, err)
 		}
-		if _, err := store.GetEnqueuePlan(t.Context(), workerServiceTenant, "different-teacher", gradingSQLBatchID); !errors.Is(err, ErrNotFound) {
-			t.Fatalf("another actor could read protected plan: %v", err)
+		denied, err := store.GetEnqueuePlan(t.Context(), workerServiceTenant, "different-teacher", gradingSQLBatchID)
+		if !errors.Is(err, ErrNotFound) || denied.Completed || denied.CommandID != "" || denied.BatchID != "" || denied.Runs != nil {
+			t.Fatalf("another actor received protected plan: %+v, %v", denied, err)
 		}
 		if err := store.CompleteEnqueuePlan(t.Context(), workerServiceTenant, gradingSQLActor, gradingSQLBatchID); err != nil {
 			t.Fatal(err)

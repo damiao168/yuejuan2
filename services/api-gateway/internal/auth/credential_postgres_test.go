@@ -86,6 +86,7 @@ func TestPostgresCredentialIssuanceChecksAuthorityBeforeReplacingToken(t *testin
 						}
 					}
 					store, script := openAuthBatch49Store(t, steps)
+					script.requireTransaction = true
 					// 导航能看到外校班级时，也只能给实际管理学校中的账号发放凭据。
 					scope := AccessScope{TenantID: actor.TenantID, SchoolIDs: []string{"local", "foreign"}, schoolWide: true, schoolManagementIDs: []string{"local"}}
 					var err error
@@ -211,6 +212,7 @@ func TestPostgresCredentialCompletionKeepsPasswordAndRevocationsTogether(t *test
 						steps[tc.failedStep].err = failure
 					}
 					store, script := openAuthBatch49Store(t, steps)
+					script.requireTransaction = true
 					// 入口尚未认证。所有写入只能归属数据库锁住的令牌账号。
 					var tenantID, userID string
 					var err error

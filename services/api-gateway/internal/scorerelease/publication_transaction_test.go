@@ -30,19 +30,57 @@ func (c publicationTxConnector) Connect(context.Context) (driver.Conn, error) {
 
 type publicationTxConnection struct {
 	studentBatch50Conn
-	probe *publicationTxProbe
+	probe    *publicationTxProbe
+	activeTx bool
 }
 
-func (c *publicationTxConnection) Begin() (driver.Tx, error) { return c, nil }
+func (c *publicationTxConnection) reject(message string) error {
+	if c.probe.err == nil {
+		c.probe.err = errors.New(message)
+	}
+	return c.probe.err
+}
+
+func (c *publicationTxConnection) Begin() (driver.Tx, error) {
+	if c.activeTx {
+		return nil, c.reject("publication connection already has an active transaction")
+	}
+	c.activeTx = true
+	return c, nil
+}
+
+func (c *publicationTxConnection) Close() error {
+	if c.activeTx {
+		return c.reject("publication connection closed with an active transaction")
+	}
+	return nil
+}
 
 func (c *publicationTxConnection) Commit() error {
+	if !c.activeTx {
+		return c.reject("publication commit outside its connection transaction")
+	}
+	c.activeTx = false
 	c.probe.committed = true
 	return nil
 }
 
 func (c *publicationTxConnection) Rollback() error {
+	if !c.activeTx {
+		return c.reject("publication rollback outside its connection transaction")
+	}
+	c.activeTx = false
 	c.probe.aborted = true
 	return nil
+}
+
+func (c *publicationTxConnection) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	// 各连接仍共用预期 SQL，但只有持有本连接事务的读取才能消费步骤。
+	// 因而 s.db 查询不能借用另一连接已经开启的发布事务。
+	if !c.activeTx {
+		return nil, c.reject("publication query outside its connection transaction")
+	}
+	return c.studentBatch50Conn.QueryContext(ctx, query, args)
 }
 
 func (c *publicationTxConnection) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {

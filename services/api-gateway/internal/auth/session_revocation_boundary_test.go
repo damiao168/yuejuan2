@@ -177,6 +177,7 @@ func TestPostgresRevokeAllSessionsKeepsTrustedDeviceRevocationInTransaction(t *t
 				steps[tc.failAt].err = failure
 			}
 			store, script := sessionBoundaryStore(t, steps, nil, tc.affected, nil)
+			script.requireTransaction = true
 			count, err := store.RevokeAllSessions(t.Context(), "tenant", "actor", "operator_revoked")
 			if tc.failAt >= 0 {
 				if !errors.Is(err, failure) || count != 0 {

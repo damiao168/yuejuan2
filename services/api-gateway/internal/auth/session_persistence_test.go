@@ -167,7 +167,7 @@ func TestPostgresPasswordChangeRevokesDevicesOnlyAfterCredentialCompareAndSwap(t
 			} else if tc.affected == 0 {
 				steps = steps[:1]
 			}
-			script := &authBatch49Script{steps: steps}
+			script := &authBatch49Script{steps: steps, requireTransaction: true}
 			db := sql.OpenDB(passwordChangeConnector{authBatch49Connector{script}, tc.affected})
 			t.Cleanup(func() { _ = db.Close() })
 			store := NewPostgresStore(db)
@@ -205,7 +205,7 @@ type passwordChangeConn struct {
 	affected int64
 }
 
-func (c passwordChangeConn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+func (c *passwordChangeConn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	result, err := c.authBatch49Conn.ExecContext(ctx, query, args)
 	if c.script.next == 1 && err == nil {
 		return driver.RowsAffected(c.affected), nil

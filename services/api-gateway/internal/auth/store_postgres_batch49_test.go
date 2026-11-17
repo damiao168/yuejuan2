@@ -21,12 +21,14 @@ type authBatch49Step struct {
 	err, rowsErr, closeErr error
 }
 
-// SQL 脚本只核对本入口的参数、执行顺序和提交/回滚，不代替真实数据库的并发锁测试。
+// SQL 脚本核对参数、执行顺序和事务所属连接，不代替真实数据库的并发锁测试。
 type authBatch49Script struct {
 	steps                []authBatch49Step
 	next, opened, closed int
 	end                  string
 	err                  error
+	transactionOwner     *authBatch49Conn
+	requireTransaction   bool
 }
 
 func (s *authBatch49Script) take(kind, query string, args []driver.NamedValue) (authBatch49Step, error) {
@@ -62,19 +64,57 @@ type authBatch49Conn struct{ script *authBatch49Script }
 func (*authBatch49Conn) Prepare(string) (driver.Stmt, error) {
 	return nil, errors.New("unexpected prepare")
 }
-func (*authBatch49Conn) Close() error                             { return nil }
+func (c *authBatch49Conn) Close() error {
+	if c.script.transactionOwner == c {
+		return c.rejectTransaction("connection closed with active transaction")
+	}
+	return nil
+}
 func (*authBatch49Conn) CheckNamedValue(*driver.NamedValue) error { return nil }
-func (c *authBatch49Conn) Begin() (driver.Tx, error)              { return c, nil }
-func (c *authBatch49Conn) BeginTx(context.Context, driver.TxOptions) (driver.Tx, error) {
+func (c *authBatch49Conn) Begin() (driver.Tx, error) {
+	if c.script.transactionOwner != nil {
+		return nil, c.rejectTransaction("another transaction already owns this script")
+	}
+	c.script.transactionOwner = c
 	return c, nil
 }
-func (c *authBatch49Conn) Commit() error   { c.script.end = "commit"; return nil }
-func (c *authBatch49Conn) Rollback() error { c.script.end = "rollback"; return nil }
+func (c *authBatch49Conn) BeginTx(context.Context, driver.TxOptions) (driver.Tx, error) {
+	return c.Begin()
+}
+func (c *authBatch49Conn) rejectTransaction(message string) error {
+	if c.script.err == nil {
+		c.script.err = fmt.Errorf("auth SQL transaction: %s", message)
+	}
+	return c.script.err
+}
+func (c *authBatch49Conn) checkTransaction() error {
+	// tx 持有连接期间，db 查询会另取连接，不能借用同一脚本冒充事务内操作。
+	if (c.script.requireTransaction || c.script.transactionOwner != nil) && c.script.transactionOwner != c {
+		return c.rejectTransaction("SQL executed outside its owning transaction")
+	}
+	return nil
+}
+func (c *authBatch49Conn) finishTransaction(end string) error {
+	if c.script.transactionOwner != c {
+		return c.rejectTransaction("transaction ended on a different connection or after completion")
+	}
+	c.script.end = end
+	c.script.transactionOwner = nil
+	return nil
+}
+func (c *authBatch49Conn) Commit() error   { return c.finishTransaction("commit") }
+func (c *authBatch49Conn) Rollback() error { return c.finishTransaction("rollback") }
 func (c *authBatch49Conn) ExecContext(_ context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	if err := c.checkTransaction(); err != nil {
+		return nil, err
+	}
 	_, err := c.script.take("exec", query, args)
 	return driver.RowsAffected(1), err
 }
 func (c *authBatch49Conn) QueryContext(_ context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	if err := c.checkTransaction(); err != nil {
+		return nil, err
+	}
 	step, err := c.script.take("query", query, args)
 	if err != nil {
 		return nil, err
@@ -113,7 +153,7 @@ func openAuthBatch49Store(t *testing.T, steps []authBatch49Step) (*PostgresStore
 
 func assertAuthBatch49Script(t *testing.T, script *authBatch49Script, end string) {
 	t.Helper()
-	if script.err != nil || script.next != len(script.steps) || script.opened != script.closed || script.end != end {
+	if script.err != nil || script.next != len(script.steps) || script.opened != script.closed || script.end != end || script.transactionOwner != nil {
 		t.Fatalf("script error=%v steps=%d/%d rows=%d/%d end=%s, want %s", script.err, script.next, len(script.steps), script.closed, script.opened, script.end, end)
 	}
 }

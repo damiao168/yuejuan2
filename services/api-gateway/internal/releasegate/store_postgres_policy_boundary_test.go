@@ -25,51 +25,86 @@ type gateSQLStep struct {
 }
 
 type gateSQLScript struct {
-	steps []gateSQLStep
-	next  int
+	steps   []gateSQLStep
+	next    int
+	active  *gateSQLConnection
+	failure error
 }
 
 func (s *gateSQLScript) Connect(context.Context) (driver.Conn, error) {
-	return gateSQLConnection{s}, nil
+	return &gateSQLConnection{script: s}, nil
 }
-func (s *gateSQLScript) Driver() driver.Driver            { return s }
-func (s *gateSQLScript) Open(string) (driver.Conn, error) { return gateSQLConnection{s}, nil }
+func (s *gateSQLScript) Driver() driver.Driver { return s }
+func (s *gateSQLScript) Open(string) (driver.Conn, error) {
+	return s.Connect(context.Background())
+}
+
+func (s *gateSQLScript) reject(format string, args ...any) error {
+	if s.failure == nil {
+		s.failure = fmt.Errorf(format, args...)
+	}
+	return s.failure
+}
 
 func (s *gateSQLScript) take(kind, query string, args []driver.NamedValue) (gateSQLStep, error) {
 	if s.next >= len(s.steps) {
-		return gateSQLStep{}, fmt.Errorf("unexpected %s: %s", kind, query)
+		return gateSQLStep{}, s.reject("unexpected %s: %s", kind, query)
 	}
 	step := s.steps[s.next]
-	s.next++
 	values := make([]driver.Value, len(args))
 	for i, arg := range args {
 		values[i] = arg.Value
 	}
 	if step.kind != kind || !strings.Contains(strings.Join(strings.Fields(query), " "), step.query) ||
 		len(values) != len(step.args) || len(values) > 0 && !reflect.DeepEqual(values, step.args) {
-		return gateSQLStep{}, fmt.Errorf("step %d: got %s %q args=%v, want %s %q args=%v", s.next, kind, query, values, step.kind, step.query, step.args)
+		return gateSQLStep{}, s.reject("step %d: got %s %q args=%v, want %s %q args=%v", s.next+1, kind, query, values, step.kind, step.query, step.args)
 	}
+	s.next++
 	return step, step.err
 }
 
 type gateSQLConnection struct{ script *gateSQLScript }
 
-func (gateSQLConnection) Prepare(string) (driver.Stmt, error) {
-	return nil, errors.New("unexpected prepare")
+func (c *gateSQLConnection) Prepare(string) (driver.Stmt, error) {
+	return nil, c.script.reject("unexpected prepare")
 }
-func (gateSQLConnection) Close() error { return nil }
-func (c gateSQLConnection) Begin() (driver.Tx, error) {
+func (c *gateSQLConnection) Close() error {
+	if c.script.active == c {
+		return c.script.reject("connection closed before its transaction ended")
+	}
+	return nil
+}
+func (c *gateSQLConnection) Begin() (driver.Tx, error) {
 	return c.BeginTx(context.Background(), driver.TxOptions{})
 }
-func (c gateSQLConnection) BeginTx(context.Context, driver.TxOptions) (driver.Tx, error) {
-	_, err := c.script.take("begin", "", nil)
-	return gateSQLTransaction(c), err
+func (c *gateSQLConnection) BeginTx(context.Context, driver.TxOptions) (driver.Tx, error) {
+	if c.script.active != nil {
+		return nil, c.script.reject("another transaction is already active")
+	}
+	if _, err := c.script.take("begin", "", nil); err != nil {
+		return nil, err
+	}
+	c.script.active = c
+	return &gateSQLTransaction{connection: c}, nil
 }
-func (c gateSQLConnection) ExecContext(_ context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+func (c *gateSQLConnection) checkTransaction() error {
+	// 已开启事务时，数据库池分配的第二条连接不能执行本应随发布回滚的读取或写入。
+	if c.script.active != nil && c.script.active != c {
+		return c.script.reject("query escaped the active publication transaction")
+	}
+	return nil
+}
+func (c *gateSQLConnection) ExecContext(_ context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	if err := c.checkTransaction(); err != nil {
+		return nil, err
+	}
 	_, err := c.script.take("exec", query, args)
 	return driver.RowsAffected(1), err
 }
-func (c gateSQLConnection) QueryContext(_ context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+func (c *gateSQLConnection) QueryContext(_ context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	if err := c.checkTransaction(); err != nil {
+		return nil, err
+	}
 	step, err := c.script.take("query", query, args)
 	if err != nil {
 		return nil, err
@@ -81,13 +116,19 @@ func (c gateSQLConnection) QueryContext(_ context.Context, query string, args []
 	return &gateSQLRows{rows: step.rows, columns: make([]string, columns)}, nil
 }
 
-type gateSQLTransaction struct{ script *gateSQLScript }
+type gateSQLTransaction struct{ connection *gateSQLConnection }
 
-func (tx gateSQLTransaction) Commit() error { _, err := tx.script.take("commit", "", nil); return err }
-func (tx gateSQLTransaction) Rollback() error {
-	_, err := tx.script.take("rollback", "", nil)
+func (tx *gateSQLTransaction) finish(kind string) error {
+	script := tx.connection.script
+	if script.active != tx.connection {
+		return script.reject("transaction ended without owning its connection")
+	}
+	_, err := script.take(kind, "", nil)
+	script.active = nil
 	return err
 }
+func (tx *gateSQLTransaction) Commit() error   { return tx.finish("commit") }
+func (tx *gateSQLTransaction) Rollback() error { return tx.finish("rollback") }
 
 type gateSQLRows struct {
 	rows    [][]driver.Value
@@ -112,11 +153,63 @@ func openGateSQLScript(t *testing.T, steps []gateSQLStep) *sql.DB {
 	db := sql.OpenDB(script)
 	t.Cleanup(func() {
 		_ = db.Close()
-		if script.next != len(script.steps) {
-			t.Errorf("executed %d SQL steps, want %d", script.next, len(script.steps))
+		// 协议错误独立留存，避免调用方忽略 defer Rollback 错误时测试仍通过。
+		if script.failure != nil || script.active != nil || script.next != len(script.steps) {
+			t.Errorf("publication SQL: error=%v active=%t steps=%d/%d", script.failure, script.active != nil, script.next, len(script.steps))
 		}
 	})
 	return db
+}
+
+func TestGateSQLScriptRejectsQueriesOutsideThePublicationTransaction(t *testing.T) {
+	for _, kind := range []string{"query", "exec"} {
+		t.Run(kind, func(t *testing.T) {
+			step := gateSQLStep{kind: kind, query: "publication statement", args: []driver.Value{"tenant"}, columns: 1, rows: [][]driver.Value{{int64(1)}}}
+			script := &gateSQLScript{steps: []gateSQLStep{{kind: "begin"}, step, {kind: "rollback"}}}
+			db := sql.OpenDB(script)
+			t.Cleanup(func() { _ = db.Close() })
+			tx, err := db.BeginTx(t.Context(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback()
+			// 池查询必须另取连接。拒绝后脚本位置不变，原事务仍能执行同一条语句。
+			if kind == "query" {
+				var value int
+				err = db.QueryRowContext(t.Context(), "publication statement", "tenant").Scan(&value)
+			} else {
+				_, err = db.ExecContext(t.Context(), "publication statement", "tenant")
+			}
+			if err == nil || script.failure != err || script.next != 1 || script.active == nil {
+				t.Fatalf("transaction escape was accepted: err=%v failure=%v next=%d", err, script.failure, script.next)
+			}
+			if kind == "query" {
+				var value int
+				if err := tx.QueryRowContext(t.Context(), "publication statement", "tenant").Scan(&value); err != nil || value != 1 {
+					t.Fatalf("original transaction read=%d, err=%v", value, err)
+				}
+			} else if _, err := tx.ExecContext(t.Context(), "publication statement", "tenant"); err != nil {
+				t.Fatal(err)
+			}
+			if err := tx.Rollback(); err != nil || script.active != nil || script.next != len(script.steps) {
+				t.Fatalf("original transaction did not finish: err=%v next=%d active=%t", err, script.next, script.active != nil)
+			}
+		})
+	}
+}
+
+func TestGateSQLScriptRecordsAnIgnoredWrongTransactionEnd(t *testing.T) {
+	script := &gateSQLScript{steps: []gateSQLStep{{kind: "begin"}, {kind: "rollback"}}}
+	db := sql.OpenDB(script)
+	t.Cleanup(func() { _ = db.Close() })
+	tx, err := db.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = tx.Commit()
+	if err == nil || script.failure != err || script.next != 1 || script.active != nil {
+		t.Fatalf("unexpected commit consumed rollback: err=%v next=%d active=%t", err, script.next, script.active != nil)
+	}
 }
 
 func TestPostgresPolicyReplacementKeepsExamLockAndRetirementAtomic(t *testing.T) {
