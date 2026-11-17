@@ -10,18 +10,21 @@ import (
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/config"
+	"edugrade-enterprise/services/api-gateway/internal/exam"
 	"edugrade-enterprise/services/api-gateway/internal/files"
 	"edugrade-enterprise/services/api-gateway/internal/logger"
 	"edugrade-enterprise/services/api-gateway/internal/score"
+	"edugrade-enterprise/services/api-gateway/internal/scorerelease"
 )
 
 func TestScoreRoutesFinalizeConfirmPublishStudentLookupAndExport(t *testing.T) {
 	authStore := reviewAuthStore(t, []string{"score:manage", "student:grade:read"})
 	scoreStore := seededRouteScoreStore()
-	router := scoreRouter(authStore, scoreStore)
+	releases := scorerelease.NewMemoryStore()
+	router := scoreRouter(t, authStore, scoreStore, releases)
 	token := reviewLogin(t, router, "review_manager")
 
-	scoreAssertUnconfirmedPublicationBlocked(t, router, token)
+	scoreAssertUnconfirmedPublicationBlocked(t, router, token, scoreStore, releases)
 
 	req := reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/confirm-grades", `{"reason":"checked by subject lead"}`, token)
 	rec := httptest.NewRecorder()
@@ -29,6 +32,7 @@ func TestScoreRoutesFinalizeConfirmPublishStudentLookupAndExport(t *testing.T) {
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"status":"confirmed"`) {
 		t.Fatalf("confirm expected confirmed, got %d %s", rec.Code, rec.Body.String())
 	}
+	syncMemoryPublicationFacts(t, scoreStore, releases, reviewTenantID, "exam-1")
 
 	req = reviewAuthedRequest(http.MethodGet, "/api/v1/exams/exam-1/grades/quality?stage=publish", "", token)
 	rec = httptest.NewRecorder()
@@ -67,13 +71,13 @@ func TestScoreRoutesFinalizeConfirmPublishStudentLookupAndExport(t *testing.T) {
 
 	reviewAssertAuditAction(t, authStore, "score.finalized")
 	reviewAssertAuditAction(t, authStore, "score.confirmed")
-	reviewAssertAuditAction(t, authStore, "score.published")
+	reviewAssertAuditAction(t, authStore, "score_release.published")
 	reviewAssertAuditAction(t, authStore, "score.exported")
 }
 
 // 先形成待确认成绩。发布前读取（publish 阶段）在可自动准备时按“创建草稿会自动确认”判断，不再报未确认；
-// confirmation 阶段读取不给出可发布结论；没有自动准备的旧发布接口仍拒绝，此阶段不能跳过确认直接公开。
-func scoreAssertUnconfirmedPublicationBlocked(t *testing.T, router http.Handler, token string) {
+// confirmation 阶段读取不给出可发布结论；本内存来源未确认时，统一发布门禁也必须拒绝。
+func scoreAssertUnconfirmedPublicationBlocked(t *testing.T, router http.Handler, token string, working score.Store, releases *scorerelease.MemoryStore) {
 	t.Helper()
 	req := reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/finalize", "", token)
 	rec := httptest.NewRecorder()
@@ -81,6 +85,7 @@ func scoreAssertUnconfirmedPublicationBlocked(t *testing.T, router http.Handler,
 	if rec.Code != http.StatusCreated || !strings.Contains(rec.Body.String(), `"status":"pending_confirmation"`) || !strings.Contains(rec.Body.String(), `"total_score":8`) {
 		t.Fatalf("finalize expected pending confirmation grade, got %d %s", rec.Code, rec.Body.String())
 	}
+	syncMemoryPublicationFacts(t, working, releases, reviewTenantID, "exam-1")
 
 	req = reviewAuthedRequest(http.MethodGet, "/api/v1/exams/exam-1/grades/quality?stage=publish", "", token)
 	rec = httptest.NewRecorder()
@@ -106,7 +111,7 @@ func scoreAssertUnconfirmedPublicationBlocked(t *testing.T, router http.Handler,
 
 func TestScoreRoutesRequirePermission(t *testing.T) {
 	authStore := reviewAuthStore(t, []string{"system:read"})
-	router := scoreRouter(authStore, seededRouteScoreStore())
+	router := scoreRouter(t, authStore, seededRouteScoreStore(), nil)
 	token := reviewLogin(t, router, "review_manager")
 	// 正式文件同样经过成绩管理 guard，不能因为新增只读导出而绕过学校成绩权限。
 	formal := httptest.NewRecorder()
@@ -133,7 +138,8 @@ func TestScoreRoutesRequirePermission(t *testing.T) {
 func TestStudentGradeRouteEnforcesStudentScope(t *testing.T) {
 	authStore := scoreAuthStoreWithStudents(t)
 	scoreStore := seededRouteScoreStore()
-	router := scoreRouter(authStore, scoreStore)
+	releases := scorerelease.NewMemoryStore()
+	router := scoreRouter(t, authStore, scoreStore, releases)
 	managerToken := reviewLogin(t, router, "score_manager")
 	studentToken := reviewLogin(t, router, "score_student")
 	otherStudentToken := reviewLogin(t, router, "other_student")
@@ -150,6 +156,7 @@ func TestStudentGradeRouteEnforcesStudentScope(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("confirm expected 200, got %d %s", rec.Code, rec.Body.String())
 	}
+	syncMemoryPublicationFacts(t, scoreStore, releases, reviewTenantID, "exam-1")
 	req = reviewAuthedRequest(http.MethodPost, "/api/v1/exams/exam-1/publish", `{"reason":"approved"}`, managerToken)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -179,7 +186,7 @@ func TestRosterRoutesRequireAdministrativeRole(t *testing.T) {
 		ExamID: "exam-1", StudentID: "student-1", StudentNo: "001",
 		StudentName: "Scoped Student", ClassID: "class-1", ClassName: "Class 1",
 	})
-	router := scoreRouter(authStore, scoreStore)
+	router := scoreRouter(t, authStore, scoreStore, nil)
 	teacherToken := reviewLogin(t, router, "score_manager")
 
 	req := reviewAuthedRequest(http.MethodGet, "/api/v1/exams/exam-1/roster", "", teacherToken)
@@ -192,7 +199,7 @@ func TestRosterRoutesRequireAdministrativeRole(t *testing.T) {
 
 func TestRosterRouteRejectsMalformedExamID(t *testing.T) {
 	authStore := reviewAuthStore(t, []string{"score:manage"})
-	router := scoreRouter(authStore, seededRouteScoreStore())
+	router := scoreRouter(t, authStore, seededRouteScoreStore(), nil)
 	token := reviewLogin(t, router, "review_manager")
 
 	req := reviewAuthedRequest(http.MethodGet, "/api/v1/exams/not-a-uuid/roster", "", token)
@@ -203,14 +210,26 @@ func TestRosterRouteRejectsMalformedExamID(t *testing.T) {
 	}
 }
 
-func scoreRouter(authStore *auth.MemoryStore, scoreStore score.Store) http.Handler {
+func scoreRouter(t *testing.T, authStore *auth.MemoryStore, scoreStore score.Store, releases *scorerelease.MemoryStore) http.Handler {
+	t.Helper()
+	exams := exam.NewMemoryStore()
+	// 兼容首发读取考试的申诉策略，成绩夹具必须对应真实存在的考试。
+	item, err := exams.CreateExam(t.Context(), auth.AccessScope{TenantID: reviewTenantID, TenantWide: true}, reviewManagerID,
+		exam.CreateInput{SchoolID: "school-1", Name: "Synthetic score exam", Subject: "math", ExamType: "quiz", TotalScore: 10})
+	if err != nil || item.ID != "exam-1" {
+		t.Fatalf("seed score route exam: %+v %v", item, err)
+	}
 	cfg := config.Config{
 		Service: config.ServiceConfig{Name: "test", Environment: "test", ReadinessTimeout: time.Millisecond},
 		Auth:    config.AuthConfig{SessionTTL: time.Hour},
 	}
 	return NewMemoryRouter(cfg, logger.New(io.Discard, "error"), nil, files.NewMemoryObjectStorage(), func(stores *ApplicationStores) {
 		stores.Identity.Auth = authStore
+		stores.Exam.Exam = exams
 		stores.Release.Score = scoreStore
+		if releases != nil {
+			stores.Release.ScoreRelease = releases
+		}
 	})
 }
 

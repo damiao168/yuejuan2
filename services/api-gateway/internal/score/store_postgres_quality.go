@@ -32,7 +32,7 @@ func (s *PostgresStore) CheckQuality(ctx context.Context, tenantID string, examI
 	return quality, nil
 }
 
-// qualityReportTx 是事务内的严格检查，供汇总、确认、旧版发布和发布前准备使用，结果直接决定写入。
+// qualityReportTx 是事务内的严格检查，供汇总、确认和发布前准备使用，结果直接决定写入。
 func (s *PostgresStore) qualityReportTx(ctx context.Context, tx *sql.Tx, tenantID string, examID string, requirePendingPublish bool) (QualityReport, error) {
 	return s.qualityReportModeTx(ctx, tx, tenantID, examID, requirePendingPublish, false)
 }

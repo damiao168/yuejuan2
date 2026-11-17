@@ -4,7 +4,33 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
-import { createPostgresTestGate, discoverPostgresTests, normalizePostgresTestDsn, postgresFixtureDsn, postgresTestScope } from "./postgres-test-gate.mjs";
+import { fileURLToPath } from "node:url";
+import { assertRequiredPostgresTests, createPostgresTestGate, discoverPostgresTests, normalizePostgresTestDsn, postgresFixtureDsn, postgresTestScope, requiredPostgresTests } from "./postgres-test-gate.mjs";
+
+test("real repository keeps required transaction tests discoverable in every critical module", () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const found = discoverPostgresTests(path.join(root, "services", "api-gateway"));
+  assert.doesNotThrow(() => assertRequiredPostgresTests(found.expected));
+  assert.deepEqual([...new Set(requiredPostgresTests.map(key => key.split("/").at(-1).split(".")[0]))].sort(),
+    ["auth", "capture", "modelgovernance", "releasegate", "score", "scorerelease", "server", "subjective"]);
+});
+
+test("critical transaction test removal, missing execution and skips all fail the full gate", () => {
+  for (const missing of requiredPostgresTests) {
+    const incomplete = new Set(requiredPostgresTests.filter(key => key !== missing));
+    assert.throws(() => assertRequiredPostgresTests(incomplete), /Required PostgreSQL transaction tests are not discovered/);
+    const missingGate = createPostgresTestGate(new Set(requiredPostgresTests));
+    const skipGate = createPostgresTestGate(new Set(requiredPostgresTests));
+    for (const key of requiredPostgresTests) {
+      const separator = key.lastIndexOf(".");
+      const event = { Package: key.slice(0, separator), Test: key.slice(separator + 1), Action: "pass" };
+      if (key !== missing) missingGate.observe(event);
+      skipGate.observe({ ...event, Action: key === missing ? "skip" : "pass" });
+    }
+    assert.throws(() => missingGate.finish(0), /missing=\["edugrade/);
+    assert.throws(() => skipGate.finish(0), /skipped=\["edugrade/);
+  }
+});
 
 test("CI defaults to all packages and local reruns cannot masquerade as a full gate", () => {
   const expected = new Set([

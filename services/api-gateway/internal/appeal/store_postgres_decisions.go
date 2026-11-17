@@ -36,6 +36,9 @@ FOR UPDATE
 	}
 	var adjustment *ScoreAdjustment
 	if input.Status == "score_adjusted" {
+		if err := requireHistoricalPublicationTx(ctx, tx, tenantID, item.ExamID); err != nil {
+			return Appeal{}, nil, err
+		}
 		finalID := input.FinalGradeID
 		if finalID == "" {
 			finalID = item.FinalGradeID

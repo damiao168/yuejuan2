@@ -27,6 +27,9 @@ func (s *PostgresStore) CreateAppeal(ctx context.Context, tenantID string, actor
 		return Appeal{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if err := requireHistoricalPublicationTx(ctx, tx, tenantID, input.ExamID); err != nil {
+		return Appeal{}, err
+	}
 	var submissionGradeID, submissionID string
 	if err := tx.QueryRowContext(ctx, `
 SELECT id::text, submission_id::text
@@ -64,6 +67,22 @@ RETURNING `+appealColumns()+`
 		return Appeal{}, err
 	}
 	return s.withDetails(ctx, item)
+}
+
+// 旧申诉的写操作与正式发布共用考试锁。已有正式版本时，更正必须走基于发布快照的申诉和复评。
+func requireHistoricalPublicationTx(ctx context.Context, tx *sql.Tx, tenantID, examID string) error {
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, tenantID, examID); err != nil {
+		return err
+	}
+	var published bool
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM score_release_current WHERE tenant_id=$1::uuid AND exam_id::text=$2)`, tenantID, examID).Scan(&published)
+	if err != nil {
+		return err
+	}
+	if published {
+		return ErrVersionedAppealRequired
+	}
+	return nil
 }
 
 func (s *PostgresStore) GetAppeal(ctx context.Context, tenantID string, id string) (Appeal, error) {

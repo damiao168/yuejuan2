@@ -21,12 +21,18 @@ EduGrade Enterprise 是面向学校和教育机构的智能阅卷与学情分析
 
 ## 项目进度与验证
 
-截至 2026 年 11 月 16 日，`main` 已通过隔离真实环境中的**核心业务全链路验证**。验证基线为 `4a639b9`，GitHub Actions 主 CI 的 40 个作业全部通过。[CI 运行记录](https://github.com/damiao168/yuejuan2/actions/runs/43805131284)
+截至 2026 年 11 月 17 日，项目已建立隔离真实环境中的**核心业务全链路验证**。最近存档的验证基线为 `1aa8ab7`，GitHub Actions 主 CI 的 40 个作业全部通过。后续提交的结果以对应提交的 Actions 为准。[存档 CI 运行记录](https://github.com/damiao168/yuejuan2/actions/runs/44006429972) · [最新主分支检查](https://github.com/damiao168/yuejuan2/actions?query=branch%3Amain)
 
-- **考试到查分**。真实 PostgreSQL 回归执行了 263 项必测用例，全部通过且无跳过。核心用例覆盖考试准备、冻结名册、答卷采集、处理任务流转、人工阅卷、成绩发布、学生查分及申诉。[数据库回归](https://github.com/damiao168/yuejuan2/actions/runs/43805131284/job/133094147075)
+- **考试到查分**。真实 PostgreSQL 回归要求全部发现的数据库用例实际执行且无跳过，并单独保护关键事务用例不能从发现清单消失。核心用例覆盖考试准备、冻结名册、答卷采集、处理任务流转、人工阅卷、成绩发布、学生查分及申诉。[存档数据库回归](https://github.com/damiao168/yuejuan2/actions/runs/44006429972/job/133782803411)
 - **管理端与辅助阅卷**。真实 Chromium 通过 Web 管理端和网关连接后端，验证登录、读取已保存的考试、打开阅卷工作区和跨租户访问拒绝。隔离 Compose 同时验证 API、主观题 Worker 和阅卷 Agent 的任务流转，检查教师建议、任务状态及审计记录实际写入 PostgreSQL。[真实系统端到端作业](https://github.com/damiao168/yuejuan2/actions/runs/43805131284/job/133094147103)
 
 验证使用合成数据，外部模型调用使用协议模拟器。生产试点仍需完成学校现场及扫描设备验收，用受治理的真实样本评估模型效果、教师一致性、置信度校准和公平性，并验证部署容量与备份恢复。[预生产部署 Runbook](docs/deployment/preproduction-runbook.md)
+
+正式发布统一使用 `scorerelease` 不可变版本及 `releasegate` 策略协调器。旧 `POST /api/v1/exams/{examId}/publish` 保留原请求和响应字段，事务内保存正式发布版本与旧命令回执。命令重放返回原结果，当前指针保留最新版本。旧学生查分遵守正式快照的可见性，尚未生成正式版本的旧考试仍可查询升级前已锁定的成绩。已有正式版本的考试通过单题申诉和复评发布更正。
+
+新增的 PostgreSQL 16 回归覆盖跨租户或考试的学生关联、同一学生的并发绑定和缺页阻断。身份审计及收卷回执写入失败时整体回滚，补传重开后重放旧命令会保留新批次的状态。实际扫描设备断电后的恢复仍需现场验收。
+
+六个重点 Go 包的语句覆盖率门槛分别为 `auth` 67%、`subjective` 69%、`modelgovernance` 63%、`scorerelease` 68%、`releasegate` 85% 和 `capture` 34%。门槛依据当前实测结果设定，用于防止覆盖率回退。[门槛配置](contracts/testing/coverage-floor.json)
 
 ## 适用场景
 
@@ -623,6 +629,8 @@ docker compose --env-file .env -f docker-compose.yml logs --tail 200 api-gateway
 5. 由具备权限的管理员显式发布。发布后系统保存不可变成绩快照和审计记录。
 6. 后续更正通过申诉、重评或新的发布版本完成，不直接覆盖历史发布记录。
 
+旧客户端的考试发布地址同样进入上述正式版本与策略门禁；已有正式版本时确认该版本，不能从旧成绩工作表重新覆盖公开结果。历史业务命令仍可通过原命令恢复页面查询，重试必须保留原操作者、命令 ID 和请求内容。
+
 ## 常见问题
 
 ### 页面无法打开或登录失败
@@ -701,6 +709,18 @@ go run ./cmd/api-gateway
 ```
 
 本地运行 API 前，应从根目录 `.env.example` 创建仅供本机使用的配置，并确保 PostgreSQL、Redis、MinIO 等依赖可用。
+
+核心覆盖率和真实数据库回归在仓库根目录执行：
+
+```powershell
+node scripts/ci/check-go-coverage.mjs
+# 使用隔离的测试 PostgreSQL 连接；脚本会创建、迁移并清理专属随机测试库。
+$env:EDUGRADE_E2E_DATABASE_URL = "postgres://edugrade@127.0.0.1:5432/edugrade_e2e_backend_test?sslmode=disable"
+$env:EDUGRADE_REDIS_TEST_ADDRESS = "127.0.0.1:6379"
+node scripts/ci/run-postgres-tests.mjs
+```
+
+数据库入口要求连接可用、关键事务用例仍在清单内，以及必跑用例零跳过。只运行某个包时可在脚本后添加包路径；定向验证通过后仍需通过 CI 的全量数据库门禁。
 
 ### Python 服务与 Worker
 

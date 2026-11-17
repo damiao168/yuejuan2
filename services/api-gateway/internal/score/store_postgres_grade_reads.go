@@ -99,23 +99,43 @@ LIMIT $`+fmt.Sprint(len(pageArgs)), pageArgs...)
 	return result, nil
 }
 
-func (s *PostgresStore) GetStudentGrade(ctx context.Context, tenantID string, studentID string, examID string) (SubmissionGrade, error) {
-	grade, err := scanSubmissionGrade(s.db.QueryRowContext(ctx, `
-SELECT id::text, tenant_id::text, exam_id::text, submission_id::text, COALESCE(student_id::text, ''),
-  anonymous_code, total_score::float8, max_score::float8, status, locked,
-  COALESCE(confirmed_by::text, ''), confirmed_at, COALESCE(published_by::text, ''), published_at,
-  revision, created_by::text, created_at, updated_at
-FROM submission_grade
-WHERE tenant_id = $1 AND exam_id::text = $2 AND student_id::text = $3 AND status = 'published' AND locked = true AND deleted_at IS NULL
+// GetStudentGrade 优先使用当前正式快照；没有正式指针的历史考试仍可查询升级前已公开并锁定的成绩。
+func (s *PostgresStore) GetStudentGrade(ctx context.Context, tenantID, studentID, examID string) (SubmissionGrade, error) {
+	grade, err := s.publications.studentGrade(ctx, tenantID, studentID, examID)
+	if !errors.Is(err, ErrNotFound) {
+		return grade, err
+	}
+	// 同一快照检查发布指针、历史总分和锁定题分；正式版本缺少某名学生时也不能回退到旧分数。
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	if err != nil {
+		return SubmissionGrade{}, err
+	}
+	defer tx.Rollback()
+	grade, err = scanSubmissionGrade(tx.QueryRowContext(ctx, `
+SELECT sg.id::text, sg.tenant_id::text, sg.exam_id::text, sg.submission_id::text, sg.student_id::text,
+  sg.anonymous_code, sg.total_score::float8, sg.max_score::float8, sg.status, sg.locked,
+  COALESCE(sg.confirmed_by::text, ''), sg.confirmed_at, COALESCE(sg.published_by::text, ''), sg.published_at,
+  sg.revision, sg.created_by::text, sg.created_at, sg.updated_at
+FROM submission_grade sg
+WHERE sg.tenant_id=$1 AND sg.exam_id::text=$2 AND sg.student_id::text=$3
+  AND sg.status='published' AND sg.locked AND sg.deleted_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM score_release_current c WHERE c.tenant_id=sg.tenant_id AND c.exam_id=sg.exam_id)
 `, tenantID, examID, studentID))
 	if err != nil {
 		return SubmissionGrade{}, err
 	}
-	items, err := s.listFinalGrades(ctx, tenantID, grade.SubmissionID)
+	items, err := s.listFinalGradesWithQueryer(ctx, tx, tenantID, grade.SubmissionID)
 	if err != nil {
 		return SubmissionGrade{}, err
 	}
-	grade.Items = items
+	for _, item := range items {
+		if item.ExamID == examID && item.Locked && item.Status == "locked" {
+			grade.Items = append(grade.Items, item)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return SubmissionGrade{}, err
+	}
 	return grade, nil
 }
 
@@ -174,10 +194,6 @@ ORDER BY anonymous_code, created_at
 		}
 	}
 	return out, nil
-}
-
-func (s *PostgresStore) listFinalGrades(ctx context.Context, tenantID string, submissionID string) ([]FinalGrade, error) {
-	return s.listFinalGradesWithQueryer(ctx, s.db, tenantID, submissionID)
 }
 
 func (s *PostgresStore) listFinalGradesWithQueryer(ctx context.Context, q queryer, tenantID string, submissionID string) ([]FinalGrade, error) {

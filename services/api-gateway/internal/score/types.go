@@ -3,6 +3,7 @@ package score
 import (
 	"context"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
+	"edugrade-enterprise/services/api-gateway/internal/scorerelease"
 	"errors"
 	"time"
 )
@@ -141,10 +142,12 @@ type PublishInput struct {
 }
 
 type PublishResult struct {
-	Status           string            `json:"status"`
-	SubmissionGrades []SubmissionGrade `json:"submission_grades"`
-	Quality          QualityReport     `json:"quality"`
-	PublishedAt      time.Time         `json:"published_at"`
+	ScoreRelease     *scorerelease.Release `json:"score_release,omitempty"`
+	Status           string                `json:"status"`
+	SubmissionGrades []SubmissionGrade     `json:"submission_grades"`
+	Quality          QualityReport         `json:"quality"`
+	PublishedAt      time.Time             `json:"published_at"`
+	newlyPublished   bool
 }
 
 type ExportResult struct {

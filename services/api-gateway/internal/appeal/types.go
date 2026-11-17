@@ -9,12 +9,13 @@ import (
 )
 
 var (
-	ErrNotFound          = errors.New("appeal resource not found")
-	ErrInvalidInput      = errors.New("invalid appeal input")
-	ErrForbidden         = errors.New("appeal action forbidden")
-	ErrInvalidTransition = errors.New("invalid appeal transition")
-	ErrUnpublishedGrade  = errors.New("grade is not published")
-	ErrRevisionConflict  = errors.New("appeal revision conflict")
+	ErrNotFound                = errors.New("appeal resource not found")
+	ErrInvalidInput            = errors.New("invalid appeal input")
+	ErrForbidden               = errors.New("appeal action forbidden")
+	ErrInvalidTransition       = errors.New("invalid appeal transition")
+	ErrUnpublishedGrade        = errors.New("grade is not published")
+	ErrVersionedAppealRequired = errors.New("published score changes require the versioned appeal flow")
+	ErrRevisionConflict        = errors.New("appeal revision conflict")
 )
 
 // Appeal 保留旧版按可变成绩处理的申诉；基于发布快照的新流程使用 PublishedQuestionAppeal。

@@ -106,7 +106,7 @@ func TestPostgresConfirmationWaitsForCompleteRosterThenAllowsLateSubmission(t *t
 		exec(`INSERT INTO answer_segment(id,tenant_id,submission_id,submission_page_id,question_id,question_no,bbox,source,status) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,'Q1','{}','manual','accepted')`, segment, tenant, submission, page, question)
 		exec(`INSERT INTO final_grade(tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,score,max_score,source,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'Q1',$4::uuid,$5::uuid,$5,8,10,'single_review','pending_confirmation',$6::uuid)`, tenant, exam, question, segment, submission, actor)
 	}
-	store := NewPostgresStore(db)
+	store, _, releases := newCompatibilityPostgresStore(db)
 	first := addSubmission(students[0], 1)
 	addFinal(first)
 	finalize := func() {
@@ -134,6 +134,12 @@ func TestPostgresConfirmationWaitsForCompleteRosterThenAllowsLateSubmission(t *t
 			t.Fatalf("rejected confirmation mutated existing grades: changed=%d err=%v", changed, err)
 		}
 	}
+	assertPublicationBlocked := func() {
+		t.Helper()
+		if _, err := store.PublishGrades(ctx, tenant, exam, actor, PublishInput{Reason: "incomplete roster"}); !errors.Is(err, ErrQualityGateFailed) {
+			t.Fatalf("compatibility publication bypassed incomplete roster: %v", err)
+		}
+	}
 	// 先只有 A 的终评和总分；未结束导入时，B 尚无答卷不能被静默作为缺考发布。
 	finalize()
 	quality, err := store.CheckQuality(ctx, tenant, exam, false)
@@ -142,8 +148,10 @@ func TestPostgresConfirmationWaitsForCompleteRosterThenAllowsLateSubmission(t *t
 	}
 	second := addSubmission(students[1], 0)
 	assertBlocked("missing_pages_unresolved")
+	assertPublicationBlocked()
 	exec(`UPDATE submission SET actual_page_count=1 WHERE id=$1::uuid`, second)
 	assertBlocked("missing_submission_grades", "question_coverage_incomplete")
+	assertPublicationBlocked()
 	addFinal(second)
 	finalize()
 	quality, err = store.CheckQuality(ctx, tenant, exam, false)
@@ -154,8 +162,9 @@ func TestPostgresConfirmationWaitsForCompleteRosterThenAllowsLateSubmission(t *t
 	if err != nil || !quality.Passed {
 		t.Fatalf("automatic-preparation preview should be ready: %#v %v", quality, err)
 	}
-	if _, err := store.PublishGrades(ctx, tenant, exam, actor, PublishInput{Reason: "legacy publication still requires confirmation"}); !errors.Is(err, ErrQualityGateFailed) {
-		t.Fatalf("legacy write bypassed strict confirmation gate: %v", err)
+	var publicVersions int
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM score_release_current WHERE tenant_id=$1 AND exam_id=$2::uuid`, tenant, exam).Scan(&publicVersions); err != nil || publicVersions != 0 {
+		t.Fatalf("read-only preparation preview published grades: current=%d err=%v", publicVersions, err)
 	}
 	// 已有所有终分仍不代表总分是最新的；旧流程确认前必须拒绝过期汇总。
 	exec(`UPDATE submission_grade SET total_score=total_score-1 WHERE tenant_id=$1::uuid AND exam_id=$2::uuid`, tenant, exam)
@@ -167,8 +176,12 @@ func TestPostgresConfirmationWaitsForCompleteRosterThenAllowsLateSubmission(t *t
 		t.Fatalf("late submission prevented complete confirmation: %#v %v", confirmed, err)
 	}
 	published, err := store.PublishGrades(ctx, tenant, exam, actor, PublishInput{Reason: "synthetic complete"})
-	if err != nil || published.Status != "published" || len(published.SubmissionGrades) != 2 {
+	if err != nil || published.Status != "published" || len(published.SubmissionGrades) != 2 || published.ScoreRelease == nil {
 		t.Fatalf("complete confirmed grades failed publication: %#v %v", published, err)
+	}
+	current, err := releases.CurrentPublished(ctx, tenant, exam)
+	if err != nil || current.Release.ID != published.ScoreRelease.ID || len(current.Items) != 2 || len(current.Questions) != 2 || current.Items[0].TotalScore != 8 || current.Items[1].TotalScore != 8 {
+		t.Fatalf("late submission missing from immutable publication: %+v %v", current, err)
 	}
 	assertPublishedRegradeContinuity(t, db, tenant, exam, actor, question, []string{first, second})
 }

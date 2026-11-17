@@ -5,11 +5,13 @@ import (
 	appealpkg "edugrade-enterprise/services/api-gateway/internal/appeal"
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/evidence"
+	"edugrade-enterprise/services/api-gateway/internal/exam"
 	"edugrade-enterprise/services/api-gateway/internal/grading"
 	"edugrade-enterprise/services/api-gateway/internal/org"
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/review"
 	"edugrade-enterprise/services/api-gateway/internal/score"
+	"edugrade-enterprise/services/api-gateway/internal/scorerelease"
 	"edugrade-enterprise/services/api-gateway/internal/subjective"
 	"edugrade-enterprise/services/api-gateway/internal/submission"
 	"net/http"
@@ -18,17 +20,19 @@ import (
 )
 
 type e2eMemoryFixture struct {
-	router          http.Handler
-	authStore       *auth.MemoryStore
-	orgStore        *org.MemoryStore
-	paperStore      *paper.MemoryStore
-	submissionStore *submission.MemoryStore
-	gradingStore    *grading.MemoryStore
-	subjectiveStore *subjective.MemoryStore
-	evidenceStore   *evidence.MemoryStore
-	reviewStore     *review.MemoryStore
-	scoreStore      *score.MemoryStore
-	appealStore     *appealpkg.MemoryStore
+	router            http.Handler
+	authStore         *auth.MemoryStore
+	orgStore          *org.MemoryStore
+	examStore         *exam.MemoryStore
+	paperStore        *paper.MemoryStore
+	submissionStore   *submission.MemoryStore
+	gradingStore      *grading.MemoryStore
+	subjectiveStore   *subjective.MemoryStore
+	evidenceStore     *evidence.MemoryStore
+	reviewStore       *review.MemoryStore
+	scoreStore        *score.MemoryStore
+	scoreReleaseStore *scorerelease.MemoryStore
+	appealStore       *appealpkg.MemoryStore
 }
 
 func TestCoreWorkflowE2EWithSyntheticMemoryStores(t *testing.T) {
@@ -302,12 +306,14 @@ func e2ePublishAndAppealMemoryWorkflow(t *testing.T, fixture *e2eMemoryFixture, 
 	if finalized["status"] != "pending_confirmation" || e2eFloat(t, finalized, "created_finals") != 1 {
 		t.Fatalf("finalize should create one pending final grade: %#v", finalized)
 	}
+	syncMemoryPublicationFacts(t, fixture.scoreStore, fixture.scoreReleaseStore, e2eTenantID, examID)
 	e2eExpectStatus(t, fixture.router, http.MethodPost, "/api/v1/exams/"+examID+"/publish", adminToken, `{"reason":"too early"}`, http.StatusConflict)
 
 	confirmed := e2ePostJSON(t, fixture.router, http.MethodPost, "/api/v1/exams/"+examID+"/confirm-grades", adminToken, `{"reason":"synthetic checked by lead"}`, http.StatusOK)["grades"].([]any)
 	if len(confirmed) != 1 || confirmed[0].(map[string]any)["status"] != "confirmed" {
 		t.Fatalf("grades should be confirmed: %#v", confirmed)
 	}
+	syncMemoryPublicationFacts(t, fixture.scoreStore, fixture.scoreReleaseStore, e2eTenantID, examID)
 	published := e2ePostJSON(t, fixture.router, http.MethodPost, "/api/v1/exams/"+examID+"/publish", adminToken, `{"reason":"synthetic approved for release"}`, http.StatusOK)
 	if published["status"] != "published" {
 		t.Fatalf("publish should succeed after confirmation: %#v", published)
@@ -323,12 +329,15 @@ func e2ePublishAndAppealMemoryWorkflow(t *testing.T, fixture *e2eMemoryFixture, 
 	if len(items) != 1 {
 		t.Fatalf("published grade should include one final grade item: %#v", studentGrade)
 	}
-	finalGrade := items[0].(map[string]any)
-	finalGradeID := e2eString(t, finalGrade, "id")
+	if items[0].(map[string]any)["id"] != "" || items[0].(map[string]any)["source"] != "" {
+		t.Fatal("student projection exposed internal final grade or source identity")
+	}
+	// 通用申诉只在独立的升级前夹具中验证，对正式版本的更正通过 PostgreSQL 版本回归验证。
+	const legacyExamID, legacySubmissionID, finalGradeID = "historical-appeal-exam", "historical-appeal-submission", "historical-final-grade"
 	fixture.appealStore.AddSubmissionGrade(appealpkg.SubmissionGradeSeed{
 		ID:            "submission-grade-synthetic-1",
-		ExamID:        examID,
-		SubmissionID:  submissionID,
+		ExamID:        legacyExamID,
+		SubmissionID:  legacySubmissionID,
 		StudentID:     e2eStudentID,
 		AnonymousCode: "SYN-001",
 		TotalScore:    4,
@@ -338,8 +347,8 @@ func e2ePublishAndAppealMemoryWorkflow(t *testing.T, fixture *e2eMemoryFixture, 
 	})
 	fixture.appealStore.AddFinalGrade(appealpkg.FinalGradeSeed{
 		ID:              finalGradeID,
-		ExamID:          examID,
-		SubmissionID:    submissionID,
+		ExamID:          legacyExamID,
+		SubmissionID:    legacySubmissionID,
 		AnswerSegmentID: segmentID,
 		QuestionID:      questionID,
 		QuestionNo:      "Q1",
@@ -353,7 +362,7 @@ func e2ePublishAndAppealMemoryWorkflow(t *testing.T, fixture *e2eMemoryFixture, 
 		HumanGrades:     []map[string]any{{"score": 4, "reviewer_id": e2eTeacherID}},
 		Rubric:          map[string]any{"points": []any{"p1"}},
 	})
-	appealResp := e2ePostJSON(t, fixture.router, http.MethodPost, "/api/v1/appeals", studentToken, `{"exam_id":"`+examID+`","student_id":"`+e2eStudentID+`","target_type":"question","final_grade_id":"`+finalGradeID+`","reason":"Synthetic appeal: answer evidence should receive full credit"}`, http.StatusCreated)["appeal"].(map[string]any)
+	appealResp := e2ePostJSON(t, fixture.router, http.MethodPost, "/api/v1/appeals", studentToken, `{"exam_id":"`+legacyExamID+`","student_id":"`+e2eStudentID+`","target_type":"question","final_grade_id":"`+finalGradeID+`","reason":"Synthetic appeal: answer evidence should receive full credit"}`, http.StatusCreated)["appeal"].(map[string]any)
 	appealID := e2eString(t, appealResp, "id")
 	if appealResp["status"] != "submitted" {
 		t.Fatalf("appeal should be submitted: %#v", appealResp)
@@ -371,7 +380,7 @@ func e2ePublishAndAppealMemoryWorkflow(t *testing.T, fixture *e2eMemoryFixture, 
 		"subjective.ai_grade_created",
 		"evidence.checked",
 		"review.human_grade_submitted",
-		"score.published",
+		"score_release.published",
 		"appeal.reviewed",
 	})
 }

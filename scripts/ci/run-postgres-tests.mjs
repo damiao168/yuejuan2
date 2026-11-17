@@ -1,7 +1,7 @@
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { createPostgresTestGate, discoverPostgresTests, normalizePostgresTestDsn, postgresFixtureDsn, postgresTestScope } from "./postgres-test-gate.mjs";
+import { assertRequiredPostgresTests, createPostgresTestGate, discoverPostgresTests, normalizePostgresTestDsn, postgresFixtureDsn, postgresTestScope } from "./postgres-test-gate.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const cwd = path.join(root, "services/api-gateway");
@@ -11,6 +11,8 @@ const env = { ...process.env, EDUGRADE_REQUIRE_PG_TESTS: "1", GOMAXPROCS: "2" };
 env.EDUGRADE_E2E_DATABASE_URL = sourceDsn;
 const { aliases, expected, declared } = discoverPostgresTests(cwd);
 if (!expected.size) throw new Error("No PostgreSQL tests discovered; refusing an empty gate");
+// CI 使用全树入口时先核对关键用例存在；本地定向复验仍只执行明确选定的子集。
+if (!process.argv.slice(2).length) assertRequiredPostgresTests(expected);
 const scope = postgresTestScope(process.argv.slice(2), expected, declared);
 console.log(`PostgreSQL verification scope: ${scope.label}`);
 const setup = spawnSync("go", ["run", "-p=1", "./cmd/prepare-postgres-tests"], { cwd, env, encoding: "utf8", maxBuffer: 1024 * 1024 });

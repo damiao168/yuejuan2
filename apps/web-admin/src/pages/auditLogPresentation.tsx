@@ -219,6 +219,7 @@ export const actionLabels: Record<string, string> = {
   "score.confirmed": "确认成绩",
   "score.finalized": "成绩定稿",
   "score.published": "发布考试成绩",
+  "score_release.published": "发布正式成绩",
   "score.exported": "导出内部原始成绩",
   "score.report_exported": "导出内部核验表",
   "score_release.formal_exported": "导出正式成绩表",

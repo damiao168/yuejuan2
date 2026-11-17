@@ -89,7 +89,7 @@ func TestCoreWorkflowE2EWithPostgresTestDatabase(t *testing.T) {
 	examID := e2ePreparePostgresExamAndFrozenPaper(t, scope)
 	segmentID := e2eCollectPostgresAnswerAndAbstainFromAI(t, scope, examID)
 	e2eCompletePostgresReviewWithDraftIsolation(t, scope, examID, segmentID)
-	e2ePublishPostgresGradeAndReviewAppeal(t, scope, examID, segmentID)
+	e2eVerifyHistoricalPostgresGradeAndAppeal(t, scope, examID, segmentID)
 }
 
 type postgresWorkflowScope struct {
@@ -359,8 +359,9 @@ func e2eCompletePostgresReviewWithDraftIsolation(t *testing.T, scope postgresWor
 
 }
 
-// 未收到答卷的冻结名册学生自动缺考，不再发送人工出勤写请求；成绩确认、学生隔离和申诉仍依原顺序执行。
-func e2ePublishPostgresGradeAndReviewAppeal(t *testing.T, scope postgresWorkflowScope, examID, segmentID string) {
+// 独立的新版本验收走正式发布。本场在确认后恢复升级前的工作表发布状态，继续验证历史查分、申诉和内部报表。
+// 未收到答卷的冻结名册学生仍自动缺考，不再发送人工出勤写请求。
+func e2eVerifyHistoricalPostgresGradeAndAppeal(t *testing.T, scope postgresWorkflowScope, examID, segmentID string) {
 	t.Helper()
 	db, router, demoTenantID, studentID, otherStudentID, adminToken, studentToken, otherStudentToken, schoolAdminToken, graderID, appealReviewerID, appealReviewerToken := scope.DB, scope.Router, scope.TenantID, scope.StudentID, scope.OtherStudentID, scope.AdminToken, scope.StudentToken, scope.OtherStudentToken, scope.SchoolAdminToken, scope.GraderID, scope.AppealReviewerID, scope.AppealReviewerToken
 	// 此流程用旧答卷导入接口，补齐收卷完成事实后再验证自动缺考和成绩发布。
@@ -369,7 +370,6 @@ func e2ePublishPostgresGradeAndReviewAppeal(t *testing.T, scope postgresWorkflow
 	if finalized["status"] != "pending_confirmation" || e2eFloat(t, finalized, "created_finals") != 1 {
 		t.Fatalf("PostgreSQL finalize should create one final grade: %#v", finalized)
 	}
-	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/publish", adminToken, `{"reason":"before confirmation"}`, http.StatusConflict)
 	// 退役接口不能继续改写旧标记；无卷学生由名册事实自动排除，不影响已收答卷的成绩门禁。
 	e2eExpectStatus(t, router, http.MethodPut, "/api/v1/exams/"+examID+"/roster/"+otherStudentID+"/attendance", adminToken, `{"status":"absent","reason":"retired manual attendance"}`, http.StatusNotFound)
 	confirmationQuality := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=confirmation", adminToken, http.StatusOK)["quality"].(map[string]any)
@@ -378,10 +378,20 @@ func e2ePublishPostgresGradeAndReviewAppeal(t *testing.T, scope postgresWorkflow
 		t.Logf("confirmation quality before publish: %#v", confirmationQuality)
 	}
 	e2eBusinessCommandReplay(t, router, "/api/v1/exams/"+examID+"/confirm-grades", adminToken, `{"reason":"story041 synthetic confirmation"}`, "score", http.StatusOK)
-	e2eBusinessCommandReplay(t, router, "/api/v1/exams/"+examID+"/publish", adminToken, `{"reason":"story041 synthetic publish"}`, "score", http.StatusOK)
+	adminID := e2eLookupUserID(t, db, "demo", "tenant_admin")
+	// 历史申诉依赖升级前已锁定的工作表，正式发布入口不会再创建这种状态。
+	if _, err := db.ExecContext(t.Context(), `WITH locked_questions AS (
+ UPDATE final_grade SET status='locked',locked=true WHERE tenant_id=$1 AND exam_id=$2 AND deleted_at IS NULL
+), locked_submissions AS (
+ UPDATE submission_grade SET status='published',locked=true,published_by=$3,published_at=now() WHERE tenant_id=$1 AND exam_id=$2 AND deleted_at IS NULL
+)
+UPDATE exam SET status='published' WHERE tenant_id=$1 AND id=$2`, demoTenantID, examID, adminID); err != nil {
+		t.Fatalf("seed pre-upgrade publication state: %v", err)
+	}
+	e2eExpectStatus(t, router, http.MethodGet, "/api/v1/exams/"+examID+"/score-releases/current-published", adminToken, "", http.StatusNotFound)
 	publishedExam := e2eGetJSON(t, router, "/api/v1/exams/"+examID, adminToken, http.StatusOK)["exam"].(map[string]any)
 	if publishedExam["status"] != "published" {
-		t.Fatalf("publishing grades must advance the exam to published: %#v", publishedExam)
+		t.Fatalf("historical published exam stage was lost: %#v", publishedExam)
 	}
 	publishedQuality := e2eGetJSON(t, router, "/api/v1/exams/"+examID+"/grades/quality?stage=publish", adminToken, http.StatusOK)
 	if publishedQuality["can_publish"] != true {
@@ -402,7 +412,7 @@ func e2ePublishPostgresGradeAndReviewAppeal(t *testing.T, scope postgresWorkflow
 		t.Fatalf("PostgreSQL appeal review should create score adjustment: %#v", appealReviewed)
 	}
 	audits := e2eGetJSON(t, router, "/api/v1/audit-logs?limit=200", adminToken, http.StatusOK)["audit_logs"].([]any)
-	e2eAssertAuditActions(t, audits, []string{"score.published", "appeal.assigned", "appeal.teacher_recommendation_submitted", "appeal.reviewed", "review.human_grade_submitted"})
+	e2eAssertAuditActions(t, audits, []string{"score.confirmed", "appeal.assigned", "appeal.teacher_recommendation_submitted", "appeal.reviewed", "review.human_grade_submitted"})
 	var manualAttendanceAuditCount int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM audit_log WHERE tenant_id=$1::uuid AND action='score.roster_attendance_updated' AND target_id=$2`, demoTenantID, otherStudentID).Scan(&manualAttendanceAuditCount); err != nil || manualAttendanceAuditCount != 0 {
 		t.Fatalf("retired manual attendance must not append an attendance audit, count=%d err=%v", manualAttendanceAuditCount, err)

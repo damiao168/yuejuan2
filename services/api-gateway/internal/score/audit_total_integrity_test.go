@@ -31,6 +31,10 @@ func TestConfirmationAndPublicationRejectStaleSubmissionTotals(t *testing.T) {
 				t.Fatal(quality, err)
 			}
 			if confirmed {
+				// 正式快照独立保存当前题分和旧总分，保护旧入口不能绕过统一的完整性门禁。
+				fact := scorePublicationFact("submission-1", "student-1", 5, 4)
+				fact.TotalScore = 8
+				attachScorePublication(store, "exam-1", fact)
 				_, err = store.PublishGrades(ctx, tenantID, "exam-1", "manager", PublishInput{Reason: "publish"})
 			} else {
 				_, err = store.ConfirmGrades(ctx, tenantID, "exam-1", "manager", ConfirmInput{Reason: "checked"})
@@ -68,6 +72,7 @@ func TestConfirmedTotalsRecoverWhenNewFinalArrivesBeforeFirstPublication(t *test
 	if _, err := store.ConfirmGrades(ctx, tenantID, "exam-1", "manager", ConfirmInput{Reason: "checked latest final"}); err != nil {
 		t.Fatal(err)
 	}
+	attachScorePublication(store, "exam-1", scorePublicationFact("submission-1", "student-1", 5, 4))
 	if _, err := store.PublishGrades(ctx, tenantID, "exam-1", "manager", PublishInput{Reason: "publish latest"}); err != nil {
 		t.Fatal(err)
 	}

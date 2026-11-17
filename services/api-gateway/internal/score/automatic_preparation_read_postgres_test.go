@@ -125,9 +125,8 @@ type automaticReadProbe struct {
 }
 
 func newAutomaticReadProbe(t *testing.T, f *automaticReadFixture) *automaticReadProbe {
-	store := NewPostgresStore(f.db)
-	prepared := scorerelease.NewPostgresStore(f.db, nil).WithGradePreparer(store)
-	return &automaticReadProbe{t: t, f: f, store: store, prepared: prepared, strictGate: scorerelease.NewPostgresStore(f.db, nil), releases: scorerelease.NewService(prepared)}
+	store, prepared, releases := newCompatibilityPostgresStore(f.db)
+	return &automaticReadProbe{t: t, f: f, store: store, prepared: prepared, strictGate: scorerelease.NewPostgresStore(f.db, nil), releases: releases}
 }
 
 func (p *automaticReadProbe) roster(submission string) (RosterEntry, RosterSummary) {
@@ -186,7 +185,7 @@ func (f *automaticReadFixture) addLateSubmission(t *testing.T) string {
 // 报告 2.1 的三种情况在同一场考试中依次出现：
 //  1. 单评已提交、规则分已确认，但仍有一题没有任何评分（或评分任务未完成）：继续阻断；
 //  2. 该题也完成单评、尚无草稿：名册 awaiting_aggregation 且 unresolved=0，质量报告和门禁读取不阻断，
-//     事务内与旧接口检查仍严格；随后创建草稿并发布成功；
+//     确认接口与不带准备器的门禁仍严格；兼容发布随后沿正式流程自动准备并发布；
 //  3. 正式发布后再来一份只差汇总的晚到答卷：读取结果与未放宽时完全相同。
 func TestPostgresPublicationReadsFollowAutomaticPreparation(t *testing.T) {
 	db := confirmationTestDB(t)
@@ -208,6 +207,9 @@ func TestPostgresPublicationReadsFollowAutomaticPreparation(t *testing.T) {
 		if _, err := p.releases.Create(ctx, f.tenant, f.exam, f.actor, scorerelease.CreateInput{Reason: "synthetic", IdempotencyKey: "missing-question"}); !errors.Is(err, scorerelease.ErrGateBlocked) {
 			t.Fatalf("draft with ungraded question: %v", err)
 		}
+		if _, err := p.store.PublishGrades(ctx, f.tenant, f.exam, f.actor, PublishInput{Reason: "missing question"}); !errors.Is(err, ErrQualityGateFailed) {
+			t.Fatalf("compatibility publication bypassed missing question gate: %v", err)
+		}
 		if p.preparedFacts() != 0 {
 			t.Fatal("blocked draft kept prepared facts")
 		}
@@ -219,6 +221,9 @@ func TestPostgresPublicationReadsFollowAutomaticPreparation(t *testing.T) {
 		}
 		if quality, gate := p.quality(true), p.gate(p.prepared); quality["unfinished_review_tasks"] != 1 || gate["unfinished_review_tasks"] != 1 {
 			t.Fatalf("unfinished review must block reads: %#v %#v", quality, gate)
+		}
+		if _, err := p.store.PublishGrades(ctx, f.tenant, f.exam, f.actor, PublishInput{Reason: "pending review"}); !errors.Is(err, ErrQualityGateFailed) {
+			t.Fatalf("compatibility publication bypassed unfinished review gate: %v", err)
 		}
 	})
 	f.exec(t, `UPDATE review_task SET deleted_at=now() WHERE id=$1::uuid`, pending)
@@ -244,17 +249,14 @@ func TestPostgresPublicationReadsFollowAutomaticPreparation(t *testing.T) {
 		if _, err := p.store.ConfirmGrades(ctx, f.tenant, f.exam, f.actor, ConfirmInput{Reason: "legacy"}); !errors.Is(err, ErrQualityGateFailed) {
 			t.Fatalf("legacy confirmation must stay strict: %v", err)
 		}
-		if _, err := p.store.PublishGrades(ctx, f.tenant, f.exam, f.actor, PublishInput{Reason: "legacy"}); !errors.Is(err, ErrQualityGateFailed) {
-			t.Fatalf("legacy publication must stay strict: %v", err)
-		}
 		if p.preparedFacts() != 0 {
 			t.Fatal("read-only checks or rejected legacy commands wrote facts")
 		}
 	})
-	t.Run("draft prepares grades and publication succeeds", func(t *testing.T) {
-		draft, err := p.releases.Create(ctx, f.tenant, f.exam, f.actor, scorerelease.CreateInput{Reason: "synthetic", IdempotencyKey: "automatic-read-initial"})
-		if err != nil {
-			t.Fatal(err)
+	t.Run("compatibility publication prepares grades and publishes frozen facts", func(t *testing.T) {
+		published, err := p.store.PublishGrades(ctx, f.tenant, f.exam, f.actor, PublishInput{Reason: "complete synthetic publication"})
+		if err != nil || published.ScoreRelease == nil || published.Status != "published" || len(published.SubmissionGrades) != 1 || published.SubmissionGrades[0].TotalScore != 9 {
+			t.Fatalf("complete compatibility publication did not create canonical result: %+v %v", published, err)
 		}
 		var status string
 		var total float64
@@ -264,8 +266,9 @@ func TestPostgresPublicationReadsFollowAutomaticPreparation(t *testing.T) {
 		if gate := p.gate(p.strictGate); len(gate) != 0 {
 			t.Fatalf("strict gate after preparation: %#v", gate)
 		}
-		if _, err := p.releases.Publish(ctx, f.tenant, draft.ID, f.actor); err != nil {
-			t.Fatal(err)
+		current, err := p.releases.CurrentPublished(ctx, f.tenant, f.exam)
+		if err != nil || current.Release.ID != published.ScoreRelease.ID || len(current.Questions) != 3 || len(current.Items) != 1 || current.Items[0].TotalScore != 9 {
+			t.Fatalf("compatibility publication diverged from frozen result: %+v %v", current, err)
 		}
 	})
 	t.Run("published exam reads are unchanged", func(t *testing.T) {

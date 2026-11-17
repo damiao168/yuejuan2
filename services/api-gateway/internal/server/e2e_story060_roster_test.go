@@ -76,6 +76,7 @@ VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, 88, 100, 'confirmed', false,
 VALUES($1::uuid,$2::uuid,'Q1','short_answer',100,1,'active') RETURNING id::text`, tenantID, examID).Scan(&finalQuestionID); err != nil {
 		t.Fatalf("seed roster final question: %v", err)
 	}
+	e2eFreezeRosterFixtureQuestion(t, db, tenantID, examID, finalQuestionID)
 	if err := db.QueryRow(`INSERT INTO submission_page(tenant_id,submission_id,file_asset_id,page_no,status)
 VALUES($1::uuid,$2::uuid,$3::uuid,1,'accepted') RETURNING id::text`, tenantID, gradedSubmissionID, finalFileID).Scan(&finalPageID); err != nil {
 		t.Fatalf("seed roster final page: %v", err)
@@ -130,7 +131,7 @@ WHERE tenant_id=$1::uuid AND student_id=$2::uuid AND status='enrolled' AND delet
 	if quality["can_publish"] != true {
 		t.Fatalf("resolved roster should pass publish quality gate: %#v", quality)
 	}
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/publish", adminToken, `{"reason":"roster fully reconciled"}`, http.StatusOK)
+	e2ePublishRosterFixture(t, router, adminToken, examID, "roster fully reconciled", 1)
 	e2eExpectStatus(t, router, http.MethodPut, "/api/v1/exams/"+examID+"/roster/"+studentIDs[1]+"/attendance", adminToken,
 		`{"status":"expected","reason":"retired after publish"}`, http.StatusNotFound)
 
@@ -291,6 +292,7 @@ FROM inserted_submissions
 VALUES($1::uuid,$2::uuid,'Q1','short_answer',100,1,'active') RETURNING id::text`, tenantID, examID).Scan(&finalQuestionID); err != nil {
 		t.Fatalf("seed scale roster final question: %v", err)
 	}
+	e2eFreezeRosterFixtureQuestion(t, db, tenantID, examID, finalQuestionID)
 	if _, err := db.Exec(`INSERT INTO submission_page(tenant_id,submission_id,file_asset_id,page_no,status)
 SELECT tenant_id,submission_id,$3::uuid,1,'accepted' FROM submission_grade
 WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND deleted_at IS NULL`, tenantID, examID, finalFileID); err != nil {
@@ -312,6 +314,30 @@ WHERE grade.tenant_id=$1::uuid AND grade.exam_id=$2::uuid AND grade.deleted_at I
 
 	e2eAssertStory060RosterReadBudget(t, db, router, adminToken, tenantID, examID)
 	e2eResolveStory060ScaleAbsences(t, db, router, adminToken, story060ScaleRosterScope{TenantID: tenantID, ClassID: classID, ExamID: examID, Suffix: suffix})
+}
+
+// 名册夹具跳过答题卡配置，仍须冻结参与评分的题目。正式版本只接收该清单中的题分。
+func e2eFreezeRosterFixtureQuestion(t *testing.T, db *sql.DB, tenant, examID, question string) {
+	t.Helper()
+	result, err := db.ExecContext(t.Context(), `INSERT INTO exam_question_snapshot(tenant_id,exam_id,question_id,subject_profile_id,subject_profile_version,archetype_code,allowed_evidence_types,risk_tier,profile_snapshot_json,archetype_snapshot_json,rubric_snapshot_json,scoring_policy_snapshot_json,content_hash)
+SELECT $1::uuid,$2::uuid,$3::uuid,id,version,'short_constructed','["text_span"]','R1',jsonb_build_object('subject_code',subject_code),'{}','{"max_score":100}','{"mode":"HUMAN_PRIMARY"}',repeat('a',64)
+FROM subject_profile WHERE tenant_id=$1::uuid AND subject_code='mathematics' AND education_stage='junior' AND status='active' ORDER BY version DESC LIMIT 1`, tenant, examID, question)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count, err := result.RowsAffected(); err != nil || count != 1 {
+		t.Fatalf("freeze roster question: affected=%d err=%v", count, err)
+	}
+}
+
+func e2ePublishRosterFixture(t *testing.T, router http.Handler, token, examID, reason string, count int) {
+	t.Helper()
+	path := "/api/v1/exams/" + examID
+	published := e2ePostJSON(t, router, http.MethodPost, path+"/publish", token, story056JSON(t, score.PublishInput{Reason: reason}), http.StatusOK)
+	current := e2eGetJSON(t, router, path+"/score-releases/current-published", token, http.StatusOK)
+	if current["release"].(map[string]any)["id"] != published["score_release"].(map[string]any)["id"] || len(current["items"].([]any)) != count {
+		t.Fatalf("official release did not contain exactly the present and graded candidates, want=%d got=%d", count, len(current["items"].([]any)))
+	}
 }
 
 // 直接预置的答卷由触发器建立收卷记录。补上结束事实时保留收卷版本，才能验证发布对自动缺考的处理。
@@ -400,7 +426,7 @@ ORDER BY student_no DESC LIMIT 3
 	if quality["can_publish"] != true {
 		t.Fatalf("500-student roster should pass with three derived absences: %#v", quality)
 	}
-	e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/publish", adminToken, `{"reason":"500-student roster reconciled"}`, http.StatusOK)
+	e2ePublishRosterFixture(t, router, adminToken, examID, "500-student roster reconciled", 497)
 }
 
 // 在独立测试库计数前后比较，既验证路由退役，也验证无出勤写入和成功审计副作用。

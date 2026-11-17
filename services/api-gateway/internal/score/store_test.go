@@ -69,7 +69,7 @@ func TestListExamGradesUsesStableCursorAndAccurateTotals(t *testing.T) {
 	}
 }
 
-func TestPublishBlocksUntilGradesConfirmedAndQualityPasses(t *testing.T) {
+func TestConfirmationAndQualityRejectUnfinishedReview(t *testing.T) {
 	store := seededScoreStore()
 	store.AddReviewTask(TaskSeed{ExamID: "exam-1", Status: "assigned"})
 	if _, err := store.FinalizeExam(context.Background(), tenantID, "exam-1", "manager-1"); err != nil {
@@ -79,17 +79,14 @@ func TestPublishBlocksUntilGradesConfirmedAndQualityPasses(t *testing.T) {
 	if !errors.Is(err, ErrQualityGateFailed) {
 		t.Fatalf("confirm should block on unfinished review task, got %v", err)
 	}
-	result, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "publish"})
-	if !errors.Is(err, ErrQualityGateFailed) {
-		t.Fatalf("publish should block before confirmation and unfinished review, got %v", err)
-	}
-	if result.Quality.Passed || len(result.Quality.Issues) == 0 {
-		t.Fatalf("publish should return blocking quality issues, got %#v", result)
+	quality, err := store.CheckQuality(context.Background(), tenantID, "exam-1", true)
+	if err != nil || quality.Passed || !hasIssue(quality.Issues, "unfinished_review_tasks") {
+		t.Fatalf("quality read lost unfinished review blocker: %#v %v", quality, err)
 	}
 }
 
 // 发布前读取按“创建草稿自动准备之后”判断：待确认总分会在准备时确认，所以不阻断；
-// 旧版发布接口没有自动准备，仍必须拒绝未确认成绩。
+// 旧发布入口现在也委托正式发布器；此处只验证工作表的只读预检，不重演已移除的发布算法。
 func TestCheckQualityReadOnlyForPublishGate(t *testing.T) {
 	store := seededScoreStore()
 	if _, err := store.FinalizeExam(context.Background(), tenantID, "exam-1", "manager-1"); err != nil {
@@ -101,9 +98,6 @@ func TestCheckQualityReadOnlyForPublishGate(t *testing.T) {
 	}
 	if !quality.Passed {
 		t.Fatalf("publish read should treat pending totals as confirmed by automatic preparation: %#v", quality)
-	}
-	if result, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "too early"}); !errors.Is(err, ErrQualityGateFailed) || !hasIssue(result.Quality.Issues, "grades_not_confirmed") {
-		t.Fatalf("legacy publish must still require confirmation: %#v %v", result, err)
 	}
 	if _, err := store.ConfirmGrades(context.Background(), tenantID, "exam-1", "leader-1", ConfirmInput{Reason: "checked"}); err != nil {
 		t.Fatalf("confirm grades: %v", err)
@@ -164,6 +158,7 @@ func TestConfirmPublishStudentLookupAndCSVExport(t *testing.T) {
 	if confirmed[0].Status != "confirmed" || confirmed[0].ConfirmedBy != "leader-1" {
 		t.Fatalf("confirmed grade mismatch: %#v", confirmed[0])
 	}
+	_, releases, _ := attachScorePublication(store, "exam-1", scorePublicationFact("submission-1", "student-1", 4, 4))
 	published, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "release"})
 	if err != nil {
 		t.Fatalf("publish grades: %v", err)
@@ -171,8 +166,8 @@ func TestConfirmPublishStudentLookupAndCSVExport(t *testing.T) {
 	if published.Status != "published" || !published.SubmissionGrades[0].Locked {
 		t.Fatalf("published grade mismatch: %#v", published)
 	}
-	if status := store.ExamStatusForTest("exam-1"); status != "published" {
-		t.Fatalf("exam status after publish = %q, want published", status)
+	if current, err := releases.CurrentPublished(context.Background(), tenantID, "exam-1"); err != nil || published.ScoreRelease == nil || current.Release.ID != published.ScoreRelease.ID {
+		t.Fatalf("publication did not expose the same frozen version: %+v %v", current, err)
 	}
 	quality, err := store.CheckQuality(context.Background(), tenantID, "exam-1", true)
 	if err != nil {
@@ -214,15 +209,20 @@ func TestGradeStateTransitionsCannotMoveBackwardOrRepeat(t *testing.T) {
 	if _, err := store.ConfirmGrades(context.Background(), tenantID, "exam-1", "leader-1", ConfirmInput{Reason: "repeat"}); !errors.Is(err, ErrInvalidTransition) {
 		t.Fatalf("repeated confirmation must be rejected, got %v", err)
 	}
-	if _, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "release"}); err != nil {
+	_, releases, _ := attachScorePublication(store, "exam-1", scorePublicationFact("submission-1", "student-1", 4, 4))
+	first, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "release"})
+	if err != nil {
 		t.Fatalf("publish grades: %v", err)
 	}
-	if _, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "repeat"}); !errors.Is(err, ErrInvalidTransition) {
-		t.Fatalf("repeated publish must be rejected, got %v", err)
+	if replay, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "repeat"}); err != nil || replay.ScoreRelease == nil || replay.ScoreRelease.ID != first.ScoreRelease.ID {
+		t.Fatalf("repeated legacy publish must retain the current version: %+v %v", replay, err)
+	}
+	if versions, err := releases.List(context.Background(), tenantID, "exam-1"); err != nil || len(versions) != 1 {
+		t.Fatalf("repeated publish added a version: %+v %v", versions, err)
 	}
 }
 
-func TestPublishRejectsInvalidExamStateWithoutLockingGrades(t *testing.T) {
+func TestUnconfiguredPublishPreservesConfirmedWorkingGrades(t *testing.T) {
 	store := seededScoreStore()
 	if _, err := store.FinalizeExam(context.Background(), tenantID, "exam-1", "manager-1"); err != nil {
 		t.Fatalf("finalize exam: %v", err)
@@ -230,9 +230,8 @@ func TestPublishRejectsInvalidExamStateWithoutLockingGrades(t *testing.T) {
 	if _, err := store.ConfirmGrades(context.Background(), tenantID, "exam-1", "leader-1", ConfirmInput{Reason: "checked"}); err != nil {
 		t.Fatalf("confirm grades: %v", err)
 	}
-	store.SetExamStatusForTest("exam-1", "archived")
-	if _, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "release"}); !errors.Is(err, ErrInvalidTransition) {
-		t.Fatalf("publish from archived exam must be rejected, got %v", err)
+	if _, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "release"}); !errors.Is(err, ErrPublicationUnavailable) {
+		t.Fatalf("publish without canonical assembly must fail closed, got %v", err)
 	}
 	result, err := store.ListExamGrades(context.Background(), tenantID, "exam-1", GradeListFilter{})
 	if err != nil {
@@ -244,20 +243,7 @@ func TestPublishRejectsInvalidExamStateWithoutLockingGrades(t *testing.T) {
 	}
 }
 
-func TestExamStatesEligibleForQualityGatedPublish(t *testing.T) {
-	for _, status := range []string{"draft", "configured", "ready", "collecting", "grading", "reviewing", "finalized"} {
-		if !canPublishExamStatus(status) {
-			t.Errorf("active exam status %q should be eligible for quality-gated publish", status)
-		}
-	}
-	for _, status := range []string{"", "published", "archived"} {
-		if canPublishExamStatus(status) {
-			t.Errorf("terminal or unknown exam status %q must not be publishable", status)
-		}
-	}
-}
-
-func TestPublishBlocksForArbitrationOCRAndMissingFinalGrade(t *testing.T) {
+func TestQualityReportsArbitrationOCRAndMissingFinalGrade(t *testing.T) {
 	store := NewMemoryStore()
 	store.AddSegment(SegmentSeed{ExamID: "exam-1", SubmissionID: "submission-1", StudentID: "student-1", AnonymousCode: "ANON-001", AnswerSegmentID: "segment-1", QuestionID: "question-1", QuestionNo: "Q1", MaxScore: 5})
 	store.AddArbitrationTask(TaskSeed{ExamID: "exam-1", Status: "pending"})
@@ -265,17 +251,17 @@ func TestPublishBlocksForArbitrationOCRAndMissingFinalGrade(t *testing.T) {
 	if _, err := store.FinalizeExam(context.Background(), tenantID, "exam-1", "manager-1"); err != nil {
 		t.Fatalf("finalize exam: %v", err)
 	}
-	result, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{})
-	if !errors.Is(err, ErrQualityGateFailed) {
-		t.Fatalf("publish should fail quality gate, got %v", err)
+	quality, err := store.CheckQuality(context.Background(), tenantID, "exam-1", true)
+	if err != nil || quality.Passed {
+		t.Fatalf("quality should report blockers, got %#v %v", quality, err)
 	}
 	codes := map[string]bool{}
-	for _, issue := range result.Quality.Issues {
+	for _, issue := range quality.Issues {
 		codes[issue.Code] = true
 	}
 	for _, expected := range []string{"unfinished_arbitration_tasks", "ocr_failed_unhandled", "missing_final_grades"} {
 		if !codes[expected] {
-			t.Fatalf("missing quality issue %s in %#v", expected, result.Quality.Issues)
+			t.Fatalf("missing quality issue %s in %#v", expected, quality.Issues)
 		}
 	}
 }

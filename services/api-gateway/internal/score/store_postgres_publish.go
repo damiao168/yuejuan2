@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
-	"edugrade-enterprise/services/api-gateway/internal/score/autoprep"
-	"time"
 )
 
 func (s *PostgresStore) ConfirmGrades(ctx context.Context, tenantID string, examID string, actorID string, input ConfirmInput) ([]SubmissionGrade, error) {
@@ -68,72 +66,9 @@ WHERE tenant_id = $1 AND exam_id::text = $2 AND deleted_at IS NULL AND locked = 
 	return grades, nil
 }
 
-func (s *PostgresStore) PublishGrades(ctx context.Context, tenantID string, examID string, actorID string, input PublishInput) (PublishResult, error) {
-	// 总分公开、题分锁定、考试状态和命令回执在同一事务提交，失败不能只留下部分发布事实。
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return PublishResult{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	var replay PublishResult
-	identity := commandreceipt.Identity{TenantID: tenantID, ActorID: actorID, Operation: "score.publish", TargetID: examID}
-	if found, err := commandreceipt.Load(ctx, tx, identity, input, &replay); err != nil || found {
-		return replay, err
-	}
-	if err := lockExamTx(ctx, tx, tenantID, examID); err != nil {
-		return PublishResult{}, err
-	}
-	if err := autoprep.LockCollection(ctx, tx, tenantID, examID); err != nil {
-		return PublishResult{}, err
-	}
-	if locked, err := s.hasLockedGradesTx(ctx, tx, tenantID, examID); err != nil {
-		return PublishResult{}, err
-	} else if locked {
-		return PublishResult{}, ErrInvalidTransition
-	}
-	quality, err := s.qualityReportTx(ctx, tx, tenantID, examID, true)
-	if err != nil {
-		return PublishResult{}, err
-	}
-	if !quality.Passed {
-		return PublishResult{Status: "blocked", Quality: quality}, ErrQualityGateFailed
-	}
-	now := time.Now().UTC()
-	if _, err := tx.ExecContext(ctx, `
-UPDATE submission_grade
-SET status = 'published', locked = true, published_by = $3::uuid, published_at = now(), revision = revision + 1, updated_at = now()
-WHERE tenant_id = $1 AND exam_id::text = $2 AND deleted_at IS NULL
-`, tenantID, examID, actorID); err != nil {
-		return PublishResult{}, err
-	}
-	if _, err := tx.ExecContext(ctx, `
-UPDATE final_grade
-SET status = 'locked', locked = true, updated_at = now()
-WHERE tenant_id = $1 AND exam_id::text = $2 AND deleted_at IS NULL
-`, tenantID, examID); err != nil {
-		return PublishResult{}, err
-	}
-	if err := publishExamTx(ctx, tx, tenantID, examID); err != nil {
-		return PublishResult{}, err
-	}
-	grades, err := s.listGradesTx(ctx, tx, tenantID, examID, true)
-	if err != nil {
-		return PublishResult{}, err
-	}
-	result := PublishResult{
-		Status:           "published",
-		SubmissionGrades: grades,
-		Quality:          QualityReport{Passed: true},
-		PublishedAt:      now,
-	}
-
-	if err := commandreceipt.Save(ctx, tx, identity, input, result); err != nil {
-		return PublishResult{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return PublishResult{}, err
-	}
-	return result, nil
+// PublishGrades 保留旧调用签名，正式发布和回执均交给不可变版本发布器。
+func (s *PostgresStore) PublishGrades(ctx context.Context, tenantID, examID, actorID string, input PublishInput) (PublishResult, error) {
+	return s.publications.publish(ctx, tenantID, examID, actorID, input)
 }
 
 func (s *PostgresStore) hasLockedGradesTx(ctx context.Context, tx *sql.Tx, tenantID string, examID string) (bool, error) {
@@ -156,35 +91,4 @@ WHERE tenant_id = $1 AND exam_id::text = $2 AND deleted_at IS NULL
 func lockExamTx(ctx context.Context, tx *sql.Tx, tenantID string, examID string) error {
 	_, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, tenantID, examID)
 	return err
-}
-
-func publishExamTx(ctx context.Context, tx *sql.Tx, tenantID string, examID string) error {
-	result, err := tx.ExecContext(ctx, `
-UPDATE exam
-SET status = 'published', updated_at = now()
-WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
-  AND status IN ('draft', 'configured', 'ready', 'collecting', 'grading', 'reviewing', 'finalized')
-`, tenantID, examID)
-	if err != nil {
-		return err
-	}
-	updated, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if updated == 1 {
-		return nil
-	}
-	var exists bool
-	if err := tx.QueryRowContext(ctx, `
-SELECT EXISTS (
-  SELECT 1 FROM exam WHERE tenant_id = $1 AND id::text = $2 AND deleted_at IS NULL
-)
-`, tenantID, examID).Scan(&exists); err != nil {
-		return err
-	}
-	if !exists {
-		return ErrNotFound
-	}
-	return ErrInvalidTransition
 }

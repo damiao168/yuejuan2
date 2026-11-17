@@ -1180,7 +1180,7 @@ export type ScoreCommandFinalGrade = { "id": string; "tenant_id": string; "exam_
 
 export type ScoreCommandConfirmInput = { "reason": string; };
 
-export type ScoreCommandPublishResult = { "status": string; "submission_grades": Array<ScoreCommandSubmissionGrade> | null; "quality": ScoreCommandQualityReport; "published_at": string; };
+export type ScoreCommandPublishResult = { "status": string; "submission_grades": Array<ScoreCommandSubmissionGrade> | null; "quality": ScoreCommandQualityReport; "published_at": string; "score_release"?: ScoreRelease; };
 
 export type ScoreCommandQualityReport = { "passed": boolean; "issues": Array<ScoreCommandQualityIssue> | null; };
 

@@ -289,6 +289,8 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusConflict, "invalid_appeal_transition", "appeal transition is invalid")
 	case errors.Is(err, ErrUnpublishedGrade):
 		httpx.Error(w, r, http.StatusConflict, "grade_not_published", "grade is not published")
+	case errors.Is(err, ErrVersionedAppealRequired):
+		httpx.Error(w, r, http.StatusConflict, "versioned_appeal_required", "该考试已发布正式成绩，请使用正式成绩的单题申诉及复评流程。")
 	case errors.Is(err, ErrRevisionConflict):
 		httpx.Error(w, r, http.StatusConflict, "resource_version_conflict", "appeal was updated by another user; refresh and retry")
 	default:

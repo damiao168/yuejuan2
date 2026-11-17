@@ -30,20 +30,7 @@ func scopedUser(id string, scope map[string]any, permissions ...string) auth.Use
 func newPublishedGradeHandler(t *testing.T) *Handler {
 	t.Helper()
 	store := NewMemoryStore()
-	for _, seed := range []SegmentSeed{
-		{ExamID: "exam-1", SubmissionID: "submission-1", StudentID: "student-1", AnonymousCode: "ANON-001", AnswerSegmentID: "segment-1", QuestionID: "question-1", QuestionNo: "Q1", MaxScore: 5},
-		{ExamID: "exam-1", SubmissionID: "submission-2", StudentID: "student-2", AnonymousCode: "ANON-002", AnswerSegmentID: "segment-2", QuestionID: "question-1", QuestionNo: "Q1", MaxScore: 5},
-	} {
-		store.AddSegment(seed)
-	}
-	store.AddHumanGrade(GradeSeed{AnswerSegmentID: "segment-1", Score: 4, MaxScore: 5})
-	store.AddHumanGrade(GradeSeed{AnswerSegmentID: "segment-2", Score: 2, MaxScore: 5})
-	if _, err := store.FinalizeExam(context.Background(), tenantID, "exam-1", "manager-1"); err != nil {
-		t.Fatalf("finalize exam: %v", err)
-	}
-	if _, err := store.ConfirmGrades(context.Background(), tenantID, "exam-1", "leader-1", ConfirmInput{Reason: "checked"}); err != nil {
-		t.Fatalf("confirm grades: %v", err)
-	}
+	attachScorePublication(store, "exam-1", scorePublicationFact("submission-1", "student-1", 4), scorePublicationFact("submission-2", "student-2", 2))
 	if _, err := store.PublishGrades(context.Background(), tenantID, "exam-1", "admin-1", PublishInput{Reason: "release"}); err != nil {
 		t.Fatalf("publish grades: %v", err)
 	}

@@ -34,6 +34,30 @@ const optionalTests = new Set([
   `${moduleName}/internal/paper.TestTemplateLibraryVisualClientAgainstRunningCV`,
 ]);
 
+// 全树发现不能让关键事务用例随删除、改名或发现规则变化一起消失。
+// 这些名称只固定最低必测范围；其他已发现的 PostgreSQL 用例仍必须运行且不能跳过。
+export const requiredPostgresTests = Object.freeze([
+  `${moduleName}/internal/auth.TestPostgresManagedSessionRevokeEnforcesTargetsAndAtomicRevocation`,
+  `${moduleName}/internal/capture.TestPostgresCaptureDecodeCompletionRollsBackBeforeReceipt`,
+  `${moduleName}/internal/capture.TestPostgresStudentIdentityPreventsCrossRosterAndConcurrentDoubleBinding`,
+  `${moduleName}/internal/capture.TestPostgresCollectionMissingPagesAndLateReceiptFailureRecoverAtomically`,
+  `${moduleName}/internal/modelgovernance.TestPostgresInvalidationRevokesDependentApprovalsAtomically`,
+  `${moduleName}/internal/releasegate.TestPostgresPublicationCommitsEvidenceAndStatusTogether`,
+  `${moduleName}/internal/score.TestPostgresHistoricalPublicationRemainsReadableUntilFormalVersion`,
+  `${moduleName}/internal/score.TestPostgresLegacyPublicationSharesSnapshotAndSurvivesNewerRelease`,
+  `${moduleName}/internal/scorerelease.TestPostgresAnonymousRegistryRollbackAndCommitFailure`,
+  `${moduleName}/internal/scorerelease.TestPostgresConcurrentRegradePublicationPreservesBothCorrections`,
+  `${moduleName}/internal/scorerelease.TestPostgresPublicationReceiptRollsBackLateFailureAndNeverRewindsCurrent`,
+  `${moduleName}/internal/server.TestLegacyScorePublicationUsesCurrentSnapshotWithPostgresTestDatabase`,
+  `${moduleName}/internal/subjective.TestRemediationPostgresWorkerCompletionAtomicRollbackAndReplay`,
+  `${moduleName}/internal/subjective.TestRemediationPostgresLeaseRotationDoesNotAcceptLateCallbacks`,
+]);
+
+export function assertRequiredPostgresTests(expected) {
+  const missing = requiredPostgresTests.filter(key => !expected.has(key));
+  if (missing.length) throw new Error(`Required PostgreSQL transaction tests are not discovered: ${JSON.stringify(missing)}`);
+}
+
 export function discoverPostgresTests(cwd) {
   function walk(dir) {
     return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? walk(path.join(dir, entry.name)) : [path.join(dir, entry.name)]);

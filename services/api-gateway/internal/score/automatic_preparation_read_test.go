@@ -44,13 +44,13 @@ func TestMemoryReadsBeforeFirstDraftTreatAutomaticAggregationAsDone(t *testing.T
 	if quality, err := store.CheckQuality(t.Context(), tenantID, "exam-1", true); err != nil || !quality.Passed {
 		t.Fatalf("publish read must pass after automatic preparation: %#v %v", quality, err)
 	}
-	// confirmation 阶段与写操作不放宽：此时确实还没有终评和总分。
+	// confirmation 阶段不放宽：此时确实还没有终评和总分。
 	strict, err := store.CheckQuality(t.Context(), tenantID, "exam-1", false)
 	if err != nil || strict.Passed || !hasIssue(strict.Issues, "missing_final_grades") || !hasIssue(strict.Issues, "missing_submission_grades") {
 		t.Fatalf("confirmation stage must stay strict: %#v %v", strict, err)
 	}
-	if _, err := store.PublishGrades(t.Context(), tenantID, "exam-1", "admin", PublishInput{Reason: "legacy"}); !errors.Is(err, ErrQualityGateFailed) {
-		t.Fatalf("legacy publish must stay strict: %v", err)
+	if _, err := store.PublishGrades(t.Context(), tenantID, "exam-1", "admin", PublishInput{Reason: "legacy"}); !errors.Is(err, ErrPublicationUnavailable) {
+		t.Fatalf("unconfigured publication cannot fall back to the working store: %v", err)
 	}
 	if len(store.finals) != 0 || len(store.submissions) != 0 {
 		t.Fatalf("read-only checks wrote grades: finals=%d totals=%d", len(store.finals), len(store.submissions))

@@ -233,13 +233,39 @@ func (s *MemoryStore) PublishGuarded(ctx context.Context, tenantID, id, actorID 
 	if !ok || release.TenantID != tenantID {
 		return Release{}, ErrNotFound
 	}
+	receipt := publicationReceiptFromContext(ctx)
+	if receipt != nil {
+		replay, found, err := receipt.Load(ctx, nil)
+		if err != nil {
+			return Release{}, err
+		}
+		if found {
+			if !validReceiptRelease(replay, release) {
+				return Release{}, ErrInvalidInput
+			}
+			return cloneRelease(replay), nil
+		}
+	}
+	currentID := s.current[tenantID+":"+release.ExamID]
+	if initialPublicationOnly(ctx) && currentID != "" {
+		// 首版兼容请求与新版在同一考试锁下选择当前版本。
+		current := s.releases[currentID]
+		if !validReceiptRelease(current, release) {
+			return Release{}, ErrInvalidTransition
+		}
+		release = current
+	}
 	if release.Status == StatusPublished {
+		if receipt != nil {
+			if err := receipt.Save(ctx, nil, cloneRelease(release), s.snapshotFactsLocked(release.ID), false); err != nil {
+				return Release{}, err
+			}
+		}
 		return cloneRelease(release), nil
 	}
 	if release.Status != StatusDraft {
 		return Release{}, ErrInvalidTransition
 	}
-	currentID := s.current[tenantID+":"+release.ExamID]
 	var rebased []SubmissionFact
 	if release.Source == SourceRegrade && release.SourceReleaseID != "" && release.SourceReleaseID != currentID {
 		var ok bool
@@ -261,12 +287,22 @@ func (s *MemoryStore) PublishGuarded(ctx context.Context, tenantID, id, actorID 
 	if !gate.Passed {
 		return Release{}, ErrGateBlocked
 	}
-	if rebased != nil {
-		s.saveSnapshotLocked(id, rebased)
-	}
 	now := s.now().UTC()
 	release.Status, release.PublishedBy, release.PublishedAt, release.GateSnapshot = StatusPublished, actorID, &now, gate
 	release.SupersedesReleaseID = s.current[tenantID+":"+release.ExamID]
+	if receipt != nil {
+		facts := rebased
+		if facts == nil {
+			facts = s.snapshotFactsLocked(id)
+		}
+		// 内存后端在改动草稿、快照和当前指针前保存回执，回调失败仍保留全部原状态。
+		if err := receipt.Save(ctx, nil, cloneRelease(release), cloneFacts(facts), true); err != nil {
+			return Release{}, err
+		}
+	}
+	if rebased != nil {
+		s.saveSnapshotLocked(id, rebased)
+	}
 	s.releases[id], s.current[tenantID+":"+release.ExamID] = release, id
 	return cloneRelease(release), nil
 }

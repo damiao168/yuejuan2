@@ -23,17 +23,60 @@ func (s *PostgresStore) publish(ctx context.Context, tenantID, id, actorID strin
 		return Release{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	var replay Release
+	var found bool
+	if receipt := publicationReceiptFromContext(ctx); receipt != nil {
+		// 确认命令先锁命令身份再锁考试；兼容发布沿用同一顺序，避免同一命令跨操作重试形成锁环。
+		replay, found, err = receipt.Load(ctx, tx)
+		if err != nil {
+			return Release{}, err
+		}
+	}
 	release, err := s.releaseTx(ctx, tx, tenantID, id, true)
 	if err != nil {
 		return Release{}, err
 	}
+	if found {
+		if !validReceiptRelease(replay, release) {
+			return Release{}, ErrInvalidInput
+		}
+		// 原命令已完成时只恢复原回执；后续发布可能已推进当前指针，不能倒退。
+		if err := tx.Commit(); err != nil {
+			return Release{}, err
+		}
+		return replay, nil
+	}
 	if err := lockExam(ctx, tx, tenantID, release.ExamID); err != nil {
 		return Release{}, err
+	}
+	if initialPublicationOnly(ctx) {
+		// 兼容方准备草稿期间可能已有新版公开；考试锁内复查指针，公开请求只复用该已发布版本。
+		// 当前版本在发布后不可变，读取时不再锁发布行，避免与其他发布事务的行锁顺序相反。
+		current, err := scanRelease(tx.QueryRowContext(ctx, releaseColumns+` FROM score_release WHERE tenant_id=$1 AND exam_id=$2::uuid AND id=(
+SELECT release_id FROM score_release_current WHERE tenant_id=$1 AND exam_id=$2::uuid)`, tenantID, release.ExamID))
+		if err == nil {
+			if !validReceiptRelease(current, release) {
+				return Release{}, ErrInvalidTransition
+			}
+			if err := s.savePublicationReceipt(ctx, tx, current, false); err != nil {
+				return Release{}, err
+			}
+			if err := tx.Commit(); err != nil {
+				return Release{}, err
+			}
+			return current, nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return Release{}, err
+		}
 	}
 	if err := autoprep.LockCollection(ctx, tx, tenantID, release.ExamID); err != nil {
 		return Release{}, err
 	}
 	if release.Status == StatusPublished {
+		if err := s.savePublicationReceipt(ctx, tx, release, false); err != nil {
+			return Release{}, err
+		}
 		if err := tx.Commit(); err != nil {
 			return Release{}, err
 		}
@@ -157,9 +200,12 @@ ON CONFLICT (tenant_id, exam_id) DO UPDATE SET release_id = EXCLUDED.release_id,
 `, tenantID, release.ExamID, release.ID, now); err != nil {
 		return Release{}, err
 	}
+	release.Status, release.PublishedBy, release.PublishedAt, release.GateSnapshot, release.SupersedesReleaseID = StatusPublished, actorID, &now, gate, supersedes.String
+	if err := s.savePublicationReceipt(ctx, tx, release, true); err != nil {
+		return Release{}, err
+	}
 	if err := tx.Commit(); err != nil {
 		return Release{}, err
 	}
-	release.Status, release.PublishedBy, release.PublishedAt, release.GateSnapshot, release.SupersedesReleaseID = StatusPublished, actorID, &now, gate, supersedes.String
 	return release, nil
 }

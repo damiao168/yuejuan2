@@ -14787,7 +14787,7 @@
     "/api/v1/exams/{examId}/publish": {
       "post": {
         "operationId": "publishExamGrades",
-        "description": "Requires authentication within the configured recent-authentication window (10 minutes by default). Persist the command and original input before sending. An uncertain response must be recovered with the same actor and command; terminal or deleted targets do not discard the receipt. expected_revision remains the original revision.",
+        "description": "Compatibility adapter for immutable score releases. Uses the same publication coordinator, policy gates and frozen snapshots as /api/v1/score-releases/{id}/publish. Replays the original command without moving the current release backward. Requires authentication within the configured recent-authentication window (10 minutes by default). Persist the command and original input before sending. Recover an uncertain response with the same actor and command. Terminal or deleted targets keep their original receipt.",
         "parameters": [
           {
             "in": "path",
@@ -50941,6 +50941,10 @@
           },
           "published_at": {
             "type": "string"
+          },
+          "score_release": {
+            "$ref": "#/components/schemas/ScoreRelease",
+            "description": "兼容发布入口实际确认的不可变发布版本；历史命令回执可以缺省。"
           }
         },
         "required": [

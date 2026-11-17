@@ -72,14 +72,20 @@ func NewReleaseModule(stores ReleaseStores, dependencies ReleaseDependencies) *R
 	}
 	releaseGateService := releasegate.NewService(stores.ReleaseGate, scoreReleaseService).
 		WithRegradeBlockerReader(regradeBlocker{service: dependencies.Regrade})
+	publisher := releaseGatePublisher{coordinator: releasegate.NewPublicationCoordinator(releaseGateService, scoreReleaseService)}
+	// 新旧 HTTP 入口共享最终策略检查和不可变版本发布；旧存储不再自行公开工作表。
+	switch compatible := stores.Score.(type) {
+	case *score.PostgresStore:
+		compatible.WithPublication(scoreReleaseService, publisher)
+	case *score.MemoryStore:
+		compatible.WithPublication(scoreReleaseService, publisher, dependencies.Exams)
+	}
 	return &ReleaseModule{
 		ScoreReleaseService: scoreReleaseService,
 		ReleaseGateService:  releaseGateService,
 		ScoreHandler:        score.NewHandler(stores.Score, dependencies.Auth),
 		ScoreReleaseHandler: scorerelease.NewHandler(scoreReleaseService, dependencies.Auth).
-			WithPublicationPublisher(releaseGatePublisher{
-				coordinator: releasegate.NewPublicationCoordinator(releaseGateService, scoreReleaseService),
-			}).
+			WithPublicationPublisher(publisher).
 			WithStudentQuestionImage(dependencies.StudentQuestionImage).
 			WithStudentPaperPageImage(dependencies.StudentPaperPageImage).
 			WithHighScorePaper(highScorePaper),

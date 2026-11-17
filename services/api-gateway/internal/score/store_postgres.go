@@ -6,7 +6,8 @@ import (
 )
 
 type PostgresStore struct {
-	db *sql.DB
+	db           *sql.DB
+	publications *publicationAdapter
 }
 
 func NewPostgresStore(db *sql.DB) *PostgresStore {

@@ -70,14 +70,26 @@ test("Go coverage rejects an invalid configured executable before starting a pro
 });
 
 test("coverage ratchet checks every required package and rejects regressions", () => {
-  const report = `ok  edugrade-enterprise/services/api-gateway/internal/auth  1.2s  coverage: 57.1% of statements
-ok  edugrade-enterprise/services/api-gateway/internal/capture  1.2s  coverage: 11.3% of statements
+  const report = `ok  edugrade-enterprise/services/api-gateway/internal/auth  1.2s  coverage: 67.0% of statements
+ok  edugrade-enterprise/services/api-gateway/internal/capture  1.2s  coverage: 33.9% of statements
 `;
-  const failures = coverageFailures(parseCoverage(report), { auth: 57.1, capture: 11.4, subjective: 63.4 });
+  const failures = coverageFailures(parseCoverage(report), { auth: 67, capture: 34, subjective: 69 });
   assert.deepEqual(failures, [
-    "capture: 11.3% is below the 11.4% floor",
+    "capture: 33.9% is below the 34.0% floor",
     "subjective: no coverage result",
   ]);
+});
+
+test("each configured floor accepts its boundary and rejects a one-decimal regression", () => {
+  // 这里保护当前已取得的覆盖率；更高的阶段目标不能代替本次真实执行结果。
+  const report = (values) => Object.entries(values).map(([name, actual]) =>
+    `ok edugrade-enterprise/services/api-gateway/internal/${name} 1s coverage: ${actual.toFixed(1)}% of statements`).join("\n");
+  assert.equal(coverageRun({ status: 0, stdout: report(floors) }).status, 0);
+  for (const [name, floor] of Object.entries(floors)) {
+    const result = coverageRun({ status: 0, stdout: report({ ...floors, [name]: floor - 0.1 }) });
+    assert.equal(result.status, 1, name);
+    assert.deepEqual(result.errors, [`coverage violation: ${name}: ${(floor - 0.1).toFixed(1)}% is below the ${floor.toFixed(1)}% floor`]);
+  }
 });
 
 test("coverage parser preserves numeric, marker and line boundaries", () => {

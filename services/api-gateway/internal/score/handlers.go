@@ -159,7 +159,12 @@ func (h *Handler) PublishGrades(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	h.auditAction(r, "score.published", "exam", r.PathValue("examId"), "发布考试成绩（旧流程）")
+	if release := result.ScoreRelease; result.newlyPublished && release != nil {
+		// 兼容响应仍沿用旧 DTO，审计统一记录正式版本，不能只留下考试 ID 而失去版本关联。
+		auth.RecordAudit(r.Context(), h.audit, auth.AuditEvent{TenantID: user.TenantID, ActorID: user.ID, Action: "score_release.published", TargetType: "score_release", TargetID: release.ID,
+			AfterValue: map[string]any{"exam_id": release.ExamID, "version": release.Version, "supersedes_release_id": release.SupersedesReleaseID},
+			Reason:     "向学生端发布成绩", IPAddress: httpx.ClientIP(r), UserAgent: r.UserAgent(), RequestID: logger.RequestID(r.Context())})
+	}
 	httpx.JSON(w, http.StatusOK, result)
 }
 
@@ -242,6 +247,8 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	switch {
+	case errors.Is(err, ErrPublicationUnavailable):
+		httpx.Error(w, r, http.StatusServiceUnavailable, "score_publication_unavailable", "正式成绩发布服务未配置")
 	case errors.Is(err, ErrNotFound):
 		httpx.Error(w, r, http.StatusNotFound, "score_resource_not_found", "score resource not found")
 	case errors.Is(err, ErrInvalidInput):

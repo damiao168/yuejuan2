@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestMemoryConfirmationAndPublishBlockMatchedSubmissionWithoutAnyGrades(t *testing.T) {
+func TestMemoryConfirmationAndQualityBlockMatchedSubmissionWithoutAnyGrades(t *testing.T) {
 	store := seededScoreStore()
 	for _, student := range []string{"student-1", "student-2"} {
 		store.AddRosterStudent(RosterSeed{ExamID: "exam-1", StudentID: student})
@@ -21,12 +21,12 @@ func TestMemoryConfirmationAndPublishBlockMatchedSubmissionWithoutAnyGrades(t *t
 	if err != nil || len(grades.Grades) != 1 || grades.Grades[0].Status != "pending_confirmation" {
 		t.Fatalf("blocked confirmation changed existing grades: %#v %v", grades, err)
 	}
-	result, err := store.PublishGrades(t.Context(), tenantID, "exam-1", "manager", PublishInput{Reason: "synthetic"})
-	if !errors.Is(err, ErrQualityGateFailed) {
-		t.Fatalf("ungraded submission was published: %#v %v", result, err)
+	quality, err := store.CheckQuality(t.Context(), tenantID, "exam-1", true)
+	if err != nil || quality.Passed {
+		t.Fatalf("ungraded submission disappeared from pre-publication quality: %#v %v", quality, err)
 	}
 	codes := map[string]int{}
-	for _, issue := range result.Quality.Issues {
+	for _, issue := range quality.Issues {
 		codes[issue.Code] = issue.Count
 	}
 	if codes["missing_submission_grades"] != 1 || codes["question_coverage_incomplete"] != 1 {

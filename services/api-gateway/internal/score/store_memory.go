@@ -58,6 +58,7 @@ type RosterSubmissionSeed struct {
 }
 
 type MemoryStore struct {
+	publications      *publicationAdapter
 	receipts          commandreceipt.Memory
 	mu                sync.RWMutex
 	next              int

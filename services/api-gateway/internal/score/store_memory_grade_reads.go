@@ -64,18 +64,9 @@ func pageExamGradeList(filtered []SubmissionGrade, filter GradeListFilter) []Sub
 	return filtered
 }
 
-func (s *MemoryStore) GetStudentGrade(_ context.Context, tenantID string, studentID string, examID string) (SubmissionGrade, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for _, grade := range s.submissions {
-		if grade.ExamID == examID && grade.StudentID == studentID && grade.Status == "published" && grade.Locked {
-			out := cloneSubmissionGrade(grade)
-			out.TenantID = tenantID
-			out.Items = s.itemsForSubmissionLocked(grade.SubmissionID)
-			return out, nil
-		}
-	}
-	return SubmissionGrade{}, ErrNotFound
+// GetStudentGrade 的旧 DTO 也只投影当前正式快照，不能从工作表拼接总分和题分。
+func (s *MemoryStore) GetStudentGrade(ctx context.Context, tenantID, studentID, examID string) (SubmissionGrade, error) {
+	return s.publications.studentGrade(ctx, tenantID, studentID, examID)
 }
 
 func (s *MemoryStore) listSubmissionGradesLocked(examID string, withItems bool) []SubmissionGrade {

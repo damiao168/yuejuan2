@@ -14,6 +14,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 	"edugrade-enterprise/services/api-gateway/internal/review"
 	"edugrade-enterprise/services/api-gateway/internal/score"
+	"edugrade-enterprise/services/api-gateway/internal/scorerelease"
 	"edugrade-enterprise/services/api-gateway/internal/segment"
 	"edugrade-enterprise/services/api-gateway/internal/subjective"
 	"edugrade-enterprise/services/api-gateway/internal/submission"
@@ -40,6 +41,7 @@ func newE2EMemoryFixture(t *testing.T) *e2eMemoryFixture {
 	evidenceStore := evidence.NewMemoryStore()
 	reviewStore := review.NewMemoryStore()
 	scoreStore := score.NewMemoryStore()
+	scoreReleaseStore := scorerelease.NewMemoryStore()
 	appealStore := appealpkg.NewMemoryStore()
 	cfg := config.Config{
 		Service: config.ServiceConfig{Name: "api-gateway-e2e-test", Environment: "test", ReadinessTimeout: time.Millisecond},
@@ -68,27 +70,41 @@ func newE2EMemoryFixture(t *testing.T) *e2eMemoryFixture {
 		stores.Grading.Evidence = evidenceStore
 		stores.Grading.Review = reviewStore
 		stores.Release.Score = scoreStore
+		stores.Release.ScoreRelease = scoreReleaseStore
 		stores.Release.Appeal = appealStore
 	})
 	return &e2eMemoryFixture{
-		router:          router,
-		authStore:       authStore,
-		orgStore:        orgStore,
-		paperStore:      paperStore,
-		submissionStore: submissionStore,
-		gradingStore:    gradingStore,
-		subjectiveStore: subjectiveStore,
-		evidenceStore:   evidenceStore,
-		reviewStore:     reviewStore,
-		scoreStore:      scoreStore,
-		appealStore:     appealStore,
+		router:            router,
+		authStore:         authStore,
+		orgStore:          orgStore,
+		examStore:         examStore,
+		paperStore:        paperStore,
+		submissionStore:   submissionStore,
+		gradingStore:      gradingStore,
+		subjectiveStore:   subjectiveStore,
+		evidenceStore:     evidenceStore,
+		reviewStore:       reviewStore,
+		scoreStore:        scoreStore,
+		scoreReleaseStore: scoreReleaseStore,
+		appealStore:       appealStore,
 	}
 }
 
 func (f *e2eMemoryFixture) assertUnfinishedReviewCannotPublish(t *testing.T, adminToken string) {
 	t.Helper()
-	incompleteExamID := "synthetic-incomplete-review-exam"
+	created, err := f.examStore.CreateExam(t.Context(), auth.AccessScope{TenantID: e2eTenantID, TenantWide: true}, e2eAdminID,
+		exam.CreateInput{SchoolID: "synthetic-school", Name: "Synthetic incomplete review exam", Subject: "physics", ExamType: "quiz", TotalScore: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	incompleteExamID := created.ID
+	f.scoreStore.AddSegment(score.SegmentSeed{ExamID: incompleteExamID, SubmissionID: "incomplete-submission", StudentID: e2eStudentID, AnswerSegmentID: "incomplete-segment", QuestionID: "incomplete-question", QuestionNo: "1", MaxScore: 1})
+	f.scoreStore.AddHumanGrade(score.GradeSeed{AnswerSegmentID: "incomplete-segment", Score: 1, MaxScore: 1})
+	if _, err := f.scoreStore.FinalizeExam(t.Context(), e2eTenantID, incompleteExamID, e2eAdminID); err != nil {
+		t.Fatal(err)
+	}
 	f.scoreStore.AddReviewTask(score.TaskSeed{ExamID: incompleteExamID, Status: "assigned"})
+	syncMemoryPublicationFacts(t, f.scoreStore, f.scoreReleaseStore, e2eTenantID, incompleteExamID)
 	rec := e2eExpectStatus(t, f.router, http.MethodPost, "/api/v1/exams/"+incompleteExamID+"/publish", adminToken, `{"reason":"should fail"}`, http.StatusConflict)
 	if !strings.Contains(rec.Body.String(), "unfinished_review_tasks") {
 		t.Fatalf("publish with unfinished review should expose quality issue, got %s", rec.Body.String())
