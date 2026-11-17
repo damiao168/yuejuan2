@@ -1,10 +1,10 @@
 {
   "packages": {
-    "auth": 67,
-    "subjective": 69,
-    "modelgovernance": 63,
-    "scorerelease": 68,
-    "releasegate": 85,
-    "capture": 34
+    "auth": 72,
+    "subjective": 74,
+    "modelgovernance": 68,
+    "scorerelease": 73,
+    "releasegate": 90,
+    "capture": 40
   }
 }
