@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { getUserErrorMessage } from "../../../api/client";
 import { downloadFileBlob } from "../../../api/files";
 import type { PaperVersion } from "../../../api/papers";
-
-GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export interface PreviewState {
   sourceId?: string;
@@ -69,7 +67,12 @@ export function useTemplatePreview(selectedPaper: PaperVersion | undefined, down
         const download = await downloadSource(selectedPaper.file_asset_id);
         if (!active) return;
         if (download.contentType === "application/pdf" || selectedPaper.file.content_type === "application/pdf") {
-          const pdfDocument = await getDocument({ data: await download.blob.arrayBuffer() }).promise;
+          // 图片预览不需要 PDF 运行时；等待模块和文件加载后再确认答题卡仍是当前来源。
+          const { GlobalWorkerOptions, getDocument } = await import("pdfjs-dist");
+          const data = await download.blob.arrayBuffer();
+          if (!active) return;
+          GlobalWorkerOptions.workerSrc = pdfWorker;
+          const pdfDocument = await getDocument({ data }).promise;
           unboundPDF = pdfDocument;
           // PDF 解析可能晚于答题卡文件切换完成，过期文档必须销毁，不能再绑定给当前预览。
           if (!active) { await pdfDocument.destroy(); return; }

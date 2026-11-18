@@ -26,6 +26,7 @@ export type ViewKey =
   | "platformGettingStarted"
   | "platformModelConfig"
   | "schoolAiChat"
+  | "membership"
   | "sessions"
   | "profile"
   | "examWorkspace";
