@@ -72,8 +72,9 @@ func TestPostgresStudentReportVisibilityAndPinnedCurrentRelease(t *testing.T) {
 		`CREATE TABLE final_grade(tenant_id uuid,id uuid,answer_segment_id uuid,deleted_at timestamptz,submission_id uuid,question_id uuid,question_no text,score numeric,max_score numeric,source text,exam_id uuid,status text,created_at timestamptz)`,
 		`CREATE TABLE question(tenant_id uuid,id uuid,question_type text,knowledge_points jsonb,deleted_at timestamptz)`,
 		`CREATE TABLE answer_segment_answer(tenant_id uuid,answer_segment_id uuid,answer_payload jsonb,created_at timestamptz,deleted_at timestamptz)`,
-		`CREATE TABLE ai_grade(tenant_id uuid,id uuid,answer_segment_id uuid,suggested_score numeric,status text,created_at timestamptz,deleted_at timestamptz)`,
-		`CREATE TABLE human_grade(tenant_id uuid,id uuid,score numeric,answer_segment_id uuid,created_at timestamptz,deleted_at timestamptz)`,
+		`CREATE TABLE ai_grade(tenant_id uuid,id uuid,answer_segment_id uuid,suggested_score numeric,status text,grader_type text,mock boolean,delivery_mode text,created_at timestamptz,deleted_at timestamptz)`,
+		`CREATE TABLE human_grade(tenant_id uuid,id uuid,review_task_id uuid,score numeric,answer_segment_id uuid,created_at timestamptz,deleted_at timestamptz)`,
+		`CREATE TABLE question_grade(tenant_id uuid,answer_segment_id uuid,review_task_id uuid,source text,evidence jsonb,version integer,deleted_at timestamptz)`,
 		`CREATE TABLE submission_grade(tenant_id uuid,exam_id uuid,submission_id uuid,student_id uuid,anonymous_code text,total_score numeric,max_score numeric,status text,locked boolean,published_at timestamptz,deleted_at timestamptz)`,
 	} {
 		if _, err := db.ExecContext(ctx, ddl); err != nil {
@@ -94,12 +95,21 @@ func TestPostgresStudentReportVisibilityAndPinnedCurrentRelease(t *testing.T) {
 	exec(`INSERT INTO student VALUES($1,$2,NULL,NULL)`, tenant, student)
 	exec(`INSERT INTO question VALUES($1,$2,'short_answer','["private-knowledge"]',NULL)`, tenant, question)
 	exec(`INSERT INTO final_grade(tenant_id,id,answer_segment_id,submission_id,question_id,question_no,score,max_score,source,exam_id,status,created_at) VALUES($1,$2,$3,$4,$5,'Q1',4,5,'single_review',$6,'published',clock_timestamp())`, tenant, final, segment, submission, question, exam)
+	// 发布引用实际的人工分。后来发布没有该人工分引用时，不继承同一答题片段上的旧采纳记录。
+	suggestion, human, task := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	exec(`INSERT INTO ai_grade VALUES($1,$2,$3,4,'succeeded','llm_subjective',false,'teacher_suggestion',clock_timestamp()-interval '2 seconds',NULL)`, tenant, suggestion, segment)
+	exec(`INSERT INTO human_grade VALUES($1,$2,$3,4,$4,clock_timestamp()-interval '1 second',NULL)`, tenant, human, task, segment)
+	exec(`INSERT INTO question_grade VALUES($1,$2,$3,'human',jsonb_build_object('human_grade_id',$4::text,'ai_adoption',jsonb_build_object('ai_grade_id',$5::text,'accepted',true)),1,NULL)`, tenant, segment, task, human, suggestion)
 	for i, release := range []string{first, second} {
 		visible := i == 1
 		policy, _ := json.Marshal(map[string]bool{"show_question_scores": visible, "show_knowledge_analysis": visible, "show_feedback": visible})
 		exec(`INSERT INTO score_release(tenant_id,id,exam_id,status,visibility_policy,published_at,created_by,published_by) VALUES($1,$2,$3,'published',$4,clock_timestamp(),$1,$1)`, tenant, release, exam, policy)
 		exec(`INSERT INTO score_release_item(tenant_id,release_id,student_id,submission_id,total_score,max_score) VALUES($1,$2,$3,$4,$5,5)`, tenant, release, student, submission, 4-i)
-		exec(`INSERT INTO score_release_question VALUES($1,$2,$3,$4,$5,'Q1',$6,$7,5,'single_review',NULL,'{"feedback":"published feedback"}')`, tenant, uuid.NewString(), release, submission, question, final, 4-i)
+		var source any
+		if i == 0 {
+			source = human
+		}
+		exec(`INSERT INTO score_release_question VALUES($1,$2,$3,$4,$5,'Q1',$6,$7,5,'single_review',$8,'{"feedback":"published feedback"}')`, tenant, uuid.NewString(), release, submission, question, final, 4-i, source)
 	}
 	store := NewPostgresStore(db)
 	studentCtx := auth.WithUser(ctx, auth.User{ID: student, TenantID: tenant, Permissions: []string{"student:report:read"}, DataScope: map[string]any{"student_id": student}})
@@ -143,6 +153,15 @@ func TestPostgresStudentReportVisibilityAndPinnedCurrentRelease(t *testing.T) {
 	oldReport := buildStudentReport(pinned, student)
 	if !queryer.switched || oldReport.TotalScore != 4 || len(oldReport.Questions) != 0 || len(pinned.Grades) != 1 || pinned.Grades[0].Score != 4 {
 		t.Fatalf("mixed two releases: %+v switched=%v", oldReport, queryer.switched)
+	}
+	var quality GradingQualityReport
+	countGradeQuality(&quality, pinned.Grades)
+	if quality.AIAdoptionRate != (Metric{Available: true, Value: 1, Numerator: 1, Denominator: 1}) {
+		t.Fatalf("linked published adoption was lost: %+v", quality.AIAdoptionRate)
+	}
+	current, err := store.loadDataset(studentCtx, db, tenant, exam)
+	if err != nil || len(current.Grades) != 1 || current.Grades[0].AIAdopted != nil {
+		t.Fatalf("unrelated release reused prior adoption: %+v %v", current.Grades, err)
 	}
 	visible := request(studentCtx)
 	if visible.TotalScore != 3 || len(visible.Questions) != 1 || visible.Questions[0].Score != 3 || len(visible.KnowledgeMastery) != 1 || len(visible.TeacherFeedback) != 1 {

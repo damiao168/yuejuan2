@@ -62,11 +62,21 @@ export interface ScoreDraft {
   disputeReason: string;
   rubricSelections: Record<string, number>;
   answerText: string;
+  // 缺失或旧版 null 表示未知；明确的采纳和手工决定都必须绑定当时的任务及模型建议。
+  aiAdoption?: DraftAIAdoption | null;
+}
+
+export interface DraftAIAdoption {
+  taskId: string;
+  aiGradeId: string;
+  suggestedScore: number;
+  accepted: boolean;
 }
 
 export interface ScoreDraftChange {
   score: number | null;
   rubricSelections: Record<string, number>;
+  aiAdoption?: DraftAIAdoption | null;
 }
 
 export interface ReviewerProgress {

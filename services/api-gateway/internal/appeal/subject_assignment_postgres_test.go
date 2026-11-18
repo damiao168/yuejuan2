@@ -73,6 +73,23 @@ func TestPostgresAppealNewAssignmentsRequireExamSubjectAndTeacherRole(t *testing
 	}
 }
 
+func TestPostgresPublishedAppealRecusesOriginalArbitrationAuthor(t *testing.T) {
+	f := newAppealSubjectFixture(t)
+	arbitrator := f.actor("arbitration-author", f.school, "active", []string{"mathematics"}, "teacher")
+	independent := f.actor("independent-reviewer", f.school, "active", []string{"mathematics"}, "teacher")
+	appealID := f.appeal("published-question")
+	// 仲裁没有 human_grade。使用冻结终分上的实际提交人验证回避，任务创建人不是该条件。
+	f.exec(`INSERT INTO final_grade(id,tenant_id,exam_id,question_id,question_no,answer_segment_id,submission_id,anonymous_code,score,max_score,source,arbitration_task_id,status,locked,created_by)
+SELECT source_final_grade_id,tenant_id,exam_id,question_id,question_no,$2,submission_id,'anonymous',source_score,source_max_score,'arbitration',$3,'locked',true,$4
+FROM question_appeal WHERE id=$1`, appealID, uuid.NewString(), uuid.NewString(), arbitrator)
+	if err := f.assign("published-question", appealID, arbitrator); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("original arbitrator unexpectedly eligible: %v", err)
+	}
+	if err := f.assign("published-question", appealID, independent); err != nil {
+		t.Fatalf("independent reviewer rejected: %v", err)
+	}
+}
+
 type appealSubjectFixture struct {
 	t                        *testing.T
 	db                       *sql.DB

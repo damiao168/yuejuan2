@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { within } from "@testing-library/dom";
 import { act, useState, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -79,6 +80,46 @@ describe("整区共图独立录分", () => {
   }
   async function settle() { await act(async () => { await vi.advanceTimersByTimeAsync(1200); }); }
   async function confirm() { let result = false; await act(async () => { result = await submitRegion!(); }); return result; }
+  it("整区保存保留未改分的采纳事实，当前题和其它题手工改分都清除旧事实", async () => {
+    const withAdoption = (no: number) => {
+      const value = context(no);
+      value.draft = { id: `d${no}`, review_task_id: `t${no}`, reviewer_id: "teacher", score: 2,
+        comments: "", private_note: "", student_feedback: "", rubric_selections: [{ point_id: `p${no}`, score: 2 }], revision: 3, updated_at: "",
+        viewer_state: { scale: 1.5, grading_ai_adoption: { taskId: `t${no}`, aiGradeId: `model${no}`, suggestedScore: 2, accepted: true } } };
+      return value;
+    };
+    api.context.mockImplementation(async (id: string) => ({ context: withAdoption(Number(id.slice(1))) }));
+    await mount(withAdoption(12));
+    // 相同分数只是重存；另一行和当前行的真正改分都不能沿用曾经的采纳来源。
+    await click(14, "2分"); await click(12, "4分"); await click(13, "0分"); await settle();
+    const payload = (id: string) => api.save.mock.calls.find(([taskId]) => taskId === id)![1] as SaveReviewDraftPayload;
+    expect(payload("t14").viewer_state.grading_ai_adoption).toEqual(withAdoption(14).draft!.viewer_state.grading_ai_adoption);
+    for (const id of ["t12", "t13"]) {
+      expect(payload(id).viewer_state).not.toHaveProperty("grading_ai_adoption");
+      expect(payload(id).viewer_state.scale).toBe(1.5);
+    }
+    expect(api.submit).not.toHaveBeenCalled();
+  });
+  it("整区交分携带每题恢复的明确决定，模型换版的旧决定省略", async () => {
+    const withAdoption = (no: number) => {
+      const value = context(no);
+      value.task.grade_round = "single";
+      value.draft = { id: `d${no}`, review_task_id: `t${no}`, reviewer_id: "teacher", score: 2,
+        comments: "", private_note: "", student_feedback: "", rubric_selections: [], revision: 3, updated_at: "",
+        viewer_state: { grading_ai_adoption: { taskId: `t${no}`, aiGradeId: `model${no}`, suggestedScore: 2, accepted: no !== 13 } } };
+      value.ai_second_opinion = { available: true, score_prefill_allowed: true, presentation: "explicit_second_opinion",
+        metadata: { id: no === 14 ? "new-model14" : `model${no}`, suggested_score: 2, grader_type: "llm_subjective",
+          status: "succeeded", mock: false, delivery_mode: "teacher_suggestion" } };
+      return value;
+    };
+    api.context.mockImplementation(async (id: string) => ({ context: withAdoption(Number(id.slice(1))) }));
+    api.submit.mockImplementation(async (id: string) => ({ task: { ...withAdoption(Number(id.slice(1))).task, status: "submitted", revision: 100 } }));
+    await mount(withAdoption(12));
+    expect(await confirm()).toBe(true);
+    expect(api.submit).toHaveBeenCalledWith("t12", expect.objectContaining({ ai_adoption: { ai_grade_id: "model12", accepted: true } }));
+    expect(api.submit).toHaveBeenCalledWith("t13", expect.objectContaining({ ai_adoption: { ai_grade_id: "model13", accepted: false } }));
+    expect(api.submit.mock.calls.find(([id]) => id === "t14")![1]).not.toHaveProperty("ai_adoption");
+  });
   it("整区停止录分只保存各题草稿，重新打开仍恢复零分及其它已存输入", async () => {
     const saved = new Map<string, ReviewTaskContext["draft"]>();
     api.save.mockImplementation(async (id: string, body: SaveReviewDraftPayload) => {
@@ -210,9 +251,10 @@ describe("整区共图独立录分", () => {
       return { context: value };
     });
     await mount();
-    expect(row(13).textContent).toContain("本题已提交，得分请查看提交记录");
+    const submitted = within(row(13));
+    expect(submitted.getByRole("status").textContent).toContain("本题已提交，得分请查看提交记录");
     expect(row(13).textContent).not.toContain("未评分");
-    expect(row(13).querySelector("output")).toBeNull();
+    expect(submitted.queryByRole("status", { name: "当前得分" })).toBeNull();
     expect(row(13).querySelector("button")).toBeNull();
   });
   it.each(["student", "reviewer", "round", "exam", "group"])("拒绝混入不同%s的题目上下文", async kind => {

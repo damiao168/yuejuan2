@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setBusinessCommandScope } from "../../../../api/businessCommand";
 import { createReviewTaskContextScope, reviewTaskContextKeys } from "../../../../query/reviewTaskContext";
 import type { AiGrade, ReviewTask } from "../../../../api/review";
-import { createInitialDraft } from "../gradingWorkbench.model";
-import type { PrefetchedTaskBundle, WorkbenchContext } from "../gradingWorkbench.types";
+import { createDraftSnapshot, createInitialDraft, fallbackSnapshot } from "../gradingWorkbench.model";
+import type { PrefetchedTaskBundle, ScoreDraft, WorkbenchContext } from "../gradingWorkbench.types";
 import type { DraftConflictResolution } from "../draftConflict";
 import { useGradingReviewActions, type UseGradingReviewActionsOptions } from "./useGradingReviewActions";
 
@@ -74,7 +74,7 @@ describe("grading review submission lifecycle", () => {
 
   afterEach(async () => { await act(async () => { root.unmount(); }); });
 
-  async function mount({ nextTask = task("B"), hasMoreTasks = false, subjectCode = "chinese", suggestedText = false, imageGrade, staleImageBinding = false }: { nextTask?: ReviewTask | null; hasMoreTasks?: boolean; subjectCode?: string; suggestedText?: boolean; imageGrade?: AiGrade; staleImageBinding?: boolean } = {}) {
+  async function mount({ nextTask = task("B"), hasMoreTasks = false, subjectCode = "chinese", suggestedText = false, imageGrade, staleImageBinding = false, restoredDraft }: { nextTask?: ReviewTask | null; hasMoreTasks?: boolean; subjectCode?: string; suggestedText?: boolean; imageGrade?: AiGrade; staleImageBinding?: boolean; restoredDraft?: ScoreDraft } = {}) {
     function Harness() {
       const [selectedTaskId, setSelectedTaskId] = useState("A");
       const [currentUserId, setUser] = useState("teacher");
@@ -114,7 +114,7 @@ describe("grading review submission lifecycle", () => {
         contextRequestRef.current += 1;
         const loaded = id ? context(id) : null;
         if (loaded && imageGrade) {
-          Object.assign(loaded.task, { answer_segment_id: "segment-A", question_id: "question-A" });
+          Object.assign(loaded.task, { answer_segment_id: "segment-A", question_id: "question-A", grade_round: "single" });
           Object.assign(loaded.reviewContext, {
             question: { id: "question-A", score: 10 }, frozen_rubric: { version: "rubric-v1" },
             question_snapshot: { id: "snapshot-A", risk_tier: "R2", scoring_policy_snapshot: { mode: "AI_ASSIST" } },
@@ -125,7 +125,7 @@ describe("grading review submission lifecycle", () => {
           });
         }
         setCtx(loaded);
-        setDraft({ ...createInitialDraft(null), score: 6, comments: `${id} feedback` });
+        setDraft(restoredDraft ?? { ...createInitialDraft(null), score: 6, comments: `${id} feedback` });
         setHydrated(true);
         setSaveStatus("saved");
         lastSavedDraft.current = `${id} snapshot`;
@@ -172,6 +172,43 @@ describe("grading review submission lifecycle", () => {
     expect(current.draft.privateNote).toBe("");
     expect(current.draft.comments).toBe("A feedback");
     expect(actions).not.toHaveProperty("adoptAiFeedback");
+  });
+
+  it("采纳事实随草稿序列化和重开恢复，不能因 hook 重建而变成未采纳", async () => {
+    const model = { id: "current-model", grader_type: "llm_subjective", suggested_score: 9, max_score: 10,
+      status: "succeeded", mock: false, delivery_mode: "teacher_suggestion" } as AiGrade;
+    await mount({ imageGrade: model });
+    await act(async () => { await actions.adoptAiScore(); });
+    const saved = JSON.parse(JSON.stringify(createDraftSnapshot(current.draft, "segment", 1, 0, { x: 0, y: 0 }, true)));
+    const restored = fallbackSnapshot(saved, createInitialDraft(null))!;
+    await act(async () => { root.unmount(); });
+    root = createRoot(document.createElement("div"));
+    await mount({ imageGrade: model, restoredDraft: restored.draft });
+    mocks.submitHumanGrade.mockResolvedValueOnce({ human_grade: { id: "final", score: 9 } });
+    await act(async () => { await actions.submitGrade(); });
+    expect(mocks.submitHumanGrade.mock.calls[0][1].ai_adoption).toEqual({ ai_grade_id: model.id, accepted: true });
+  });
+
+  it.each(["unknown", "new_model", "other_task", "manual_old_model", "legacy_manual"])("%s 草稿不补造当前建议的采纳决定", async (kind) => {
+    const model = { id: "current-model", grader_type: "llm_subjective", suggested_score: 9, max_score: 10,
+      status: "succeeded", mock: false, delivery_mode: "teacher_suggestion" } as AiGrade;
+    const restoredDraft: ScoreDraft = { ...createInitialDraft(null), score: 9,
+      ...(kind === "unknown" ? {} : { aiAdoption: kind === "legacy_manual" ? null : { taskId: kind === "other_task" ? "other" : "A",
+        aiGradeId: ["new_model", "manual_old_model"].includes(kind) ? "old-model" : model.id, suggestedScore: 9, accepted: kind !== "manual_old_model" } }) };
+    await mount({ imageGrade: model, restoredDraft });
+    mocks.submitHumanGrade.mockResolvedValueOnce({ human_grade: { id: "final", score: 9 } });
+    await act(async () => { await actions.submitGrade(); });
+    expect(mocks.submitHumanGrade.mock.calls[0][1]).not.toHaveProperty("ai_adoption");
+  });
+
+  it("绑定当前建议的手工评分恢复后仍明确记录未采纳，即使最终总分与建议相同", async () => {
+    const model = { id: "current-model", grader_type: "llm_subjective", suggested_score: 9, max_score: 10,
+      status: "succeeded", mock: false, delivery_mode: "teacher_suggestion" } as AiGrade;
+    await mount({ imageGrade: model, restoredDraft: { ...createInitialDraft(null), score: 9,
+      aiAdoption: { taskId: "A", aiGradeId: model.id, suggestedScore: 9, accepted: false } } });
+    mocks.submitHumanGrade.mockResolvedValueOnce({ human_grade: { id: "final", score: 9 } });
+    await act(async () => { await actions.submitGrade(); });
+    expect(mocks.submitHumanGrade.mock.calls[0][1].ai_adoption).toEqual({ ai_grade_id: model.id, accepted: false });
   });
 
   it.each([0, 9])("当前图像数学建议 %s 分直接采纳，不再要求旧版数学工件", async score => {

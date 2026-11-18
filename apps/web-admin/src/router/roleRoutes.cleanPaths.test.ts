@@ -3,7 +3,7 @@ import roleMatrix from "../../../../contracts/authorization/role-matrix.json";
 import type { SessionUser } from "../auth/session";
 import { availableExperiences, defaultExperience, pathForExperience, type ProductExperience } from "./experience";
 import { hasPathAccess, legacyRedirectForPath } from "./navigation";
-import { createRouteRegistry, examWorkspaceSections, routeFromPath } from "./routes";
+import { createRouteRegistry, examWorkspaceSections, hasRouteAccess, routeFromPath, visibleRoutes } from "./routes";
 
 type HumanRole = "platform_admin" | "tenant_admin" | "school_admin" | "teacher" | "grader" | "arbitrator" | "auditor" | "student";
 const allExperiences: ProductExperience[] = ["admin", "teacher", "auditor", "student"];
@@ -13,7 +13,7 @@ const schoolPages = ["/question-bank", "/dashboard", "/account/profile", "/accou
 const allowedPages: Record<HumanRole, readonly string[]> = {
   platform_admin: ["/dashboard", "/account/profile", "/account/sessions", "/platform/getting-started", "/platform/schools", "/platform/model-config", "/system/models", "/system/status", "/audit"],
   tenant_admin: schoolPages,
-  school_admin: [...schoolPages, "/ai-chat"],
+  school_admin: [...schoolPages, "/ai-chat", "/membership"],
   teacher: ["/question-bank", "/dashboard", "/account/profile", "/account/sessions", "/grading", "/reports", "/appeals"],
   grader: ["/dashboard", "/account/profile", "/account/sessions", "/grading"],
   arbitrator: ["/dashboard", "/account/profile", "/account/sessions", "/arbitration"],
@@ -68,6 +68,22 @@ describe("无井号地址的完整身份边界", () => {
     }
     expect(hasPathAccess(user, "/admin/exams")).toBe(false);
     expect(hasPathAccess(user, "/admin/platform/model-config")).toBe(false);
+  });
+
+  it("会员中心只显示在学校管理员菜单，深链接也执行同一权限判断", () => {
+    const path = "/admin/membership";
+    const membership = routeFromPath(path, production);
+    for (const [roles, expected] of [
+      [["school_admin"], true], [["school_admin", "teacher"], true], [["platform_admin", "school_admin"], false],
+      [["tenant_admin", "school_admin"], false], [["teacher"], false],
+    ] satisfies [HumanRole[], boolean][]) {
+      const user = session(roles);
+      expect(hasPathAccess(user, path)).toBe(expected);
+      expect(visibleRoutes("admin").filter(route => hasRouteAccess(user, route, "admin"))).toEqual(
+        expected ? expect.arrayContaining([membership]) : expect.not.arrayContaining([membership]),
+      );
+    }
+    expect(legacyRedirectForPath("/membership", session(["school_admin"]))).toBe(path);
   });
 
   it("查询参数和编码ID在旧地址跳转及身份切换后保持完整", () => {

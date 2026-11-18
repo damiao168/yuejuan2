@@ -29,6 +29,7 @@ const PlatformSchoolsPage = lazy(() => import("../pages/PlatformSchoolsPage").th
 const PlatformGettingStartedPage = lazy(() => import("../pages/PlatformGettingStartedPage").then((module) => ({ default: module.PlatformGettingStartedPage })));
 const PlatformModelConfigPage = lazy(() => import("../pages/PlatformModelConfigPage").then((module) => ({ default: module.PlatformModelConfigPage })));
 const SchoolAIChatPage = lazy(() => import("../pages/SchoolAIChatPage").then((module) => ({ default: module.SchoolAIChatPage })));
+const SchoolMembershipPage = lazy(() => import("../pages/SchoolMembershipPage").then((module) => ({ default: module.SchoolMembershipPage })));
 const ExamWorkspacePage = lazy(() => import("../pages/ExamWorkspacePage").then((module) => ({ default: module.ExamWorkspacePage })));
 const AnswerSheetTemplatePage = lazy(() => import("../pages/AnswerSheetTemplatePage").then((module) => ({ default: module.AnswerSheetTemplatePage })));
 const ExamCapturePage = lazy(() => import("../features/capture/ExamCapturePage").then((module) => ({ default: module.ExamCapturePage })));
@@ -174,6 +175,8 @@ export function renderAppRouteContent(context: Readonly<RouteRenderingContext>):
       return <PlatformModelConfigPage />;
     case "/ai-chat":
       return <SchoolAIChatPage key={`${user.tenant}:${user.id}`} user={user} />;
+    case "/membership":
+      return <SchoolMembershipPage key={`${user.tenant}:${user.id}`} school={user.school} />;
     case "/papers":
       return <PaperRubricPage canManage={hasEveryPermission(user, ["exam:manage", "file:manage"])} canReadQuestionBank={hasEveryPermission(user,["question_bank:read"])} canImportQuestionBank={hasEveryPermission(user,["question_bank:read","question_bank:create","question_bank:edit"])} questionBankScope={`${user.tenant}:${user.id}`} canManageAssessment={adminAllows(["exam:manage"])} />;
     case "/question-bank":

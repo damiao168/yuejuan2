@@ -61,4 +61,19 @@ describe("draft conflict field resolution", () => {
     expect(merged.draft.disputeReason).toBe(local.draft.disputeReason);
     expect(merged.draft.answerText).toBe(local.draft.answerText);
   });
+
+  it("采纳事实跟随选中的分数，切换查看状态不能替换它", () => {
+    const local = snapshot("local");
+    const server = snapshot("server");
+    local.draft.aiAdoption = { taskId: "task", aiGradeId: "model", suggestedScore: 8, accepted: true };
+    server.draft.aiAdoption = { taskId: "task", aiGradeId: "model", suggestedScore: 8, accepted: false };
+    const choices = initialDraftConflictChoices("server");
+    choices.score = "local";
+    expect(mergeDraftConflict(local, server, choices).draft.aiAdoption).toEqual(local.draft.aiAdoption);
+    choices.score = "server";
+    choices.viewer = "local";
+    expect(mergeDraftConflict(local, server, choices).draft.aiAdoption).toEqual(server.draft.aiAdoption);
+    delete server.draft.aiAdoption;
+    expect(mergeDraftConflict(local, server, choices).draft.aiAdoption).toBeUndefined();
+  });
 });

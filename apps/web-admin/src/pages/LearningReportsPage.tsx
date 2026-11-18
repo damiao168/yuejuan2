@@ -396,7 +396,7 @@ export function LearningReportsPage({ canRead, canExport, initialExamId = "" }: 
                   <div>
                     <span>AI 采纳率</span>
                     <strong>{formatMetric(quality.ai_adoption_rate)}</strong>
-                    <small>{metricDetail(quality.ai_adoption_rate)}</small>
+                    <small>{quality.ai_adoption_rate.available ? `${metricDetail(quality.ai_adoption_rate)} 份已记录选择` : "暂无可核实的教师采纳记录"}</small>
                   </div>
                   <div>
                     <span>人工改分率</span>

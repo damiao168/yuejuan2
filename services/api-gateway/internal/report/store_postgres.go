@@ -215,7 +215,7 @@ SELECT released_question.submission_id::text, COALESCE(item.student_id::text, ''
   COALESCE(sc.name, ''), released_question.question_id::text, released_question.question_no, q.question_type, fg.answer_segment_id::text,
   released_question.score::float8, released_question.max_score::float8, released_question.source_type, q.knowledge_points,
   COALESCE(ans.answer_payload, '{}'::jsonb),
-  ag.suggested_score::float8, hg.score::float8,
+  ag.suggested_score::float8, hg.score::float8, adoption.accepted,
   CASE WHEN $4::boolean
     THEN NULLIF(BTRIM(released_question.student_explanation->>'feedback'), '') ELSE NULL END
 FROM score_release release
@@ -236,17 +236,31 @@ LEFT JOIN LATERAL (
   SELECT suggested_score
   FROM ai_grade
   WHERE tenant_id = fg.tenant_id AND answer_segment_id = fg.answer_segment_id AND deleted_at IS NULL AND status = 'succeeded'
+    AND grader_type = 'llm_subjective' AND NOT mock AND delivery_mode IN ('teacher_review','teacher_suggestion')
     AND created_at <= release.published_at
   ORDER BY created_at DESC, id DESC
   LIMIT 1
 ) ag ON true
 LEFT JOIN LATERAL (
-  SELECT score
+  SELECT id, review_task_id, created_at, score
   FROM human_grade
   WHERE tenant_id = released_question.tenant_id AND id = released_question.source_id
     AND released_question.source_type = 'single_review' AND deleted_at IS NULL
   LIMIT 1
 ) hg ON true
+LEFT JOIN LATERAL (
+  SELECT (fact.evidence->'ai_adoption'->'accepted') = 'true'::jsonb AS accepted
+  FROM question_grade fact
+  JOIN ai_grade suggestion ON suggestion.tenant_id = fact.tenant_id AND suggestion.answer_segment_id = fact.answer_segment_id
+    AND suggestion.id::text = fact.evidence->'ai_adoption'->>'ai_grade_id'
+    AND suggestion.deleted_at IS NULL AND suggestion.status = 'succeeded'
+    AND suggestion.grader_type = 'llm_subjective' AND NOT suggestion.mock
+    AND suggestion.delivery_mode IN ('teacher_review','teacher_suggestion') AND suggestion.created_at <= hg.created_at
+  WHERE fact.tenant_id = fg.tenant_id AND fact.answer_segment_id = fg.answer_segment_id AND fact.review_task_id = hg.review_task_id
+    AND fact.source = 'human' AND fact.deleted_at IS NULL AND fact.evidence->>'human_grade_id' = hg.id::text
+    AND jsonb_typeof(fact.evidence->'ai_adoption'->'accepted') = 'boolean'
+  ORDER BY fact.version DESC LIMIT 1
+) adoption ON true
 WHERE release.tenant_id = $1 AND release.exam_id::text = $2 AND release.id=$3::uuid AND release.status='published'
 ORDER BY released_question.question_no, released_question.id
 `
@@ -255,7 +269,7 @@ ORDER BY released_question.question_no, released_question.id
 SELECT fg.submission_id::text, COALESCE(sg.student_id::text,''), COALESCE(st.class_id::text,''),
   COALESCE(sc.name,''), fg.question_id::text, fg.question_no, question.question_type, fg.answer_segment_id::text,
   fg.score::float8, fg.max_score::float8, fg.source, question.knowledge_points,
-  COALESCE(ans.answer_payload,'{}'::jsonb), ag.suggested_score::float8, hg.score::float8, NULL::text
+  COALESCE(ans.answer_payload,'{}'::jsonb), ag.suggested_score::float8, hg.score::float8, NULL::boolean, NULL::text
 FROM final_grade fg
 JOIN submission_grade sg ON sg.tenant_id=fg.tenant_id AND sg.submission_id=fg.submission_id AND sg.deleted_at IS NULL
 LEFT JOIN student st ON st.tenant_id=sg.tenant_id AND st.id=sg.student_id AND st.deleted_at IS NULL
@@ -265,7 +279,9 @@ LEFT JOIN LATERAL (
   SELECT answer_payload FROM answer_segment_answer WHERE tenant_id=fg.tenant_id AND answer_segment_id=fg.answer_segment_id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1
 ) ans ON true
 LEFT JOIN LATERAL (
-  SELECT suggested_score FROM ai_grade WHERE tenant_id=fg.tenant_id AND answer_segment_id=fg.answer_segment_id AND deleted_at IS NULL AND status='succeeded' AND created_at<=sg.published_at ORDER BY created_at DESC,id DESC LIMIT 1
+  SELECT suggested_score FROM ai_grade WHERE tenant_id=fg.tenant_id AND answer_segment_id=fg.answer_segment_id AND deleted_at IS NULL AND status='succeeded'
+    AND grader_type='llm_subjective' AND NOT mock AND delivery_mode IN ('teacher_review','teacher_suggestion') AND created_at<=sg.published_at
+  ORDER BY created_at DESC,id DESC LIMIT 1
 ) ag ON true
 LEFT JOIN LATERAL (
   SELECT score FROM human_grade WHERE tenant_id=fg.tenant_id AND answer_segment_id=fg.answer_segment_id AND deleted_at IS NULL AND created_at<=sg.published_at ORDER BY created_at DESC,id DESC LIMIT 1
@@ -284,6 +300,7 @@ ORDER BY fg.question_no, fg.created_at DESC`
 		var knowledgeRaw []byte
 		var payloadRaw []byte
 		var aiScore sql.NullFloat64
+		var aiAdopted sql.NullBool
 		var humanScore sql.NullFloat64
 		var publishedFeedback sql.NullString
 		if err := rows.Scan(
@@ -302,6 +319,7 @@ ORDER BY fg.question_no, fg.created_at DESC`
 			&payloadRaw,
 			&aiScore,
 			&humanScore,
+			&aiAdopted,
 			&publishedFeedback,
 		); err != nil {
 			return dataset{}, err
@@ -311,6 +329,10 @@ ORDER BY fg.question_no, fg.created_at DESC`
 		if aiScore.Valid {
 			value := aiScore.Float64
 			record.AIScore = &value
+		}
+		if aiAdopted.Valid {
+			value := aiAdopted.Bool
+			record.AIAdopted = &value
 		}
 		if humanScore.Valid {
 			value := humanScore.Float64
@@ -333,22 +355,7 @@ WHERE seg.tenant_id = $1 AND sub.exam_id::text = $2 AND seg.deleted_at IS NULL`,
 	if err != nil {
 		return GradingQualityReport{}, err
 	}
-	for _, grade := range data.Grades {
-		if grade.AIScore != nil {
-			out.AIGradeCount++
-		}
-		if grade.Source == "rule_auto" {
-			out.AIAcceptedCount++
-		}
-		if grade.AIScore != nil && grade.HumanScore != nil {
-			out.HumanComparableCount++
-			if round2(*grade.AIScore) != round2(*grade.HumanScore) {
-				out.HumanModifiedCount++
-			}
-		}
-	}
-	out.AIAdoptionRate = metric(out.AIAcceptedCount, out.AIGradeCount, "no_ai_grades")
-	out.HumanModificationRate = metric(out.HumanModifiedCount, out.HumanComparableCount, "no_ai_human_comparison")
+	countGradeQuality(&out, data.Grades)
 	out.ArbitrationCount, err = scalarCount(ctx, q, `SELECT COUNT(*) FROM arbitration_task WHERE tenant_id = $1 AND exam_id::text = $2 AND deleted_at IS NULL`, tenantID, examID)
 	if err != nil {
 		return GradingQualityReport{}, err

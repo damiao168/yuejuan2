@@ -52,6 +52,7 @@ type GradeSeed struct {
 	KnowledgePoints     []string
 	AnswerPayload       map[string]any
 	AIScore             *float64
+	AIAdopted           *bool
 	HumanScore          *float64
 	AIFeedbackText      string
 	TeacherFeedbackText string
@@ -100,6 +101,7 @@ func (s *MemoryStore) AddGrade(seed GradeSeed) {
 		KnowledgePoints: append([]string(nil), seed.KnowledgePoints...),
 		AnswerPayload:   seed.AnswerPayload,
 		AIScore:         seed.AIScore,
+		AIAdopted:       seed.AIAdopted,
 		HumanScore:      seed.HumanScore,
 	}
 	if seed.AIFeedbackText != "" {
@@ -199,8 +201,6 @@ func (s *MemoryStore) qualityLocked(examID string, data dataset) GradingQualityR
 		out.TotalSegments = len(data.Grades)
 	}
 	countGradeQuality(&out, data.Grades)
-	out.AIAdoptionRate = metric(out.AIAcceptedCount, out.AIGradeCount, "no_ai_grades")
-	out.HumanModificationRate = metric(out.HumanModifiedCount, out.HumanComparableCount, "no_ai_human_comparison")
 	out.DoubleMarkSessionCount = len(s.doubleMarkDiffs)
 	if len(s.doubleMarkDiffs) == 0 {
 		out.AverageDoubleMarkDiff = Metric{Available: false, Reason: "no_double_mark_sessions"}
@@ -222,21 +222,32 @@ func (s *MemoryStore) qualityLocked(examID string, data dataset) GradingQualityR
 }
 
 func countGradeQuality(out *GradingQualityReport, grades []gradeRecord) {
-	// 沿用内存报表种子的计数口径：来源计数与 AI 分数是否存在独立，比较先保留两位小数。
+	// 采纳率只用明确记录过教师选择的真实模型样本。历史数据的空值不同于可核实的未采纳。
+	var adoptionSamples int
 	for _, grade := range grades {
-		if grade.AIScore != nil {
-			out.AIGradeCount++
+		if grade.Source == "rule_auto" || grade.AIScore == nil {
+			continue
 		}
-		if grade.Source == "rule_auto" {
-			out.AIAcceptedCount++
+		out.AIGradeCount++
+		if grade.AIAdopted != nil {
+			adoptionSamples++
+			if *grade.AIAdopted {
+				out.AIAcceptedCount++
+			}
 		}
-		if grade.AIScore != nil && grade.HumanScore != nil {
+		if grade.HumanScore != nil {
 			out.HumanComparableCount++
 			if round2(*grade.AIScore) != round2(*grade.HumanScore) {
 				out.HumanModifiedCount++
 			}
 		}
 	}
+	reason := "no_ai_grades"
+	if out.AIGradeCount > 0 {
+		reason = "no_ai_adoption_evidence"
+	}
+	out.AIAdoptionRate = metric(out.AIAcceptedCount, adoptionSamples, reason)
+	out.HumanModificationRate = metric(out.HumanModifiedCount, out.HumanComparableCount, "no_ai_human_comparison")
 }
 
 func metric(numerator int, denominator int, emptyReason string) Metric {

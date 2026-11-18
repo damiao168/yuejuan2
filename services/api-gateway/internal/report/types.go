@@ -217,6 +217,7 @@ type gradeRecord struct {
 	KnowledgePoints []string
 	AnswerPayload   map[string]any
 	AIScore         *float64
+	AIAdopted       *bool
 	HumanScore      *float64
 	AIFeedback      []FeedbackItem
 	TeacherFeedback []FeedbackItem

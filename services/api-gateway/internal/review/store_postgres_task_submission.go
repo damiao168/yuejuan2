@@ -104,13 +104,17 @@ RETURNING id::text, tenant_id::text, review_task_id::text, answer_segment_id::te
 	questionGradeID := ""
 	// 单评直接替换当前题目成绩；双评先保存各自的人工评分，等合分或仲裁后再产生当前成绩。
 	if task.GradeRound == "single" {
-		evidence, marshalErr := json.Marshal(map[string]any{
+		scoreEvidence := map[string]any{
 			"human_grade_id":    grade.ID,
 			"rubric_selections": input.RubricSelections,
 			"comments":          stringsTrim(input.Comments),
 			"student_feedback":  stringsTrim(input.StudentFeedback),
 			"reason":            stringsTrim(input.Reason),
-		})
+		}
+		if adoption := recordedAIAdoption(input, taskContext); adoption != nil {
+			scoreEvidence["ai_adoption"] = adoption
+		}
+		evidence, marshalErr := json.Marshal(scoreEvidence)
 		if marshalErr != nil {
 			return SubmitResult{}, marshalErr
 		}

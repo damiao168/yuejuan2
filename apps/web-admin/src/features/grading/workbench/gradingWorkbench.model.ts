@@ -1,6 +1,7 @@
 import { ApiClientError, getUserErrorMessage } from "../../../api/client";
 import type { RubricPoint } from "../../../api/papers";
 import type { AiGrade, ReviewDraft, ScoringRunItem } from "../../../api/review";
+import { restoreDraftAIAdoption } from "./aiAdoptionDraft";
 import type { StatusTone } from "../../../types";
 import { scoringProgressLabel, scoringReasonLabels } from "./scoringProgress";
 import type {
@@ -286,7 +287,8 @@ export function serverDraftSnapshot(initial: ScoreDraft, draft: ReviewDraft | nu
         privateNote: draft.private_note,
         studentFeedback: draft.student_feedback,
         reason: typeof viewer.grading_reason === "string" ? viewer.grading_reason : initial.reason,
-        rubricSelections: Object.fromEntries(draft.rubric_selections.map((item) => [item.point_id, item.score]))
+        rubricSelections: Object.fromEntries(draft.rubric_selections.map((item) => [item.point_id, item.score])),
+        aiAdoption: restoreDraftAIAdoption(viewer.grading_ai_adoption)
       },
       mode,
       Number.isFinite(scale) ? scale : 1,
@@ -345,6 +347,7 @@ function restoreFallbackDraft(cachedDraft: Partial<ScoreDraft>, initial: ScoreDr
     reason: typeof cachedDraft.reason === "string" ? cachedDraft.reason : initial.reason,
     disputeReason: typeof cachedDraft.disputeReason === "string" ? cachedDraft.disputeReason : initial.disputeReason,
     rubricSelections: selections,
-    answerText: typeof cachedDraft.answerText === "string" ? cachedDraft.answerText : initial.answerText
+    answerText: typeof cachedDraft.answerText === "string" ? cachedDraft.answerText : initial.answerText,
+    aiAdoption: restoreDraftAIAdoption(cachedDraft.aiAdoption)
   };
 }

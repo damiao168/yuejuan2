@@ -36,9 +36,11 @@ func TestExportLeavesUnavailableQualityMetricEmptyWithReason(t *testing.T) {
 
 // 通过公开报表和导出方法生成指标，区分人工考试的无样本与已有样本中的真实零值。
 func TestMemoryExportQualityAvailabilityMatchesSourceMetrics(t *testing.T) {
+	adopted, declined := true, false
 	for _, tc := range []struct {
 		name        string
 		aiScore     *float64
+		aiAdopted   *bool
 		source      string
 		ocrTasks    int
 		ocrFailures int
@@ -46,13 +48,15 @@ func TestMemoryExportQualityAvailabilityMatchesSourceMetrics(t *testing.T) {
 		wantOCR     string
 	}{
 		{name: "manual-without-ai-or-ocr", source: "single_review"},
-		{name: "measured-zero", aiScore: floatPointer(4), source: "single_review", ocrTasks: 4, wantAI: "0.00", wantOCR: "0.00"},
-		{name: "measured-nonzero", aiScore: floatPointer(4), source: "rule_auto", ocrTasks: 4, ocrFailures: 1, wantAI: "1.00", wantOCR: "0.25"},
+		{name: "measured-zero", aiScore: floatPointer(4), aiAdopted: &declined, source: "single_review", ocrTasks: 4, wantAI: "0.00", wantOCR: "0.00"},
+		{name: "measured-nonzero", aiScore: floatPointer(4), aiAdopted: &adopted, source: "single_review", ocrTasks: 4, ocrFailures: 1, wantAI: "1.00", wantOCR: "0.25"},
+		{name: "historic-suggestion-without-adoption-record", aiScore: floatPointer(4), source: "single_review"},
+		{name: "rule-is-not-ai", aiScore: floatPointer(4), source: "rule_auto"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			store := NewMemoryStore()
 			store.AddSubmission(SubmissionSeed{ID: "submission", ExamID: "exam", StudentID: "student", TotalScore: 4, MaxScore: 5})
-			store.AddGrade(GradeSeed{SubmissionID: "submission", StudentID: "student", QuestionID: "question", Score: 4, MaxScore: 5, Source: tc.source, AIScore: tc.aiScore})
+			store.AddGrade(GradeSeed{SubmissionID: "submission", StudentID: "student", QuestionID: "question", Score: 4, MaxScore: 5, Source: tc.source, AIScore: tc.aiScore, AIAdopted: tc.aiAdopted})
 			store.SetQuality(QualitySeed{OCRTaskCount: tc.ocrTasks, OCRFailedCount: tc.ocrFailures})
 			quality, err := store.GradingQuality(context.Background(), "tenant", "exam")
 			if err != nil {

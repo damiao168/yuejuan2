@@ -64,6 +64,26 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("batch8 queued context and restore helpers (new helpers only)", () => {
+  it.each([undefined, { taskId: "A", aiGradeId: "model", suggestedScore: 9, accepted: true }, { taskId: "A", aiGradeId: "model", suggestedScore: 9, accepted: false }])("preserves an adoption choice through saved server draft restoration (%j)", async (choice) => {
+    const options = commitFixture();
+    options.snapshotValue.draft.score = 9;
+    options.snapshotValue.draft.aiAdoption = choice;
+    options.snapshot = JSON.stringify(options.snapshotValue);
+    saveReviewDraftFallback("teacher", "A", options.snapshotValue);
+    let saved: WorkbenchContext["reviewContext"]["draft"];
+    mocks.save.mockImplementationOnce(async (_id, payload) => {
+      saved = { ...payload, id: "server", review_task_id: "A", reviewer_id: "teacher", revision: 4, updated_at: new Date().toISOString() };
+      return { draft: saved };
+    });
+    await commitWorkbenchDraft(options);
+    const loaded = context();
+    loaded.reviewContext.draft = saved!;
+    const restored = restoreWorkbenchDraft(loaded, { taskId: "A", currentUserId: "teacher", canViewOriginalImage: false, isConflicted: false });
+    expect(restored.restored.draft.score).toBe(9);
+    expect(restored.restored.draft.aiAdoption).toEqual(choice);
+    expect(mocks.save.mock.calls[0][1].viewer_state.grading_ai_adoption).toEqual(choice);
+  });
+
   it("waits for the same draft's save before invalidating and loading context", async () => {
     const pending = deferred<number>();
     const saves = new TaskDraftSaveQueue();

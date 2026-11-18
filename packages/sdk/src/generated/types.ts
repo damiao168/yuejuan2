@@ -1176,7 +1176,7 @@ export type ReviewCommandArbitrationTask = { "id": string; "tenant_id": string; 
 
 export type ReviewCommandReviewContext = { "question"?: ReviewQuestion; "rubric"?: FrozenReviewRubric; "raw_answer"?: string; "ocr_text"?: string; "ai_suggestion"?: Record<string, unknown>; };
 
-export type ReviewCommandSubmitGradeInput = { "auto_submit"?: boolean; "score": number; "rubric_selections": Array<ReviewCommandRubricSelection> | null; "comments": string; "private_note": string; "student_feedback": string; "reason": string; "expected_revision": number; "score_only"?: boolean; };
+export type ReviewCommandSubmitGradeInput = { "auto_submit"?: boolean; "score": number; "rubric_selections": Array<ReviewCommandRubricSelection> | null; "comments": string; "private_note": string; "student_feedback": string; "reason": string; "expected_revision": number; "score_only"?: boolean; "ai_adoption"?: { "ai_grade_id": string; "accepted": boolean; }; };
 
 export type ReviewCommandArbitrationSubmitResult = { "arbitration_task": ReviewCommandArbitrationTask; "final_grade": ReviewCommandFinalGrade; };
 

@@ -10,20 +10,21 @@ func TestBatch28QualityCountsKeepIndependentDenominators(t *testing.T) {
 	store := NewMemoryStore()
 	firstAI, firstHuman := 10.121, 10.124
 	secondAI, secondHuman := 10.121, 10.129
+	adopted, declined := true, false
 	for _, seed := range []GradeSeed{
 		{Source: "rule_auto"},
-		{Source: "single_review", AIScore: &firstAI, HumanScore: &firstHuman},
-		{Source: "single_review", AIScore: &secondAI, HumanScore: &secondHuman},
+		{Source: "single_review", AIScore: &firstAI, HumanScore: &firstHuman, AIAdopted: &adopted},
+		{Source: "single_review", AIScore: &secondAI, HumanScore: &secondHuman, AIAdopted: &declined},
 		{Source: "single_review", HumanScore: &firstHuman},
-		{Source: "rule_auto", AIScore: &firstAI},
+		{Source: "rule_auto", AIScore: &firstAI, AIAdopted: &adopted},
 	} {
 		store.AddGrade(seed)
 	}
 	store.SetQuality(QualitySeed{DoubleMarkDiffs: []float64{1, 2, 3}, ArbitrationCount: 2, OCRTaskCount: 4, OCRFailedCount: 1, LowConfidenceReviewCount: 3})
-	// 内存报表不校验种子来源；这里只保护旧口径，不能把 rule_auto 计数理解为真实模型采纳证明。
+	// 混入旧规则自动评分也不能改变可核实的模型采纳样本。
 	want := GradingQualityReport{
-		ExamID: "exam-a", TotalSegments: 5, AIGradeCount: 3, AIAcceptedCount: 2,
-		AIAdoptionRate:       Metric{Available: true, Value: 0.67, Numerator: 2, Denominator: 3},
+		ExamID: "exam-a", TotalSegments: 5, AIGradeCount: 2, AIAcceptedCount: 1,
+		AIAdoptionRate:       Metric{Available: true, Value: 0.5, Numerator: 1, Denominator: 2},
 		HumanComparableCount: 2, HumanModifiedCount: 1,
 		HumanModificationRate:  Metric{Available: true, Value: 0.5, Numerator: 1, Denominator: 2},
 		DoubleMarkSessionCount: 3,

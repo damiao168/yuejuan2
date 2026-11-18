@@ -51039,6 +51039,23 @@
             "type": "boolean",
             "default": false,
             "description": "Explicitly confirmed final total score without hidden per-point selections. Does not trigger submission automatically. Supplied rubric selections remain validated."
+          },
+          "ai_adoption": {
+            "type": "object",
+            "description": "本次教师提交对于有效模型建议的明确选择。省略时不计入采纳率；失效建议不影响人工分提交。",
+            "properties": {
+              "ai_grade_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "accepted": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "ai_grade_id",
+              "accepted"
+            ]
           }
         },
         "required": [

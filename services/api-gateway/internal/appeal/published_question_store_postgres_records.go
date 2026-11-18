@@ -88,13 +88,20 @@ SELECT EXISTS (
 
 func publishedQuestionSourceReviewerParticipated(ctx context.Context, tx *sql.Tx, tenantID, finalGradeID, reviewerID string) (bool, error) {
 	var participated bool
+	// 仲裁提交直接生成终分，没有 human_grade。终分创建人是冻结的实际提交者，
+	// 无需从可变的任务分派推断谁决定了被申诉的分数。
 	err := tx.QueryRowContext(ctx, `
 SELECT EXISTS (
-  SELECT 1 FROM human_grade human
-  JOIN final_grade grade
-    ON grade.tenant_id = human.tenant_id AND grade.answer_segment_id = human.answer_segment_id
-  WHERE grade.tenant_id = $1 AND grade.id = $2::uuid AND human.reviewer_id = $3::uuid
-    AND grade.deleted_at IS NULL AND human.deleted_at IS NULL
+  SELECT 1 FROM final_grade grade
+  WHERE grade.tenant_id = $1 AND grade.id = $2::uuid AND grade.deleted_at IS NULL
+    AND (
+      (grade.source = 'arbitration' AND grade.arbitration_task_id IS NOT NULL AND grade.created_by = $3::uuid)
+      OR EXISTS (
+        SELECT 1 FROM human_grade human
+        WHERE grade.tenant_id = human.tenant_id AND grade.answer_segment_id = human.answer_segment_id
+          AND human.reviewer_id = $3::uuid AND human.deleted_at IS NULL
+      )
+    )
 )
 `, tenantID, finalGradeID, reviewerID).Scan(&participated)
 	return participated, err

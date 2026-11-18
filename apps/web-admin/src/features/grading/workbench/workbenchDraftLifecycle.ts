@@ -128,7 +128,8 @@ async function persistWorkbenchDraft(options: Readonly<WorkbenchDraftCommitOptio
       comments: draft.comments,
       private_note: draft.privateNote,
       student_feedback: draft.studentFeedback,
-      viewer_state: { ...options.snapshotValue.viewer },
+      // 采纳事实与分数使用同一草稿版本保存，恢复和冲突处理时才能保留对应关系。
+      viewer_state: { ...options.snapshotValue.viewer, ...(draft.aiAdoption !== undefined ? { grading_ai_adoption: draft.aiAdoption } : {}) },
       expected_revision: expectedRevision,
       client_updated_at: new Date().toISOString()
     });

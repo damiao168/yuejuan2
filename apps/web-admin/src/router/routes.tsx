@@ -8,6 +8,7 @@ import {
   Building2,
   Cable,
   ClipboardCheck,
+  CreditCard,
   FileText,
   Gauge,
   Gavel,
@@ -70,6 +71,11 @@ const productionRouteDefinitions: AppRoute[] = [
     key: "schoolAiChat", path: "/ai-chat", title: "学校 AI 助手", group: "工作台", icon: <MessageCircle size={18} />, permissions: [],
     allowedRoles: ["school_admin"], workspaces: ["school_admin"], mock: false, productionReady: true,
     experiences: { admin: { title: "学校 AI 助手", group: "工作台" } }
+  },
+  {
+    key: "membership", path: "/membership", title: "会员中心", group: "设置", icon: <CreditCard size={18} />, permissions: [],
+    allowedRoles: ["school_admin"], excludedRoles: ["platform_admin"], workspaces: ["school_admin"], mock: false, productionReady: true,
+    experiences: { admin: { title: "会员中心", group: "设置" } }
   },
   {
     key: "profile", path: "/account/profile", title: "个人信息与账户安全", group: "设置", icon: <UserCog size={18} />, permissions: [],

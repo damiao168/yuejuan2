@@ -1,0 +1,119 @@
+.school-membership {
+  display: grid;
+  gap: 32px;
+  min-width: 0;
+  max-width: 1100px;
+  margin-inline: auto;
+  padding-bottom: 24px;
+}
+.school-membership__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.school-membership__heading h1 {
+  margin: 0 0 5px;
+  font-size: var(--eg-font-title);
+  line-height: 1.25;
+}
+.school-membership__heading p, .school-membership__section-heading p, .school-membership__feedback {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+.school-membership__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.school-membership__feedback {
+  margin-top: -20px;
+}
+.school-membership__section-heading {
+  margin-bottom: 14px;
+}
+.school-membership__section-heading h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+.school-membership__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.school-membership__table-wrap:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.school-membership__table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: start;
+}
+.school-membership__table th, .school-membership__table td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.45;
+}
+.school-membership__table thead th {
+  background: var(--surface-soft);
+}
+.school-membership__table :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  width: 126px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  text-align: start;
+}
+.school-membership__table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.school-membership__table thead strong {
+  display: block;
+  font-size: 16px;
+}
+.school-membership__table span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+.school-membership__price {
+  font-size: clamp(18px, 2.4vw, 26px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.school-membership__rules dl {
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+.school-membership__rules dl > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 14px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.55;
+}
+.school-membership__rules dt {
+  font-weight: 600;
+}
+.school-membership__rules dd {
+  margin: 0;
+}
+@media (max-width: 600px) {
+  .school-membership { gap: 25px; }
+  .school-membership__table :is(th, td):first-child { width: 102px; }
+  .school-membership__table th, .school-membership__table td { padding: 11px; }
+  .school-membership__rules dl > div { grid-template-columns: 1fr; gap: 3px; }
+}

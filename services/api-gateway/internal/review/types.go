@@ -124,6 +124,7 @@ type SubmitGradeInput struct {
 	AutoSubmit bool `json:"auto_submit,omitempty"`
 	// ScoreOnly 由教师显式确认总分；不触发自动交分，也不改变标记的提交门禁。
 	ScoreOnly        bool              `json:"score_only,omitempty"`
+	AIAdoption       *AIAdoption       `json:"ai_adoption,omitempty"`
 	Score            float64           `json:"score"`
 	RubricSelections []RubricSelection `json:"rubric_selections"`
 	Comments         string            `json:"comments"`
@@ -131,6 +132,12 @@ type SubmitGradeInput struct {
 	StudentFeedback  string            `json:"student_feedback"`
 	Reason           string            `json:"reason"`
 	ExpectedRevision int64             `json:"expected_revision"`
+}
+
+// AIAdoption 记录教师对特定模型建议的选择。省略表示旧客户端或没有可采纳建议。
+type AIAdoption struct {
+	AIGradeID string `json:"ai_grade_id"`
+	Accepted  bool   `json:"accepted"`
 }
 
 type ReturnTaskInput struct {

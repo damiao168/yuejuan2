@@ -14,6 +14,7 @@ import { isReviewTaskContextScopeCurrent, reviewTaskContextKeys } from "../../..
 import type { ScoreDraft } from "../gradingWorkbench.types";
 import { mathSuggestionState } from "../mathWorkbenchEvidence";
 import { aiPointAdoption } from "../aiAdoption";
+import { submittedDraftAIAdoption } from "../aiAdoptionDraft";
 import { imageSuggestionState, isImageWorkbenchGrade } from "../workbenchReviewState";
 
 export function useGradingReviewActions({
@@ -99,9 +100,13 @@ export function useGradingReviewActions({
       async () => {
         if (!isCurrentSession()) return;
         const submittedTaskId = ctx.task.id;
+        const modelSuggestion = ctx.task.grade_round === "single" && canAdoptAiScore && selectedGrade?.grader_type === "llm_subjective"
+          && selectedGrade.status === "succeeded" && !selectedGrade.mock && selectedGrade.delivery_mode !== "shadow_only" ? selectedGrade : undefined;
+        const aiAdoption = modelSuggestion ? submittedDraftAIAdoption(draft, submittedTaskId, modelSuggestion) : undefined;
         // 此入口由教师确认最终总分；不伪造采分点，也不再以自动提交绕过显式确认。
         const result = await submitHumanGrade(submittedTaskId, {
           score_only: true,
+          ...(aiAdoption ? { ai_adoption: aiAdoption } : {}),
           expected_revision: ctx.reviewContext.expected_revision,
           score,
           rubric_selections: [],
@@ -173,6 +178,7 @@ export function useGradingReviewActions({
 
   // 只同步填入分数草稿；数学路径必须先完成证据和本地评分快照核对。
   const applyAiScore = (grade: AiGrade) => {
+    if (!ctx) return;
     scoreShortcuts.rememberCurrent();
     const selections = aiPointAdoption(grade, rubricPoints, ctx?.question?.rubric?.version);
     // 采纳只更新分数与评分点；历史评语字段按原值保留，不能因入口删除而覆盖存量记录。
@@ -183,7 +189,8 @@ export function useGradingReviewActions({
       } else if (rubricPoints.length) {
         adoption = { reason: `教师采用 AI 总分建议 ${grade.suggested_score} 分；未自动匹配冻结评分点。` };
       }
-      return { ...current, score: grade.suggested_score, ...adoption };
+      return { ...current, score: grade.suggested_score, ...adoption,
+        aiAdoption: { taskId: ctx.task.id, aiGradeId: grade.id, suggestedScore: grade.suggested_score, accepted: true } };
     });
     notify.info(`已采纳 AI 建议 ${grade.suggested_score} 分`);
   };

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import type { ScoreDraft, ScoreDraftChange } from "../gradingWorkbench.types";
+import type { DraftAIAdoption, ScoreDraft, ScoreDraftChange } from "../gradingWorkbench.types";
 
 interface RubricShortcutPoint {
   id: string;
@@ -11,9 +11,10 @@ interface UseGradingScoreShortcutsOptions {
   setDraft: Dispatch<SetStateAction<ScoreDraft>>;
   rubricPoints: RubricShortcutPoint[];
   onInfo: (message: string) => void;
+  manualAdoption?: DraftAIAdoption;
 }
 
-export function useGradingScoreShortcuts({ draft, setDraft, rubricPoints, onInfo }: UseGradingScoreShortcutsOptions) {
+export function useGradingScoreShortcuts({ draft, setDraft, rubricPoints, onInfo, manualAdoption }: UseGradingScoreShortcutsOptions) {
   const lastChange = useRef<ScoreDraftChange | null>(null);
   const currentDraft = useRef(draft);
   currentDraft.current = draft;
@@ -21,7 +22,7 @@ export function useGradingScoreShortcuts({ draft, setDraft, rubricPoints, onInfo
   const [canUndo, setCanUndo] = useState(false);
 
   const rememberCurrent = useCallback(() => {
-    lastChange.current = { score: currentDraft.current.score, rubricSelections: { ...currentDraft.current.rubricSelections } };
+    lastChange.current = { score: currentDraft.current.score, rubricSelections: { ...currentDraft.current.rubricSelections }, aiAdoption: currentDraft.current.aiAdoption };
     setCanUndo(true);
   }, []);
 
@@ -32,12 +33,16 @@ export function useGradingScoreShortcuts({ draft, setDraft, rubricPoints, onInfo
 
   const updateDraft = useCallback<Dispatch<SetStateAction<ScoreDraft>>>((update) => {
     const previous = currentDraft.current;
-    const next = typeof update === "function" ? update(previous) : update;
+    let next = typeof update === "function" ? update(previous) : update;
     // 直接填分和快捷评分共用撤销记录；只改评语时不能覆盖上一笔可撤销的分数。
-    if (next.score !== previous.score || JSON.stringify(next.rubricSelections) !== JSON.stringify(previous.rubricSelections)) rememberCurrent();
+    if (next.score !== previous.score || JSON.stringify(next.rubricSelections) !== JSON.stringify(previous.rubricSelections)) {
+      rememberCurrent();
+      // 手动决定只属于当时可采纳的建议；未显示有效建议时保持未知，不能归给后来生成的模型结果。
+      next = { ...next, aiAdoption: manualAdoption };
+    }
     currentDraft.current = next;
     setDraft(next);
-  }, [rememberCurrent, setDraft]);
+  }, [manualAdoption, rememberCurrent, setDraft]);
 
   const setScore = useCallback((score: number) => {
     updateDraft((current) => ({ ...current, score }));

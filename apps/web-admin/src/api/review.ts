@@ -26,6 +26,7 @@ export interface RubricSelection {
 export interface SubmitHumanGradePayload {
   auto_submit?: boolean;
   score_only?: boolean;
+  ai_adoption?: { ai_grade_id: string; accepted: boolean };
   expected_revision: number;
   score: number;
   rubric_selections: RubricSelection[];

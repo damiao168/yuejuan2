@@ -50,7 +50,7 @@ func TestReportsUsePublishedGradesForStudentClassQuestionAndQuality(t *testing.T
 	if err != nil {
 		t.Fatalf("quality: %v", err)
 	}
-	if !quality.AIAdoptionRate.Available || quality.AIAdoptionRate.Value != 0.75 || !quality.OCRFailureRate.Available || quality.OCRFailureRate.Value != 0.25 {
+	if quality.AIAdoptionRate.Available || quality.AIAdoptionRate.Reason != "no_ai_adoption_evidence" || quality.AIAcceptedCount != 0 || !quality.OCRFailureRate.Available || quality.OCRFailureRate.Value != 0.25 {
 		t.Fatalf("quality metrics mismatch: %#v", quality)
 	}
 }

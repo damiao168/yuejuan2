@@ -44,6 +44,7 @@ import { ReviewBookmarkControls, ReviewBookmarksDrawer } from "./components/Revi
 import { TaskContentContainer } from "./components/WorkbenchContainers";
 import { FrozenQuestionReference, type FrozenReferenceTab } from "./components/FrozenQuestionReference";
 import { useLiveScoreDraft } from "./hooks/useLiveScoreDraft";
+import { manualDraftAIAdoption } from "./aiAdoptionDraft";
 import { ReviewStatisticsPanel } from "./components/ReviewStatisticsPanel";
 
 export interface GradingWorkbenchProps {
@@ -169,7 +170,8 @@ export function GradingWorkbench({ canWork, canManageTasks, canViewOriginalImage
   useEffect(() => { setMathRequestNotice(""); setMathSelection(null); setMathRequesting(false); setReferenceTab(null); }, [selectedTaskId]);
   const maxScore = ctx?.question?.score ?? selectedGrade?.max_score ?? 0;
   const rubricPoints = ctx?.question?.rubric?.points ?? [];
-  const scoreShortcuts = useGradingScoreShortcuts({ draft, setDraft: setEditingDraft, rubricPoints: [], onInfo: (text) => message.info(text) });
+  const scoreShortcuts = useGradingScoreShortcuts({ draft, setDraft: setEditingDraft, rubricPoints: [], onInfo: (text) => message.info(text),
+    manualAdoption: ctx?.task.grade_round === "single" && canAdoptAiScore ? manualDraftAIAdoption(ctx.task.id, selectedGrade) : undefined });
   const resetScoreShortcuts = scoreShortcuts.reset;
   const { ownsSelectedTask, canEditDraft, pendingGradeSubmission, canSubmit } = reviewDraftState({
     ctx, currentUserId, canWork, hasSession, resolvingConflict, hasConflict: Boolean(draftConflict),

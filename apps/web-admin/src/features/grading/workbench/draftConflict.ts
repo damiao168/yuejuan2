@@ -43,6 +43,8 @@ export function mergeDraftConflict(
       disputeReason: local.draft.disputeReason,
       answerText: local.draft.answerText,
       score: choices.score === "local" ? local.draft.score : server.draft.score,
+      // 采纳事实属于最终分的来源，不能从另一个窗口或所选查看状态带入。
+      aiAdoption: choices.score === "local" ? local.draft.aiAdoption : server.draft.aiAdoption,
       rubricSelections: choices.rubricSelections === "local" ? local.draft.rubricSelections : server.draft.rubricSelections,
       comments: choices.comments === "local" ? local.draft.comments : server.draft.comments,
       studentFeedback: choices.studentFeedback === "local" ? local.draft.studentFeedback : server.draft.studentFeedback,
