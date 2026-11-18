@@ -59,15 +59,15 @@
         },
         {
           "id": "idem",
-          "label": "requireAuth中的幂等收据\n缓存key含tenant+actor+route+指纹\n命中时直接返回旧响应\nP1：内层权限/资源检查未执行",
-          "x": 948,
-          "y": 679,
-          "w": 456,
-          "h": 111,
-          "status": "issue",
+          "label": "授权后处理命令回执\n只用于命令；绑定当前角色、权限、数据及组织范围和资源授权。",
+          "x": 1020,
+          "y": 656,
+          "w": 312,
+          "h": 157,
+          "status": "infra",
           "kind": "box",
-          "evidence": "services/api-gateway/internal/server/router_guards.go:98;services/api-gateway/internal/idempotency/middleware.go:144",
-          "display_label": "通用收据重放",
+          "evidence": "services/api-gateway/internal/server/router_guards.go:113;services/api-gateway/internal/idempotency/middleware.go:168",
+          "display_label": "命令回执\n绑定当前授权",
           "show_evidence": false,
           "title_font_size": 72,
           "body_font_size": 32,
@@ -76,32 +76,32 @@
         },
         {
           "id": "resource",
-          "label": "资源边界 + Permission\n学校、班级、考试、学生、分派任务\n平台角色仍受保留tenant校验\n新命令继续经过业务Store scope",
-          "x": 1668,
-          "y": 686,
-          "w": 577,
-          "h": 98,
+          "label": "资源与业务权限\n校验学校、班级、考试、学生及分派任务。范围变化后不返回原回执。",
+          "x": 1692,
+          "y": 679,
+          "w": 528,
+          "h": 111,
           "status": "implemented",
           "kind": "box",
-          "evidence": "services/api-gateway/internal/auth/resource_scope.go:37;services/api-gateway/internal/server/router_guards.go:130",
-          "display_label": "资源范围 / 业务权限",
+          "evidence": "services/api-gateway/internal/auth/resource_scope.go:195;services/api-gateway/internal/server/router_guards.go:141",
+          "display_label": "资源与业务权限",
           "show_evidence": false,
-          "title_font_size": 61,
+          "title_font_size": 72,
           "body_font_size": 32,
           "title_single_line": true,
           "text_align": "center"
         },
         {
           "id": "recent",
-          "label": "受保护关键guard顺序\nauth → resource → permission → recentAuth\n→ idempotency → handler\n导出/关键命令会在缓存返回前再次检查",
-          "x": 382,
-          "y": 1085,
-          "w": 380,
-          "h": 157,
+          "label": "关键操作近期认证\n认证、资源、权限与近期认证先于重放；适用于发布等受保护命令。",
+          "x": 272,
+          "y": 1108,
+          "w": 600,
+          "h": 111,
           "status": "implemented",
           "kind": "box",
-          "evidence": "services/api-gateway/internal/server/router_guards.go:116;services/api-gateway/internal/server/recent_auth_test.go:67",
-          "display_label": "关键操作\n授权 → 近期认证 → 重放",
+          "evidence": "services/api-gateway/internal/server/router_guards.go:145",
+          "display_label": "关键操作近期认证",
           "show_evidence": false,
           "title_font_size": 72,
           "body_font_size": 32,
@@ -144,15 +144,15 @@
         },
         {
           "id": "boundary",
-          "label": "审计边界\n身份仍始终校验；权限变更会废止旧会话\n同actor重新登录、scope仍有效后才可能旧键重放\n不表示重放会再次执行写操作\nDB复合租户FK与快照触发器缺口见审查报告",
-          "x": 1318,
+          "label": "学校与发布约束\n考试、场次和学籍父引用使用同范围外键；已发布明细由触发器保护。",
+          "x": 1570,
           "y": 1482,
-          "w": 888,
+          "w": 384,
           "h": 157,
-          "status": "partial",
+          "status": "infra",
           "kind": "note",
-          "evidence": "services/api-gateway/internal/auth/managed_access_store.go:154;docs/architecture/evidence/database-audit.md",
-          "display_label": "旧键：同操作者有效新会话\n收据命中可能跳过当前业务授权",
+          "evidence": "services/api-gateway/migrations/000231_exam_enrollment_scope_foreign_keys.sql;services/api-gateway/migrations/000230_score_release_snapshot_immutability.sql",
+          "display_label": "数据库约束\n学校范围与发布快照",
           "show_evidence": false,
           "title_font_size": 72,
           "body_font_size": 32,
@@ -193,15 +193,41 @@
         },
         {
           "source": "auth",
-          "target": "idem",
-          "label": "requireAuth路线",
-          "display_label": "requireAuth路线"
+          "target": "resource",
+          "label": "读取当前范围",
+          "display_label": "读取当前范围",
+          "exitX": 1,
+          "exitY": 0.25,
+          "entryX": 0,
+          "entryY": 0.25,
+          "points": [
+            [
+              656,
+              706.75
+            ],
+            [
+              1004,
+              706.75
+            ],
+            [
+              1004,
+              636
+            ],
+            [
+              1672,
+              636
+            ],
+            [
+              1672,
+              706.75
+            ]
+          ]
         },
         {
-          "source": "idem",
-          "target": "resource",
-          "label": "只有新执行时",
-          "display_label": "只有新执行时"
+          "source": "resource",
+          "target": "idem",
+          "label": "授权后",
+          "display_label": "授权后"
         },
         {
           "source": "auth",
@@ -256,7 +282,7 @@
       ],
       "width": 2340,
       "height": 1885,
-      "note": "当前工作区实际实现 · 2026-10-10 · 箭头表示调用／依赖方向；完整出处见节点属性与provenance目录",
+      "note": "工作区实现复核 · 2026-11-13 · 箭头表示调用／依赖方向；完整出处见节点属性与provenance目录",
       "display_note": "",
       "typography_layout_base": {
         "width": 1800,
@@ -484,7 +510,7 @@
         },
         {
           "id": "protect",
-          "label": "HTTP与审计控制\nCSRF、CORS、body limit、安全头\nRedis登录失败限流、MFA/step-up\n日志、指标、显式审计写入\n真实.env、口令、API Key未写入文档",
+          "label": "HTTP与审计控制\nCSRF、CORS、body limit、安全头\nRedis登录失败限流、近期认证\n日志、指标、显式审计写入\n真实.env、口令、API Key未写入文档",
           "x": 1420,
           "y": 1277,
           "w": 645,
@@ -558,7 +584,7 @@
       ],
       "width": 2340,
       "height": 1677,
-      "note": "当前工作区实际实现 · 2026-10-10 · 箭头表示调用／依赖方向；完整出处见节点属性与provenance目录",
+      "note": "工作区实现复核 · 2026-11-13 · 箭头表示调用／依赖方向；完整出处见节点属性与provenance目录",
       "display_note": "",
       "typography_layout_base": {
         "width": 1800,

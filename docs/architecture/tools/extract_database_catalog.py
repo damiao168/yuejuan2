@@ -113,12 +113,18 @@ for path in files:
     for m in re.finditer(r'\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(\w+)\s+',matchsql,re.I):events.append((m.start(),'alter',m[1],sql[m.end():semicolon(sql,m.end())],m.end()))
     for m in re.finditer(r'\bCREATE\s+(UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s+ON\s+(\w+)\s*',matchsql,re.I):events.append((m.start(),'index',m[3],sql[m.start():semicolon(sql,m.end())],m.end()))
     for m in re.finditer(r'\bDROP\s+INDEX\s+(?:IF\s+EXISTS\s+)?(\w+)',matchsql,re.I):events.append((m.start(),'dropindex',m[1],'',m.end()))
+    for m in re.finditer(r'\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?(\w+)\s*(?:CASCADE|RESTRICT)?\s*;',matchsql,re.I):
+        events.append((m.start(),'droptable',m[1],'',m.end()))
     for m in re.finditer(r"(?:PERFORM\s+)?pg_temp\.ensure_tenant_identity\('([^']+)',\s*'([^']+)'\)",sql,re.I):events.append((m.start(),'dynunique',m[1],m[2],m.start()))
     for m in re.finditer(r"(?:PERFORM\s+)?pg_temp\.ensure_tenant_fk\('([^']+)',\s*'([^']+)',\s*'([^']+)',\s*'([^']+)'\)",sql,re.I):events.append((m.start(),'dynfk',m[1],(m[2],m[3],m[4]),m.start()))
     for pos,kind,name,body,off in sorted(events):
         ev=loc(path,raw,pos)
         if kind=='dropindex':
             for t in tables.values():t['indexes'].pop(name,None)
+            continue
+        if kind=='droptable':
+            # 历史迁移保留创建记录，当前目录与 ER 图只列仍存在的表。
+            tables.pop(name,None)
             continue
         if kind=='create':
             t={'name':name,'database':'SQLite' if path.suffix=='.rs' else 'PostgreSQL','columns':{},'constraints':{},'indexes':{},'history':[], 'rls':False,'create_evidence':ev}
@@ -140,6 +146,8 @@ for path in files:
                 if a!=action:constraint(name,a,pe);continue
                 m=re.match(r'DROP\s+CONSTRAINT\s+(?:IF\s+EXISTS\s+)?(\w+)',action,re.I)
                 if m:tables[name]['constraints'].pop(m[1],None);continue
+                m=re.match(r'DROP\s+COLUMN\s+(?:IF\s+EXISTS\s+)?(\w+)',action,re.I)
+                if m:tables[name]['columns'].pop(m[1],None);continue
                 m=re.match(r'ALTER\s+COLUMN\s+(\w+)\s+TYPE\s+(.*)',action,re.I|re.S)
                 if m and m[1] in tables[name]['columns']:tables[name]['columns'][m[1]]['type']=m[2].strip();tables[name]['columns'][m[1]]['type_evidence']=pe;continue
                 m=re.match(r'ALTER\s+COLUMN\s+(\w+)\s+(SET|DROP)\s+NOT\s+NULL',action,re.I)

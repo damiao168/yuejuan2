@@ -13,7 +13,7 @@ for position,entry in enumerate(manifest):
   manifest[position]=dict(entry,read_status='not_manually_reviewed',analysis_status='pending')
 groups=[
  ('auth','认证与RBAC','tenant app_user role permission user_role role_permission auth_session audit_log'),
- ('identity','身份激活、风险与MFA','auth_activation auth_recovery auth_trusted_device auth_risk_event auth_totp auth_mfa_recovery_code auth_mfa_challenge auth_security_notification_intent wechat_identity auth_wechat_login_challenge'),
+ ('identity','身份激活、风险与近期认证','auth_activation auth_recovery auth_trusted_device auth_risk_event wechat_identity auth_wechat_login_challenge'),
  ('org','组织、学籍与学校','school grade school_class student teacher_class academic_year grade_cohort student_enrollment'),
  ('exam','整场考试、学科与冻结名册','exam_session exam exam_class exam_candidate_snapshot exam_blueprint_section exam_template exam_template_subject exam_template_section exam_student_attendance exam_readiness_snapshot'),
  ('paper','试卷、题目、答案与评分细则','exam_paper question question_answer_key rubric_version question_rubric question_solution'),
@@ -38,6 +38,9 @@ groups=[
  ('bank','题库内容版本、ACL与发布','question_bank question_bank_acl question_bank_item question_bank_item_version question_bank_review question_bank_answer_version question_bank_rubric_version question_bank_item_asset'),
  ('bankmeta','题库模板、元数据、分组与导入','question_bank_rubric_template question_bank_rubric_template_version question_bank_metadata_schema question_bank_item_metadata question_bank_group question_bank_group_member question_bank_group_acl question_bank_import'),
  ('reliability','文件生命周期、审计命令与迁移','file_asset file_reconciliation_run file_reconciliation_finding event_outbox idempotency_record business_command_receipt exam_management_command exam_archive_guarded_table schema_migration'),
+ ('template-materials','模板库与评分资料','exam_answer_sheet_template_binding_revision answer_sheet_template_library answer_sheet_template_library_instance question_rubric_draft_job question_reference_manifest question_reference_manifest_item subjective_request_material_receipt question_bank_reference_grant'),
+ ('grading-operations','评分计划、作业与人员协作','scoring_ai_trial answer_input_version scoring_run_item exam_grading_ai_plan review_bookmark private_opinion_draft question_bank_handoff question_bank_handoff_event school_calibration_template gold_quality_image_pool'),
+ ('current-operations','采集收尾、模型选择与审计','capture_collection capture_collection_completion tenant_document_model_selection tenant_answer_sheet_model_selection tenant_chat_model_access tenant_grading_model_selection audit_log_scope'),
  ('sqlite','桌面离线SQLite与本地关系','local_asset scan_batch_local upload_session upload_chunk local_asset_ingest local_asset_chunk sync_event draft')]
 seen=set()
 for gid,title,names in groups:
@@ -122,7 +125,7 @@ def edge(parent,child,fk,label_override=None):
 pages=[]
 # 全局入口只展示核心主干。参考页和完整字段目录承接全部表。
 gnames=['school','exam','exam_paper','question','student','submission','submission_page','answer_segment','rubric_version','scoring_run','question_grade','review_task','subjective_grading_panel','subjective_grading_run','ai_grade','human_grade','final_grade','score_release','score_release_item','score_release_question']
-gpage={'id':'global','title':'数据库全局：核心实体与历史事实','width':2300,'height':2050,'note':'PG 198表 / 桌面SQLite 8表；核心主干仅绘精选FK。其余表见后续27业务域页，完整字段和全部FK见database-catalog.json。未连接部署数据库、未执行迁移。','nodes':[],'edges':[]}
+gpage={'id':'global','title':'数据库全局：核心实体与历史事实','width':2300,'height':2050,'note':f"PG {c['summary']['PostgreSQL']['tables']} 表 / 桌面 SQLite {c['summary']['SQLite']['tables']} 表。核心主干绘精选 FK，字段和约束见 database-catalog.json。目录来自迁移源码。",'nodes':[],'edges':[]}
 for i,n in enumerate(gnames):gpage['nodes'].append(node(n,55+(i%4)*570,150+(i//4)*365,485,300))
 for p,ch in [('school','exam'),('exam','exam_paper'),('exam','submission'),('exam','score_release'),('exam_paper','question'),('student','submission'),('submission','submission_page'),('submission_page','answer_segment'),('question','answer_segment'),('question','rubric_version'),('answer_segment','question_grade'),('scoring_run','question_grade'),('answer_segment','review_task'),('subjective_grading_panel','subjective_grading_run'),('subjective_grading_run','ai_grade'),('review_task','human_grade'),('human_grade','final_grade'),('final_grade','score_release_question'),('score_release','score_release_item'),('score_release','score_release_question')]:
  fk=choose_fk(p,ch)

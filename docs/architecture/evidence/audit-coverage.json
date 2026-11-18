@@ -4,15 +4,15 @@
   "protected_counts_as_review": false,
   "inventory_source": {
     "file": "docs/architecture/evidence/file-inventory.json",
-    "sha256": "1a20a86c1a474129d0b14dc7ecfe83c43853cbfc5ac8463d5b0266ff83f8cfa3"
+    "sha256": "7259197b0434846c97cbec7b3823733afcaf6a81a5bd0d85b67fa0e601fd702c"
   },
   "original_files": 3396,
-  "reviewed": 181,
-  "pending": 3215,
+  "reviewed": 99,
+  "pending": 3297,
   "read_status_counts": {
-    "not_manually_reviewed": 3151,
-    "complete": 181,
-    "partial": 64
+    "not_manually_reviewed": 3285,
+    "complete": 99,
+    "partial": 12
   },
   "handling_counts": {
     "read_only": 2584,
@@ -21,45 +21,60 @@
   },
   "source_manifests": [
     {
+      "file": "docs/architecture/evidence/architecture-markdown-reviewed-files.json",
+      "sha256": "218da185529fda5f2a992fb373a5db34db1dd4a5a9e8072ac7edddb11b194ff0",
+      "records": 30
+    },
+    {
       "file": "docs/architecture/evidence/current-desktop-reviewed-files.json",
       "sha256": "c74404799444a1b1b515739fbf596e02565092950869526a68074ca55d0d024d",
       "records": 1
     },
     {
       "file": "docs/architecture/evidence/database-reviewed-files.json",
-      "sha256": "7e412a248bedd9e99fb8e297f7038c07cf9a0c5931e918eb5a04caa0a57fe8e4",
+      "sha256": "cde0ff5803126a9490404b50615384edef78358505ec63db8ac238698013744f",
       "records": 336
     },
     {
       "file": "docs/architecture/evidence/final-reviewed-files.json",
-      "sha256": "8b579363baff4d13dbcf9e71a8c01294acde1f3cc40fe001e0f268eaab8c38c8",
+      "sha256": "139be09315c50550d4e437c5858d1c7603965df816e630d8a6b2e4f5e2aed5ed",
       "records": 10
     },
     {
       "file": "docs/architecture/evidence/frontend-reviewed-files.json",
-      "sha256": "fa4909d2af6f2793eb65eee2b3d3cef9feb07a1f2bec15bfcab1acedfc7f93ca",
+      "sha256": "924e0310d0ba71793ead78873291e36928316bddc84e60e5e84abbe77a859a6b",
       "records": 944
     },
     {
       "file": "docs/architecture/evidence/late-current-reviewed-files.json",
-      "sha256": "d7fe78d0d252276d88be08dfd9b3707226bdd7335dba237861772f0a43250b39",
+      "sha256": "5cb4bb1595d7683a3ebea143d6f4155962ff698a0fea5f8fc5782d2307874a51",
       "records": 8
     },
     {
       "file": "docs/architecture/evidence/pipeline-reviewed-files.json",
-      "sha256": "202ee36f34020edc25445c0f961f99133dd6b56e41d790bd249e9c7e1eefbb0d",
+      "sha256": "d38dee7a62b2fbd11255b0040574bbd3fc01920ac73dbae4d7948c4b1ece346f",
       "records": 581
     },
     {
+      "file": "docs/architecture/evidence/remaining-docs-reviewed-files.json",
+      "sha256": "60d93a08ed4120f0a63c8e5008c3b5bd91d63c472b2dd64e5fa1508613ff68e3",
+      "records": 9
+    },
+    {
+      "file": "docs/architecture/evidence/remediation-reviewed-files.json",
+      "sha256": "92ca6b7547a180c89d25a2b5c4aa771da77babdf5486db9a677874148afaa9dd",
+      "records": 45
+    },
+    {
       "file": "docs/architecture/evidence/root-reviewed-files.json",
-      "sha256": "c25744d0144aeb5c81f0c1098beaa4940764f9f9c6f309c59afa91dd0793aeeb",
+      "sha256": "635543cf161b96d42133e13abd7904d43afc23f0950870431ee394c2a38e5fc9",
       "records": 48
     }
   ],
   "directory_counts": {
     "(root files)": {
-      "pending": 11,
-      "reviewed": 2
+      "pending": 12,
+      "reviewed": 1
     },
     ".github/CODEOWNERS": {
       "pending": 1
@@ -77,8 +92,8 @@
       "pending": 1
     },
     "ai-services/grading_agent": {
-      "pending": 27,
-      "reviewed": 2
+      "pending": 28,
+      "reviewed": 1
     },
     "ai-services/prompts": {
       "pending": 35
@@ -90,19 +105,17 @@
       "pending": 32
     },
     "apps/desktop-client": {
-      "pending": 111,
-      "reviewed": 9
+      "pending": 120
     },
     "apps/student-portal": {
-      "pending": 45,
-      "reviewed": 1
+      "pending": 46
     },
     "apps/teacher-portal": {
       "reviewed": 1
     },
     "apps/web-admin": {
-      "pending": 670,
-      "reviewed": 43
+      "pending": 699,
+      "reviewed": 14
     },
     "contracts/architecture": {
       "pending": 1
@@ -129,8 +142,8 @@
       "pending": 22
     },
     "docs/architecture": {
-      "pending": 11,
-      "reviewed": 1
+      "reviewed": 5,
+      "pending": 7
     },
     "docs/code-review-context.md": {
       "pending": 1
@@ -152,7 +165,7 @@
       "pending": 11
     },
     "docs/frontend-ux-optimization-2026-09-12.md": {
-      "pending": 1
+      "reviewed": 1
     },
     "docs/history-session": {
       "pending": 6
@@ -161,7 +174,7 @@
       "pending": 1
     },
     "docs/ocr-formula-ai-evidence-review-2026-09-12.md": {
-      "pending": 1
+      "reviewed": 1
     },
     "docs/paper-import-benchmark": {
       "pending": 4
@@ -182,7 +195,8 @@
       "pending": 2
     },
     "docs/ui-spec": {
-      "pending": 2
+      "reviewed": 1,
+      "pending": 1
     },
     "docs/user-guides": {
       "pending": 2
@@ -215,8 +229,7 @@
       "pending": 1
     },
     "infra/docker-compose": {
-      "pending": 25,
-      "reviewed": 1
+      "pending": 26
     },
     "lab/.gitignore": {
       "pending": 1
@@ -234,7 +247,8 @@
       "pending": 32
     },
     "lab/evals": {
-      "pending": 183
+      "pending": 182,
+      "reviewed": 1
     },
     "lab/examples": {
       "pending": 5
@@ -246,7 +260,7 @@
       "pending": 1
     },
     "lab/package.json": {
-      "reviewed": 1
+      "pending": 1
     },
     "lab/scripts": {
       "pending": 26
@@ -255,7 +269,8 @@
       "pending": 35
     },
     "lab/stories": {
-      "pending": 39
+      "pending": 37,
+      "reviewed": 2
     },
     "lab/tests": {
       "pending": 25
@@ -386,12 +401,12 @@
       "pending": 1
     },
     "services/api-gateway": {
-      "pending": 1117,
-      "reviewed": 109
+      "pending": 1163,
+      "reviewed": 63
     },
     "services/image-quality-worker": {
-      "pending": 18,
-      "reviewed": 2
+      "pending": 19,
+      "reviewed": 1
     },
     "services/math-verification-worker": {
       "pending": 12
@@ -400,12 +415,11 @@
       "pending": 37
     },
     "services/page-processing-worker": {
-      "pending": 27,
-      "reviewed": 4
+      "pending": 29,
+      "reviewed": 2
     },
     "services/subjective-grading-worker": {
-      "pending": 9,
-      "reviewed": 1
+      "pending": 10
     },
     "tests/README.md": {
       "pending": 1
@@ -414,14 +428,626 @@
       "pending": 7
     },
     "tests/e2e": {
-      "pending": 44
+      "pending": 43,
+      "reviewed": 1
     },
     "tests/integration": {
       "pending": 2
     }
   },
+  "superseded_completion_claims": [
+    {
+      "file": "docs/architecture/production-security-and-reliability.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "docs/architecture/teacher-account-security-mfa-pilot.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "docs/architecture/teacher-account-security-mfa-ux-research.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "docs/architecture/teacher-account-security-phase0.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "docs/code-review-context.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/desktop-client/src/components/OfflineWorkbench.tsx",
+      "source": "docs/architecture/evidence/current-desktop-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/connection.rs",
+      "source": "docs/architecture/evidence/database-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/crypto.rs",
+      "source": "docs/architecture/evidence/database-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/paths.rs",
+      "source": "docs/architecture/evidence/database-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/queue.rs",
+      "source": "docs/architecture/evidence/database-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/desktop-client/src-tauri/src/durable_store/schema.rs",
+      "source": "docs/architecture/evidence/database-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/db/tenant_context.go",
+      "source": "docs/architecture/evidence/database-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/org/store_postgres.go",
+      "source": "docs/architecture/evidence/database-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/migrations/000184_model_role_binding_revision.sql",
+      "source": "docs/architecture/evidence/database-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan/ScanWorkspace.tsx",
+      "source": "docs/architecture/evidence/final-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/pages/ScoreManagementPage.tsx",
+      "source": "docs/architecture/evidence/final-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/desktop-client/src/App.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan-queue/useScanQueue.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/student-portal/src/App.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/AppShell.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/api/client.test.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/api/client.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/api/schoolAiChat.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/api/scores.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/auth/session.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/features/exams/create/createExamValidation.test.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/features/exams/create/createExamValidation.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/pages/OrganizationSetupPage.test.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/pages/OrganizationSetupPage.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/query/client.test.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/router/appRouter.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/router/navigation.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/router/pageRendering.test.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/router/pageRendering.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/router/routes.test.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/router/routes.tsx",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/router/useUnsavedChangesGuard.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/styles/features/exam-preparation.css",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/workspaces/registry.ts",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/router_guards.go",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_auth.go",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_capture.go",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_grading.go",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_paper.go",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_platform_schools.go",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_processing.go",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_release.go",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_review.go",
+      "source": "docs/architecture/evidence/frontend-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "ai-services/grading_agent/app.py",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/components/features/assessment/AssessmentProfileEditor.tsx",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/view/TemplateWorkspaceView.tsx",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/features/calibration/CalibrationDrawer.tsx",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/GradingWorkbench.tsx",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/features/grading/workbench/hooks/useGradingKeyboard.ts",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/hooks/useScoreWorkspaceData.ts",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/pages/CaptureBatchPage.tsx",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "apps/web-admin/src/pages/ExamPreparationPage.tsx",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/correction_apply_store_postgres.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/registration_review_store_postgres.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/registration_store_postgres.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/template_match_store_postgres.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/grading/scoring_run_process.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/grading/scoring_run_routing.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/paper/store_postgres_template_binding.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/releasegate/coordinator.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/score/handlers.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_release.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_worker.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/adapter_http.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/grade_settlement_pipeline.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/handlers.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/handlers_worker.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/math_grading.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/panel_orchestrator.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/worker_completion_service.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/subjective/worker_execution_service.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/workerruntime/scope_middleware.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/workerruntime/store_postgres.go",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/image-quality-worker/image_quality/policy.py",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/page-processing-worker/page_processing/registration.py",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/page-processing-worker/page_processing/runner.py",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/subjective-grading-worker/subjective_grading_worker/runner.py",
+      "source": "docs/architecture/evidence/pipeline-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "tests/ai-evaluation/reports/ai_evaluation_report.md",
+      "source": "docs/architecture/evidence/remaining-docs-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "package.json",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "lab/package.json",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/go.mod",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/application_modules.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/infrastructure.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/router_guards.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/routes_release.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_identity.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_exam.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_capture.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_ai_foundation.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/middleware.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/role_policy.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/auth/token.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/db/tenant_context.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/outbox/publisher_log.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "services/api-gateway/internal/logger/logger.go",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    },
+    {
+      "file": "infra/docker-compose/nginx/nginx.conf",
+      "source": "docs/architecture/evidence/root-reviewed-files.json",
+      "reason": "source_changed"
+    }
+  ],
   "rejected_completion_claims": [],
   "records_outside_original_inventory": [
+    {
+      "file": "docs/architecture/ARCHITECTURE_REVIEW.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/MODULE_CATALOG.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/a01-reference-materials-design-2026-10-19.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/ai-output-truncation-diagnostics-design-2026-10-18.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/answer-sheet-multimodal-optimization.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/answer-sheet-region-review.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/automatic-grading-pipeline-design-2026-10-21.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/personal-review-bookmarks-design-2026-10-18.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/acceptance-report.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/concurrent-workspace-review.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/current-desktop-recheck.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/database-audit.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/final-current-source-review.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/final-delivery-audit.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/frontend-api-audit.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/frontend-current-source-recheck.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/late-current-recheck.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/pipeline-audit.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/pipeline-current-ui-subread.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/root-audit.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/evidence/visual-qa.md",
+      "source": "docs/architecture/evidence/architecture-markdown-reviewed-files.json"
+    },
     {
       "file": "apps/student-portal/src/App.beforeUnload.batch52.test.tsx",
       "source": "docs/architecture/evidence/frontend-reviewed-files.json"
@@ -481,6 +1107,146 @@
     {
       "file": "services/subjective-grading-worker/.pytest_cache/README.md",
       "source": "docs/architecture/evidence/pipeline-reviewed-files.json"
+    },
+    {
+      "file": "scripts/evals/README.template-analysis-v7.md",
+      "source": "docs/architecture/evidence/remaining-docs-reviewed-files.json"
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan-queue/browserScanImport.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/editor/collectRegionSuggestions.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/useQuestionBankDraftState.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/useQuestionBankSearchState.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/readConversationAttachments.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/useConversationModelSettings.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/useConversationPersistence.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/useConversationScroll.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/useCopyConversationReply.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/hooks/useRegradeAssignees.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/server/compatible_score_publication.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/compatibility_publish.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/score/compatibility_published_grade.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/server/score_release_remediation_postgres_test.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/db/architecture_scope_postgres_test.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/apicontract/architecture_public_handler_schema_test.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/migrations/000230_score_release_snapshot_immutability.sql",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/migrations/000231_exam_enrollment_scope_foreign_keys.sql",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/migrations/000232_platform_school_metrics_statement_refresh.sql",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/useQuestionBankEditorData.tsx",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/useAccountConversation.ts",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/org/organization_delete.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/org/patch_handlers.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/org/student_accounts.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/org/student_delete.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/org/student_import.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/store_postgres_publish.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/store_postgres_drafts.go",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/tools/build_preview.py",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/tools/extract_database_catalog.py",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/tools/build_database_specs.py",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/tools/merge_review_ledger.py",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/tools/verify_database_catalog.py",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
+    },
+    {
+      "file": "docs/architecture/tools/render_native.js",
+      "source": "docs/architecture/evidence/remediation-reviewed-files.json"
     }
   ],
   "limitations": [

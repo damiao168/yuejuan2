@@ -679,7 +679,7 @@
       "node": "F08-boundary",
       "title_size": 72,
       "body_size": 32,
-      "width": 672,
+      "width": 456,
       "height": 157
     },
     {
@@ -1093,8 +1093,8 @@
       "node": "sdk",
       "title_size": 72,
       "body_size": 32,
-      "width": 174,
-      "height": 111
+      "width": 361,
+      "height": 157
     },
     {
       "file": "03-module-dependencies.drawio",
@@ -1111,7 +1111,7 @@
       "node": "debt",
       "title_size": 72,
       "body_size": 32,
-      "width": 312,
+      "width": 384,
       "height": 157
     },
     {
@@ -1120,8 +1120,8 @@
       "node": "constraints",
       "title_size": 72,
       "body_size": 32,
-      "width": 603,
-      "height": 157
+      "width": 456,
+      "height": 111
     },
     {
       "file": "03-module-dependencies.drawio",
@@ -1364,7 +1364,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1373,7 +1373,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1391,7 +1391,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1400,7 +1400,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1409,7 +1409,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1418,7 +1418,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1427,7 +1427,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1436,7 +1436,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1445,7 +1445,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1463,7 +1463,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 432
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1472,7 +1472,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1481,7 +1481,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1490,7 +1490,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1499,7 +1499,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1508,7 +1508,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1535,7 +1535,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1544,7 +1544,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1553,7 +1553,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 235
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -1562,7 +1562,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1571,7 +1571,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1580,7 +1580,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 235
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -1589,7 +1589,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1598,7 +1598,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1607,7 +1607,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 268
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -1625,7 +1625,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1634,7 +1634,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 268
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -1652,7 +1652,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1661,7 +1661,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 202
+      "height": 301
     },
     {
       "file": "04-database-er.drawio",
@@ -1679,7 +1679,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 170
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1688,7 +1688,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 1065,
-      "height": 104
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -1697,7 +1697,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1706,7 +1706,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1715,7 +1715,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1724,7 +1724,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1733,7 +1733,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1742,7 +1742,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1751,7 +1751,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1760,7 +1760,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1769,7 +1769,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1778,7 +1778,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1787,7 +1787,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1796,43 +1796,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
-    },
-    {
-      "file": "04-database-er.drawio",
-      "page": "identity",
-      "node": "auth_totp",
-      "title_size": 34,
-      "body_size": 26,
-      "width": 728,
-      "height": 202
-    },
-    {
-      "file": "04-database-er.drawio",
-      "page": "identity",
-      "node": "auth_mfa_recovery_code",
-      "title_size": 34,
-      "body_size": 26,
-      "width": 728,
-      "height": 202
-    },
-    {
-      "file": "04-database-er.drawio",
-      "page": "identity",
-      "node": "auth_mfa_challenge",
-      "title_size": 34,
-      "body_size": 26,
-      "width": 728,
-      "height": 235
-    },
-    {
-      "file": "04-database-er.drawio",
-      "page": "identity",
-      "node": "auth_security_notification_intent",
-      "title_size": 34,
-      "body_size": 26,
-      "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1841,7 +1805,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1850,7 +1814,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1859,7 +1823,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1868,7 +1832,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1886,7 +1850,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1895,7 +1859,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1913,7 +1877,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1940,7 +1904,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1949,7 +1913,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1958,7 +1922,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1967,7 +1931,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1976,7 +1940,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1985,7 +1949,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -1994,7 +1958,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2012,7 +1976,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2030,7 +1994,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2039,7 +2003,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2048,7 +2012,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2057,7 +2021,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2066,7 +2030,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2075,7 +2039,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2084,7 +2048,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2093,7 +2057,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2120,7 +2084,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2138,7 +2102,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2147,7 +2111,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2156,7 +2120,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2165,7 +2129,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2174,7 +2138,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2183,7 +2147,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 170
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2192,7 +2156,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2210,7 +2174,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2219,7 +2183,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2237,7 +2201,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2246,7 +2210,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2255,7 +2219,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 432
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -2264,7 +2228,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2273,7 +2237,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2291,7 +2255,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2300,7 +2264,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2309,7 +2273,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2318,7 +2282,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2327,7 +2291,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2336,7 +2300,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2345,7 +2309,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 333
     },
     {
       "file": "04-database-er.drawio",
@@ -2354,7 +2318,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2363,7 +2327,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2372,7 +2336,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2390,7 +2354,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2399,7 +2363,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2408,7 +2372,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2417,7 +2381,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2426,7 +2390,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2435,7 +2399,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2444,7 +2408,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2462,7 +2426,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 432
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2471,7 +2435,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2489,7 +2453,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2498,7 +2462,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2507,7 +2471,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2516,7 +2480,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2534,7 +2498,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2543,7 +2507,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2552,7 +2516,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2561,7 +2525,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2570,7 +2534,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2579,7 +2543,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2588,7 +2552,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 366
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -2597,7 +2561,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2606,7 +2570,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 170
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2615,7 +2579,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2624,7 +2588,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2633,7 +2597,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2651,7 +2615,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2660,7 +2624,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 301
     },
     {
       "file": "04-database-er.drawio",
@@ -2678,7 +2642,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -2687,7 +2651,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2696,7 +2660,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2705,7 +2669,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 432
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2714,7 +2678,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2723,7 +2687,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 170
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -2732,7 +2696,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 170
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2741,7 +2705,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 137
+      "height": 333
     },
     {
       "file": "04-database-er.drawio",
@@ -2750,7 +2714,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2759,7 +2723,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2768,7 +2732,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 104
+      "height": 333
     },
     {
       "file": "04-database-er.drawio",
@@ -2777,7 +2741,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2786,7 +2750,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2795,7 +2759,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2822,7 +2786,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2831,7 +2795,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2840,7 +2804,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2858,7 +2822,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2867,7 +2831,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2876,7 +2840,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2885,7 +2849,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2903,7 +2867,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2912,7 +2876,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2930,7 +2894,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2939,7 +2903,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -2948,7 +2912,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2957,7 +2921,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2975,7 +2939,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -2984,7 +2948,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -2993,7 +2957,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3002,7 +2966,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3011,7 +2975,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3020,7 +2984,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3029,7 +2993,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3038,7 +3002,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3047,7 +3011,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3056,7 +3020,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3083,7 +3047,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 268
     },
     {
       "file": "04-database-er.drawio",
@@ -3101,7 +3065,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3110,7 +3074,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3128,7 +3092,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3137,7 +3101,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3146,7 +3110,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3155,7 +3119,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3164,7 +3128,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3182,7 +3146,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3200,7 +3164,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3209,7 +3173,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3218,7 +3182,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3227,7 +3191,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3236,7 +3200,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3245,7 +3209,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3254,7 +3218,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3263,7 +3227,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 301
     },
     {
       "file": "04-database-er.drawio",
@@ -3290,7 +3254,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3299,7 +3263,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 301
     },
     {
       "file": "04-database-er.drawio",
@@ -3308,7 +3272,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 301
     },
     {
       "file": "04-database-er.drawio",
@@ -3317,7 +3281,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3326,7 +3290,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 137
+      "height": 202
     },
     {
       "file": "04-database-er.drawio",
@@ -3335,7 +3299,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 268
     },
     {
       "file": "04-database-er.drawio",
@@ -3344,7 +3308,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3353,7 +3317,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3362,7 +3326,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 268
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3371,7 +3335,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 268
     },
     {
       "file": "04-database-er.drawio",
@@ -3380,7 +3344,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 301
     },
     {
       "file": "04-database-er.drawio",
@@ -3389,7 +3353,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 333
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3398,7 +3362,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 399
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3407,7 +3371,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 170
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3416,7 +3380,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3425,7 +3389,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 202
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3434,7 +3398,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 301
+      "height": 399
     },
     {
       "file": "04-database-er.drawio",
@@ -3443,7 +3407,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 170
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3452,7 +3416,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 170
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3461,7 +3425,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 104
+      "height": 170
     },
     {
       "file": "04-database-er.drawio",
@@ -3470,7 +3434,232 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 104
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "template-materials",
+      "node": "exam_answer_sheet_template_binding_revision",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 829,
+      "height": 268
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "template-materials",
+      "node": "answer_sheet_template_library",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "template-materials",
+      "node": "answer_sheet_template_library_instance",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "template-materials",
+      "node": "question_rubric_draft_job",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "template-materials",
+      "node": "question_reference_manifest",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "template-materials",
+      "node": "question_reference_manifest_item",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "template-materials",
+      "node": "subjective_request_material_receipt",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "template-materials",
+      "node": "question_bank_reference_grant",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "grading-operations",
+      "node": "scoring_ai_trial",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "grading-operations",
+      "node": "answer_input_version",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "grading-operations",
+      "node": "scoring_run_item",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "grading-operations",
+      "node": "exam_grading_ai_plan",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "grading-operations",
+      "node": "review_bookmark",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "grading-operations",
+      "node": "private_opinion_draft",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "grading-operations",
+      "node": "question_bank_handoff",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "grading-operations",
+      "node": "question_bank_handoff_event",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "grading-operations",
+      "node": "school_calibration_template",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 399
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "grading-operations",
+      "node": "gold_quality_image_pool",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 235
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "current-operations",
+      "node": "capture_collection",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "current-operations",
+      "node": "capture_collection_completion",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 366
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "current-operations",
+      "node": "tenant_document_model_selection",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "current-operations",
+      "node": "tenant_answer_sheet_model_selection",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "current-operations",
+      "node": "tenant_chat_model_access",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "current-operations",
+      "node": "tenant_grading_model_selection",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 333
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "current-operations",
+      "node": "audit_log_scope",
+      "title_size": 34,
+      "body_size": 26,
+      "width": 728,
+      "height": 301
     },
     {
       "file": "04-database-er.drawio",
@@ -3479,7 +3668,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 170
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3488,7 +3677,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 137
+      "height": 333
     },
     {
       "file": "04-database-er.drawio",
@@ -3497,7 +3686,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 104
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3506,7 +3695,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 170
+      "height": 333
     },
     {
       "file": "04-database-er.drawio",
@@ -3515,7 +3704,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 137
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3524,7 +3713,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 170
+      "height": 333
     },
     {
       "file": "04-database-er.drawio",
@@ -3533,7 +3722,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 235
+      "height": 366
     },
     {
       "file": "04-database-er.drawio",
@@ -3542,7 +3731,7 @@
       "title_size": 34,
       "body_size": 26,
       "width": 728,
-      "height": 104
+      "height": 366
     },
     {
       "file": "05-business-workflow.drawio",
@@ -3784,7 +3973,7 @@
       "node": "old_route",
       "title_size": 72,
       "body_size": 32,
-      "width": 384,
+      "width": 456,
       "height": 111
     },
     {
@@ -3793,7 +3982,7 @@
       "node": "old_gate",
       "title_size": 72,
       "body_size": 32,
-      "width": 384,
+      "width": 456,
       "height": 111
     },
     {
@@ -3802,7 +3991,7 @@
       "node": "old_publish",
       "title_size": 72,
       "body_size": 32,
-      "width": 456,
+      "width": 528,
       "height": 111
     },
     {
@@ -3811,7 +4000,7 @@
       "node": "old_student",
       "title_size": 72,
       "body_size": 32,
-      "width": 528,
+      "width": 456,
       "height": 111
     },
     {
@@ -3827,19 +4016,19 @@
       "file": "05-business-workflow.drawio",
       "page": "publication_paths",
       "node": "new_gate",
-      "title_size": 47,
+      "title_size": 48,
       "body_size": 32,
-      "width": 547,
-      "height": 81
+      "width": 552,
+      "height": 82
     },
     {
       "file": "05-business-workflow.drawio",
       "page": "publication_paths",
       "node": "new_publish",
-      "title_size": 46,
+      "title_size": 59,
       "body_size": 32,
-      "width": 558,
-      "height": 80
+      "width": 555,
+      "height": 95
     },
     {
       "file": "05-business-workflow.drawio",
@@ -3847,7 +4036,7 @@
       "node": "new_student",
       "title_size": 72,
       "body_size": 32,
-      "width": 528,
+      "width": 312,
       "height": 111
     },
     {
@@ -3856,7 +4045,7 @@
       "node": "gap",
       "title_size": 72,
       "body_size": 32,
-      "width": 888,
+      "width": 528,
       "height": 111
     },
     {
@@ -3865,7 +4054,7 @@
       "node": "split",
       "title_size": 72,
       "body_size": 32,
-      "width": 960,
+      "width": 528,
       "height": 111
     },
     {
@@ -4052,19 +4241,19 @@
       "file": "06-image-template-pipeline.drawio",
       "page": "registration_crops",
       "node": "persist",
-      "title_size": 72,
+      "title_size": 48,
       "body_size": 32,
-      "width": 456,
-      "height": 111
+      "width": 552,
+      "height": 82
     },
     {
       "file": "06-image-template-pipeline.drawio",
       "page": "registration_crops",
       "node": "runtime",
-      "title_size": 72,
+      "title_size": 59,
       "body_size": 32,
-      "width": 497,
-      "height": 157
+      "width": 555,
+      "height": 95
     },
     {
       "file": "06-image-template-pipeline.drawio",
@@ -4241,10 +4430,10 @@
       "file": "07-ai-grading.drawio",
       "page": "actual_entry",
       "node": "adapter",
-      "title_size": 57,
+      "title_size": 53,
       "body_size": 32,
-      "width": 557,
-      "height": 93
+      "width": 554,
+      "height": 88
     },
     {
       "file": "07-ai-grading.drawio",
@@ -4268,10 +4457,10 @@
       "file": "07-ai-grading.drawio",
       "page": "actual_entry",
       "node": "complete",
-      "title_size": 58,
+      "title_size": 55,
       "body_size": 32,
-      "width": 549,
-      "height": 94
+      "width": 555,
+      "height": 90
     },
     {
       "file": "07-ai-grading.drawio",
@@ -4286,10 +4475,10 @@
       "file": "07-ai-grading.drawio",
       "page": "actual_entry",
       "node": "missing",
-      "title_size": 72,
+      "title_size": 43,
       "body_size": 32,
-      "width": 408,
-      "height": 157
+      "width": 554,
+      "height": 76
     },
     {
       "file": "07-ai-grading.drawio",
@@ -4475,19 +4664,19 @@
       "file": "07-ai-grading.drawio",
       "page": "failure_cost",
       "node": "gap",
-      "title_size": 48,
+      "title_size": 66,
       "body_size": 32,
       "width": 552,
-      "height": 82
+      "height": 104
     },
     {
       "file": "07-ai-grading.drawio",
       "page": "failure_cost",
       "node": "panel_gap",
-      "title_size": 41,
+      "title_size": 66,
       "body_size": 32,
-      "width": 557,
-      "height": 74
+      "width": 552,
+      "height": 104
     },
     {
       "file": "07-ai-grading.drawio",
@@ -4559,7 +4748,7 @@
       "title_size": 54,
       "body_size": 32,
       "width": 554,
-      "height": 136
+      "height": 89
     },
     {
       "file": "07-ai-grading.drawio",
@@ -4592,10 +4781,10 @@
       "file": "07-ai-grading.drawio",
       "page": "multimodal_math",
       "node": "empty",
-      "title_size": 62,
+      "title_size": 54,
       "body_size": 32,
-      "width": 550,
-      "height": 99
+      "width": 552,
+      "height": 89
     },
     {
       "file": "08-api-data-flow.drawio",
@@ -4637,10 +4826,10 @@
       "file": "08-api-data-flow.drawio",
       "page": "api-overview",
       "node": "mux",
-      "title_size": 70,
+      "title_size": 65,
       "body_size": 32,
-      "width": 455,
-      "height": 108
+      "width": 465,
+      "height": 149
     },
     {
       "file": "08-api-data-flow.drawio",
@@ -4727,10 +4916,10 @@
       "file": "08-api-data-flow.drawio",
       "page": "identity-org",
       "node": "row0-data",
-      "title_size": 72,
+      "title_size": 57,
       "body_size": 32,
-      "width": 440,
-      "height": 157
+      "width": 480,
+      "height": 93
     },
     {
       "file": "08-api-data-flow.drawio",
@@ -4799,10 +4988,10 @@
       "file": "08-api-data-flow.drawio",
       "page": "identity-org",
       "node": "row2-data",
-      "title_size": 72,
+      "title_size": 66,
       "body_size": 32,
-      "width": 472,
-      "height": 157
+      "width": 486,
+      "height": 104
     },
     {
       "file": "08-api-data-flow.drawio",
@@ -5152,8 +5341,8 @@
       "node": "row0-handler",
       "title_size": 53,
       "body_size": 32,
-      "width": 452,
-      "height": 134
+      "width": 448,
+      "height": 88
     },
     {
       "file": "08-api-data-flow.drawio",
@@ -5224,17 +5413,17 @@
       "node": "row2-handler",
       "title_size": 52,
       "body_size": 32,
-      "width": 455,
-      "height": 174
+      "width": 446,
+      "height": 87
     },
     {
       "file": "08-api-data-flow.drawio",
       "page": "grading-release",
       "node": "row2-data",
-      "title_size": 72,
+      "title_size": 51,
       "body_size": 32,
-      "width": 488,
-      "height": 198
+      "width": 483,
+      "height": 86
     },
     {
       "file": "08-api-data-flow.drawio",
@@ -5546,19 +5735,19 @@
       "file": "08-api-data-flow.drawio",
       "page": "auth-order",
       "node": "generic",
-      "title_size": 72,
+      "title_size": 47,
       "body_size": 32,
-      "width": 412,
-      "height": 111
+      "width": 447,
+      "height": 81
     },
     {
       "file": "08-api-data-flow.drawio",
       "page": "auth-order",
       "node": "cache",
-      "title_size": 72,
+      "title_size": 47,
       "body_size": 32,
-      "width": 384,
-      "height": 111
+      "width": 447,
+      "height": 81
     },
     {
       "file": "08-api-data-flow.drawio",
@@ -5602,7 +5791,7 @@
       "node": "mfa",
       "title_size": 72,
       "body_size": 32,
-      "width": 800,
+      "width": 532,
       "height": 111
     },
     {
@@ -5620,7 +5809,7 @@
       "node": "risk",
       "title_size": 72,
       "body_size": 32,
-      "width": 960,
+      "width": 384,
       "height": 111
     },
     {
@@ -5870,55 +6059,55 @@
       "file": "09-task-state-machine.drawio",
       "page": "commit_boundaries",
       "node": "reg_finish",
-      "title_size": 70,
+      "title_size": 59,
       "body_size": 32,
-      "width": 554,
-      "height": 108
+      "width": 555,
+      "height": 95
     },
     {
       "file": "09-task-state-machine.drawio",
       "page": "commit_boundaries",
       "node": "reg_effect",
-      "title_size": 48,
-      "body_size": 32,
-      "width": 552,
-      "height": 82
-    },
-    {
-      "file": "09-task-state-machine.drawio",
-      "page": "commit_boundaries",
-      "node": "ai_grade",
-      "title_size": 41,
-      "body_size": 32,
-      "width": 557,
-      "height": 74
-    },
-    {
-      "file": "09-task-state-machine.drawio",
-      "page": "commit_boundaries",
-      "node": "ai_run",
       "title_size": 72,
       "body_size": 32,
-      "width": 386,
+      "width": 528,
       "height": 111
     },
     {
       "file": "09-task-state-machine.drawio",
       "page": "commit_boundaries",
-      "node": "ai_effect",
-      "title_size": 53,
+      "node": "ai_grade",
+      "title_size": 59,
       "body_size": 32,
-      "width": 554,
-      "height": 88
+      "width": 555,
+      "height": 95
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "ai_run",
+      "title_size": 59,
+      "body_size": 32,
+      "width": 555,
+      "height": 95
+    },
+    {
+      "file": "09-task-state-machine.drawio",
+      "page": "commit_boundaries",
+      "node": "ai_effect",
+      "title_size": 59,
+      "body_size": 32,
+      "width": 555,
+      "height": 95
     },
     {
       "file": "09-task-state-machine.drawio",
       "page": "commit_boundaries",
       "node": "panel_state",
-      "title_size": 54,
+      "title_size": 66,
       "body_size": 32,
-      "width": 550,
-      "height": 89
+      "width": 552,
+      "height": 104
     },
     {
       "file": "09-task-state-machine.drawio",
@@ -5926,17 +6115,17 @@
       "node": "panel_replay",
       "title_size": 66,
       "body_size": 32,
-      "width": 557,
+      "width": 552,
       "height": 104
     },
     {
       "file": "09-task-state-machine.drawio",
       "page": "commit_boundaries",
       "node": "panel_effect",
-      "title_size": 48,
+      "title_size": 66,
       "body_size": 32,
       "width": 552,
-      "height": 82
+      "height": 104
     },
     {
       "file": "10-security-deployment.drawio",
@@ -5971,17 +6160,17 @@
       "node": "idem",
       "title_size": 72,
       "body_size": 32,
-      "width": 456,
-      "height": 111
+      "width": 312,
+      "height": 157
     },
     {
       "file": "10-security-deployment.drawio",
       "page": "authorization",
       "node": "resource",
-      "title_size": 61,
+      "title_size": 72,
       "body_size": 32,
-      "width": 577,
-      "height": 98
+      "width": 528,
+      "height": 111
     },
     {
       "file": "10-security-deployment.drawio",
@@ -5989,8 +6178,8 @@
       "node": "recent",
       "title_size": 72,
       "body_size": 32,
-      "width": 380,
-      "height": 157
+      "width": 600,
+      "height": 111
     },
     {
       "file": "10-security-deployment.drawio",
@@ -6016,7 +6205,7 @@
       "node": "boundary",
       "title_size": 72,
       "body_size": 32,
-      "width": 888,
+      "width": 384,
       "height": 157
     },
     {

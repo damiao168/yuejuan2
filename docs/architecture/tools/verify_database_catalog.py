@@ -40,10 +40,22 @@ for source in catalog['migration_files']:
     for match in re.finditer(r"pg_temp\.ensure_tenant_fk\('([^']+)',\s*'([^']+)',\s*'([^']+)',\s*'([^']+)'\)", sql):
         child, column, parent, name = match.groups()
         dynamic_fk_count += 1
-        check(any(c['kind'] == 'foreign_key' and c['name'] == name
+        recorded = any(c['kind'] == 'foreign_key' and c['name'] == name
                   and c['columns'] == ['tenant_id', column] and c['referenced_table'] == parent
                   and c['referenced_columns'] == ['tenant_id', 'id']
-                  for c in tables[child]['constraints']), '动态租户FK漏项: ' + name)
+                  for c in tables[child]['constraints'])
+        # 后续迁移显式移除旧约束时，检查当前目录是否保留了同父表、更窄范围的替代约束。
+        replaced = any(
+            event['file'] > source['file'] and event['operation'] == 'alter'
+            and re.search(r'\bDROP\s+CONSTRAINT\s+(?:IF\s+EXISTS\s+)?' + re.escape(name) + r'\b',
+                          event['definition'], re.I)
+            for event in tables[child]['history']
+        ) and any(
+            c['kind'] == 'foreign_key' and c['referenced_table'] == parent
+            and {'tenant_id', column} < set(c['columns'])
+            for c in tables[child]['constraints']
+        )
+        check(recorded or replaced, '动态租户FK漏项: ' + name)
 
 visible_tables = set()
 for page in spec['pages']:

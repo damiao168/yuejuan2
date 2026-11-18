@@ -1,47 +1,48 @@
 {
-  "renderer": "Actual app.diagrams.net EditorUi / mxGraph",
+  "renderer": "draw.io EditorUi / mxGraph",
+  "renderer_origin": "http://127.0.0.1:8767",
   "files": 10,
-  "pages": 70,
+  "pages": 73,
   "inputs": [
     {
       "file": "01-feature-tree.drawio",
-      "source_sha256": "ce9f45d4b2a5985e08efa91af8f5e4428a76f39ab066307d342adacffa213ee4"
+      "source_sha256": "88661405afe74c64433a1efcabcac00543cd064fc88d7b4306f48a8484243aa3"
     },
     {
       "file": "02-system-architecture.drawio",
-      "source_sha256": "566de960ea1a67208508a4718cc23e339cfcadd7f56de24d8449f8c618adf638"
+      "source_sha256": "754babbd5ea8f646c0a77f2ab1937f6f84470476e8cf0fab01309d8d2cb9bc0e"
     },
     {
       "file": "03-module-dependencies.drawio",
-      "source_sha256": "c4bd39130819b20b52fa998984e67ff49b2079adf638b60d2b6ad1c5c36fcaaf"
+      "source_sha256": "e2f5378cb0948854a55de4761488eae78a6e6f8f0a9fba30bc26ea0b5a729db2"
     },
     {
       "file": "04-database-er.drawio",
-      "source_sha256": "10a1c9947153aafeb9c8631dd780d75cc627a13b550769078c1a6c5143b1a646"
+      "source_sha256": "ab1d0c51e6fc3c17c4bf6140c5a9f0b4ac90f71af2b4ae81ad96c586efe06018"
     },
     {
       "file": "05-business-workflow.drawio",
-      "source_sha256": "ffe29e56c656dac4844fff53e66f019e91c5662117bb4d649d54691e5441b09d"
+      "source_sha256": "76bdcb2a8213b19b7845947379ed208d33d20b93da115d9e54a87da06545285d"
     },
     {
       "file": "06-image-template-pipeline.drawio",
-      "source_sha256": "993fa46ff20c8598ae6cd7aee7f8cf6c1415c587ffa22023d552e0962b576a36"
+      "source_sha256": "71c9ba2767a749e3993938305700008b5aeb4131d9e5bc38c9c4a816bc533e8d"
     },
     {
       "file": "07-ai-grading.drawio",
-      "source_sha256": "a374e4fcd129dda00aaf8995d2d1239db38fc9a07b516d897e1e71914141b93d"
+      "source_sha256": "6508fa09a701c218e39c25f2b4ffa987d04a07da5de8ee8db1b023fd9bb671b6"
     },
     {
       "file": "08-api-data-flow.drawio",
-      "source_sha256": "f457a8f14be1c5ea708b7f802455b653097628bb58360eb95bf9a1c725aef289"
+      "source_sha256": "16729a383645f1c13d30f674fe6f24f39aec38915818e89b6644d28033824099"
     },
     {
       "file": "09-task-state-machine.drawio",
-      "source_sha256": "a9008613307501e9330406f517c2826cac447cb51b83c6eef7752781fa36f126"
+      "source_sha256": "ca78fc915b886d9d579a8a09d88fc7b816aa4aac4fd7984d33d84e36c035db30"
     },
     {
       "file": "10-security-deployment.drawio",
-      "source_sha256": "76280f49d3ccda4a2fd508d6efb10fd94f346c3ef66190c93e0126e12391a2af"
+      "source_sha256": "b826ed922d25524d35c94f27d6b178e6b4958eb3a79a2f9db50e7731fb7acfa4"
     }
   ],
   "results": [
@@ -289,10 +290,10 @@
       "file": "04-database-er.drawio",
       "index": 4,
       "id": "identity",
-      "title": "身份激活、风险与MFA",
+      "title": "身份激活、风险与近期认证",
       "preview": "previews/04-database-er-04.svg",
-      "vertices": 18,
-      "edges": 1,
+      "vertices": 14,
+      "edges": 0,
       "dangling": [],
       "overflow": [],
       "obstructions": []
@@ -588,9 +589,45 @@
     {
       "file": "04-database-er.drawio",
       "index": 29,
+      "id": "template-materials",
+      "title": "模板库与评分资料",
+      "preview": "previews/04-database-er-29.svg",
+      "vertices": 16,
+      "edges": 2,
+      "dangling": [],
+      "overflow": [],
+      "obstructions": []
+    },
+    {
+      "file": "04-database-er.drawio",
+      "index": 30,
+      "id": "grading-operations",
+      "title": "评分计划、作业与人员协作",
+      "preview": "previews/04-database-er-30.svg",
+      "vertices": 18,
+      "edges": 1,
+      "dangling": [],
+      "overflow": [],
+      "obstructions": []
+    },
+    {
+      "file": "04-database-er.drawio",
+      "index": 31,
+      "id": "current-operations",
+      "title": "采集收尾、模型选择与审计",
+      "preview": "previews/04-database-er-31.svg",
+      "vertices": 15,
+      "edges": 1,
+      "dangling": [],
+      "overflow": [],
+      "obstructions": []
+    },
+    {
+      "file": "04-database-er.drawio",
+      "index": 32,
       "id": "sqlite",
       "title": "桌面离线SQLite与本地关系",
-      "preview": "previews/04-database-er-29.svg",
+      "preview": "previews/04-database-er-32.svg",
       "vertices": 16,
       "edges": 5,
       "dangling": [],
@@ -625,10 +662,10 @@
       "file": "05-business-workflow.drawio",
       "index": 3,
       "id": "publication_paths",
-      "title": "03 两条发布与学生读取路径并存",
+      "title": "03 兼容入口与正式发布共用同一快照",
       "preview": "previews/05-business-workflow-03.svg",
       "vertices": 18,
-      "edges": 6,
+      "edges": 7,
       "dangling": [],
       "overflow": [],
       "obstructions": []
@@ -673,7 +710,7 @@
       "file": "07-ai-grading.drawio",
       "index": 1,
       "id": "actual_entry",
-      "title": "01 实际生产入口：单适配器建议与服务端结算",
+      "title": "01 生产评分入口与服务端结算",
       "preview": "previews/07-ai-grading-01.svg",
       "vertices": 21,
       "edges": 11,
@@ -841,7 +878,7 @@
       "file": "09-task-state-machine.drawio",
       "index": 3,
       "id": "commit_boundaries",
-      "title": "03 提交边界与已确认恢复缺口",
+      "title": "03 原子提交与人工交接恢复",
       "preview": "previews/09-task-state-machine-03.svg",
       "vertices": 20,
       "edges": 6,

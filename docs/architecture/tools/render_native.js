@@ -98,7 +98,8 @@ async (page) => {
       results.push({file:name,index:index+1,...metadata[index],preview:`previews/${slug}.svg`,...checks});
     }
   }
-  const report = {renderer:"Actual app.diagrams.net EditorUi / mxGraph",files:names.length,pages:results.length,inputs,results};
+  const rendererOrigin = await page.evaluate(() => window.location.origin);
+  const report = {renderer:"draw.io EditorUi / mxGraph",renderer_origin:rendererOrigin,files:names.length,pages:results.length,inputs,results};
   await page.request.post(`${base}/evidence/native-render-validation.json`, {data:JSON.stringify(report,null,2),headers:{"Content-Type":"application/json"}});
   return {files:names.length,pages:results.length,dangling:results.reduce((n,p)=>n+p.dangling.length,0),overflow:results.filter(p=>p.overflow.length).map(p=>({file:p.file,page:p.title,objects:p.overflow})),obstructions:results.filter(p=>p.obstructions.length).map(p=>({file:p.file,id:p.id,count:p.obstructions.length}))};
 }

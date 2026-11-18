@@ -1,6 +1,6 @@
 {
   "files": 10,
-  "pages": 70,
+  "pages": 73,
   "errors": [],
   "details": [
     {
@@ -165,9 +165,9 @@
     },
     {
       "file": "04-database-er.drawio",
-      "page": "身份激活、风险与MFA",
-      "nodes": 10,
-      "edges": 1,
+      "page": "身份激活、风险与近期认证",
+      "nodes": 6,
+      "edges": 0,
       "width": 3450,
       "height": 2175
     },
@@ -365,6 +365,30 @@
     },
     {
       "file": "04-database-er.drawio",
+      "page": "模板库与评分资料",
+      "nodes": 8,
+      "edges": 2,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "评分计划、作业与人员协作",
+      "nodes": 10,
+      "edges": 1,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
+      "page": "采集收尾、模型选择与审计",
+      "nodes": 7,
+      "edges": 1,
+      "width": 3450,
+      "height": 2175
+    },
+    {
+      "file": "04-database-er.drawio",
       "page": "桌面离线SQLite与本地关系",
       "nodes": 8,
       "edges": 5,
@@ -389,9 +413,9 @@
     },
     {
       "file": "05-business-workflow.drawio",
-      "page": "03 两条发布与学生读取路径并存",
+      "page": "03 兼容入口与正式发布共用同一快照",
       "nodes": 10,
-      "edges": 6,
+      "edges": 7,
       "width": 2340,
       "height": 1898
     },
@@ -421,7 +445,7 @@
     },
     {
       "file": "07-ai-grading.drawio",
-      "page": "01 实际生产入口：单适配器建议与服务端结算",
+      "page": "01 生产评分入口与服务端结算",
       "nodes": 13,
       "edges": 11,
       "width": 2340,
@@ -533,7 +557,7 @@
     },
     {
       "file": "09-task-state-machine.drawio",
-      "page": "03 提交边界与已确认恢复缺口",
+      "page": "03 原子提交与人工交接恢复",
       "nodes": 12,
       "edges": 6,
       "width": 2340,

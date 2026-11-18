@@ -1,0 +1,374 @@
+{
+  "review_date": "2026-11-13",
+  "checked_at_utc": "2026-11-13T04:41:38.517635+00:00",
+  "repository_head": "5b797440e52e0dd356e41901adfca3564c385391",
+  "scope": "架构审计 P1/P2 实现及受影响图纸工具",
+  "automatic_enumeration_is_review": false,
+  "files": [
+    {
+      "file": "apps/desktop-client/src/features/scan-queue/browserScanImport.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "64babec7535252f35811b58186138fde360ab2405f256e1008a8266a7fda243a",
+      "line_count": 83,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/editor/collectRegionSuggestions.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "a6d7cf2af954159574cf47f7896506db4a0b9e7ea6269dca771db026f4c0b9aa",
+      "line_count": 328,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/useQuestionBankDraftState.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "53ed21ddd260727139f4170c5c0623a146709c8e1e49532594cb6143cc144f75",
+      "line_count": 46,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/useQuestionBankSearchState.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "678df49077d1c76fb6a094e428b2218bd43b678f5af560a8dfa47af8053e1d8d",
+      "line_count": 42,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/readConversationAttachments.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "e999d04ad36f015e6e217773aaf6f12cd31095a94f16ed5b43eb2ee06db2a7c5",
+      "line_count": 31,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/useConversationModelSettings.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "0b0e773c52d2305d11721507091b7ac842c2056570694c7f02e19a74d0423130",
+      "line_count": 91,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/useConversationPersistence.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "4159645811b16de6e4757289efcfdd463c7579dc74ff0386943888a66e1bc842",
+      "line_count": 73,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/useConversationScroll.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "ef47e4afd5ba2ed4208e37dd28bd7923bd9b6818a342e442813efd2af7885829",
+      "line_count": 58,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/useCopyConversationReply.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "7767fdc0b689b52c1e02e4e9866591a37072701a2112ef7463bc249fd3111adc",
+      "line_count": 22,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/hooks/useRegradeAssignees.ts",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "5a6a616abf4c80e5cb6c0ec4c3bdd5717f960fbf66f81489593d50d1c954f76f",
+      "line_count": 57,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "services/api-gateway/internal/server/compatible_score_publication.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "e7d3843d89910a16df05bc9919f1781ac8a05e451cb0af563782b881d3af43dc",
+      "line_count": 88,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/compatibility_publish.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "3f6d03a60e591a9487cc49639543ea3a171f751a427547035c7aabb438578f05",
+      "line_count": 121,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "services/api-gateway/internal/score/compatibility_published_grade.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "eaaac179f260276216f22b199e7170f1647c99cf82392ea7cb14bd6bd6748942",
+      "line_count": 58,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "services/api-gateway/internal/server/score_release_remediation_postgres_test.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "af7fb49da6be10bfae2e4e8c1fc3424bb3c98e6fad22dc06f9207ee7f4a1dc91",
+      "line_count": 215,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "services/api-gateway/internal/db/architecture_scope_postgres_test.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "ec50e9b5b019d0fb2d3947c9a77d3e7ba0dd4bf5aed9cd304796d4190a943200",
+      "line_count": 354,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "services/api-gateway/internal/apicontract/architecture_public_handler_schema_test.go",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "a5d31d91efaef7eb181666c113750e6ab5a1607a0777f4736c3db5bc97a43d5b",
+      "line_count": 99,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "services/api-gateway/migrations/000230_score_release_snapshot_immutability.sql",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "7a9ed4161b57cb227ae69384468856bde2e2139431b2759570e57b4f8d4dea83",
+      "line_count": 110,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "services/api-gateway/migrations/000231_exam_enrollment_scope_foreign_keys.sql",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "cffd9b29000dce61014082b808b41f604242c59fd5ccf16094d161175e88c4c6",
+      "line_count": 65,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "services/api-gateway/migrations/000232_platform_school_metrics_statement_refresh.sql",
+      "read_status": "complete",
+      "analysis_status": "reviewed",
+      "source_sha256": "347d85799870a3b4f170488fa59fa113da55853a28c630494fdbfbe9dd08f551",
+      "line_count": 94,
+      "reason": "本轮新增实现全文与业务边界核对，包含独立复核和相关回归。"
+    },
+    {
+      "file": "apps/desktop-client/src/features/scan-queue/useScanQueue.ts",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "d8f3391b6c1a49661a8e4b9daf006edbc070ca119818813b0110d96802cd6ea9",
+      "line_count": 311,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "apps/web-admin/src/features/answer-sheet-template/editor/useRegionSuggestion.ts",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "7552659678c32ffa8ec12d29170b45a6a7ae368f3118bcca89c5aae13af0d590",
+      "line_count": 311,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "apps/web-admin/src/features/question-bank/useQuestionBankEditorData.tsx",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "c609d61984f91c6f640a831b00e26b283f3d6e0b0f1d47f909f9b6475de4024c",
+      "line_count": 190,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "apps/web-admin/src/features/school-assistant/useAccountConversation.ts",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "9a199abc7ec16f0f5f2165e58dde5188606b3f3e4ca0df169992ae487b81606f",
+      "line_count": 336,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "apps/web-admin/src/features/score-management/hooks/useRegradeWorkflow.tsx",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "9c60165c48492ebae677fcc27aa599075c9e97483885a677dc89e5cd615c301f",
+      "line_count": 273,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/org/types.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "7a2338b13da90e7d73287d7da36424edbd8cffab68fef8752772ab9ce97fbfcd",
+      "line_count": 228,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/org/handlers.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "8665de260771505b27c1fe1aa3fce263fa43586ee8107d04229f5cf7af241af3",
+      "line_count": 600,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/org/organization_delete.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "100d8484b298f4cdda01ba34c85be19597234b28d41c5b164024f39755f28fe2",
+      "line_count": 173,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/org/patch_handlers.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "455d150ff2eaf6e3b9897fe56ee7c1ea0ae795109bfcb4e5ad7ad9d7fea72383",
+      "line_count": 97,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/org/student_accounts.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "80ff866c2c4b34e4ca2411414bbb1e5b08b93f1ea7db3851389f5c2138df4401",
+      "line_count": 95,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/org/student_delete.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "499ee82d4e672d380d9e4e7ee9d10bf75f995e9bb14c89b8f61d9f1211181c20",
+      "line_count": 108,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/org/student_import.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "653756167797cba0fd5903b3cb41409f7d6fed1aa962587dc767d7b5b8114b99",
+      "line_count": 219,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/capture/handlers.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "8075a91f5c066290cec292a7e1ef91e67a66a946eadbedb3f3f1960aa7399a3a",
+      "line_count": 106,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/review/handlers.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "3959e4d9a32872f3f7b80f570d938cb6f90a6a832b44ee92f39a7afda5b837fb",
+      "line_count": 164,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/server/onboarding_readers.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "7add27790700c3c55e5178de12467712b72ff6558d59bc74cef49b792d598155",
+      "line_count": 177,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_grading.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "e4d34e8a07839f8a4df14b6758448c8d5ae4d9bf75591bdff95dd1e88f90774d",
+      "line_count": 265,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/server/module_release.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "a6260077ccbbca027c84b4d66c6d97ea2c4729a6c25492e9de856cf84fa2724a",
+      "line_count": 122,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/score/handlers.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "1daf060d49fe3fa2a3dfe1bfcf81f765172055d1af8bd06e6eb4823d2a79efe6",
+      "line_count": 294,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/store_postgres_publish.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "fc6493a08c49b096186fb181136444a2713902345a611ea0357e4b4a2fbe6084",
+      "line_count": 216,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "services/api-gateway/internal/scorerelease/store_postgres_drafts.go",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "d213da005ed0ecd2fb218ca8bfc264f45349585fb423de58ea8c8001b0121842",
+      "line_count": 282,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "docs/architecture/tools/build_preview.py",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "ac9158eee3b6e668c9cdd3e79c836dc59f6be6eaac34d1b66c5567ca5c32afb3",
+      "line_count": 52,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "docs/architecture/tools/extract_database_catalog.py",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "e94cde85e2d13752a96166a01e47356606153fce1a290a40de49708c3c73ed66",
+      "line_count": 181,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "docs/architecture/tools/build_database_specs.py",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "4e24196a5c65416e2c0ba960368db37d6aa052bdac3dc34097e1816da5edb679",
+      "line_count": 168,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "docs/architecture/tools/merge_review_ledger.py",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "ff877e35dd182f2cc5d017e5bb7dcc127964cb5f7991734ec0ff20791c900771",
+      "line_count": 141,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "docs/architecture/tools/verify_database_catalog.py",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "9041edabfc3e818dc844772724cb0d158fb34df53689fd5c3af3a710d6061712",
+      "line_count": 126,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    },
+    {
+      "file": "docs/architecture/tools/render_native.js",
+      "read_status": "partial",
+      "analysis_status": "pending",
+      "source_sha256": "65276c59c85fbcf23eb823b1a7b87f61c23b35a24166ea38fe1bdb2ff789f87b",
+      "line_count": 105,
+      "reason": "核对本轮修改、相关调用与恢复边界，既有未提交内容未纳入全文完成声明。"
+    }
+  ],
+  "generated_contracts": {
+    "source": "services/api-gateway/openapi/edugrade-api.openapi.json",
+    "route_coverage": "services/api-gateway/openapi/route-coverage.json",
+    "method": "按具体 handler 和 DTO 核对新增操作；生成 SDK 经一致性与正常入口契约回归。"
+  }
+}

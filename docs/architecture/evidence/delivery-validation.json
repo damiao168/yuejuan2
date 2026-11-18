@@ -1,64 +1,64 @@
 {
-  "checked_at_utc": "2026-10-11T04:12:35.763748+00:00",
+  "checked_at_utc": "2026-11-18T04:03:47.993864+00:00",
   "artifact_checks_passed": true,
   "errors": [],
   "diagrams": [
     {
       "file": "01-feature-tree.drawio",
       "pages": 11,
-      "sha256": "fa517344fa3d16d3f39e09f929c5247bec06fac6733543a196695c558c5dadd8"
+      "sha256": "88661405afe74c64433a1efcabcac00543cd064fc88d7b4306f48a8484243aa3"
     },
     {
       "file": "02-system-architecture.drawio",
       "pages": 2,
-      "sha256": "7a76e2b072a7b9d4a09b3aeacdc1acc224d09cd9dca66f8375077799e58c35f2"
+      "sha256": "754babbd5ea8f646c0a77f2ab1937f6f84470476e8cf0fab01309d8d2cb9bc0e"
     },
     {
       "file": "03-module-dependencies.drawio",
       "pages": 4,
-      "sha256": "a87d3eeb814f3c5c868b54b870702d1fb40d2968310e9a61755a46d2aa395c45"
+      "sha256": "e2f5378cb0948854a55de4761488eae78a6e6f8f0a9fba30bc26ea0b5a729db2"
     },
     {
       "file": "04-database-er.drawio",
-      "pages": 29,
-      "sha256": "b1d05e83525eb0ecdea5b439bd885ecaa3050d97778d37c44843912cecf0eda6"
+      "pages": 32,
+      "sha256": "ab1d0c51e6fc3c17c4bf6140c5a9f0b4ac90f71af2b4ae81ad96c586efe06018"
     },
     {
       "file": "05-business-workflow.drawio",
       "pages": 3,
-      "sha256": "445f8c918028203029826ecfa85a9ee61ef7decba211d92d6d8084678233c5d2"
+      "sha256": "76bdcb2a8213b19b7845947379ed208d33d20b93da115d9e54a87da06545285d"
     },
     {
       "file": "06-image-template-pipeline.drawio",
       "pages": 3,
-      "sha256": "fd36dd3633a4507fdee5c724652f999502ea237183dacf644d52c9c19f2c346f"
+      "sha256": "71c9ba2767a749e3993938305700008b5aeb4131d9e5bc38c9c4a816bc533e8d"
     },
     {
       "file": "07-ai-grading.drawio",
       "pages": 4,
-      "sha256": "a0f76cf70175450910baf8d4dd8ba781bce573701ef3d2d0127942812ed73631"
+      "sha256": "6508fa09a701c218e39c25f2b4ffa987d04a07da5de8ee8db1b023fd9bb671b6"
     },
     {
       "file": "08-api-data-flow.drawio",
       "pages": 8,
-      "sha256": "d1875acb23e4ce592e86cdc28a418845a97ae464776b0397146bc76c949d01de"
+      "sha256": "16729a383645f1c13d30f674fe6f24f39aec38915818e89b6644d28033824099"
     },
     {
       "file": "09-task-state-machine.drawio",
       "pages": 3,
-      "sha256": "57f40a9c3b3935f3c5bb69451c77efcfec1c7ba65132affd8e8a7f4c141b39f8"
+      "sha256": "ca78fc915b886d9d579a8a09d88fc7b816aa4aac4fd7984d33d84e36c035db30"
     },
     {
       "file": "10-security-deployment.drawio",
       "pages": 3,
-      "sha256": "08b075a4ca3e4b58b809c0e73a86a414d959b7b531a00e9071e7f9b624075f8a"
+      "sha256": "b826ed922d25524d35c94f27d6b178e6b4958eb3a79a2f9db50e7731fb7acfa4"
     }
   ],
-  "total_pages": 70,
+  "total_pages": 73,
   "current_spec_and_evidence_checks": "page/node/edge labels, details, source paths and line bounds checked; does not prove business behavior",
   "full_file_review": {
-    "reviewed": 181,
-    "pending": 3215,
+    "reviewed": 99,
+    "pending": 3297,
     "status": "pending"
   },
   "original_workspace": {

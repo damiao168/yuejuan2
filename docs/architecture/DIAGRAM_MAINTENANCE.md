@@ -41,7 +41,7 @@ python docs/architecture/tools/verify_delivery.py
 
 `build_diagrams.py` 的磁盘回读、`verify_delivery.py`、`verify_typography.py` 的图纸读取，以及 `build_preview.py` 的 SVG 解析使用 `defusedxml`，拒绝 DTD、自定义实体及外部实体引用。当前原生图纸和预览不需要这些声明；如遇拒绝，先检查文件来源和内容，再重新生成或修正，不能改回普通解析器绕过检查。此约束只覆盖这四个工具的 XML 读取入口，不代表所有图纸处理工具均支持不可信外部文件。
 
-`verify_delivery.py`核对当前规格与XML的页面、节点、连线、短标签、完整属性和源码行号，检查当前XML与原生渲染hash一致，并核对全文审读文件当前hash。失败后先重新审读受影响内容；`retire_stale_reviews.py`可保留旧证据并撤销已失效的完成声明，再合并账本，它不会替代重审或自动认定新版本完成。
+`verify_delivery.py`核对当前规格与 XML 的页面、节点、连线、说明和源码出处，检查原生渲染覆盖的文件哈希。`merge_review_ledger.py`保留旧审读来源，把源码已变化的完成记录列入 `superseded_completion_claims`，当前文件回到 pending。实际重读后再增加带当前指纹的审读记录。
 
 `simplify_diagrams.py`只缩短显示文字，保留关系、完整说明与出处；ER仍显示精选字段、唯一约束和实际索引。模块职责来源保存在[module-responsibilities.json](evidence/module-responsibilities.json)，包目录生成时须回填职责，不能只输出import数量。
 
@@ -57,7 +57,7 @@ python docs/architecture/tools/verify_delivery.py
 
 逐文件记录保存`read_status`、`analysis_status`、理由、source_sha256和modified；complete仅在全文、业务边界与相关调用核对后填写。partial及只搜索/枚举的文件保持pending。源码hash变化使完成记录失效，不能通过重算hash自动继承旧审读。merge脚本只合并可信记录，不自动清pending。状态表与handling=protected分开，受保护不等于已审读。
 
-用Git一起提交规格、draw.io、出处、审查报告和必要验证结果；提交说明写清源码基线/未提交工作区、事实变化、接入边界、风险与验证。更新风险时保留触发条件与动态验证范围，不把未复现当修复，不把旧风险文案机械复制为现状。本批未提交/推送或修改任何现有代码。
+提交时一起纳入规格、draw.io、出处、审查报告和必要验证结果。提交说明写清源码基线、工作区变更、事实变化、接入边界和验证。2026-11-13 这轮包含业务实现及迁移整改，对照表见 [架构审查](ARCHITECTURE_REVIEW.md)。
 
 后续CI可做XML解析、路径/行号有效性、枚举/路由/schema变化提示与图纸更新关联检查。提示应进入人工评审，**不能仅因代码变而图纸未变就作为阻止合并的唯一理由**。语义没有变化时记录无需改图的理由；代码新增行为而图纸仍承诺旧行为时必须同步修正。
 

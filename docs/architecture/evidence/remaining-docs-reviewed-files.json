@@ -1,0 +1,20 @@
+{
+  "review_date": "2026-10-25",
+  "repository_head": "4496cd9abd33db8da93de2cbe67d23d32bcc5641",
+  "review_scope": "指定说明、规范与评测报告全文静态审读；未执行其中命令、未访问真实系统、未修改业务源码或运行输入。历史评测结果仅保留其证据边界。",
+  "tests_executed": false,
+  "modified_business_files": false,
+  "files": [
+    {"file":"docs/frontend-ux-optimization-2026-09-12.md","source_sha256":"76b628ceea72c3d2dae42b038a28c6e275f0c1cf9dc710e1f223f3d89bc1b137","line_count":449,"read_status":"complete","analysis_status":"reviewed","read_ranges":[1,449],"modified_by_this_audit":false,"scope":"全文方案与证据边界审读；建议项和未实测声明按原文保留","read_complete":true},
+    {"file":"docs/ocr-formula-ai-evidence-review-2026-09-12.md","source_sha256":"4234311fb5e18a3f2d3677d9bb413ea905eed28d7d7f9bec0479f7c923fc4d19","line_count":444,"read_status":"complete","analysis_status":"reviewed","read_ranges":[1,444],"modified_by_this_audit":false,"scope":"全文证据审读；历史 OCR/AI 结论不外推为生产效果","read_complete":true},
+    {"file":"docs/ui-spec/enterprise-ui-guidelines.md","source_sha256":"2d32d898a7f5e3d4534c3a550393a6e29af94036fa0b33dd2eb1a564a1eef94c","line_count":532,"read_status":"complete","analysis_status":"reviewed","read_ranges":[1,532],"modified_by_this_audit":false,"scope":"全文 UI 规范审读；规范要求与实现事实分开","read_complete":true},
+    {"file":"lab/evals/reports/latest-report.md","source_sha256":"21576bbe59b48d197e701d85c2e0155f46dda112525c3b964d013c2890a175be","line_count":28,"read_status":"complete","analysis_status":"reviewed","read_ranges":[1,28],"modified_by_this_audit":false,"scope":"历史 mock 评测报告；仅说明合成样本与适配器边界，不作为真实模型能力证明","read_complete":true},
+    {"file":"lab/stories/story-002-grading-agent-spec.md","source_sha256":"9699380c91b8ce2eb18eda66a6c33ae099aa9a40d96c0d3891652deea2ebb142","line_count":25,"read_status":"complete","analysis_status":"reviewed","read_ranges":[1,25],"modified_by_this_audit":false,"scope":"故事记录全文审读；实现状态以引用文档和代码为准","read_complete":true},
+    {"file":"lab/stories/story-board.md","source_sha256":"8a38cf513499c646524f644c840b107799541bda8c8a7391574df415287963ac","line_count":52,"read_status":"complete","analysis_status":"reviewed","read_ranges":[1,52],"modified_by_this_audit":false,"scope":"故事板全文审读；Done 状态属于历史记录，未据此推断生产就绪","read_complete":true},
+    {"file":"scripts/evals/README.template-analysis-v7.md","source_sha256":"82c4e5e0b97817f9934cf64ca52452158ae2671c43993f93874f208f8703c802","line_count":44,"read_status":"complete","analysis_status":"reviewed","read_ranges":[1,44],"modified_by_this_audit":false,"scope":"回放契约说明全文审读；未运行命令，明确固定夹具与真实效果边界","read_complete":true},
+    {"file":"tests/ai-evaluation/reports/ai_evaluation_report.md","source_sha256":"aa2a8a74da17628f703831e6a7cfa3e96be95e039d64042079730e313643d521","line_count":66,"read_status":"complete","analysis_status":"reviewed","read_ranges":[1,66],"modified_by_this_audit":false,"scope":"合成 AI 评测报告全文审读；指标不外推公平性、鲁棒性或生产就绪","read_complete":true},
+    {"file":"tests/e2e/SHOWCASES.md","source_sha256":"2bdbd8247efb30f85fffa18989a9ef73c992521c46148cc1b45f8ab61d698778","line_count":17,"read_status":"complete","analysis_status":"reviewed","read_ranges":[1,17],"modified_by_this_audit":false,"scope":"共享 UI showcase 说明全文审读；仅 mock 前端回归证据，未执行 showcase","read_complete":true}
+  ],
+  "reproducible_findings": [],
+  "evidence_boundary": "本批未发现需单独提交给主审的当前可复核问题；文档中的历史结果、建议和 mock/合成评测均未提升为生产能力结论。"
+}

@@ -124,7 +124,9 @@ def main():
         'handling_counts': dict(Counter(row['handling'] for row in rows)),
         'source_manifests': source_manifests,
         'directory_counts': {key: dict(value) for key, value in sorted(directory_counts.items())},
-        'rejected_completion_claims': rejected,
+        # 保留旧清单及其指纹。源码变更后只撤销当前资格，原审读记录仍可查阅。
+        'superseded_completion_claims': [entry for entry in rejected if entry['reason'] in ('source_changed', 'missing_file')],
+        'rejected_completion_claims': [entry for entry in rejected if entry['reason'] not in ('source_changed', 'missing_file')],
         'records_outside_original_inventory': outside_inventory,
         'limitations': ['账本只汇总有版本依据的审读声明，不自行证明审读质量',
                         '尚未落盘的分工记录不会计入；交付前必须重新合并',
