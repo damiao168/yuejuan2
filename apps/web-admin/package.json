@@ -24,7 +24,7 @@
     "@tanstack/react-router": "^1.170.23",
     "@tesseract.js-data/eng": "^1.0.0",
     "antd": "^5.27.6",
-    "framer-motion": "^12.23.0",
+    "framer-motion": "^14.0.0",
     "katex": "^0.18.7",
     "lucide-react": "^0.468.0",
     "mdast-util-from-markdown": "^2.0.3",
