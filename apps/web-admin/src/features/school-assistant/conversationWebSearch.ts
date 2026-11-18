@@ -14,6 +14,18 @@ export function hasReadWebPage(source: Pick<SchoolAssistantSource, "note">): boo
   return source.note === WEB_PAGE_READ_NOTE || source.note === WEB_PAGE_READ_NOTE + WEB_UNMARKED_CITATION_NOTE;
 }
 
+function isDecimalOctet(value: string): boolean {
+  return value.length > 0 && value.length <= 3 && [...value].every(char => char >= "0" && char <= "9") && Number(value) <= 255;
+}
+
+function isPrivateIPv4(host: string): boolean {
+  const parts = host.split(".");
+  if (parts.length !== 4 || !parts.every(isDecimalOctet)) return false;
+  const [first, second] = parts.map(Number);
+  return first === 0 || first === 10 || first === 127 || (first === 169 && second === 254)
+    || (first === 192 && second === 168) || (first === 172 && second >= 16 && second <= 31);
+}
+
 export function isPublicWebTool(toolName: string): boolean {
   return toolName === "web_search" || toolName === "web_fetch";
 }
@@ -23,9 +35,10 @@ export function publicSourceURL(value: unknown): string | undefined {
   try {
     const url = new URL(value);
     if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) return undefined;
-    const host = url.hostname.toLowerCase().replace(/\.+$/, "");
+    let host = url.hostname.toLowerCase();
+    while (host.endsWith(".")) host = host.slice(0, -1);
     if (!host.includes(".") || host === "localhost" || [".localhost", ".local", ".internal", ".lan", ".home"].some(suffix => host.endsWith(suffix)) || host === "[::1]") return undefined;
-    if (/^(0|10|127)\./.test(host) || /^169\.254\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) return undefined;
+    if (["0.", "10.", "127.", "169.254.", "192.168."].some(prefix => host.startsWith(prefix)) || isPrivateIPv4(host)) return undefined;
     url.hostname = host;
     return url.href;
   } catch { return undefined; }

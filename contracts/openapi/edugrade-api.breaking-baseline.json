@@ -9767,6 +9767,273 @@
     }
   },
   "schemas": {
+    "ManagedModelContextPolicy": {
+      "type": "object",
+      "properties": {
+        "context_window_tokens": {
+          "type": "integer",
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {}
+          ]
+        },
+        "max_input_tokens": {
+          "type": "integer",
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {}
+          ]
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {}
+          ]
+        },
+        "tokenizer": {
+          "type": "string",
+          "enum": [
+            "utf8_bytes",
+            "cl100k_base",
+            "o200k_base"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "SchoolConversationContextBudget": {
+      "type": "object",
+      "required": [
+        "phase",
+        "estimated_input_tokens",
+        "input_budget_tokens",
+        "max_output_tokens",
+        "context_window_tokens",
+        "dropped_messages",
+        "estimation_method",
+        "memory_used",
+        "memory_omitted",
+        "accepted"
+      ],
+      "properties": {
+        "phase": {
+          "type": "string"
+        },
+        "estimated_input_tokens": {
+          "type": "integer"
+        },
+        "actual_input_tokens": {
+          "type": "integer"
+        },
+        "input_budget_tokens": {
+          "type": "integer"
+        },
+        "max_output_tokens": {
+          "type": "integer"
+        },
+        "context_window_tokens": {
+          "type": "integer"
+        },
+        "dropped_messages": {
+          "type": "integer"
+        },
+        "estimation_method": {
+          "type": "string"
+        },
+        "memory_used": {
+          "type": "boolean"
+        },
+        "memory_omitted": {
+          "type": "boolean"
+        },
+        "accepted": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SchoolConversationGenerationMetrics": {
+      "type": "object",
+      "required": [
+        "output_tokens",
+        "duration_ms",
+        "tokens_per_second"
+      ],
+      "properties": {
+        "model_config_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "output_tokens": {
+          "type": "integer"
+        },
+        "duration_ms": {
+          "type": "integer"
+        },
+        "tokens_per_second": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SchoolConversationMemory": {
+      "type": "object",
+      "required": [
+        "version",
+        "entries"
+      ],
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 2
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SchoolConversationMemoryEntry"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "SchoolConversationMemoryEntry": {
+      "type": "object",
+      "required": [
+        "source_id",
+        "order",
+        "content"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer"
+        },
+        "content": {
+          "type": "string"
+        },
+        "pinned": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CreateManagedModelAPIInput": {
+      "type": "object",
+      "required": [
+        "tenant_id",
+        "provider_key",
+        "display_name",
+        "adapter_type",
+        "base_url",
+        "model_name",
+        "model_version",
+        "api_key"
+      ],
+      "properties": {
+        "tenant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "provider_key": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "adapter_type": {
+          "type": "string",
+          "enum": [
+            "openai_compatible",
+            "dashscope_native"
+          ]
+        },
+        "base_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "model_version": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "api_key": {
+          "type": "string",
+          "format": "password"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "disabled"
+          ]
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "context_policy": {
+          "$ref": "#/components/schemas/ManagedModelContextPolicy"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AutoManagedModelAPIInput": {
+      "type": "object",
+      "required": [
+        "tenant_id"
+      ],
+      "properties": {
+        "tenant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "api_key": {
+          "type": "string",
+          "format": "password"
+        },
+        "credential_source_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "context_policy": {
+          "$ref": "#/components/schemas/ManagedModelContextPolicy"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "api_key"
+          ]
+        },
+        {
+          "required": [
+            "credential_source_id"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
     "ScoreRosterEntry": {
       "type": "object",
       "required": [
@@ -11271,8 +11538,17 @@
         "model_config_id": {
           "type": "string",
           "format": "uuid"
+        },
+        "web_search": {
+          "type": "boolean"
+        },
+        "memory": {
+          "$ref": "#/components/schemas/SchoolConversationMemory"
         }
       },
+      "allOf": [
+        {}
+      ],
       "additionalProperties": false
     },
     "SchoolConversationEvent": {
@@ -11510,6 +11786,9 @@
             },
             "completion": {
               "$ref": "#/components/schemas/ManagedChatCompletion"
+            },
+            "generation_metrics": {
+              "$ref": "#/components/schemas/SchoolConversationGenerationMetrics"
             }
           },
           "additionalProperties": false
@@ -11540,6 +11819,32 @@
             },
             "message": {
               "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "request_id",
+            "seq",
+            "context_budget"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "context"
+            },
+            "request_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "seq": {
+              "type": "integer"
+            },
+            "context_budget": {
+              "$ref": "#/components/schemas/SchoolConversationContextBudget"
             }
           },
           "additionalProperties": false
@@ -13630,6 +13935,9 @@
         },
         "provider_key": {
           "type": "string"
+        },
+        "context_window_tokens": {
+          "type": "integer"
         },
         "message": {
           "type": "string"
@@ -39081,6 +39389,9 @@
         },
         "credential_only": {
           "type": "boolean"
+        },
+        "context_policy": {
+          "$ref": "#/components/schemas/ManagedModelContextPolicy"
         }
       },
       "oneOf": [
@@ -39282,6 +39593,9 @@
               "type": "null"
             }
           ]
+        },
+        "context_policy": {
+          "$ref": "#/components/schemas/ManagedModelContextPolicy"
         }
       },
       "additionalProperties": true

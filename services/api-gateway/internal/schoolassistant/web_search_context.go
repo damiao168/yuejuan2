@@ -1,6 +1,8 @@
 package schoolassistant
 
 import (
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -19,7 +21,6 @@ const (
 // 分词和窗口评分只是有界抽取，不保证语义完整；调用方还须同时检查引用在视图和原文中存在。
 func compactPublicSearchCandidates(question, informationNeeded string, sources []Source) []Source {
 	view := append([]Source(nil), sources...)
-	budgets := make([]int, len(sources))
 	desired := make([]int, len(sources))
 	active := 0
 	for i, source := range sources {
@@ -39,6 +40,16 @@ func compactPublicSearchCandidates(question, informationNeeded string, sources [
 	if active == 0 {
 		return view
 	}
+	budgets := allocatePublicContextBudgets(desired, active)
+	terms := contextQueryTerms(question, informationNeeded)
+	for i := range view {
+		view[i].Excerpt = compactPublicContextExcerpt(sources[i].Excerpt, budgets[i], terms)
+	}
+	return view
+}
+
+func allocatePublicContextBudgets(desired []int, active int) []int {
+	budgets := make([]int, len(desired))
 	remaining := publicContextTotalRunes
 	share := remaining / active
 	for i := range budgets {
@@ -63,11 +74,7 @@ func compactPublicSearchCandidates(question, informationNeeded string, sources [
 			remaining -= add
 		}
 	}
-	terms := contextQueryTerms(question, informationNeeded)
-	for i := range view {
-		view[i].Excerpt = compactPublicContextExcerpt(sources[i].Excerpt, budgets[i], terms)
-	}
-	return view
+	return budgets
 }
 
 type publicContextSpan struct{ start, end int }
@@ -180,65 +187,15 @@ func compactPublicContextExcerpt(text string, budget int, terms map[string]int) 
 	// 首段保留标题、作者和日期等可能的线索；其余额度由相关词覆盖决定，而非只截网页开头。
 	selected := []publicContextSpan{{0, contextPrefixEnd(text, 0, len(text), min(180, budget/3))}}
 	windowRunes := min(360, budget-utf8.RuneCountInString(text[:selected[0].end])-separatorRunes)
-	var windows []publicContextWindow
-	for _, region := range publicContextRegions(text) {
-		for start := region.start; start < region.end; {
-			windowEnd := contextPrefixEnd(text, start, region.end, windowRunes)
-			if windowEnd == region.end {
-				start = contextSuffixStart(text, region.start, region.end, windowRunes)
-			}
-			matched := map[int]bool{}
-			walkContextTerms(text[start:windowEnd], func(term string) {
-				if id, exists := terms[term]; exists {
-					matched[id] = true
-				}
-			})
-			if len(matched) > 0 {
-				ids := make([]int, 0, len(matched))
-				for id := range matched {
-					ids = append(ids, id)
-				}
-				windows = append(windows, publicContextWindow{publicContextSpan{start, windowEnd}, ids})
-			}
-			if windowEnd == region.end {
-				break
-			}
-			start = contextPrefixEnd(text, start, region.end, max(40, windowRunes*2/3))
-		}
-	}
+	windows := publicContextWindows(text, windowRunes, terms)
 	if len(windows) == 0 {
 		return contextFallbackExcerpt(text, budget)
 	}
-	covered := map[int]bool{}
-	walkContextTerms(text[:selected[0].end], func(term string) {
-		if id, exists := terms[term]; exists {
-			covered[id] = true
-		}
-	})
+	covered := matchContextTerms(text[:selected[0].end], terms)
 	used := make([]bool, len(windows))
 	// 最多挑八个窗口；优先覆盖此前没出现的查询词，让多城市、多实体需求各有机会入选。
 	for pass := 0; pass < 8; pass++ {
-		best, bestScore := -1, 0
-		var bestSpans []publicContextSpan
-		for i, window := range windows {
-			if used[i] {
-				continue
-			}
-			score := len(window.terms)
-			for _, id := range window.terms {
-				if !covered[id] {
-					score += 4
-				}
-			}
-			if score <= bestScore {
-				continue
-			}
-			spans := mergeContextSpans(append(append([]publicContextSpan(nil), selected...), window.span))
-			if contextSpansRunes(text, spans, separatorRunes) > budget || sameContextSpans(spans, selected) {
-				continue
-			}
-			best, bestScore, bestSpans = i, score, spans
-		}
+		best, bestSpans := bestPublicContextWindow(text, budget, separatorRunes, selected, windows, used, covered)
 		if best < 0 {
 			break
 		}
@@ -249,6 +206,63 @@ func compactPublicContextExcerpt(text string, budget int, terms map[string]int) 
 		}
 	}
 	return renderContextSpans(text, selected)
+}
+
+func publicContextWindows(text string, windowRunes int, terms map[string]int) []publicContextWindow {
+	var windows []publicContextWindow
+	for _, region := range publicContextRegions(text) {
+		for start := region.start; start < region.end; {
+			windowEnd := contextPrefixEnd(text, start, region.end, windowRunes)
+			if windowEnd == region.end {
+				start = contextSuffixStart(text, region.start, region.end, windowRunes)
+			}
+			matched := matchContextTerms(text[start:windowEnd], terms)
+			if len(matched) > 0 {
+				ids := slices.Collect(maps.Keys(matched))
+				windows = append(windows, publicContextWindow{publicContextSpan{start, windowEnd}, ids})
+			}
+			if windowEnd == region.end {
+				break
+			}
+			start = contextPrefixEnd(text, start, region.end, max(40, windowRunes*2/3))
+		}
+	}
+	return windows
+}
+
+func matchContextTerms(text string, terms map[string]int) map[int]bool {
+	matched := map[int]bool{}
+	walkContextTerms(text, func(term string) {
+		if id, exists := terms[term]; exists {
+			matched[id] = true
+		}
+	})
+	return matched
+}
+
+func bestPublicContextWindow(text string, budget, separatorRunes int, selected []publicContextSpan, windows []publicContextWindow, used []bool, covered map[int]bool) (int, []publicContextSpan) {
+	best, bestScore := -1, 0
+	var bestSpans []publicContextSpan
+	for i, window := range windows {
+		if used[i] {
+			continue
+		}
+		score := len(window.terms)
+		for _, id := range window.terms {
+			if !covered[id] {
+				score += 4
+			}
+		}
+		if score <= bestScore {
+			continue
+		}
+		spans := mergeContextSpans(append(append([]publicContextSpan(nil), selected...), window.span))
+		if contextSpansRunes(text, spans, separatorRunes) > budget || sameContextSpans(spans, selected) {
+			continue
+		}
+		best, bestScore, bestSpans = i, score, spans
+	}
+	return best, bestSpans
 }
 
 func contextFallbackExcerpt(text string, budget int) string {

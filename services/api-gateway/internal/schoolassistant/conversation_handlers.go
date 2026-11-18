@@ -70,8 +70,20 @@ func conversationError(err error) (string, string) {
 	if errors.Is(err, modelgovernance.ErrAgentImagesUnsupported) {
 		return "ai_chat_images_unsupported", "当前学校模型不支持图片，请联系管理员更换支持图片的对话模型，或开启新对话发送文字。"
 	}
+	if errors.Is(err, modelgovernance.ErrAgentContextExceeded) {
+		return "ai_chat_context_exceeded", "本次问题或附件超过当前模型的上下文预算，请缩小内容或开启新对话。"
+	}
+	if errors.Is(err, modelgovernance.ErrAgentTurnBudgetExceeded) {
+		return "ai_chat_budget_exceeded", "本次提问的累计额度不足，请缩小查询范围或减少分析步骤。"
+	}
+	if errors.Is(err, modelgovernance.ErrAgentContextPolicy) {
+		return "ai_chat_context_unavailable", "当前模型的上下文容量配置无效，请联系管理员核对。"
+	}
 	if errors.Is(err, errConversationBudget) {
-		return "ai_chat_budget_exceeded", "本次问题需要的查询步骤过多，请分成更具体的问题。"
+		return "ai_chat_budget_exceeded", "本次提问的用量或查询步骤已达到预算，请缩小范围或减少分析步骤。"
+	}
+	if errors.Is(err, modelgovernance.ErrAgentResponseTruncated) {
+		return "ai_chat_answer_truncated", "本次模型输出未完成，请缩小问题范围或调整模型输出上限后重试。"
 	}
 	if errors.Is(err, modelgovernance.ErrAgentToolsUnsupported) {
 		return "ai_chat_tools_unsupported", "当前模型不支持业务工具调用，请联系平台管理员更换兼容模型。"

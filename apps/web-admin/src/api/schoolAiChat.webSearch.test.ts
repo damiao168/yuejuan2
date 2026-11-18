@@ -7,6 +7,20 @@ vi.mock("./client", async (original) => ({ ...await original<typeof import("./cl
 describe("school conversation web-search wire boundary", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("sends separate untrusted memory only in ordinary mode and strips local source metadata", async () => {
+    const messages: SchoolChatMessage[] = [{ role: "user", content: "公开问题", memory_source_id: "m-local", memory_order: 3, memory_pinned: true }];
+    const memory = { version: 2 as const, entries: [{ source_id: "m-old-0", order: 1, content: "旧私有要求", pinned: true }] };
+    await streamSchoolConversation(messages, undefined, new AbortController().signal, () => {}, undefined, false, memory);
+    const ordinary = JSON.parse(api.stream.mock.calls[0]![1].body);
+    expect(ordinary.memory).toEqual(memory);
+    expect(ordinary.messages).toEqual([{ role: "user", content: "公开问题" }]);
+    await streamSchoolConversation(messages, undefined, new AbortController().signal, () => {}, undefined, true, memory);
+    const publicRequest = JSON.parse(api.stream.mock.calls[1]![1].body);
+    expect(publicRequest.memory).toBeUndefined();
+    expect(JSON.stringify(publicRequest)).not.toContain("旧私有要求");
+    expect(JSON.stringify(publicRequest)).not.toContain("m-local");
+  });
+
   it("excludes ordinary history, cached sources and reasoning, retaining only a separate server-side context hint", async () => {
     const source = { id: "web-1", kind: "web" as const, status: "available" as const, label: "来源", read_at: "2026-11-01T00:00:00Z", consistency: "source_local" as const, scope_label: "公开网页", url: "https://example.org" };
     await streamSchoolConversation([

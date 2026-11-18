@@ -42,6 +42,7 @@ type ManagedAPIConfig struct {
 	CapabilityProfile        string                    `json:"capability_profile"`
 	PricingPolicy            map[string]any            `json:"pricing_policy"`
 	DataPolicy               map[string]any            `json:"data_policy"`
+	ContextPolicy            AgentContextPolicy        `json:"context_policy"`
 	HealthState              string                    `json:"health_state"`
 	CredentialConfigured     bool                      `json:"credential_configured"`
 	CredentialHint           string                    `json:"credential_hint,omitempty"`
@@ -87,19 +88,21 @@ type ManagedAPIConfigInput struct {
 	ConfigSource            string                 `json:"-"`
 	ProviderRegistryVersion string                 `json:"-"`
 	InitialProbe            *ManagedAPIProbeResult `json:"-"`
+	ContextPolicy           *AgentContextPolicy    `json:"context_policy,omitempty"`
 }
 
 type ManagedAPIConfigUpdateInput struct {
-	DisplayName  string                 `json:"display_name"`
-	AdapterType  string                 `json:"adapter_type"`
-	BaseURL      string                 `json:"base_url"`
-	ModelName    string                 `json:"model_name"`
-	ModelVersion string                 `json:"model_version"`
-	Region       string                 `json:"region"`
-	APIKey       string                 `json:"api_key,omitempty"`
-	Status       string                 `json:"status"`
-	IsDefault    bool                   `json:"is_default"`
-	InitialProbe *ManagedAPIProbeResult `json:"-"`
+	DisplayName   string                 `json:"display_name"`
+	AdapterType   string                 `json:"adapter_type"`
+	BaseURL       string                 `json:"base_url"`
+	ModelName     string                 `json:"model_name"`
+	ModelVersion  string                 `json:"model_version"`
+	Region        string                 `json:"region"`
+	APIKey        string                 `json:"api_key,omitempty"`
+	Status        string                 `json:"status"`
+	IsDefault     bool                   `json:"is_default"`
+	InitialProbe  *ManagedAPIProbeResult `json:"-"`
+	ContextPolicy *AgentContextPolicy    `json:"context_policy,omitempty"`
 	// 轮换向导冻结已选配置的版本；仅轮换密钥时其他字段由服务端补全，不接受文件或旧表单覆盖。
 	CredentialOnly          bool   `json:"credential_only,omitempty"`
 	ClientExpectedUpdatedAt string `json:"expected_updated_at,omitempty"`
@@ -316,6 +319,13 @@ func normalizeManagedAPIInput(input ManagedAPIConfigInput, requireKey bool) (Man
 	input.ConfigSource = strings.TrimSpace(input.ConfigSource)
 	input.ProviderRegistryVersion = strings.TrimSpace(input.ProviderRegistryVersion)
 	input = defaultManagedAPIInput(input)
+	if input.ContextPolicy != nil {
+		policy, err := NormalizeAgentContextPolicy(*input.ContextPolicy)
+		if err != nil {
+			return ManagedAPIConfigInput{}, err
+		}
+		input.ContextPolicy = &policy
+	}
 	if !governanceKey.MatchString(input.ProviderKey) ||
 		(input.AdapterType != "openai_compatible" && input.AdapterType != "dashscope_native") ||
 		(input.Status != "active" && input.Status != "disabled") ||
@@ -391,6 +401,7 @@ func normalizeManagedAPIUpdate(input ManagedAPIConfigUpdateInput) (ManagedAPICon
 		AdapterType: input.AdapterType, BaseURL: input.BaseURL, ModelName: input.ModelName,
 		ModelVersion: input.ModelVersion, Region: input.Region, APIKey: input.APIKey,
 		Status: input.Status, IsDefault: input.IsDefault,
+		ContextPolicy: input.ContextPolicy,
 	}, false)
 	if err != nil {
 		return ManagedAPIConfigUpdateInput{}, err
@@ -401,6 +412,7 @@ func normalizeManagedAPIUpdate(input ManagedAPIConfigUpdateInput) (ManagedAPICon
 		ModelVersion: normalized.ModelVersion, Region: normalized.Region,
 		APIKey: normalized.APIKey, Status: normalized.Status, IsDefault: normalized.IsDefault,
 		InitialProbe: input.InitialProbe, ExpectedUpdatedAt: input.ExpectedUpdatedAt,
+		ContextPolicy:  normalized.ContextPolicy,
 		CredentialOnly: input.CredentialOnly, ClientExpectedUpdatedAt: strings.TrimSpace(input.ClientExpectedUpdatedAt),
 	}, nil
 }

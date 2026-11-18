@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"log/slog"
 	"net/http"
 )
 
@@ -37,7 +38,14 @@ func (h *Handler) CreateManagedChatCompletion(w http.ResponseWriter, r *http.Req
 	}
 	connection, err := ResolveChatManagedAPI(r.Context(), store, mustUser(r).TenantID, input.ModelConfigID)
 	if err != nil || connection == nil {
+		if writeManagedChatContextError(w, r, err) {
+			return
+		}
 		httpx.Error(w, r, http.StatusServiceUnavailable, "ai_chat_model_unavailable", "当前没有可用的学校对话模型，请联系平台管理员")
+		return
+	}
+	messages, ok = prepareManagedChatForHandler(w, r, connection.Config, messages)
+	if !ok {
 		return
 	}
 	chatter := h.managedAPIChatter
@@ -49,6 +57,9 @@ func (h *Handler) CreateManagedChatCompletion(w http.ResponseWriter, r *http.Req
 	completion, err := chatter.Chat(r.Context(), *connection, messages)
 	if err != nil {
 		h.recordUsage(r.Context(), ModelUsageEvent{TenantID: mustUser(r).TenantID, RequestID: generationID, Feature: "school_ai_chat", ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName, Status: "failed", Metadata: map[string]any{"trace_request_id": logger.RequestID(r.Context()), "message_count": len(messages)}})
+		if writeManagedChatContextError(w, r, err) {
+			return
+		}
 		var providerErr ManagedChatProviderError
 		if errors.As(err, &providerErr) && providerErr.StatusCode == http.StatusTooManyRequests {
 			httpx.Error(w, r, http.StatusTooManyRequests, "ai_chat_rate_limited", "模型服务繁忙，请稍后重试")
@@ -109,7 +120,15 @@ func (h *Handler) StreamManagedChatCompletion(w http.ResponseWriter, r *http.Req
 	}
 	connection, err := ResolveChatManagedAPI(r.Context(), store, mustUser(r).TenantID, input.ModelConfigID)
 	if err != nil || connection == nil {
+		if writeManagedChatContextError(w, r, err) {
+			return
+		}
 		httpx.Error(w, r, http.StatusServiceUnavailable, "ai_chat_model_unavailable", "当前没有可用的学校对话模型，请联系平台管理员")
+		return
+	}
+	// 在提交 SSE 响应头前完成预算检查，超限以可读 HTTP 错误返回，不能先启动模型生成。
+	messages, ok = prepareManagedChatForHandler(w, r, connection.Config, messages)
+	if !ok {
 		return
 	}
 	chatter := h.managedAPIChatter
@@ -156,4 +175,31 @@ func (h *Handler) StreamManagedChatCompletion(w http.ResponseWriter, r *http.Req
 		h.recordUsage(r.Context(), ModelUsageEvent{TenantID: mustUser(r).TenantID, RequestID: generationID, Feature: "school_ai_chat", ProviderKey: connection.Config.ProviderKey, ModelName: connection.Config.ModelName, Status: "failed", Metadata: map[string]any{"trace_request_id": logger.RequestID(r.Context()), "message_count": len(messages), "stream": true}})
 		_ = emit(ManagedChatEvent{Type: "error"})
 	}
+}
+
+func prepareManagedChatForHandler(w http.ResponseWriter, r *http.Request, config ManagedAPIConfig, messages []ManagedChatMessage) ([]ManagedChatMessage, bool) {
+	prepared, usage, err := prepareManagedChatContext(config, messages)
+	if err != nil {
+		if !writeManagedChatContextError(w, r, err) {
+			httpx.Error(w, r, http.StatusBadRequest, "invalid_ai_chat_request", "对话内容为空、过长或格式不正确")
+		}
+		return nil, false
+	}
+	slog.InfoContext(r.Context(), "managed chat context budget", "event", "school_assistant_context_budget", "feature", "school_ai_chat",
+		"estimated_input_tokens", usage.EstimatedInputTokens, "input_budget_tokens", usage.InputBudgetTokens,
+		"max_output_tokens", usage.MaxOutputTokens, "context_window_tokens", usage.ContextWindowTokens,
+		"dropped_messages", usage.DroppedMessages, "estimation_method", usage.EstimationMethod)
+	return prepared, true
+}
+
+func writeManagedChatContextError(w http.ResponseWriter, r *http.Request, err error) bool {
+	if errors.Is(err, ErrAgentContextExceeded) {
+		httpx.Error(w, r, http.StatusBadRequest, "ai_chat_context_exceeded", "本次问题或附件超过当前模型的上下文预算，请缩小内容或开启新对话。")
+		return true
+	}
+	if errors.Is(err, ErrAgentContextPolicy) {
+		httpx.Error(w, r, http.StatusServiceUnavailable, "ai_chat_context_unavailable", "当前模型的上下文容量配置无效，请联系管理员核对。")
+		return true
+	}
+	return false
 }

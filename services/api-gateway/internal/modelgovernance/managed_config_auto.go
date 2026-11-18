@@ -8,12 +8,13 @@ import (
 )
 
 type AutoManagedAPIConfigInput struct {
-	TenantID           string `json:"tenant_id"`
-	APIKey             string `json:"api_key"`
-	CredentialSourceID string `json:"credential_source_id,omitempty"`
-	ModelName          string `json:"model_name"`
-	Provider           string `json:"provider,omitempty"`
-	BaseURL            string `json:"base_url,omitempty"`
+	TenantID           string              `json:"tenant_id"`
+	APIKey             string              `json:"api_key"`
+	CredentialSourceID string              `json:"credential_source_id,omitempty"`
+	ModelName          string              `json:"model_name"`
+	Provider           string              `json:"provider,omitempty"`
+	BaseURL            string              `json:"base_url,omitempty"`
+	ContextPolicy      *AgentContextPolicy `json:"context_policy,omitempty"`
 }
 
 type ResolveManagedProviderInput struct {
@@ -182,5 +183,6 @@ func (s *AutoManagedAPIConfigService) configInput(tenantID string, input AutoMan
 		APIKey: input.APIKey, ModelName: resolved.ModelName, ModelVersion: resolved.ModelName,
 		Region: resolved.Provider.Region, Status: "active", IsDefault: isDefault,
 		ConfigSource: "auto", ProviderRegistryVersion: resolved.RegistryVersion,
+		ContextPolicy: input.ContextPolicy,
 	}
 }

@@ -134,6 +134,7 @@ func (s *agentStreamState) consume(data []byte, emit func(AgentEvent) error) err
 		return ManagedChatProviderError{StatusCode: http.StatusBadGateway}
 	}
 	if len(chunk.Usage) > 0 && string(chunk.Usage) != "null" {
+		// 每帧用量是本次生成的累计快照；重复帧只能覆盖，不能累计增加计费或缓存命中量。
 		s.usage = parseAgentUsage(chunk.Usage, s.dashscope)
 	}
 	message, reason, found := chunk.message(s.dashscope)

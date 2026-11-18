@@ -16,9 +16,16 @@ type Config struct {
 	Qdrant                   QdrantConfig
 	AIService                AIServiceConfig
 	SchoolAssistantSearchURL string
+	SchoolAssistant          SchoolAssistantConfig
 	Files                    FileConfig
 	Observability            ObservabilityConfig
 	Barcode                  BarcodeConfig
+}
+
+type SchoolAssistantConfig struct {
+	DirectAnswerEnabled    bool
+	DisableMemory          bool
+	DisableCacheCoalescing bool
 }
 
 type ServiceConfig struct {

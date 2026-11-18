@@ -1,6 +1,7 @@
 import type { PendingConversation } from "./conversationPresentation";
 import type { ConversationRefreshSnapshot } from "./conversationRefresh";
 import type { ConversationThread } from "./conversationStorage";
+import { compactConversationHistory } from "./conversationHistory";
 
 export const REFRESH_INTERRUPTED_MESSAGE = "上次回复未完成，已恢复问题和收到的内容。可重新生成回复。";
 
@@ -29,11 +30,12 @@ export function restoreConversationRefresh(history: ConversationThread[], snapsh
   if (!snapshot) return { threads: history, activeId: history[0]?.id ?? null };
   const restored = snapshot.entries.map(entry => {
     const previous = history.find(thread => thread.id === entry.threadId);
-    const messages = [...(previous?.messages ?? []), entry.question].slice(-49);
-    return {
+    const messages = [...(previous?.messages ?? []), entry.question];
+    return compactConversationHistory({
       id: entry.threadId, title: previous?.title ?? entry.title, updatedAt: Math.max(previous?.updatedAt ?? 0, entry.updatedAt), messages,
+      ...(previous?.historyExcerpt ? { historyExcerpt: previous.historyExcerpt } : {}),
       interruptedReply: { content: entry.partialContent, ...(entry.modelConfigID ? { modelConfigID: entry.modelConfigID } : {}) },
-    } satisfies ConversationThread;
+    } satisfies ConversationThread);
   });
   const ids = new Set(restored.map(thread => thread.id));
   const threads: ConversationThread[] = [...restored, ...history.filter(thread => !ids.has(thread.id))].slice(0, 20);

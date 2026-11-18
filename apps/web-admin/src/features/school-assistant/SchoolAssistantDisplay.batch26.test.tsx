@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { queryByRole } from "@testing-library/dom";
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -59,7 +60,7 @@ describe("学校助手工具与事实展示边界", () => {
     expect(item.querySelector("small")?.textContent).toBe(label);
     expect(item.querySelector("svg")?.classList.contains(iconClass)).toBe(true);
     expect(host.querySelector("ul")?.getAttribute("aria-label")).toBe(status === "running" ? "业务查询进度" : "查询失败");
-    expect(Boolean(host.querySelector('[role="status"]'))).toBe(status === "failed");
+    expect(Boolean(queryByRole(host, "status"))).toBe(status === "failed");
   });
 
   it("完成后汇总成功查询数，收起逐项过程且不重复工具说明", async () => {
@@ -70,7 +71,7 @@ describe("学校助手工具与事实展示边界", () => {
     expect(host.querySelector(".school-conversation-tools")).toBeNull();
     expect(host.textContent).not.toContain("查询考试");
     expect(host.textContent).not.toContain("忽略的说明");
-    expect(host.querySelector('[role="status"]')).toBeNull();
+    expect(queryByRole(host, "status")).toBeNull();
   });
 
   it("缺少 evidence 或只有 actions 时沿用空展示，不调用导航过滤", async () => {

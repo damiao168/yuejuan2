@@ -32,7 +32,7 @@ function identifier(value: unknown): value is string {
 function shortText(value: string, limit: number): string {
   if (value.length <= limit) return value;
   const truncated = value.slice(0, limit);
-  const last = truncated.charCodeAt(truncated.length - 1);
+  const last = truncated.codePointAt(truncated.length - 1) ?? 0;
   return last >= 0xd800 && last <= 0xdbff ? truncated.slice(0, -1) : truncated;
 }
 
@@ -42,7 +42,7 @@ function refreshEntry(value: unknown): ConversationRefreshEntry | null {
   // 恢复记录也按白名单读取，不能从手工篡改的缓存带回附件、业务范围或证据。
   if (!entry || entry.business === true || entry.context !== undefined || !identifier(entry.threadId)
     || typeof entry.title !== "string" || typeof entry.updatedAt !== "number" || !Number.isFinite(entry.updatedAt) || entry.updatedAt <= 0
-    || !question || question.role !== "user" || typeof question.content !== "string" || !question.content.trim()
+    || question?.role !== "user" || typeof question.content !== "string" || !question.content.trim()
     || question.attachments !== undefined || entry.attachments !== undefined || typeof entry.partialContent !== "string") return null;
   return {
     threadId: entry.threadId,
@@ -57,7 +57,7 @@ function refreshEntry(value: unknown): ConversationRefreshEntry | null {
 function refreshSnapshot(value: unknown): ConversationRefreshSnapshot | null {
   const snapshot = object(value);
   const now = Date.now();
-  if (!snapshot || snapshot.version !== 1 || typeof snapshot.savedAt !== "number" || !Number.isFinite(snapshot.savedAt)
+  if (snapshot?.version !== 1 || typeof snapshot.savedAt !== "number" || !Number.isFinite(snapshot.savedAt)
     || snapshot.savedAt <= 0 || now - snapshot.savedAt >= CONVERSATION_REFRESH_TTL_MS || snapshot.savedAt > now + 5_000
     || snapshot.activeId !== null && !identifier(snapshot.activeId) || !Array.isArray(snapshot.entries)) return null;
   const entries: ConversationRefreshEntry[] = [];

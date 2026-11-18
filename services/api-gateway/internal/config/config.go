@@ -40,6 +40,11 @@ func Load(envFile string) (Config, error) {
 	sessionCookieSecure := parser.Bool("EDUGRADE_SESSION_COOKIE_SECURE", defaultSessionCookieSecure(environment))
 
 	cfg := Config{
+		SchoolAssistant: SchoolAssistantConfig{
+			DirectAnswerEnabled:    parser.Bool("EDUGRADE_ASSISTANT_DIRECT_ANSWER_ENABLED", false),
+			DisableMemory:          parser.Bool("EDUGRADE_ASSISTANT_MEMORY_DISABLED", false),
+			DisableCacheCoalescing: parser.Bool("EDUGRADE_ASSISTANT_CACHE_COALESCING_DISABLED", false),
+		},
 		Service: ServiceConfig{
 			Name:                getEnv("EDUGRADE_SERVICE_NAME", "api-gateway"),
 			Environment:         environment,

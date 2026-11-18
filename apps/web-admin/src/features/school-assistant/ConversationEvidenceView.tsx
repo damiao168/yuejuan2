@@ -6,13 +6,15 @@ import { assistantActionPath } from "./navigation";
 import { hasReadWebPage, isPublicWebTool, publicSourceNote, publicSourceNumber, publicSourceURL, WEB_UNMARKED_CITATION_NOTE } from "./conversationWebSearch";
 
 const statusLabel: Record<string, string> = { available: "已读取", partial: "部分可用", empty: "暂无记录", unavailable: "读取失败", forbidden: "无权限" };
+const completedToolLabels = new Map([["web_search", "搜索完成"], ["web_fetch", "网页读取完成"]]);
+const runningToolLabels = new Map([["web_search", "正在搜索公开资料"], ["web_fetch", "正在读取网页"]]);
 
 function ConversationToolItem({ tool }: Readonly<{ tool: ConversationEvidence["tools"][number] }>) {
   let icon = <Check size={13} />;
-  let label = tool.tool_name === "web_search" ? "搜索完成" : tool.tool_name === "web_fetch" ? "网页读取完成" : "已查询";
+  let label = completedToolLabels.get(tool.tool_name) ?? "已查询";
   if (tool.status === "running") {
     icon = <LoaderCircle size={13} />;
-    label = tool.tool_name === "web_search" ? "正在搜索公开资料" : tool.tool_name === "web_fetch" ? "正在读取网页" : "正在查询";
+    label = runningToolLabels.get(tool.tool_name) ?? "正在查询";
   } else if (tool.status === "failed") {
     icon = <TriangleAlert size={13} />;
     label = tool.message || "查询失败";
@@ -22,23 +24,30 @@ function ConversationToolItem({ tool }: Readonly<{ tool: ConversationEvidence["t
   </li>;
 }
 
+function ConversationToolProgress({ tools, webOnly }: Readonly<{ tools: ConversationEvidence["tools"]; webOnly: boolean }>) {
+  if (tools.some(tool => tool.status === "running")) {
+    return <ul className="school-conversation-tools" aria-label={webOnly ? "联网搜索进度" : "业务查询进度"}>{tools.map(tool => <ConversationToolItem key={tool.call_id} tool={tool} />)}</ul>;
+  }
+  const failed = tools.filter(tool => tool.status === "failed");
+  return <>
+    {tools.length && !webOnly ? <span>已查询{tools.length - failed.length}项资料</span> : null}
+    {failed.length ? <ul className="school-conversation-tools" aria-label="查询失败">{failed.map(tool => <ConversationToolItem key={tool.call_id} tool={tool} />)}</ul> : null}
+  </>;
+}
+
 export function ConversationEvidenceView({ evidence, user, onNavigate, allowActions = true }: Readonly<{
   evidence?: ConversationEvidence; user: SessionUser; onNavigate?: (path: string) => void; allowActions?: boolean;
 }>) {
   if (!evidence || (!evidence.tools.length && !evidence.sources.length)) return null;
-  const running = evidence.tools.some(tool => tool.status === "running");
-  const failed = evidence.tools.filter(tool => tool.status === "failed");
+  const failed = evidence.tools.some(tool => tool.status === "failed");
   const sourceIncomplete = evidence.sources.some(source => ["partial", "unavailable", "forbidden"].includes(source.status));
   const webSources = evidence.sources.filter(source => source.kind === "web");
   const businessSources = evidence.sources.filter(source => source.kind !== "web");
   const webOnly = evidence.tools.every(tool => isPublicWebTool(tool.tool_name)) && !businessSources.length;
   return <div className="school-conversation-evidence">
-    {running ? <ul className="school-conversation-tools" aria-label={webOnly ? "联网搜索进度" : "业务查询进度"}>{evidence.tools.map((tool) => <ConversationToolItem key={tool.call_id} tool={tool} />)}</ul> : <>
-      {evidence.tools.length && !webOnly ? <span>已查询{evidence.tools.length - failed.length}项资料</span> : null}
-      {failed.length ? <ul className="school-conversation-tools" aria-label="查询失败">{failed.map(tool => <ConversationToolItem key={tool.call_id} tool={tool} />)}</ul> : null}
-    </>}
+    <ConversationToolProgress tools={evidence.tools} webOnly={webOnly} />
     {/* 完成后只收拢成功过程；缺失来源仍直接提醒，不能靠折叠来源区掩盖回答范围。 */}
-    {failed.length || sourceIncomplete ? <p role="status">部分资料未能完整读取，请核对回答范围。</p> : null}
+    {failed || sourceIncomplete ? <p><output>部分资料未能完整读取，请核对回答范围。</output></p> : null}
     {webSources.length ? <Collapse ghost size="small" className="school-conversation-sources school-conversation-web-sources" items={[{
       key: "web", label: <span><Globe size={13} />参考来源（{webSources.length}）</span>,
       children: <div>{webSources.map((source, index) => {

@@ -40,7 +40,8 @@ func TestPublicSearchLoopPrefetchesBodyBeforeSecondModelDecision(t *testing.T) {
 	if strings.Contains(first[0].Content, webSearchEvidenceInstructions) || !strings.Contains(next[0].Content, webSearchEvidenceInstructions) {
 		t.Fatal("first decision carried unavailable page and evidence instructions")
 	}
-	if !strings.Contains(next[1].Content, body) || !strings.Contains(next[1].Content, `"question":"`+question+`"`) || !strings.Contains(next[1].Content, `"read_source_ids":["candidate-1"]`) || !strings.Contains(next[1].Content, `"reads_remaining":2`) {
+	nextState := lastTestUserMessage(model.requests[1]).Content
+	if !strings.Contains(nextState, body) || !strings.Contains(nextState, `"question":"`+question+`"`) || !strings.Contains(nextState, `"read_source_ids":["candidate-1"]`) || !strings.Contains(nextState, `"reads_remaining":2`) {
 		t.Fatal("prefetched body lost whole question, stable source or read budget")
 	}
 	sources := events[len(events)-2]
@@ -67,7 +68,7 @@ func TestPublicSearchLoopPrefetchRoundRobinPreservesStableSourceIDs(t *testing.T
 	if !seen[a1.URL] || !seen[b1.URL] || seen[a2.URL] {
 		t.Fatalf("first query monopolized prefetched pages: %v", seen)
 	}
-	state := model.requests[1].Messages[1].Content
+	state := lastTestUserMessage(model.requests[1]).Content
 	if !strings.Contains(state, `"read_source_ids":["candidate-1","candidate-3"]`) || !strings.Contains(state, `"reads_remaining":1`) {
 		t.Fatal("duplicate result consumed a page or source IDs followed completion order")
 	}
@@ -97,7 +98,7 @@ func TestPublicSearchLoopPrefetchSkipsKnownRedirectAndSharesThreeReadBudget(t *t
 	if !seen[entry.URL] || !seen[next1.URL] || !seen[next2.URL] || seen[target.URL] {
 		t.Fatalf("known alias was fetched again: %v", seen)
 	}
-	state := model.requests[2].Messages[1].Content
+	state := lastTestUserMessage(model.requests[2]).Content
 	if !strings.Contains(state, `"read_source_ids":["candidate-1","candidate-3","candidate-4"]`) || !strings.Contains(state, `"reads_remaining":0`) || !strings.Contains(state, `"can_read_search_results":false`) {
 		t.Fatal("prefetch and prior redirect did not share the three-page budget")
 	}
@@ -153,7 +154,7 @@ func TestPublicSearchLoopFailedPrefetchKeepsSummaryAndContinuesAnswer(t *testing
 			failed++
 		}
 	}
-	if failed != 1 || !strings.Contains(model.requests[1].Messages[1].Content, `"reads_remaining":2`) {
+	if failed != 1 || !strings.Contains(lastTestUserMessage(model.requests[1]).Content, `"reads_remaining":2`) {
 		t.Fatal("failed body read disappeared from events or budget")
 	}
 	sources := events[len(events)-2].Sources

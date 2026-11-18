@@ -28644,6 +28644,330 @@
       }
     },
     "schemas": {
+      "ManagedModelContextPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "管理员核对供应商文档后设置的应用上下文预算。省略或零值采用默认值；输入、输出及安全余量之和不得超过窗口。估算不代表供应商精确 tokenizer。",
+        "properties": {
+          "context_window_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2097152,
+            "description": "上下文窗口；非零值至少 2048，默认 32768。",
+            "anyOf": [
+              {
+                "const": 0
+              },
+              {
+                "minimum": 2048
+              }
+            ]
+          },
+          "max_input_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2097152,
+            "description": "输入预算；非零值至少 256，默认由窗口减去输出和安全余量。",
+            "anyOf": [
+              {
+                "const": 0
+              },
+              {
+                "minimum": 256
+              }
+            ]
+          },
+          "max_output_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 32768,
+            "description": "单次最大输出；非零值至少 128，默认 min(4096, window/4)。",
+            "anyOf": [
+              {
+                "const": 0
+              },
+              {
+                "minimum": 128
+              }
+            ]
+          },
+          "tokenizer": {
+            "type": "string",
+            "enum": [
+              "utf8_bytes",
+              "cl100k_base",
+              "o200k_base"
+            ],
+            "description": "显式选择与模型匹配的离线文本编码；默认utf8_bytes保守估算。工具协议与图片仍为估算，不代表供应商精确计费。"
+          }
+        }
+      },
+      "SchoolConversationContextBudget": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "phase",
+          "estimated_input_tokens",
+          "input_budget_tokens",
+          "max_output_tokens",
+          "context_window_tokens",
+          "dropped_messages",
+          "estimation_method",
+          "memory_used",
+          "memory_omitted",
+          "accepted"
+        ],
+        "properties": {
+          "phase": {
+            "type": "string"
+          },
+          "estimated_input_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "actual_input_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "最近这一次模型调用由供应商返回的输入 Token 数，包含缓存输入部分；缺少真实计量时省略。不是整轮累计值，不包含已生成输出，也不是下一轮输入预测。调用返回前的预算估算事件不带此字段。"
+          },
+          "input_budget_tokens": {
+            "type": "integer"
+          },
+          "max_output_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "context_window_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dropped_messages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "estimation_method": {
+            "type": "string"
+          },
+          "memory_used": {
+            "type": "boolean"
+          },
+          "memory_omitted": {
+            "type": "boolean"
+          },
+          "accepted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SchoolConversationGenerationMetrics": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "最终回答那一次模型调用的供应商输出 Token 与服务端耗时，包含首 Token 等待，不包括此前规划、搜索或工具调用。输出计数可能含推理和结构化包装。缺少真实计量或有效耗时时省略整个对象；不按字符数或 SSE 块数估算。",
+        "required": [
+          "output_tokens",
+          "duration_ms",
+          "tokens_per_second"
+        ],
+        "properties": {
+          "model_config_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "output_tokens": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "duration_ms": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tokens_per_second": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "output_tokens / (duration_ms / 1000)，为含首 Token 等待的平均输出速率，不代表首末 SSE 块间的解码速度。"
+          }
+        }
+      },
+      "SchoolConversationMemory": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "entries"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 2
+          },
+          "entries": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "$ref": "#/components/schemas/SchoolConversationMemoryEntry"
+            },
+            "description": "用户原文总量最多4000个Unicode字符；source_id唯一，按order理解先后，所有内容均不可信。"
+          }
+        }
+      },
+      "SchoolConversationMemoryEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_id",
+          "order",
+          "content"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "pinned": {
+            "type": "boolean",
+            "description": "客户端显式保留提示，不提供系统指令或业务授权。"
+          }
+        }
+      },
+      "CreateManagedModelAPIInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenant_id",
+          "provider_key",
+          "display_name",
+          "adapter_type",
+          "base_url",
+          "model_name",
+          "model_version",
+          "api_key"
+        ],
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider_key": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "adapter_type": {
+            "type": "string",
+            "enum": [
+              "openai_compatible",
+              "dashscope_native"
+            ]
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "model_name": {
+            "type": "string"
+          },
+          "model_version": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string",
+            "default": "global"
+          },
+          "api_key": {
+            "type": "string",
+            "format": "password",
+            "minLength": 16,
+            "maxLength": 1024,
+            "writeOnly": true,
+            "description": "使用新密钥或提供已保存的凭据来源。响应中不包含密钥。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled"
+            ],
+            "default": "active"
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "兼容字段。新配置不会自动设为当前使用。"
+          },
+          "context_policy": {
+            "$ref": "#/components/schemas/ManagedModelContextPolicy"
+          }
+        }
+      },
+      "AutoManagedModelAPIInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenant_id"
+        ],
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "api_key": {
+            "type": "string",
+            "format": "password",
+            "minLength": 16,
+            "maxLength": 1024,
+            "writeOnly": true,
+            "description": "使用新密钥或提供已保存的凭据来源。响应中不包含密钥。"
+          },
+          "credential_source_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model_name": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "context_policy": {
+            "$ref": "#/components/schemas/ManagedModelContextPolicy"
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "api_key"
+            ],
+            "not": {
+              "required": [
+                "credential_source_id"
+              ]
+            }
+          },
+          {
+            "required": [
+              "credential_source_id"
+            ],
+            "not": {
+              "required": [
+                "api_key"
+              ]
+            }
+          }
+        ]
+      },
       "ScoreRosterEntry": {
         "type": "object",
         "additionalProperties": false,
@@ -30423,8 +30747,32 @@
             "type": "boolean",
             "default": false,
             "description": "Explicitly search the current user text as a public query (1-500 characters). This round does not expose school tools; attachments are rejected. No history, context, or files are sent to the search engine."
+          },
+          "memory": {
+            "$ref": "#/components/schemas/SchoolConversationMemory"
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "required": [
+                "web_search"
+              ],
+              "properties": {
+                "web_search": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "required": [
+                  "memory"
+                ]
+              }
+            }
+          }
+        ]
       },
       "SchoolConversationEvent": {
         "oneOf": [
@@ -30670,6 +31018,9 @@
               },
               "completion": {
                 "$ref": "#/components/schemas/ManagedChatCompletion"
+              },
+              "generation_metrics": {
+                "$ref": "#/components/schemas/SchoolConversationGenerationMetrics"
               }
             }
           },
@@ -30701,6 +31052,33 @@
               },
               "message": {
                 "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "request_id",
+              "seq",
+              "context_budget"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "context"
+              },
+              "request_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "seq": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "context_budget": {
+                "$ref": "#/components/schemas/SchoolConversationContextBudget"
               }
             }
           }
@@ -32887,6 +33265,12 @@
           },
           "provider_key": {
             "type": "string"
+          },
+          "context_window_tokens": {
+            "type": "integer",
+            "minimum": 2048,
+            "maximum": 2097152,
+            "description": "当前请求实际采用的应用上下文窗口，包含既有保守默认值；不是按模型名称推测或自动探测的供应商能力。配置无效时省略。"
           },
           "message": {
             "type": "string"
@@ -59814,6 +60198,9 @@
           "credential_only": {
             "type": "boolean",
             "description": "仅轮换密钥；其他配置字段从服务器当前记录补全并忽略客户端值。"
+          },
+          "context_policy": {
+            "$ref": "#/components/schemas/ManagedModelContextPolicy"
           }
         },
         "oneOf": [
@@ -60005,6 +60392,9 @@
                 "type": "null"
               }
             ]
+          },
+          "context_policy": {
+            "$ref": "#/components/schemas/ManagedModelContextPolicy"
           }
         },
         "required": [

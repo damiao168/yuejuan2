@@ -15,6 +15,10 @@ type ConversationDependencies struct {
 	Usage  modelgovernance.UsageLedger
 	Search SearchProvider
 	Reader WebPageReader
+	// 实验回答路径默认关闭；关闭记忆或请求合并可单独退回保守路径。
+	DirectAnswerEnabled    bool
+	DisableMemory          bool
+	DisableCacheCoalescing bool
 }
 
 type ConversationContext struct {
@@ -28,26 +32,29 @@ type ConversationRequest struct {
 	ModelConfigID string                               `json:"model_config_id,omitempty"`
 	Messages      []modelgovernance.ManagedChatMessage `json:"messages"`
 	Context       *ConversationContext                 `json:"context,omitempty"`
+	Memory        *ConversationMemory                  `json:"memory,omitempty"`
 }
 
 type ConversationEvent struct {
-	Type       string                                  `json:"type"`
-	RequestID  string                                  `json:"request_id"`
-	Seq        int                                     `json:"seq"`
-	Phase      string                                  `json:"phase,omitempty"`
-	Model      *modelgovernance.ManagedChatModelStatus `json:"model,omitempty"`
-	CallID     string                                  `json:"call_id,omitempty"`
-	ToolName   string                                  `json:"tool_name,omitempty"`
-	Label      string                                  `json:"label,omitempty"`
-	Status     string                                  `json:"status,omitempty"`
-	Channel    string                                  `json:"channel,omitempty"`
-	Delta      string                                  `json:"delta,omitempty"`
-	Sources    []Source                                `json:"sources,omitempty"`
-	Actions    []Action                                `json:"actions,omitempty"`
-	Scope      *Scope                                  `json:"scope,omitempty"`
-	Completion *modelgovernance.ManagedChatCompletion  `json:"completion,omitempty"`
-	Code       string                                  `json:"code,omitempty"`
-	Message    string                                  `json:"message,omitempty"`
+	Type              string                                  `json:"type"`
+	RequestID         string                                  `json:"request_id"`
+	Seq               int                                     `json:"seq"`
+	Phase             string                                  `json:"phase,omitempty"`
+	Model             *modelgovernance.ManagedChatModelStatus `json:"model,omitempty"`
+	CallID            string                                  `json:"call_id,omitempty"`
+	ToolName          string                                  `json:"tool_name,omitempty"`
+	Label             string                                  `json:"label,omitempty"`
+	Status            string                                  `json:"status,omitempty"`
+	Channel           string                                  `json:"channel,omitempty"`
+	Delta             string                                  `json:"delta,omitempty"`
+	Sources           []Source                                `json:"sources,omitempty"`
+	Actions           []Action                                `json:"actions,omitempty"`
+	Scope             *Scope                                  `json:"scope,omitempty"`
+	Completion        *modelgovernance.ManagedChatCompletion  `json:"completion,omitempty"`
+	Code              string                                  `json:"code,omitempty"`
+	Message           string                                  `json:"message,omitempty"`
+	ContextBudget     *ConversationContextBudget              `json:"context_budget,omitempty"`
+	GenerationMetrics *ConversationGenerationMetrics          `json:"generation_metrics,omitempty"`
 }
 
 // MarshalJSON 只在来源事件中保证数组存在；其他事件不携带无关的 null 字段。

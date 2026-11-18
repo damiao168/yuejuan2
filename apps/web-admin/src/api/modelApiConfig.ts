@@ -1,4 +1,7 @@
 import { ApiClientError, apiClient, getUserErrorMessage } from "./client";
+import type { ManagedModelContextPolicy } from "@edugrade/sdk";
+
+export type { ManagedModelContextPolicy };
 
 export type ManagedAdapterType = "openai_compatible" | "dashscope_native";
 export type ManagedAPIConfigStatus = "active" | "disabled";
@@ -13,6 +16,7 @@ export interface ManagedModelAPIConfig {
   base_url: string;
   model_name: string;
   model_version: string;
+  context_policy?: ManagedModelContextPolicy;
   region: string;
   credential_configured: boolean;
   credential_hint?: string;
@@ -148,6 +152,7 @@ export interface ManagedModelAPIConfigInput {
   base_url: string;
   model_name: string;
   model_version: string;
+  context_policy?: ManagedModelContextPolicy;
   region: string;
   api_key: string;
   status: ManagedAPIConfigStatus;
@@ -205,6 +210,7 @@ export interface AutoManagedModelAPIConfigInput {
   api_key?: string;
   credential_source_id?: string;
   model_name: string;
+  context_policy?: ManagedModelContextPolicy;
   provider?: string;
   base_url?: string;
 }

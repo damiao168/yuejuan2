@@ -10,7 +10,8 @@ describe("refresh checkpoints and model history", () => {
     expect(snapshot.entries[0]?.question.content).toBe("待回答的问题");
     const restored = restoreConversationRefresh([], snapshot);
     expect(restored.activeId).toBe(base.id);
-    expect(restored.threads[0]?.messages).toEqual(base.messages);
+    expect(restored.threads[0]?.messages).toMatchObject(base.messages);
+    expect(restored.threads[0]?.messages[0]?.memory_source_id).toMatch(/^m-/);
     expect(restored.threads[0]?.interruptedReply).toEqual({ content: "" });
     expect(JSON.parse(serializeConversationThreads(restored.threads))).toEqual([]);
     expect(buildConversationRefresh(restored.threads, {}, restored.activeId).entries).toEqual(snapshot.entries);

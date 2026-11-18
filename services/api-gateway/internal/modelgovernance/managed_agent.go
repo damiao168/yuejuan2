@@ -25,6 +25,10 @@ type AgentMessage struct {
 	Name             string                  `json:"name,omitempty"`
 	ToolCalls        []AgentToolCall         `json:"tool_calls,omitempty"`
 	Images           []ManagedChatAttachment `json:"-"`
+	// PreserveContext 仅由服务端标记无附件的普通用户记忆；不会提升为系统规则或业务证据。
+	PreserveContext bool `json:"-"`
+	// ContextPriority 仅用于记忆缩减，越高越晚省略；当前问题与系统约束不参与该优先级。
+	ContextPriority int `json:"-"`
 }
 
 type AgentTool struct {
@@ -45,6 +49,11 @@ type AgentRequest struct {
 	ToolChoice string         `json:"tool_choice,omitempty"`
 	// DisableThinking 仅请求已知供应商支持的关闭策略；不按第三方模型名称猜测参数协议。
 	DisableThinking bool `json:"-"`
+	// TokenBudget 由服务端累计用量计算；零表示只使用模型策略，客户端不能指定。
+	TokenBudget int64 `json:"-"`
+	// MaxOutputTokens 可由内部摘要等短响应降低，始终受模型策略的最大输出约束。
+	MaxOutputTokens int `json:"-"`
+	contextCache    *agentContextCache
 }
 
 type AgentResponse struct {

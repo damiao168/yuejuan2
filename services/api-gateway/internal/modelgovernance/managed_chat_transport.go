@@ -12,27 +12,22 @@ import (
 )
 
 func (c *HTTPManagedAPIChatter) StreamChat(ctx context.Context, connection ManagedAPIConnection, messages []ManagedChatMessage, emit func(ManagedChatEvent) error) error {
+	prepared, contextUsage, err := prepareManagedChatContext(connection.Config, messages)
+	if err != nil {
+		return err
+	}
+	messages = prepared
 	var endpoint string
-	var payload []byte
-	var err error
 	dashscope := connection.Config.AdapterType == "dashscope_native"
 	if dashscope {
 		endpoint = strings.TrimRight(connection.Config.BaseURL, "/") + "/" + managedChatGenerationPath(messages)
-		payload, _ = json.Marshal(map[string]any{
-			"model":      connection.Config.ModelName,
-			"input":      map[string]any{"messages": managedChatProviderMessages(messages, true)},
-			"parameters": map[string]any{"result_format": "message", "incremental_output": true, "temperature": 0.7},
-		})
 	} else {
 		endpoint, err = managedCompletionEndpoint(connection.Config.BaseURL)
 		if err != nil {
 			return err
 		}
-		payload, _ = json.Marshal(map[string]any{
-			"model": connection.Config.ModelName, "messages": managedChatProviderMessages(messages),
-			"stream": true, "stream_options": map[string]any{"include_usage": true}, "temperature": 0.7,
-		})
 	}
+	payload, _ := json.Marshal(managedChatProviderPayload(connection.Config, messages, true, dashscope, contextUsage.MaxOutputTokens))
 	transport := &http.Transport{DialContext: safePublicDialContext, TLSHandshakeTimeout: 8 * time.Second, ResponseHeaderTimeout: c.timeout, IdleConnTimeout: 10 * time.Second}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, Timeout: c.timeout, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
@@ -145,13 +140,10 @@ func (state *managedChatStreamState) updateUsage(raw json.RawMessage, dashscope 
 		return
 	}
 	if dashscope {
-		var value struct {
-			InputTokens  int64 `json:"input_tokens"`
-			OutputTokens int64 `json:"output_tokens"`
-			TotalTokens  int64 `json:"total_tokens"`
-		}
+		var value managedDashScopeUsage
 		if json.Unmarshal(raw, &value) == nil {
-			state.usage = ManagedAPIProbeUsage{InputTokens: value.InputTokens, OutputTokens: value.OutputTokens, TotalTokens: value.TotalTokens}
+			// 原生流式用量与普通响应共用归一化；快照覆盖可避免重复帧导致重复计费。
+			state.usage = value.normalized()
 		}
 	} else {
 		var value managedOpenAIProbeUsage
@@ -162,14 +154,16 @@ func (state *managedChatStreamState) updateUsage(raw json.RawMessage, dashscope 
 }
 
 func (c *HTTPManagedAPIChatter) chatOpenAICompatible(ctx context.Context, connection ManagedAPIConnection, messages []ManagedChatMessage) (ManagedChatCompletion, error) {
+	prepared, contextUsage, err := prepareManagedChatContext(connection.Config, messages)
+	if err != nil {
+		return ManagedChatCompletion{}, err
+	}
+	messages = prepared
 	endpoint, err := managedCompletionEndpoint(connection.Config.BaseURL)
 	if err != nil {
 		return ManagedChatCompletion{}, err
 	}
-	payload, _ := json.Marshal(map[string]any{
-		"model": connection.Config.ModelName, "messages": managedChatProviderMessages(messages),
-		"temperature": 0.7, "stream": false,
-	})
+	payload, _ := json.Marshal(managedChatProviderPayload(connection.Config, messages, false, false, contextUsage.MaxOutputTokens))
 	body, status, err := c.request(ctx, endpoint, connection, payload)
 	if err != nil {
 		return ManagedChatCompletion{}, err
@@ -193,12 +187,13 @@ func (c *HTTPManagedAPIChatter) chatOpenAICompatible(ctx context.Context, connec
 }
 
 func (c *HTTPManagedAPIChatter) chatDashScope(ctx context.Context, connection ManagedAPIConnection, messages []ManagedChatMessage) (ManagedChatCompletion, error) {
+	prepared, contextUsage, err := prepareManagedChatContext(connection.Config, messages)
+	if err != nil {
+		return ManagedChatCompletion{}, err
+	}
+	messages = prepared
 	endpoint := strings.TrimRight(connection.Config.BaseURL, "/") + "/" + managedChatGenerationPath(messages)
-	payload, _ := json.Marshal(map[string]any{
-		"model":      connection.Config.ModelName,
-		"input":      map[string]any{"messages": managedChatProviderMessages(messages, true)},
-		"parameters": map[string]any{"result_format": "message", "temperature": 0.7},
-	})
+	payload, _ := json.Marshal(managedChatProviderPayload(connection.Config, messages, false, true, contextUsage.MaxOutputTokens))
 	body, status, err := c.request(ctx, endpoint, connection, payload)
 	if err != nil {
 		return ManagedChatCompletion{}, err
@@ -206,6 +201,10 @@ func (c *HTTPManagedAPIChatter) chatDashScope(ctx context.Context, connection Ma
 	if status < 200 || status >= 300 {
 		return ManagedChatCompletion{}, ManagedChatProviderError{StatusCode: status}
 	}
+	return parseManagedDashScopeCompletion(connection, body)
+}
+
+func parseManagedDashScopeCompletion(connection ManagedAPIConnection, body []byte) (ManagedChatCompletion, error) {
 	var response struct {
 		Output struct {
 			Choices []struct {
@@ -213,19 +212,12 @@ func (c *HTTPManagedAPIChatter) chatDashScope(ctx context.Context, connection Ma
 				FinishReason string               `json:"finish_reason"`
 			} `json:"choices"`
 		} `json:"output"`
-		Usage struct {
-			InputTokens  int64 `json:"input_tokens"`
-			OutputTokens int64 `json:"output_tokens"`
-			TotalTokens  int64 `json:"total_tokens"`
-		} `json:"usage"`
+		Usage managedDashScopeUsage `json:"usage"`
 	}
 	if json.Unmarshal(body, &response) != nil || len(response.Output.Choices) == 0 {
 		return ManagedChatCompletion{}, ErrManagedChatEmptyResponse
 	}
-	usage := ManagedAPIProbeUsage{InputTokens: response.Usage.InputTokens, OutputTokens: response.Usage.OutputTokens, TotalTokens: response.Usage.TotalTokens}
-	if usage.TotalTokens == 0 {
-		usage.TotalTokens = usage.InputTokens + usage.OutputTokens
-	}
+	usage := response.Usage.normalized()
 	choice := response.Output.Choices[0]
 	completion, err := managedChatCompletion(connection, choice.Message.Content, choice.FinishReason, usage)
 	completion.Message.ReasoningContent = choice.Message.ReasoningContent

@@ -10,6 +10,7 @@ import (
 	"net/netip"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -105,7 +106,11 @@ func (s *searXNGSearch) searchUncached(ctx context.Context, query string) ([]Sou
 		// 上游响应可能含代理地址或服务诊断，不把原始错误传给用户或模型。
 		return nil, reject(503, "web_search_failed", webSearchFailed)
 	}
-	data, err := io.ReadAll(io.LimitReader(response.Body, webSearchMaxBodyBytes+1))
+	return decodeSearXNGSources(response.Body)
+}
+
+func decodeSearXNGSources(body io.Reader) ([]Source, error) {
+	data, err := io.ReadAll(io.LimitReader(body, webSearchMaxBodyBytes+1))
 	if err != nil || len(data) > webSearchMaxBodyBytes {
 		return nil, reject(503, "web_search_failed", webSearchFailed)
 	}
@@ -236,6 +241,8 @@ type webSearchBudget struct {
 	modelCount      int
 	total           modelgovernance.ManagedAPIProbeUsage
 	modelDurationMS int64
+	// 只保留最终 answer/clarify 调用的计量；搜索决策不能冒充回答生成速率。
+	generationMetrics *ConversationGenerationMetrics
 }
 
 func (s *ConversationService) routeWebSearchBusiness(ctx context.Context, p preparedConversation, budget webSearchBudget, send func(ConversationEvent) error) error {
@@ -257,7 +264,13 @@ func (s *ConversationService) routeWebSearchBusiness(ctx context.Context, p prep
 	}
 	// 选定校内分支后只进入原只读工具链。公开检索不是业务工具，也不接收后续取得的校内事实。
 	p.webSearch = false
-	p.messages = append([]modelgovernance.AgentMessage{{Role: "system", Content: conversationInstructions + "\n本轮只处理校内问题，不进行公开搜索。\n当前服务器时间：" + time.Now().UTC().Format(time.RFC3339) + trustedContext}}, p.messages[1:]...)
+	history := make([]modelgovernance.AgentMessage, 0, len(p.messages))
+	for _, message := range p.messages {
+		if message.Role != "system" {
+			history = append(history, message)
+		}
+	}
+	p.messages = conversationPromptMessages(conversationInstructions+"\n本轮只处理校内问题，不进行公开搜索。", history, "当前服务器时间："+time.Now().UTC().Format(time.RFC3339)+trustedContext)
 	for _, definition := range definitions {
 		parameters, err := json.Marshal(definition.Parameters)
 		if err != nil {
@@ -285,49 +298,7 @@ func decodeStrictWebSearchObject(content string, target any) error {
 		return errors.New("invalid search JSON object")
 	}
 	decoder := json.NewDecoder(strings.NewReader(content))
-	var scan func(int) error
-	scan = func(depth int) error {
-		if depth > 8 {
-			return errors.New("search JSON nesting too deep")
-		}
-		token, err := decoder.Token()
-		if err != nil {
-			return err
-		}
-		if token == json.Delim('{') {
-			seen := make(map[string]bool)
-			for decoder.More() {
-				key, err := decoder.Token()
-				if err != nil {
-					return err
-				}
-				name, ok := key.(string)
-				if !ok || seen[name] {
-					return errors.New("duplicate search JSON key")
-				}
-				seen[name] = true
-				if err := scan(depth + 1); err != nil {
-					return err
-				}
-			}
-			end, err := decoder.Token()
-			if err != nil || end != json.Delim('}') {
-				return errors.New("invalid search JSON object end")
-			}
-		} else if token == json.Delim('[') {
-			for decoder.More() {
-				if err := scan(depth + 1); err != nil {
-					return err
-				}
-			}
-			end, err := decoder.Token()
-			if err != nil || end != json.Delim(']') {
-				return errors.New("invalid search JSON array end")
-			}
-		}
-		return nil
-	}
-	if err := scan(0); err != nil {
+	if err := scanWebSearchJSONValue(decoder, 0); err != nil {
 		return err
 	}
 	if _, err := decoder.Token(); err != io.EOF {
@@ -336,6 +307,54 @@ func decodeStrictWebSearchObject(content string, target any) error {
 	decoder = json.NewDecoder(strings.NewReader(content))
 	decoder.DisallowUnknownFields()
 	return decoder.Decode(target)
+}
+
+func scanWebSearchJSONValue(decoder *json.Decoder, depth int) error {
+	if depth > 8 {
+		return errors.New("search JSON nesting too deep")
+	}
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	switch token {
+	case json.Delim('{'):
+		return scanWebSearchJSONMembers(decoder, depth)
+	case json.Delim('['):
+		for decoder.More() {
+			if err := scanWebSearchJSONValue(decoder, depth+1); err != nil {
+				return err
+			}
+		}
+		end, err := decoder.Token()
+		if err != nil || end != json.Delim(']') {
+			return errors.New("invalid search JSON array end")
+		}
+	}
+	return nil
+}
+
+func scanWebSearchJSONMembers(decoder *json.Decoder, depth int) error {
+	seen := make(map[string]bool)
+	for decoder.More() {
+		key, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		name, ok := key.(string)
+		if !ok || seen[name] {
+			return errors.New("duplicate search JSON key")
+		}
+		seen[name] = true
+		if err := scanWebSearchJSONValue(decoder, depth+1); err != nil {
+			return err
+		}
+	}
+	end, err := decoder.Token()
+	if err != nil || end != json.Delim('}') {
+		return errors.New("invalid search JSON object end")
+	}
+	return nil
 }
 
 func validWebSearchQuotes(evidence webSearchEvidence, excerpt string) bool {
@@ -373,6 +392,12 @@ type webSearchPageSelection struct {
 	InformationNeeded string
 }
 
+type pageReadResult struct {
+	index int
+	page  WebPageContent
+	err   error
+}
+
 func webSearchRuneLimit(value string, limit int) string {
 	runes := []rune(value)
 	if len(runes) > limit {
@@ -383,11 +408,6 @@ func webSearchRuneLimit(value string, limit int) string {
 
 func (s *ConversationService) readWebPageSelection(ctx context.Context, selection webSearchPageSelection, candidates []Source, attempted map[string]bool, send func(ConversationEvent) error) (string, error) {
 	informationNeeded := selection.InformationNeeded
-	type pageReadResult struct {
-		index int
-		page  WebPageContent
-		err   error
-	}
 	// 选页结果最多三条，可以并发读取；候选修改和 SSE 写入仍由当前协程负责。
 	// 任一写入失败或请求取消后，先取消并收齐已启动读取，避免后台继续占用连接。
 	readsCtx, cancelReads := context.WithCancel(ctx)
@@ -401,13 +421,7 @@ func (s *ConversationService) readWebPageSelection(ctx context.Context, selectio
 		}
 	}()
 	for _, id := range selection.SourceIDs {
-		index := -1
-		for candidateIndex := range candidates {
-			if candidates[candidateIndex].ID == id {
-				index = candidateIndex
-				break
-			}
-		}
+		index := slices.IndexFunc(candidates, func(source Source) bool { return source.ID == id })
 		if index < 0 {
 			return informationNeeded, errors.New("selected source no longer exists")
 		}
@@ -421,19 +435,7 @@ func (s *ConversationService) readWebPageSelection(ctx context.Context, selectio
 			return informationNeeded, err
 		}
 		launched++
-		go func(index int, address string) {
-			readCtx, cancel := context.WithTimeout(readsCtx, webSearchTimeout)
-			defer cancel()
-			var page WebPageContent
-			readErr := readCtx.Err()
-			if readErr == nil {
-				page, readErr = s.deps.Reader.Read(readCtx, address)
-			}
-			if readCtx.Err() != nil {
-				readErr = readCtx.Err()
-			}
-			results <- pageReadResult{index: index, page: page, err: readErr}
-		}(index, source.URL)
+		go s.readPublicPage(readsCtx, index, source.URL, results)
 	}
 	for collected < launched {
 		var result pageReadResult
@@ -446,32 +448,56 @@ func (s *ConversationService) readWebPageSelection(ctx context.Context, selectio
 		if err := ctx.Err(); err != nil {
 			return informationNeeded, err
 		}
-		source := &candidates[result.index]
-		callID := "web-fetch-" + source.ID
-		page := result.page
-		status, message := "failed", "网页正文未能读取，将保留搜索摘要。"
-		if result.err == nil && strings.TrimSpace(page.Text) != "" {
-			address, site, valid := publicSearchURL(page.URL)
-			// 只有读取器校验过的公开重定向终点可替换来源地址；模型只能选择真实候选 ID，不能提供读取 URL。
-			if valid {
-				source.URL, source.SiteName = address, site
-				source.Excerpt = webSearchRuneLimit(strings.TrimSpace(page.Text), webSearchMaxPageRunes)
-				source.Note = "已读取网页正文。"
-				if title := searchText(page.Title, 200); title != "" {
-					source.Label = title
-				}
-				if !page.ReadAt.IsZero() {
-					source.ReadAt = page.ReadAt
-				}
-				status, message = "completed", "网页正文已读取，正在核实所需信息。"
-			}
-		}
-		if status == "failed" {
-			source.Note = "网页正文未能读取，仅使用搜索摘要。"
-		}
-		if err := send(ConversationEvent{Type: "tool_finished", CallID: callID, ToolName: "web_fetch", Label: "读取网页正文", Status: status, Message: message}); err != nil {
+		if err := send(finishPublicPageRead(&candidates[result.index], result)); err != nil {
 			return informationNeeded, err
 		}
 	}
 	return selection.InformationNeeded, nil
+}
+
+func (s *ConversationService) readPublicPage(ctx context.Context, index int, address string, results chan<- pageReadResult) {
+	readCtx, cancel := context.WithTimeout(ctx, webSearchTimeout)
+	defer cancel()
+	var page WebPageContent
+	readErr := readCtx.Err()
+	if readErr == nil {
+		page, readErr = s.deps.Reader.Read(readCtx, address)
+	}
+	if err := readCtx.Err(); err != nil {
+		readErr = err
+	}
+	results <- pageReadResult{index: index, page: page, err: readErr}
+}
+
+func finishPublicPageRead(source *Source, result pageReadResult) ConversationEvent {
+	event := ConversationEvent{Type: "tool_finished", CallID: "web-fetch-" + source.ID, ToolName: "web_fetch", Label: "读取网页正文"}
+	if result.err != nil || !applyPublicPageRead(source, result.page) {
+		source.Note = "网页正文未能读取，仅使用搜索摘要。"
+		event.Status, event.Message = "failed", "网页正文未能读取，将保留搜索摘要。"
+		return event
+	}
+	event.Status, event.Message = "completed", "网页正文已读取，正在核实所需信息。"
+	return event
+}
+
+func applyPublicPageRead(source *Source, page WebPageContent) bool {
+	text := strings.TrimSpace(page.Text)
+	if text == "" {
+		return false
+	}
+	// 只有读取器校验过的公开重定向终点可替换来源地址；模型只能选择真实候选 ID，不能提供读取 URL。
+	address, site, valid := publicSearchURL(page.URL)
+	if !valid {
+		return false
+	}
+	source.URL, source.SiteName = address, site
+	source.Excerpt = webSearchRuneLimit(text, webSearchMaxPageRunes)
+	source.Note = "已读取网页正文。"
+	if title := searchText(page.Title, 200); title != "" {
+		source.Label = title
+	}
+	if !page.ReadAt.IsZero() {
+		source.ReadAt = page.ReadAt
+	}
+	return true
 }

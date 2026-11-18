@@ -2,6 +2,7 @@ package schoolassistant
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -49,153 +50,203 @@ func decodeWebSearchAction(response modelgovernance.AgentResponse, candidates []
 		return invalid()
 	}
 	var fields map[string]json.RawMessage
-	if json.Unmarshal([]byte(response.Message.Content), &fields) != nil || fields["action"] == nil {
+	if json.Unmarshal([]byte(response.Message.Content), &fields) != nil || !validWebSearchActionFields(action.Action, fields) {
 		return invalid()
-	}
-	// encoding/json 对字段大小写兼容；动作协议固定小写键，不能靠兼容规则接受另一套结构。
-	allowed := map[string]bool{"action": true}
-	var required []string
-	switch action.Action {
-	case "search":
-		allowed["query"], allowed["information_needed"], allowed["question"], allowed["additional_queries"] = true, true, true, true
-		allowed["read_top_results"] = true
-		required = []string{"query"}
-	case "read":
-		allowed["source_ids"], allowed["information_needed"] = true, true
-		required = []string{"source_ids", "information_needed"}
-	case "answer":
-		allowed["answer"], allowed["covered"], allowed["missing"], allowed["evidence"] = true, true, true, true
-		required = []string{"answer", "covered", "missing", "evidence"}
-	case "clarify":
-		allowed["answer"] = true
-		required = []string{"answer"}
-	case "business":
-	default:
-		return invalid()
-	}
-	for field, value := range fields {
-		if !allowed[field] || strings.TrimSpace(string(value)) == "null" {
-			return invalid()
-		}
-	}
-	for _, field := range required {
-		if fields[field] == nil {
-			return invalid()
-		}
 	}
 	action.Question = strings.TrimSpace(action.Question)
 	action.Query = strings.TrimSpace(action.Query)
 	action.InformationNeeded = strings.TrimSpace(action.InformationNeeded)
-	if action.Action == "search" {
-		// 模型可把选页合并到搜索动作；仍按本轮剩余读取额度校验，不能额外增加网络请求。
-		if action.ReadTopResults < 0 || action.ReadTopResults > webSearchMaxPrefetchReads || action.ReadTopResults > 0 && action.ReadTopResults > remainingReads {
-			return invalid()
-		}
-		if action.Query == "" || utf8.RuneCountInString(action.Query) > webSearchMaxQueryRunes || utf8.RuneCountInString(action.InformationNeeded) > 1000 || (fields["question"] != nil && (action.Question == "" || utf8.RuneCountInString(action.Question) > 1000)) {
-			return invalid()
-		}
-		// 空数组和省略都表示没有补充查询；null已在字段检查中拒绝，不能借数组扩充整轮额度。
-		if len(action.AdditionalQueries) > 1 {
-			return invalid()
-		}
-		if len(action.AdditionalQueries) == 1 {
-			primaryKey := strings.ToLower(strings.Join(strings.Fields(action.Query), " "))
-			query := strings.TrimSpace(action.AdditionalQueries[0])
-			if query == "" || utf8.RuneCountInString(query) > webSearchMaxQueryRunes || strings.ToLower(strings.Join(strings.Fields(query), " ")) == primaryKey {
-				return invalid()
-			}
-			action.AdditionalQueries[0] = query
-		}
+	var valid bool
+	switch action.Action {
+	case "search":
+		valid = validateWebSearchQueries(&action, fields["question"] != nil, remainingReads)
+	case "read":
+		valid = validWebSearchRead(action, webSearchCandidatesByID(candidates), remainingReads)
+	case "answer":
+		valid = validateWebSearchAnswer(&action, fields, webSearchCandidatesByID(candidates))
+	case "clarify":
+		valid = strings.TrimSpace(action.Answer) != "" && utf8.RuneCountInString(action.Answer) <= 1000
+	case "business":
+		valid = true
 	}
-	if action.Action == "clarify" && (strings.TrimSpace(action.Answer) == "" || utf8.RuneCountInString(action.Answer) > 1000) {
+	if !valid {
 		return invalid()
 	}
-	// Answer 可在整对象验证前增量显示；只判断空白，不能修剪已显示正文而改变最终前缀。
-	if action.Action == "answer" && (strings.TrimSpace(action.Answer) == "" || utf8.RuneCountInString(action.Answer) > webSearchActionMaxAnswerRunes || action.Covered == nil || action.Missing == nil || action.Evidence == nil) {
-		return invalid()
+	return action, nil
+}
+
+func webSearchActionFields(action string) (required, optional []string, ok bool) {
+	switch action {
+	case "search":
+		return []string{"query"}, []string{"information_needed", "question", "additional_queries", "read_top_results"}, true
+	case "read":
+		return []string{"source_ids", "information_needed"}, nil, true
+	case "answer":
+		return []string{"answer", "covered", "missing", "evidence"}, nil, true
+	case "clarify":
+		return []string{"answer"}, nil, true
+	case "business":
+		return nil, nil, true
+	default:
+		return nil, nil, false
 	}
+}
+
+func validWebSearchActionFields(action string, fields map[string]json.RawMessage) bool {
+	required, optional, ok := webSearchActionFields(action)
+	if !ok || fields["action"] == nil {
+		return false
+	}
+	// encoding/json 对字段大小写兼容；这里按协议拒绝其他键名和显式 null。
+	for field, value := range fields {
+		if strings.TrimSpace(string(value)) == "null" {
+			return false
+		}
+		if field != "action" && !slices.Contains(required, field) && !slices.Contains(optional, field) {
+			return false
+		}
+	}
+	for _, field := range required {
+		if fields[field] == nil {
+			return false
+		}
+	}
+	return true
+}
+
+func validateWebSearchQueries(action *webSearchAction, hasQuestion bool, remainingReads int) bool {
+	// 模型可把选页合并到搜索动作；仍按本轮剩余读取额度校验，不能额外增加网络请求。
+	if action.ReadTopResults < 0 || action.ReadTopResults > webSearchMaxPrefetchReads || action.ReadTopResults > 0 && action.ReadTopResults > remainingReads {
+		return false
+	}
+	if action.Query == "" || utf8.RuneCountInString(action.Query) > webSearchMaxQueryRunes || utf8.RuneCountInString(action.InformationNeeded) > 1000 {
+		return false
+	}
+	if hasQuestion && (action.Question == "" || utf8.RuneCountInString(action.Question) > 1000) {
+		return false
+	}
+	// 空数组和省略都表示没有补充查询；单次动作最多补一条。
+	if len(action.AdditionalQueries) == 0 {
+		return true
+	}
+	if len(action.AdditionalQueries) > 1 {
+		return false
+	}
+	query := strings.TrimSpace(action.AdditionalQueries[0])
+	if query == "" || utf8.RuneCountInString(query) > webSearchMaxQueryRunes || publicSearchQueryKey(query) == publicSearchQueryKey(action.Query) {
+		return false
+	}
+	action.AdditionalQueries[0] = query
+	return true
+}
+
+func webSearchCandidatesByID(candidates []Source) map[string]Source {
 	byID := make(map[string]Source, len(candidates))
 	for _, source := range candidates {
 		byID[source.ID] = source
 	}
-	if action.Action == "read" {
-		if remainingReads > webSearchMaxPageReads {
-			remainingReads = webSearchMaxPageReads
-		}
-		if action.InformationNeeded == "" || utf8.RuneCountInString(action.InformationNeeded) > 1000 || len(action.SourceIDs) == 0 || len(action.SourceIDs) > remainingReads {
-			return invalid()
-		}
-		seen := make(map[string]bool)
-		for _, id := range action.SourceIDs {
-			if _, exists := byID[id]; id == "" || !exists || seen[id] {
-				return invalid()
-			}
-			seen[id] = true
-		}
+	return byID
+}
+
+func validWebSearchRead(action webSearchAction, byID map[string]Source, remainingReads int) bool {
+	if action.InformationNeeded == "" || utf8.RuneCountInString(action.InformationNeeded) > 1000 || len(action.SourceIDs) == 0 || len(action.SourceIDs) > min(remainingReads, webSearchMaxPageReads) {
+		return false
 	}
-	if action.Action != "answer" {
-		return action, nil
+	seen := make(map[string]bool)
+	for _, id := range action.SourceIDs {
+		if _, exists := byID[id]; id == "" || !exists || seen[id] {
+			return false
+		}
+		seen[id] = true
+	}
+	return true
+}
+
+func validateWebSearchAnswer(action *webSearchAction, fields map[string]json.RawMessage, byID map[string]Source) bool {
+	// Answer 可在整对象验证前增量显示；只判断空白，不能修剪已显示正文而改变最终前缀。
+	if strings.TrimSpace(action.Answer) == "" || utf8.RuneCountInString(action.Answer) > webSearchActionMaxAnswerRunes || action.Covered == nil || action.Missing == nil || action.Evidence == nil {
+		return false
 	}
 	if len(action.Evidence) > webSearchMaxResults || len(action.Covered)+len(action.Missing) > webSearchActionMaxClaims || (len(action.Evidence) > 0 && len(action.Covered) == 0) {
-		return invalid()
+		return false
 	}
+	quotedIDs, ok := validateWebSearchActionEvidence(action.Evidence, fields["evidence"], byID)
+	return ok && validateWebSearchActionClaims(action, fields["covered"], quotedIDs)
+}
+
+func validateWebSearchActionEvidence(evidenceList []webSearchEvidence, raw json.RawMessage, byID map[string]Source) (map[string]bool, bool) {
 	var evidenceFields []map[string]json.RawMessage
-	_ = json.Unmarshal(fields["evidence"], &evidenceFields)
+	if json.Unmarshal(raw, &evidenceFields) != nil || len(evidenceFields) != len(evidenceList) {
+		return nil, false
+	}
 	quotedIDs, quoteTotal := make(map[string]bool), 0
-	for index, evidence := range action.Evidence {
+	for index, evidence := range evidenceList {
 		entry := evidenceFields[index]
 		if len(entry) != 2 || entry["source_id"] == nil || (entry["quote"] == nil) == (entry["quotes"] == nil) {
-			return invalid()
+			return nil, false
 		}
 		source, exists := byID[evidence.SourceID]
 		if evidence.SourceID == "" || !exists || quotedIDs[evidence.SourceID] || !validWebSearchQuotes(evidence, source.Excerpt) {
-			return invalid()
+			return nil, false
 		}
 		quoteTotal += utf8.RuneCountInString(evidence.Quote)
 		for _, quote := range evidence.Quotes {
 			quoteTotal += utf8.RuneCountInString(quote)
 		}
 		if quoteTotal > webSearchActionMaxQuoteTotal {
-			return invalid()
+			return nil, false
 		}
 		quotedIDs[evidence.SourceID] = true
 	}
+	return quotedIDs, true
+}
+
+func validateWebSearchActionClaims(action *webSearchAction, raw json.RawMessage, quotedIDs map[string]bool) bool {
 	var coveredFields []map[string]json.RawMessage
-	_ = json.Unmarshal(fields["covered"], &coveredFields)
+	if json.Unmarshal(raw, &coveredFields) != nil || len(coveredFields) != len(action.Covered) {
+		return false
+	}
 	seenClaims, coveredIDs, claimTotal := make(map[string]bool), make(map[string]bool), 0
 	for index := range action.Covered {
 		claim := &action.Covered[index]
 		entry := coveredFields[index]
 		claim.Claim = strings.TrimSpace(claim.Claim)
-		claimTotal += utf8.RuneCountInString(claim.Claim)
-		if len(entry) != 2 || entry["claim"] == nil || entry["source_ids"] == nil || claim.Claim == "" || utf8.RuneCountInString(claim.Claim) > webSearchActionMaxClaimRunes || len(claim.SourceIDs) == 0 || len(claim.SourceIDs) > webSearchMaxResults || seenClaims[claim.Claim] {
-			return invalid()
+		length := utf8.RuneCountInString(claim.Claim)
+		if len(entry) != 2 || entry["claim"] == nil || entry["source_ids"] == nil || length == 0 || length > webSearchActionMaxClaimRunes || seenClaims[claim.Claim] {
+			return false
 		}
+		claimTotal += length
 		seenClaims[claim.Claim] = true
-		seenSources := make(map[string]bool)
-		for _, id := range claim.SourceIDs {
-			if !quotedIDs[id] || seenSources[id] {
-				return invalid()
-			}
-			seenSources[id] = true
-			coveredIDs[id] = true
+		if !markWebSearchClaimSources(claim.SourceIDs, quotedIDs, coveredIDs) {
+			return false
 		}
 	}
-	for id := range quotedIDs {
-		if !coveredIDs[id] {
-			return invalid()
-		}
+	// 已关联的来源都经过引文验证；数量相等表示每条引文都关联到至少一项声明。
+	if len(coveredIDs) != len(quotedIDs) {
+		return false
 	}
 	for index, missing := range action.Missing {
 		missing = strings.TrimSpace(missing)
-		claimTotal += utf8.RuneCountInString(missing)
-		if missing == "" || utf8.RuneCountInString(missing) > webSearchActionMaxClaimRunes || seenClaims[missing] {
-			return invalid()
+		length := utf8.RuneCountInString(missing)
+		if length == 0 || length > webSearchActionMaxClaimRunes || seenClaims[missing] {
+			return false
 		}
+		claimTotal += length
 		seenClaims[missing], action.Missing[index] = true, missing
 	}
-	if claimTotal > webSearchActionMaxClaimTotal {
-		return invalid()
+	return claimTotal <= webSearchActionMaxClaimTotal
+}
+
+func markWebSearchClaimSources(ids []string, quotedIDs, coveredIDs map[string]bool) bool {
+	if len(ids) == 0 || len(ids) > webSearchMaxResults {
+		return false
 	}
-	return action, nil
+	seen := make(map[string]bool)
+	for _, id := range ids {
+		if !quotedIDs[id] || seen[id] {
+			return false
+		}
+		seen[id], coveredIDs[id] = true, true
+	}
+	return true
 }

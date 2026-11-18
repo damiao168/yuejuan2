@@ -11,7 +11,7 @@ import { useModelApplications } from "../features/platform-model-config/hooks/us
 import { useModelConfigDrafts } from "../features/platform-model-config/hooks/useModelConfigDrafts";
 import { useModelOperations } from "../features/platform-model-config/hooks/useModelOperations";
 import { useSchoolModelActions, type ModelConfigPatch } from "../features/platform-model-config/hooks/useSchoolModelActions";
-import { applySavedModelConfig, capabilityVerified, hasModelFormChanges, isSameModelAPIOrigin, loadAllSchoolTenants, modelConfigDraftKey, presetForConfig, supplierDefaults, textVerified, type ConfigFormValues, type SupplierPreset } from "../features/platform-model-config/lib/modelConfig";
+import { applySavedModelConfig, capabilityVerified, hasModelFormChanges, isSameModelAPIOrigin, loadAllSchoolTenants, modelConfigDraftKey, modelContextPolicyInput, presetForConfig, supplierDefaults, textVerified, type ConfigFormValues, type SupplierPreset } from "../features/platform-model-config/lib/modelConfig";
 import { selectModelSchool } from "../features/platform-model-config/lib/modelConfigLocation";
 import { modelDiscoveryFailure, modelSaveFailure } from "../features/platform-model-config/lib/modelConfigNotices";
 import { modelOperationKey } from "../features/platform-model-config/lib/modelOperationQueue";
@@ -247,6 +247,7 @@ export function usePlatformModelConfigPage() {
       api_key: "",
       model_name: "",
       model_version: "",
+      context_window_tokens: undefined, max_input_tokens: undefined, max_output_tokens: undefined, tokenizer: undefined,
       region: "global",
       enabled: true,
       is_default: configs.length === 0
@@ -271,6 +272,7 @@ export function usePlatformModelConfigPage() {
       api_key: "",
       model_name: "",
       model_version: "",
+      context_window_tokens: undefined, max_input_tokens: undefined, max_output_tokens: undefined, tokenizer: undefined,
       region: config.region,
       enabled: true,
       is_default: false
@@ -295,6 +297,10 @@ export function usePlatformModelConfigPage() {
       api_key: "",
       model_name: config.model_name,
       model_version: config.model_version,
+      context_window_tokens: config.context_policy?.context_window_tokens,
+      max_input_tokens: config.context_policy?.max_input_tokens,
+      max_output_tokens: config.context_policy?.max_output_tokens,
+      tokenizer: config.context_policy?.tokenizer,
       region: config.region,
       enabled: config.status === "active",
       is_default: config.is_default
@@ -306,7 +312,7 @@ export function usePlatformModelConfigPage() {
   const changeSupplier = (supplier: SupplierPreset) => {
     if (editing || credentialSource) return;
     invalidateModelDiscovery();
-    form.setFieldsValue({ ...supplierDefaults[supplier], supplier, base_url: "", model_name: "" });
+    form.setFieldsValue({ ...supplierDefaults[supplier], supplier, base_url: "", model_name: "", context_window_tokens: undefined, max_input_tokens: undefined, max_output_tokens: undefined, tokenizer: undefined });
     setAvailableModels([]);
     setModelOptionsOpen(false);
     setFilterAvailableModels(false);
@@ -393,6 +399,7 @@ export function usePlatformModelConfigPage() {
     if (currentEditing?.is_default && !releaseDefault) { release(); setSaving(false); return; }
     const draftKey = modelConfigDraftKey(selectedTenantID, editing?.id, credentialSource?.id);
     const apiKey = String(values.api_key ?? "").trim();
+    const contextPolicy = modelContextPolicyInput(values);
     try {
       if (editing) {
         const response = await updateManagedModelAPIConfig(editing.id, selectedTenantID, {
@@ -404,6 +411,7 @@ export function usePlatformModelConfigPage() {
           api_key: apiKey,
           model_name: values.model_name.trim(),
           model_version: values.model_name.trim(),
+          ...(contextPolicy ? { context_policy: contextPolicy } : {}),
           region: editing.region,
           status: currentEditing!.status,
           is_default: currentEditing!.is_default
@@ -417,6 +425,7 @@ export function usePlatformModelConfigPage() {
           tenant_id: selectedTenantID,
           ...(credentialSource ? { credential_source_id: credentialSource.id } : { api_key: apiKey }),
           model_name: values.model_name.trim(),
+          ...(contextPolicy ? { context_policy: contextPolicy } : {}),
           provider: values.supplier,
           base_url: values.supplier === "custom" ? values.base_url?.trim() : undefined
         });

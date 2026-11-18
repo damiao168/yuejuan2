@@ -89,18 +89,7 @@ func (s *searXNGSearch) Search(ctx context.Context, query string) (sources []Sou
 	started := time.Now()
 	cacheHit := false
 	defer func() {
-		status, code := "succeeded", ""
-		if err != nil {
-			status, code = "failed", "web_search_failed"
-			var failure *queryError
-			if errors.As(err, &failure) {
-				code = failure.code
-			} else if errors.Is(err, context.Canceled) {
-				code = "request_canceled"
-			} else if errors.Is(err, context.DeadlineExceeded) {
-				code = "web_search_timeout"
-			}
-		}
+		status, code := publicSearchLogStatus(err)
 		// 检索耗时与模型阶段分开记录；日志不包含搜索词、网址、正文或任何凭据。
 		slog.InfoContext(ctx, "school assistant search", "event", "school_assistant_search", "duration_ms", time.Since(started).Milliseconds(), "result_count", len(sources), "cache_hit", cacheHit, "status", status, "error_code", code)
 	}()
@@ -130,4 +119,21 @@ func (s *searXNGSearch) Search(ctx context.Context, query string) (sources []Sou
 		s.cache.put(key, sources)
 	}
 	return sources, err
+}
+
+func publicSearchLogStatus(err error) (status, code string) {
+	if err == nil {
+		return "succeeded", ""
+	}
+	var failure *queryError
+	switch {
+	case errors.As(err, &failure):
+		return "failed", failure.code
+	case errors.Is(err, context.Canceled):
+		return "failed", "request_canceled"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "failed", "web_search_timeout"
+	default:
+		return "failed", "web_search_failed"
+	}
 }

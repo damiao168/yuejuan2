@@ -23,7 +23,7 @@
 .school-chat-topbar-title { display: flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 650; }
 .school-chat-topbar-title svg { color: #3168b2; }
 .school-chat-activity { color: #7b8493; font-size: 12px; white-space: nowrap; }
-.school-chat-model-status { display: flex; min-width: 0; align-items: center; gap: 7px; overflow: hidden; color: #7b8493; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.school-chat-model-status { display: flex; min-width: 0; max-width: min(270px, 48vw); min-height: 33px; align-items: center; gap: 7px; overflow: hidden; color: #7b8493; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .school-chat-model-status i { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #c4cbd5; }
 .school-chat-model-status i.is-online { background: #39a778; }
 /* 禁用浏览器滚动锚定，流式追加内容时由聊天组件决定是否跟随底部。 */
@@ -139,7 +139,6 @@
 .school-chat-composer-tools { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
 /* 上传入口需要容纳文字，不能套用发送圆按钮的固定宽度。 */
 .school-chat-composer-tools > .school-chat-upload.ant-btn { display: inline-flex; height: 33px; flex-shrink: 0; align-items: center; gap: 5px; margin-left: -4px; color: #66758a; width: auto; white-space: nowrap; }
-.school-chat-model-status { max-width: min(270px, 48vw); min-height: 33px; }
 .school-chat-model-selector.ant-select { width: auto; min-width: 0; max-width: 100%; font-size: 12px; }
 .school-chat-model-selector.ant-select .ant-select-selector { padding-inline: 0 17px !important; border-radius: 6px; }
 .school-chat-model-selector.ant-select .ant-select-selection-item { padding-inline-end: 0; }
@@ -168,3 +167,6 @@
 .school-chat-history-mobile .school-chat-history-head { display: none; }
 @media (hover: none) { .school-chat-delete { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .school-chat-welcome, .school-chat-message, .school-chat-waiting, .school-chat-thinking i { animation: none; } }
+.school-chat-metrics { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding: 8px 4px 0; color: #7b8493; font-size: 11px; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.school-chat-metrics__item { min-width: 0; }
+.school-chat-metrics__item strong { color: #657184; font-weight: 400; }

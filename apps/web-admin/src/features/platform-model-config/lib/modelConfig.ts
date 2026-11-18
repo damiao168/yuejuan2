@@ -1,4 +1,4 @@
-import type { ManagedAdapterType, ManagedModelAPIConfig } from "../../../api/modelApiConfig";
+import type { ManagedAdapterType, ManagedModelAPIConfig, ManagedModelContextPolicy } from "../../../api/modelApiConfig";
 import { listTenants, type Tenant } from "../../../api/org";
 
 export type SupplierPreset = "aliyun" | "deepseek" | "openai" | "zhipu" | "moonshot" | "anthropic" | "gemini" | "custom";
@@ -12,6 +12,10 @@ export interface ConfigFormValues {
   api_key: string;
   model_name: string;
   model_version?: string;
+  context_window_tokens?: number | null;
+  max_input_tokens?: number | null;
+  max_output_tokens?: number | null;
+  tokenizer?: ManagedModelContextPolicy["tokenizer"];
   region?: string;
   enabled?: boolean;
   is_default?: boolean;
@@ -144,10 +148,30 @@ export function hasModelFormChanges(values: ConfigFormValues, editing: ManagedMo
   const apiKey = String(values.api_key ?? "").trim();
   const baseURL = String(values.base_url ?? "").trim();
   const modelName = String(values.model_name ?? "").trim();
-  if (editing) return apiKey !== "" || baseURL !== editing.base_url || modelName !== editing.model_name;
+  const policy = modelContextPolicyInput(values);
+  if (editing) {
+    const current = effectiveContextPolicy(editing.context_policy);
+    const next = effectiveContextPolicy(policy);
+    return apiKey !== "" || baseURL !== editing.base_url || modelName !== editing.model_name
+      || Boolean(policy && Object.keys(current).some(key => current[key as keyof typeof current] !== next[key as keyof typeof next]));
+  }
   // 沿用密钥的新模型不编辑供应商和地址，只判断用户是否填写了模型名。
-  if (credentialSource) return modelName !== "";
-  return Boolean(values.supplier || apiKey || baseURL || modelName);
+  if (credentialSource) return modelName !== "" || Boolean(policy);
+  return Boolean(values.supplier || apiKey || baseURL || modelName || policy);
+}
+
+function effectiveContextPolicy(policy?: ManagedModelContextPolicy) {
+  const window = policy?.context_window_tokens || 32_768;
+  const output = policy?.max_output_tokens || Math.min(4_096, Math.floor(window / 4));
+  const safety = Math.min(1_024, Math.max(128, Math.floor(window / 16)));
+  return { context_window_tokens: window, max_output_tokens: output, max_input_tokens: policy?.max_input_tokens || window - output - safety, tokenizer: policy?.tokenizer || "utf8_bytes" };
+}
+
+// 空白不向服务端写入容量；编辑原模型时保留已保存值，更换模型时由服务端恢复产品默认预算。
+export function modelContextPolicyInput(values: Pick<ConfigFormValues, "context_window_tokens" | "max_input_tokens" | "max_output_tokens" | "tokenizer">): ManagedModelContextPolicy | undefined {
+  const policy = Object.fromEntries(["context_window_tokens", "max_input_tokens", "max_output_tokens", "tokenizer"]
+    .flatMap((key) => { const value = values[key as keyof typeof values]; return value == null ? [] : [[key, value]]; }));
+  return Object.keys(policy).length ? policy : undefined;
 }
 
 export function capabilityDialogPresentation(displayName: string, temporarilyUnavailable: boolean, failed: boolean): { kind: "warning" | "error" | "info"; title: string } {

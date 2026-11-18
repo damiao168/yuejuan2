@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -20,27 +21,19 @@ func (s *ConversationService) searchWebBatch(ctx context.Context, queries []stri
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if len(queries) < 1 || len(queries) > webSearchMaxAttempts || firstAttempt < 0 {
-		return nil, reject(400, "invalid_web_search_query", "本轮只能执行一至两条公开查询。")
-	}
-	for _, query := range queries {
-		if strings.TrimSpace(query) == "" || utf8.RuneCountInString(query) > webSearchMaxQueryRunes {
-			return nil, reject(400, "invalid_web_search_query", "请输入不超过 500 字的公开搜索问题。")
-		}
+	if err := validatePublicSearchBatch(queries, firstAttempt); err != nil {
+		return nil, err
 	}
 	if s.deps.Search == nil {
 		return nil, reject(503, "web_search_unavailable", "联网搜索暂未配置，请关闭联网搜索后提问。")
 	}
 	batchCtx, cancelBatch := context.WithCancel(ctx)
 	results := make(chan publicSearchBatchResult, len(queries))
-	launched, collected := 0, 0
+	var workers sync.WaitGroup
 	defer func() {
 		cancelBatch()
-		// 搜索实现须遵守context取消；此处回收所有在途调用，避免函数退出后继续占用连接。
-		for collected < launched {
-			<-results
-			collected++
-		}
+		// 先取消再等待；缓冲区能容纳所有结果，事件写入失败也不会阻塞结果发送。
+		workers.Wait()
 	}()
 	for index, query := range queries {
 		if err := ctx.Err(); err != nil {
@@ -50,30 +43,50 @@ func (s *ConversationService) searchWebBatch(ctx context.Context, queries []stri
 		if err := send(ConversationEvent{Type: "tool_started", CallID: callID, ToolName: "web_search", Label: "搜索公开资料"}); err != nil {
 			return nil, err
 		}
-		launched++
-		go func(index int, query string) {
-			searchCtx, cancel := context.WithTimeout(batchCtx, webSearchRequestTimeout)
-			defer cancel()
-			var sources []Source
-			err := searchCtx.Err()
-			if err == nil {
-				sources, err = s.deps.Search.Search(searchCtx, query)
-			}
-			if searchCtx.Err() != nil {
-				err = searchCtx.Err()
-			}
-			results <- publicSearchBatchResult{index: index, sources: sources, err: err}
-		}(index, strings.TrimSpace(query))
+		query := strings.TrimSpace(query)
+		workers.Go(func() {
+			results <- s.searchPublicBatchQuery(batchCtx, index, query)
+		})
 	}
-	groups, failures := make([][]Source, len(queries)), make([]error, len(queries))
+	return collectPublicSearchBatch(ctx, results, len(queries), firstAttempt, send)
+}
+
+func validatePublicSearchBatch(queries []string, firstAttempt int) error {
+	if len(queries) < 1 || len(queries) > webSearchMaxAttempts || firstAttempt < 0 {
+		return reject(400, "invalid_web_search_query", "本轮只能执行一至两条公开查询。")
+	}
+	for _, query := range queries {
+		if strings.TrimSpace(query) == "" || utf8.RuneCountInString(query) > webSearchMaxQueryRunes {
+			return reject(400, "invalid_web_search_query", "请输入不超过 500 字的公开搜索问题。")
+		}
+	}
+	return nil
+}
+
+func (s *ConversationService) searchPublicBatchQuery(ctx context.Context, index int, query string) publicSearchBatchResult {
+	searchCtx, cancel := context.WithTimeout(ctx, webSearchRequestTimeout)
+	defer cancel()
+	var sources []Source
+	err := searchCtx.Err()
+	if err == nil {
+		sources, err = s.deps.Search.Search(searchCtx, query)
+	}
+	if contextErr := searchCtx.Err(); contextErr != nil {
+		err = contextErr
+	}
+	return publicSearchBatchResult{index: index, sources: sources, err: err}
+}
+
+func collectPublicSearchBatch(ctx context.Context, results <-chan publicSearchBatchResult, count, firstAttempt int, send func(ConversationEvent) error) ([][]Source, error) {
+	groups := make([][]Source, count)
+	var firstFailure error
 	succeeded := 0
-	for collected < launched {
+	for range count {
 		var result publicSearchBatchResult
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case result = <-results:
-			collected++
 		}
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -81,7 +94,9 @@ func (s *ConversationService) searchWebBatch(ctx context.Context, queries []stri
 		status, message := "completed", fmt.Sprintf("取得 %d 条候选资料，正在核实是否适用。", len(result.sources))
 		if result.err != nil {
 			failure := publicSearchBatchFailure(result.err)
-			failures[result.index] = failure
+			if result.index == 0 {
+				firstFailure = failure
+			}
 			status, message = "failed", failure.message
 		} else {
 			groups[result.index] = result.sources
@@ -97,11 +112,7 @@ func (s *ConversationService) searchWebBatch(ctx context.Context, queries []stri
 	}
 	if succeeded == 0 {
 		// 全部失败时按输入顺序选第一个稳定错误，不能由网络返回先后改变对外结果。
-		for _, err := range failures {
-			if err != nil {
-				return nil, err
-			}
-		}
+		return nil, firstFailure
 	}
 	return groups, nil
 }

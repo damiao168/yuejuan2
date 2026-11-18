@@ -43,6 +43,8 @@ type ManagedChatModelStatus struct {
 	ModelName   string `json:"model_name,omitempty"`
 	ProviderKey string `json:"provider_key,omitempty"`
 	Message     string `json:"message"`
+	// 展示实际请求采用的应用窗口（含保守默认值），不是按模型名称推测的供应商能力。
+	ContextWindowTokens int `json:"context_window_tokens,omitempty"`
 }
 
 type ManagedChatProviderError struct {

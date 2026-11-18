@@ -60,6 +60,18 @@ func (s *PostgresStore) CreateManagedAPIConfig(ctx context.Context, tenantID, ac
 		}
 	}
 	probe := managedProbePersistence(normalized.InitialProbe)
+	policy := AgentContextPolicy{}
+	if normalized.ContextPolicy != nil {
+		policy = *normalized.ContextPolicy
+	}
+	policy, err = NormalizeAgentContextPolicy(policy)
+	if err != nil {
+		return ManagedAPIConfig{}, err
+	}
+	dataPolicy, err := json.Marshal(managedContextDataPolicy(map[string]any{"training_allowed": false, "retention_mode": "no_store"}, policy))
+	if err != nil {
+		return ManagedAPIConfig{}, ErrAgentContextPolicy
+	}
 	row := tx.QueryRowContext(ctx, `
 INSERT INTO managed_model_api_config(
   id,tenant_id,provider_key,display_name,adapter_type,base_url,model_name,model_version,region,
@@ -67,9 +79,9 @@ INSERT INTO managed_model_api_config(
   last_test_latency_ms,last_tested_at,last_successful_tested_at,last_probe_mode,last_capability_status,last_capability_message,
   last_capability_tested_at,last_capability_probe_version,last_capability_usage,last_capability_diagnostic,
   config_source,provider_registry_version,created_by,
-  last_text_status,last_text_message,last_text_tested_at,last_text_usage,last_text_diagnostic
+  last_text_status,last_text_message,last_text_tested_at,last_text_usage,last_text_diagnostic,data_policy
 )
-VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::timestamptz,CASE WHEN $15='success' THEN $18::timestamptz ELSE NULL END,$19,$20,$21,$22,$23,$24::jsonb,$25::jsonb,$26,$27,NULLIF($28,'')::uuid,$29,$30,$31,$32::jsonb,$33::jsonb)
+VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::timestamptz,CASE WHEN $15='success' THEN $18::timestamptz ELSE NULL END,$19,$20,$21,$22,$23,$24::jsonb,$25::jsonb,$26,$27,NULLIF($28,'')::uuid,$29,$30,$31,$32::jsonb,$33::jsonb,$34::jsonb)
 RETURNING `+managedAPIConfigColumns+`
 `, id, tenantID, normalized.ProviderKey, normalized.DisplayName, normalized.AdapterType,
 		normalized.BaseURL, normalized.ModelName, normalized.ModelVersion, normalized.Region,
@@ -77,7 +89,7 @@ RETURNING `+managedAPIConfigColumns+`
 		probe.Status, probe.Message, probe.Latency, probe.TestedAt, probe.Mode,
 		probe.CapabilityStatus, probe.CapabilityMessage, probe.CapabilityTestedAt, probe.CapabilityVersion, probe.CapabilityUsage, probe.CapabilityDiagnostic,
 		normalized.ConfigSource, normalized.ProviderRegistryVersion, actorID,
-		probe.TextStatus, probe.TextMessage, probe.TextTestedAt, probe.TextUsage, probe.TextDiagnostic)
+		probe.TextStatus, probe.TextMessage, probe.TextTestedAt, probe.TextUsage, probe.TextDiagnostic, string(dataPolicy))
 	item, err := scanManagedAPIConfig(row)
 	if err != nil {
 		return ManagedAPIConfig{}, mapStoreError(err)
@@ -124,11 +136,24 @@ func (s *PostgresStore) UpdateManagedAPIConfig(ctx context.Context, tenantID, id
 		}
 	}
 	probe := managedProbePersistence(normalized.InitialProbe)
+	var contextPolicyJSON any
+	if normalized.ContextPolicy != nil && !normalized.CredentialOnly {
+		encoded, marshalErr := json.Marshal(normalized.ContextPolicy)
+		if marshalErr != nil {
+			return ManagedAPIConfig{}, ErrAgentContextPolicy
+		}
+		contextPolicyJSON = string(encoded)
+	}
 	// 更新原子核对检测时的版本；冲突时事务回滚，先前的默认项切换也不会生效。
 	// 更新时间至少前进一微秒，避免等待行锁或系统时钟回退造成版本重复。
+	// 不单独读取旧预算：在同一行更新中决定保留或重置，避免配置并发切换时串用另一模型的窗口。
 	row := tx.QueryRowContext(ctx, `
 UPDATE managed_model_api_config
 SET display_name=$3,adapter_type=$4,base_url=$5,model_name=$6,model_version=$7,region=$8,
+    data_policy=CASE WHEN $35 THEN data_policy
+      WHEN $34::jsonb IS NOT NULL THEN data_policy || jsonb_build_object('context_budget',$34::jsonb)
+      WHEN adapter_type<>$4 OR base_url<>$5 OR model_name<>$6 OR model_version<>$7 OR region<>$8 THEN data_policy - 'context_budget'
+      ELSE data_policy END,
     credential_ciphertext=CASE WHEN $9::bytea IS NULL THEN credential_ciphertext ELSE $9::bytea END,
     credential_nonce=CASE WHEN $10::bytea IS NULL THEN credential_nonce ELSE $10::bytea END,
     credential_hint=CASE WHEN $9::bytea IS NULL THEN credential_hint ELSE $11 END,
@@ -160,7 +185,8 @@ RETURNING `+managedAPIConfigColumns+`
 		probe.HasProbe, probe.Status, probe.Message, probe.Latency, probe.TestedAt, probe.Mode,
 		probe.UpdateCapability, probe.CapabilityStatus, probe.CapabilityMessage, probe.CapabilityTestedAt,
 		probe.CapabilityVersion, probe.CapabilityUsage, probe.CapabilityDiagnostic, expectedUpdatedAt,
-		probe.UpdateText, probe.TextStatus, probe.TextMessage, probe.TextTestedAt, probe.TextUsage, probe.TextDiagnostic)
+		probe.UpdateText, probe.TextStatus, probe.TextMessage, probe.TextTestedAt, probe.TextUsage, probe.TextDiagnostic,
+		contextPolicyJSON, normalized.CredentialOnly)
 	item, err := scanManagedAPIConfig(row)
 	if err != nil {
 		if expectedUpdatedAt != nil && errors.Is(err, sql.ErrNoRows) {
@@ -332,6 +358,11 @@ func scanManagedAPIConfig(row rowScanner, extra ...any) (ManagedAPIConfig, error
 	if err := json.Unmarshal(dataPolicy, &item.DataPolicy); err != nil {
 		return ManagedAPIConfig{}, err
 	}
+	policy, err := ResolveAgentContextPolicy(item)
+	if err != nil {
+		return ManagedAPIConfig{}, err
+	}
+	item.ContextPolicy = policy
 	return item, nil
 }
 

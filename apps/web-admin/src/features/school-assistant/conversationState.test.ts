@@ -108,7 +108,9 @@ describe("school conversation ownership and evidence", () => {
     ];
     const thread = { id: "general", title: "你能做什么", updatedAt: 2, messages: [...completed, { role: "user" as const, content: "查看这场考试的进度" }] };
     // 刷新发生在追问未完成时，恢复之前的一般问答；若已开始调用业务工具，继续遵守整段不落盘的边界。
-    expect(parseConversationThreads(JSON.parse(serializeConversationThreads([thread])))).toEqual([{ ...thread, messages: completed }]);
+    const serialized = serializeConversationThreads([thread]);
+    expect(parseConversationThreads(JSON.parse(serialized))).toMatchObject([{ ...thread, messages: completed }]);
+    expect(serialized).not.toContain("查看这场考试的进度");
     expect(JSON.parse(serializeConversationThreads([{ ...thread, business: true }]))).toEqual([]);
   });
 

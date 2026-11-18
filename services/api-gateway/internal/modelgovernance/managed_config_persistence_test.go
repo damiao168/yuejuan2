@@ -3,6 +3,7 @@ package modelgovernance
 import (
 	"context"
 	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -221,8 +222,11 @@ func TestPostgresManagedConfigUpdateCommitsDefaultAndCredentialsTogether(t *test
 			write := governanceSQLStep{
 				kind: "query", fragment: "OR updated_at=$27::timestamptz", columns: len(row),
 				check: func(args []any) error {
-					if len(args) != 33 || args[0] != sqlTenant || args[1] != sqlOther || args[26] != now || args[12] != true {
+					if len(args) != 35 || args[0] != sqlTenant || args[1] != sqlOther || args[26] != now || args[12] != true {
 						return errors.New("model update has incorrect scope, default or expected version")
+					}
+					if args[33] != nil || args[34] != false {
+						return errors.New("ordinary update unexpectedly supplies a context policy or uses credential-only mode")
 					}
 					if tc.secret == "" {
 						if args[8] != nil || args[9] != nil {
@@ -304,8 +308,19 @@ func TestPostgresManagedConfigCreateKeepsDefaultPromotionAtomic(t *testing.T) {
 					{kind: "query", fragment: "SELECT EXISTS(SELECT 1 FROM tenant_chat_model_access", args: []any{sqlTenant}, columns: 1, rows: [][]driver.Value{{true}}},
 					{kind: "exec", fragment: "AND is_default AND deleted_at IS NULL", args: []any{sqlTenant}},
 					{kind: "query", fragment: "INSERT INTO managed_model_api_config", columns: len(row), rows: [][]driver.Value{row}, err: tc.internalErr, check: func(args []any) error {
-						if len(args) != 33 || args[1] != sqlTenant || args[2] != "service" || args[12] != "active" || args[13] != true || args[27] != sqlActor {
+						if len(args) != 34 || args[1] != sqlTenant || args[2] != "service" || args[12] != "active" || args[13] != true || args[27] != sqlActor {
 							return errors.New("insert forgot tenant, actor, provider or default status")
+						}
+						var dataPolicy struct {
+							ContextBudget   AgentContextPolicy `json:"context_budget"`
+							TrainingAllowed *bool              `json:"training_allowed"`
+							RetentionMode   string             `json:"retention_mode"`
+						}
+						rawPolicy, ok := args[33].(string)
+						if !ok || json.Unmarshal([]byte(rawPolicy), &dataPolicy) != nil ||
+							dataPolicy.ContextBudget != (AgentContextPolicy{ContextWindowTokens: 32_768, MaxInputTokens: 27_648, MaxOutputTokens: 4_096, Tokenizer: "utf8_bytes"}) ||
+							dataPolicy.TrainingAllowed == nil || *dataPolicy.TrainingAllowed || dataPolicy.RetentionMode != "no_store" {
+							return errors.New("insert failed to persist context defaults and data restrictions together")
 						}
 						id, idOK := args[0].(string)
 						ciphertext, cipherOK := args[9].([]byte)

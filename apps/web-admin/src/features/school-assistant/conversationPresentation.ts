@@ -1,5 +1,6 @@
 import type { SchoolChatModel } from "../../api/schoolAiChat";
 import type { ConversationEvidence } from "./conversationState";
+import type { ConversationTurnMetrics } from "./conversationMetrics";
 
 export interface PendingConversation {
   readonly startedAt?: number;
@@ -8,6 +9,8 @@ export interface PendingConversation {
   readonly content: string;
   readonly reasoning: string;
   readonly evidence: ConversationEvidence;
+  readonly contextOmitted?: boolean;
+  readonly metrics?: ConversationTurnMetrics;
 }
 
 export function conversationModelStatus(model: SchoolChatModel | null, loading: boolean): string {

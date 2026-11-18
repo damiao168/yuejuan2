@@ -163,6 +163,8 @@ func (h *Handler) writeManagedAPIError(w http.ResponseWriter, r *http.Request, e
 		httpx.Error(w, r, http.StatusConflict, "managed_model_credential_source_disabled", "密钥来源配置已停用，请先启用该配置，再获取模型列表或添加模型")
 	case errors.Is(err, ErrManagedCredentialOriginChanged):
 		httpx.Error(w, r, http.StatusBadRequest, "managed_model_credential_origin_changed", "更换 API 域名或端口时，请重新输入 API Key（可以使用原密钥）")
+	case errors.Is(err, ErrAgentContextPolicy):
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_model_context_policy", "模型上下文预算无效，请核对窗口、输入和输出上限，并预留安全余量")
 	case errors.Is(err, ErrInvalidManagedConfig):
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_managed_model_api", "第三方模型 API 配置不完整或不安全")
 	case errors.Is(err, ErrNotFound):

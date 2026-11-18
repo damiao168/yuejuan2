@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime"
 	"net"
 	"net/http"
@@ -45,17 +46,30 @@ type WebPageContent struct {
 	ReadAt time.Time
 }
 
-type publicWebPageReader struct{ client *http.Client }
+type publicWebPageReader struct {
+	client            *http.Client
+	cache             *publicWebPageCache
+	disableCoalescing bool
+}
+
+type PublicWebPageReaderOptions struct {
+	DisableCoalescing bool
+}
 
 // NewPublicWebPageReader 不带浏览器会话、模型密钥或环境代理；每次拨号先验证 DNS 全部结果再固定 IP。
 // 最多跟随两次公开 HTTP(S) 跳转，跳转后的地址也必须重新经过 URL 和拨号检查。
 func NewPublicWebPageReader() WebPageReader {
+	return NewPublicWebPageReaderWithOptions(PublicWebPageReaderOptions{})
+}
+
+// NewPublicWebPageReaderWithOptions 允许单独回退请求合并，URL、缓存和拨号校验不随开关关闭。
+func NewPublicWebPageReaderWithOptions(options PublicWebPageReaderOptions) WebPageReader {
 	transport := &http.Transport{
 		DialContext: dialPublicWebPage, TLSHandshakeTimeout: 5 * time.Second,
 		ResponseHeaderTimeout: webPageReadTimeout, IdleConnTimeout: 20 * time.Second,
 		MaxIdleConns: 8, MaxIdleConnsPerHost: 2, MaxResponseHeaderBytes: 32 << 10,
 	}
-	return &publicWebPageReader{client: &http.Client{
+	return &publicWebPageReader{cache: newPublicWebPageCache(), disableCoalescing: options.DisableCoalescing, client: &http.Client{
 		Transport: transport, Timeout: webPageReadTimeout,
 		CheckRedirect: func(request *http.Request, via []*http.Request) error {
 			if len(via) > 2 || !validWebPageURL(request.URL.String()) {
@@ -143,18 +157,78 @@ func dialResolvedPublicWebPage(ctx context.Context, network, port string, ips []
 	return nil, errWebPageUnavailable
 }
 
-func (reader *publicWebPageReader) Read(ctx context.Context, address string) (WebPageContent, error) {
+func (reader *publicWebPageReader) Read(ctx context.Context, address string) (content WebPageContent, err error) {
+	started, cacheHit, coalesced := time.Now(), false, false
+	defer func() {
+		status := "succeeded"
+		if err != nil {
+			status = "failed"
+		}
+		// 只记录缓存与耗时；搜索地址和页面内容不进入日志。
+		stats := publicWebPageCacheStats{}
+		if reader.cache != nil {
+			stats = reader.cache.snapshot()
+		}
+		slog.InfoContext(ctx, "school assistant page read", "event", "school_assistant_page_read", "duration_ms", time.Since(started).Milliseconds(), "cache_hit", cacheHit, "coalesced", coalesced, "status", status,
+			"cache_hits", stats.Hits, "cache_misses", stats.Misses, "cache_coalesced", stats.Coalesced, "cache_evictions", stats.Evictions, "cache_expirations", stats.Expirations, "cache_fetches", stats.Fetches, "cache_rejected", stats.Rejected, "cache_items", stats.Items, "cache_bytes", stats.Bytes, "inflight", stats.Active, "active_fetches", stats.Fetching, "waiters", stats.Waiters)
+	}()
 	if err := ctx.Err(); err != nil {
 		return WebPageContent{}, err
 	}
 	if !validWebPageURL(address) {
 		return WebPageContent{}, webPageFailure("url")
 	}
+	key := publicWebPageCacheKey(address)
+	if reader.cache != nil {
+		if !reader.disableCoalescing {
+			content, cacheHit, coalesced, err = reader.cache.load(ctx, key, func(callCtx context.Context) (WebPageContent, time.Duration, error) {
+				return reader.readUncached(callCtx, address)
+			})
+			return content, err
+		}
+		reader.cache.mu.Lock()
+		closed := reader.cache.closed
+		reader.cache.mu.Unlock()
+		if closed {
+			return WebPageContent{}, webPageFailure("closed")
+		}
+		if cached, exists := reader.cache.get(key); exists {
+			if err := ctx.Err(); err != nil {
+				return WebPageContent{}, err
+			}
+			cacheHit = true
+			return cached, nil
+		}
+	}
+	var ttl time.Duration
+	if reader.cache != nil {
+		content, ttl, err = reader.cache.fetchLimited(ctx, func(callCtx context.Context) (WebPageContent, time.Duration, error) {
+			return reader.readUncached(callCtx, address)
+		})
+	} else {
+		content, ttl, err = reader.readUncached(ctx, address)
+	}
+	if err == nil && ctx.Err() == nil && reader.cache != nil {
+		reader.cache.put(key, content, ttl)
+	}
+	return content, err
+}
+
+// Close 停止本实例的共享和独立读取；调用方持有生命周期时可通过 io.Closer 主动释放，重复关闭无副作用。
+func (reader *publicWebPageReader) Close() error {
+	if reader.cache != nil {
+		reader.cache.close()
+	}
+	reader.client.CloseIdleConnections()
+	return nil
+}
+
+func (reader *publicWebPageReader) readUncached(ctx context.Context, address string) (WebPageContent, time.Duration, error) {
 	ctx, cancel := context.WithTimeout(ctx, webPageReadTimeout)
 	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
 	if err != nil {
-		return WebPageContent{}, webPageFailure("request")
+		return WebPageContent{}, 0, webPageFailure("request")
 	}
 	request.Header.Set("User-Agent", "EduGrade-PublicReader/1.0")
 	request.Header.Set("Accept", "text/html,application/xhtml+xml,text/plain;q=0.9")
@@ -162,11 +236,23 @@ func (reader *publicWebPageReader) Read(ctx context.Context, address string) (We
 	response, err := reader.client.Do(request)
 	if err != nil {
 		if ctx.Err() != nil {
-			return WebPageContent{}, ctx.Err()
+			return WebPageContent{}, 0, ctx.Err()
 		}
-		return WebPageContent{}, webPageFailure("transport")
+		return WebPageContent{}, 0, webPageFailure("transport")
 	}
 	defer response.Body.Close()
+	content, err := parsePublicWebPageResponse(response, address)
+	if ctx.Err() != nil {
+		return WebPageContent{}, 0, ctx.Err()
+	}
+	ttl := time.Duration(0)
+	if err == nil && reader.cache != nil {
+		ttl = publicWebPageCacheLifetime(response.Header, reader.cache.now())
+	}
+	return content, ttl, err
+}
+
+func parsePublicWebPageResponse(response *http.Response, address string) (WebPageContent, error) {
 	if response.StatusCode != http.StatusOK {
 		return WebPageContent{}, webPageFailure(fmt.Sprintf("http_%d", response.StatusCode))
 	}
@@ -177,17 +263,9 @@ func (reader *publicWebPageReader) Read(ctx context.Context, address string) (We
 	if err != nil || (mediaType != "text/html" && mediaType != "application/xhtml+xml" && mediaType != "text/plain") {
 		return WebPageContent{}, webPageFailure("media_type")
 	}
-	raw, err := io.ReadAll(io.LimitReader(response.Body, webPageMaxBytes+1))
-	if err != nil || len(raw) > webPageMaxBytes {
-		return WebPageContent{}, webPageFailure("body")
-	}
-	decoded, err := charset.NewReader(bytes.NewReader(raw), response.Header.Get("Content-Type"))
+	data, err := readPublicWebPageBody(response)
 	if err != nil {
-		return WebPageContent{}, webPageFailure("charset")
-	}
-	data, err := io.ReadAll(io.LimitReader(decoded, webPageMaxBytes+1))
-	if err != nil || len(data) > webPageMaxBytes {
-		return WebPageContent{}, webPageFailure("decoded_body")
+		return WebPageContent{}, err
 	}
 	finalURL := address
 	if response.Request != nil && response.Request.URL != nil {
@@ -206,6 +284,23 @@ func (reader *publicWebPageReader) Read(ctx context.Context, address string) (We
 		return WebPageContent{}, webPageFailure("empty_body")
 	}
 	return content, nil
+}
+
+// 字符集转换可能放大数据，原始响应和转码结果分别检查字节数。
+func readPublicWebPageBody(response *http.Response) ([]byte, error) {
+	raw, err := io.ReadAll(io.LimitReader(response.Body, webPageMaxBytes+1))
+	if err != nil || len(raw) > webPageMaxBytes {
+		return nil, webPageFailure("body")
+	}
+	decoded, err := charset.NewReader(bytes.NewReader(raw), response.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, webPageFailure("charset")
+	}
+	data, err := io.ReadAll(io.LimitReader(decoded, webPageMaxBytes+1))
+	if err != nil || len(data) > webPageMaxBytes {
+		return nil, webPageFailure("decoded_body")
+	}
+	return data, nil
 }
 
 func truncatePageText(value string, limit int) string {
@@ -271,45 +366,65 @@ func extractWebPage(data []byte) (string, string, error) {
 	if err != nil {
 		return "", "", errWebPageUnavailable
 	}
-	title := ""
-	var body *html.Node
-	var explicit []*html.Node
-	count := 0
-	var visit func(*html.Node, int)
-	visit = func(node *html.Node, depth int) {
-		count++
-		if count > 50_000 || depth > 128 {
-			return
-		}
-		if node.Type == html.ElementNode {
-			// 某些门户把广告错误片段嵌进正文，片段内的第二个 title 不能覆盖文档标题。
-			if title == "" && node.Data == "title" && node.Parent != nil && node.Parent.Data == "head" && node.FirstChild != nil {
-				title = truncatePageText(node.FirstChild.Data, 200)
-			}
-			if node.Data == "body" {
-				body = node
-			}
-			if hiddenWebPageNode(node) {
-				return
-			}
-			main := node.Data == "article" || node.Data == "main"
-			for _, attr := range node.Attr {
-				if attr.Key == "role" && attr.Val == "main" {
-					main = true
-				}
-			}
-			if main {
-				explicit = append(explicit, node)
-				return
-			}
-		}
-		for child := node.FirstChild; child != nil; child = child.NextSibling {
-			visit(child, depth+1)
+	var structure webPageStructure
+	structure.visit(document, 0)
+	return structure.title, formatWebPageLines(structure.selectText()), nil
+}
+
+type webPageStructure struct {
+	title    string
+	body     *html.Node
+	explicit []*html.Node
+	count    int
+}
+
+func (page *webPageStructure) visit(node *html.Node, depth int) {
+	page.count++
+	if page.count > 50_000 || depth > 128 {
+		return
+	}
+	if node.Type == html.ElementNode && page.inspectElement(node) {
+		return
+	}
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		page.visit(child, depth+1)
+	}
+}
+
+func (page *webPageStructure) inspectElement(node *html.Node) bool {
+	// 某些门户把广告错误片段嵌进正文，片段内的第二个 title 不能覆盖文档标题。
+	if page.title == "" && node.Data == "title" && node.Parent != nil && node.Parent.Data == "head" && node.FirstChild != nil {
+		page.title = truncatePageText(node.FirstChild.Data, 200)
+	}
+	if node.Data == "body" {
+		page.body = node
+	}
+	if hiddenWebPageNode(node) {
+		return true
+	}
+	if !isWebPageMainElement(node) {
+		return false
+	}
+	// 整块候选正文稍后统一提取，避免将其嵌套的主区域重复加入候选。
+	page.explicit = append(page.explicit, node)
+	return true
+}
+
+func isWebPageMainElement(node *html.Node) bool {
+	if node.Data == "article" || node.Data == "main" {
+		return true
+	}
+	for _, attr := range node.Attr {
+		if attr.Key == "role" && attr.Val == "main" {
+			return true
 		}
 	}
-	visit(document, 0)
+	return false
+}
+
+func (page webPageStructure) selectText() string {
 	var selected string
-	for _, node := range explicit {
+	for _, node := range page.explicit {
 		var output strings.Builder
 		webPageNodeText(node, 0, &output)
 		text := output.String()
@@ -317,12 +432,16 @@ func extractWebPage(data []byte) (string, string, error) {
 			selected = text
 		}
 	}
-	if len(strings.TrimSpace(selected)) < 24 && body != nil {
+	if len(strings.TrimSpace(selected)) < 24 && page.body != nil {
 		var output strings.Builder
-		webPageNodeText(body, 0, &output)
+		webPageNodeText(page.body, 0, &output)
 		selected = output.String()
 	}
-	// 保留段落和表格行，避免温度、日期及表头在清理时被拼成无法对应的单行。
+	return selected
+}
+
+// 保留段落和表格行，避免温度、日期及表头在清理时被拼成无法对应的单行。
+func formatWebPageLines(selected string) string {
 	lines := []string{}
 	remaining := webPageMaxRunes
 	truncated := false
@@ -347,5 +466,5 @@ func extractWebPage(data []byte) (string, string, error) {
 	if truncated {
 		lines = append(lines, "[正文超出读取上限，后续未读取]")
 	}
-	return title, strings.Join(lines, "\n"), nil
+	return strings.Join(lines, "\n")
 }

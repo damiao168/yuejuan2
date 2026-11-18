@@ -188,7 +188,7 @@ func TestPublicSearchLoopUsesSummaryInTwoCallsAndKeepsThirdSourceNumber(t *testi
 	if err != nil || len(model.requests) != 2 || len(usage.events) != 2 || len(search.queries) != 1 {
 		t.Fatalf("summary should need two decisions: err=%v calls=%d", err, len(model.requests))
 	}
-	if !strings.Contains(model.requests[1].Messages[1].Content, `"question":"公开活动时间"`) {
+	if !strings.Contains(lastTestUserMessage(model.requests[1]).Content, `"question":"公开活动时间"`) {
 		t.Fatal("independent public question was lost")
 	}
 	finalSources := events[len(events)-2]
@@ -208,7 +208,7 @@ func TestPublicSearchLoopReadsOnlySelectedBodyInThreeCalls(t *testing.T) {
 	if events[len(events)-2].Sources[0].Note != "已读取网页正文。" {
 		t.Fatal("read evidence was mislabelled")
 	}
-	if !strings.Contains(model.requests[2].Messages[1].Content, `"read_source_ids":["candidate-1"]`) {
+	if !strings.Contains(lastTestUserMessage(model.requests[2]).Content, `"read_source_ids":["candidate-1"]`) {
 		t.Fatal("read history omitted")
 	}
 }
@@ -221,7 +221,7 @@ func TestPublicSearchLoopDoesNotRepeatSameSearch(t *testing.T) {
 	if err != nil || len(search.queries) != 1 || len(model.requests) != 3 || events[len(events)-1].Type != "done" {
 		t.Fatalf("duplicate search was not stopped: err=%v searches=%d", err, len(search.queries))
 	}
-	if !strings.Contains(model.requests[2].Messages[1].Content, `"allow_search":false`) {
+	if !strings.Contains(lastTestUserMessage(model.requests[2]).Content, `"allow_search":false`) {
 		t.Fatal("server stop was not returned to model")
 	}
 }
@@ -292,7 +292,7 @@ func TestPublicSearchLoopPreservesWholeQuestionBeyondFirstSubquery(t *testing.T)
 		t.Fatal(err)
 	}
 	for _, request := range model.requests[1:] {
-		if !strings.Contains(request.Messages[1].Content, `"question":"比较北京和上海今天的气温"`) {
+		if !strings.Contains(lastTestUserMessage(request).Content, `"question":"比较北京和上海今天的气温"`) {
 			t.Fatal("first subquery overwrote whole task")
 		}
 	}
@@ -322,7 +322,7 @@ func TestPublicSearchLoopDoesNotReadKnownRedirectAliasTwice(t *testing.T) {
 	if code != "invalid_web_search_action" || len(reader.urls) != 1 {
 		t.Fatalf("known alias was re-read: err=%v calls=%v", err, reader.urls)
 	}
-	last := model.requests[2].Messages[1].Content
+	last := lastTestUserMessage(model.requests[2]).Content
 	if !strings.Contains(last, `"reads_remaining":2`) || !strings.Contains(last, `"available_read_source_ids":[]`) {
 		t.Fatal("alias consumed a read or stayed available")
 	}

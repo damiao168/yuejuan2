@@ -40,7 +40,8 @@ func TestConversationImageRequestAboveOldBodyLimitReachesBothModelRounds(t *test
 	}
 	requests := append(model.requests, model.answerRequest)
 	for _, request := range requests {
-		if len(request.Messages) < 2 || len(request.Messages[1].Images) != 1 || request.Messages[1].Images[0].Content != attachment.Content {
+		question := lastTestUserMessage(request)
+		if question.Role != "user" || len(question.Images) != 1 || question.Images[0].Content != attachment.Content {
 			t.Fatal("image lost between user input, planning and final answer")
 		}
 	}

@@ -128,6 +128,137 @@ describe("school conversation account, stream, and presentation boundaries", () 
   }
   async function finish(index = sessions.length - 1) { await act(async () => sessions[index]!.resolve()); }
 
+  it("在输入框下展示本次请求指标，忽略探测与拒绝预算，切换模型后不沿用旧模型用量", async () => {
+    const modelA = { ...readyModel, id: "model-a", context_window_tokens: 128_000 };
+    const modelB = { ...readyModel, id: "model-b", model_name: "other", display_name: "另一模型", context_window_tokens: 32_000 };
+    mocks.model.mockResolvedValue({ model: modelA, models: [modelA, modelB] });
+    await render();
+    const metrics = () => host.querySelector(".school-chat-metrics")!;
+    expect(host.querySelector(".school-chat-composer")!.compareDocumentPosition(metrics()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(metrics().textContent).toContain("128K");
+    await send("统计本次上下文");
+    const budget = { phase: "answer", estimated_input_tokens: 10_000, input_budget_tokens: 50_000, max_output_tokens: 4096, context_window_tokens: 128_000,
+      dropped_messages: 0, estimation_method: "utf8_bytes", memory_used: false, memory_omitted: false, accepted: true };
+    await emit({ type: "context", request_id: "request", seq: 1, context_budget: budget });
+    await emit({ type: "context", request_id: "request", seq: 2, context_budget: { ...budget, accepted: false, estimated_input_tokens: 99_999 } });
+    await emit({ type: "context", request_id: "request", seq: 3, context_budget: { ...budget, phase: "tool_capability", estimated_input_tokens: 5 } });
+    expect(metrics().textContent).toContain("10K");
+    expect(metrics().textContent).not.toContain("99");
+    const completed = done(4, "统计完成。");
+    if (completed.type !== "done") throw new Error("Expected completion fixture");
+    // 整轮汇总包含规划和工具调用；页脚只能采用最终回答单次调用的供应商用量与服务端耗时。
+    completed.completion.usage.output_tokens = 40_000;
+    completed.generation_metrics = { model_config_id: "model-a", output_tokens: 200, duration_ms: 4000, tokens_per_second: 50 };
+    await emit(completed); await finish();
+    expect(metrics().textContent).toMatch(/50(?:\.0)?\s*Token\/s/);
+    expect(window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(user)}`)).not.toContain("tokens_per_second");
+    await chooseModel("model-b");
+    expect(metrics().textContent).toContain("32K");
+    expect(metrics().textContent).not.toContain("10K");
+    expect(metrics().textContent).not.toMatch(/50(?:\.0)?\s*Token\/s/);
+    await chooseModel("model-a"); await send("再次提问并中断");
+    expect(metrics().textContent).not.toMatch(/50(?:\.0)?\s*Token\/s/);
+    await emit({ type: "context", request_id: "request", seq: 1, context_budget: { ...budget, estimated_input_tokens: 20_000 } });
+    await click("中断当前对话");
+    expect(metrics().textContent).toContain("20K");
+    expect(metrics().textContent).not.toMatch(/50(?:\.0)?\s*Token\/s/);
+  });
+
+  it("并行对话的容量和速率留在各自线程，没有供应商计量时保持未知", async () => {
+    mocks.model.mockResolvedValue({ model: { ...readyModel, context_window_tokens: 128_000 } });
+    await render(); await send("第一条指标对话");
+    const budget = { phase: "answer", estimated_input_tokens: 10_000, input_budget_tokens: 50_000, max_output_tokens: 4096, context_window_tokens: 128_000,
+      dropped_messages: 0, estimation_method: "utf8_bytes", memory_used: false, memory_omitted: false, accepted: true };
+    await emit({ type: "context", request_id: "request", seq: 1, context_budget: budget }, 0);
+    await click("开启新对话"); await send("第二条指标对话");
+    await emit({ type: "context", request_id: "request", seq: 1, context_budget: { ...budget, estimated_input_tokens: 20_000 } }, 1);
+    const first = done(2, "第一条完成。");
+    if (first.type !== "done") throw new Error("Expected completion fixture");
+    first.generation_metrics = { output_tokens: 200, duration_ms: 4000, tokens_per_second: 50 };
+    await emit(first, 0); await finish(0);
+    expect(host.querySelector(".school-chat-metrics")?.textContent).toContain("20K");
+    expect(host.querySelector(".school-chat-metrics")?.textContent).not.toMatch(/50(?:\.0)?\s*Token\/s/);
+    await click("第一条指标对话");
+    expect(host.querySelector(".school-chat-metrics")?.textContent).toContain("10K");
+    expect(host.querySelector(".school-chat-metrics")?.textContent).toMatch(/50(?:\.0)?\s*Token\/s/);
+    await click("第二条指标对话");
+    await emit(done(2, "第二条未返回用量。"), 1); await finish(1);
+    expect(host.querySelector(".school-chat-metrics")?.textContent).toContain("20K");
+    expect(host.querySelector(".school-chat-metrics")?.textContent).not.toContain("统计中");
+    expect(host.querySelector(".school-chat-metrics")?.textContent).not.toMatch(/\d+(?:\.\d+)?\s*Token\/s/);
+  });
+
+  it("返回后台仍在生成的对话时，容量与该请求固定的模型选择器一致", async () => {
+    const modelA = { ...readyModel, id: "model-a", context_window_tokens: 128_000 };
+    const modelB = { ...readyModel, id: "model-b", model_name: "other", display_name: "另一模型", context_window_tokens: 32_000 };
+    mocks.model.mockResolvedValue({ model: modelA, models: [modelA, modelB] });
+    await render(); await send("模型甲的在途对话");
+    const budget = { phase: "answer", estimated_input_tokens: 10_000, input_budget_tokens: 50_000, max_output_tokens: 4096, context_window_tokens: 128_000,
+      dropped_messages: 0, estimation_method: "utf8_bytes", memory_used: false, memory_omitted: false, accepted: true };
+    await emit({ type: "context", request_id: "request", seq: 1, context_budget: budget }, 0);
+    await click("开启新对话"); await chooseModel("model-b"); await send("模型乙的在途对话");
+    expect(host.querySelector(".school-chat-metrics")?.textContent).toContain("32K");
+    await click("模型甲的在途对话");
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')?.value).toBe("model-a");
+    expect(host.querySelector(".school-chat-metrics")?.textContent).toContain("10K / 应用上限 128K");
+    expect(host.querySelector(".school-chat-metrics")?.textContent).not.toContain("32K");
+    await click("模型乙的在途对话");
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="切换对话模型"]')?.value).toBe("model-b");
+    expect(host.querySelector(".school-chat-metrics")?.textContent).toContain("32K");
+  });
+
+  it("完成后显示单次供应商实报输入，下一模型阶段与下一请求不能沿用旧实报", async () => {
+    const currentModel = { ...readyModel, id: "context-model", context_window_tokens: 32_768 };
+    mocks.model.mockResolvedValue({ model: currentModel, models: [currentModel] });
+    await render(); await send("核对输入用量");
+    const metrics = () => host.querySelector(".school-chat-metrics")!.textContent;
+    const budget = { phase: "planning", estimated_input_tokens: 5192, input_budget_tokens: 27_648, max_output_tokens: 1024, context_window_tokens: 32_768,
+      dropped_messages: 0, estimation_method: "utf8_bytes_and_image_patches", memory_used: false, memory_omitted: false, accepted: true };
+    await emit({ type: "context", request_id: "request", seq: 1, context_budget: { ...budget, actual_input_tokens: 1378 } });
+    expect(metrics()).toContain("实报");
+    // 最终回答的估算帧必须替换规划实报，不能把前一次调用的精确值误贴到新请求。
+    const answerBudget = { ...budget, phase: "answer", estimated_input_tokens: 4750, max_output_tokens: 4096 };
+    await emit({ type: "context", request_id: "request", seq: 2, context_budget: answerBudget });
+    expect(metrics()).toContain("约 4.8K");
+    expect(metrics()).toContain("14.5% · 估算");
+    expect(metrics()).not.toContain("实报");
+    await emit({ type: "context", request_id: "request", seq: 3, context_budget: { ...answerBudget, actual_input_tokens: 989 } });
+    expect(metrics()).toContain("989 / 应用上限 32.8K");
+    expect(metrics()).toContain("3.0% · 实报");
+    const completed = done(4, "已核对。");
+    if (completed.type !== "done") throw new Error("Expected completion fixture");
+    completed.completion.usage.input_tokens = 2367;
+    await emit(completed); await finish();
+    expect(metrics()).toContain("989 / 应用上限 32.8K");
+    expect(metrics()).not.toContain("2.4K");
+    expect(window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(user)}`)).not.toContain("actual_input_tokens");
+    await send("开启下一次请求");
+    expect(metrics()).not.toContain("989");
+    expect(metrics()).not.toContain("实报");
+  });
+
+  it("keeps long display history separate from bounded model input and excludes excerpts from public requests", async () => {
+    const messages = Array.from({ length: 30 }, (_, index) => [
+      { role: "user", content: `历史问题${index}` }, { role: "assistant", content: `历史回答${index}` },
+    ]).flat();
+    window.localStorage.setItem(`edugrade.ai-chat.v2:${conversationAccountKey(user)}`, JSON.stringify([{ id: "long", title: "长对话", updatedAt: 1, messages, historyExcerpt: { version: 1, userNotes: ["更早的私有用户文字"] } }]));
+    mocks.capabilities.mockResolvedValue({ web_search: { available: true, message: "" } });
+    await render(); await send("普通追问");
+    expect(mocks.stream.mock.calls[0]?.[0].length).toBeLessThanOrEqual(49);
+    expect(JSON.stringify(mocks.stream.mock.calls[0]?.[6])).toContain("更早的私有用户文字");
+    expect(mocks.stream.mock.calls[0]?.[0][0]?.content).not.toContain("早先用户原文摘录");
+    expect(host.textContent).toContain("历史问题0");
+    expect(host.textContent).toContain("容量不足时可能省略");
+    await emit(done(1, "新的回答")); await finish();
+    await click("联网搜索"); await send("公开问题");
+    const publicInput = mocks.stream.mock.calls[1]?.[0] as SchoolChatMessage[];
+    expect(JSON.stringify(publicInput)).not.toContain("更早的私有用户文字");
+    expect(mocks.stream.mock.calls[1]?.[6]).toBeUndefined();
+    expect(publicInput.every(message => !message.content.includes("早先用户原文摘录"))).toBe(true);
+    const stored = JSON.parse(window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(user)}`)!);
+    expect(stored[0].messages).toHaveLength(62);
+  });
+
   it("keeps progress with its background thread and removes it when that reply completes", async () => {
     await render(); await send("first progress question");
     await emit({ type: "progress", request_id: "request", seq: 1, phase: "reading" }, 0);
@@ -144,6 +275,55 @@ describe("school conversation account, stream, and presentation boundaries", () 
     expect(host.querySelector("output")?.textContent).toBe("正在理解问题");
     await emit(done(2, "second completed result"), 1); await finish(1);
     expect(host.querySelector("output")).toBeNull();
+  });
+
+  it("lets users explicitly preserve and remove a requirement from the next request memory", async () => {
+    await render(); await send("通知必须保持三段结构。");
+    expect(button("保留这条要求").disabled).toBe(true);
+    await emit(done(1, "已按要求起草。")); await finish();
+    await click("保留这条要求");
+    expect(button("取消保留要求").getAttribute("aria-pressed")).toBe("true");
+    await send("继续起草");
+    expect(mocks.stream.mock.calls[1]?.[6]).toMatchObject({ version: 2, entries: [expect.objectContaining({ content: "通知必须保持三段结构。", pinned: true })] });
+    await emit(done(1, "继续完成。")); await finish();
+    await click("取消保留要求");
+    await send("下一步");
+    expect(JSON.stringify(mocks.stream.mock.calls[2]?.[6] ?? {})).not.toContain("通知必须保持三段结构");
+  });
+
+  it("shows actual server omission feedback and retains it after completion without persisting business evidence", async () => {
+    await render(); await send("请继续解释");
+    expect(host.textContent).not.toContain("本次已省略部分旧历史或会话记忆");
+    await emit({ type: "context", request_id: "request", seq: 1, context_budget: {
+      phase: "planning", estimated_input_tokens: 100, input_budget_tokens: 200, max_output_tokens: 512, context_window_tokens: 2048,
+      dropped_messages: 2, estimation_method: "utf8_bytes", memory_used: false, memory_omitted: true, accepted: true,
+    } });
+    expect(host.textContent).toContain("本次已省略部分旧历史或会话记忆");
+    await emit(done(2, "已解释。")); await finish();
+    expect(host.textContent).toContain("本次已省略部分旧历史或会话记忆");
+    await send("新的问题");
+    expect(host.textContent).not.toContain("本次已省略部分旧历史或会话记忆");
+  });
+
+  it("keeps explicitly preserved requirements ephemeral on public computers and isolates the next account", async () => {
+    const publicUser = { ...user, publicComputer: true };
+    await render({ user: publicUser }); await send("通知必须隐藏姓名。");
+    await emit(done(1, "已起草。")); await finish(); await click("保留这条要求");
+    expect(host.textContent).toContain("已保留的要求");
+    expect(window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(publicUser)}`)).toBeNull();
+    expect(window.sessionStorage.getItem(`${CONVERSATION_REFRESH_PREFIX}${conversationAccountKey(publicUser)}`)).toBeNull();
+    await render({ user: { ...user, id: "other-account", username: "other-account" } });
+    expect(host.textContent).not.toContain("通知必须隐藏姓名");
+    expect(host.textContent).not.toContain("已保留的要求");
+  });
+
+  it("does not persist explicitly preserved text after the conversation is classified as business", async () => {
+    await render(); await send("业务查询仍按此前统计口径。");
+    await emit({ type: "tool_started", request_id: "request", seq: 1, call_id: "private", tool_name: "school_business", label: "校内读取" });
+    await emit(done(2, "本轮已读取校内依据。")); await finish(); await click("保留这条要求");
+    expect(host.textContent).toContain("已保留的要求");
+    expect(window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(user)}`) ?? "").not.toContain("此前统计口径");
+    expect(window.sessionStorage.getItem(`${CONVERSATION_REFRESH_PREFIX}${conversationAccountKey(user)}`) ?? "").not.toContain("此前统计口径");
   });
   async function chooseModel(id: string) {
     await act(async () => {
@@ -727,13 +907,13 @@ describe("school conversation account, stream, and presentation boundaries", () 
     expect(window.localStorage.getItem(`edugrade.ai-chat.v2:${conversationAccountKey(user)}`)).not.toContain("联网搜索北京的天气");
     await act(async () => root.unmount()); root = createRoot(host); await render();
     expect(firstSignal.aborted).toBe(true);
-    expect(host.querySelector(".is-user")?.textContent).toBe("联网搜索北京的天气");
+    expect(host.querySelector(".is-user")?.textContent).toContain("联网搜索北京的天气");
     expect(host.textContent).toContain("上次回复未完成");
     expect(host.querySelector(".school-chat-waiting")).toBeNull();
     expect(mocks.stream).toHaveBeenCalledTimes(1);
     await click("重新生成");
     expect(mocks.stream).toHaveBeenCalledTimes(2);
-    expect(mocks.stream.mock.calls[1]?.[0]).toEqual([{ role: "user", content: "联网搜索北京的天气", web_search: true }]);
+    expect(mocks.stream.mock.calls[1]?.[0]).toMatchObject([{ role: "user", content: "联网搜索北京的天气", web_search: true }]);
     expect(mocks.stream.mock.calls[1]?.[5]).toBe(true);
   });
 

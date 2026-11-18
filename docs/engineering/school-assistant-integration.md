@@ -58,4 +58,4 @@
 - 网页读取仅接受模型选中的真实候选 ID，最多三页；读取器在 URL、DNS、实际拨号、重定向、媒体类型和正文大小各层限制范围。正文提取失败不能伪称已读；同页补搜的新摘要可以补齐缺项，但不能覆盖已经读取的正文。网页读取事件也属于公开历史，不能误标业务会话。
 - 允许联网时的校内问题仍复用原只读工具链，该分支不调用公开搜索；页面提示只在选定校内分支后验证，业务标记后的完成或中断回复都不能进入下一轮公开历史。
 
-具体实现、接口及当前限制见 [统一对话 API](../api/school-assistant.md)；当前设计见 [对话实施说明](../design-reviews/2026-10-02-school-admin-ai-conversation.md)。代码注释按 [注释与维护说明标准](commenting-standard.md) 同步核对。
+具体实现、接口及当前限制见 [统一对话 API](../api/school-assistant.md)；上下文容量、历史摘录、缓存与第三方来源见 [上下文与缓存维护说明](../architecture/ai-conversation-context-cache.md)；当前设计见 [对话实施说明](../design-reviews/2026-10-02-school-admin-ai-conversation.md)。代码注释按 [注释与维护说明标准](commenting-standard.md) 同步核对。

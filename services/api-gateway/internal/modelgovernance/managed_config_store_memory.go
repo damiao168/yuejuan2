@@ -15,6 +15,11 @@ func (s *MemoryStore) ListManagedAPIConfigs(_ context.Context, tenantID string) 
 	items := []ManagedAPIConfig{}
 	for _, item := range s.managedConfigs {
 		if item.TenantID == tenantID && item.DeletedAt == nil {
+			policy, err := ResolveAgentContextPolicy(item)
+			if err != nil {
+				return nil, err
+			}
+			item.ContextPolicy = policy
 			items = append(items, item)
 		}
 	}
@@ -33,6 +38,14 @@ func (s *MemoryStore) CreateManagedAPIConfig(_ context.Context, tenantID, _ stri
 	if err != nil {
 		return ManagedAPIConfig{}, err
 	}
+	policyInput := AgentContextPolicy{}
+	if normalized.ContextPolicy != nil {
+		policyInput = *normalized.ContextPolicy
+	}
+	policy, err := NormalizeAgentContextPolicy(policyInput)
+	if err != nil {
+		return ManagedAPIConfig{}, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if normalized.IsDefault {
@@ -48,7 +61,8 @@ func (s *MemoryStore) CreateManagedAPIConfig(_ context.Context, tenantID, _ stri
 		Region: normalized.Region, CredentialConfigured: true, CredentialHint: credentialHint(normalized.APIKey),
 		Modalities: []string{"text"}, CapabilityProfile: "general",
 		PricingPolicy: map[string]any{},
-		DataPolicy:    map[string]any{"training_allowed": false, "retention_mode": "no_store"},
+		DataPolicy:    managedContextDataPolicy(map[string]any{"training_allowed": false, "retention_mode": "no_store"}, policy),
+		ContextPolicy: policy,
 		HealthState:   "unverified",
 		Status:        normalized.Status, IsDefault: normalized.IsDefault, LastTestStatus: "untested",
 		LastTextStatus: "untested", LastCapabilityStatus: "untested",
@@ -79,6 +93,10 @@ func (s *MemoryStore) UpdateManagedAPIConfig(_ context.Context, tenantID, id str
 		!normalized.ExpectedUpdatedAt.IsZero() && !item.UpdatedAt.Equal(normalized.ExpectedUpdatedAt) {
 		return ManagedAPIConfig{}, ErrManagedProbeStale
 	}
+	policy, err := managedUpdatedContextPolicy(item, normalized)
+	if err != nil {
+		return ManagedAPIConfig{}, err
+	}
 	s.preserveInheritedChatAccessLocked(tenantID, id, normalized.IsDefault)
 	if normalized.IsDefault {
 		s.clearManagedDefault(tenantID, id)
@@ -95,6 +113,8 @@ func (s *MemoryStore) UpdateManagedAPIConfig(_ context.Context, tenantID, id str
 	item.Status = normalized.Status
 	item.IsDefault = normalized.IsDefault
 	item.UpdatedAt = nextManagedConfigUpdatedAt(item.UpdatedAt)
+	item.ContextPolicy = policy
+	item.DataPolicy = managedContextDataPolicy(item.DataPolicy, policy)
 	if normalized.APIKey != "" {
 		s.managedSecrets[id] = normalized.APIKey
 		item.CredentialHint = credentialHint(normalized.APIKey)
@@ -193,6 +213,11 @@ func (s *MemoryStore) GetManagedAPIConnection(_ context.Context, tenantID, id st
 	if strings.TrimSpace(secret) == "" {
 		return ManagedAPIConnection{}, ErrManagedConfigUnavailable
 	}
+	policy, err := ResolveAgentContextPolicy(item)
+	if err != nil {
+		return ManagedAPIConnection{}, err
+	}
+	item.ContextPolicy = policy
 	return ManagedAPIConnection{Config: item, APIKey: secret}, nil
 }
 

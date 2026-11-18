@@ -38,7 +38,7 @@ func TestConversationCarriesMathFormatIntoPlanningAndFinalAnswer(t *testing.T) {
 			messages := model.answerRequest.Messages
 			assertMathFormatMessage(t, messages[0])
 			assertMathFormatMessage(t, messages[len(messages)-1])
-			if model.answerRequest.ToolChoice != "none" || messages[1].Content != input.Messages[0].Content {
+			if model.answerRequest.ToolChoice != "none" || lastTestUserMessage(model.answerRequest).Content != input.Messages[0].Content {
 				t.Fatal("format rules changed tool restrictions or original user text")
 			}
 			// 脚本模型仅验证格式规范到达模型，以及公式字符经过 SSE 事件后不变；不代表外部模型必然遵循提示。

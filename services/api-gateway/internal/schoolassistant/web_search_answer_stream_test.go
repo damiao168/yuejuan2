@@ -15,7 +15,7 @@ func TestPublicSearchDecisionDeadlineCannotBeResetByRawModelChunks(t *testing.T)
 	ctx, _, closeDecision := publicSearchDecisionContext(context.Background(), 20*time.Millisecond)
 	defer closeDecision()
 	model := waitingConversationStreamModel{chunks: 20, interval: 5 * time.Millisecond}
-	_, err := streamConversationModel(ctx, model, modelgovernance.ManagedAPIConnection{}, modelgovernance.AgentRequest{}, func(modelgovernance.AgentEvent) error { return nil }, time.Second)
+	_, err := streamConversationModel(ctx, model, modelgovernance.ManagedAPIConnection{}, validTestAgentRequest(), func(modelgovernance.AgentEvent) error { return nil }, time.Second)
 	if err == nil || !errors.Is(context.Cause(ctx), context.DeadlineExceeded) {
 		t.Fatalf("raw model activity bypassed decision deadline: %v", err)
 	}
@@ -26,7 +26,7 @@ func TestPublicSearchDecisionAllowsAnswerToContinueAfterDecisionWindow(t *testin
 	defer closeDecision()
 	answerStarted()
 	model := waitingConversationStreamModel{chunks: 6, interval: 10 * time.Millisecond}
-	_, err := streamConversationModel(ctx, model, modelgovernance.ManagedAPIConnection{}, modelgovernance.AgentRequest{}, func(modelgovernance.AgentEvent) error { return nil }, time.Second)
+	_, err := streamConversationModel(ctx, model, modelgovernance.ManagedAPIConnection{}, validTestAgentRequest(), func(modelgovernance.AgentEvent) error { return nil }, time.Second)
 	if err != nil {
 		t.Fatalf("normal answer was limited as a tool decision: %v", err)
 	}

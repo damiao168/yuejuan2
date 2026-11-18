@@ -17,6 +17,7 @@ const ChatRequestBodyLimit = 14 << 20
 
 const managedChatMaxImageBytes = 3 << 20
 const managedChatMaxImageTotalBytes = 9 << 20
+const managedChatImageMediaTypePrefix = "image/"
 
 var ErrManagedChatInvalidImage = errors.New("invalid managed chat image")
 var ErrManagedChatImageBudget = errors.New("managed chat image budget exceeded")
@@ -35,7 +36,7 @@ func validateChatImage(attachment ManagedChatAttachment) error {
 	}
 	// 只允许内联 PNG/JPEG；不代用户下载 URL，也不依据文件名相信格式或尺寸。
 	config, format, err := image.DecodeConfig(bytes.NewReader(data))
-	if err != nil || "image/"+format != attachment.MediaType || config.Width <= 0 || config.Height <= 0 || config.Width > 10000 || config.Height > 10000 || int64(config.Width)*int64(config.Height) > 20_000_000 {
+	if err != nil || managedChatImageMediaTypePrefix+format != attachment.MediaType || config.Width <= 0 || config.Height <= 0 || config.Width > 10000 || config.Height > 10000 || int64(config.Width)*int64(config.Height) > 20_000_000 {
 		return ErrManagedChatInvalidImage
 	}
 	return nil
@@ -48,7 +49,7 @@ func chatAgentMessage(message ManagedChatMessage) AgentMessage {
 		sections = append(sections, content)
 	}
 	for _, attachment := range message.Attachments {
-		if strings.HasPrefix(attachment.MediaType, "image/") {
+		if strings.HasPrefix(attachment.MediaType, managedChatImageMediaTypePrefix) {
 			out.Images = append(out.Images, attachment)
 			sections = append(sections, fmt.Sprintf("图片附件：%s", attachment.Name))
 		} else {
@@ -71,7 +72,7 @@ func agentHasImages(messages []AgentMessage) bool {
 func managedChatGenerationPath(messages []ManagedChatMessage) string {
 	for _, message := range messages {
 		for _, attachment := range message.Attachments {
-			if strings.HasPrefix(attachment.MediaType, "image/") {
+			if strings.HasPrefix(attachment.MediaType, managedChatImageMediaTypePrefix) {
 				return "services/aigc/multimodal-generation/generation"
 			}
 		}

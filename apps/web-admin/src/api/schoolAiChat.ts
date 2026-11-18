@@ -1,5 +1,7 @@
 import { ApiClientError, apiClient } from "./client";
-import type { SchoolConversationContext as ApiSchoolConversationContext, SchoolConversationEvent as ApiSchoolConversationEvent, SchoolAssistantSource } from "@edugrade/sdk";
+import type { SchoolConversationContext as ApiSchoolConversationContext, SchoolConversationEvent as ApiSchoolConversationEvent, SchoolAssistantSource, SchoolConversationMemory, SchoolConversationMemoryEntry } from "@edugrade/sdk";
+
+export type { SchoolConversationMemory, SchoolConversationMemoryEntry };
 
 export interface SchoolChatAttachment {
   name: string;
@@ -16,6 +18,11 @@ export interface SchoolChatMessage {
   // 以下字段供界面、公开问答范围选择和历史恢复；发送前会剥离，不能作为模型已核实的来源。
   web_search?: boolean;
   web_sources?: SchoolAssistantSource[];
+  // 仅用于浏览器的来源追溯与用户保留；传输层不外发这些消息元数据。
+  memory_source_id?: string;
+  memory_order?: number;
+  memory_pinned?: boolean;
+  memory_excluded?: boolean;
 }
 
 export interface SchoolChatModel {
@@ -24,6 +31,7 @@ export interface SchoolChatModel {
   display_name?: string;
   model_name?: string;
   provider_key?: string;
+  context_window_tokens?: number;
   message: string;
 }
 
@@ -91,7 +99,7 @@ export function publicSearchMessages(messages: SchoolChatMessage[]): SchoolChatM
 // 服务端最多处理三分钟，浏览器额外留十秒接收收尾；代理悬空时也必须释放本条对话的在途锁。
 export const CONVERSATION_REQUEST_TIMEOUT_MS = 190_000;
 
-export async function streamSchoolConversation(messages: SchoolChatMessage[], context: SchoolConversationContext | undefined, signal: AbortSignal, onEvent: (event: SchoolConversationEvent) => void, modelConfigID?: string, webSearch = false) {
+export async function streamSchoolConversation(messages: SchoolChatMessage[], context: SchoolConversationContext | undefined, signal: AbortSignal, onEvent: (event: SchoolConversationEvent) => void, modelConfigID?: string, webSearch = false, memory?: SchoolConversationMemory) {
   // 名称只供界面展示，模型传入的考试 ID 由服务端重新授权；不把前端标签当成业务事实。
   // 联网开启时仍可选校内分支；页面提示只交服务端保管，服务端在该分支选定后才验证读取，公开规划/检索不使用它。
   const requestContext = context ? { exam_id: context.exam_id, origin_module: context.origin_module, origin_section: context.origin_section } : undefined;
@@ -113,7 +121,7 @@ export async function streamSchoolConversation(messages: SchoolChatMessage[], co
   });
   try {
     await Promise.race([apiClient.requestEventStream<SchoolConversationEvent>("/api/v1/school-assistant/conversations/stream", {
-      method: "POST", body: JSON.stringify({ messages: requestMessages, context: requestContext, model_config_id: modelConfigID || undefined, ...(webSearch ? { web_search: true } : {}) }), signal: controller.signal
+      method: "POST", body: JSON.stringify({ messages: requestMessages, context: requestContext, model_config_id: modelConfigID || undefined, ...(webSearch ? { web_search: true } : {}), ...(!webSearch && memory?.entries.length ? { memory } : {}) }), signal: controller.signal
     }, (event) => {
       if (event.type === "error") {
         try { onEvent(event); } finally {

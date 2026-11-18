@@ -116,7 +116,10 @@ func newApplicationModules(dependencies ApplicationDependencies, stores Applicat
 		Exams: examModule.ExamStore, Workspaces: examModule.WorkspaceService,
 		Gates: releaseModule.ReleaseGateService, CurrentReleases: releaseModule.ScoreReleaseService,
 		Resources: resourceResolver, Audit: identity.AuthStore,
-		Conversation: schoolassistant.ConversationDependencies{Models: managedModels, Usage: modelUsage, Search: publicSearch},
+		Conversation: schoolassistant.ConversationDependencies{Models: managedModels, Usage: modelUsage, Search: publicSearch,
+			DirectAnswerEnabled:    dependencies.Config.SchoolAssistant.DirectAnswerEnabled,
+			DisableMemory:          dependencies.Config.SchoolAssistant.DisableMemory,
+			DisableCacheCoalescing: dependencies.Config.SchoolAssistant.DisableCacheCoalescing},
 	})
 	return ApplicationModules{
 		Identity: identity, Exam: examModule, Capture: captureModule, Grading: gradingQuality,

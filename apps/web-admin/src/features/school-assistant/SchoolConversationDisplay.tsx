@@ -10,6 +10,7 @@ import type { ConversationEvidence } from "./conversationState";
 import type { ConversationThread } from "./conversationStorage";
 import type { PendingConversation } from "./conversationPresentation";
 import { isPublicWebTool, publicConversationEvidence } from "./conversationWebSearch";
+import { hasConversationHistoryExcerpt, pinnedConversationMemorySources } from "./conversationHistory";
 
 interface ReasoningProps {
   content: string;
@@ -68,9 +69,11 @@ interface MessagesProps {
   copiedMessage: string;
   onCopy: (content: string, key: string) => Promise<void>;
   onReasoningToggle?: (expanded: boolean) => void;
+  onToggleMemoryPin?: (sourceID: string) => void;
+  memoryPinDisabled?: boolean;
 }
 
-export function ConversationMessages({ thread, evidence, user, onNavigate, reasoningExpanded, copiedMessage, onCopy, onReasoningToggle }: Readonly<MessagesProps>) {
+export function ConversationMessages({ thread, evidence, user, onNavigate, reasoningExpanded, copiedMessage, onCopy, onReasoningToggle, onToggleMemoryPin, memoryPinDisabled }: Readonly<MessagesProps>) {
   return <>{thread.messages.map((message, index) => {
     const messageKey = `${thread.id}-${index}`;
     return <article className={`school-chat-message is-${message.role}`} key={messageKey}>
@@ -82,6 +85,7 @@ export function ConversationMessages({ thread, evidence, user, onNavigate, reaso
           : <span title={attachment.name} key={`${messageKey}-${attachmentIndex}`}><FileText size={14} />{attachment.name}</span>)}</div> : null}
         {message.role === "assistant" && message.reasoning_content ? <ReasoningDisclosure content={message.reasoning_content} defaultExpanded={index === thread.messages.length - 1 && reasoningExpanded} onToggle={index === thread.messages.length - 1 ? onReasoningToggle : undefined} /> : null}
         <MessageContent message={message} />
+        {message.role === "user" && message.content && message.memory_source_id && onToggleMemoryPin ? <div className="school-chat-message-actions"><Tooltip title="在本对话中优先保留原文片段，仍受容量限制；联网搜索不使用。取消后不再自动带入这条旧材料。"><Button type="text" size="small" disabled={memoryPinDisabled} aria-pressed={Boolean(message.memory_pinned)} onClick={() => onToggleMemoryPin(message.memory_source_id!)}>{message.memory_pinned ? "取消保留要求" : "保留这条要求"}</Button></Tooltip></div> : null}
         {message.role === "assistant" && message.content ? <div className="school-chat-message-actions"><Button type="text" size="small" icon={copiedMessage === messageKey ? <Check size={14} /> : <Copy size={14} />} onClick={() => void onCopy(message.content, messageKey)}>{copiedMessage === messageKey ? "已复制" : "复制"}</Button></div> : null}
       </div>
     </article>;
@@ -99,6 +103,24 @@ interface PendingProps {
   onReasoningToggle: (expanded: boolean) => void;
 }
 
+function pendingConversationStatus(pending: PendingConversation) {
+  const thinking = !pending.reasoning && !pending.content;
+  const runningWebTool = pending.webSearch ? pending.evidence.tools.find(tool => isPublicWebTool(tool.tool_name) && tool.status === "running") : undefined;
+  const searchFinished = pending.evidence.tools.some(tool => isPublicWebTool(tool.tool_name) && tool.status === "completed");
+  // 来源要等最终引用核验才返回；搜索已结束时不能因 sources 仍为空而退回“理解问题”。
+  const phaseLabels = { understanding: "正在理解问题", searching: "正在搜索公开资料", reading: "正在读取网页", reviewing: "正在核实资料", answering: "正在生成回答" };
+  const phaseLabel = pending.evidence.phase ? phaseLabels[pending.evidence.phase] : undefined;
+  let label = "思考中";
+  if (pending.webSearch) {
+    label = searchFinished || pending.evidence.sources.length ? "正在整理回答" : "正在理解问题";
+  }
+  label = phaseLabel ?? label;
+  if (runningWebTool) {
+    label = runningWebTool.tool_name === "web_fetch" ? "正在读取网页" : "正在搜索公开资料";
+  }
+  return { label, searchRunning: Boolean(runningWebTool), waiting: thinking || (Boolean(phaseLabel) && !pending.content) };
+}
+
 export function PendingConversationView({ pending, user, onReasoningToggle }: Readonly<PendingProps>) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -108,20 +130,12 @@ export function PendingConversationView({ pending, user, onReasoningToggle }: Re
     return () => clearInterval(timer);
   }, [pending.content, pending.startedAt]);
   const elapsed = pending.startedAt ? Math.max(0, Math.floor((now - pending.startedAt) / 1000)) : 0;
-  const thinking = !pending.reasoning && !pending.content;
-  const runningWebTool = pending.webSearch ? pending.evidence.tools.find(tool => isPublicWebTool(tool.tool_name) && tool.status === "running") : undefined;
-  const searchRunning = Boolean(runningWebTool);
-  const searchFinished = pending.evidence.tools.some(tool => isPublicWebTool(tool.tool_name) && tool.status === "completed");
-  // 来源要等最终引用核验才返回；搜索已结束时不能因 sources 仍为空而退回“理解问题”。
-  const phaseLabels = { understanding: "正在理解问题", searching: "正在搜索公开资料", reading: "正在读取网页", reviewing: "正在核实资料", answering: "正在生成回答" };
-  const phaseLabel = pending.evidence.phase ? phaseLabels[pending.evidence.phase] : undefined;
-  const waitingLabel = phaseLabel ?? (pending.webSearch ? (searchFinished || pending.evidence.sources.length ? "正在整理回答" : "正在理解问题") : "思考中");
-  const waiting = thinking || (Boolean(phaseLabel) && !pending.content);
+  const { label, searchRunning, waiting } = pendingConversationStatus(pending);
   return <div className="school-chat-waiting"><span className="school-chat-avatar"><Bot size={18} /></span><div className="school-chat-live-body">
     <ConversationEvidenceView evidence={pending.evidence} user={user} allowActions={false} />
     {/* output 只含短状态；富文本和证据沿用外层 flow 的播报边界，不复制到原生状态区域。 */}
     <output className={waiting && !searchRunning ? "school-chat-thinking" : undefined} style={waiting && !searchRunning ? undefined : hiddenStatusStyle}>
-      {waiting ? <>{searchRunning ? runningWebTool?.tool_name === "web_fetch" ? "正在读取网页" : "正在搜索公开资料" : waitingLabel}<span aria-hidden="true"><i /><i /><i /></span></> : "正在回复"}
+      {waiting ? <>{label}<span aria-hidden="true"><i /><i /><i /></span></> : "正在回复"}
     </output>
     {!pending.content && elapsed >= 20 ? <p className="school-chat-interrupted" aria-live="off">已用时 {elapsed} 秒，可停止后重试或切换模型。</p> : null}
     {pending.reasoning ? <ReasoningDisclosure content={pending.reasoning} onToggle={onReasoningToggle} streaming /> : null}
@@ -149,9 +163,11 @@ interface FlowProps {
   scrollRef?: RefObject<HTMLDivElement | null>;
   onScroll?: UIEventHandler<HTMLDivElement>;
   onWheel?: WheelEventHandler<HTMLDivElement>;
+  onToggleMemoryPin?: (sourceID: string) => void;
 }
 
-export function ConversationFlow({ thread, pending, evidence, failedEvidence, sendError, user, onNavigate, reasoningExpanded, onReasoningToggle, copiedMessage, onCopy, retryDisabled, onRetry, modelError, model, onSuggestion, scrollRef, onScroll, onWheel }: Readonly<FlowProps>) {
+export function ConversationFlow({ thread, pending, evidence, failedEvidence, sendError, user, onNavigate, reasoningExpanded, onReasoningToggle, copiedMessage, onCopy, retryDisabled, onRetry, modelError, model, onSuggestion, scrollRef, onScroll, onWheel, onToggleMemoryPin }: Readonly<FlowProps>) {
+  const pinnedSources = thread ? pinnedConversationMemorySources(thread) : [];
   return <div ref={scrollRef} className={`school-chat-flow ${!thread ? "is-empty" : ""}`} aria-live="polite" onScroll={onScroll} onWheel={onWheel}>
     {!thread ? <div className="school-chat-welcome">
       <div className="school-chat-welcome-mark"><Bot size={30} strokeWidth={1.6} /></div>
@@ -160,8 +176,15 @@ export function ConversationFlow({ thread, pending, evidence, failedEvidence, se
       <div className="school-conversation-suggestions" aria-label="建议问题">{["列出我能查看的考试", "这场考试进度怎么样？", "为什么成绩还不能发布？", "帮我起草一份考试通知"].map((question) => <button type="button" key={question} onClick={() => onSuggestion(question)}>{question}</button>)}</div>
       {modelError || (model && !model.available) ? <div className="school-chat-notice" role="alert">{modelError || model?.message}</div> : null}
     </div> : <div className="school-chat-messages">
+      {hasConversationHistoryExcerpt(thread) ? <p className="school-chat-interrupted">按相关性带入带来源的用户原文，容量不足时可能省略。联网搜索只承接近期公开问答。</p> : null}
+      {(pending?.contextOmitted ?? thread.contextOmitted) ? <p className="school-chat-interrupted" role="status">本次已省略部分旧历史或会话记忆。</p> : null}
+      {pinnedSources.length ? <details className="school-chat-memory"><summary>已保留的要求（{pinnedSources.length}）</summary>
+        <p>原文只供本对话参考，发送仍受容量限制；联网搜索不使用。</p>
+        {pinnedSources.map(source => <div key={source.sourceID}><p style={{ whiteSpace: "pre-wrap" }}>{source.content}</p>
+          {onToggleMemoryPin ? <Button type="text" size="small" disabled={Boolean(pending)} onClick={() => onToggleMemoryPin(source.sourceID)}>移除保留要求</Button> : null}</div>)}
+      </details> : null}
       <ConversationMessages thread={thread} evidence={evidence} user={user} onNavigate={onNavigate}
-        reasoningExpanded={reasoningExpanded} copiedMessage={copiedMessage} onCopy={onCopy} onReasoningToggle={onReasoningToggle} />
+        reasoningExpanded={reasoningExpanded} copiedMessage={copiedMessage} onCopy={onCopy} onReasoningToggle={onReasoningToggle} onToggleMemoryPin={onToggleMemoryPin} memoryPinDisabled={Boolean(pending)} />
       {!pending && thread.interruptedReply?.content ? <article className="school-chat-message is-assistant">
         <div className="school-chat-avatar"><Bot size={18} /></div>
         <div className="school-chat-message-body"><p className="school-chat-interrupted">上次未完成的回复</p>

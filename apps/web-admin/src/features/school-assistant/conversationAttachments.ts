@@ -35,7 +35,11 @@ export async function readChatAttachment(file: File, signal?: AbortSignal): Prom
       const reader = new FileReader();
       const cancel = () => { reader.abort(); reject(new DOMException("附件读取已取消", "AbortError")); };
       signal?.addEventListener("abort", cancel, { once: true });
-      reader.onload = () => { signal?.removeEventListener("abort", cancel); resolve(String(reader.result)); };
+      reader.onload = () => {
+        signal?.removeEventListener("abort", cancel);
+        if (typeof reader.result === "string") resolve(reader.result);
+        else reject(new Error("图片读取失败，请重新复制或选择图片"));
+      };
       reader.onerror = () => { signal?.removeEventListener("abort", cancel); reject(new Error("图片读取失败，请重新复制或选择图片")); };
       // 文件选择器可能没有 MIME 类型；只补已支持的格式，服务端仍核验实际图片头。
       reader.readAsDataURL(file.type ? file : new Blob([file], { type: imageType }));

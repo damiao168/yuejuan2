@@ -59,7 +59,7 @@ func (m *conversationScriptModel) Complete(_ context.Context, _ modelgovernance.
 		if m.unsupported {
 			return modelgovernance.AgentResponse{Message: modelgovernance.AgentMessage{Role: "assistant", Content: "我只能输出文本"}, Usage: usage}, nil
 		}
-		marker := strings.TrimPrefix(request.Messages[1].Content, "marker=")
+		marker := strings.TrimPrefix(lastTestUserMessage(request).Content, "marker=")
 		args, _ := json.Marshal(map[string]string{"marker": marker})
 		return modelgovernance.AgentResponse{Message: modelgovernance.AgentMessage{Role: "assistant", ToolCalls: []modelgovernance.AgentToolCall{{ID: "probe", Name: "check_tool_support", Arguments: args}}}, Usage: usage}, nil
 	}

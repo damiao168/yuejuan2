@@ -126,6 +126,9 @@ func (h *Handler) getChatModels(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		status := ManagedChatModelStatus{ID: config.ID, DisplayName: config.DisplayName, ModelName: config.ModelName, ProviderKey: config.ProviderKey, Available: chatConfigEligible(config), Message: chatConfigUnavailableMessage(config)}
+		if policy, err := ResolveAgentContextPolicy(config); err == nil {
+			status.ContextWindowTokens = policy.ContextWindowTokens
+		}
 		if status.Available {
 			status.Message = "当前模型可用"
 		}

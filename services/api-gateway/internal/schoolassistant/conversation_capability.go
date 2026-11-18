@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *ConversationService) verifyToolSupport(ctx context.Context, p preparedConversation, step int) (modelgovernance.ManagedAPIProbeUsage, bool, error) {
+func (s *ConversationService) verifyToolSupport(ctx context.Context, p preparedConversation, step int, tokenBudget int64) (modelgovernance.ManagedAPIProbeUsage, bool, error) {
 	if err := ctx.Err(); err != nil {
 		return modelgovernance.ManagedAPIProbeUsage{}, false, err
 	}
@@ -22,12 +22,15 @@ func (s *ConversationService) verifyToolSupport(ctx context.Context, p preparedC
 	if time.Now().Before(expires) {
 		return modelgovernance.ManagedAPIProbeUsage{}, false, nil
 	}
+	if tokenBudget <= 0 {
+		return modelgovernance.ManagedAPIProbeUsage{}, false, modelgovernance.ErrAgentTurnBudgetExceeded
+	}
 	marker := uuid.NewString()
 	parameters, _ := json.Marshal(map[string]any{"type": "object", "additionalProperties": false, "required": []string{"marker"}, "properties": map[string]any{"marker": map[string]any{"type": "string", "enum": []string{marker}}}})
-	response, err := s.deps.Model.Complete(ctx, p.connection, modelgovernance.AgentRequest{
+	response, err := s.completeConversationModel(ctx, p, modelgovernance.AgentRequest{
 		Messages: []modelgovernance.AgentMessage{{Role: "system", Content: "这是无业务数据的工具能力检测。必须调用 check_tool_support 一次，把给定 marker 原样放入参数；不要回答文本。"}, {Role: "user", Content: "marker=" + marker}},
-		Tools:    []modelgovernance.AgentTool{{Name: "check_tool_support", Description: "验证模型原生函数调用格式；不会执行业务。", Parameters: parameters}}, ToolChoice: "auto",
-	})
+		Tools:    []modelgovernance.AgentTool{{Name: "check_tool_support", Description: "验证模型原生函数调用格式；不会执行业务。", Parameters: parameters}}, ToolChoice: "auto", TokenBudget: tokenBudget, MaxOutputTokens: conversationProbeOutputTokens,
+	}, "tool_capability", step, conversationPlanningTimeout)
 	if err == nil {
 		var args struct {
 			Marker string `json:"marker"`

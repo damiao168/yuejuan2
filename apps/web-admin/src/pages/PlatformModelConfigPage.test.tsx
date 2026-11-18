@@ -17,6 +17,7 @@ import {
   isTransientProbeError,
   modelSaveLabel,
   modelUsageMessage,
+  modelContextPolicyInput,
   textVerified,
   type ConfigFormValues
 } from "../features/platform-model-config/lib/modelConfig";
@@ -83,7 +84,7 @@ vi.mock("antd", async () => {
       {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
     </select>,
     Drawer: ({ open, children, extra, onClose }: { open: boolean; children?: ReactNode; extra?: ReactNode; onClose?: () => void }) => open ? <aside><button onClick={onClose}>关闭用途</button>{extra}{children}</aside> : null,
-    Alert: ({ message, description, action }: { message?: ReactNode; description?: ReactNode; action?: ReactNode }) => <section data-alert>{message}{description}{action}</section>, AutoComplete: () => null, Input: Object.assign(() => null, { Password: () => null }),
+    Alert: ({ message, description, action }: { message?: ReactNode; description?: ReactNode; action?: ReactNode }) => <section data-alert>{message}{description}{action}</section>, AutoComplete: () => null, Input: Object.assign(() => null, { Password: () => null }), InputNumber: () => null,
     Segmented: ({ options, onChange }: { options: { value: string; label: ReactNode }[]; onChange: (value: string) => void }) => <div>{options.map((option) => <button key={option.value} onClick={() => onChange(option.value)}>{option.label}</button>)}</div>, Space: passthrough, Tooltip: passthrough, Tag: passthrough, Empty: () => null,
     Form: Object.assign(passthrough, { useForm: () => [mocks.form], useWatch: mocks.watch,
       Item: ({ children, label, extra }: { children?: ReactNode; label?: ReactNode; extra?: ReactNode }) => <div>{label}{children}{extra}</div> })
@@ -109,6 +110,17 @@ function deferred<T>() {
 type ProbeResponse = { config: ManagedModelAPIConfig; result: Partial<ManagedAPIProbeResult> };
 
 describe("模型配置显示和草稿边界", () => {
+  it("容量留空沿用服务端策略，单独修改容量也会触发未保存保护", () => {
+    const editing = config("context-model");
+    const values: ConfigFormValues = { supplier: "custom", api_key: "", base_url: editing.base_url, model_name: editing.model_name };
+    expect(modelContextPolicyInput(values)).toBeUndefined();
+    expect(hasModelFormChanges(values, null, null)).toBe(true);
+    expect(hasModelFormChanges({ ...values, context_window_tokens: 65_536 }, editing, null)).toBe(true);
+    expect(hasModelFormChanges({ ...values, context_window_tokens: 32_768, max_output_tokens: 4_096 }, editing, null)).toBe(false);
+    expect(modelContextPolicyInput({ max_input_tokens: null, max_output_tokens: 2_048 })).toEqual({ max_output_tokens: 2_048 });
+    const larger = { ...editing, context_policy: { context_window_tokens: 65_536, max_input_tokens: 57_344, max_output_tokens: 8_192 } };
+    expect(hasModelFormChanges({ ...values, context_window_tokens: 65_536, max_input_tokens: 57_344, max_output_tokens: null }, larger, null)).toBe(true);
+  });
   it.each([
     ["https://provider.example/", true],
     ["https://provider.example/v2/", true],
@@ -955,6 +967,21 @@ describe("学校模型库操作", () => {
     expect(mocks.success).toHaveBeenCalledOnce();
     expect(mocks.success).toHaveBeenLastCalledWith("已从当前编辑模型获取 1 个模型，请选择");
     expect(button("已找到 1 个，点击选择", host.querySelector("aside")!).disabled).toBe(false);
+  });
+
+  it("编辑模型时传入容量配置并保留当前停用状态", async () => {
+    const values: ConfigFormValues = { supplier: "custom", api_key: "", base_url: configs[2].base_url, model_name: configs[2].model_name,
+      context_window_tokens: 65_536, max_input_tokens: 60_416, max_output_tokens: 4_096 };
+    mocks.form.getFieldValue.mockImplementation((name: keyof ConfigFormValues) => values[name]);
+    mocks.form.getFieldsValue.mockReturnValue(values);
+    mocks.form.validateFields.mockResolvedValue(values);
+    mocks.update.mockResolvedValue({ config: configs[2] });
+    await render();
+    await act(async () => row("百炼").querySelector<HTMLButtonElement>('[aria-label="编辑百炼"]')!.click());
+    await act(async () => button("检测连接并更新", host.querySelector("aside")!).click());
+    expect(mocks.update).toHaveBeenLastCalledWith("百炼", "school-a", expect.objectContaining({
+      status: "disabled", context_policy: { context_window_tokens: 65_536, max_input_tokens: 60_416, max_output_tokens: 4_096 }
+    }));
   });
 
   it("停用配置说明复用限制并禁用模型发现，仍可手动编辑保存且不自动启用", async () => {

@@ -23,6 +23,18 @@ describe("PDF extraction lifecycle", () => {
     expect(destroy).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    { name: "全无文字", pages: ["", ""], missingPage: 1 },
+    { name: "文字后接扫描页", pages: ["第一页正文", "", "第三页正文"], missingPage: 2 },
+    { name: "扫描页后接文字", pages: ["", "第二页正文"], missingPage: 1 },
+    { name: "真实空白页", pages: ["第一页正文", " \n\t "], missingPage: 2 },
+  ])("rejects the whole $name PDF and reports its first unreadable page", async ({ pages, missingPage }) => {
+    const { getPage, destroy } = fixture(pages);
+    await expect(readConversationPDF(file, 60_000)).rejects.toThrow(`PDF 第 ${missingPage} 页未提取到文字。请删除空白页，或改传 PNG/JPEG 图片、每页带文字层的 PDF。`);
+    expect(getPage).toHaveBeenCalledTimes(missingPage);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
   it("destroys the task after a character-limit failure", async () => {
     const { destroy } = fixture(["过长的文字"]);
     await expect(readConversationPDF(file, 1)).rejects.toThrow("文件文字过多");
@@ -49,5 +61,19 @@ describe("PDF extraction lifecycle", () => {
     finish({ numPages: 1, getPage });
     await expect(pending).rejects.toMatchObject({ name: "AbortError" });
     expect(getPage).not.toHaveBeenCalled();
+  });
+
+  it("ignores unreadable page results that arrive after cancellation", async () => {
+    const controller = new AbortController();
+    let finish!: (text: { items: { str: string }[] }) => void;
+    const { getPage, destroy } = fixture();
+    getPage.mockResolvedValueOnce({ getTextContent: () => new Promise(resolve => { finish = resolve; }) });
+    const pending = readConversationPDF(file, 60_000, controller.signal);
+    await vi.waitFor(() => expect(finish).toBeDefined());
+    controller.abort();
+    finish({ items: [] });
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(getPage).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalled();
   });
 });

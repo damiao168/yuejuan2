@@ -1,5 +1,19 @@
 // Generated from services/api-gateway/openapi/edugrade-api.openapi.json. DO NOT EDIT.
 
+export type ManagedModelContextPolicy = { "context_window_tokens"?: (number) & (0 | unknown); "max_input_tokens"?: (number) & (0 | unknown); "max_output_tokens"?: (number) & (0 | unknown); "tokenizer"?: "utf8_bytes" | "cl100k_base" | "o200k_base"; };
+
+export type SchoolConversationContextBudget = { "phase": string; "estimated_input_tokens": number; "actual_input_tokens"?: number; "input_budget_tokens": number; "max_output_tokens": number; "context_window_tokens": number; "dropped_messages": number; "estimation_method": string; "memory_used": boolean; "memory_omitted": boolean; "accepted": boolean; };
+
+export type SchoolConversationGenerationMetrics = { "model_config_id"?: string; "output_tokens": number; "duration_ms": number; "tokens_per_second": number; };
+
+export type SchoolConversationMemory = { "version": 2; "entries": Array<SchoolConversationMemoryEntry>; };
+
+export type SchoolConversationMemoryEntry = { "source_id": string; "order": number; "content": string; "pinned"?: boolean; };
+
+export type CreateManagedModelAPIInput = { "tenant_id": string; "provider_key": string; "display_name": string; "adapter_type": "openai_compatible" | "dashscope_native"; "base_url": string; "model_name": string; "model_version": string; "region"?: string; "api_key": string; "status"?: "active" | "disabled"; "is_default"?: boolean; "context_policy"?: ManagedModelContextPolicy; };
+
+export type AutoManagedModelAPIInput = ({ "tenant_id": string; "api_key"?: string; "credential_source_id"?: string; "model_name"?: string; "provider"?: string; "base_url"?: string; "context_policy"?: ManagedModelContextPolicy; }) & ({ "api_key": string; } | { "credential_source_id": string; });
+
 export type ScoreRosterEntry = { "key": string; "student_id"?: string; "student_no"?: string; "student_name"?: string; "class_id"?: string; "class_name"?: string; "submission_id"?: string; "candidate_no"?: string; "status": "graded" | "submitted" | "absent" | "unmatched" | "missing_pages"; "resolution_code": string; "expected_page_count": number; "actual_page_count": number; "total_score"?: number; "max_score"?: number; "attendance_reason"?: string; "marked_by"?: string; "marked_at"?: string; };
 
 export type ScoreRosterSummary = { "expected": number; "received": number; "graded": number; "absent": number; "unresolved": number; "missing_pages": number; "unidentified": number; };
@@ -98,9 +112,9 @@ export type SchoolAssistantCapabilities = { "mode": "school_business"; "model_re
 
 export type SchoolConversationContext = { "exam_id"?: string; "origin_module"?: string; "origin_section"?: string; };
 
-export type SchoolConversationRequest = { "messages": Array<ManagedChatMessage>; "context"?: SchoolConversationContext; "model_config_id"?: string; "web_search"?: boolean; };
+export type SchoolConversationRequest = ({ "messages": Array<ManagedChatMessage>; "context"?: SchoolConversationContext; "model_config_id"?: string; "web_search"?: boolean; "memory"?: SchoolConversationMemory; }) & (unknown);
 
-export type SchoolConversationEvent = { "type": "model"; "request_id": string; "seq": number; "model": ManagedChatModelStatus; } | { "type": "progress"; "request_id": string; "seq": number; "phase": "understanding" | "searching" | "reading" | "reviewing" | "answering"; } | { "type": "tool_started"; "request_id": string; "seq": number; "call_id": string; "tool_name": string; "label": string; } | { "type": "tool_finished"; "request_id": string; "seq": number; "call_id": string; "tool_name": string; "label": string; "status": "completed" | "failed"; "message"?: string; } | { "type": "delta"; "request_id": string; "seq": number; "channel": "content" | "reasoning"; "delta": string; } | { "type": "sources"; "request_id": string; "seq": number; "sources": Array<SchoolAssistantSource>; "actions": Array<SchoolAssistantAction>; "scope"?: SchoolAssistantScope; } | { "type": "done"; "request_id": string; "seq": number; "completion": ManagedChatCompletion; } | { "type": "error"; "request_id": string; "seq": number; "code": string; "message": string; };
+export type SchoolConversationEvent = { "type": "model"; "request_id": string; "seq": number; "model": ManagedChatModelStatus; } | { "type": "progress"; "request_id": string; "seq": number; "phase": "understanding" | "searching" | "reading" | "reviewing" | "answering"; } | { "type": "tool_started"; "request_id": string; "seq": number; "call_id": string; "tool_name": string; "label": string; } | { "type": "tool_finished"; "request_id": string; "seq": number; "call_id": string; "tool_name": string; "label": string; "status": "completed" | "failed"; "message"?: string; } | { "type": "delta"; "request_id": string; "seq": number; "channel": "content" | "reasoning"; "delta": string; } | { "type": "sources"; "request_id": string; "seq": number; "sources": Array<SchoolAssistantSource>; "actions": Array<SchoolAssistantAction>; "scope"?: SchoolAssistantScope; } | { "type": "done"; "request_id": string; "seq": number; "completion": ManagedChatCompletion; "generation_metrics"?: SchoolConversationGenerationMetrics; } | { "type": "error"; "request_id": string; "seq": number; "code": string; "message": string; } | { "type": "context"; "request_id": string; "seq": number; "context_budget": SchoolConversationContextBudget; };
 
 export type SchoolAssistantScope = { "exam_id"?: string; "exam_name"?: string; "subject"?: string; "class_ids": Array<string>; "release_channel"?: "student_portal"; "data_basis": "workspace_live" | "exam_live"; "scope_label": string; };
 
@@ -188,7 +202,7 @@ export type ManagedChatMessage = { "role": "user" | "assistant"; "content": stri
 
 export type ManagedChatRequest = { "messages": Array<ManagedChatMessage>; "model_config_id"?: string; };
 
-export type ManagedChatModelStatus = { "available": boolean; "display_name"?: string; "model_name"?: string; "provider_key"?: string; "message": string; "id"?: string; };
+export type ManagedChatModelStatus = { "available": boolean; "display_name"?: string; "model_name"?: string; "provider_key"?: string; "context_window_tokens"?: number; "message": string; "id"?: string; };
 
 export type ManagedChatModelResponse = { "model": ManagedChatModelStatus; "models"?: Array<ManagedChatModelStatus>; };
 
@@ -1634,9 +1648,9 @@ export type QuestionBankReferenceMaterials = { "source_exam_id": string; "source
 
 export type QuestionBankReferenceMaterialItem = { "id": string; "crop_ref": string; "role": "question_diagram" | "reference_solution"; "ordinal": number; "required": true; "sha256": string; "width": number; "height": number; "size_bytes": number; "pixel_bbox": ReferencePixelBox; "source": ReferenceMaterialSource; };
 
-export type ManagedModelAPIConfigUpdateInput = ({ "display_name"?: string; "adapter_type"?: string; "base_url"?: string; "model_name"?: string; "model_version"?: string; "region"?: string; "api_key"?: string; "status"?: string; "is_default"?: boolean; "expected_updated_at": string; "credential_only"?: boolean; }) & ({ "credential_only"?: false; "display_name": string; "adapter_type": string; "base_url": string; "model_name": string; "model_version": string; "region": string; "status": string; "is_default": boolean; } | { "credential_only": true; "api_key": string; "expected_updated_at": string; });
+export type ManagedModelAPIConfigUpdateInput = ({ "display_name"?: string; "adapter_type"?: string; "base_url"?: string; "model_name"?: string; "model_version"?: string; "region"?: string; "api_key"?: string; "status"?: string; "is_default"?: boolean; "expected_updated_at": string; "credential_only"?: boolean; "context_policy"?: ManagedModelContextPolicy; }) & ({ "credential_only"?: false; "display_name": string; "adapter_type": string; "base_url": string; "model_name": string; "model_version": string; "region": string; "status": string; "is_default": boolean; } | { "credential_only": true; "api_key": string; "expected_updated_at": string; });
 
-export type ManagedModelAPIConfig = ({ "id": string; "tenant_id": string; "provider_key"?: string; "display_name": string; "adapter_type": string; "base_url": string; "model_name": string; "model_version": string; "region": string; "capability_profile"?: string; "health_state"?: string; "credential_hint"?: string; "status": string; "last_test_status"?: string; "last_text_status"?: string; "last_capability_status"?: string; "config_source"?: string; "provider_registry_version"?: string; "credential_configured": boolean; "is_default": boolean; "created_at"?: string; "updated_at": string; "modalities"?: Array<string> | null; "pricing_policy"?: Record<string, unknown> | null; "data_policy"?: Record<string, unknown> | null; "last_text_usage"?: Record<string, unknown> | null; "last_text_diagnostic"?: Record<string, unknown> | null; "last_capability_usage"?: Record<string, unknown> | null; "last_capability_diagnostic"?: Record<string, unknown> | null; } & Record<string, unknown>);
+export type ManagedModelAPIConfig = ({ "id": string; "tenant_id": string; "provider_key"?: string; "display_name": string; "adapter_type": string; "base_url": string; "model_name": string; "model_version": string; "region": string; "capability_profile"?: string; "health_state"?: string; "credential_hint"?: string; "status": string; "last_test_status"?: string; "last_text_status"?: string; "last_capability_status"?: string; "config_source"?: string; "provider_registry_version"?: string; "credential_configured": boolean; "is_default": boolean; "created_at"?: string; "updated_at": string; "modalities"?: Array<string> | null; "pricing_policy"?: Record<string, unknown> | null; "data_policy"?: Record<string, unknown> | null; "last_text_usage"?: Record<string, unknown> | null; "last_text_diagnostic"?: Record<string, unknown> | null; "last_capability_usage"?: Record<string, unknown> | null; "last_capability_diagnostic"?: Record<string, unknown> | null; "context_policy"?: ManagedModelContextPolicy; } & Record<string, unknown>);
 
 export type ManagedModelAPIConfigResponse = { "config": ManagedModelAPIConfig; };
 
@@ -1720,6 +1734,13 @@ export type OrganizationStudentPage = { "students": Array<OrganizationStudent>; 
 
 export interface components {
   schemas: {
+    "ManagedModelContextPolicy": ManagedModelContextPolicy;
+    "SchoolConversationContextBudget": SchoolConversationContextBudget;
+    "SchoolConversationGenerationMetrics": SchoolConversationGenerationMetrics;
+    "SchoolConversationMemory": SchoolConversationMemory;
+    "SchoolConversationMemoryEntry": SchoolConversationMemoryEntry;
+    "CreateManagedModelAPIInput": CreateManagedModelAPIInput;
+    "AutoManagedModelAPIInput": AutoManagedModelAPIInput;
     "ScoreRosterEntry": ScoreRosterEntry;
     "ScoreRosterSummary": ScoreRosterSummary;
     "ScoreRosterReport": ScoreRosterReport;

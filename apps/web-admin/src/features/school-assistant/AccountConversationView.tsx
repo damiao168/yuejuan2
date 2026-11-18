@@ -4,6 +4,7 @@ import { ConversationFlow, ConversationHistory } from "./SchoolConversationDispl
 import { ConversationImage, canPreviewConversationImage } from "./ConversationImage";
 import { conversationPlaceholder } from "./conversationPresentation";
 import { ConversationModelSelector } from "./ConversationModelSelector";
+import { ConversationMetricsView } from "./ConversationMetricsView";
 import type { AccountConversationModel } from './useAccountConversation';
 import { MAX_ATTACHMENTS, MAX_ACTIVE_CHATS } from './useAccountConversation';
 
@@ -11,6 +12,10 @@ import { MAX_ATTACHMENTS, MAX_ACTIVE_CHATS } from './useAccountConversation';
 export function AccountConversationView({ model: conversation }: Readonly<{ model: AccountConversationModel }>) {
   const { compact, onNavigate, user, threads, activeId, pending, openNew, deleteThread, selectThread, historyOpen, setHistoryOpen, model, chatModels, activePending, selectedModelID, modelLoading, selectModel, activeCount, activeContext, clearContext, activeThread, replyEvidence, failedEvidence, sendErrors, reasoningExpanded, toggleReasoning, copiedMessage, copyReply, retry, modelError, suggestQuestion, scrollFlow, scrollConversation, wheelConversation, send, draftAttachments, setDraftAttachments, inputRef, draft, setDraft, onInputKeyDown, pasteImages, fileInputRef, selectFiles, attaching, stop, webSearch, setWebSearch, webSearchCapability } = conversation;
   const searchEnabled = activePending?.webSearch ?? webSearch;
+  // 其他对话可修改模型偏好，在途页脚要与本条请求固定的模型选择器保持一致。
+  const metricsModel = activePending?.modelConfigID
+    ? chatModels.find(item => item.id === activePending.modelConfigID) ?? (model?.id === activePending.modelConfigID ? model : null)
+    : model;
 
   const historyContent = <ConversationHistory threads={threads} activeId={activeId} pending={pending} onNew={openNew}
     onSelect={selectThread} onDelete={deleteThread} />;
@@ -33,7 +38,7 @@ export function AccountConversationView({ model: conversation }: Readonly<{ mode
         user={user} onNavigate={onNavigate} reasoningExpanded={reasoningExpanded}
         onReasoningToggle={toggleReasoning} copiedMessage={copiedMessage} onCopy={copyReply} retryDisabled={modelLoading || !model?.available || activeCount >= MAX_ACTIVE_CHATS} onRetry={retry}
         modelError={modelError} model={model} onSuggestion={suggestQuestion} scrollRef={scrollFlow}
-        onScroll={scrollConversation} onWheel={wheelConversation} />
+        onScroll={scrollConversation} onWheel={wheelConversation} onToggleMemoryPin={conversation.toggleMemoryPin} />
 
       <div className="school-chat-composer-wrap">
         <form className="school-chat-composer" onSubmit={send}>
@@ -56,6 +61,7 @@ export function AccountConversationView({ model: conversation }: Readonly<{ mode
             {activePending ? <Button type="primary" shape="circle" icon={<Square size={15} fill="currentColor" />} aria-label="中断当前对话" onClick={stop} /> : <Button type="primary" shape="circle" htmlType="submit" icon={<ArrowUp size={19} />} aria-label="发送消息" disabled={(!draft.trim() && draftAttachments.length === 0) || !model?.available || activeCount >= MAX_ACTIVE_CHATS || attaching} />}
           </div>
         </form>
+        <ConversationMetricsView model={metricsModel} metrics={activePending?.metrics ?? activeThread?.metrics} pending={Boolean(activePending)} />
         <p className="school-chat-disclaimer">业务信息请核对来源，正式操作请进入对应页面。</p>
       </div>
     </section>

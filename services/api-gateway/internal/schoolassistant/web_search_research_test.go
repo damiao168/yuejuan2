@@ -102,7 +102,7 @@ func (m *researchScriptModel) Complete(ctx context.Context, _ modelgovernance.Ma
 	usage := modelgovernance.ManagedAPIProbeUsage{InputTokens: 10, OutputTokens: 5, TotalTokens: 15}
 	if len(request.Tools) == 1 && request.Tools[0].Name == "check_tool_support" {
 		m.probeCalls++
-		marker := strings.TrimPrefix(request.Messages[1].Content, "marker=")
+		marker := strings.TrimPrefix(lastTestUserMessage(request).Content, "marker=")
 		arguments, _ := json.Marshal(map[string]string{"marker": marker})
 		return modelgovernance.AgentResponse{Message: modelgovernance.AgentMessage{Role: "assistant", ToolCalls: []modelgovernance.AgentToolCall{{ID: "research-probe", Name: "check_tool_support", Arguments: arguments}}}, Usage: usage}, nil
 	}
@@ -244,7 +244,16 @@ func TestWebResearchDisplaysOnlySupportedSourcesActuallyCitedByAnswer(t *testing
 		t.Fatalf("unsupported, unused or renumbered source displayed: %+v", sources)
 	}
 	assessmentRequest, _ := json.Marshal(model.requests[1])
-	if len(model.requests[1].Messages) != 2 || strings.Contains(string(assessmentRequest), "历史私有标记") || len(model.requests[1].Tools) != 0 || model.requests[1].ToolChoice != "none" {
+	users, systems := 0, 0
+	for _, message := range model.requests[1].Messages {
+		if message.Role == "user" {
+			users++
+		}
+		if message.Role == "system" {
+			systems++
+		}
+	}
+	if len(model.requests[1].Messages) != 3 || users != 1 || systems != 2 || strings.Contains(string(assessmentRequest), "历史私有标记") || len(model.requests[1].Tools) != 0 || model.requests[1].ToolChoice != "none" {
 		t.Fatalf("assessment received chat history or tools: %s", assessmentRequest)
 	}
 	// 统一决策轮需要看候选才能筛选；用户可见来源仍只能包含答案实际引用的逐字证据。
@@ -277,7 +286,7 @@ func TestWebResearchRefinesOnceAndDeduplicatesURLsAcrossAttempts(t *testing.T) {
 		Query      string   `json:"question"`
 		Candidates []Source `json:"candidates"`
 	}
-	stateContent := model.requests[2].Messages[1].Content
+	stateContent := lastTestUserMessage(model.requests[2]).Content
 	stateContent = stateContent[strings.IndexByte(stateContent, '{'):]
 	if err := json.Unmarshal([]byte(stateContent), &input); err != nil {
 		t.Fatal(err)

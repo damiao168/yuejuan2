@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type SubmitEvent, type KeyboardEvent } from "react";
 import { App } from "antd";
 import { ApiClientError, getUserErrorMessage } from "../../api/client";
-import { getSchoolChatModel, streamSchoolConversation, type SchoolChatAttachment, type SchoolChatMessage, type SchoolChatModel, type SchoolConversationContext } from "../../api/schoolAiChat";
-import { getSchoolAssistantCapabilities } from "../../api/schoolAssistant";
+import { streamSchoolConversation, type SchoolChatAttachment, type SchoolChatMessage, type SchoolConversationContext } from "../../api/schoolAiChat";
 import { requestMessages } from "../../pages/schoolAiChatMessages";
-import { readChatAttachment } from "./conversationAttachments";
-import { readConversationThreads, serializeConversationThreads, type ConversationThread } from "./conversationStorage";
+import { pastedConversationImages, readConversationAttachments } from "./readConversationAttachments";
+import { readConversationThreads, type ConversationThread } from "./conversationStorage";
 import { emptyConversationEvidence, mergeConversationEvidence, acceptConversationEvent, conversationAccountKey, contextFromEvidence, type ConversationEvidence, type ConversationStreamIdentity } from "./conversationState";
 import { type PendingConversation } from "./conversationPresentation";
 import { conversationRecovery } from "./conversationRecovery";
-import { conversationModelPreferenceKey, readConversationModelPreference, saveConversationModelPreference } from "./conversationModelPreference";
-import type { UIEventHandler, WheelEventHandler } from 'react';
+import { conversationModelPreferenceKey } from "./conversationModelPreference";
 import type { SchoolConversationProps } from './conversationTypes';
 import { hasBusinessConversationEvent, publicConversationSources } from "./conversationWebSearch";
-import { CONVERSATION_REFRESH_PREFIX, readConversationRefresh, writeConversationRefresh } from "./conversationRefresh";
-import { buildConversationRefresh, restoreConversationRefresh, REFRESH_INTERRUPTED_MESSAGE } from "./conversationRefreshState";
+import { CONVERSATION_REFRESH_PREFIX, readConversationRefresh } from "./conversationRefresh";
+import { restoreConversationRefresh, REFRESH_INTERRUPTED_MESSAGE } from "./conversationRefreshState";
+
+import { useConversationModelSettings } from "./useConversationModelSettings";
+import { useConversationPersistence } from "./useConversationPersistence";
+import { useConversationScroll } from "./useConversationScroll";
+import { useCopyConversationReply } from "./useCopyConversationReply";
+import { compactConversationHistory, conversationHistoryMessages, conversationRequestMemory, toggleConversationMemoryPin, type ConversationHistoryExcerpt } from "./conversationHistory";
 
 export const MAX_ATTACHMENTS = 3;
 export const MAX_ACTIVE_CHATS = 5;
@@ -52,16 +56,12 @@ export function useAccountConversation({ user, initialContext, compact = false, 
   const [draft, setDraft] = useState("");
   const [draftAttachments, setDraftAttachments] = useState<SchoolChatAttachment[]>([]);
   const [attaching, setAttaching] = useState(false);
-  const [model, setModel] = useState<SchoolChatModel | null>(null);
-  const [chatModels, setChatModels] = useState<SchoolChatModel[]>([]);
-  const [selectedModelID, setSelectedModelID] = useState<string>();
-  const [modelLoading, setModelLoading] = useState(true);
-  const [modelError, setModelError] = useState("");
+  const { model, setModel, chatModels, selectedModelID, modelLoading, modelError, chooseModel, webSearchCapability } =
+    useConversationModelSettings(modelPreferenceKey, user.publicComputer, enabled);
   const [webSearch, setWebSearch] = useState(() => {
     const messages = restored.threads.find(thread => thread.id === restored.activeId)?.messages;
     return messages?.[messages.length - 1]?.web_search === true;
   });
-  const [webSearchCapability, setWebSearchCapability] = useState({ available: false, message: "正在读取联网搜索状态" });
   const [sendErrors, setSendErrors] = useState<Record<string, string>>(() => Object.fromEntries(restored.threads.filter(thread => thread.interruptedReply).map(thread => [thread.id, REFRESH_INTERRUPTED_MESSAGE])));
   const [pending, setPending] = useState<Record<string, PendingConversation>>({});
   const [replyEvidence, setReplyEvidence] = useState(new Map<SchoolChatMessage, ConversationEvidence>());
@@ -71,23 +71,14 @@ export function useAccountConversation({ user, initialContext, compact = false, 
   const attachmentRead = useRef<AbortController | null>(null);
   const live = useRef(true);
   const businessThreads = useRef(new Set<string>());
-  const checkpointState = useRef({ threads, pending, activeId });
-  checkpointState.current = { threads, pending, activeId };
-  const persistRefresh = useCallback(() => {
-    if (!live.current) return;
-    const state = checkpointState.current;
-    writeConversationRefresh(refreshKey, buildConversationRefresh(state.threads.filter(thread => !businessThreads.current.has(thread.id)), state.pending, state.activeId), user.publicComputer);
-  }, [refreshKey, user.publicComputer]);
-  const expandedReasoning = useRef(new Set<string>());
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [copiedMessage, setCopiedMessage] = useState("");
-  const scrollFlow = useRef<HTMLDivElement>(null);
-  const followingReply = useRef(true);
-  const scrollThread = useRef<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeThread = threads.find((thread) => thread.id === activeId);
   const activePending = activeId ? pending[activeId] : undefined;
+  const { scrollFlow, followingReply, scrollConversation, wheelConversation, toggleReasoning, reasoningExpanded, resetReasoning } =
+    useConversationScroll(activeId, activeThread?.messages.length, activePending);
+  const { copiedMessage, copyReply } = useCopyConversationReply(toast);
   const activeContext = activeThread ? activeThread.context : seedContext;
   const activeCount = Object.keys(pending).length;
 
@@ -120,79 +111,11 @@ export function useAccountConversation({ user, initialContext, compact = false, 
   }, [initialContext?.exam_id, initialContext?.origin_module, initialContext?.origin_section]);
 
   useEffect(() => {
-    if (!live.current) return;
-    writeConversationRefresh(refreshKey, buildConversationRefresh(threads.filter(thread => !businessThreads.current.has(thread.id)), pending, activeId), user.publicComputer);
-  }, [refreshKey, threads, pending, activeId, user.publicComputer]);
-  useEffect(() => {
-    // 刷新会断开原HTTP流，只保存恢复检查点；不能在卸载时清除，也不能自动重发收费请求。
-    window.addEventListener("pagehide", persistRefresh);
-    window.addEventListener("beforeunload", persistRefresh);
-    return () => {
-      window.removeEventListener("pagehide", persistRefresh);
-      window.removeEventListener("beforeunload", persistRefresh);
-    };
-  }, [persistRefresh]);
-
-  useEffect(() => {
     const visibleMessages = new Set(threads.flatMap((thread) => thread.messages));
     setReplyEvidence((current) => new Map([...current].filter(([reply]) => visibleMessages.has(reply))));
   }, [threads]);
 
-  useEffect(() => {
-    // 公共电脑不落盘；个人电脑只保存一般聊天，业务会话与附件正文不写入历史。
-    if (user.publicComputer) return;
-    try {
-      window.localStorage.setItem(storageKey, serializeConversationThreads(threads));
-    } catch {
-      // 浏览器存储禁用或已满时，当前对话仍保留在内存中。
-    }
-  }, [storageKey, threads, user.publicComputer]);
-
-  useEffect(() => {
-    // 其他栏目不预取模型；首次打开助手后保持控制器，后台增量才能继续归入原对话。
-    if (!enabled) return;
-    let mounted = true;
-    getSchoolChatModel()
-      .then((response) => {
-        if (!mounted) return;
-        const candidates = response.models ?? [];
-        // 本机偏好只在新读取的可用名单内恢复；取消开放、停用和跨校授权变化都不能沿用旧编号。
-        const preferredID = readConversationModelPreference(modelPreferenceKey, user.publicComputer);
-        const selected = candidates.find(item => item.id === preferredID && item.available) ?? response.model;
-        setModel(selected); setChatModels(candidates); setSelectedModelID(selected.id);
-        saveConversationModelPreference(modelPreferenceKey, user.publicComputer, selected.available ? selected.id : undefined);
-      })
-      .catch((error: unknown) => { if (mounted) setModelError(getUserErrorMessage(error, "无法加载对话模型")); })
-      .finally(() => { if (mounted) setModelLoading(false); });
-    return () => { mounted = false; };
-  }, [enabled, modelPreferenceKey, user.publicComputer]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    const controller = new AbortController();
-    getSchoolAssistantCapabilities(controller.signal)
-      .then(response => {
-        if (controller.signal.aborted) return;
-        setWebSearchCapability(response.web_search ?? { available: false, message: "联网搜索尚未配置" });
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setWebSearchCapability({ available: false, message: "暂时无法读取联网搜索状态" });
-      });
-    return () => controller.abort();
-  }, [enabled]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 正文、消息数量和工具进度是滚动触发键；推理增量不能打断用户正在阅读的位置。
-  useEffect(() => {
-    if (scrollThread.current !== activeId) {
-      scrollThread.current = activeId;
-      followingReply.current = true;
-    }
-    // 用户上翻后保留阅读位置；是否跟随由滚动事件记录，不能用追加正文后的距离反推。
-    if (!followingReply.current || (activeId && expandedReasoning.current.has(activeId))) return;
-    const flow = scrollFlow.current;
-    // 只滚消息容器，不启动持续的平滑动画，以免下一段输出和鼠标争抢滚动位置。
-    flow?.scrollTo({ top: flow.scrollHeight, behavior: "instant" });
-  }, [activeId, activeThread?.messages.length, activePending?.content, activePending?.evidence.tools.length]);
+  const persistRefresh = useConversationPersistence({ threads, pending, activeId, businessThreads, live, refreshKey, storageKey, publicComputer: user.publicComputer });
 
   const openNew = useCallback(() => {
     attachmentRead.current?.abort();
@@ -206,32 +129,42 @@ export function useAccountConversation({ user, initialContext, compact = false, 
     inputRef.current?.focus();
   }, [activateThread]);
 
-  const complete = useCallback(async (threadId: string, messages: SchoolChatMessage[], context?: SchoolConversationContext, requestWebSearch = false) => {
+  const complete = useCallback(async (threadId: string, messages: SchoolChatMessage[], context?: SchoolConversationContext, requestWebSearch = false, historyExcerpt?: ConversationHistoryExcerpt) => {
     if (controllers.current.has(threadId) || controllers.current.size >= MAX_ACTIVE_CHATS) return;
     const controller = new AbortController();
     const startedAt = Date.now();
     // 每条在途对话固定本次模型；其他对话更改偏好不能改写请求或当前对话显示的模型。
     const requestModelID = selectedModelID;
+    const metrics = { modelConfigID: requestModelID, modelName: model?.model_name };
     // ref 立即登记在途请求，防止 React 状态提交前连续操作突破单对话或全局并发限制。
     controllers.current.set(threadId, controller);
-    setThreads(current => current.map(thread => thread.id === threadId && thread.interruptedReply ? { ...thread, interruptedReply: undefined } : thread));
-    setPending((current) => ({ ...current, [threadId]: { startedAt, content: "", reasoning: "", evidence: emptyConversationEvidence(), modelConfigID: requestModelID, webSearch: requestWebSearch } }));
+    setThreads(current => current.map(thread => thread.id === threadId ? { ...thread, interruptedReply: undefined, contextOmitted: false, metrics: undefined } : thread));
+    setPending((current) => ({ ...current, [threadId]: { startedAt, content: "", reasoning: "", evidence: emptyConversationEvidence(), modelConfigID: requestModelID, webSearch: requestWebSearch, contextOmitted: false, metrics } }));
     setSendErrors((current) => { const next = { ...current }; delete next[threadId]; return next; });
     setFailedEvidence((current) => { const next = { ...current }; delete next[threadId]; return next; });
-    let partial: PendingConversation = { startedAt, content: "", reasoning: "", evidence: emptyConversationEvidence(), modelConfigID: requestModelID, webSearch: requestWebSearch };
+    let partial: PendingConversation = { startedAt, content: "", reasoning: "", evidence: emptyConversationEvidence(), modelConfigID: requestModelID, webSearch: requestWebSearch, contextOmitted: false, metrics };
     const identity: ConversationStreamIdentity = { sequence: 0 };
     let completed = false;
     // 联网开关只代表允许搜索。服务端若转入校内问答，本轮包括中断正文都不能成为下一次公开搜索的历史。
     let businessSeen = false;
     try {
       // 公开模式在 API 边界按模式标记筛选历史，先通用规范化会丢掉这些标记，导致上下文无法承接。
-      await streamSchoolConversation(requestWebSearch ? messages.slice(-49) : requestMessages(messages.slice(-49)), context, controller.signal, (event) => {
+      await streamSchoolConversation(requestWebSearch ? messages.slice(-49) : requestMessages(conversationHistoryMessages(messages, historyExcerpt)), context, controller.signal, (event) => {
         // 先挡住旧挂载、已停止或替换的请求，再推进序号；晚到回调不能污染当前流。
         if (!live.current || controller.signal.aborted || controllers.current.get(threadId) !== controller || completed || !acceptConversationEvent(identity, event)) return;
         // SSE 也只按受控错误码展示；不直接透传模型或上游接口的内部说明。
         if (event.type === "error") throw new ApiClientError(0, event.code, event.message);
         // 多模型选择是本页偏好；并行请求的元数据不能把选择器切换到其他模型。
         if (event.type === "model" && !chatModels.length) setModel(event.model);
+        if (event.type === "context") {
+          const omitted = event.context_budget.accepted && (event.context_budget.dropped_messages > 0 || event.context_budget.memory_omitted);
+          partial = { ...partial, contextOmitted: Boolean(partial.contextOmitted || omitted) };
+          // 探测包和未接受的请求不能冒充当前对话占用；显示最近一次真正接受的业务模型请求。
+          if (event.context_budget.accepted && event.context_budget.phase !== "tool_capability") {
+            partial = { ...partial, metrics: { ...partial.metrics, contextBudget: event.context_budget } };
+          }
+          setPending(current => ({ ...current, [threadId]: partial }));
+        }
         if (event.type === "delta") {
           partial = { ...partial, [event.channel]: partial[event.channel] + event.delta };
           setPending((current) => ({ ...current, [threadId]: partial }));
@@ -248,26 +181,28 @@ export function useAccountConversation({ user, initialContext, compact = false, 
         }
         if (event.type === "done") {
           completed = true;
-          partial = { ...partial, evidence: mergeConversationEvidence(partial.evidence, event) };
+          partial = { ...partial, evidence: mergeConversationEvidence(partial.evidence, event), metrics: { ...partial.metrics, generation: event.generation_metrics } };
           // 公开历史要求问答两条都有标记；业务回复不标记，即使用户当时打开联网也会在 API 边界断开这组历史。
           const reply = replyWithPublicSources(event.completion.message, partial.evidence, requestWebSearch && !businessSeen);
           // 证据以回复对象为键，历史裁剪或删除消息时不会把旧导航绑定到另一条回复。
           setReplyEvidence((current) => new Map(current).set(reply, partial.evidence));
-          setThreads((current) => current.map((thread) => thread.id === threadId ? {
-            ...thread, messages: [...thread.messages, reply].slice(-50), updatedAt: Date.now(), context: contextFromEvidence(partial.evidence, context)
-          } : thread));
+          setThreads((current) => current.map((thread) => thread.id === threadId ? compactConversationHistory({
+            ...thread, messages: [...thread.messages, reply], updatedAt: Date.now(), context: contextFromEvidence(partial.evidence, context), contextOmitted: partial.contextOmitted, metrics: partial.metrics
+          }) : thread));
         }
-      }, requestModelID, requestWebSearch);
+      }, requestModelID, requestWebSearch, requestWebSearch ? undefined : conversationRequestMemory(messages, historyExcerpt));
       if (!completed) throw new Error("对话流意外中断");
     } catch (error) {
       if (!live.current || controllers.current.get(threadId) !== controller) return;
+      // 中断后保留本次已接受的上下文估算；缺少供应商最终用量时，不能沿用上一次的速率。
+      setThreads(current => current.map(thread => thread.id === threadId ? { ...thread, contextOmitted: partial.contextOmitted, metrics: partial.metrics } : thread));
       const recovery = conversationRecovery(error, controller.signal.aborted, completed, partial);
       if (recovery?.kind === "reply") {
         const reply = replyWithPublicSources(recovery.reply, recovery.evidence, requestWebSearch && !businessSeen);
         setReplyEvidence((current) => new Map(current).set(reply, recovery.evidence));
-        setThreads((current) => current.map((thread) => thread.id === threadId ? {
-          ...thread, messages: [...thread.messages, reply].slice(-50), updatedAt: Date.now()
-        } : thread));
+        setThreads((current) => current.map((thread) => thread.id === threadId ? compactConversationHistory({
+          ...thread, messages: [...thread.messages, reply], updatedAt: Date.now()
+        }) : thread));
       } else if (recovery?.kind === "failure") {
         setSendErrors((current) => ({ ...current, [threadId]: recovery.message }));
         setFailedEvidence((current) => ({ ...current, [threadId]: recovery.evidence }));
@@ -278,7 +213,7 @@ export function useAccountConversation({ user, initialContext, compact = false, 
         setPending((current) => { const next = { ...current }; delete next[threadId]; return next; });
       }
     }
-  }, [chatModels.length, selectedModelID, persistRefresh]);
+  }, [chatModels.length, selectedModelID, model?.model_name, persistRefresh, setModel]);
 
   const send = useCallback((event?: SubmitEvent) => {
     event?.preventDefault();
@@ -290,14 +225,15 @@ export function useAccountConversation({ user, initialContext, compact = false, 
     }
     followingReply.current = true;
     const id = activeThread?.id ?? crypto.randomUUID();
-    expandedReasoning.current.delete(id);
-    const messages: SchoolChatMessage[] = [...(activeThread?.messages ?? []), {
+    resetReasoning(id);
+    const appended: SchoolChatMessage[] = [...(activeThread?.messages ?? []), {
       role: "user" as const, content, attachments: draftAttachments.length ? draftAttachments : undefined, ...(webSearch ? { web_search: true } : {})
-    }].slice(-49);
+    }];
+    const history = compactConversationHistory({ messages: appended, ...(activeThread?.historyExcerpt ? { historyExcerpt: activeThread.historyExcerpt } : {}) });
     setThreads((current) => {
       const existing = current.find((thread) => thread.id === id);
       const next: ConversationThread = {
-        id, title: existing?.title ?? titleFromMessage(content || draftAttachments[0]?.name || "附件对话"), updatedAt: Date.now(), messages, context: activeContext, business: existing?.business || (!webSearch && Boolean(activeContext?.exam_id))
+        id, title: existing?.title ?? titleFromMessage(content || draftAttachments[0]?.name || "附件对话"), updatedAt: Date.now(), ...history, context: activeContext, business: existing?.business || (!webSearch && Boolean(activeContext?.exam_id))
       };
       return [next, ...current.filter((thread) => thread.id !== id)]
         .filter((thread, index) => index < 20 || controllers.current.has(thread.id));
@@ -305,8 +241,8 @@ export function useAccountConversation({ user, initialContext, compact = false, 
     activateThread(id);
     setDraft("");
     setDraftAttachments([]);
-    void complete(id, messages, activeContext, webSearch);
-  }, [activeId, activeThread, activeContext, activateThread, attaching, complete, draft, draftAttachments, model?.available, toast, webSearch, webSearchCapability]);
+    void complete(id, history.messages, activeContext, webSearch, history.historyExcerpt);
+  }, [activeId, activeThread, activeContext, activateThread, attaching, complete, draft, draftAttachments, model?.available, toast, webSearch, webSearchCapability, followingReply, resetReasoning]);
 
   const stop = () => { if (activeId) controllers.current.get(activeId)?.abort(); };
 
@@ -333,20 +269,6 @@ export function useAccountConversation({ user, initialContext, compact = false, 
     });
   };
 
-  const readSelectedAttachments = async (files: File[], controller: AbortController) => {
-    const accepted: SchoolChatAttachment[] = [];
-    // 按选择顺序逐份读取；单份失败仍处理后续文件，取消后不再开始下一份。
-    for (const file of files) {
-      if (controller.signal.aborted || !live.current) break;
-      try {
-        accepted.push(await readChatAttachment(file, controller.signal));
-      } catch (error) {
-        if (!controller.signal.aborted && live.current) toast.error(`${file.name}：${getUserErrorMessage(error, "文件读取失败")}`);
-      }
-    }
-    return accepted;
-  };
-
   const addFiles = async (files: File[]) => {
     if (webSearch) {
       toast.warning("联网搜索只使用文字问题，请先关闭联网搜索再上传文件");
@@ -363,7 +285,8 @@ export function useAccountConversation({ user, initialContext, compact = false, 
     setAttaching(true);
     const controller = new AbortController();
     attachmentRead.current = controller;
-    const accepted = await readSelectedAttachments(files.slice(0, available), controller);
+    const accepted = await readConversationAttachments(files.slice(0, available), controller.signal,
+      () => live.current, (file, error) => toast.error(`${file.name}：${getUserErrorMessage(error, "文件读取失败")}`));
     if (live.current && !controller.signal.aborted && attachmentRead.current === controller) {
       if (accepted.length > 0) setDraftAttachments((current) => [...current, ...accepted]);
       setAttaching(false);
@@ -378,10 +301,7 @@ export function useAccountConversation({ user, initialContext, compact = false, 
   };
 
   const pasteImages = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const items = Array.from(event.clipboardData.items ?? []);
-    const images = items.filter(item => item.kind === "file" && item.type.startsWith("image/"))
-      .map(item => item.getAsFile()).filter((file): file is File => file !== null);
-    const files = images.length ? images : Array.from(event.clipboardData.files ?? []).filter(file => file.type.startsWith("image/"));
+    const files = pastedConversationImages(event.clipboardData);
     // 没有图片时保留浏览器原生文字粘贴；图片与 HTML 同时存在时不粘贴网页标记。
     if (!files.length) return;
     event.preventDefault();
@@ -394,22 +314,11 @@ export function useAccountConversation({ user, initialContext, compact = false, 
     }
   };
 
-  const copyReply = async (content: string, key: string) => {
-    try {
-      await navigator.clipboard.writeText(content);
-      setCopiedMessage(key);
-      toast.success("回复已复制");
-      window.setTimeout(() => setCopiedMessage((current) => current === key ? "" : current), 1600);
-    } catch {
-      toast.error("复制失败，请手动选择内容");
-    }
-  };
-
   const retry = () => {
     if (activeThread && activeThread.messages[activeThread.messages.length - 1]?.role === "user" && !controllers.current.has(activeThread.id) && controllers.current.size < MAX_ACTIVE_CHATS) {
       followingReply.current = true;
       // 重试沿用原问题的模式，不能因用户切到另一条对话后修改开关而改变请求。
-      void complete(activeThread.id, activeThread.messages, activeThread.context, activeThread.messages[activeThread.messages.length - 1]?.web_search === true);
+      void complete(activeThread.id, activeThread.messages, activeThread.context, activeThread.messages[activeThread.messages.length - 1]?.web_search === true, activeThread.historyExcerpt);
     }
   };
 
@@ -427,35 +336,28 @@ export function useAccountConversation({ user, initialContext, compact = false, 
       activateThread(id); setHistoryOpen(false);
     };
 
-  const selectModel: (id: string) => void = id => {
-            const currentThread = activeIdRef.current;
-            if (currentThread && controllers.current.has(currentThread)) return;
-            const selected = chatModels.find(item => item.id === id && item.available);
-            if (selected) {
-              setSelectedModelID(id); setModel(selected); setModelError("");
-              saveConversationModelPreference(modelPreferenceKey, user.publicComputer, id);
-            }
-          };
-
-  const toggleReasoning: (expanded: boolean) => void = (expanded) => {
-          if (activeId) { if (expanded) expandedReasoning.current.add(activeId); else expandedReasoning.current.delete(activeId); }
-        };
+  const selectModel = (id: string) => {
+    const currentThread = activeIdRef.current;
+    if (currentThread && controllers.current.has(currentThread)) return;
+    chooseModel(id);
+  };
 
   const suggestQuestion: (question: string) => void = (question) => { setDraft(question); inputRef.current?.focus(); };
 
-  const scrollConversation: UIEventHandler<HTMLDivElement> = (event) => {
-          const flow = event.currentTarget;
-          // 仅容忍小数像素舍入；轻微上滚也要暂停，拖动滚动条和触摸滚动同样走此边界。
-          followingReply.current = flow.scrollHeight - flow.scrollTop - flow.clientHeight <= 2;
-        };
+  const toggleMemoryPin = (sourceID: string) => {
+    if (!activeId || controllers.current.has(activeId)) return;
+    const message = activeThread?.messages.find(item => item.memory_source_id === sourceID);
+    if (!activeThread) return;
+    const next = toggleConversationMemoryPin(activeThread, sourceID);
+    if (message && !message.memory_pinned && !next.messages.find(item => item.memory_source_id === sourceID)?.memory_pinned) {
+      toast.warning("保留要求已达到容量上限，请先移除旧要求，或将关键要求单独发送后保留。");
+      return;
+    }
+    if (message && !message.memory_pinned && [...message.content].length > 4_000) toast.warning("内容较长，发送时仍会按容量选取原文片段，可将关键要求单独发送后保留。");
+    setThreads(current => current.map(thread => thread.id === activeId ? toggleConversationMemoryPin(thread, sourceID) : thread));
+  };
 
-  const wheelConversation: WheelEventHandler<HTMLDivElement> = (event) => {
-          // 滚轮默认滚动之前就交还控制权，避免同一帧到达的正文先把页面拉回底部。
-          if (event.deltaY < 0) followingReply.current = false;
-        };
-
-  const reasoningExpanded = Boolean(activeId && expandedReasoning.current.has(activeId));
-  return { compact, onNavigate, user, threads, activeId, pending, openNew, deleteThread, selectThread, historyOpen, setHistoryOpen, model, chatModels, activePending, selectedModelID, modelLoading, selectModel, activeCount, activeContext, clearContext, activeThread, replyEvidence, failedEvidence, sendErrors, reasoningExpanded, toggleReasoning, copiedMessage, copyReply, retry, modelError, suggestQuestion, scrollFlow, scrollConversation, wheelConversation, send, draftAttachments, setDraftAttachments, inputRef, draft, setDraft, onInputKeyDown, pasteImages, fileInputRef, selectFiles, attaching, stop, webSearch, setWebSearch, webSearchCapability };
+  return { compact, onNavigate, user, threads, activeId, pending, openNew, deleteThread, selectThread, historyOpen, setHistoryOpen, model, chatModels, activePending, selectedModelID, modelLoading, selectModel, activeCount, activeContext, clearContext, activeThread, replyEvidence, failedEvidence, sendErrors, reasoningExpanded, toggleReasoning, copiedMessage, copyReply, retry, modelError, suggestQuestion, scrollFlow, scrollConversation, wheelConversation, send, draftAttachments, setDraftAttachments, inputRef, draft, setDraft, onInputKeyDown, pasteImages, fileInputRef, selectFiles, attaching, stop, webSearch, setWebSearch, webSearchCapability, toggleMemoryPin };
 }
 
 export type AccountConversationModel = ReturnType<typeof useAccountConversation>;

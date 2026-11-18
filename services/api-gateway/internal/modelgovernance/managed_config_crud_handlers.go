@@ -148,6 +148,8 @@ func (h *Handler) UpdateManagedAPIConfig(w http.ResponseWriter, r *http.Request)
 		input.DisplayName, input.AdapterType, input.BaseURL = current.DisplayName, current.AdapterType, current.BaseURL
 		input.ModelName, input.ModelVersion, input.Region = current.ModelName, current.ModelVersion, current.Region
 		input.Status, input.IsDefault = current.Status, current.IsDefault
+		policy := current.ContextPolicy
+		input.ContextPolicy = &policy
 	}
 	normalized, err := normalizeManagedAPIUpdate(input)
 	if err != nil {

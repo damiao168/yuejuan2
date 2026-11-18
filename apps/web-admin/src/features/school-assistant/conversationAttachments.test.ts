@@ -54,6 +54,13 @@ describe("attachment loading boundaries", () => {
     expect(mocks.pdf).toHaveBeenCalledWith(pdf, 60_000, controller.signal);
   });
 
+  it("rejects the attachment when any PDF page has no extractable text", async () => {
+    const { readChatAttachment } = await import("./conversationAttachments");
+    const error = new Error("PDF 第 2 页未提取到文字。请删除空白页，或改传 PNG/JPEG 图片、每页带文字层的 PDF。");
+    mocks.pdf.mockRejectedValueOnce(error);
+    await expect(readChatAttachment(file("mixed.pdf", "", 4, "application/pdf"))).rejects.toBe(error);
+  });
+
   it("never starts loading for an already cancelled upload", async () => {
     const { readChatAttachment } = await import("./conversationAttachments");
     const controller = new AbortController(); controller.abort();

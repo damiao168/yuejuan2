@@ -110,7 +110,7 @@ func TestWebResearchReadsModelSelectedPagesAndKeepsFiveCallThreePageBudget(t *te
 		Candidates []Source `json:"candidates"`
 		Needed     string   `json:"information_needed"`
 	}
-	stateContent := model.requests[4].Messages[1].Content
+	stateContent := lastTestUserMessage(model.requests[4]).Content
 	stateContent = stateContent[strings.IndexByte(stateContent, '{'):]
 	if err := json.Unmarshal([]byte(stateContent), &assessment); err != nil {
 		t.Fatal(err)

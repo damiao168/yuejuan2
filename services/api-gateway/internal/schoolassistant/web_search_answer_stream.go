@@ -26,38 +26,37 @@ func publicSearchAnswerPreview(raw string) string {
 	action := ""
 	for decoder.More() {
 		token, err := decoder.Token()
-		if err != nil {
-			return ""
-		}
 		key, ok := token.(string)
-		if !ok {
+		if err != nil || !ok {
 			return ""
 		}
 		if key == "answer" {
-			if action != "answer" && action != "clarify" {
-				return ""
-			}
-			value := strings.TrimSpace(raw[decoder.InputOffset():])
-			if !strings.HasPrefix(value, ":") {
-				return ""
-			}
-			return partialPublicJSONString(strings.TrimSpace(value[1:]))
+			return publicAnswerFieldPreview(raw[decoder.InputOffset():], action)
 		}
-		if key == "action" {
-			if err := decoder.Decode(&action); err != nil {
-				return ""
-			}
-			if action != "answer" && action != "clarify" {
-				return ""
-			}
-		} else {
-			var ignored json.RawMessage
-			if err := decoder.Decode(&ignored); err != nil {
-				return ""
-			}
+		if !readPublicAnswerPreviewField(decoder, key, &action) {
+			return ""
 		}
 	}
 	return ""
+}
+
+func publicAnswerFieldPreview(raw, action string) string {
+	if action != "answer" && action != "clarify" {
+		return ""
+	}
+	value := strings.TrimSpace(raw)
+	if !strings.HasPrefix(value, ":") {
+		return ""
+	}
+	return partialPublicJSONString(strings.TrimSpace(value[1:]))
+}
+
+func readPublicAnswerPreviewField(decoder *json.Decoder, key string, action *string) bool {
+	if key == "action" {
+		return decoder.Decode(action) == nil && (*action == "answer" || *action == "clarify")
+	}
+	var ignored json.RawMessage
+	return decoder.Decode(&ignored) == nil
 }
 
 func partialPublicJSONString(raw string) string {
@@ -70,33 +69,11 @@ func partialPublicJSONString(raw string) string {
 			break
 		}
 		if raw[end] == '\\' {
-			if end+1 >= len(raw) {
+			size := publicJSONStringEscapeSize(raw[end:])
+			if size == 0 {
 				break
 			}
-			if raw[end+1] == 'u' {
-				if end+6 > len(raw) {
-					break
-				}
-				code, err := strconv.ParseUint(raw[end+2:end+6], 16, 16)
-				if err != nil {
-					break
-				}
-				if code >= 0xD800 && code <= 0xDBFF {
-					// 高代理项须等低代理项完整后再解码，避免先输出替代字符又回头改写正文。
-					if end+12 > len(raw) || raw[end+6:end+8] != `\u` {
-						break
-					}
-					low, err := strconv.ParseUint(raw[end+8:end+12], 16, 16)
-					if err != nil || low < 0xDC00 || low > 0xDFFF {
-						break
-					}
-					end += 12
-				} else {
-					end += 6
-				}
-			} else {
-				end += 2
-			}
+			end += size
 			continue
 		}
 		_, size := utf8.DecodeRuneInString(raw[end:])
@@ -110,4 +87,32 @@ func partialPublicJSONString(raw string) string {
 		return ""
 	}
 	return preview
+}
+
+// 高代理项须等低代理项完整后再解码，避免先输出替代字符又回头改写正文。
+func publicJSONStringEscapeSize(raw string) int {
+	if len(raw) < 2 {
+		return 0
+	}
+	if raw[1] != 'u' {
+		return 2
+	}
+	if len(raw) < 6 {
+		return 0
+	}
+	code, err := strconv.ParseUint(raw[2:6], 16, 16)
+	if err != nil {
+		return 0
+	}
+	if code < 0xD800 || code > 0xDBFF {
+		return 6
+	}
+	if len(raw) < 12 || raw[6:8] != `\u` {
+		return 0
+	}
+	low, err := strconv.ParseUint(raw[8:12], 16, 16)
+	if err != nil || low < 0xDC00 || low > 0xDFFF {
+		return 0
+	}
+	return 12
 }
