@@ -2,4 +2,4 @@
 
 package db
 
-const RequiredSchemaVersion = "000229"
+const RequiredSchemaVersion = "000232"
