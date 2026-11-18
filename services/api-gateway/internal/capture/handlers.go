@@ -57,7 +57,10 @@ func decodeStrict(w http.ResponseWriter, r *http.Request, target any) bool {
 }
 func mustUser(r *http.Request) auth.User { user, _ := auth.UserFromContext(r.Context()); return user }
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
+	var printInput printPackageInputError
 	switch {
+	case errors.Is(err, ErrPrintLayoutConfirmationRequired):
+		httpx.Error(w, r, http.StatusConflict, "student_print_layout_confirmation_required", "请先查看原答题卡，并逐页确认可放置二维码的位置。")
 	case errors.Is(err, ErrFileHasGrades):
 		httpx.Error(w, r, http.StatusConflict, "capture_file_has_grades", "这份答卷已进入评分，请通过答卷修订与重新阅卷处理，不能直接移除")
 	case strings.Contains(err.Error(), "capture_collection_closed"):
@@ -66,6 +69,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusNotFound, "capture_not_found", "capture resource not found")
 	case errors.Is(err, ErrInvalidInput):
 		httpx.Error(w, r, http.StatusBadRequest, "capture_invalid_input", "capture input is invalid")
+	case errors.As(err, &printInput):
+		httpx.Error(w, r, http.StatusConflict, "student_print_layout_unavailable", printInput.Error())
 	case errors.Is(err, ErrInvalidTransition):
 		httpx.Error(w, r, http.StatusConflict, "capture_invalid_transition", "capture state does not allow this action")
 	case errors.Is(err, ErrConflict):

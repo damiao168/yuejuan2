@@ -250,14 +250,17 @@ describe("采集批次页条件展示与对齐回读", () => {
     expect(host.querySelector<HTMLSelectElement>('select[aria-label="每名学生答题卡页数"]')?.value).toBe("");
   });
 
-  it("上传替代答卷绑定本次整组首个新文件，不在新登记完成前排除原组", async () => {
+  it.each(["file_failed", "upload_group_duplicate"])("%s 替代答卷完整登记后才绑定新组，重复组持续提示完整答卷边界", async code => {
     mocks.getBatch.mockResolvedValue(detail());
     mocks.exclude.mockResolvedValue({});
     await renderPage();
     const collection = mocks.collectionProps.mock.lastCall![0] as { onReplace: (issue: object, reason: string) => Promise<void> };
-    await act(async () => collection.onReplace({ id: "old", kind: "file", code: "file_failed", name: "旧选择.pdf", batch_id: "batch-16", file_id: "old-file" }, "重新导出完整答卷"));
+    await act(async () => collection.onReplace({ id: "old", kind: "file", code, name: "旧选择.pdf", batch_id: "batch-16", file_id: "old-file" }, "重新导出完整答卷"));
     await choosePages();
-    expect(host.textContent).toContain("原选择的全部文件及其答卷将退出有效输入");
+    if (code === "upload_group_duplicate") {
+      expect(host.textContent).toContain("尚未成功导入的完整答卷，不能只补单页");
+      expect(host.textContent).toContain("此前成功组的答卷不要再次选择");
+    } else expect(host.textContent).toContain("原选择的全部文件及其答卷将退出有效输入");
     const files = [new File(["front"], "front.png"), new File(["back"], "back.png")] as Parameters<NonNullable<UploadProps["beforeUpload"]>>[1];
     await act(async () => { await mocks.uploadProps!.beforeUpload!(files[0], files); });
     expect(mocks.exclude).not.toHaveBeenCalled();

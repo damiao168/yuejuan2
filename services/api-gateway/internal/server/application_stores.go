@@ -154,7 +154,7 @@ func NewPostgresApplicationStores(infra *Infrastructure) (ApplicationStores, err
 			OCR: ocrpkg.NewPostgresStore(infra.DB), Orchestrator: orchestrator.NewPostgresStore(infra.DB),
 			Capture: capture.NewPostgresStoreWithBarcodeKeyring(infra.DB, capture.BarcodeKeyring{
 				ActiveKeyID: infra.Config.Barcode.ActiveKeyID, Keys: infra.Config.Barcode.HMACKeys,
-			}),
+			}, infra.ObjectStore),
 			CaptureUpload: captureupload.NewPostgresStore(infra.DB), Processing: processing.NewPostgresStore(infra.DB),
 		},
 		AIFoundation: AIFoundationStores{

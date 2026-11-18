@@ -15,6 +15,10 @@ func TestRenderStudentPrintPackageIsDeterministicAndContainsOnePagePerLedgerPage
 		TemplateContentHash: "sha256:" + strings.Repeat("a", 64),
 		KeyID:               "2026-01",
 		IssuedAt:            time.Date(2026, 7, 28, 9, 0, 0, 0, time.UTC),
+		QRLayout: &StudentPrintLayout{Pages: []StudentPrintQRPage{
+			{PageNo: 1, X: .82, Y: .85, Width: .16, Height: .12},
+			{PageNo: 2, X: .82, Y: .85, Width: .16, Height: .12},
+		}},
 		Sheets: []PrintPackageSheet{{
 			StudentID:   "44444444-4444-4444-8444-444444444444",
 			SheetSerial: "55555555-5555-4555-8555-555555555555",

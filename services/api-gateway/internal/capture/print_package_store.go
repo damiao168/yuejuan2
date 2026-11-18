@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 
 	"edugrade-enterprise/services/api-gateway/internal/paper"
 )
@@ -16,22 +17,23 @@ type printPackagePageLayout struct {
 
 func (s *PostgresStore) GetStudentPrintPackage(ctx context.Context, tenantID, printBatchID string) (StudentPrintPackage, error) {
 	var out StudentPrintPackage
-	var layoutRaw []byte
+	var layoutRaw, printLayoutRaw []byte
 	var expectedSheetCount, expectedPageCount int
 	if err := s.db.QueryRowContext(ctx, `
 SELECT
   b.id::text,b.exam_id::text,e.name,b.template_id::text,
-  b.template_content_hash,b.key_id,b.issued_at,b.sheet_count,b.page_count,t.layout
+  b.template_content_hash,b.key_id,b.issued_at,b.sheet_count,b.page_count,t.layout,b.print_layout
 FROM answer_sheet_print_batch b
 JOIN exam e
   ON e.tenant_id=b.tenant_id AND e.id=b.exam_id AND e.deleted_at IS NULL
 JOIN answer_sheet_template t
-  ON t.tenant_id=b.tenant_id AND t.id=b.template_id AND t.deleted_at IS NULL
+  ON t.tenant_id=b.tenant_id AND t.id=b.template_id AND t.exam_id=b.exam_id
+  AND t.content_hash=b.template_content_hash AND t.status='locked' AND t.deleted_at IS NULL
 WHERE b.tenant_id=$1 AND b.id=$2::uuid
 `, tenantID, printBatchID).Scan(
 		&out.PrintBatchID, &out.ExamID, &out.ExamName, &out.TemplateID,
 		&out.TemplateContentHash, &out.KeyID, &out.IssuedAt,
-		&expectedSheetCount, &expectedPageCount, &layoutRaw,
+		&expectedSheetCount, &expectedPageCount, &layoutRaw, &printLayoutRaw,
 	); err != nil {
 		return StudentPrintPackage{}, mapNotFound(err)
 	}
@@ -91,13 +93,25 @@ ORDER BY sh.ordinal,p.page_no
 	if err := validatePrintPackageSheetCounts(out.Sheets, expectedSheetCount, expectedPageCount); err != nil {
 		return StudentPrintPackage{}, err
 	}
+	out.background, err = s.readStudentPrintBackground(ctx, s.db, tenantID, out.TemplateID, out.TemplateContentHash, layoutRaw)
+	if err != nil {
+		return StudentPrintPackage{}, err
+	}
+	storedLayout, err := decodeStudentPrintLayout(printLayoutRaw)
+	if err != nil {
+		return StudentPrintPackage{}, err
+	}
+	out.QRLayout, err = normalizedStudentPrintLayout(pagesByNumber, out.background.sha256, storedLayout)
+	if err != nil {
+		return StudentPrintPackage{}, err
+	}
 	return out, nil
 }
 
 // 台账数量和模板页数必须先通过边界校验，后面才允许逐页组装可下载包。
 func printPackagePages(layoutRaw []byte, sheetCount, pageCount int) (map[int]printPackagePageLayout, error) {
 	if sheetCount <= 0 || pageCount <= 0 || sheetCount > maxPrintPackagePages/pageCount {
-		return nil, ErrInvalidTransition
+		return nil, printPackageInputError{fmt.Sprintf("每批最多打印 %d 页，请减少学生人数后分批签发。", maxPrintPackagePages)}
 	}
 	var layout paper.TemplateLayout
 	if err := json.Unmarshal(layoutRaw, &layout); err != nil || len(layout.Pages) == 0 || len(layout.Pages) != pageCount {
@@ -119,6 +133,31 @@ func printPackagePages(layoutRaw []byte, sheetCount, pageCount int) (map[int]pri
 		pagesByNumber[page.PageNo] = printPackagePageLayout{width: page.Width, height: page.Height, regions: printRegions(page.QuestionRegions), marks: printRegions(page.RegistrationMarks), identity: printRegions(page.IdentityRegions), groups: groups}
 	}
 	return pagesByNumber, nil
+}
+
+type printPackageInputError struct{ message string }
+
+func (err printPackageInputError) Error() string { return err.message }
+func (err printPackageInputError) Unwrap() error { return ErrInvalidTransition }
+
+func (s *PostgresStore) prepareStudentPrintPackageTx(ctx context.Context, tx *sql.Tx, tenantID, templateID, templateHash string, layoutRaw []byte, sheetCount, pageCount int, input *StudentPrintLayout) (*StudentPrintLayout, error) {
+	pages, err := printPackagePages(layoutRaw, sheetCount, pageCount)
+	if err != nil {
+		return nil, err
+	}
+	background, err := s.readStudentPrintBackground(ctx, tx, tenantID, templateID, templateHash, layoutRaw)
+	if err != nil {
+		return nil, err
+	}
+	layout, err := normalizedStudentPrintLayout(pages, background.sha256, input)
+	if err != nil {
+		return nil, err
+	}
+	// 用和下载相同的背景与页面几何做签发预检。失败时整笔签发或补打尚未入账。
+	if err := validatePrintPackageBackgroundAndGeometry(pages, background, layout); err != nil {
+		return nil, err
+	}
+	return layout, nil
 }
 
 func printRegions(regions []paper.LayoutRegion) []PrintPackageRegion {

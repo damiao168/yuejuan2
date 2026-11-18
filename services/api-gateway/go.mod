@@ -3,12 +3,15 @@ module edugrade-enterprise/services/api-gateway
 go 1.26.11
 
 require (
+	github.com/boxesandglue/baseline-pdf v1.1.34
+	github.com/boxesandglue/gofpdi v1.0.26
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/phpdave11/gofpdf v1.4.3
 	github.com/redis/go-redis/v9 v9.7.3
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	github.com/speedata/pdfdisassembler v0.0.9
 	github.com/tiktoken-go/tokenizer v0.10.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/net v0.62.0
@@ -17,6 +20,8 @@ require (
 )
 
 require (
+	github.com/andybalholm/brotli v1.2.7 // indirect
+	github.com/boxesandglue/textshape v0.0.19 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2/v2 v2.5.1 // indirect

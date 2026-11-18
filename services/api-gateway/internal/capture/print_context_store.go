@@ -3,6 +3,7 @@ package capture
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 )
 
 // GetStudentPrintContext 返回不可变打印历史和当前考试考生名单。它归属 exam:manage，使打印工作流不依赖成绩管理权限。
@@ -12,13 +13,26 @@ func (s *PostgresStore) GetStudentPrintContext(ctx context.Context, tenantID, te
 		Candidates: []StudentPrintCandidate{},
 		Batches:    []StudentPrintBatchSummary{},
 	}
+	var layoutRaw []byte
 	if err := s.db.QueryRowContext(ctx, `
-SELECT exam_id::text,content_hash
-FROM answer_sheet_template
-WHERE tenant_id=$1 AND id=$2::uuid AND status='locked' AND deleted_at IS NULL
-`, tenantID, templateID).Scan(&out.ExamID, &out.TemplateContentHash); err != nil {
+SELECT t.exam_id::text,t.content_hash,t.layout,f.id::text,f.content_type,f.hash_sha256
+FROM answer_sheet_template t
+JOIN exam_paper p ON p.tenant_id=t.tenant_id AND p.id=t.exam_paper_id AND p.exam_id=t.exam_id AND p.deleted_at IS NULL
+JOIN file_asset f ON f.tenant_id=p.tenant_id AND f.id=p.file_asset_id AND f.deleted_at IS NULL AND f.lifecycle_status='active'
+WHERE t.tenant_id=$1 AND t.id=$2::uuid AND t.status='locked' AND t.deleted_at IS NULL
+`, tenantID, templateID).Scan(&out.ExamID, &out.TemplateContentHash, &layoutRaw, &out.PrintSource.FileAssetID, &out.PrintSource.ContentType, &out.PrintSource.SHA256); err != nil {
 		return StudentPrintContext{}, mapNotFound(err)
 	}
+	var layout templateLayout
+	if err := json.Unmarshal(layoutRaw, &layout); err != nil {
+		return StudentPrintContext{}, err
+	}
+	pages, err := printPackagePages(layoutRaw, 1, len(layout.Pages))
+	if err != nil {
+		return StudentPrintContext{}, err
+	}
+	out.QRLayoutPageNos = missingPrintQRPages(pages)
+	out.QRLayoutRequired = len(out.QRLayoutPageNos) > 0
 
 	// 打印覆盖完整冻结名册，不能按历史人工缺考或尚未收卷排除学生。expected 仅保留旧响应兼容。
 	// 活动打印只看同一模板和内容哈希的最新未撤销纸张。
@@ -76,7 +90,7 @@ SELECT
   count(*) FILTER (WHERE sh.status='conflict')::int,
   count(*) FILTER (WHERE sh.status='revoked')::int,
   bool_and(sh.status='issued'),
-  b.issued_at
+  b.issued_at,b.print_layout
 FROM answer_sheet_print_batch b
 JOIN answer_sheet_print_sheet sh
   ON sh.tenant_id=b.tenant_id AND sh.print_batch_id=b.id
@@ -91,15 +105,21 @@ LIMIT 20
 	defer batchRows.Close()
 	for batchRows.Next() {
 		var batch StudentPrintBatchSummary
+		var qrLayoutRaw []byte
 		if err = batchRows.Scan(
 			&batch.PrintBatchID, &batch.Operation, &batch.Reason,
 			&batch.SheetCount, &batch.PageCount,
 			&batch.IssuedCount, &batch.ObservedCount, &batch.ConflictCount, &batch.RevokedCount,
-			&batch.Downloadable, &batch.IssuedAt,
+			&batch.Downloadable, &batch.IssuedAt, &qrLayoutRaw,
 		); err != nil {
 			return StudentPrintContext{}, err
 		}
 		batch.IssuedAt = batch.IssuedAt.UTC()
+		batch.QRLayout, err = decodeStudentPrintLayout(qrLayoutRaw)
+		if err != nil {
+			return StudentPrintContext{}, err
+		}
+		batch.QRLayoutRequired = out.QRLayoutRequired && batch.QRLayout == nil
 		out.Batches = append(out.Batches, batch)
 	}
 	if err = batchRows.Err(); err != nil {

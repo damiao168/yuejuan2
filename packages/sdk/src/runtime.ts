@@ -1,5 +1,13 @@
+export interface ApiBlobResponse {
+  blob: Blob;
+  contentType: string;
+  filename?: string;
+  watermark?: string;
+}
+
 export interface ApiTransport {
   request<T>(path: string, init?: RequestInit): Promise<T>;
+  requestBlob?(path: string, init?: RequestInit): Promise<ApiBlobResponse>;
 }
 
 export function fillPath(template: string, values: Record<string, string | number>): string {

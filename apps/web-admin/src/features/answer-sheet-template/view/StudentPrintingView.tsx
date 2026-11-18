@@ -3,6 +3,7 @@ import { Download, Printer } from "lucide-react";
 import { StatusTag } from "../../../components/StatusTag";
 import type { StudentPrintBatchSummary, StudentPrintCandidate } from "../../../api/printing";
 import type { TemplatePrintingView } from "./templateViewTypes";
+import { StudentPrintLayoutModal } from "../printing/StudentPrintLayoutModal";
 
 function printBatchTime(value: string) {
 	return new Intl.DateTimeFormat("zh-CN", {
@@ -203,6 +204,11 @@ export function StudentPrintModal({ view }: Readonly<{ view: TemplatePrintingVie
 		: "";
 	return (
 		<>
+		{/* 换了原文件必须重新核对，旧底图的逐页勾选不能带入新文件。 */}
+		{view.printing.layoutRequest && view.selectedTemplate && view.printing.printContext ? <StudentPrintLayoutModal
+			key={`${view.selectedTemplate.id}:${view.printing.printContext.print_source?.sha256 ?? "unknown"}:${view.printing.layoutRequest.intent}:${view.printing.layoutRequest.batchId ?? "new"}`}
+			template={view.selectedTemplate} context={view.printing.printContext} busy={printBusy} error={view.printing.layoutError}
+			onCancel={view.printing.closeLayout} onConfirm={view.printing.confirmLayout} /> : null}
 		<Modal
 			open={printModalOpen}
 			title="生成受控答题卡打印包"

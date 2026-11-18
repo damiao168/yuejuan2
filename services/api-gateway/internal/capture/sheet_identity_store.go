@@ -90,24 +90,56 @@ FOR UPDATE
 		return IssuedStudentBarcodes{}, err
 	}
 	if recovered {
+		if input.QRLayout != nil {
+			var raw []byte
+			if err = tx.QueryRowContext(ctx, `SELECT print_layout FROM answer_sheet_print_batch WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, out.PrintBatchID).Scan(&raw); err != nil {
+				return IssuedStudentBarcodes{}, err
+			}
+			stored, decodeErr := decodeStudentPrintLayout(raw)
+			if decodeErr != nil {
+				return IssuedStudentBarcodes{}, decodeErr
+			}
+			if !sameStudentPrintLayout(stored, input.QRLayout) {
+				return IssuedStudentBarcodes{}, ErrConflict
+			}
+		}
 		return out, tx.Commit()
 	}
-	layout, contentHash, err := loadStudentSheetReprintLayoutTx(ctx, tx, tenantID, sheetSerial, current)
+	layout, contentHash, err := s.loadStudentSheetReprintLayoutTx(ctx, tx, tenantID, sheetSerial, current)
 	if err != nil {
 		return IssuedStudentBarcodes{}, err
 	}
-	requestHash := studentBarcodeRequestHash([]string{current.StudentID})
+	confirmedLayout := input.QRLayout
+	if confirmedLayout == nil {
+		var raw []byte
+		if err = tx.QueryRowContext(ctx, `SELECT print_layout FROM answer_sheet_print_batch WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, current.PrintBatchID).Scan(&raw); err != nil {
+			return IssuedStudentBarcodes{}, err
+		}
+		confirmedLayout, err = decodeStudentPrintLayout(raw)
+		if err != nil {
+			return IssuedStudentBarcodes{}, err
+		}
+	}
+	var raw []byte
+	if err = tx.QueryRowContext(ctx, `SELECT layout FROM answer_sheet_template WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, current.TemplateID).Scan(&raw); err != nil {
+		return IssuedStudentBarcodes{}, err
+	}
+	confirmedLayout, err = s.prepareStudentPrintPackageTx(ctx, tx, tenantID, current.TemplateID, contentHash, raw, 1, len(layout.Pages), confirmedLayout)
+	if err != nil {
+		return IssuedStudentBarcodes{}, err
+	}
+	requestHash := studentBarcodePrintRequestHash([]string{current.StudentID}, confirmedLayout)
 	var printBatchID string
 	var issuedAt time.Time
 	if err = tx.QueryRowContext(ctx, `
 INSERT INTO answer_sheet_print_batch (
   tenant_id,exam_id,template_id,template_content_hash,key_id,idempotency_key,
-  request_hash,sheet_count,page_count,issued_by,operation,reason
+  request_hash,sheet_count,page_count,issued_by,operation,reason,print_layout
 )
-VALUES ($1,$2::uuid,$3::uuid,$4,$5,$6,$7,1,$8,$9::uuid,'reprint',$10)
+VALUES ($1,$2::uuid,$3::uuid,$4,$5,$6,$7,1,$8,$9::uuid,'reprint',$10,$11::jsonb)
 RETURNING id::text,issued_at
 `, tenantID, current.ExamID, current.TemplateID, contentHash, s.barcodeKeyring.ActiveKeyID,
-		idempotencyKey, requestHash, len(layout.Pages), actorID, reason).Scan(&printBatchID, &issuedAt); err != nil {
+		idempotencyKey, requestHash, len(layout.Pages), actorID, reason, printLayoutJSON(confirmedLayout)).Scan(&printBatchID, &issuedAt); err != nil {
 		return IssuedStudentBarcodes{}, err
 	}
 
@@ -177,7 +209,7 @@ WHERE b.tenant_id=$1 AND b.template_id=$2::uuid AND b.idempotency_key=$3
 }
 
 // 只为尚无替代品、模板哈希仍匹配且学生仍在考试名册内的纸张补印；模板共享锁保持到外层事务结束。
-func loadStudentSheetReprintLayoutTx(ctx context.Context, tx *sql.Tx, tenantID, sheetSerial string, current StudentSheet) (templateLayout, string, error) {
+func (s *PostgresStore) loadStudentSheetReprintLayoutTx(ctx context.Context, tx *sql.Tx, tenantID, sheetSerial string, current StudentSheet) (templateLayout, string, error) {
 	var replacementBatchID string
 	err := tx.QueryRowContext(ctx, `
 SELECT print_batch_id::text

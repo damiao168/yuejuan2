@@ -25,6 +25,29 @@ export interface StudentPrintBatchSummary {
   revoked_count: number;
   downloadable: boolean;
   issued_at: string;
+  qr_layout_required?: boolean;
+  qr_layout?: StudentPrintLayout;
+}
+
+export interface StudentPrintQRPage {
+  // 以原页左上角为原点，坐标和宽高均按整页归一化；矩形包含打印时的全部覆盖范围。
+  page_no: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface StudentPrintLayout {
+  source_sha256: string;
+  // 只包含模板缺少专用二维码区的页；已有专用区的位置由后端读取，不能在此覆盖。
+  pages: StudentPrintQRPage[];
+}
+
+export interface StudentPrintSource {
+  file_asset_id: string;
+  content_type: string;
+  sha256: string;
 }
 
 export interface StudentPrintContext {
@@ -33,6 +56,9 @@ export interface StudentPrintContext {
   template_content_hash: string;
   candidates: StudentPrintCandidate[];
   batches: StudentPrintBatchSummary[];
+  print_source?: StudentPrintSource;
+  qr_layout_required?: boolean;
+  qr_layout_page_nos?: number[];
 }
 
 export interface IssuedStudentBarcodes {
@@ -54,12 +80,12 @@ export async function getStudentPrintContext(templateId: string) {
   );
 }
 
-export async function issueStudentPrintBatch(templateId: string, studentIds: string[], idempotencyKey: string) {
+export async function issueStudentPrintBatch(templateId: string, studentIds: string[], idempotencyKey: string, qrLayout?: StudentPrintLayout) {
   return apiClient.request<{ barcodes: IssuedStudentBarcodes }>(
     `/api/v1/answer-sheet-templates/${encodeURIComponent(templateId)}/student-barcodes`,
     {
       method: "POST",
-      body: JSON.stringify({ student_ids: studentIds, idempotency_key: idempotencyKey })
+      body: JSON.stringify({ student_ids: studentIds, idempotency_key: idempotencyKey, ...(qrLayout ? { qr_layout: qrLayout } : {}) })
     }
   );
 }
@@ -70,9 +96,21 @@ export async function downloadStudentPrintPackage(printBatchId: string) {
   );
 }
 
-export async function reprintStudentSheet(sheetSerial: string, reason: string, idempotencyKey: string) {
+export function downloadStudentPrintSource(templateId: string) {
+  // 打印管理员通过模板所属考试读取底图；不依赖通用文件管理权限。
+  return apiClient.requestBlob(`/api/v1/answer-sheet-templates/${encodeURIComponent(templateId)}/print-source`);
+}
+
+export async function reprintStudentSheet(sheetSerial: string, reason: string, idempotencyKey: string, qrLayout?: StudentPrintLayout) {
   return apiClient.request<{ barcodes: IssuedStudentBarcodes }>(
     `/api/v1/answer-sheet-print-sheets/${encodeURIComponent(sheetSerial)}/reprint`,
-    { method: "POST", body: JSON.stringify({ reason, idempotency_key: idempotencyKey }) }
+    { method: "POST", body: JSON.stringify({ reason, idempotency_key: idempotencyKey, ...(qrLayout ? { qr_layout: qrLayout } : {}) }) }
+  );
+}
+
+export function confirmStudentPrintLayout(printBatchId: string, layout: StudentPrintLayout) {
+  return apiClient.request<{ qr_layout: StudentPrintLayout }>(
+    `/api/v1/answer-sheet-print-batches/${encodeURIComponent(printBatchId)}/confirm-layout`,
+    { method: "POST", body: JSON.stringify(layout) }
   );
 }

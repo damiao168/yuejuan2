@@ -1,9 +1,12 @@
 package capture
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"database/sql/driver"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +14,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/files"
 )
 
 type printLedgerQuery struct {
@@ -127,8 +132,8 @@ func printLedgerPackageQueries() []printLedgerQuery {
 	layout := []byte(`{"pages":[{"page_no":1,"width":1000,"height":1400},{"page_no":2,"width":1400,"height":1000}]}`)
 	return []printLedgerQuery{
 		{fragments: []string{"FROM answer_sheet_print_batch", "e.tenant_id=b.tenant_id", "t.tenant_id=b.tenant_id", "b.tenant_id=$1 AND b.id=$2::uuid"},
-			args: []driver.Value{"tenant", "batch"}, columns: 10,
-			values: [][]driver.Value{{"batch", "exam", "synthetic exam", "template", "frozen-hash", "key", issued, int64(2), int64(2), layout}}},
+			args: []driver.Value{"tenant", "batch"}, columns: 11,
+			values: [][]driver.Value{{"batch", "exam", "synthetic exam", "template", "frozen-hash", "key", issued, int64(2), int64(2), layout, nil}}},
 		{fragments: []string{"FROM answer_sheet_print_sheet", "p.tenant_id=sh.tenant_id", "sh.tenant_id=$1 AND sh.print_batch_id=$2::uuid", "ORDER BY sh.ordinal,p.page_no"},
 			args: []driver.Value{"tenant", "batch"}, columns: 6,
 			values: [][]driver.Value{
@@ -141,10 +146,31 @@ func printLedgerPackageQueries() []printLedgerQuery {
 }
 
 func TestPrintLedgerReadKeepsStudentSheetOrderAndFrozenPageGeometry(t *testing.T) {
-	store := printLedgerStore(t, printLedgerPackageQueries())
+	queries := printLedgerPackageQueries()
+	background := samplePrintBackground(t)
+	digest := sha256.Sum256(background.payload)
+	sourceHash := hex.EncodeToString(digest[:])
+	queries[0].values[0][10] = printLayoutJSON(&StudentPrintLayout{SourceSHA256: sourceHash, Pages: []StudentPrintQRPage{
+		{PageNo: 1, X: .75, Y: .05, Width: .2, Height: .18},
+		{PageNo: 2, X: .75, Y: .05, Width: .2, Height: .18},
+	}})
+	queries = append(queries, printLedgerQuery{
+		fragments: []string{"FROM answer_sheet_template t", "p.exam_id=t.exam_id", "f.lifecycle_status='active'"},
+		args:      []driver.Value{"tenant", "template", "frozen-hash"}, columns: 6,
+		values: [][]driver.Value{{"asset", "bucket", "source.pdf", "application/pdf", sourceHash, int64(len(background.payload))}},
+	})
+	store := printLedgerStore(t, queries)
+	objects := files.NewMemoryObjectStorage()
+	if err := objects.Put(t.Context(), "bucket", "source.pdf", bytes.NewReader(background.payload), int64(len(background.payload)), "application/pdf"); err != nil {
+		t.Fatal(err)
+	}
+	store.printObjects = objects
 	pkg, err := store.GetStudentPrintPackage(t.Context(), "tenant", "batch")
 	if err != nil || pkg.PrintBatchID != "batch" || pkg.TemplateContentHash != "frozen-hash" || pkg.IssuedAt.Location() != time.UTC || len(pkg.Sheets) != 2 {
 		t.Fatalf("unexpected print package header: %+v err=%v", pkg, err)
+	}
+	if pkg.QRLayout == nil || pkg.QRLayout.SourceSHA256 != sourceHash || len(pkg.QRLayout.Pages) != 2 || pkg.background == nil || !bytes.Equal(pkg.background.payload, background.payload) {
+		t.Fatalf("print package changed the confirmed QR layout or frozen source: %+v", pkg.QRLayout)
 	}
 	for i, sheet := range pkg.Sheets {
 		student, serial, barcode := "student-a", "sheet-a", "barcode-a"

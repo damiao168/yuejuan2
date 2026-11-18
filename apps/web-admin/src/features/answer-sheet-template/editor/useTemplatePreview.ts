@@ -38,7 +38,8 @@ async function inspectPdfTextLayer(pdfDocument: PDFDocumentProxy, isActive: () =
   return hasText;
 }
 
-export function useTemplatePreview(selectedPaper: PaperVersion | undefined) {
+// 可注入权限受限场景的下载器；调用方需保持函数引用稳定，避免界面重绘重复下载。
+export function useTemplatePreview(selectedPaper: PaperVersion | undefined, downloadSource: typeof downloadFileBlob = downloadFileBlob) {
   const pdfRef = useRef<PDFDocumentProxy | undefined>(undefined);
   const imageObjectUrlRef = useRef<string | undefined>(undefined);
   const renderedObjectUrlRef = useRef<string | undefined>(undefined);
@@ -65,7 +66,7 @@ export function useTemplatePreview(selectedPaper: PaperVersion | undefined) {
       setPreview((current) => ({ ...current, loading: true, error: undefined, imageUrl: undefined, textLayerAvailable: undefined, textLayerChecking: true }));
       let unboundPDF: PDFDocumentProxy | undefined;
       try {
-        const download = await downloadFileBlob(selectedPaper.file_asset_id);
+        const download = await downloadSource(selectedPaper.file_asset_id);
         if (!active) return;
         if (download.contentType === "application/pdf" || selectedPaper.file.content_type === "application/pdf") {
           const pdfDocument = await getDocument({ data: await download.blob.arrayBuffer() }).promise;
@@ -110,7 +111,7 @@ export function useTemplatePreview(selectedPaper: PaperVersion | undefined) {
     }
     void loadSource();
     return () => { active = false; };
-  }, [selectedPaper]);
+  }, [downloadSource, selectedPaper]);
 
   useEffect(() => {
     let active = true;

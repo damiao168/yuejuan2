@@ -3,8 +3,10 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"edugrade-enterprise/services/api-gateway/internal/capture"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -65,11 +67,14 @@ LIMIT 1
 	}
 
 	scenario := sheetIdentityScenario{DB: db, Router: router, AdminToken: adminToken, Acceptance: fixture, Suffix: suffix}
+	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/answer-sheet-templates/"+fixture.TemplateID+"/student-barcodes", adminToken,
+		story056JSON(t, map[string]any{"student_ids": []string{studentID}, "idempotency_key": "story060-unconfirmed-" + suffix}), http.StatusConflict)
 	issue := func(label, targetStudentID string) (string, string, map[int]string) {
 		return e2eIssueThreePageSheet(t, scenario, label, targetStudentID)
 	}
 
 	printBatchID, insertedSheetSerial, insertedBarcodes := issue("inserted", studentID)
+	e2eAssertLegacyPrintLayoutConfirmation(t, scenario, printBatchID, insertedSheetSerial)
 	e2eAssertThreePagePrintPackage(t, scenario, studentID, printBatchID)
 	store := capture.NewPostgresStoreWithBarcodeKeyring(db, e2eBarcodeKeyring())
 	scenario.Capture = store
@@ -120,6 +125,7 @@ ORDER BY cp.source_index
 		t.Fatalf("inserted page shifted controlled semantics: semantic=%v physical=%v", semanticPages, physicalPages)
 	}
 	e2eAssertObservedSheetPackageUnavailable(t, scenario, printBatchID)
+	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/answer-sheet-print-batches/"+printBatchID+"/confirm-layout", adminToken, story056JSON(t, e2eStory060ConfirmedPrintLayout(t, router, adminToken, fixture.TemplateID)), http.StatusConflict)
 	e2eAssertMissingAndRepeatedSheetPages(t, scenario, studentID, insertedSheetSerial, issue, createCapture)
 }
 
@@ -142,6 +148,7 @@ func e2eIssueThreePageSheet(t *testing.T, scenario sheetIdentityScenario, label,
 		story056JSON(t, map[string]any{
 			"student_ids":     []string{targetStudentID},
 			"idempotency_key": "story060-" + label + "-" + suffix,
+			"qr_layout":       e2eStory060ConfirmedPrintLayout(t, router, adminToken, fixture.TemplateID),
 		}),
 		http.StatusOK,
 	)["barcodes"].(map[string]any)
@@ -218,6 +225,15 @@ func e2eAssertThreePagePrintPackage(t *testing.T, scenario sheetIdentityScenario
 	if e2eString(t, printContext, "template_id") != fixture.TemplateID ||
 		e2eString(t, printContext, "exam_id") != fixture.ExamID {
 		t.Fatalf("print context must stay scoped to the locked template: %#v", printContext)
+	}
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/answer-sheet-templates/"+fixture.TemplateID+"/print-source", nil)
+	request.Header.Set("Authorization", "Bearer "+adminToken)
+	sourceResponse := httptest.NewRecorder()
+	router.ServeHTTP(sourceResponse, request)
+	sourceHash := sha256.Sum256(sourceResponse.Body.Bytes())
+	if sourceResponse.Code != http.StatusOK || sourceResponse.Header().Get("Content-Type") != "application/pdf" ||
+		!bytes.HasPrefix(sourceResponse.Body.Bytes(), []byte("%PDF-")) || hex.EncodeToString(sourceHash[:]) != printContext["print_source"].(map[string]any)["sha256"] {
+		t.Fatalf("print source must return the original verified PDF: status=%d headers=%v body=%s", sourceResponse.Code, sourceResponse.Header(), sourceResponse.Body.String())
 	}
 	var activeCandidateFound bool
 	for _, raw := range printContext["candidates"].([]any) {

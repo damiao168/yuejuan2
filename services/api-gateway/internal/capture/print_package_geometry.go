@@ -59,52 +59,64 @@ func printQuestionOptions(question PrintPackageRegion) []PrintPackageRegion {
 }
 
 func printQRRegion(page PrintPackagePage, width, height float64) (PrintPackageRegion, error) {
+	blocked, dedicated := qrRegionCandidates(page)
+	if len(dedicated) == 0 && page.confirmedQR != nil {
+		dedicated = []PrintPackageRegion{*page.confirmedQR}
+	}
+	if err := validateQRRegions(blocked, dedicated, width, height); err != nil {
+		return PrintPackageRegion{}, err
+	}
+	if len(dedicated) > 0 {
+		return dedicatedQRRegion(dedicated, blocked, width, height)
+	}
+	// 区域标注不包含所有页眉和说明，不能将未标注的位置当成空白。
+	return PrintPackageRegion{}, ErrPrintLayoutConfirmationRequired
+}
+
+func qrRegionCandidates(page PrintPackagePage) ([]PrintPackageRegion, []PrintPackageRegion) {
 	blocked := append(append(append([]PrintPackageRegion{}, page.QuestionRegions...), page.GradingGroups...), page.RegistrationMarks...)
 	var dedicated []PrintPackageRegion
 	for _, region := range page.IdentityRegions {
 		if namedQRRegion(region) {
 			dedicated = append(dedicated, region)
-		} else {
-			blocked = append(blocked, region)
+			continue
 		}
+		blocked = append(blocked, region)
 	}
+	return blocked, dedicated
+}
+
+func validateQRRegions(blocked, dedicated []PrintPackageRegion, width, height float64) error {
 	for _, region := range append(append([]PrintPackageRegion{}, blocked...), dedicated...) {
 		if _, _, _, _, ok := mapPrintRegion(region, 0, 0, width, height); !ok {
-			return PrintPackageRegion{}, ErrInvalidInput
+			return ErrInvalidInput
 		}
 	}
-	clear := func(candidate PrintPackageRegion) bool {
-		for _, region := range blocked {
-			if overlapsPrintRegion(candidate, region) {
-				return false
-			}
-		}
-		return true
-	}
-	if len(dedicated) > 0 {
-		// 明确声明的二维码区不能被打印器挪走；与答题区重叠或过小就拒绝签发该版式。
-		if len(dedicated) != 1 {
-			return PrintPackageRegion{}, ErrInvalidTransition
-		}
-		box := dedicated[0]
-		size := math.Min(box.Width*width, box.Height*height)
-		if size < 24 {
-			return PrintPackageRegion{}, ErrInvalidTransition
-		}
-		qr := PrintPackageRegion{X: box.X + (box.Width-size/width)/2, Y: box.Y + (box.Height-size/height)/2, Width: size / width, Height: size / height}
-		if !clear(qr) {
-			return PrintPackageRegion{}, ErrInvalidTransition
-		}
-		return qr, nil
-	}
-	// 无专用区时只使用空白，不覆盖学生身份或答案。无空白可容纳时返回可见错误，不能偷偷移动原题区。
-	for y := 8.0; y+32 <= height-8; y += 4 {
-		for x := width - 40; x >= 8; x -= 4 {
-			qr := PrintPackageRegion{X: x / width, Y: y / height, Width: 32 / width, Height: 32 / height}
-			if clear(qr) {
-				return qr, nil
-			}
+	return nil
+}
+
+func clearQRRegion(candidate PrintPackageRegion, blocked []PrintPackageRegion) bool {
+	for _, region := range blocked {
+		if overlapsPrintRegion(candidate, region) {
+			return false
 		}
 	}
-	return PrintPackageRegion{}, ErrInvalidTransition
+	return true
+}
+
+func dedicatedQRRegion(dedicated, blocked []PrintPackageRegion, width, height float64) (PrintPackageRegion, error) {
+	// 明确声明的二维码区不能被打印器挪走；与答题区重叠或过小就拒绝签发该版式。
+	if len(dedicated) != 1 {
+		return PrintPackageRegion{}, ErrInvalidTransition
+	}
+	box := dedicated[0]
+	size := math.Min(box.Width*width, box.Height*height)
+	if size < 24 {
+		return PrintPackageRegion{}, ErrInvalidTransition
+	}
+	qr := PrintPackageRegion{X: box.X + (box.Width-size/width)/2, Y: box.Y + (box.Height-size/height)/2, Width: size / width, Height: size / height}
+	if !clearQRRegion(qr, blocked) {
+		return PrintPackageRegion{}, ErrInvalidTransition
+	}
+	return qr, nil
 }

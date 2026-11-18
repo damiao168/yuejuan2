@@ -37,6 +37,22 @@ export function CaptureBatchPage(props: Parameters<typeof useCaptureBatchPage>[0
     prepareReplacement, resolveRegistration,
   } = useCaptureBatchPage(props);
 
+  const renderBatchListState = () => {
+    if (loading) return <LoadingState label="正在加载采集批次" />;
+    if (error) return <ErrorState message={`采集批次加载失败：${error}`} onRetry={() => void loadBatches()} />;
+    if (batches.length === 0) return <Empty description="尚未创建采集批次"><Button type="primary" onClick={() => setModalOpen(true)} disabled={!canCreateBatch}>创建第一个批次</Button></Empty>;
+    return undefined;
+  };
+  const openNewBatch = () => {
+    // 上次创建结果待确认时恢复原操作，不能再选文件开启另一批次。
+    if (pendingCreation) {
+      setModalOpen(true);
+      return;
+    }
+    form.setFieldsValue({ name: `答卷导入 ${new Date().toLocaleString("zh-CN", { hour12: false })}`, source_type: "web_upload" });
+    newFilesInput.current?.click();
+  };
+
   if (correctionRunId) return <RegistrationCorrectionWorkspace runId={correctionRunId} canManage={batchCanManage} showCoordinates onClose={() => setCorrectionRunId(undefined)} onChanged={async () => { await loadDetail(selectedId, true); }} />;
   const collectionPanel = <CaptureCollectionPanel key={`${user.tenant}:${user.id}:${examId}`} examId={examId} actorKey={`${user.tenant}:${user.id}`} summary={collection.summary} loading={collection.loading} error={collection.error}
     canManage={canCreateBatch} localBusy={uploading || Boolean(pendingUpload) || actioning || creating || locating}
@@ -47,6 +63,56 @@ export function CaptureBatchPage(props: Parameters<typeof useCaptureBatchPage>[0
       await Promise.all([loadBatches(), loadDetail(selectedId, true), onCollectionChanged?.()]);
     }}
     onMaterialChanged={async batchId => { await loadBatches(); if (batchId === selectedId) await loadDetail(batchId, true); }} />;
+  const renderNewBatchModal = () => {
+    const importTitle = supplement ? "导入补传答卷" : "导入答卷";
+    const importConfirmText = newFiles.length > 0 ? "确认导入并处理" : "创建";
+    const batchTitle = pendingCreation ? "恢复上次采集批次创建" : importTitle;
+    const batchConfirmText = pendingCreation ? "继续确认原操作" : importConfirmText;
+    return <Modal
+        title={batchTitle}
+        okText={batchConfirmText}
+        open={modalOpen}
+        closable={!creating} maskClosable={!creating}
+        onCancel={() => { if (!creating) { setModalOpen(false); setNewFiles([]); } }}
+        onOk={() => void submitBatch()}
+        confirmLoading={creating}
+        okButtonProps={{ disabled: !pendingCreation && (newPdfPending || Boolean(captureSelectionError(newFiles, pagesPerStudent))) }}
+      >
+        {!pendingCreation ? <>
+          <Button disabled={creating} onClick={() => newFilesInput.current?.click()}>选择答卷文件</Button>
+          <label>每人页数<Select disabled={creating} aria-label="新批次每人页数" value={pagesPerStudent} onChange={setPagesPerStudent} options={Array.from({ length: 20 }, (_, i) => ({ value: i + 1, label: `${i + 1} 页` }))} /></label>
+          <CaptureFileOrderPreview files={newFiles} pages={pagesPerStudent} onPendingChange={setNewPdfPending} onChange={files => { if (!creating) setNewFiles(files); }} disabled={creating} />
+        </> : null}
+        <Form
+          form={form}
+          disabled={creating}
+          layout="vertical"
+          initialValues={{ source_type: "web_upload" }}
+        >
+          <section aria-label="导入记录名称"><h3>导入记录名称（选填）</h3><Form.Item
+            name="name"
+            label="批次名称"
+            rules={[
+              { required: true, message: "请输入批次名称" },
+              { max: 120 },
+            ]}
+          >
+            <Input placeholder="例如：期末考试第一扫描批次" />
+          </Form.Item></section>
+          <Form.Item
+            name="source_type"
+            hidden
+            label="采集方式"
+            rules={[{ required: true }]}
+          >
+            <Select
+              options={[{ value: "web_upload", label: "网页文件导入" }]}
+            />
+          </Form.Item>
+          {supplement ? <Form.Item name="reason" label="补传原因" rules={[{ required: true, whitespace: true, message: "请填写补传原因" }, { max: 300 }]}><Input.TextArea rows={3} maxLength={300} placeholder="例如：补交学生答卷或补扫遗漏页面" /></Form.Item> : null}
+        </Form>
+      </Modal>;
+  };
   return (
     <div className="capture-batch-page">
       <section className="capture-records" aria-label="批次文件与处理记录">
@@ -65,12 +131,7 @@ export function CaptureBatchPage(props: Parameters<typeof useCaptureBatchPage>[0
           <Button
             type="primary"
             icon={<Plus size={16} />}
-            onClick={() => {
-              if (!pendingCreation) {
-                form.setFieldsValue({ name: `答卷导入 ${new Date().toLocaleString("zh-CN", { hour12: false })}`, source_type: "web_upload" });
-                newFilesInput.current?.click();
-              } else setModalOpen(true);
-            }}
+            onClick={openNewBatch}
             disabled={!canCreateBatch}
           >
             {supplement ? "补传答卷" : "导入答卷"}
@@ -78,14 +139,16 @@ export function CaptureBatchPage(props: Parameters<typeof useCaptureBatchPage>[0
           <input ref={newFilesInput} aria-label="选择新批次答卷文件" type="file" hidden multiple accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff" onChange={event => { const files = Array.from(event.target.files ?? []); if (files.length) { setNewFiles(files); setModalOpen(true); } event.target.value = ""; }} />
         </Space>
       </div>
-      {replacement?.batchId === selectedId ? <Alert type="warning" showIcon message={`正在替代：${replacement.name}`} description="请先选择每名学生页数，再一次上传本次选择所对应的全部完整答卷。登记成功后，原选择的全部文件及其答卷将退出有效输入；新答卷仍需处理成功。" action={<Button disabled={uploading || Boolean(pendingUpload)} onClick={() => setReplacement(undefined)}>取消替代</Button>} /> : null}
+      {replacement?.batchId === selectedId ? <Alert type="warning" showIcon message={`正在替代：${replacement.name}`} description={replacement.code === "upload_group_duplicate"
+        ? "请先选择每名学生页数，再一次上传尚未成功导入的完整答卷，不能只补单页。此前成功组的答卷不要再次选择，它们会继续保留；本次卡住的选择在新文件完整登记后整组退出有效输入。"
+        : "请先选择每名学生页数，再一次上传本次选择所对应的全部完整答卷。登记成功后，原选择的全部文件及其答卷将退出有效输入；新答卷仍需处理成功。"} action={<Button disabled={uploading || Boolean(pendingUpload)} onClick={() => setReplacement(undefined)}>取消替代</Button>} /> : null}
       {locationError ? <Alert type="warning" showIcon message={locationError} action={<Button onClick={() => setLocationAttempt(value => value + 1)}>重试定位</Button>} /> : null}
       {locationChoices.length > 1 ? <Alert type="info" message={`定位到 ${locationChoices.length} 份采集答卷，请选择本次核对对象`} description={<Select aria-label="选择名册对应采集答卷" style={{ minWidth: 320 }} value={locatedSubmission ? `${selectedId}:${locatedSubmission}` : undefined} options={locationChoices.map((choice, index) => ({ value: `${choice.batch.id}:${choice.submissionId}`, label: `${choice.batch.name} · 考号 ${choice.candidateNo || "待匹配"} · 答卷 ${index + 1}` }))} onChange={value => { const choice = locationChoices.find(item => `${item.batch.id}:${item.submissionId}` === value); if (choice) { setSelectedId(choice.batch.id); setLocatedBatch(choice.batch.id); setLocatedSubmission(choice.submissionId); setActiveTab(hashQueryParam("tab") || "matching"); setLocating(false); } }} />} /> : null}
         <div id="capture-processing-records" className="capture-records-body">
             <CaptureBatchWorkspace detail={detail} detailError={detailError} detailLoading={detailLoading} selectedId={selectedId}
               collectionPanel={collectionPanel}
               batchListPanel={<CaptureBatchListPanel batches={batches} selectedId={selectedId} setSelectedId={setSelectedId} disabled={uploading} hasMoreBatches={hasMoreBatches} loadingMoreBatches={loadingMoreBatches} loadMoreBatches={loadMoreBatches} />}
-              batchListState={loading ? <LoadingState label="正在加载采集批次" /> : error ? <ErrorState message={`采集批次加载失败：${error}`} onRetry={() => void loadBatches()} /> : batches.length === 0 ? <Empty description="尚未创建采集批次"><Button type="primary" onClick={() => setModalOpen(true)} disabled={!canCreateBatch}>创建第一个批次</Button></Empty> : undefined}
+              batchListState={renderBatchListState()}
               loadDetail={loadDetail} canManage={canEditSelectedBatch} batchCanManage={batchCanManage} progressPercent={progressPercent}
               summary={summary} uploadProps={uploadProps} uploading={uploading} actioning={actioning} startProcessing={startProcessing}
               uploadLabel={replacement?.batchId === selectedId ? "上传替代答卷" : undefined}
@@ -142,50 +205,7 @@ export function CaptureBatchPage(props: Parameters<typeof useCaptureBatchPage>[0
       >
         <Input.TextArea value={reopenReason} rows={3} maxLength={300} placeholder="填写重开原因" onChange={(event) => setReopenReason(event.target.value)} />
       </Modal>
-      <Modal
-        title={pendingCreation ? "恢复上次采集批次创建" : supplement ? "导入补传答卷" : "导入答卷"}
-        okText={pendingCreation ? "继续确认原操作" : newFiles.length ? "确认导入并处理" : "创建"}
-        open={modalOpen}
-        closable={!creating} maskClosable={!creating}
-        onCancel={() => { if (!creating) { setModalOpen(false); setNewFiles([]); } }}
-        onOk={() => void submitBatch()}
-        confirmLoading={creating}
-        okButtonProps={{ disabled: !pendingCreation && (newPdfPending || Boolean(captureSelectionError(newFiles, pagesPerStudent))) }}
-      >
-        {!pendingCreation ? <>
-          <Button disabled={creating} onClick={() => newFilesInput.current?.click()}>选择答卷文件</Button>
-          <label>每人页数<Select disabled={creating} aria-label="新批次每人页数" value={pagesPerStudent} onChange={setPagesPerStudent} options={Array.from({ length: 20 }, (_, i) => ({ value: i + 1, label: `${i + 1} 页` }))} /></label>
-          <CaptureFileOrderPreview files={newFiles} pages={pagesPerStudent} onPendingChange={setNewPdfPending} onChange={files => { if (!creating) setNewFiles(files); }} disabled={creating} />
-        </> : null}
-        <Form
-          form={form}
-          disabled={creating}
-          layout="vertical"
-          initialValues={{ source_type: "web_upload" }}
-        >
-          <section aria-label="导入记录名称"><h3>导入记录名称（选填）</h3><Form.Item
-            name="name"
-            label="批次名称"
-            rules={[
-              { required: true, message: "请输入批次名称" },
-              { max: 120 },
-            ]}
-          >
-            <Input placeholder="例如：期末考试第一扫描批次" />
-          </Form.Item></section>
-          <Form.Item
-            name="source_type"
-            hidden
-            label="采集方式"
-            rules={[{ required: true }]}
-          >
-            <Select
-              options={[{ value: "web_upload", label: "网页文件导入" }]}
-            />
-          </Form.Item>
-          {supplement ? <Form.Item name="reason" label="补传原因" rules={[{ required: true, whitespace: true, message: "请填写补传原因" }, { max: 300 }]}><Input.TextArea rows={3} maxLength={300} placeholder="例如：补交学生答卷或补扫遗漏页面" /></Form.Item> : null}
-        </Form>
-      </Modal>
+      {renderNewBatchModal()}
       <Modal
         title="答卷图片预览"
         open={Boolean(preview)}

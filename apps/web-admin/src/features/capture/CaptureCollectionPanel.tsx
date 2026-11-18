@@ -16,9 +16,73 @@ const issueLabels: Record<string, string> = {
   registration_failed: "版面对齐失败", registration_review: "版面对齐需要核对", segments_missing: "题目切分尚未完成",
   grouping_incomplete: "答卷尚未组齐，请核对文件和页序", template_missing: "尚未确认本场答题卡模板", page_needs_review: "页面质量或版面对齐需要处理",
   file_failed: "文件处理失败", file_processing: "文件正在处理", task_processing: "页面正在处理", upload_group_incomplete: "本次选择的答卷尚未组齐", upload_incomplete: "本次上传未完成",
+  upload_group_duplicate: "本次选择含重复文件，无法完成分组",
 };
 
 export interface CaptureCollectionTarget { batchId: string; submissionId?: string; tab: string }
+
+type ResolutionEditor = { issue: CaptureCollectionIssue; replace?: boolean; cancelBatch?: boolean };
+
+function shouldDiscardCollectionCommand(cause: unknown) {
+  // 请求超时或限流后仍可用原命令重试；其他明确拒绝的 4xx 才清理本地记录。
+  return cause instanceof ApiClientError && cause.status >= 400 && cause.status < 500 && ![408, 429].includes(cause.status);
+}
+
+function collectionFinishReasons(summary: CaptureCollectionSummary | undefined, error: string | undefined, localBusy: boolean, canManage: boolean, loading: boolean) {
+  // 提示按原有优先级展示；有材料阻塞时，刷新状态不能盖住待处理原因。
+  if (!summary) return [error || "正在读取导入核对信息"];
+  if (error) return [error];
+  if (localBusy) return ["本页仍有上传或处理操作，请等待完成"];
+  if (!canManage) return ["当前为只读状态，无法结束导入"];
+  if (summary.closed && !summary.can_complete) return ["本场导入已结束；需要补传时请创建补传批次"];
+  if (summary.blockers.length) return summary.blockers;
+  if (loading) return ["正在刷新导入核对信息"];
+  return summary.can_complete ? [] : ["仍有答卷或材料需要处理，请检查下方列表"];
+}
+
+function entryTone(status: CaptureCollectionEntry["status"]) {
+  if (status === "ready") return "success";
+  if (status === "processing") return "processing";
+  return status === "absent" ? "neutral" : "warning";
+}
+
+function entryTargetTab(code: string) {
+  if (code.includes("quality")) return "image-quality";
+  if (code === "page_needs_review") return "issues";
+  if (["grouping_incomplete", "missing_pages"].includes(code)) return "files";
+  if (code.includes("registration") || code.includes("segment") || code === "template_missing") return "processing";
+  return "matching";
+}
+
+function materialIssueLabel(issue: CaptureCollectionIssue) {
+  if (issueLabels[issue.code]) return issueLabels[issue.code];
+  if (issue.kind === "file") return "文件需要处理";
+  if (issue.kind === "upload") return "上传尚未完成";
+  if (issue.kind === "batch") return "批次需要处理";
+  return "答卷尚未唯一匹配到应考学生";
+}
+
+function materialTargetTab(issue: CaptureCollectionIssue) {
+  if (issue.code === "task_processing") return "processing";
+  return issue.kind === "submission" ? "matching" : "files";
+}
+
+function resolutionTitle(editor: ResolutionEditor | undefined) {
+  if (editor?.replace) return "上传替代答卷";
+  return editor?.cancelBatch ? "取消未完成上传所在批次" : "本次选择的材料不计入";
+}
+
+function resolutionDescription(editor: ResolutionEditor | undefined) {
+  if (editor?.cancelBatch) return "取消后，本批全部材料和未完成上传不再计入核对。请确认没有需保留的材料；没有有效匹配答卷的名册学生会自动显示缺考。";
+  if (editor?.issue.code === "upload_group_duplicate") {
+    // 只替代本次卡住的选择；此前成功组里的重复来源继续保留，不能引导用户把同一材料再次传入新组。
+    return editor.replace
+      ? "请按每人页数重新选择尚未成功导入的完整答卷，不要只补单页，也不要再次选择此前已成功导入的答卷。新文件登记成功后，本次卡住的选择整组退出有效输入，历史保留；此前成功组的文件和答卷继续保留。"
+      : "本次含重复文件的选择将整组退出有效输入，历史保留；此前成功组的文件和答卷继续保留。随后可按每人页数重新导入尚未成功导入的完整答卷，不能只补单页。";
+  }
+  if (editor?.replace) return "请选择每人页数，并一次上传原选择对应的全部完整答卷。新文件登记成功后，原选择的全部文件及答卷退出有效输入，历史保留；新答卷处理成功才算导入完成。已有评分的材料不能在此移除。";
+  return "原选择的全部文件及答卷将不再计入，历史保留；没有有效匹配答卷的名册学生会自动显示缺考。已有评分的材料不能在此移除。";
+}
 
 export function CaptureCollectionPanel({ examId, actorKey, summary, loading, error, canManage, localBusy, onRefresh, onLocate, onReplace, onCompleted, onMaterialChanged }: Readonly<{
   examId: string;
@@ -37,7 +101,7 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
   const { message, modal } = App.useApp();
   const [filter, setFilter] = useState("pending");
   const [acting, setActing] = useState(false);
-  const [editor, setEditor] = useState<{ issue: CaptureCollectionIssue; replace?: boolean; cancelBatch?: boolean }>();
+  const [editor, setEditor] = useState<ResolutionEditor>();
   const [reason, setReason] = useState("");
   const busy = useRef(false);
   const active = useRef(true);
@@ -61,25 +125,20 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
   const pendingEntries = summary?.entries.filter(entry => entry.status !== "ready" && entry.status !== "absent") ?? [];
   const entries = filter === "all" ? summary?.entries ?? [] : pendingEntries;
   const blocked = !summary || loading || Boolean(error) || !canManage || localBusy || acting || !summary.can_complete;
-  const finishReasons = !summary ? [error || "正在读取导入核对信息"]
-    : error ? [error]
-    : localBusy ? ["本页仍有上传或处理操作，请等待完成"]
-    : !canManage ? ["当前为只读状态，无法结束导入"]
-    : summary.closed && !summary.can_complete ? ["本场导入已结束；需要补传时请创建补传批次"]
-    : summary.blockers.length ? summary.blockers
-    : loading ? ["正在刷新导入核对信息"]
-    : summary.can_complete ? [] : ["仍有答卷或材料需要处理，请检查下方列表"];
+  const finishReasons = collectionFinishReasons(summary, error, localBusy, canManage, loading);
 
   function finishCollection() {
     if (blocked || !summary || busy.current) return;
     const revision = summary.revision;
+    // 确认框可能晚于场次切换关闭；旧确认和旧回执只能处理其原场次的命令。
+    const isCurrent = () => active.current && context.current.examId === examId;
     dialog.current = modal.confirm({
       title: "结束本场导入",
       content: `已交卷${summary.required_count}人，导入完成${summary.ready_count}人，自动缺考${summary.absent_count}人。结束时再次核对学生与材料，并封存已处理批次。${summary.exam_status === "collecting" ? "确认后进入阅卷。" : "本次补传结束，当前阅卷阶段保持不变。"}`,
       okText: "确认结束导入", cancelText: "返回核对",
       onOk: async () => {
         const current = context.current;
-        if (!active.current || current.examId !== examId || !current.canManage || current.localBusy || busy.current) return;
+        if (!isCurrent() || !current.canManage || current.localBusy || busy.current) return;
         busy.current = true;
         setActing(true);
         try {
@@ -95,20 +154,20 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
           localStorage.setItem(commandKey, JSON.stringify(command));
           const result = await completeCaptureCollection(examId, command);
           localStorage.removeItem(commandKey);
-          if (active.current && context.current.examId === examId) {
+          if (isCurrent()) {
             await onCompleted(result.summary);
             message.success(result.summary.exam_status === "grading" && summary.exam_status === "collecting" ? "本场导入已结束，已进入阅卷阶段" : "本次导入已结束");
           }
         } catch (cause) {
-          if (cause instanceof ApiClientError && cause.status >= 400 && cause.status < 500 && ![408, 429].includes(cause.status)) localStorage.removeItem(commandKey);
+          if (shouldDiscardCollectionCommand(cause)) localStorage.removeItem(commandKey);
           // 提交可能已生效或被其他人更新；失败后也重读事实，避免继续使用旧人数和旧修订号。
-          if (active.current && context.current.examId === examId) {
+          if (isCurrent()) {
             await onRefresh();
             message.error(getUserErrorMessage(cause, "暂时无法确认结束结果，请刷新后重试"));
           }
         } finally {
           busy.current = false;
-          if (active.current && context.current.examId === examId) setActing(false);
+          if (isCurrent()) setActing(false);
         }
       },
     });
@@ -161,10 +220,10 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
 
   const columns: TableColumnsType<CaptureCollectionEntry> = [
     { title: "学生", key: "student", render: (_, entry) => <div><strong>{entry.student_name || entry.student_no}</strong><div className="muted">{[entry.class_name, entry.student_no].filter(Boolean).join(" · ")}</div></div> },
-    { title: "导入情况", key: "status", render: (_, entry) => <div><StatusTag tone={entry.status === "ready" ? "success" : entry.status === "processing" ? "processing" : entry.status === "absent" ? "neutral" : "warning"}>{entryLabels[entry.status]}</StatusTag>{entry.status !== "ready" && entry.status !== "processing" ? <div className="muted">{entry.status === "absent" || entry.status === "missing" ? "未匹配到该生答卷，自动按缺考显示" : issueLabels[entry.code] || entry.reason || "请查看答卷处理具体问题"}</div> : null}</div> },
+    { title: "导入情况", key: "status", render: (_, entry) => <div><StatusTag tone={entryTone(entry.status)}>{entryLabels[entry.status]}</StatusTag>{entry.status !== "ready" && entry.status !== "processing" ? <div className="muted">{entry.status === "absent" || entry.status === "missing" ? "未匹配到该生答卷，自动按缺考显示" : issueLabels[entry.code] || entry.reason || "请查看答卷处理具体问题"}</div> : null}</div> },
     { title: "页数", key: "pages", width: 100, render: (_, entry) => entry.status === "absent" ? "—" : `${entry.actual_pages} / ${entry.expected_pages}` },
     { title: "操作", key: "action", render: (_, entry) => <Space wrap>
-      {entry.batch_id ? <Button size="small" disabled={localBusy} onClick={() => onLocate({ batchId: entry.batch_id!, submissionId: entry.submission_id, tab: entry.code.includes("quality") ? "image-quality" : entry.code === "page_needs_review" ? "issues" : ["grouping_incomplete", "missing_pages"].includes(entry.code) ? "files" : entry.code.includes("registration") || entry.code.includes("segment") || entry.code === "template_missing" ? "processing" : "matching" })}>{entry.status === "ready" ? "查看答卷" : "查看处理"}</Button> : null}
+      {entry.batch_id ? <Button size="small" disabled={localBusy} onClick={() => onLocate({ batchId: entry.batch_id!, submissionId: entry.submission_id, tab: entryTargetTab(entry.code) })}>{entry.status === "ready" ? "查看答卷" : "查看处理"}</Button> : null}
     </Space> },
   ];
 
@@ -184,19 +243,15 @@ export function CaptureCollectionPanel({ examId, actorKey, summary, loading, err
       <div className="capture-collection-filter"><Segmented aria-label="学生核对范围" value={filter} onChange={value => setFilter(String(value))} options={[{ value: "pending", label: `待完成 (${pendingEntries.length})` }, { value: "all", label: "全部学生" }]} /></div>
       <ResponsiveTable className="dense-data-table" rowKey="student_id" columns={columns} mobilePrimaryCount={columns.length} dataSource={entries} pagination={{ pageSize: 10 }} size="small" locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={filter === "pending" ? "学生待办已处理完毕，请继续核对材料问题" : "本场暂无学生名册"} /> }} />
       {summary.issues.length ? <div className="capture-collection-materials"><h3>材料问题 <small>{summary.issues.length} 项，不计入学生人数</small></h3>{summary.issues.map(issue => <div className="capture-collection-material" key={`${issue.kind}:${issue.id}`}>
-        <div><strong>{issue.name}</strong><span>{issueLabels[issue.code] || (issue.kind === "file" ? "文件需要处理" : issue.kind === "upload" ? "上传尚未完成" : issue.kind === "batch" ? "批次需要处理" : "答卷尚未唯一匹配到应考学生")}</span></div>
-        <Space wrap><Button size="small" disabled={localBusy} onClick={() => onLocate({ batchId: issue.batch_id, submissionId: issue.submission_id, tab: issue.code === "task_processing" ? "processing" : issue.kind === "submission" ? "matching" : "files" })}>查看材料</Button>
-          {canManage && issue.file_id && ["file_failed", "upload_group_incomplete"].includes(issue.code) ? <>{issue.code === "file_failed" ? <Button size="small" disabled={acting || localBusy} onClick={() => void retryFile(issue)}>重试原文件</Button> : null}<Button size="small" disabled={acting || localBusy} onClick={() => { setEditor({ issue, replace: true }); setReason(""); }}>上传替代答卷</Button><Button size="small" disabled={acting || localBusy} onClick={() => { setEditor({ issue }); setReason(""); }}>不计入</Button></> : null}
+        <div><strong>{issue.name}</strong><span>{materialIssueLabel(issue)}</span></div>
+        <Space wrap><Button size="small" disabled={localBusy} onClick={() => onLocate({ batchId: issue.batch_id, submissionId: issue.submission_id, tab: materialTargetTab(issue) })}>查看材料</Button>
+          {canManage && issue.file_id && ["file_failed", "upload_group_incomplete", "upload_group_duplicate"].includes(issue.code) ? <>{issue.code === "file_failed" ? <Button size="small" disabled={acting || localBusy} onClick={() => void retryFile(issue)}>重试原文件</Button> : null}<Button size="small" disabled={acting || localBusy} onClick={() => { setEditor({ issue, replace: true }); setReason(""); }}>上传替代答卷</Button><Button size="small" disabled={acting || localBusy} onClick={() => { setEditor({ issue }); setReason(""); }}>不计入</Button></> : null}
           {canManage && issue.code === "upload_incomplete" && !issue.file_id ? <Button size="small" disabled={acting || localBusy} onClick={() => { setEditor({ issue, cancelBatch: true }); setReason(""); }}>取消该批次</Button> : null}
         </Space>
       </div>)}</div> : null}
     </> : null}
-    <Modal title={editor?.replace ? "上传替代答卷" : editor?.cancelBatch ? "取消未完成上传所在批次" : "本次选择的材料不计入"} open={Boolean(editor)} okText={editor?.replace ? "继续选择完整答卷" : "确认并重新核对"} cancelText="取消" confirmLoading={acting} okButtonProps={{ disabled: !reason.trim() || !canManage || localBusy }} onCancel={() => { if (!acting) setEditor(undefined); }} onOk={() => void saveResolution()}>
-      <p>{editor?.cancelBatch
-        ? "取消后，本批全部材料和未完成上传不再计入核对。请确认没有需保留的材料；没有有效匹配答卷的名册学生会自动显示缺考。"
-        : editor?.replace
-          ? "请选择每人页数，并一次上传原选择对应的全部完整答卷。新文件登记成功后，原选择的全部文件及答卷退出有效输入，历史保留；新答卷处理成功才算导入完成。已有评分的材料不能在此移除。"
-          : "原选择的全部文件及答卷将不再计入，历史保留；没有有效匹配答卷的名册学生会自动显示缺考。已有评分的材料不能在此移除。"}</p>
+    <Modal title={resolutionTitle(editor)} open={Boolean(editor)} okText={editor?.replace ? "继续选择完整答卷" : "确认并重新核对"} cancelText="取消" confirmLoading={acting} okButtonProps={{ disabled: !reason.trim() || !canManage || localBusy }} onCancel={() => { if (!acting) setEditor(undefined); }} onOk={() => void saveResolution()}>
+      <p>{resolutionDescription(editor)}</p>
       <Input.TextArea aria-label="处理原因" rows={3} maxLength={300} value={reason} onChange={event => setReason(event.target.value)} placeholder="填写本次处理原因" />
     </Modal>
   </section>;

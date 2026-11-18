@@ -17,8 +17,37 @@ type IssuedTemplateBarcodes struct {
 }
 
 type IssueStudentBarcodesInput struct {
-	StudentIDs     []string `json:"student_ids"`
-	IdempotencyKey string   `json:"idempotency_key"`
+	StudentIDs     []string            `json:"student_ids"`
+	IdempotencyKey string              `json:"idempotency_key"`
+	QRLayout       *StudentPrintLayout `json:"qr_layout,omitempty"`
+}
+
+// StudentPrintLayout 只确认模板未声明的打印位置，不改动锁定模板的评分与配准坐标。
+// 来源哈希与页码随打印批次冻结，重下载不能悄悄移动二维码。
+type StudentPrintLayout struct {
+	SourceSHA256 string               `json:"source_sha256"`
+	Pages        []StudentPrintQRPage `json:"pages"`
+}
+
+type StudentPrintQRPage struct {
+	PageNo int     `json:"page_no"`
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
+type StudentPrintSource struct {
+	FileAssetID string `json:"file_asset_id"`
+	ContentType string `json:"content_type"`
+	SHA256      string `json:"sha256"`
+}
+
+// StudentPrintSourceContent 仅由锁定模板查得并校验哈希，不承接客户端传入的文件身份。
+type StudentPrintSourceContent struct {
+	ContentType string
+	SHA256      string
+	Payload     []byte
 }
 
 type IssuedStudentBarcodeSet struct {
@@ -60,6 +89,7 @@ type PrintPackagePage struct {
 	// 当前模板只声明像素宽高；未来接入可信物理尺寸时可显式传入，不能从像素冒充源文件DPI。
 	PhysicalWidthMM  float64 `json:"-"`
 	PhysicalHeightMM float64 `json:"-"`
+	confirmedQR      *PrintPackageRegion
 }
 
 type PrintPackageSheet struct {
@@ -78,6 +108,8 @@ type StudentPrintPackage struct {
 	KeyID               string              `json:"kid"`
 	IssuedAt            time.Time           `json:"issued_at"`
 	Sheets              []PrintPackageSheet `json:"sheets"`
+	QRLayout            *StudentPrintLayout `json:"-"`
+	background          *studentPrintBackground
 }
 
 type StudentPrintCandidate struct {
@@ -94,17 +126,19 @@ type StudentPrintCandidate struct {
 }
 
 type StudentPrintBatchSummary struct {
-	PrintBatchID  string    `json:"print_batch_id"`
-	Operation     string    `json:"operation"`
-	Reason        string    `json:"reason,omitempty"`
-	SheetCount    int       `json:"sheet_count"`
-	PageCount     int       `json:"page_count"`
-	IssuedCount   int       `json:"issued_count"`
-	ObservedCount int       `json:"observed_count"`
-	ConflictCount int       `json:"conflict_count"`
-	RevokedCount  int       `json:"revoked_count"`
-	Downloadable  bool      `json:"downloadable"`
-	IssuedAt      time.Time `json:"issued_at"`
+	PrintBatchID     string              `json:"print_batch_id"`
+	Operation        string              `json:"operation"`
+	Reason           string              `json:"reason,omitempty"`
+	SheetCount       int                 `json:"sheet_count"`
+	PageCount        int                 `json:"page_count"`
+	IssuedCount      int                 `json:"issued_count"`
+	ObservedCount    int                 `json:"observed_count"`
+	ConflictCount    int                 `json:"conflict_count"`
+	RevokedCount     int                 `json:"revoked_count"`
+	Downloadable     bool                `json:"downloadable"`
+	IssuedAt         time.Time           `json:"issued_at"`
+	QRLayoutRequired bool                `json:"qr_layout_required"`
+	QRLayout         *StudentPrintLayout `json:"qr_layout,omitempty"`
 }
 
 type StudentPrintContext struct {
@@ -113,6 +147,9 @@ type StudentPrintContext struct {
 	TemplateContentHash string                     `json:"template_content_hash"`
 	Candidates          []StudentPrintCandidate    `json:"candidates"`
 	Batches             []StudentPrintBatchSummary `json:"batches"`
+	PrintSource         StudentPrintSource         `json:"print_source"`
+	QRLayoutRequired    bool                       `json:"qr_layout_required"`
+	QRLayoutPageNos     []int                      `json:"qr_layout_page_nos"`
 }
 
 type StudentSheetLifecycleInput struct {
@@ -120,8 +157,9 @@ type StudentSheetLifecycleInput struct {
 }
 
 type ReprintStudentSheetInput struct {
-	Reason         string `json:"reason"`
-	IdempotencyKey string `json:"idempotency_key"`
+	Reason         string              `json:"reason"`
+	IdempotencyKey string              `json:"idempotency_key"`
+	QRLayout       *StudentPrintLayout `json:"qr_layout,omitempty"`
 }
 
 type StudentSheet struct {

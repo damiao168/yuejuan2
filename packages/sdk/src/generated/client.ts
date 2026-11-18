@@ -1,6 +1,6 @@
 // Generated from services/api-gateway/openapi/edugrade-api.openapi.json. DO NOT EDIT.
 
-import type { ApiTransport } from "../runtime";
+import type { ApiBlobResponse, ApiTransport } from "../runtime";
 import { appendQuery, fillPath } from "../runtime";
 import type {
   ScoreRosterResponse,
@@ -404,7 +404,11 @@ import type {
   RestartQuestionAppealReviewRequest,
   CreateOrganizationStudentRequest,
   OpenOrganizationStudentAccountRequest,
-  OrganizationStudentPage
+  OrganizationStudentPage,
+  CaptureStudentPrintLayout,
+  CaptureIssuedStudentBarcodes,
+  CaptureStudentSheet,
+  CaptureStudentPrintContext
 } from "./types";
 
 export interface operations {
@@ -417,13 +421,13 @@ export interface operations {
   "getPlatformModelApplications": { args: { query: { "tenant_id": string; }; signal?: AbortSignal; }; response: ModelApplications; };
   "savePlatformDocumentModelSelection": { args: { body: DocumentModelSelectionInput; signal?: AbortSignal; }; response: { "selection": DocumentModelSelection; }; };
   "getRegradeItemReviewContext": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: RegradeReviewContextResponse; };
-  "downloadRegradeItemReviewImage": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "downloadRegradeItemReviewImage": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "getAnswerGroupMemberContext": { args: { path: { "groupId": string; "segmentId": string; }; signal?: AbortSignal; }; response: AnswerGroupMemberContextResponse; };
-  "downloadAnswerGroupMemberImage": { args: { path: { "groupId": string; "segmentId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "downloadAnswerGroupMemberImage": { args: { path: { "groupId": string; "segmentId": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "listExamReviewActors": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: WorkflowActorsResponse; };
   "listExamProcessingActors": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: WorkflowActorsResponse; };
   "getProcessingExceptionContext": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ProcessingExceptionContextResponse; };
-  "downloadProcessingExceptionPageImage": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: unknown; };
+  "downloadProcessingExceptionPageImage": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "findExamCaptureTargets": { args: { path: { "examId": string; }; query?: { "submission_id"?: string; "student_id"?: string; }; signal?: AbortSignal; }; response: CaptureObjectTargetsResponse; };
   "streamSchoolConversation": { args: { body: SchoolConversationRequest; signal?: AbortSignal; }; response: unknown; };
   "getSchoolAssistantCapabilities": { args: { signal?: AbortSignal; }; response: SchoolAssistantCapabilities; };
@@ -567,7 +571,7 @@ export interface operations {
   "getStudentPublishedResult": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: StudentPublishedResultResponse; };
   "getStudentPublishedQuestion": { args: { path: { "examId": string; "questionId": string; }; query?: { "expected_release_id"?: string; }; signal?: AbortSignal; }; response: StudentPublishedQuestionResponse; };
   "listStudentQuestionReviewAnnotations": { args: { path: { "examId": string; "questionId": string; }; query?: { "expected_release_id"?: string; }; signal?: AbortSignal; }; response: StudentQuestionReviewAnnotationListResponse; };
-  "getStudentPublishedQuestionAnswerImage": { args: { path: { "examId": string; "questionId": string; }; query?: { "expected_release_id"?: string; }; signal?: AbortSignal; }; response: unknown; };
+  "getStudentPublishedQuestionAnswerImage": { args: { path: { "examId": string; "questionId": string; }; query?: { "expected_release_id"?: string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "previewRegrade": { args: { path: { "examId": string; "questionId": string; }; body: CreateRegradePreviewRequest; signal?: AbortSignal; }; response: RegradePreviewResponse; };
   "createRegradeJob": { args: { path: { "examId": string; "questionId": string; }; body: CreateRegradeJobRequest; signal?: AbortSignal; }; response: RegradeSummaryResponse; };
   "listRegradeJobs": { args: { query?: { "exam_id"?: string; "question_id"?: string; }; signal?: AbortSignal; }; response: RegradeJobListResponse; };
@@ -581,7 +585,7 @@ export interface operations {
   "listMyRegradeItems": { args: { signal?: AbortSignal; }; response: RegradeWorkItemListResponse; };
   "claimRegradeItem": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: RegradeWorkItemResponse; };
   "getRegradeItemContext": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: RegradeGraderContextResponse; };
-  "downloadRegradeItemSegmentImage": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "downloadRegradeItemSegmentImage": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "recordRegradeCandidate": { args: { path: { "itemId": string; }; body: RecordRegradeCandidateRequest; signal?: AbortSignal; }; response: RegradeWorkItemResponse; };
   "reviewRegradeItem": { args: { path: { "itemId": string; }; body: ReviewRegradeItemRequest; signal?: AbortSignal; }; response: RegradeItemResponse; };
   "createReleaseGatePolicy": { args: { path: { "examId": string; }; body: CreateReleaseGatePolicyRequest; signal?: AbortSignal; }; response: ReleaseGatePolicyResponse; };
@@ -594,7 +598,7 @@ export interface operations {
   "listQuestionAppeals": { args: { query?: { "exam_id"?: string; "status"?: string; }; signal?: AbortSignal; }; response: PublishedQuestionAppealListResponse; };
   "getQuestionAppeal": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
   "getQuestionAppealContext": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: PublishedQuestionAppealContextResponse; };
-  "getQuestionAppealAnswerImage": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getQuestionAppealAnswerImage": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "startQuestionAppealReview": { args: { path: { "id": string; }; body: StartQuestionAppealReviewRequest; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
   "decideQuestionAppeal": { args: { path: { "id": string; }; body: DecideQuestionAppealRequest; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
   "resolveQuestionAppeal": { args: { path: { "id": string; }; body: ResolveQuestionAppealRequest; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
@@ -616,7 +620,7 @@ export interface operations {
   "listMyBackmarkItems": { args: { query?: { "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: BackmarkGraderItemListResponse; };
   "claimBackmarkItem": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: BackmarkGraderItemResponse; };
   "getBackmarkItemContext": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: BackmarkGraderContextResponse; };
-  "getBackmarkItemSegmentImage": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getBackmarkItemSegmentImage": { args: { path: { "itemId": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "submitBackmarkItem": { args: { path: { "itemId": string; }; body: SubmitBackmarkItemRequest; signal?: AbortSignal; }; response: SubmitBackmarkItemResponse; };
   "listGraderQualityWindows": { args: { path: { "examId": string; "questionId": string; }; query?: { "grader_id"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: GraderQualityWindowListResponse; };
   "recomputeGraderDrift": { args: { path: { "examId": string; "questionId": string; }; body?: RecomputeGraderDriftRequest; signal?: AbortSignal; }; response: RecomputeGraderDriftResponse; };
@@ -656,7 +660,7 @@ export interface operations {
   "recoverReviewCommand": { args: { path: { "commandId": string; }; signal?: AbortSignal; }; response: BusinessCommandReceipt; };
   "recoverScoreCommand": { args: { path: { "commandId": string; }; signal?: AbortSignal; }; response: BusinessCommandReceipt; };
   "recoverReportCommand": { args: { path: { "commandId": string; }; signal?: AbortSignal; }; response: BusinessCommandReceipt; };
-  "exportLearningReport": { args: { path: { "examId": string; }; headers: { "Idempotency-Key": string; }; signal?: AbortSignal; }; response: unknown; };
+  "exportLearningReport": { args: { path: { "examId": string; }; headers: { "Idempotency-Key": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "listQuestionBanks": { args: { query?: { "limit"?: number; "offset"?: number; "q"?: string; }; signal?: AbortSignal; }; response: QuestionBankPage; };
   "createQuestionBank": { args: { headers: { "Idempotency-Key": string; }; body: CreateQuestionBankRequest; signal?: AbortSignal; }; response: QuestionBankResponse; };
   "getQuestionBank": { args: { path: { "bankId": string; }; signal?: AbortSignal; }; response: QuestionBankResponse; };
@@ -702,7 +706,7 @@ export interface operations {
   "updateManagedUserAccess": { args: { path: { "id": string; }; body: UpdateManagedUserAccessRequest; signal?: AbortSignal; }; response: ManagedOrganizationUserResponse; };
   "getScoreReleaseStudentPreview": { args: { path: { "id": string; }; query: { "student_id": string; }; signal?: AbortSignal; }; response: StudentScorePreviewResponse; };
   "confirmExamReadiness": { args: { path: { "examId": string; }; body?: ConfirmExamReadinessRequest; signal?: AbortSignal; }; response: ExamReadinessConfirmationResponse; };
-  "getStudentPublishedPaperPageImage": { args: { path: { "examId": string; "questionId": string; }; query?: { "variant"?: "high_score"; "expected_release_id"?: string; "paper_id"?: string; }; signal?: AbortSignal; }; response: unknown; };
+  "getStudentPublishedPaperPageImage": { args: { path: { "examId": string; "questionId": string; }; query?: { "variant"?: "high_score"; "expected_release_id"?: string; "paper_id"?: string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "submitQuestionAppealReviewOpinion": { args: { path: { "id": string; }; body: QuestionAppealReviewOpinionRequest; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
   "getCaptureScanContext": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: CaptureScanContextResponse; };
   "getExamTemplateBinding": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ExamTemplateBindingState; };
@@ -737,19 +741,19 @@ export interface operations {
   "deletePersonalReviewBookmark": { args: { path: { "bookmarkId": string; }; headers: { "Idempotency-Key": string; }; body: PersonalReviewBookmarkDelete; signal?: AbortSignal; }; response: PersonalReviewBookmarkAcknowledgement; };
   "listUnavailablePersonalReviewBookmarks": { args: { signal?: AbortSignal; }; response: PersonalReviewBookmarkCleanupResponse; };
   "getPersonalReviewBookmarkContext": { args: { path: { "bookmarkId": string; }; signal?: AbortSignal; }; response: PersonalReviewBookmarkContext; };
-  "getPersonalReviewBookmarkImage": { args: { path: { "bookmarkId": string; }; query: { "version": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getPersonalReviewBookmarkImage": { args: { path: { "bookmarkId": string; }; query: { "version": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "listReferenceMaterialSources": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ReferenceMaterialSourcesResponse; };
-  "getReferenceMaterialSourceImage": { args: { path: { "examId": string; "pageRef": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getReferenceMaterialSourceImage": { args: { path: { "examId": string; "pageRef": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "createReferenceMaterialCrop": { args: { path: { "examId": string; "questionId": string; }; body: ReferenceMaterialCropRequest; signal?: AbortSignal; }; response: ReferenceMaterialCropResponse; };
-  "getReferenceMaterialCropImage": { args: { path: { "examId": string; "questionId": string; "cropRef": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getReferenceMaterialCropImage": { args: { path: { "examId": string; "questionId": string; "cropRef": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "getQuestionReferenceMaterials": { args: { path: { "examId": string; "questionId": string; }; signal?: AbortSignal; }; response: ReferenceMaterialsResponse; };
   "saveQuestionReferenceMaterials": { args: { path: { "examId": string; "questionId": string; }; body: SaveReferenceMaterialsRequest; signal?: AbortSignal; }; response: ReferenceMaterialsResponse; };
   "withdrawQuestionReferenceMaterials": { args: { path: { "examId": string; "questionId": string; "manifestId": string; }; body: WithdrawReferenceMaterialsRequest; signal?: AbortSignal; }; response: ReferenceMaterialsResponse; };
   "recoverReferenceMaterialCommand": { args: { path: { "examId": string; "commandId": string; }; signal?: AbortSignal; }; response: ReferenceMaterialCommandResponse; };
   "getTaskReferenceMaterials": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ReferenceMaterialsResponse; };
-  "getTaskReferenceMaterialImage": { args: { path: { "id": string; "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getTaskReferenceMaterialImage": { args: { path: { "id": string; "itemId": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "getScoringReferenceMaterials": { args: { path: { "runId": string; "questionId": string; }; signal?: AbortSignal; }; response: ReferenceMaterialsResponse; };
-  "getScoringReferenceMaterialImage": { args: { path: { "runId": string; "questionId": string; "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getScoringReferenceMaterialImage": { args: { path: { "runId": string; "questionId": string; "itemId": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "recordMaterialExecutionFact": { args: { path: { "runId": string; "permitId": string; }; body: MaterialPermitRecordRequest; signal?: AbortSignal; }; response: MaterialPermitRecordResponse; };
   "resumeReferenceMaterialCommand": { args: { path: { "examId": string; "questionId": string; "commandId": string; }; signal?: AbortSignal; }; response: ReferenceMaterialCommandResponse; };
   "registerCaptureFile": { args: { path: { "id": string; }; body: CaptureFileRegisterRequest; signal?: AbortSignal; }; response: CaptureFileResponse; };
@@ -759,9 +763,9 @@ export interface operations {
   "getCaptureCollectionSummary": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: CaptureCollectionResponse; };
   "completeCaptureCollection": { args: { path: { "examId": string; }; body: CompleteCaptureCollectionRequest; signal?: AbortSignal; }; response: CaptureCollectionResponse; };
   "excludeCaptureFile": { args: { path: { "id": string; }; body: ExcludeCaptureFileRequest; signal?: AbortSignal; }; response: CaptureBatchResponse; };
-  "getQuestionBankReferenceMaterialImage": { args: { path: { "versionId": string; "itemId": string; }; signal?: AbortSignal; }; response: unknown; };
-  "getGoldPaperVersionImage": { args: { path: { "id": string; "version": number; }; signal?: AbortSignal; }; response: unknown; };
-  "getCalibrationSampleImage": { args: { path: { "id": string; "goldId": string; }; signal?: AbortSignal; }; response: unknown; };
+  "getQuestionBankReferenceMaterialImage": { args: { path: { "versionId": string; "itemId": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
+  "getGoldPaperVersionImage": { args: { path: { "id": string; "version": number; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
+  "getCalibrationSampleImage": { args: { path: { "id": string; "goldId": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "updateManagedModelAPIConfig": { args: { path: { "id": string; }; query: { "tenant_id": string; }; body: ManagedModelAPIConfigUpdateInput; signal?: AbortSignal; }; response: ManagedModelAPIConfigResponse; };
   "assignQuestionBankHandoff": { args: { path: { "versionId": string; }; headers: { "Idempotency-Key": string; }; body: QuestionBankHandoffRequest; signal?: AbortSignal; }; response: QuestionBankVersionResponse; };
   "claimQuestionBankReview": { args: { path: { "versionId": string; }; headers: { "Idempotency-Key": string; }; body: QuestionBankClaimRequest; signal?: AbortSignal; }; response: QuestionBankVersionResponse; };
@@ -769,7 +773,7 @@ export interface operations {
   "listQuestionBankHandoffEvents": { args: { path: { "versionId": string; }; signal?: AbortSignal; }; response: QuestionBankHandoffEventsResponse; };
   "listAIEligibilityDecisions": { args: { query?: { "tenant_id"?: string; "q"?: string; "cursor"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: AIEligibilityDecisionPage; };
   "listAuditLogs": { args: { query?: { "action"?: string; "actor_id"?: string; "target_type"?: string; "target_id"?: string; "exam_id"?: string; "ip_address"?: string; "created_from"?: string; "created_to"?: string; "q"?: string; "cursor"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: AuditLogPage; };
-  "exportAuditLogs": { args: { query?: { "action"?: string; "actor_id"?: string; "target_type"?: string; "target_id"?: string; "exam_id"?: string; "ip_address"?: string; "created_from"?: string; "created_to"?: string; "q"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: unknown; };
+  "exportAuditLogs": { args: { query?: { "action"?: string; "actor_id"?: string; "target_type"?: string; "target_id"?: string; "exam_id"?: string; "ip_address"?: string; "created_from"?: string; "created_to"?: string; "q"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "getPublicSchoolName": { args: { path: { "code": string; }; signal?: AbortSignal; }; response: PublicSchoolNameResponse; };
   "listSubjectiveGradingSources": { args: { path: { "examId": string; }; query?: { "question_id"?: string; "cursor"?: string; "limit"?: number; }; signal?: AbortSignal; }; response: SubjectiveGradingSourcePage; };
   "getQuestionAppealPrivateDraft": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: PrivateOpinionDraftResponse; };
@@ -792,12 +796,19 @@ export interface operations {
   "getSeedSamplingPolicy": { args: { path: { "examId": string; "questionId": string; }; signal?: AbortSignal; }; response: SeedSamplingPolicyResponse; };
   "putSeedSamplingPolicy": { args: { path: { "examId": string; "questionId": string; }; body: PutSeedSamplingPolicyRequest; signal?: AbortSignal; }; response: SeedSamplingPolicyResponse; };
   "getAccountProfile": { args: { signal?: AbortSignal; }; response: AccountProfileResponse; };
-  "exportExamGradeReport": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: unknown; };
-  "exportPublishedExamGrades": { args: { path: { "examId": string; }; query?: { "format"?: "csv" | "xlsx"; }; signal?: AbortSignal; }; response: unknown; };
+  "exportExamGradeReport": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
+  "exportPublishedExamGrades": { args: { path: { "examId": string; }; query?: { "format"?: "csv" | "xlsx"; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "restartQuestionAppealReview": { args: { path: { "id": string; }; body: RestartQuestionAppealReviewRequest; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
   "listOrganizationStudents": { args: { query?: { "class_id"?: string; "q"?: string; "ids"?: string; "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: OrganizationStudentPage; };
   "createOrganizationStudent": { args: { body: CreateOrganizationStudentRequest; signal?: AbortSignal; }; response: OrganizationStudentResponse; };
   "openOrganizationStudentAccount": { args: { path: { "id": string; }; body: OpenOrganizationStudentAccountRequest; signal?: AbortSignal; }; response: OrganizationStudentResponse; };
+  "downloadAnswerSheetPrintPackage": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
+  "issueStudentBoundAnswerSheetBarcodes": { args: { path: { "id": string; }; headers: { "Idempotency-Key": string; "X-EduGrade-CSRF"?: "1"; }; body: { "student_ids": Array<string> | null; "idempotency_key": string; "qr_layout"?: CaptureStudentPrintLayout; }; signal?: AbortSignal; }; response: { "barcodes": CaptureIssuedStudentBarcodes; }; };
+  "reprintStudentBoundAnswerSheet": { args: { path: { "id": string; }; headers: { "Idempotency-Key": string; "X-EduGrade-CSRF"?: "1"; }; body: { "reason": string; "idempotency_key": string; "qr_layout"?: CaptureStudentPrintLayout; }; signal?: AbortSignal; }; response: { "barcodes": CaptureIssuedStudentBarcodes; }; };
+  "revokeStudentBoundAnswerSheet": { args: { path: { "id": string; }; headers?: { "Idempotency-Key"?: string; "X-EduGrade-CSRF"?: "1"; }; body: { "reason": string; }; signal?: AbortSignal; }; response: { "sheet": CaptureStudentSheet; }; };
+  "getStudentAnswerSheetPrintContext": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: { "print_context": CaptureStudentPrintContext; }; };
+  "confirmStudentAnswerSheetPrintLayout": { args: { path: { "id": string; }; headers: { "Idempotency-Key": string; "X-EduGrade-CSRF"?: "1"; }; body: CaptureStudentPrintLayout; signal?: AbortSignal; }; response: { "qr_layout": CaptureStudentPrintLayout; }; };
+  "downloadStudentAnswerSheetPrintSource": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
 }
 
 export class EduGradeApi {
@@ -850,7 +861,8 @@ export class EduGradeApi {
 
   downloadRegradeItemReviewImage(args: operations["downloadRegradeItemReviewImage"]["args"]): Promise<operations["downloadRegradeItemReviewImage"]["response"]> {
     const requestPath = fillPath("/api/v1/regrade-items/{itemId}/review-segment-image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   getAnswerGroupMemberContext(args: operations["getAnswerGroupMemberContext"]["args"]): Promise<operations["getAnswerGroupMemberContext"]["response"]> {
@@ -860,7 +872,8 @@ export class EduGradeApi {
 
   downloadAnswerGroupMemberImage(args: operations["downloadAnswerGroupMemberImage"]["args"]): Promise<operations["downloadAnswerGroupMemberImage"]["response"]> {
     const requestPath = fillPath("/api/v1/answer-groups/{groupId}/samples/{segmentId}/segment-image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   listExamReviewActors(args: operations["listExamReviewActors"]["args"]): Promise<operations["listExamReviewActors"]["response"]> {
@@ -880,7 +893,8 @@ export class EduGradeApi {
 
   downloadProcessingExceptionPageImage(args: operations["downloadProcessingExceptionPageImage"]["args"]): Promise<operations["downloadProcessingExceptionPageImage"]["response"]> {
     const requestPath = fillPath("/api/v1/processing/exceptions/{id}/page-image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   findExamCaptureTargets(args: operations["findExamCaptureTargets"]["args"]): Promise<operations["findExamCaptureTargets"]["response"]> {
@@ -1600,7 +1614,8 @@ export class EduGradeApi {
 
   getStudentPublishedQuestionAnswerImage(args: operations["getStudentPublishedQuestionAnswerImage"]["args"]): Promise<operations["getStudentPublishedQuestionAnswerImage"]["response"]> {
     const requestPath = appendQuery(fillPath("/api/v1/student/exams/{examId}/questions/{questionId}/answer-image", args.path), args.query);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   previewRegrade(args: operations["previewRegrade"]["args"]): Promise<operations["previewRegrade"]["response"]> {
@@ -1670,7 +1685,8 @@ export class EduGradeApi {
 
   downloadRegradeItemSegmentImage(args: operations["downloadRegradeItemSegmentImage"]["args"]): Promise<operations["downloadRegradeItemSegmentImage"]["response"]> {
     const requestPath = fillPath("/api/v1/regrade-items/{itemId}/segment-image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   recordRegradeCandidate(args: operations["recordRegradeCandidate"]["args"]): Promise<operations["recordRegradeCandidate"]["response"]> {
@@ -1735,7 +1751,8 @@ export class EduGradeApi {
 
   getQuestionAppealAnswerImage(args: operations["getQuestionAppealAnswerImage"]["args"]): Promise<operations["getQuestionAppealAnswerImage"]["response"]> {
     const requestPath = fillPath("/api/v1/question-appeals/{id}/answer-image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   startQuestionAppealReview(args: operations["startQuestionAppealReview"]["args"]): Promise<operations["startQuestionAppealReview"]["response"]> {
@@ -1845,7 +1862,8 @@ export class EduGradeApi {
 
   getBackmarkItemSegmentImage(args: operations["getBackmarkItemSegmentImage"]["args"]): Promise<operations["getBackmarkItemSegmentImage"]["response"]> {
     const requestPath = fillPath("/api/v1/backmark-items/{itemId}/segment-image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   submitBackmarkItem(args: operations["submitBackmarkItem"]["args"]): Promise<operations["submitBackmarkItem"]["response"]> {
@@ -2045,7 +2063,8 @@ export class EduGradeApi {
 
   exportLearningReport(args: operations["exportLearningReport"]["args"]): Promise<operations["exportLearningReport"]["response"]> {
     const requestPath = fillPath("/api/v1/exams/{examId}/reports/export", args.path);
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal, headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "POST", signal: args.signal, headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
   }
 
   listQuestionBanks(args: operations["listQuestionBanks"]["args"] = {}): Promise<operations["listQuestionBanks"]["response"]> {
@@ -2275,7 +2294,8 @@ export class EduGradeApi {
 
   getStudentPublishedPaperPageImage(args: operations["getStudentPublishedPaperPageImage"]["args"]): Promise<operations["getStudentPublishedPaperPageImage"]["response"]> {
     const requestPath = appendQuery(fillPath("/api/v1/student/exams/{examId}/questions/{questionId}/page-image", args.path), args.query);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   submitQuestionAppealReviewOpinion(args: operations["submitQuestionAppealReviewOpinion"]["args"]): Promise<operations["submitQuestionAppealReviewOpinion"]["response"]> {
@@ -2450,7 +2470,8 @@ export class EduGradeApi {
 
   getPersonalReviewBookmarkImage(args: operations["getPersonalReviewBookmarkImage"]["args"]): Promise<operations["getPersonalReviewBookmarkImage"]["response"]> {
     const requestPath = appendQuery(fillPath("/api/v1/me/review-bookmarks/{bookmarkId}/image", args.path), args.query);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   listReferenceMaterialSources(args: operations["listReferenceMaterialSources"]["args"]): Promise<operations["listReferenceMaterialSources"]["response"]> {
@@ -2460,7 +2481,8 @@ export class EduGradeApi {
 
   getReferenceMaterialSourceImage(args: operations["getReferenceMaterialSourceImage"]["args"]): Promise<operations["getReferenceMaterialSourceImage"]["response"]> {
     const requestPath = fillPath("/api/v1/exams/{examId}/reference-material-sources/{pageRef}/image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   createReferenceMaterialCrop(args: operations["createReferenceMaterialCrop"]["args"]): Promise<operations["createReferenceMaterialCrop"]["response"]> {
@@ -2470,7 +2492,8 @@ export class EduGradeApi {
 
   getReferenceMaterialCropImage(args: operations["getReferenceMaterialCropImage"]["args"]): Promise<operations["getReferenceMaterialCropImage"]["response"]> {
     const requestPath = fillPath("/api/v1/exams/{examId}/questions/{questionId}/reference-material-crops/{cropRef}/image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   getQuestionReferenceMaterials(args: operations["getQuestionReferenceMaterials"]["args"]): Promise<operations["getQuestionReferenceMaterials"]["response"]> {
@@ -2500,7 +2523,8 @@ export class EduGradeApi {
 
   getTaskReferenceMaterialImage(args: operations["getTaskReferenceMaterialImage"]["args"]): Promise<operations["getTaskReferenceMaterialImage"]["response"]> {
     const requestPath = fillPath("/api/v1/review-tasks/{id}/reference-materials/{itemId}/image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   getScoringReferenceMaterials(args: operations["getScoringReferenceMaterials"]["args"]): Promise<operations["getScoringReferenceMaterials"]["response"]> {
@@ -2510,7 +2534,8 @@ export class EduGradeApi {
 
   getScoringReferenceMaterialImage(args: operations["getScoringReferenceMaterialImage"]["args"]): Promise<operations["getScoringReferenceMaterialImage"]["response"]> {
     const requestPath = fillPath("/api/v1/scoring-runs/{runId}/questions/{questionId}/reference-materials/{itemId}/image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   recordMaterialExecutionFact(args: operations["recordMaterialExecutionFact"]["args"]): Promise<operations["recordMaterialExecutionFact"]["response"]> {
@@ -2560,17 +2585,20 @@ export class EduGradeApi {
 
   getQuestionBankReferenceMaterialImage(args: operations["getQuestionBankReferenceMaterialImage"]["args"]): Promise<operations["getQuestionBankReferenceMaterialImage"]["response"]> {
     const requestPath = fillPath("/api/v1/question-bank/versions/{versionId}/reference-materials/{itemId}/image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   getGoldPaperVersionImage(args: operations["getGoldPaperVersionImage"]["args"]): Promise<operations["getGoldPaperVersionImage"]["response"]> {
     const requestPath = fillPath("/api/v1/gold-papers/{id}/versions/{version}/image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   getCalibrationSampleImage(args: operations["getCalibrationSampleImage"]["args"]): Promise<operations["getCalibrationSampleImage"]["response"]> {
     const requestPath = fillPath("/api/v1/calibration-sessions/{id}/samples/{goldId}/image", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   updateManagedModelAPIConfig(args: operations["updateManagedModelAPIConfig"]["args"]): Promise<operations["updateManagedModelAPIConfig"]["response"]> {
@@ -2610,7 +2638,8 @@ export class EduGradeApi {
 
   exportAuditLogs(args: operations["exportAuditLogs"]["args"] = {}): Promise<operations["exportAuditLogs"]["response"]> {
     const requestPath = appendQuery("/api/v1/audit-logs/export", args.query);
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "POST", signal: args.signal });
   }
 
   getPublicSchoolName(args: operations["getPublicSchoolName"]["args"]): Promise<operations["getPublicSchoolName"]["response"]> {
@@ -2725,12 +2754,14 @@ export class EduGradeApi {
 
   exportExamGradeReport(args: operations["exportExamGradeReport"]["args"]): Promise<operations["exportExamGradeReport"]["response"]> {
     const requestPath = fillPath("/api/v1/exams/{examId}/grades/export/report", args.path);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   exportPublishedExamGrades(args: operations["exportPublishedExamGrades"]["args"]): Promise<operations["exportPublishedExamGrades"]["response"]> {
     const requestPath = appendQuery(fillPath("/api/v1/exams/{examId}/score-releases/export", args.path), args.query);
-    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 
   restartQuestionAppealReview(args: operations["restartQuestionAppealReview"]["args"]): Promise<operations["restartQuestionAppealReview"]["response"]> {
@@ -2751,5 +2782,42 @@ export class EduGradeApi {
   openOrganizationStudentAccount(args: operations["openOrganizationStudentAccount"]["args"]): Promise<operations["openOrganizationStudentAccount"]["response"]> {
     const requestPath = fillPath("/api/v1/students/{id}/account", args.path);
     return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
+  }
+
+  downloadAnswerSheetPrintPackage(args: operations["downloadAnswerSheetPrintPackage"]["args"]): Promise<operations["downloadAnswerSheetPrintPackage"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-print-batches/{id}/package.pdf", args.path);
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  issueStudentBoundAnswerSheetBarcodes(args: operations["issueStudentBoundAnswerSheetBarcodes"]["args"]): Promise<operations["issueStudentBoundAnswerSheetBarcodes"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-templates/{id}/student-barcodes", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  reprintStudentBoundAnswerSheet(args: operations["reprintStudentBoundAnswerSheet"]["args"]): Promise<operations["reprintStudentBoundAnswerSheet"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-print-sheets/{id}/reprint", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  revokeStudentBoundAnswerSheet(args: operations["revokeStudentBoundAnswerSheet"]["args"]): Promise<operations["revokeStudentBoundAnswerSheet"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-print-sheets/{id}/revoke", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  getStudentAnswerSheetPrintContext(args: operations["getStudentAnswerSheetPrintContext"]["args"]): Promise<operations["getStudentAnswerSheetPrintContext"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-templates/{id}/print-context", args.path);
+    return this.transport.request(requestPath, { method: "GET", signal: args.signal });
+  }
+
+  confirmStudentAnswerSheetPrintLayout(args: operations["confirmStudentAnswerSheetPrintLayout"]["args"]): Promise<operations["confirmStudentAnswerSheetPrintLayout"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-print-batches/{id}/confirm-layout", args.path);
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body), headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)])) });
+  }
+
+  downloadStudentAnswerSheetPrintSource(args: operations["downloadStudentAnswerSheetPrintSource"]["args"]): Promise<operations["downloadStudentAnswerSheetPrintSource"]["response"]> {
+    const requestPath = fillPath("/api/v1/answer-sheet-templates/{id}/print-source", args.path);
+    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));
+    return this.transport.requestBlob(requestPath, { method: "GET", signal: args.signal });
   }
 }

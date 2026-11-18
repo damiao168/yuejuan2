@@ -186,7 +186,9 @@ type StudentSheetStore interface {
 	IssueTemplateBarcodes(ctx context.Context, tenantID, templateID string) (IssuedTemplateBarcodes, error)
 	IssueStudentBarcodes(ctx context.Context, tenantID, templateID, actorID string, input IssueStudentBarcodesInput) (IssuedStudentBarcodes, error)
 	GetStudentPrintContext(ctx context.Context, tenantID, templateID string) (StudentPrintContext, error)
+	GetStudentPrintSource(ctx context.Context, tenantID, templateID string) (StudentPrintSourceContent, error)
 	GetStudentPrintPackage(ctx context.Context, tenantID, printBatchID string) (StudentPrintPackage, error)
+	ConfirmStudentPrintLayout(ctx context.Context, tenantID, printBatchID string, input StudentPrintLayout) (StudentPrintLayout, error)
 	RevokeStudentSheet(ctx context.Context, tenantID, sheetSerial, actorID string, input StudentSheetLifecycleInput) (StudentSheet, error)
 	ReprintStudentSheet(ctx context.Context, tenantID, sheetSerial, actorID string, input ReprintStudentSheetInput) (IssuedStudentBarcodes, error)
 }

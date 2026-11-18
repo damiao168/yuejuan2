@@ -57,15 +57,13 @@ func collectionSummaryTx(ctx context.Context, q collectionQueryer, tenantID, exa
 	}
 	for rows.Next() {
 		var x CollectionEntry
-		var identity, quality string
-		var n, ready, bad, numbers, minNo, maxNo int
-		var groupBad bool
-		if err = rows.Scan(&x.StudentID, &x.StudentNo, &x.StudentName, &x.ClassName, &n, &x.SubmissionID, &identity, &quality, &x.BatchID, &x.ActualPages, &ready, &bad, &numbers, &minNo, &maxNo, &groupBad); err != nil {
+		var facts collectionEntryFacts
+		if err = rows.Scan(&x.StudentID, &x.StudentNo, &x.StudentName, &x.ClassName, &facts.submissions, &x.SubmissionID, &facts.identity, &facts.quality, &x.BatchID, &x.ActualPages, &facts.ready, &facts.bad, &facts.numbers, &facts.minNo, &facts.maxNo, &facts.groupBad); err != nil {
 			rows.Close()
 			return out, err
 		}
 		x.ExpectedPages = out.PagesPerStudent
-		x.Status, x.Code = classifyCollectionEntry(n, identity, quality, x.ActualPages, x.ExpectedPages, ready, bad, numbers, minNo, maxNo, groupBad)
+		x.Status, x.Code = classifyCollectionEntry(x, facts)
 		out.Entries = append(out.Entries, x)
 	}
 	err = rows.Err()
@@ -73,12 +71,14 @@ func collectionSummaryTx(ctx context.Context, q collectionQueryer, tenantID, exa
 	if err != nil {
 		return out, err
 	}
+	// 重复文件不再解码，混合组却不能跳过它重新拼页。直接按现存文件识别，旧的等待组也能整组退出或替代。
 	issueRows, err := q.QueryContext(ctx, `SELECT f.id::text,'file',CASE WHEN f.status='failed' THEN 'file_failed' ELSE 'file_processing' END,f.original_name,b.id::text,'',f.id::text
  FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id AND b.id=f.capture_batch_id WHERE b.tenant_id=$1 AND b.exam_id=$2::uuid AND b.deleted_at IS NULL AND b.status<>'cancelled' AND f.deleted_at IS NULL AND f.status IN ('uploaded','queued','processing','failed')
  UNION ALL SELECT u.id::text,'upload','upload_incomplete',u.original_name,b.id::text,'','' FROM capture_upload_session u JOIN capture_batch b ON b.tenant_id=u.tenant_id AND b.id=u.capture_batch_id WHERE u.tenant_id=$1 AND u.exam_id=$2::uuid AND u.status<>'completed' AND b.status<>'cancelled' AND b.deleted_at IS NULL
  UNION ALL SELECT s.id::text,'submission',CASE WHEN s.student_id IS NULL THEN 'student_unidentified' ELSE 'student_not_in_roster' END,COALESCE(s.candidate_no,'未匹配答卷'),COALESCE((SELECT min(cp.capture_batch_id::text) FROM capture_page cp WHERE cp.tenant_id=s.tenant_id AND cp.submission_id=s.id AND cp.deleted_at IS NULL AND cp.status<>'deleted'),''),s.id::text,''
  FROM submission s WHERE s.tenant_id=$1 AND s.exam_id=$2::uuid AND s.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM exam_candidate_snapshot c WHERE c.tenant_id=s.tenant_id AND c.exam_id=s.exam_id AND c.student_id=s.student_id)
  UNION ALL SELECT min(f.id::text),'batch','upload_group_incomplete','本次选择的文件尚未完整登记',b.id::text,'',min(f.id::text) FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id AND b.id=f.capture_batch_id WHERE b.tenant_id=$1 AND b.exam_id=$2::uuid AND b.status<>'cancelled' AND b.deleted_at IS NULL AND f.deleted_at IS NULL AND f.upload_group_id IS NOT NULL GROUP BY b.id,f.upload_group_id HAVING count(*)<max(f.upload_group_file_count)
+ UNION ALL SELECT min(f.id::text),'batch','upload_group_duplicate','本次选择含重复文件，无法完成分组',b.id::text,'',min(f.id::text) FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id AND b.id=f.capture_batch_id WHERE b.tenant_id=$1 AND b.exam_id=$2::uuid AND b.status<>'cancelled' AND b.deleted_at IS NULL AND f.deleted_at IS NULL AND f.upload_group_id IS NOT NULL GROUP BY b.id,f.upload_group_id HAVING count(*)=max(f.upload_group_file_count) AND bool_or(f.status='duplicate') AND bool_or(f.status<>'duplicate')
  UNION ALL SELECT t.id::text,'batch','task_processing','导入任务尚在运行',b.id::text,'','' FROM agent_worker_task t JOIN capture_batch b ON b.tenant_id=t.tenant_id AND b.exam_id=$2::uuid AND b.status<>'cancelled' AND b.deleted_at IS NULL WHERE t.tenant_id=$1 AND t.status IN ('queued','leased','running') AND (
  (t.source_type='capture_file' AND EXISTS(SELECT 1 FROM capture_file f WHERE f.tenant_id=t.tenant_id AND f.id=t.source_id AND f.capture_batch_id=b.id AND f.deleted_at IS NULL)) OR
  (t.source_type='page_registration_run' AND EXISTS(SELECT 1 FROM page_registration_run r JOIN capture_page p ON p.tenant_id=r.tenant_id AND p.id=r.capture_page_id WHERE r.tenant_id=t.tenant_id AND r.id=t.source_id AND p.capture_batch_id=b.id AND p.deleted_at IS NULL AND p.status<>'deleted')) OR
@@ -102,23 +102,32 @@ func collectionSummaryTx(ctx context.Context, q collectionQueryer, tenantID, exa
 	return out, nil
 }
 
-func classifyCollectionEntry(n int, identity, quality string, pages, expected, ready, bad, numbers, minNo, maxNo int, groupBad bool) (string, string) {
+type collectionEntryFacts struct {
+	submissions                       int
+	identity, quality                 string
+	ready, bad, numbers, minNo, maxNo int
+	groupBad                          bool
+}
+
+// 缺考只由无答卷判定；有答卷时按身份、分组、完整页码及页质量的优先顺序报告阻断。
+func classifyCollectionEntry(entry CollectionEntry, facts collectionEntryFacts) (string, string) {
+	expected := entry.ExpectedPages
 	switch {
-	case n == 0:
+	case facts.submissions == 0:
 		return "absent", "absent"
-	case n > 1:
+	case facts.submissions > 1:
 		return "needs_attention", "duplicate_submission"
-	case identity != "matched":
+	case facts.identity != "matched":
 		return "needs_attention", "student_unidentified"
-	case groupBad:
+	case facts.groupBad:
 		return "needs_attention", "grouping_incomplete"
 	case expected <= 0:
 		return "needs_attention", "template_missing"
-	case pages != expected || numbers != expected || minNo != 1 || maxNo != expected:
+	case entry.ActualPages != expected || facts.numbers != expected || facts.minNo != 1 || facts.maxNo != expected:
 		return "needs_attention", "missing_pages"
-	case quality == "failed" || bad > 0:
+	case facts.quality == "failed" || facts.bad > 0:
 		return "needs_attention", "page_needs_review"
-	case ready != expected:
+	case facts.ready != expected:
 		return "processing", "page_processing"
 	default:
 		return "ready", "import_complete"

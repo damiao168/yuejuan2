@@ -70,7 +70,7 @@ func TestPrintPackagePreservesWholePageGeometryInRenderedPDF(t *testing.T) {
 	}
 }
 
-func TestPrintQRUsesDeclaredRegionOrUnoccupiedSpace(t *testing.T) {
+func TestPrintQRUsesDeclaredRegionOrRequiresExplicitConfirmation(t *testing.T) {
 	base := PrintPackagePage{PageNo: 1, TemplateWidth: 1000, TemplateHeight: 1400, BarcodeValue: "EG1.synthetic.signature",
 		RegistrationMarks: []PrintPackageRegion{{X: .03, Y: .03, Width: .02, Height: .02}},
 		QuestionRegions:   []PrintPackageRegion{{X: .1, Y: .25, Width: .8, Height: .65}},
@@ -81,13 +81,17 @@ func TestPrintQRUsesDeclaredRegionOrUnoccupiedSpace(t *testing.T) {
 		t.Fatalf("declared QR must remain inside its original physical square: %#v, %v", qr, err)
 	}
 	base.IdentityRegions = base.IdentityRegions[:1]
+	if _, err = printQRRegion(base, 210, 294); !errors.Is(err, ErrPrintLayoutConfirmationRequired) {
+		t.Fatalf("unlabelled page content cannot be treated as blank: %v", err)
+	}
+	base.confirmedQR = &PrintPackageRegion{X: .7, Y: .05, Width: .2, Height: .18}
 	qr, err = printQRRegion(base, 210, 294)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, region := range append(append([]PrintPackageRegion{}, base.QuestionRegions...), base.IdentityRegions...) {
 		if overlapsPrintRegion(qr, region) {
-			t.Fatalf("fallback QR overlaps declared region: %#v, %#v", qr, region)
+			t.Fatalf("confirmed QR overlaps declared region: %#v, %#v", qr, region)
 		}
 	}
 	for _, name := range []string{"no_space", "declared_overlaps_question", "declared_too_small"} {

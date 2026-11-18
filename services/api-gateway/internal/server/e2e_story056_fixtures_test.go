@@ -1,10 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"net/http"
 	"testing"
+
+	"github.com/phpdave11/gofpdf"
 )
 
 func e2eCreateStory056AcceptanceFixture(t *testing.T, db *sql.DB, router http.Handler, adminToken string, suffix string, candidateCount ...int) story056AcceptanceFixture {
@@ -67,7 +70,7 @@ func e2eCreateStory056AcceptanceFixtureWithLifecycle(t *testing.T, db *sql.DB, r
 		"grading_mode": "auto_objective_only", "appeal_enabled": true, "publish_policy": "manual_after_confirmation", "class_ids": []string{classID},
 	}), http.StatusCreated)["exam"].(map[string]any)
 	examID := e2eString(t, exam, "id")
-	paperFileID := e2eUploadSyntheticPDF(t, router, adminToken, "story056-paper-"+suffix+".pdf", "%PDF-1.4\n% story056 acceptance paper "+suffix+"\n")
+	paperFileID := e2eUploadSyntheticPDF(t, router, adminToken, "story056-paper-"+suffix+".pdf", e2eStory056PrintSource(t, suffix))
 	paper := e2ePostJSON(t, router, http.MethodPost, "/api/v1/exams/"+examID+"/papers", adminToken, story056JSON(t, map[string]any{
 		"file_asset_id": paperFileID,
 	}), http.StatusCreated)["paper"].(map[string]any)
@@ -119,6 +122,23 @@ func e2eCreateStory056AcceptanceFixtureWithLifecycle(t *testing.T, db *sql.DB, r
 		TenantID: tenantID, AdminID: adminID, SchoolID: schoolID, ClassID: classID, StudentIDs: studentIDs, ExamID: examID,
 		PaperFileAssetID: paperFileID, TemplateID: templateID, TemplateContentHash: e2eString(t, locked, "content_hash"), QuestionIDs: questionIDs,
 	}
+}
+
+// 060 用相同验收夹具将模板扩展为三页；使用可打印的合成 PDF 作为底图。
+func e2eStory056PrintSource(t *testing.T, suffix string) string {
+	t.Helper()
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.SetFont("Helvetica", "", 12)
+	for page := 1; page <= 3; page++ {
+		pdf.AddPage()
+		pdf.Text(24, 64, fmt.Sprintf("Q%d  A. First  B. Second  C. Third  D. Fourth", page))
+		pdf.Text(24, 92, "Synthetic exam "+suffix)
+	}
+	var out bytes.Buffer
+	if err := pdf.Output(&out); err != nil {
+		t.Fatal(err)
+	}
+	return out.String()
 }
 
 // 题目夹具把试卷归属、题型、标准答案与排序作为一份输入，避免相邻字符串参数传反。

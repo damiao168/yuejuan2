@@ -1732,6 +1732,26 @@ export type OpenOrganizationStudentAccountRequest = { "password": string; "passw
 
 export type OrganizationStudentPage = { "students": Array<OrganizationStudent>; "next_cursor": string; "has_more": boolean; };
 
+export type CaptureStudentPrintLayout = { "source_sha256": string; "pages": Array<CaptureStudentPrintQRPage>; };
+
+export type CaptureIssuedStudentBarcodes = { "print_batch_id": string; "template_id": string; "template_content_hash": string; "kid": string; "students": Array<CaptureIssuedStudentBarcodeSet> | null; "issued_at": string; };
+
+export type CaptureStudentSheet = { "sheet_serial": string; "print_batch_id": string; "exam_id": string; "template_id": string; "template_content_hash": string; "student_id": string; "status": string; "supersedes_sheet_id"?: string; "revoked_by"?: string; "revoked_at"?: string | null; "revoke_reason"?: string; "first_observed_at"?: string | null; "last_observed_at"?: string | null; };
+
+export type CaptureStudentPrintContext = { "exam_id": string; "template_id": string; "template_content_hash": string; "candidates": Array<CaptureStudentPrintCandidate> | null; "batches": Array<CaptureStudentPrintBatchSummary> | null; "print_source": CaptureStudentPrintSource; "qr_layout_required": boolean; "qr_layout_page_nos": Array<number>; };
+
+export type CaptureStudentPrintQRPage = { "page_no": number; "x": number; "y": number; "width": number; "height": number; };
+
+export type CaptureIssuedStudentBarcodeSet = { "student_id": string; "sheet_serial": string; "pages": Array<CaptureIssuedPageBarcode> | null; };
+
+export type CaptureStudentPrintCandidate = { "student_id": string; "student_no": string; "student_name": string; "class_id": string; "class_name": string; "attendance_status": string; "has_active_sheet": boolean; "active_sheet_serial"?: string; "active_sheet_status"?: string; "active_print_batch_id"?: string; };
+
+export type CaptureStudentPrintBatchSummary = { "print_batch_id": string; "operation": string; "reason"?: string; "sheet_count": number; "page_count": number; "issued_count": number; "observed_count": number; "conflict_count": number; "revoked_count": number; "downloadable": boolean; "issued_at": string; "qr_layout_required": boolean; "qr_layout"?: CaptureStudentPrintLayout; };
+
+export type CaptureStudentPrintSource = { "file_asset_id": string; "content_type": string; "sha256": string; };
+
+export type CaptureIssuedPageBarcode = { "page_no": number; "value": string; };
+
 export interface components {
   schemas: {
     "ManagedModelContextPolicy": ManagedModelContextPolicy;
@@ -2600,5 +2620,15 @@ export interface components {
     "CreateOrganizationStudentRequest": CreateOrganizationStudentRequest;
     "OpenOrganizationStudentAccountRequest": OpenOrganizationStudentAccountRequest;
     "OrganizationStudentPage": OrganizationStudentPage;
+    "CaptureStudentPrintLayout": CaptureStudentPrintLayout;
+    "CaptureIssuedStudentBarcodes": CaptureIssuedStudentBarcodes;
+    "CaptureStudentSheet": CaptureStudentSheet;
+    "CaptureStudentPrintContext": CaptureStudentPrintContext;
+    "CaptureStudentPrintQRPage": CaptureStudentPrintQRPage;
+    "CaptureIssuedStudentBarcodeSet": CaptureIssuedStudentBarcodeSet;
+    "CaptureStudentPrintCandidate": CaptureStudentPrintCandidate;
+    "CaptureStudentPrintBatchSummary": CaptureStudentPrintBatchSummary;
+    "CaptureStudentPrintSource": CaptureStudentPrintSource;
+    "CaptureIssuedPageBarcode": CaptureIssuedPageBarcode;
   };
 }

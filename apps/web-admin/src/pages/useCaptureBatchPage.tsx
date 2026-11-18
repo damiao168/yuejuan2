@@ -73,7 +73,7 @@ export function useCaptureBatchPage({
   const [locationAttempt,setLocationAttempt]=useState(0);
   const [locating, setLocating] = useState(() => Boolean(hashQueryParam("batch") || hashQueryParam("submission") || hashQueryParam("student")));
   const [locationChoices, setLocationChoices] = useState<Array<{ batch: CaptureBatch; submissionId: string; candidateNo: string }>>([]);
-  const [replacement, setReplacement] = useState<{ fileId: string; batchId: string; name: string; reason: string }>();
+  const [replacement, setReplacement] = useState<{ fileId: string; batchId: string; name: string; reason: string; code: string }>();
   const { detail, detailError, detailLoading, matching, matchingError, setMatching, matchingLoading, processingSummaries,
     loadDetail, loadMatching, resetDetail } = useCaptureBatchDetail(setBatches, setActiveTab, selectedId, selectedId === locatedBatch ? locatedTab : undefined);
   const { uploading, pendingUpload, uploadSources, retryUpload, discardUpload } = useCaptureUpload(detail, examId, loadDetail, selectedId);
@@ -412,7 +412,7 @@ export function useCaptureBatchPage({
   async function prepareReplacement(issue: CaptureCollectionIssue, reason: string) {
     if (!issue.file_id || !await locateCollectionTarget({ batchId: issue.batch_id, tab: "files" })) throw new Error("暂时无法定位待替代材料，请刷新核对后重试");
     setPagesPerStudent(defaultPages && Number.isInteger(defaultPages) && defaultPages >= 1 && defaultPages <= 20 ? defaultPages : undefined);
-    setReplacement({ fileId: issue.file_id, batchId: issue.batch_id, name: issue.name, reason });
+    setReplacement({ fileId: issue.file_id, batchId: issue.batch_id, name: issue.name, reason, code: issue.code });
   }
   async function resolveRegistration(runId: string, action: "confirm" | "retry") {
     setActioning(true);

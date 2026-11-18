@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// 解码结果一次性物化为同一提交的页面，页面先进入质检等待，不直接视为可配准。
+// ApplyFileResult 把同一文件的解码页面归入同一提交。成组上传等待组内文件到齐，其他页面直接等待质检。
 func (s *MemoryStore) ApplyFileResult(_ context.Context, tenantID, fileID string, inputs []DecodedPageInput) (File, error) {
 	if len(inputs) == 0 {
 		return File{}, ErrInvalidInput
@@ -28,12 +28,7 @@ func (s *MemoryStore) applyFileResultLocked(tenantID, fileID string, inputs []De
 	if file.Status != "queued" && file.Status != "processing" && file.Status != "failed" {
 		return File{}, ErrInvalidTransition
 	}
-	base := 0
-	for _, p := range s.pages {
-		if p.CaptureBatchID == file.CaptureBatchID && p.SequenceNo > base {
-			base = p.SequenceNo
-		}
-	}
+	base := s.decodedPageSequenceBaseLocked(file.CaptureBatchID)
 	submissionID := uuid.NewString()
 	for i, input := range inputs {
 		if input.SourceIndex != i+1 || input.FileAssetID == "" {
@@ -64,24 +59,53 @@ func (s *MemoryStore) applyFileResultLocked(tenantID, fileID string, inputs []De
 	return file, nil
 }
 
-// 内存运行模式沿用同一组边界；不同文件选择的余页不能拼到一起。
-func (s *MemoryStore) finalizeUploadGroupLocked(file File) {
-	files := map[string]File{}
-	for _, f := range s.files {
-		if f.TenantID == file.TenantID && f.CaptureBatchID == file.CaptureBatchID && f.UploadGroupID == file.UploadGroupID {
-			if f.Status != "completed" {
-				return
-			}
-			files[f.ID] = f
+// 在写入页面的同一写锁下取批次最大序号。仍保留的已删除页也计入，避免重用其序号。
+func (s *MemoryStore) decodedPageSequenceBaseLocked(batchID string) int {
+	base := 0
+	for _, page := range s.pages {
+		if page.CaptureBatchID == batchID && page.SequenceNo > base {
+			base = page.SequenceNo
 		}
 	}
-	if len(files) != file.UploadGroupFileCount {
+	return base
+}
+
+// 内存运行模式沿用同一组边界；不同文件选择的余页不能拼到一起。
+func (s *MemoryStore) finalizeUploadGroupLocked(file File) {
+	files, completeFiles := completedUploadGroupFiles(s.files, file)
+	if !completeFiles || len(files) != file.UploadGroupFileCount {
 		return
 	}
+	pages := uploadGroupPages(s.pages, files)
+	complete := len(pages) > 0 && len(pages)%file.PagesPerStudent == 0
+	applyUploadGroupPageStatus(s.pages, pages, file.PagesPerStudent, complete)
+	batch := s.batches[file.CaptureBatchID]
+	batch.SubmissionCount = uploadGroupSubmissionCount(s.pages, batch.ID)
+	if !complete {
+		batch.Status = "needs_review"
+	}
+	s.batches[batch.ID] = batch
+}
+
+func completedUploadGroupFiles(all map[string]File, file File) (map[string]File, bool) {
+	files := map[string]File{}
+	for _, candidate := range all {
+		if candidate.TenantID != file.TenantID || candidate.CaptureBatchID != file.CaptureBatchID || candidate.UploadGroupID != file.UploadGroupID {
+			continue
+		}
+		if candidate.Status != "completed" {
+			return nil, false
+		}
+		files[candidate.ID] = candidate
+	}
+	return files, true
+}
+
+func uploadGroupPages(all map[string]Page, files map[string]File) []Page {
 	pages := []Page{}
-	for _, p := range s.pages {
-		if _, ok := files[p.CaptureFileID]; ok && p.Status != "deleted" {
-			pages = append(pages, p)
+	for _, page := range all {
+		if _, ok := files[page.CaptureFileID]; ok && page.Status != "deleted" {
+			pages = append(pages, page)
 		}
 	}
 	sort.Slice(pages, func(i, j int) bool {
@@ -91,36 +115,37 @@ func (s *MemoryStore) finalizeUploadGroupLocked(file File) {
 		}
 		return pages[i].SourceIndex < pages[j].SourceIndex
 	})
-	complete := len(pages) > 0 && len(pages)%file.PagesPerStudent == 0
+	return pages
+}
+
+func applyUploadGroupPageStatus(all map[string]Page, pages []Page, pagesPerStudent int, complete bool) {
 	target := ""
-	for i, p := range pages {
+	for index, page := range pages {
 		if complete {
-			if i%file.PagesPerStudent == 0 {
+			if index%pagesPerStudent == 0 {
 				target = uuid.NewString()
 			}
-			p.SubmissionID = target
-			p.AssignedPageNo = i%file.PagesPerStudent + 1
-			p.Status = "quality_checking"
-			p.PageIdentity["grouping_status"] = "complete"
-			p.PageIdentity["received_pages"] = file.PagesPerStudent
+			page.SubmissionID = target
+			page.AssignedPageNo = index%pagesPerStudent + 1
+			page.Status = "quality_checking"
+			page.PageIdentity["grouping_status"] = "complete"
+			page.PageIdentity["received_pages"] = pagesPerStudent
 		} else {
-			p.Status = "needs_review"
-			p.PageIdentity["grouping_status"] = "incomplete_pages"
-			p.PageIdentity["received_pages"] = len(pages)
-			p.PageIdentity["missing_pages"] = (file.PagesPerStudent - len(pages)%file.PagesPerStudent) % file.PagesPerStudent
+			page.Status = "needs_review"
+			page.PageIdentity["grouping_status"] = "incomplete_pages"
+			page.PageIdentity["received_pages"] = len(pages)
+			page.PageIdentity["missing_pages"] = (pagesPerStudent - len(pages)%pagesPerStudent) % pagesPerStudent
 		}
-		s.pages[p.ID] = p
+		all[page.ID] = page
 	}
-	batch := s.batches[file.CaptureBatchID]
+}
+
+func uploadGroupSubmissionCount(pages map[string]Page, batchID string) int {
 	submissions := map[string]bool{}
-	for _, p := range s.pages {
-		if p.CaptureBatchID == batch.ID && p.Status != "deleted" {
-			submissions[p.SubmissionID] = true
+	for _, page := range pages {
+		if page.CaptureBatchID == batchID && page.Status != "deleted" {
+			submissions[page.SubmissionID] = true
 		}
 	}
-	batch.SubmissionCount = len(submissions)
-	if !complete {
-		batch.Status = "needs_review"
-	}
-	s.batches[batch.ID] = batch
+	return len(submissions)
 }

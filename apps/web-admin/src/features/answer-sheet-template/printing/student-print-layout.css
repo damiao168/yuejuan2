@@ -1,0 +1,21 @@
+.student-print-layout-page {
+  position: relative;
+  width: min(100%, 680px);
+  margin: 16px auto;
+  border: 1px solid var(--border-color, #d9d9d9);
+  cursor: crosshair;
+  background: #fff;
+}
+.student-print-layout-page img { display: block; width: 100%; height: 100%; user-select: none; }
+.student-print-layout-box {
+  /* 百分比坐标对应整张原页；半透明覆盖便于核对方框下是否仍有题目。 */
+  position: absolute;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border: 2px dashed #1677ff;
+  background: rgb(22 119 255 / 16%);
+  color: #0958d9;
+  font-size: 12px;
+  pointer-events: none;
+}

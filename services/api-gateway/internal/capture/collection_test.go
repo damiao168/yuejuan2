@@ -20,7 +20,7 @@ func TestCollectionImportDoesNotDependOnGrades(t *testing.T) {
 	}
 	for _, x := range tests {
 		t.Run(x.name, func(t *testing.T) {
-			status, code := classifyCollectionEntry(x.n, x.identity, x.quality, x.pages, x.expected, x.ready, x.bad, x.numbers, x.min, x.max, x.group)
+			status, code := classifyCollectionEntry(CollectionEntry{ActualPages: x.pages, ExpectedPages: x.expected}, collectionEntryFacts{submissions: x.n, identity: x.identity, quality: x.quality, ready: x.ready, bad: x.bad, numbers: x.numbers, minNo: x.min, maxNo: x.max, groupBad: x.group})
 			if status != x.status || code != x.code {
 				t.Fatalf("got %s/%s want %s/%s", status, code, x.status, x.code)
 			}

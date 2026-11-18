@@ -47,7 +47,7 @@ func (s *PostgresStore) IssueStudentBarcodes(ctx context.Context, tenantID, temp
 	if err != nil {
 		return IssuedStudentBarcodes{}, err
 	}
-	requestHash := studentBarcodeRequestHash(studentIDs)
+	requestHash := studentBarcodePrintRequestHash(studentIDs, input.QRLayout)
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -82,6 +82,10 @@ WHERE tenant_id=$1 AND template_id=$2::uuid AND idempotency_key=$3
 	if err != sql.ErrNoRows {
 		return IssuedStudentBarcodes{}, err
 	}
+	confirmedLayout, err := s.prepareStudentPrintPackageTx(ctx, tx, tenantID, templateID, contentHash, layoutRaw, len(studentIDs), len(layout.Pages), input.QRLayout)
+	if err != nil {
+		return IssuedStudentBarcodes{}, err
+	}
 
 	studentPayload, _ := json.Marshal(studentIDs)
 	var rosterCount int
@@ -107,13 +111,13 @@ JOIN exam_candidate_snapshot candidate
 	err = tx.QueryRowContext(ctx, `
 INSERT INTO answer_sheet_print_batch (
   tenant_id,exam_id,template_id,template_content_hash,key_id,idempotency_key,
-  request_hash,sheet_count,page_count,issued_by
+  request_hash,sheet_count,page_count,issued_by,print_layout
 )
-VALUES ($1,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10::uuid)
+VALUES ($1,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10::uuid,$11::jsonb)
 ON CONFLICT (tenant_id,template_id,idempotency_key) DO NOTHING
 RETURNING id::text,issued_at
 `, tenantID, examID, templateID, contentHash, s.barcodeKeyring.ActiveKeyID, idempotencyKey,
-		requestHash, len(studentIDs), len(layout.Pages), actorID).Scan(&printBatchID, &issuedAt)
+		requestHash, len(studentIDs), len(layout.Pages), actorID, printLayoutJSON(confirmedLayout)).Scan(&printBatchID, &issuedAt)
 	if err == sql.ErrNoRows {
 		if err = tx.QueryRowContext(ctx, `
 SELECT id::text,request_hash

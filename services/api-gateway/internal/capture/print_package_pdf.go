@@ -21,6 +21,9 @@ func RenderStudentPrintPackage(pkg StudentPrintPackage) ([]byte, string, error) 
 	if pkg.PrintBatchID == "" || pkg.ExamID == "" || pkg.TemplateID == "" || len(pkg.Sheets) == 0 {
 		return nil, "", ErrInvalidInput
 	}
+	if pkg.background != nil {
+		return renderStudentPrintWithBackground(pkg)
+	}
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetCompression(true)
 	pdf.SetCatalogSort(true)
@@ -62,6 +65,7 @@ func RenderStudentPrintPackage(pkg StudentPrintPackage) ([]byte, string, error) 
 }
 
 func renderStudentPrintPage(pdf *gofpdf.Fpdf, pkg StudentPrintPackage, sheet PrintPackageSheet, page PrintPackagePage) error {
+	page = printPageWithConfirmedQR(page, pkg.QRLayout)
 	if page.PageNo <= 0 || page.TemplateWidth <= 0 || page.TemplateHeight <= 0 || page.BarcodeValue == "" {
 		return ErrInvalidInput
 	}
@@ -94,6 +98,15 @@ func renderStudentPrintPage(pdf *gofpdf.Fpdf, pkg StudentPrintPackage, sheet Pri
 			regions = append(regions, identity)
 		}
 	}
+	if err := drawPrintRegions(pdf, regions, widthMM, heightMM); err != nil {
+		return err
+	}
+	x, y, w, _, _ := mapPrintRegion(qr, 0, 0, widthMM, heightMM)
+	drawQRCode(pdf, code.Bitmap(), x, y, w)
+	return nil
+}
+
+func drawPrintRegions(pdf *gofpdf.Fpdf, regions []PrintPackageRegion, widthMM, heightMM float64) error {
 	for _, region := range regions {
 		x, y, w, h, ok := mapPrintRegion(region, 0, 0, widthMM, heightMM)
 		if !ok {
@@ -109,8 +122,6 @@ func renderStudentPrintPage(pdf *gofpdf.Fpdf, pkg StudentPrintPackage, sheet Pri
 			pdf.Rect(ox, oy, ow, oh, "D")
 		}
 	}
-	x, y, w, _, _ := mapPrintRegion(qr, 0, 0, widthMM, heightMM)
-	drawQRCode(pdf, code.Bitmap(), x, y, w)
 	return nil
 }
 

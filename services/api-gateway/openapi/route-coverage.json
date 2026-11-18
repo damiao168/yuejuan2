@@ -4,9 +4,9 @@
   "exception_ledger": "contracts/openapi/registered-route-exceptions.json",
   "policy": "Every registered route is covered by OpenAPI or an exact, reviewed exception-ledger entry; generation never invents approvals.",
   "counts": {
-    "registered": 605,
-    "openapi": 378,
-    "registered_gaps": 227
+    "registered": 607,
+    "openapi": 385,
+    "registered_gaps": 222
   },
   "routes": [
     {
@@ -327,43 +327,32 @@
       "operation_id": "createSubjectiveAIGrade"
     },
     {
+      "method": "POST",
+      "path": "/api/v1/answer-sheet-print-batches/{id}/confirm-layout",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "confirmStudentAnswerSheetPrintLayout"
+    },
+    {
       "method": "GET",
       "path": "/api/v1/answer-sheet-print-batches/{id}/package.pdf",
       "source": "services/api-gateway/internal/server/routes_paper.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "downloadAnswerSheetPrintPackage"
     },
     {
       "method": "POST",
       "path": "/api/v1/answer-sheet-print-sheets/{id}/reprint",
       "source": "services/api-gateway/internal/server/routes_paper.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "reprintStudentBoundAnswerSheet"
     },
     {
       "method": "POST",
       "path": "/api/v1/answer-sheet-print-sheets/{id}/revoke",
       "source": "services/api-gateway/internal/server/routes_paper.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "revokeStudentBoundAnswerSheet"
     },
     {
       "method": "PATCH",
@@ -456,27 +445,22 @@
       "method": "GET",
       "path": "/api/v1/answer-sheet-templates/{id}/print-context",
       "source": "services/api-gateway/internal/server/routes_paper.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-read",
-      "contract_carrier": "Go handler tests and existing consumer behavior tests",
-      "exception_scope": "Frozen existing read routes only; any newly registered route must be reviewed explicitly.",
-      "exception_policy": "legacy-public-read-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy read surface predates the OpenAPI migration and remains tracked as bounded debt."
+      "coverage": "openapi",
+      "operation_id": "getStudentAnswerSheetPrintContext"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/answer-sheet-templates/{id}/print-source",
+      "source": "services/api-gateway/internal/server/routes_paper.go",
+      "coverage": "openapi",
+      "operation_id": "downloadStudentAnswerSheetPrintSource"
     },
     {
       "method": "POST",
       "path": "/api/v1/answer-sheet-templates/{id}/student-barcodes",
       "source": "services/api-gateway/internal/server/routes_paper.go",
-      "coverage": "registered-gap",
-      "interface_category": "legacy-public-command",
-      "contract_carrier": "Go handler tests, idempotency middleware policy, and existing consumer behavior tests",
-      "exception_scope": "Frozen existing command routes only; critical/new commands must move to OpenAPI.",
-      "exception_policy": "legacy-public-command-v1",
-      "owner": "api-platform",
-      "review_after": "2026-12-31",
-      "reason": "Legacy command surface predates the OpenAPI migration; this exact list is a temporary reviewed exception."
+      "coverage": "openapi",
+      "operation_id": "issueStudentBoundAnswerSheetBarcodes"
     },
     {
       "method": "GET",

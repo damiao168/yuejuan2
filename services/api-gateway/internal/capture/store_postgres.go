@@ -4,17 +4,24 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
+	"edugrade-enterprise/services/api-gateway/internal/files"
 )
 
 type PostgresStore struct {
 	db             *sql.DB
 	barcodeKeyring BarcodeKeyring
+	printObjects   files.ObjectStorage
 }
 
 func NewPostgresStore(db *sql.DB) *PostgresStore { return &PostgresStore{db: db} }
 
-func NewPostgresStoreWithBarcodeKeyring(db *sql.DB, keyring BarcodeKeyring) *PostgresStore {
-	return &PostgresStore{db: db, barcodeKeyring: keyring}
+func NewPostgresStoreWithBarcodeKeyring(db *sql.DB, keyring BarcodeKeyring, objects ...files.ObjectStorage) *PostgresStore {
+	store := &PostgresStore{db: db, barcodeKeyring: keyring}
+	if len(objects) > 0 {
+		store.printObjects = objects[0]
+	}
+	return store
 }
 
 const batchColumns = `id::text, tenant_id::text, exam_id::text, name, source_type, status, revision,

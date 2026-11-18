@@ -44,53 +44,11 @@ func (s *PostgresStore) finalizeUploadGroupTx(ctx context.Context, tx *sql.Tx, s
 	if registered != f.UploadGroupFileCount || completed != registered {
 		return nil
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT cp.id::text,cp.submission_id::text,cp.submission_page_id::text,cp.capture_file_id::text,cp.decoded_file_asset_id::text,cp.source_index,
- COALESCE(cp.page_identity->>'sha256',''),COALESCE((cp.page_identity->>'width')::int,0),COALESCE((cp.page_identity->>'height')::int,0),COALESCE(cp.assigned_page_no,0),
- COALESCE(cp.barcode_student_id::text,''),COALESCE(cp.barcode_template_id::text,''),COALESCE(cp.sheet_serial::text,''),COALESCE(cp.page_identity->>'barcode_status','none'),
- cp.duplicate_of_page_id IS NOT NULL OR cp.manual_override<>'{}'::jsonb OR sp.latest_quality_run_id IS NOT NULL OR sp.quality_status<>'unchecked'
- FROM capture_page cp JOIN capture_file cf ON cf.tenant_id=cp.tenant_id AND cf.id=cp.capture_file_id
- JOIN submission_page sp ON sp.tenant_id=cp.tenant_id AND sp.id=cp.submission_page_id
- WHERE cp.tenant_id=$1 AND cp.capture_batch_id=$2::uuid AND cf.upload_group_id=$3::uuid AND cp.deleted_at IS NULL AND cp.status<>'deleted'
- ORDER BY cf.upload_group_file_index,cp.source_index`, scope.tenantID, f.CaptureBatchID, f.UploadGroupID)
+	pages, err := loadUploadGroupPagesTx(ctx, tx, scope)
 	if err != nil {
 		return err
 	}
-	pages := []uploadGroupPage{}
-	for rows.Next() {
-		var p uploadGroupPage
-		if err = rows.Scan(&p.id, &p.submissionID, &p.pageID, &p.fileID, &p.assetID, &p.sourceIndex, &p.sha, &p.width, &p.height, &p.assignedPageNo, &p.studentID, &p.templateID, &p.sheetSerial, &p.barcodeStatus, &p.conflict); err != nil {
-			rows.Close()
-			return err
-		}
-		pages = append(pages, p)
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return err
-	}
-	state := "complete"
-	if len(pages) == 0 || len(pages)%f.PagesPerStudent != 0 {
-		state = "incomplete_pages"
-	}
-	for start := 0; start < len(pages); start += f.PagesPerStudent {
-		students, sheets := map[string]bool{}, map[string]bool{}
-		for i := start; i < start+f.PagesPerStudent && i < len(pages); i++ {
-			p := pages[i]
-			if p.studentID != "" {
-				students[p.studentID] = true
-			}
-			if p.sheetSerial != "" {
-				sheets[p.sheetSerial] = true
-			}
-			if p.conflict {
-				state = "identity_conflict"
-			}
-		}
-		if len(students) > 1 || len(sheets) > 1 {
-			state = "identity_conflict"
-		}
-	}
+	state := uploadGroupStatus(pages, f.PagesPerStudent)
 	if state != "complete" {
 		_, err = tx.ExecContext(ctx, `UPDATE capture_page cp SET status='needs_review',page_identity=page_identity||jsonb_build_object('grouping_status',$4::text,'expected_pages',$5::int,'received_pages',$6::int,'missing_pages',$7::int),updated_at=now() FROM capture_file cf WHERE cp.tenant_id=$1 AND cp.capture_batch_id=$2::uuid AND cf.tenant_id=cp.tenant_id AND cf.id=cp.capture_file_id AND cf.upload_group_id=$3::uuid AND cp.deleted_at IS NULL`, scope.tenantID, f.CaptureBatchID, f.UploadGroupID, state, f.PagesPerStudent, len(pages), (f.PagesPerStudent-len(pages)%f.PagesPerStudent)%f.PagesPerStudent)
 		return err
@@ -100,40 +58,7 @@ func (s *PostgresStore) finalizeUploadGroupTx(ctx context.Context, tx *sql.Tx, s
 		oldSubmissions[p.submissionID] = true
 	}
 	for start := 0; start < len(pages); start += f.PagesPerStudent {
-		var target string
-		err = tx.QueryRowContext(ctx, `INSERT INTO submission(tenant_id,exam_id,source_type,status,expected_page_count,actual_page_count,quality_status,quality_issues,collected_by,identity_status) VALUES($1,$2::uuid,'image_upload','pages_uploaded',$3,$3,'unchecked','[]',$4::uuid,'unassigned') RETURNING id::text`, scope.tenantID, scope.examID, f.PagesPerStudent, f.UploadedBy).Scan(&target)
-		if err != nil {
-			return err
-		}
-		grouped := scope
-		grouped.submissionID = target
-		identity := decodedFileIdentity{verifiedPageNumbers: map[int]bool{}}
-		// 未识别页使用内部占位号，不能预占正式第 1、2 页；否则反面先匹配到第 2 页时会被另一张的临时页号挡住。
-		// 界面使用 capture_page 的上传页序，正式 submission_page 页号由条码或图像匹配写回。
-		for offset := 0; offset < f.PagesPerStudent; offset++ {
-			p := pages[start+offset]
-			pageNo := offset + 1
-			storedPageNo := 1000000 + pageNo
-			if p.barcodeStatus == "verified" && p.assignedPageNo > 0 {
-				storedPageNo = p.assignedPageNo
-			}
-			if _, err = tx.ExecContext(ctx, `UPDATE submission_page SET submission_id=$3::uuid,page_no=$4,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid`, scope.tenantID, p.pageID, target, storedPageNo); err != nil {
-				return err
-			}
-			fields, _ := json.Marshal(map[string]any{"grouping_status": "complete", "expected_pages": f.PagesPerStudent, "received_pages": f.PagesPerStudent, "upload_page_no": pageNo, "upload_group_id": f.UploadGroupID})
-			assigned := pageNo
-			if p.barcodeStatus == "verified" && p.assignedPageNo > 0 {
-				assigned = p.assignedPageNo
-			}
-			if _, err = tx.ExecContext(ctx, `UPDATE capture_page SET submission_id=$3::uuid,assigned_page_no=$4,status='quality_checking',page_identity=page_identity||$5::jsonb,revision=revision+1,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid`, scope.tenantID, p.id, target, assigned, fields); err != nil {
-				return err
-			}
-			identity.observePage(decodedCapturePageResult{capturePageID: p.id, assignedPageNo: assigned, barcodeStatus: p.barcodeStatus, barcode: barcodeEvaluation{AssignedStudentID: p.studentID, AssignedTemplateID: p.templateID, AssignedSheetSerial: p.sheetSerial}})
-			if err = queueDecodedPageQualityTx(ctx, tx, grouped, DecodedPageInput{SourceIndex: pageNo, FileAssetID: p.assetID, SHA256: p.sha, Width: p.width, Height: p.height}, p.pageID, p.id); err != nil {
-				return err
-			}
-		}
-		if err = reconcileDecodedFileIdentityTx(ctx, tx, grouped, identity); err != nil {
+		if err := assignUploadGroupSubmissionTx(ctx, tx, scope, pages[start:start+f.PagesPerStudent]); err != nil {
 			return err
 		}
 	}
@@ -141,6 +66,107 @@ func (s *PostgresStore) finalizeUploadGroupTx(ctx context.Context, tx *sql.Tx, s
 		if _, err = tx.ExecContext(ctx, `UPDATE submission SET deleted_at=now(),updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid AND NOT EXISTS(SELECT 1 FROM capture_page WHERE tenant_id=$1 AND submission_id=$2::uuid AND deleted_at IS NULL AND status<>'deleted')`, scope.tenantID, id); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func loadUploadGroupPagesTx(ctx context.Context, tx *sql.Tx, scope decodedFileScope) ([]uploadGroupPage, error) {
+	f := scope.file
+	rows, err := tx.QueryContext(ctx, `SELECT cp.id::text,cp.submission_id::text,cp.submission_page_id::text,cp.capture_file_id::text,cp.decoded_file_asset_id::text,cp.source_index,
+ COALESCE(cp.page_identity->>'sha256',''),COALESCE((cp.page_identity->>'width')::int,0),COALESCE((cp.page_identity->>'height')::int,0),COALESCE(cp.assigned_page_no,0),
+ COALESCE(cp.barcode_student_id::text,''),COALESCE(cp.barcode_template_id::text,''),COALESCE(cp.sheet_serial::text,''),COALESCE(cp.page_identity->>'barcode_status','none'),
+ cp.duplicate_of_page_id IS NOT NULL OR cp.manual_override<>'{}'::jsonb OR sp.latest_quality_run_id IS NOT NULL OR sp.quality_status<>'unchecked'
+ FROM capture_page cp JOIN capture_file cf ON cf.tenant_id=cp.tenant_id AND cf.id=cp.capture_file_id
+ JOIN submission_page sp ON sp.tenant_id=cp.tenant_id AND sp.id=cp.submission_page_id
+ WHERE cp.tenant_id=$1 AND cp.capture_batch_id=$2::uuid AND cf.upload_group_id=$3::uuid AND cp.deleted_at IS NULL AND cp.status<>'deleted'
+ ORDER BY cf.upload_group_file_index,cp.source_index`, scope.tenantID, f.CaptureBatchID, f.UploadGroupID)
+	if err != nil {
+		return nil, err
+	}
+	pages := []uploadGroupPage{}
+	for rows.Next() {
+		var p uploadGroupPage
+		if err = rows.Scan(&p.id, &p.submissionID, &p.pageID, &p.fileID, &p.assetID, &p.sourceIndex, &p.sha, &p.width, &p.height, &p.assignedPageNo, &p.studentID, &p.templateID, &p.sheetSerial, &p.barcodeStatus, &p.conflict); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		pages = append(pages, p)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	return pages, nil
+}
+
+// 组内身份或卷面序号冲突优先于缺页；待处理组保持原答卷关系。
+func uploadGroupStatus(pages []uploadGroupPage, pagesPerStudent int) string {
+	state := "complete"
+	if len(pages) == 0 || len(pages)%pagesPerStudent != 0 {
+		state = "incomplete_pages"
+	}
+	for start := 0; start < len(pages); start += pagesPerStudent {
+		if uploadGroupHasIdentityConflict(pages[start:min(start+pagesPerStudent, len(pages))]) {
+			return "identity_conflict"
+		}
+	}
+	return state
+}
+
+func uploadGroupHasIdentityConflict(pages []uploadGroupPage) bool {
+	students, sheets := map[string]bool{}, map[string]bool{}
+	for _, p := range pages {
+		if p.studentID != "" {
+			students[p.studentID] = true
+		}
+		if p.sheetSerial != "" {
+			sheets[p.sheetSerial] = true
+		}
+		if p.conflict {
+			return true
+		}
+	}
+	return len(students) > 1 || len(sheets) > 1
+}
+
+// 新答卷、各页外键和质检入队在调用方事务中一起更新。
+func assignUploadGroupSubmissionTx(ctx context.Context, tx *sql.Tx, scope decodedFileScope, pages []uploadGroupPage) error {
+	f := scope.file
+	var target string
+	err := tx.QueryRowContext(ctx, `INSERT INTO submission(tenant_id,exam_id,source_type,status,expected_page_count,actual_page_count,quality_status,quality_issues,collected_by,identity_status) VALUES($1,$2::uuid,'image_upload','pages_uploaded',$3,$3,'unchecked','[]',$4::uuid,'unassigned') RETURNING id::text`, scope.tenantID, scope.examID, f.PagesPerStudent, f.UploadedBy).Scan(&target)
+	if err != nil {
+		return err
+	}
+	grouped := scope
+	grouped.submissionID = target
+	identity := decodedFileIdentity{verifiedPageNumbers: map[int]bool{}}
+	// 未识别页使用内部占位号，不能预占正式第 1、2 页；否则反面先匹配到第 2 页时会被另一张的临时页号挡住。
+	// 界面使用 capture_page 的上传页序，正式 submission_page 页号由条码或图像匹配写回。
+	for offset, p := range pages {
+		pageNo := offset + 1
+		storedPageNo := 1000000 + pageNo
+		if p.barcodeStatus == "verified" && p.assignedPageNo > 0 {
+			storedPageNo = p.assignedPageNo
+		}
+		if _, err = tx.ExecContext(ctx, `UPDATE submission_page SET submission_id=$3::uuid,page_no=$4,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid`, scope.tenantID, p.pageID, target, storedPageNo); err != nil {
+			return err
+		}
+		fields, _ := json.Marshal(map[string]any{"grouping_status": "complete", "expected_pages": f.PagesPerStudent, "received_pages": f.PagesPerStudent, "upload_page_no": pageNo, "upload_group_id": f.UploadGroupID})
+		assigned := pageNo
+		if p.barcodeStatus == "verified" && p.assignedPageNo > 0 {
+			assigned = p.assignedPageNo
+		}
+		if _, err = tx.ExecContext(ctx, `UPDATE capture_page SET submission_id=$3::uuid,assigned_page_no=$4,status='quality_checking',page_identity=page_identity||$5::jsonb,revision=revision+1,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid`, scope.tenantID, p.id, target, assigned, fields); err != nil {
+			return err
+		}
+		identity.observePage(decodedCapturePageResult{capturePageID: p.id, assignedPageNo: assigned, barcodeStatus: p.barcodeStatus, barcode: barcodeEvaluation{AssignedStudentID: p.studentID, AssignedTemplateID: p.templateID, AssignedSheetSerial: p.sheetSerial}})
+		if err = queueDecodedPageQualityTx(ctx, tx, grouped, DecodedPageInput{SourceIndex: pageNo, FileAssetID: p.assetID, SHA256: p.sha, Width: p.width, Height: p.height}, p.pageID, p.id); err != nil {
+			return err
+		}
+	}
+	if err = reconcileDecodedFileIdentityTx(ctx, tx, grouped, identity); err != nil {
+		return err
 	}
 	return nil
 }

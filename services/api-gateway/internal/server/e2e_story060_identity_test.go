@@ -63,6 +63,7 @@ LIMIT 1
 		story056JSON(t, map[string]any{
 			"student_ids":     []string{rosterStudentID, outsideStudentID},
 			"idempotency_key": "story060-reject-outside-" + suffix,
+			"qr_layout":       e2eStory060ConfirmedPrintLayout(t, router, adminToken, fixture.TemplateID),
 		}),
 		http.StatusBadRequest,
 	)
@@ -141,6 +142,7 @@ func e2eAssertSinglePageSheetIssuance(t *testing.T, scenario sheetIdentityScenar
 	issueBody := story056JSON(t, map[string]any{
 		"student_ids":     []string{rosterStudentID},
 		"idempotency_key": "story060-issue-" + suffix,
+		"qr_layout":       e2eStory060ConfirmedPrintLayout(t, router, adminToken, fixture.TemplateID),
 	})
 	issued := e2ePostJSON(
 		t,
@@ -342,6 +344,9 @@ func e2eRevokeObservedSheet(t *testing.T, scenario sheetIdentityScenario, batchI
 	if revoked["status"] != "revoked" || revoked["revoke_reason"] != "STORY-060 physical sheet damaged" {
 		t.Fatalf("sheet revocation metadata is incomplete: %#v", revoked)
 	}
+	e2eExpectStatus(t, router, http.MethodPost,
+		"/api/v1/answer-sheet-print-batches/"+e2eString(t, revoked, "print_batch_id")+"/confirm-layout",
+		adminToken, story056JSON(t, e2eStory060ConfirmedPrintLayout(t, router, adminToken, scenario.Acceptance.TemplateID)), http.StatusConflict)
 	pages := e2eGetJSON(t, router, "/api/v1/capture-batches/"+batchID+"/pages", adminToken, http.StatusOK)["pages"].([]any)
 	for _, rawPage := range pages {
 		page := rawPage.(map[string]any)
@@ -361,6 +366,12 @@ func e2eAssertSheetReprintIdentityAndLineage(t *testing.T, scenario sheetIdentit
 		"reason":          "STORY-060 replace damaged physical sheet",
 		"idempotency_key": "story060-reprint-" + suffix,
 	})
+	// 位置预检失败不能占用命令键或创建替代品；随后省略位置可沿用原批次的冻结确认。
+	invalidLayout := e2eStory060ConfirmedPrintLayout(t, router, adminToken, fixture.TemplateID)
+	invalidPage := invalidLayout["pages"].([]any)[0].(map[string]any)
+	invalidPage["width"], invalidPage["height"] = .001, .001
+	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/answer-sheet-print-sheets/"+sheetSerial+"/reprint", adminToken,
+		story056JSON(t, map[string]any{"reason": "STORY-060 replace damaged physical sheet", "idempotency_key": "story060-reprint-" + suffix, "qr_layout": invalidLayout}), http.StatusConflict)
 	reprinted := e2ePostJSON(
 		t,
 		router,
@@ -381,6 +392,11 @@ func e2eAssertSheetReprintIdentityAndLineage(t *testing.T, scenario sheetIdentit
 	)["barcodes"].(map[string]any)
 	reprintedStudent := reprinted["students"].([]any)[0].(map[string]any)
 	reprintedSerial := e2eString(t, reprintedStudent, "sheet_serial")
+	e2eExpectStatus(t, router, http.MethodGet, "/api/v1/answer-sheet-print-batches/"+e2eString(t, reprinted, "print_batch_id")+"/package.pdf", adminToken, "", http.StatusOK)
+	changedLayout := e2eStory060ConfirmedPrintLayout(t, router, adminToken, fixture.TemplateID)
+	changedLayout["pages"].([]any)[0].(map[string]any)["x"] = .65
+	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/answer-sheet-print-sheets/"+sheetSerial+"/reprint", adminToken,
+		story056JSON(t, map[string]any{"reason": "STORY-060 replace damaged physical sheet", "idempotency_key": "story060-reprint-" + suffix, "qr_layout": changedLayout}), http.StatusConflict)
 	if reprintedSerial == sheetSerial ||
 		e2eString(t, replayedReprint, "print_batch_id") != e2eString(t, reprinted, "print_batch_id") ||
 		e2eString(t, replayedReprint["students"].([]any)[0].(map[string]any), "sheet_serial") != reprintedSerial {

@@ -28414,6 +28414,809 @@
           }
         }
       }
+    },
+    "/api/v1/answer-sheet-print-batches/{id}/package.pdf": {
+      "get": {
+        "operationId": "downloadAnswerSheetPrintPackage",
+        "tags": [
+          "Answer sheets"
+        ],
+        "description": "需要 exam:manage 及打印批次范围。下载的 PDF 与打印版本绑定。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "经授权的二进制文件",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Length": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-EduGrade-SHA256": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "打印批次不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "打印批次状态不允许下载",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "生成 PDF 失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/answer-sheet-templates/{id}/student-barcodes": {
+      "post": {
+        "operationId": "issueStudentBoundAnswerSheetBarcodes",
+        "tags": [
+          "Controlled printing"
+        ],
+        "description": "需要 exam:manage 与模板或打印纸张所属考试范围。条码由受控签名与打印台账绑定，重印撤销旧纸张。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "description": "production/staging 环境必须提交固定命令键；开发环境可省略。重试使用同一键与相同请求，不能为同一操作另换键。"
+          },
+          {
+            "name": "X-EduGrade-CSRF",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "const": "1"
+            },
+            "description": "使用 Cookie 的浏览器写请求必须携带该值。Bearer 请求无此要求。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "student_ids",
+                  "idempotency_key"
+                ],
+                "properties": {
+                  "student_ids": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "idempotency_key": {
+                    "type": "string"
+                  },
+                  "qr_layout": {
+                    "$ref": "#/components/schemas/CaptureStudentPrintLayout"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "barcodes"
+                  ],
+                  "properties": {
+                    "barcodes": {
+                      "$ref": "#/components/schemas/CaptureIssuedStudentBarcodes"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "资源不存在或超出当前范围",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "业务状态或请求冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "操作失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/answer-sheet-print-sheets/{id}/reprint": {
+      "post": {
+        "operationId": "reprintStudentBoundAnswerSheet",
+        "tags": [
+          "Controlled printing"
+        ],
+        "description": "需要 exam:manage 与模板或打印纸张所属考试范围。条码由受控签名与打印台账绑定，重印撤销旧纸张。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "description": "production/staging 环境必须提交固定命令键；开发环境可省略。重试使用同一键与相同请求，不能为同一操作另换键。"
+          },
+          {
+            "name": "X-EduGrade-CSRF",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "const": "1"
+            },
+            "description": "使用 Cookie 的浏览器写请求必须携带该值。Bearer 请求无此要求。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "reason",
+                  "idempotency_key"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  },
+                  "idempotency_key": {
+                    "type": "string"
+                  },
+                  "qr_layout": {
+                    "$ref": "#/components/schemas/CaptureStudentPrintLayout"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "barcodes"
+                  ],
+                  "properties": {
+                    "barcodes": {
+                      "$ref": "#/components/schemas/CaptureIssuedStudentBarcodes"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "资源不存在或超出当前范围",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "业务状态或请求冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "操作失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/answer-sheet-print-sheets/{id}/revoke": {
+      "post": {
+        "operationId": "revokeStudentBoundAnswerSheet",
+        "tags": [
+          "Controlled printing"
+        ],
+        "description": "需要 exam:manage 与模板或打印纸张所属考试范围。条码由受控签名与打印台账绑定，重印撤销旧纸张。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            }
+          },
+          {
+            "name": "X-EduGrade-CSRF",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "const": "1"
+            },
+            "description": "使用 Cookie 的浏览器写请求必须携带该值。Bearer 请求无此要求。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "sheet"
+                  ],
+                  "properties": {
+                    "sheet": {
+                      "$ref": "#/components/schemas/CaptureStudentSheet"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "资源不存在或超出当前范围",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "业务状态或请求冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "操作失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/answer-sheet-templates/{id}/print-context": {
+      "get": {
+        "operationId": "getStudentAnswerSheetPrintContext",
+        "tags": [
+          "Controlled printing"
+        ],
+        "description": "需要 exam:manage 与模板或打印纸张所属考试范围。返回冻结名册、当前纸张和打印批次。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "print_context"
+                  ],
+                  "properties": {
+                    "print_context": {
+                      "$ref": "#/components/schemas/CaptureStudentPrintContext"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "资源不存在或超出当前范围",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "读取失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/answer-sheet-print-batches/{id}/confirm-layout": {
+      "post": {
+        "operationId": "confirmStudentAnswerSheetPrintLayout",
+        "tags": [
+          "Controlled printing"
+        ],
+        "description": "需要 exam:manage 和打印批次资源范围。仅对全部纸张仍为 issued 的旧批次补齐首次确认；相同布局可重放，已观察、撤销或不同布局返回冲突。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "description": "production/staging 环境必须提交固定命令键；开发环境可省略。重试使用同一键与相同请求，不能为同一操作另换键。"
+          },
+          {
+            "name": "X-EduGrade-CSRF",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "const": "1"
+            },
+            "description": "使用 Cookie 的浏览器写请求必须携带该值。Bearer 请求无此要求。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureStudentPrintLayout"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "qr_layout"
+                  ],
+                  "properties": {
+                    "qr_layout": {
+                      "$ref": "#/components/schemas/CaptureStudentPrintLayout"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "资源不存在或超出当前范围",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "业务状态或请求冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "操作失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/answer-sheet-templates/{id}/print-source": {
+      "get": {
+        "operationId": "downloadStudentAnswerSheetPrintSource",
+        "tags": [
+          "Controlled printing"
+        ],
+        "description": "需要 exam:manage 和模板资源范围。只读取该锁定模板绑定且经哈希验证的打印底图；不接受任意文件ID，不要求通用文件管理权限。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "经授权的二进制文件",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Length": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-EduGrade-SHA256": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string",
+                  "const": "nosniff"
+                }
+              }
+            },
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "锁定模板或绑定底图不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "底图与锁定版本不匹配或格式不可用于打印",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "生成 PDF 失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -61714,6 +62517,404 @@
           },
           "has_more": {
             "type": "boolean"
+          }
+        }
+      },
+      "CaptureStudentPrintLayout": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_sha256",
+          "pages"
+        ],
+        "description": "在原底图确认可覆盖的二维码区域；只包含模板未声明专用区的全部页，随打印批次冻结。坐标以显示方向整页归一化。",
+        "properties": {
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[A-Fa-f0-9]{64}$"
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaptureStudentPrintQRPage"
+            }
+          }
+        }
+      },
+      "CaptureIssuedStudentBarcodes": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "print_batch_id",
+          "template_id",
+          "template_content_hash",
+          "kid",
+          "students",
+          "issued_at"
+        ],
+        "properties": {
+          "print_batch_id": {
+            "type": "string"
+          },
+          "template_id": {
+            "type": "string"
+          },
+          "template_content_hash": {
+            "type": "string"
+          },
+          "kid": {
+            "type": "string"
+          },
+          "students": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CaptureIssuedStudentBarcodeSet"
+            }
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CaptureStudentSheet": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sheet_serial",
+          "print_batch_id",
+          "exam_id",
+          "template_id",
+          "template_content_hash",
+          "student_id",
+          "status"
+        ],
+        "properties": {
+          "sheet_serial": {
+            "type": "string"
+          },
+          "print_batch_id": {
+            "type": "string"
+          },
+          "exam_id": {
+            "type": "string"
+          },
+          "template_id": {
+            "type": "string"
+          },
+          "template_content_hash": {
+            "type": "string"
+          },
+          "student_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "supersedes_sheet_id": {
+            "type": "string"
+          },
+          "revoked_by": {
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revoke_reason": {
+            "type": "string"
+          },
+          "first_observed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_observed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "CaptureStudentPrintContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "exam_id",
+          "template_id",
+          "template_content_hash",
+          "candidates",
+          "batches",
+          "print_source",
+          "qr_layout_required",
+          "qr_layout_page_nos"
+        ],
+        "properties": {
+          "exam_id": {
+            "type": "string"
+          },
+          "template_id": {
+            "type": "string"
+          },
+          "template_content_hash": {
+            "type": "string"
+          },
+          "candidates": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CaptureStudentPrintCandidate"
+            }
+          },
+          "batches": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CaptureStudentPrintBatchSummary"
+            }
+          },
+          "print_source": {
+            "$ref": "#/components/schemas/CaptureStudentPrintSource"
+          },
+          "qr_layout_required": {
+            "type": "boolean"
+          },
+          "qr_layout_page_nos": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      },
+      "CaptureStudentPrintQRPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "page_no",
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "properties": {
+          "page_no": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "width": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1
+          },
+          "height": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "CaptureIssuedStudentBarcodeSet": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "student_id",
+          "sheet_serial",
+          "pages"
+        ],
+        "properties": {
+          "student_id": {
+            "type": "string"
+          },
+          "sheet_serial": {
+            "type": "string"
+          },
+          "pages": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CaptureIssuedPageBarcode"
+            }
+          }
+        }
+      },
+      "CaptureStudentPrintCandidate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "student_id",
+          "student_no",
+          "student_name",
+          "class_id",
+          "class_name",
+          "attendance_status",
+          "has_active_sheet"
+        ],
+        "properties": {
+          "student_id": {
+            "type": "string"
+          },
+          "student_no": {
+            "type": "string"
+          },
+          "student_name": {
+            "type": "string"
+          },
+          "class_id": {
+            "type": "string"
+          },
+          "class_name": {
+            "type": "string"
+          },
+          "attendance_status": {
+            "type": "string"
+          },
+          "has_active_sheet": {
+            "type": "boolean"
+          },
+          "active_sheet_serial": {
+            "type": "string"
+          },
+          "active_sheet_status": {
+            "type": "string"
+          },
+          "active_print_batch_id": {
+            "type": "string"
+          }
+        }
+      },
+      "CaptureStudentPrintBatchSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "print_batch_id",
+          "operation",
+          "sheet_count",
+          "page_count",
+          "issued_count",
+          "observed_count",
+          "conflict_count",
+          "revoked_count",
+          "downloadable",
+          "issued_at",
+          "qr_layout_required"
+        ],
+        "properties": {
+          "print_batch_id": {
+            "type": "string"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "sheet_count": {
+            "type": "integer"
+          },
+          "page_count": {
+            "type": "integer"
+          },
+          "issued_count": {
+            "type": "integer"
+          },
+          "observed_count": {
+            "type": "integer"
+          },
+          "conflict_count": {
+            "type": "integer"
+          },
+          "revoked_count": {
+            "type": "integer"
+          },
+          "downloadable": {
+            "type": "boolean"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "qr_layout_required": {
+            "type": "boolean"
+          },
+          "qr_layout": {
+            "$ref": "#/components/schemas/CaptureStudentPrintLayout"
+          }
+        }
+      },
+      "CaptureStudentPrintSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file_asset_id",
+          "content_type",
+          "sha256"
+        ],
+        "properties": {
+          "file_asset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          }
+        }
+      },
+      "CaptureIssuedPageBarcode": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "page_no",
+          "value"
+        ],
+        "properties": {
+          "page_no": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "string"
           }
         }
       }

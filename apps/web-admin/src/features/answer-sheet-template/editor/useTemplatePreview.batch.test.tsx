@@ -34,8 +34,12 @@ describe("multi-page answer-sheet preview source and page-size boundaries", () =
   let root: Root;
   let host: HTMLDivElement;
   let current: ReturnType<typeof useTemplatePreview>;
-  function Probe({ paper }: { paper?: PaperVersion }) { current = useTemplatePreview(paper); return null; }
-  async function render(paper?: PaperVersion) { await act(async () => root.render(<Probe paper={paper} />)); }
+  function Probe({ paper, downloadSource }: { paper?: PaperVersion; downloadSource?: Parameters<typeof useTemplatePreview>[1] }) {
+    current = useTemplatePreview(paper, downloadSource); return null;
+  }
+  async function render(paper?: PaperVersion, downloadSource?: Parameters<typeof useTemplatePreview>[1]) {
+    await act(async () => root.render(<Probe paper={paper} downloadSource={downloadSource} />));
+  }
   beforeEach(() => {
     vi.resetAllMocks();
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -61,6 +65,21 @@ describe("multi-page answer-sheet preview source and page-size boundaries", () =
     expect(current.preview).toMatchObject({ width: 1191, height: 842, loading: false });
     expect(current.preview.pageSizes?.[0]).toEqual({ width: 595, height: 842 });
     expect(document.pages[1].render).toHaveBeenCalledOnce();
+  });
+
+  it("uses a stable scoped source downloader without requesting generic file access", async () => {
+    const document = pdf([[595, 842]]);
+    const paper = source("exam-managed-source");
+    const blob = new Blob(["synthetic print source"], { type: "application/pdf" });
+    Object.defineProperty(blob, "arrayBuffer", { value: async () => new ArrayBuffer(8) });
+    const scopedDownload = vi.fn(async () => ({ blob, contentType: "application/pdf" }));
+    mocks.getDocument.mockReturnValue({ promise: Promise.resolve(document.proxy) });
+    await render(paper, scopedDownload);
+    await render(paper, scopedDownload);
+    expect(scopedDownload).toHaveBeenCalledExactlyOnceWith(paper.file_asset_id);
+    expect(mocks.download).not.toHaveBeenCalled();
+    expect(current.preview).toMatchObject({ sourceId: paper.id, loading: false, pageCount: 1 });
+    expect(current.preview.imageUrl).toBeDefined();
   });
 
   it("keeps the source unavailable until dimensions for the entire document have been read", async () => {

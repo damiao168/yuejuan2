@@ -94,12 +94,20 @@ function resolveParameter(spec, parameter) {
   return spec.components?.parameters?.[refName(parameter.$ref)] ?? parameter;
 }
 
+function resolveResponse(spec, response) {
+  return response?.$ref ? spec.components?.responses?.[refName(response.$ref)] : response;
+}
+
+function binaryResponse(spec, operation) {
+  return Object.entries(operation.responses ?? {}).some(([status, response]) => /^2\d\d$/.test(status) &&
+    Object.values(resolveResponse(spec, response)?.content ?? {}).some(({ schema }) => schema?.type === "string" && schema.format === "binary"));
+}
+
 function responseSchema(spec, operation) {
+  if (binaryResponse(spec, operation)) return "ApiBlobResponse";
   for (const [status, responseOrRef] of Object.entries(operation.responses ?? {})) {
     if (!/^2\d\d$/.test(status)) continue;
-    const response = responseOrRef?.$ref
-      ? spec.components?.responses?.[refName(responseOrRef.$ref)]
-      : responseOrRef;
+    const response = resolveResponse(spec, responseOrRef);
     const schema = response?.content?.["application/json"]?.schema;
     if (schema) return schemaToType(schema);
     if (status === "204") return "void";
@@ -211,11 +219,17 @@ export function generateClient(spec) {
       } else if (parameters.some((parameter) => parameter?.in === "header")) {
         initParts.push("headers: Object.fromEntries(Object.entries(args.headers ?? {}).map(([name, value]) => [name, String(value)]))");
       }
-      return `  ${operationId}(${args}): Promise<operations[${propertyKey(operationId)}]["response"]> {\n    const requestPath = ${queryExpression};\n    return this.transport.request(requestPath, { ${initParts.join(", ")} });\n  }`;
+      const transport = binaryResponse(spec, operation) ? "requestBlob" : "request";
+      // 下载响应不能交给 JSON transport，否则客户端会尝试把图片或文件内容解析为 JSON。
+      const transportCheck = transport === "requestBlob"
+        ? '\n    if (!this.transport.requestBlob) return Promise.reject(new Error("This API transport does not support binary downloads"));'
+        : "";
+      return `  ${operationId}(${args}): Promise<operations[${propertyKey(operationId)}]["response"]> {\n    const requestPath = ${queryExpression};${transportCheck}\n    return this.transport.${transport}(requestPath, { ${initParts.join(", ")} });\n  }`;
     })
     .join("\n\n");
 
-  return `${banner()}import type { ApiTransport } from "../runtime";\nimport { appendQuery, fillPath } from "../runtime";\nimport type {\n${referencedSchemas
+  const transportTypes = entries.some(({ operation }) => binaryResponse(spec, operation)) ? "ApiBlobResponse, ApiTransport" : "ApiTransport";
+  return `${banner()}import type { ${transportTypes} } from "../runtime";\nimport { appendQuery, fillPath } from "../runtime";\nimport type {\n${referencedSchemas
     .map((name) => `  ${name}`)
     .join(",\n")}\n} from "./types";\n\nexport interface operations {\n${operationTypes}\n}\n\nexport class EduGradeApi {\n  constructor(private readonly transport: ApiTransport) {}\n\n${methods}\n}\n`;
 }

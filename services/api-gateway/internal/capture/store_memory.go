@@ -33,8 +33,16 @@ func (s *MemoryStore) GetStudentPrintContext(context.Context, string, string) (S
 	return StudentPrintContext{}, ErrNotFound
 }
 
+func (s *MemoryStore) GetStudentPrintSource(context.Context, string, string) (StudentPrintSourceContent, error) {
+	return StudentPrintSourceContent{}, ErrNotFound
+}
+
 func (s *MemoryStore) GetStudentPrintPackage(context.Context, string, string) (StudentPrintPackage, error) {
 	return StudentPrintPackage{}, ErrNotFound
+}
+
+func (s *MemoryStore) ConfirmStudentPrintLayout(context.Context, string, string, StudentPrintLayout) (StudentPrintLayout, error) {
+	return StudentPrintLayout{}, ErrInvalidTransition
 }
 
 func (s *MemoryStore) RevokeStudentSheet(context.Context, string, string, string, StudentSheetLifecycleInput) (StudentSheet, error) {

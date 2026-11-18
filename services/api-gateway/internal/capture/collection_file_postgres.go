@@ -45,80 +45,18 @@ func (s *PostgresStore) ExcludeFile(ctx context.Context, tenantID, fileID, actor
 	if err = ensureBatchWritableTx(ctx, tx, tenantID, batchID); err != nil {
 		return Batch{}, err
 	}
-	if input.ReplacementFileID != "" {
-		var valid bool
-		err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id AND b.id=f.capture_batch_id JOIN capture_batch old ON old.tenant_id=b.tenant_id AND old.exam_id=b.exam_id WHERE old.id=$2::uuid AND f.tenant_id=$1 AND f.id=$3::uuid AND f.id<>$4::uuid AND f.deleted_at IS NULL AND (NULLIF($5,'')::uuid IS NULL OR f.upload_group_id IS DISTINCT FROM NULLIF($5,'')::uuid))`, tenantID, batchID, input.ReplacementFileID, fileID, groupID).Scan(&valid)
-		if err != nil {
-			return Batch{}, err
-		}
-		if !valid {
-			return Batch{}, ErrInvalidInput
-		}
-	}
-	// 一次选择是完整分组单位；只移除其中一张会改变余下学生的分组，必须整体退出有效输入。
-	rows, err := tx.QueryContext(ctx, `SELECT id::text FROM capture_file WHERE tenant_id=$1 AND capture_batch_id=$2::uuid AND deleted_at IS NULL AND (id=$3::uuid OR upload_group_id=NULLIF($4,'')::uuid) ORDER BY id FOR UPDATE`, tenantID, batchID, fileID, groupID)
-	if err != nil {
+	if err := validateExclusionReplacementTx(ctx, tx, tenantID, batchID, fileID, groupID, input.ReplacementFileID); err != nil {
 		return Batch{}, err
 	}
-	ids := []string{}
-	for rows.Next() {
-		var id string
-		if err = rows.Scan(&id); err != nil {
-			rows.Close()
-			return Batch{}, err
-		}
-		ids = append(ids, id)
-	}
-	err = rows.Err()
-	rows.Close()
+	ids, err := lockExcludedFileGroupTx(ctx, tx, tenantID, batchID, fileID, groupID)
 	if err != nil {
 		return Batch{}, err
 	}
 	for _, id := range ids {
-		segments, lockErr := tx.QueryContext(ctx, `SELECT a.id FROM answer_segment a JOIN capture_page p ON p.tenant_id=a.tenant_id AND p.submission_page_id=a.submission_page_id WHERE p.tenant_id=$1 AND p.capture_file_id=$2::uuid ORDER BY a.id FOR UPDATE OF a NOWAIT`, tenantID, id)
-		if lockErr != nil {
-			return Batch{}, ErrConflict
-		}
-		for segments.Next() {
-			var segmentID string
-			if lockErr = segments.Scan(&segmentID); lockErr != nil {
-				segments.Close()
-				return Batch{}, lockErr
-			}
-		}
-		lockErr = segments.Err()
-		segments.Close()
-		if lockErr != nil {
-			return Batch{}, lockErr
-		}
-		var graded bool
-		err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM capture_page p JOIN answer_segment a ON a.tenant_id=p.tenant_id AND a.submission_page_id=p.submission_page_id WHERE p.tenant_id=$1 AND p.capture_file_id=$2::uuid AND (
-   EXISTS(SELECT 1 FROM ai_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
-   EXISTS(SELECT 1 FROM human_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
-   EXISTS(SELECT 1 FROM question_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
-   EXISTS(SELECT 1 FROM final_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
-   EXISTS(SELECT 1 FROM subjective_grading_run g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
-   EXISTS(SELECT 1 FROM scoring_run_item g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id)))`, tenantID, id).Scan(&graded)
-		if err != nil {
+		if err := ensureExcludedFileUngradedTx(ctx, tx, tenantID, id); err != nil {
 			return Batch{}, err
 		}
-		if graded {
-			return Batch{}, ErrFileHasGrades
-		}
-		// 排除页面和任务在同一事务内完成；旧租约回调只能被拒绝，不能把已排除的材料重新激活。
-		if _, err = tx.ExecContext(ctx, `UPDATE agent_worker_task SET status='cancelled',lease_token=NULL,lease_expires_at=NULL,completed_at=now(),updated_at=now() WHERE tenant_id=$1 AND status IN ('queued','leased','running') AND ((source_type='capture_file' AND source_id=$2::uuid) OR (source_type='page_registration_run' AND source_id IN(SELECT r.id FROM page_registration_run r JOIN capture_page p ON p.tenant_id=r.tenant_id AND p.id=r.capture_page_id WHERE p.tenant_id=$1 AND p.capture_file_id=$2::uuid)) OR (source_type='page_template_match_run' AND source_id IN(SELECT r.id FROM page_template_match_run r JOIN capture_page p ON p.tenant_id=r.tenant_id AND p.id=r.capture_page_id WHERE p.tenant_id=$1 AND p.capture_file_id=$2::uuid)))`, tenantID, id); err != nil {
-			return Batch{}, err
-		}
-		if _, err = tx.ExecContext(ctx, `UPDATE answer_segment SET processing_status='invalidated',deleted_at=now(),updated_at=now() WHERE tenant_id=$1 AND submission_page_id IN(SELECT submission_page_id FROM capture_page WHERE tenant_id=$1 AND capture_file_id=$2::uuid) AND deleted_at IS NULL`, tenantID, id); err != nil {
-			return Batch{}, err
-		}
-		if _, err = tx.ExecContext(ctx, `UPDATE submission_page SET deleted_at=now(),updated_at=now() WHERE tenant_id=$1 AND id IN(SELECT submission_page_id FROM capture_page WHERE tenant_id=$1 AND capture_file_id=$2::uuid) AND deleted_at IS NULL`, tenantID, id); err != nil {
-			return Batch{}, err
-		}
-		if _, err = tx.ExecContext(ctx, `UPDATE capture_page SET status='deleted',revision=revision+1,updated_at=now() WHERE tenant_id=$1 AND capture_file_id=$2::uuid AND deleted_at IS NULL`, tenantID, id); err != nil {
-			return Batch{}, err
-		}
-		if _, err = tx.ExecContext(ctx, `UPDATE capture_file SET exclusion_reason=$3,excluded_by=$4::uuid,replaced_by_file_id=NULLIF($5,'')::uuid,deleted_at=now(),updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, id, input.Reason, actorID, input.ReplacementFileID); err != nil {
+		if err := excludeCaptureFileTx(ctx, tx, tenantID, id, actorID, input); err != nil {
 			return Batch{}, err
 		}
 	}
@@ -148,6 +86,99 @@ func (s *PostgresStore) ExcludeFile(ctx context.Context, tenantID, fileID, actor
 		return Batch{}, err
 	}
 	return out, tx.Commit()
+}
+
+func validateExclusionReplacementTx(ctx context.Context, tx *sql.Tx, tenantID, batchID, fileID, groupID, replacementID string) error {
+	if replacementID == "" {
+		return nil
+	}
+	var valid bool
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id AND b.id=f.capture_batch_id JOIN capture_batch old ON old.tenant_id=b.tenant_id AND old.exam_id=b.exam_id WHERE old.id=$2::uuid AND f.tenant_id=$1 AND f.id=$3::uuid AND f.id<>$4::uuid AND f.deleted_at IS NULL AND (NULLIF($5,'')::uuid IS NULL OR f.upload_group_id IS DISTINCT FROM NULLIF($5,'')::uuid))`, tenantID, batchID, replacementID, fileID, groupID).Scan(&valid)
+	if err != nil {
+		return err
+	}
+	if !valid {
+		return ErrInvalidInput
+	}
+	return nil
+}
+
+func lockExcludedFileGroupTx(ctx context.Context, tx *sql.Tx, tenantID, batchID, fileID, groupID string) ([]string, error) {
+	// 一次选择是完整分组单位；只移除其中一张会改变余下学生的分组，必须整体退出有效输入。
+	rows, err := tx.QueryContext(ctx, `SELECT id::text FROM capture_file WHERE tenant_id=$1 AND capture_batch_id=$2::uuid AND deleted_at IS NULL AND (id=$3::uuid OR upload_group_id=NULLIF($4,'')::uuid) ORDER BY id FOR UPDATE`, tenantID, batchID, fileID, groupID)
+	if err != nil {
+		return nil, err
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// 先锁题块再查评分引用，避免排除与并发评分交错。取锁时使用 NOWAIT，避免和评分互相等待。
+func ensureExcludedFileUngradedTx(ctx context.Context, tx *sql.Tx, tenantID, id string) error {
+	segments, lockErr := tx.QueryContext(ctx, `SELECT a.id FROM answer_segment a JOIN capture_page p ON p.tenant_id=a.tenant_id AND p.submission_page_id=a.submission_page_id WHERE p.tenant_id=$1 AND p.capture_file_id=$2::uuid ORDER BY a.id FOR UPDATE OF a NOWAIT`, tenantID, id)
+	if lockErr != nil {
+		return ErrConflict
+	}
+	for segments.Next() {
+		var segmentID string
+		if lockErr = segments.Scan(&segmentID); lockErr != nil {
+			segments.Close()
+			return lockErr
+		}
+	}
+	lockErr = segments.Err()
+	segments.Close()
+	if lockErr != nil {
+		return lockErr
+	}
+	var graded bool
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM capture_page p JOIN answer_segment a ON a.tenant_id=p.tenant_id AND a.submission_page_id=p.submission_page_id WHERE p.tenant_id=$1 AND p.capture_file_id=$2::uuid AND (
+   EXISTS(SELECT 1 FROM ai_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
+   EXISTS(SELECT 1 FROM human_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
+   EXISTS(SELECT 1 FROM question_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
+   EXISTS(SELECT 1 FROM final_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
+   EXISTS(SELECT 1 FROM subjective_grading_run g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
+   EXISTS(SELECT 1 FROM scoring_run_item g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id)))`, tenantID, id).Scan(&graded)
+	if err != nil {
+		return err
+	}
+	if graded {
+		return ErrFileHasGrades
+	}
+	return nil
+}
+
+func excludeCaptureFileTx(ctx context.Context, tx *sql.Tx, tenantID, id, actorID string, input ExcludeFileInput) error {
+	// 排除页面和任务在同一事务内完成；旧租约回调只能被拒绝，不能把已排除的材料重新激活。
+	if _, err := tx.ExecContext(ctx, `UPDATE agent_worker_task SET status='cancelled',lease_token=NULL,lease_expires_at=NULL,completed_at=now(),updated_at=now() WHERE tenant_id=$1 AND status IN ('queued','leased','running') AND ((source_type='capture_file' AND source_id=$2::uuid) OR (source_type='page_registration_run' AND source_id IN(SELECT r.id FROM page_registration_run r JOIN capture_page p ON p.tenant_id=r.tenant_id AND p.id=r.capture_page_id WHERE p.tenant_id=$1 AND p.capture_file_id=$2::uuid)) OR (source_type='page_template_match_run' AND source_id IN(SELECT r.id FROM page_template_match_run r JOIN capture_page p ON p.tenant_id=r.tenant_id AND p.id=r.capture_page_id WHERE p.tenant_id=$1 AND p.capture_file_id=$2::uuid)))`, tenantID, id); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE answer_segment SET processing_status='invalidated',deleted_at=now(),updated_at=now() WHERE tenant_id=$1 AND submission_page_id IN(SELECT submission_page_id FROM capture_page WHERE tenant_id=$1 AND capture_file_id=$2::uuid) AND deleted_at IS NULL`, tenantID, id); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE submission_page SET deleted_at=now(),updated_at=now() WHERE tenant_id=$1 AND id IN(SELECT submission_page_id FROM capture_page WHERE tenant_id=$1 AND capture_file_id=$2::uuid) AND deleted_at IS NULL`, tenantID, id); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE capture_page SET status='deleted',revision=revision+1,updated_at=now() WHERE tenant_id=$1 AND capture_file_id=$2::uuid AND deleted_at IS NULL`, tenantID, id); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE capture_file SET exclusion_reason=$3,excluded_by=$4::uuid,replaced_by_file_id=NULLIF($5,'')::uuid,deleted_at=now(),updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid`, tenantID, id, input.Reason, actorID, input.ReplacementFileID); err != nil {
+		return err
+	}
+	return nil
 }
 
 var _ CollectionStore = (*PostgresStore)(nil)

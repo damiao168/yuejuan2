@@ -438,7 +438,8 @@ describe("answer sheet page behavior before and after extraction", () => {
 			downloadPrintBatch: vi.fn(),
 			issuePrintPackage: vi.fn(),
 			reprintCandidate: undefined, reprintReason: "", setReprintReason: vi.fn(), reprintError: undefined,
-			reprintReasonFrozen: false, downloadPendingBatch: undefined, openReprint: vi.fn(), reprint: vi.fn(), closeReprint: vi.fn()
+			reprintReasonFrozen: false, downloadPendingBatch: undefined, openReprint: vi.fn(), reprint: vi.fn(), closeReprint: vi.fn(),
+			layoutRequest: undefined, layoutError: undefined, confirmLayout: vi.fn(), closeLayout: vi.fn()
 		};
 		host = document.createElement("div");
 		document.body.append(host);

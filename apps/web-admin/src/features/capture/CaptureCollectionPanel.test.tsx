@@ -187,4 +187,34 @@ describe("考试级答卷导入核对", () => {
     await fillReason("放弃尚未开始的上传"); await click("确认并重新核对");
     expect(mocks.cancel).toHaveBeenCalledWith("batch-b", "放弃尚未开始的上传");
   });
+
+  it("重复文件卡住的混合组可整组退出，并明确保留此前成功组", async () => {
+    const issue = { id: "mixed-group", kind: "batch" as const, code: "upload_group_duplicate", name: "本次选择含重复文件，无法完成分组", batch_id: "batch-a", file_id: "mixed-file" };
+    await render({ summary: collectionSummary({ issues: [issue] }) });
+    expect(host.textContent).toContain("本次选择含重复文件，无法完成分组");
+    expect([...host.querySelectorAll("button")].some(item => item.textContent === "重试原文件")).toBe(false);
+    await click("不计入");
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain("此前成功组的文件和答卷继续保留");
+    await fillReason("保留此前成功答卷，重新导入本次未完成答卷");
+    await click("确认并重新核对");
+    expect(mocks.exclude).toHaveBeenCalledWith("mixed-file", "保留此前成功答卷，重新导入本次未完成答卷");
+    expect(props.onRefresh).toHaveBeenCalledOnce();
+    expect(props.onMaterialChanged).toHaveBeenCalledWith("batch-a");
+  });
+
+  it("重复混合组替代只要求尚未成功的完整答卷，并沿用操作期间的禁用保护", async () => {
+    const issue = { id: "mixed-group", kind: "batch" as const, code: "upload_group_duplicate", name: "重复混合组", batch_id: "batch-a", file_id: "mixed-file" };
+    await render({ summary: collectionSummary({ issues: [issue] }), localBusy: true });
+    expect(button("上传替代答卷").disabled).toBe(true);
+    expect(button("不计入").disabled).toBe(true);
+    await render({ localBusy: false });
+    await click("上传替代答卷");
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain("尚未成功导入的完整答卷");
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain("不要只补单页");
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain("不要再次选择此前已成功导入的答卷");
+    await fillReason("重新导入尚未成功的完整答卷");
+    await click("继续选择完整答卷");
+    expect(props.onReplace).toHaveBeenCalledWith(issue, "重新导入尚未成功的完整答卷");
+    expect(mocks.exclude).not.toHaveBeenCalled();
+  });
 });

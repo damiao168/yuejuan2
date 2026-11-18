@@ -4,10 +4,20 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import ts from "typescript";
-import { createBreakingBaseline, generateTypes, readOpenApi, schemaToType } from "../lib/openapi-sdk.mjs";
+import { createBreakingBaseline, generateClient, generateTypes, readOpenApi, schemaToType } from "../lib/openapi-sdk.mjs";
 import { findBreakingChanges } from "../check-openapi-breaking.mjs";
 
 const spec = readOpenApi("services/api-gateway/openapi/edugrade-api.openapi.json");
+
+test("student print downloads use the binary SDK transport", () => {
+  const client = generateClient(spec);
+  for (const operation of ["downloadAnswerSheetPrintPackage", "downloadStudentAnswerSheetPrintSource"]) {
+    assert.match(client, new RegExp(`"${operation}": .+ response: ApiBlobResponse;`));
+    const method = client.split(`  ${operation}(`)[1]?.split("\n  }")[0];
+    assert.ok(method?.includes("if (!this.transport.requestBlob)"));
+    assert.ok(method?.includes("return this.transport.requestBlob(requestPath,"));
+  }
+});
 
 function compile(t, types, fixture) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "sdk-remediation-"));

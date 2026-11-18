@@ -30,7 +30,8 @@ func printDownloadFixture() StudentPrintPackage {
 		IssuedAt: time.Date(2026, 11, 16, 0, 0, 0, 0, time.UTC),
 		Sheets: []PrintPackageSheet{{
 			StudentID: "student", SheetSerial: "sheet", Ordinal: 1,
-			Pages: []PrintPackagePage{{PageNo: 1, TemplateWidth: 1000, TemplateHeight: 1400, BarcodeValue: "synthetic-signed-barcode"}},
+			Pages: []PrintPackagePage{{PageNo: 1, TemplateWidth: 1000, TemplateHeight: 1400, BarcodeValue: "synthetic-signed-barcode",
+				IdentityRegions: []PrintPackageRegion{{ID: "qr", X: .75, Y: .05, Width: .2, Height: .18}}}},
 		}},
 	}
 }
