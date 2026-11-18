@@ -45,19 +45,47 @@ func (f *coordinatorFixtureImages) Observe(_ context.Context, _ string, input Sc
 }
 func (f *coordinatorFixtureImages) Schedule(ctx context.Context, tenantID, actorID string, input ScoringAIInput) (string, string, error) {
 	f.schedules++
-	runID := uuid.NewString()
-	_, err := f.db.ExecContext(ctx, `INSERT INTO subjective_grading_run(id,tenant_id,answer_segment_id,answer_version,question_id,rubric_version,model_version,prompt_version,request_id,status) SELECT $1::uuid,$2::uuid,seg.id,$4,seg.question_id,'fixture-v1','fixture-v1','fixture-v1',$5,'queued' FROM answer_segment seg WHERE seg.tenant_id=$2::uuid AND seg.id=$3::uuid`, runID, tenantID, input.SegmentID, input.InputVersionID, input.IdempotencyKey)
+	tx, err := f.db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", "", err
 	}
-	task, err := f.runtime.CreateTask(ctx, tenantID, actorID, workerruntime.CreateTaskInput{TaskType: "ai_grade", QueueName: "subjective-grading", SourceType: "subjective_grading_run", SourceID: runID, PayloadSchemaVersion: "fixture-v1", Payload: map[string]any{}, IdempotencyKey: input.IdempotencyKey})
-	return runID, task.ID, err
+	defer tx.Rollback()
+	// 与正式入队接口相同，替身返回成功前须在同一事务里提交运行、任务和计划关联。
+	var existingRun, existingTask string
+	err = tx.QueryRowContext(ctx, `SELECT COALESCE(subjective_run_id::text,''),COALESCE(runtime_task_id::text,'') FROM scoring_run_item WHERE tenant_id=$1 AND scoring_run_id=$2 AND answer_segment_id=$3 AND input_version_id=$4 AND assessment_snapshot_id=$5 FOR UPDATE`,
+		tenantID, input.ScoringRunID, input.SegmentID, input.InputVersionID, input.AssessmentSnapshotID).Scan(&existingRun, &existingTask)
+	if err != nil {
+		return "", "", err
+	}
+	if existingRun != "" {
+		return existingRun, existingTask, tx.Commit()
+	}
+	runID := uuid.NewString()
+	_, err = tx.ExecContext(ctx, `INSERT INTO subjective_grading_run(id,tenant_id,answer_segment_id,answer_version,question_id,rubric_version,model_version,prompt_version,request_id,status) SELECT $1::uuid,$2::uuid,seg.id,$4,seg.question_id,'fixture-v1','fixture-v1','fixture-v1',$5,'queued' FROM answer_segment seg WHERE seg.tenant_id=$2::uuid AND seg.id=$3::uuid`, runID, tenantID, input.SegmentID, input.InputVersionID, input.IdempotencyKey)
+	if err != nil {
+		return "", "", err
+	}
+	task, err := workerruntime.CreateTaskInTx(ctx, tx, tenantID, actorID, workerruntime.CreateTaskInput{TaskType: "ai_grade", QueueName: "subjective-grading", SourceType: "subjective_grading_run", SourceID: runID, PayloadSchemaVersion: "fixture-v1", Payload: map[string]any{}, IdempotencyKey: input.IdempotencyKey})
+	if err != nil {
+		return "", "", err
+	}
+	_, err = tx.ExecContext(ctx, `UPDATE scoring_run_item SET subjective_run_id=$4,runtime_task_id=$5,stage='score',processing_status='queued',reason_code='ai_suggestion_pending',next_action='wait',revision=revision+1 WHERE tenant_id=$1 AND scoring_run_id=$2 AND answer_segment_id=$3 AND input_version_id=$6 AND assessment_snapshot_id=$7`,
+		tenantID, input.ScoringRunID, input.SegmentID, runID, task.ID, input.InputVersionID, input.AssessmentSnapshotID)
+	if err != nil {
+		return "", "", err
+	}
+	if err = tx.Commit(); err != nil {
+		return "", "", err
+	}
+	return runID, task.ID, nil
 }
 
 // 在独立 schema 执行正式 203 与生产启动的计划/排队事务，再使用真实 runtime 和规则成绩写入。
 // 观察/AI transport 是离线夹具；此测试不证明真实模型准确性，也不替代纸卷准备度确认的独立验收。
 func TestPostgresDurableScoringCoordinatorStartObserveResume(t *testing.T) {
 	ctx, db := newDurableScoringFixture(t)
+	// 调度器和执行器共用连接池。限制为一条连接，持有连接时再次向池借用就会超时。
+	db.SetMaxOpenConns(1)
 	mustExec := func(query string, args ...any) {
 		t.Helper()
 		if _, err := db.ExecContext(ctx, query, args...); err != nil {
@@ -125,10 +153,16 @@ func TestPostgresDurableScoringCoordinatorStartObserveResume(t *testing.T) {
 	}
 	images := &coordinatorFixtureImages{db: db, runtime: runtime}
 	coordinator := NewScoringCoordinator(store, runtime, images, time.Minute)
-	for range 3 {
-		if err = coordinator.RunOnce(ctx); err != nil {
-			t.Fatal(err)
+	runOnce := func() {
+		t.Helper()
+		cycle, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		if err := coordinator.RunOnce(cycle); err != nil {
+			t.Fatalf("one scoring cycle with one PostgreSQL connection: %v", err)
 		}
+	}
+	for range 3 {
+		runOnce()
 	}
 	if images.observations != 2 || images.schedules != 1 {
 		t.Fatalf("shared/recovery dispatch observations=%d schedules=%d", images.observations, images.schedules)
@@ -143,11 +177,25 @@ func TestPostgresDurableScoringCoordinatorStartObserveResume(t *testing.T) {
 	if _, _, _, err = store.ResumeScoringRun(ctx, tenant, runID, false); err != nil {
 		t.Fatal(err)
 	}
-	if err = coordinator.RunOnce(ctx); err != nil {
-		t.Fatal(err)
-	}
+	runOnce()
 	if images.observations != 2 || images.schedules != 1 {
 		t.Fatal("resume repeated successful external work")
+	}
+	var subjectiveRuns, runtimeTasks, linkedItems int
+	if err = db.QueryRowContext(ctx, `
+SELECT
+  (SELECT count(*) FROM subjective_grading_run),
+  (SELECT count(*) FROM agent_worker_task WHERE queue_name='subjective-grading'),
+  (SELECT count(*) FROM scoring_run_item item
+   JOIN subjective_grading_run sgr ON sgr.tenant_id=item.tenant_id AND sgr.id=item.subjective_run_id
+   JOIN agent_worker_task task ON task.tenant_id=item.tenant_id AND task.id=item.runtime_task_id AND task.source_id=sgr.id
+   WHERE item.tenant_id=$1 AND item.scoring_run_id=$2 AND item.route='image_ai'
+     AND item.stage='score' AND item.processing_status='queued')
+`, tenant, runID).Scan(&subjectiveRuns, &runtimeTasks, &linkedItems); err != nil {
+		t.Fatal(err)
+	}
+	if subjectiveRuns != 1 || runtimeTasks != 1 || linkedItems != 1 {
+		t.Fatalf("AI enqueue facts: runs=%d tasks=%d linked=%d", subjectiveRuns, runtimeTasks, linkedItems)
 	}
 	var finalGrades int
 	if err = db.QueryRowContext(ctx, `SELECT count(*) FROM question_grade WHERE source='human'`).Scan(&finalGrades); err != nil || finalGrades != 0 {

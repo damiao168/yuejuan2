@@ -2,6 +2,7 @@ package grading
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 	"github.com/google/uuid"
 )
+
+const scoringEnqueueTimeout = 15 * time.Second
 
 // ScoringCoordinator 消费持久观察任务，并扫描已满足依赖的条目。浏览器退出不影响接续。
 // 租约保护来源提交；供应商若没有幂等回执，网络断开仍可能产生未知外部调用，不能承诺恰好调用一次。
@@ -220,33 +223,31 @@ func (c *ScoringCoordinator) resumePending(ctx context.Context) error {
 }
 
 func (c *ScoringCoordinator) scheduleAI(ctx context.Context, item pendingScoringItem) error {
-	// advisory lock 仅串行化持久任务的建立；模型计算由 subjective Worker 在独立租约里执行。
-	conn, err := c.store.db.Conn(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	key := item.tenantID + ":" + item.runID + ":" + item.segmentID + ":scoring-ai"
-	var locked bool
-	if err = conn.QueryRowContext(ctx, `SELECT pg_try_advisory_lock(hashtextextended($1,0))`, key).Scan(&locked); err != nil || !locked {
-		return err
-	}
-	defer conn.ExecContext(context.WithoutCancel(ctx), `SELECT pg_advisory_unlock(hashtextextended($1,0))`, key)
-	var existing, status string
-	err = conn.QueryRowContext(ctx, `SELECT COALESCE(item.subjective_run_id::text,''),sr.status FROM scoring_run_item item JOIN scoring_run sr ON sr.tenant_id=item.tenant_id AND sr.id=item.scoring_run_id WHERE item.tenant_id=$1::uuid AND item.scoring_run_id=$2::uuid AND item.answer_segment_id=$3::uuid`, item.tenantID, item.runID, item.segmentID).Scan(&existing, &status)
-	if err != nil {
-		return err
-	}
-	if existing != "" || status == "cancelling" || status == "cancelled" {
+	// 下游入队事务负责串行化并关联任务，预检结束便释放连接。入队不执行模型，超时后下一轮恢复扫描会重试。
+	ctx, cancel := context.WithTimeout(ctx, scoringEnqueueTimeout)
+	defer cancel()
+	var revision int64
+	err := c.store.db.QueryRowContext(ctx, `
+SELECT item.revision
+FROM scoring_run_item item
+JOIN scoring_run sr ON sr.tenant_id=item.tenant_id AND sr.id=item.scoring_run_id
+WHERE item.tenant_id=$1::uuid AND item.scoring_run_id=$2::uuid AND item.answer_segment_id=$3::uuid
+  AND item.input_version_id=$4::uuid AND item.assessment_snapshot_id=$5::uuid AND item.observation_json=$6::jsonb
+  AND sr.deleted_at IS NULL AND sr.status NOT IN ('cancelling','cancelled')
+  AND item.route='image_ai' AND item.subjective_run_id IS NULL
+  AND item.processing_status IN ('waiting_dependency','queued','running','retry_wait')
+`, item.tenantID, item.runID, item.segmentID, item.inputID, item.snapshotID, string(item.observation)).Scan(&revision)
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil
+	}
+	if err != nil {
+		return err
 	}
 	runID, taskID, err := c.images.Schedule(ctx, item.tenantID, item.actorID, ScoringAIInput{ScoringRunID: item.runID, SegmentID: item.segmentID, InputVersionID: item.inputID, CropSHA256: item.cropHash, AssessmentSnapshotID: item.snapshotID, IdempotencyKey: "scoring-ai:" + item.runID + ":" + item.segmentID + ":" + item.inputID, Observation: item.observation})
 	if err != nil {
 		code, retryable := scoringExecutionFailure(err)
-		// 确定性配置问题停在 blocked；瞬时排队错误交给恢复扫描，不重复执行已经持久化的主观运行。
 		if !retryable {
-			_, updateErr := conn.ExecContext(ctx, `UPDATE scoring_run_item SET processing_status='blocked',reason_code=$4,next_action='check_configuration',retryable=false,revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND answer_segment_id=$3::uuid AND subjective_run_id IS NULL`, item.tenantID, item.runID, item.segmentID, code)
-			if updateErr != nil {
+			if updateErr := c.store.blockAIEnqueue(ctx, item, revision, code); updateErr != nil {
 				return updateErr
 			}
 		}
@@ -255,8 +256,45 @@ func (c *ScoringCoordinator) scheduleAI(ctx context.Context, item pendingScoring
 	if runID == "" || taskID == "" {
 		return ErrInvalidInput
 	}
-	_, err = conn.ExecContext(ctx, `UPDATE scoring_run_item SET subjective_run_id=$4::uuid,runtime_task_id=$5::uuid,stage='score',processing_status='queued',reason_code='ai_suggestion_pending',revision=revision+1,updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND answer_segment_id=$3::uuid AND subjective_run_id IS NULL AND processing_status NOT IN ('cancelled','superseded')`, item.tenantID, item.runID, item.segmentID, runID, taskID)
-	return err
+	return nil
+}
+
+func (s *PostgresStore) blockAIEnqueue(ctx context.Context, item pendingScoringItem, revision int64, code string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	// 和取消、入队使用同一父运行锁顺序。迟到的配置错误只能标记预检时仍有效的条目版本。
+	var active bool
+	err = tx.QueryRowContext(ctx, `
+SELECT status NOT IN ('cancelling','cancelled') FROM scoring_run
+WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE
+`, item.tenantID, item.runID).Scan(&active)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil || !active {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `
+UPDATE scoring_run_item item
+SET processing_status='blocked',reason_code=$7,next_action='check_configuration',
+    retryable=false,revision=item.revision+1,updated_at=now()
+FROM answer_input_version iv, answer_segment seg
+WHERE item.tenant_id=$1::uuid AND item.scoring_run_id=$2::uuid AND item.answer_segment_id=$3::uuid
+  AND item.input_version_id=$4::uuid AND item.assessment_snapshot_id=$5::uuid AND item.revision=$6
+  AND item.route='image_ai' AND item.subjective_run_id IS NULL
+  AND item.processing_status IN ('waiting_dependency','queued','running','retry_wait')
+  AND iv.tenant_id=item.tenant_id AND iv.id=item.input_version_id
+  AND seg.tenant_id=item.tenant_id AND seg.id=item.answer_segment_id AND seg.deleted_at IS NULL
+  AND seg.crop_sha256=iv.crop_sha256 AND seg.crop_file_asset_id=iv.crop_file_asset_id
+  AND seg.registration_run_id IS NOT DISTINCT FROM iv.registration_run_id
+`, item.tenantID, item.runID, item.segmentID, item.inputID, item.snapshotID, revision, code)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // ResumeScoringRun 只唤醒当前冻结计划，不把新规则混入旧运行；失败重排另由显式 retry 命令负责。

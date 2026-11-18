@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/db"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -198,7 +199,7 @@ WHERE tenant_id=$1::uuid AND id=$2::uuid AND status<>'retired'
 }
 
 func (s *PostgresStore) Get(ctx context.Context, tenantID, id string) (GoldPaper, error) {
-	items, err := s.query(ctx, tenantID, ` AND gp.id::text=$2 AND $3::text='' AND $4::text=''`, id, "", "")
+	items, err := s.query(ctx, s.db, tenantID, ` AND gp.id::text=$2 AND $3::text='' AND $4::text=''`, id, "", "")
 	if err != nil {
 		return GoldPaper{}, err
 	}
@@ -217,21 +218,26 @@ func (s *PostgresStore) List(ctx context.Context, tenantID string, filter ListFi
 		return nil, err
 	}
 	args := append([]any{filter.ExamID, filter.QuestionID, string(filter.Status)}, accessArgs...)
-	return s.query(ctx, tenantID, ` AND ($2='' OR gp.exam_id::text=$2) AND ($3='' OR gp.question_id::text=$3) AND ($4='' OR gp.status=$4) AND `+auth.ExamCollectionPredicate("gp.exam_id", 5), args...)
+	return s.query(ctx, s.db, tenantID, ` AND ($2='' OR gp.exam_id::text=$2) AND ($3='' OR gp.question_id::text=$3) AND ($4='' OR gp.status=$4) AND `+auth.ExamCollectionPredicate("gp.exam_id", 5), args...)
 }
 
 func (s *PostgresStore) ListActiveApproved(ctx context.Context, tenantID, examID, questionID string) ([]GoldPaper, error) {
-	return s.query(ctx, tenantID, ` AND gp.exam_id::text=$2 AND gp.question_id::text=$3 AND gp.status='active' AND $4::text=''`, examID, questionID, "")
+	return s.listActiveApproved(ctx, s.db, tenantID, examID, questionID)
+}
+
+func (s *PostgresStore) listActiveApproved(ctx context.Context, reader sqlQueryer, tenantID, examID, questionID string) ([]GoldPaper, error) {
+	return s.query(ctx, reader, tenantID, ` AND gp.exam_id::text=$2 AND gp.question_id::text=$3 AND gp.status='active' AND $4::text=''`, examID, questionID, "")
 }
 
 func (s *PostgresStore) Coverage(ctx context.Context, tenantID, examID, questionID string) (Coverage, error) {
-	items, err := s.ListActiveApproved(ctx, tenantID, examID, questionID)
+	reader := db.ReadQueryer(ctx, s.db)
+	items, err := s.listActiveApproved(ctx, reader, tenantID, examID, questionID)
 	if err != nil {
 		return Coverage{}, err
 	}
 	var subject, archetype, risk string
 	var maxScore float64
-	err = s.db.QueryRowContext(ctx, `
+	err = reader.QueryRowContext(ctx, `
 SELECT COALESCE(eqs.profile_snapshot_json->>'subject_code',''),eqs.archetype_code,eqs.risk_tier,q.score::float8
 FROM question q
 JOIN LATERAL (
@@ -363,7 +369,7 @@ RETURNING id::text
 	return id, err
 }
 
-func (s *PostgresStore) query(ctx context.Context, tenantID, condition string, filterArgs ...any) ([]GoldPaper, error) {
+func (s *PostgresStore) query(ctx context.Context, reader sqlQueryer, tenantID, condition string, filterArgs ...any) ([]GoldPaper, error) {
 	query := `
 SELECT gp.id::text,gp.exam_id::text,gp.question_id::text,gp.submission_id::text,gp.quality_pool,
        COALESCE(gp.active_version,0),gp.status,gp.nominated_by::text,gp.retired_at,gp.retirement_reason,gp.created_at,gp.updated_at,
@@ -380,7 +386,7 @@ LEFT JOIN question q ON q.tenant_id=gp.tenant_id AND q.exam_id=gp.exam_id AND q.
 WHERE gp.tenant_id=$1::uuid` + condition + `
 ORDER BY gp.created_at,gp.id,v.version`
 	args := append([]any{tenantID}, filterArgs...)
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := reader.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

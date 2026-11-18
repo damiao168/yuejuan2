@@ -3,10 +3,12 @@ package graderdrift
 import (
 	"context"
 	"database/sql"
-	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"encoding/json"
 	"errors"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/db"
 )
 
 type PostgresStore struct{ db *sql.DB }
@@ -118,7 +120,7 @@ func (s *PostgresStore) ListIncidents(ctx context.Context, tenantID string, filt
 		before = filter.BeforeCreatedAt
 	}
 	args = append(args, before, filter.BeforeID)
-	rows, err := s.db.QueryContext(ctx, `SELECT `+incidentColumns+`
+	rows, err := db.ReadQueryer(ctx, s.db).QueryContext(ctx, `SELECT `+incidentColumns+`
 FROM grading_quality_incident WHERE tenant_id=$1::uuid
  AND ($2='' OR exam_id::text=$2) AND ($3='' OR question_id::text=$3) AND ($4='' OR grader_id::text=$4)
  AND ($5='' OR status=$5)
@@ -142,7 +144,7 @@ ORDER BY created_at DESC,id DESC LIMIT $6`, args...)
 
 func (s *PostgresStore) CountOpenIncidents(ctx context.Context, tenantID, examID, questionID string) (IncidentCounts, error) {
 	var result IncidentCounts
-	err := s.db.QueryRowContext(ctx, `SELECT count(*) FILTER (WHERE severity='critical'),count(*) FILTER (WHERE severity<>'critical')
+	err := db.ReadQueryer(ctx, s.db).QueryRowContext(ctx, `SELECT count(*) FILTER (WHERE severity='critical'),count(*) FILTER (WHERE severity<>'critical')
 FROM grading_quality_incident WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND ($3='' OR question_id::text=$3) AND status='open'`, tenantID, examID, questionID).Scan(&result.OpenCritical, &result.OpenWarnings)
 	return result, err
 }

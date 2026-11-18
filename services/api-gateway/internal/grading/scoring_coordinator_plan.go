@@ -40,7 +40,7 @@ type ScoringAIInput struct {
 }
 
 // ScoringImageExecutor 由装配层接入主观服务，避免 grading 与 subjective 相互导入。
-// 观察请求不含标准答案；调度的 AI 任务必须使用本轮冻结快照。
+// 观察请求不含标准答案。Schedule 使用本轮冻结快照，在同一事务建立 AI 任务并关联条目。
 type ScoringImageExecutor interface {
 	Observe(context.Context, string, ScoringObservationInput) (json.RawMessage, error)
 	Schedule(context.Context, string, string, ScoringAIInput) (string, string, error)

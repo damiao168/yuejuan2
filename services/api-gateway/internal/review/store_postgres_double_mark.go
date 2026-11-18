@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/db"
 )
 
 func (s *PostgresStore) SetExamDoubleMarkPolicy(ctx context.Context, tenantID string, examID string, actorID string, input SetDoubleMarkPolicyInput) (DoubleMarkPolicy, error) {
@@ -186,7 +187,7 @@ func (s *PostgresStore) ListDoubleMarkSessions(ctx context.Context, tenantID str
 		return nil, err
 	}
 	args := append([]any{tenantID, filter.Status, filter.AnswerSegmentID, filter.ExamID, filter.QuestionID}, scopeArgs...)
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := db.ReadQueryer(ctx, s.db).QueryContext(ctx, `
 SELECT id::text, tenant_id::text, exam_id::text, question_id::text, question_no,
   answer_segment_id::text, submission_id::text, anonymous_code,
   first_review_task_id::text, second_review_task_id::text, first_reviewer_id::text, second_reviewer_id::text,

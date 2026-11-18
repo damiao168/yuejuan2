@@ -6,13 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"edugrade-enterprise/services/api-gateway/internal/db"
 )
 
 func (s *PostgresStore) List(ctx context.Context, tenantID, examID, questionID string) ([]Group, error) {
 	if s.db == nil || !validIDs(tenantID, examID, questionID) {
 		return nil, ErrInvalidInput
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id::text FROM answer_group WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$3::uuid ORDER BY member_count DESC,id`, tenantID, examID, questionID)
+	reader := db.ReadQueryer(ctx, s.db)
+	rows, err := reader.QueryContext(ctx, `SELECT id::text FROM answer_group WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$3::uuid ORDER BY member_count DESC,id`, tenantID, examID, questionID)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +31,11 @@ func (s *PostgresStore) List(ctx context.Context, tenantID, examID, questionID s
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	return s.groupsByIDs(ctx, s.db, tenantID, ids)
+	// 逐个读取分组之前释放结果集，后续查询可能正在复用同一条事务连接。
+	if err = rows.Close(); err != nil {
+		return nil, err
+	}
+	return s.groupsByIDs(ctx, reader, tenantID, ids)
 }
 
 func (s *PostgresStore) Get(ctx context.Context, tenantID, groupID string) (Group, error) {
@@ -45,7 +52,7 @@ func (s *PostgresStore) Metrics(ctx context.Context, tenantID, examID, questionI
 	var metric Metrics
 	var weighted sql.NullFloat64
 	var decided, rolledBack int
-	err := s.db.QueryRowContext(ctx, `
+	err := db.ReadQueryer(ctx, s.db).QueryRowContext(ctx, `
 SELECT count(grouping.id),COALESCE(sum(grouping.member_count),0),
        sum(grouping.homogeneity * grouping.member_count),
        count(*) FILTER (WHERE grouping.status IN ('confirmed','rolled_back')),

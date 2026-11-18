@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"edugrade-enterprise/services/api-gateway/internal/assessment"
 	"edugrade-enterprise/services/api-gateway/internal/grading"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -60,12 +61,64 @@ func newImageSchedulePostgresFixture(t *testing.T) (context.Context, *PostgresSt
 	mustExec(`INSERT INTO scoring_run(id,tenant_id,exam_id,idempotency_key,status,started_by) VALUES($1,$2,$3,'fixture','processing',$4)`, runID, tenant, uuid.NewString(), actor)
 	mustExec(`INSERT INTO answer_segment(id,tenant_id,submission_id,submission_page_id,question_id,question_no,bbox,source,status,crop_file_asset_id,crop_sha256) VALUES($1,$2,$3,$4,$5,'17','{}','manual','accepted',$6,$7)`, segment, tenant, submission, uuid.NewString(), question, crop, hash)
 	mustExec(`INSERT INTO answer_input_version(id,tenant_id,answer_segment_id,submission_id,crop_file_asset_id,crop_sha256,template_content_hash,answer_scope,members_json,input_hash) VALUES($1,$2,$3,$4,$5,$6,$6,'question','[{}]',$6)`, inputID, tenant, segment, submission, crop, hash)
-	mustExec(`INSERT INTO scoring_run_item(tenant_id,scoring_run_id,answer_segment_id,question_id,input_version_id,assessment_snapshot_id,route,observation_json) VALUES($1,$2,$3,$4,$5,$6,'image_ai','{"fixture":true}')`, tenant, runID, segment, question, inputID, snapshot)
+	observation := []byte(`{"fixture":true}`)
+	mustExec(`INSERT INTO scoring_run_item(tenant_id,scoring_run_id,answer_segment_id,question_id,input_version_id,assessment_snapshot_id,route,observation_json) VALUES($1,$2,$3,$4,$5,$6,'image_ai',$7::jsonb)`, tenant, runID, segment, question, inputID, snapshot, string(observation))
 	value := serviceTestContext()
 	value.SegmentID, value.Question.ID, value.AssessmentSnapshot.ID = segment, question, snapshot
 	value.InputVersionID, value.AnswerVersion, value.CropSHA256 = inputID, inputID, hash
-	input := grading.ScoringAIInput{ScoringRunID: runID, SegmentID: segment, InputVersionID: inputID, CropSHA256: hash, AssessmentSnapshotID: snapshot, IdempotencyKey: "fixture-" + uuid.NewString()}
+	input := grading.ScoringAIInput{ScoringRunID: runID, SegmentID: segment, InputVersionID: inputID, CropSHA256: hash, AssessmentSnapshotID: snapshot, IdempotencyKey: "fixture-" + uuid.NewString(), Observation: observation}
 	return ctx, NewPostgresStore(database), tenant, actor, input, value
+}
+
+func TestPostgresScheduleScoringItemSharesSingleConnection(t *testing.T) {
+	ctx, store, tenant, actor, input, value := newImageSchedulePostgresFixture(t)
+	model := coordinatorModel()
+	plan := coordinatorPlan(model)
+	value.Rubric.QuestionID = value.Question.ID
+	value.AssessmentSnapshot.ScoringPolicySnapshot.Mode = assessment.ScoringAIAssist
+	frozen := map[string]any{"question": value.Question, "rubric": value.Rubric, "assessment_snapshot": value.AssessmentSnapshot}
+	if _, err := store.db.ExecContext(ctx, `UPDATE scoring_run SET rule_snapshot=$3::jsonb WHERE tenant_id=$1 AND id=$2`, tenant, input.ScoringRunID,
+		string(imageJSON(t, map[string]any{"ai_plan": plan, "questions": map[string]any{value.Question.ID: frozen}}))); err != nil {
+		t.Fatal(err)
+	}
+	observation := imageTestObservation(value.Question.ID, value.CropSHA256)
+	observation.InputVersionID, observation.ModelBinding = input.InputVersionID, imageModelBinding(model)
+	input.Observation = imageJSON(t, map[string]any{"student_observation": observation})
+	if _, err := store.db.ExecContext(ctx, `UPDATE scoring_run_item SET observation_json=$3::jsonb WHERE tenant_id=$1 AND scoring_run_id=$2`, tenant, input.ScoringRunID, string(input.Observation)); err != nil {
+		t.Fatal(err)
+	}
+	store.db.SetMaxOpenConns(1)
+	// 使用正式处理器读取快照和写入任务。模型解析是替身，但仍从同一连接池读取该租户的配置来源。
+	handler := coordinatorHandler(t, store.db, "http://127.0.0.1:1", model).WithImageModelByIDResolver(func(ctx context.Context, scope, modelID, revision string) (*ImageModelConfig, error) {
+		if scope != tenant || modelID != model.ConfigID || revision != plan.SingleModel.BindingRevision {
+			return nil, errors.New("model binding escaped the frozen plan")
+		}
+		var exists bool
+		if err := store.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM scoring_run WHERE tenant_id=$1 AND id=$2)`, scope, input.ScoringRunID).Scan(&exists); err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, errors.New("missing model scope")
+		}
+		return model, nil
+	})
+	scheduleCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	before := store.db.Stats().WaitCount
+	run, task, err := handler.ScheduleScoringItem(scheduleCtx, tenant, actor, input)
+	if err != nil || run == "" || task == "" || store.db.Stats().WaitCount != before {
+		t.Fatalf("single-pool enqueue: run=%q task=%q err=%v", run, task, err)
+	}
+	var bound bool
+	err = store.db.QueryRowContext(ctx, `SELECT EXISTS(
+ SELECT 1 FROM scoring_run_item item
+ JOIN subjective_grading_run r ON r.tenant_id=item.tenant_id AND r.id=item.subjective_run_id
+ JOIN agent_worker_task wt ON wt.tenant_id=item.tenant_id AND wt.id=item.runtime_task_id AND wt.source_id=r.id
+ WHERE item.tenant_id=$1::uuid AND item.scoring_run_id=$2::uuid AND r.id=$3::uuid AND wt.id=$4::uuid
+ AND r.input_version_id=item.input_version_id AND wt.status='queued' AND item.processing_status='queued')`, tenant, input.ScoringRunID, run, task).Scan(&bound)
+	if err != nil || !bound {
+		t.Fatalf("handler did not atomically bind run and task: bound=%v err=%v", bound, err)
+	}
 }
 
 func TestPostgresScheduleImageRunTypedInputAndReplay(t *testing.T) {
@@ -93,6 +146,89 @@ func TestPostgresScheduleImageRunTypedInputAndReplay(t *testing.T) {
 	var runs, tasks int
 	if err = store.db.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM subjective_grading_run),(SELECT count(*) FROM agent_worker_task)`).Scan(&runs, &tasks); err != nil || runs != 1 || tasks != 1 {
 		t.Fatalf("replay duplicated rows: runs=%d tasks=%d err=%v", runs, tasks, err)
+	}
+}
+
+func TestPostgresScheduleImageRunConcurrentReplayKeepsOneTask(t *testing.T) {
+	ctx, store, tenant, actor, input, value := newImageSchedulePostgresFixture(t)
+	store.db.SetMaxOpenConns(2)
+	policy := ModelPolicy{ModelVersion: "fixture-model", PromptVersion: "fixture-prompt", MinConfidence: .8}
+	type scheduledImage struct {
+		run, task string
+		err       error
+	}
+	start := make(chan struct{})
+	ready := make(chan struct{}, 2)
+	results := make(chan scheduledImage, 2)
+	for range 2 {
+		go func() {
+			ready <- struct{}{}
+			<-start
+			run, task, err := store.scheduleImageRun(ctx, tenant, actor, input, value, policy)
+			results <- scheduledImage{run: run, task: task, err: err}
+		}()
+	}
+	<-ready
+	<-ready
+	close(start)
+	first, second := <-results, <-results
+	if first.err != nil || second.err != nil || first.run == "" || first.task == "" || first.run != second.run || first.task != second.task {
+		t.Fatalf("concurrent replay must return the same run and task: first=%+v second=%+v", first, second)
+	}
+	// 任务完成后允许重放原请求，但换请求键不能为同一条目留下未关联的新任务。
+	if _, err := store.db.ExecContext(ctx, `UPDATE scoring_run_item SET processing_status='succeeded' WHERE tenant_id=$1 AND scoring_run_id=$2`, tenant, input.ScoringRunID); err != nil {
+		t.Fatal(err)
+	}
+	run, task, err := store.scheduleImageRun(ctx, tenant, actor, input, value, policy)
+	if err != nil || run != first.run || task != first.task {
+		t.Fatalf("finished replay changed the binding: run=%q task=%q err=%v", run, task, err)
+	}
+	input.IdempotencyKey = uuid.NewString()
+	if _, _, err := store.scheduleImageRun(ctx, tenant, actor, input, value, policy); !errors.Is(err, ErrWorkerResultVersionConflict) {
+		t.Fatalf("already linked item accepted a different request: %v", err)
+	}
+	var runs, tasks int
+	var bound bool
+	err = store.db.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM subjective_grading_run),
+ (SELECT count(*) FROM agent_worker_task),
+ EXISTS(SELECT 1 FROM scoring_run_item WHERE subjective_run_id=$1::uuid AND runtime_task_id=$2::uuid AND processing_status='succeeded')`, first.run, first.task).Scan(&runs, &tasks, &bound)
+	if err != nil || runs != 1 || tasks != 1 || !bound {
+		t.Fatalf("unexpected persisted result: runs=%d tasks=%d bound=%v err=%v", runs, tasks, bound, err)
+	}
+}
+
+func TestPostgresScheduleImageRunRejectsInactiveOrChangedItem(t *testing.T) {
+	for _, test := range []struct {
+		name, change string
+		want         error
+	}{
+		{"cancelling", `UPDATE scoring_run SET status='cancelling'`, ErrBatchCancelled},
+		{"cancelled", `UPDATE scoring_run SET status='cancelled'`, ErrBatchCancelled},
+		{"blocked meanwhile", `UPDATE scoring_run_item SET processing_status='blocked'`, ErrWorkerResultVersionConflict},
+		{"superseded", `UPDATE scoring_run_item SET processing_status='superseded'`, ErrWorkerResultVersionConflict},
+		{"new registration", `UPDATE answer_segment SET registration_run_id=gen_random_uuid()`, ErrWorkerResultVersionConflict},
+		{"new snapshot", `UPDATE scoring_run_item SET assessment_snapshot_id=gen_random_uuid()`, ErrWorkerResultVersionConflict},
+		{"new observation", `UPDATE scoring_run_item SET observation_json='{"fixture":false}'`, ErrWorkerResultVersionConflict},
+		{"observation reset", `UPDATE scoring_run_item SET observation_json=NULL`, ErrWorkerResultVersionConflict},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, store, tenant, actor, input, value := newImageSchedulePostgresFixture(t)
+			// 请求继续使用原输入，模拟协调器读出候选条目后、实际入队前，状态或来源已改变。
+			if _, err := store.db.ExecContext(ctx, test.change); err != nil {
+				t.Fatal(err)
+			}
+			run, task, err := store.scheduleImageRun(ctx, tenant, actor, input, value, ModelPolicy{ModelVersion: "fixture-model", PromptVersion: "fixture-prompt", MinConfidence: .8})
+			if !errors.Is(err, test.want) || run != "" || task != "" {
+				t.Fatalf("stale schedule returned run=%q task=%q err=%v, want %v", run, task, err, test.want)
+			}
+			var runs, tasks, bindings int
+			err = store.db.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM subjective_grading_run),
+ (SELECT count(*) FROM agent_worker_task),
+ (SELECT count(*) FROM scoring_run_item WHERE subjective_run_id IS NOT NULL OR runtime_task_id IS NOT NULL OR revision<>1)`).Scan(&runs, &tasks, &bindings)
+			if err != nil || runs != 0 || tasks != 0 || bindings != 0 {
+				t.Fatalf("stale request changed persisted state: runs=%d tasks=%d bindings=%d err=%v", runs, tasks, bindings, err)
+			}
+		})
 	}
 }
 

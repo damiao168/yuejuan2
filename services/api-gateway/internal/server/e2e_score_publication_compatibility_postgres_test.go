@@ -2,12 +2,14 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"edugrade-enterprise/services/api-gateway/internal/appeal"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
@@ -18,8 +20,35 @@ import (
 
 func TestLegacyScorePublicationUsesCurrentSnapshotWithPostgresTestDatabase(t *testing.T) {
 	db, router, admin, fixture, answers, _ := repairFixture(t)
+	// 使用接入真实质量看板的路由。发布如果额外借用连接，单连接池会一直等待自身释放。
+	db.SetMaxOpenConns(1)
+	application := router
+	router = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/publish") {
+			ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+			defer cancel()
+			r = r.WithContext(ctx)
+		}
+		application.ServeHTTP(w, r)
+	})
 	answer := answers[0]
 	tenant, exam := fixture.TenantID, fixture.ExamID
+	// 已取消的批次不阻断发布，但仍会让质量看板读取批次详情和明细统计。
+	if _, err := db.ExecContext(t.Context(), `
+INSERT INTO backmark_batch(tenant_id,exam_id,question_id,source_incident_id,status,created_by)
+VALUES($1::uuid,$2::uuid,$3::uuid,'single-connection publication','cancelled',$4::uuid)
+`, tenant, exam, fixture.QuestionIDs["true_false"], fixture.AdminID); err != nil {
+		t.Fatal(err)
+	}
+	// 已回滚的答案组仍需读取组详情、成员和决定，便于检验嵌套查询能否复用连接。
+	if _, err := db.ExecContext(t.Context(), `
+INSERT INTO answer_group(tenant_id,exam_id,question_id,exam_question_snapshot_id,build_input_hash,algorithm_version,representation_version,
+ member_count,representative_submission_id,homogeneity,minimum_sample,status,created_by)
+VALUES($1::uuid,$2::uuid,$3::uuid,(SELECT id FROM exam_question_snapshot WHERE tenant_id=$1 AND exam_id=$2 AND question_id=$3 ORDER BY snapshot_version DESC LIMIT 1),
+ repeat('0',64),'test','test',1,$4::uuid,1,1,'rolled_back',$5::uuid)
+`, tenant, exam, fixture.QuestionIDs["true_false"], answer.submission, fixture.AdminID); err != nil {
+		t.Fatal(err)
+	}
 	var schoolCode, studentNo string
 	var appealEnabled bool
 	if err := db.QueryRowContext(t.Context(), `SELECT school.code,c.student_no_snapshot,exam.appeal_enabled FROM school JOIN exam ON exam.tenant_id=school.tenant_id AND exam.school_id=school.id JOIN exam_candidate_snapshot c ON c.tenant_id=exam.tenant_id AND c.exam_id=exam.id WHERE school.id=$1 AND exam.id=$2 AND c.student_id=$3`, fixture.SchoolID, exam, answer.student).Scan(&schoolCode, &studentNo, &appealEnabled); err != nil {
@@ -71,6 +100,9 @@ func TestLegacyScorePublicationUsesCurrentSnapshotWithPostgresTestDatabase(t *te
 	original := e2eString(t, originalCurrent, "id")
 	if originalCurrent["version"] != float64(1) || originalCurrent["status"] != "published" || initialResult.ScoreRelease == nil || initialResult.ScoreRelease.ID != original || initialResult.Status != "published" || !initialResult.Quality.Passed || len(initialResult.SubmissionGrades) != 2 {
 		t.Fatalf("compatibility response did not publish the official initial release: %s current=%#v", first.Body.String(), originalCurrent)
+	}
+	if initialResult.ScoreRelease.GateSnapshot.Counts["gold_coverage_incomplete"] == 0 {
+		t.Fatal("published gate snapshot must retain the quality dashboard findings")
 	}
 	if !initialResult.ScoreRelease.AppealWindow.Enabled || originalCurrent["appeal_window"].(map[string]any)["enabled"] != true {
 		t.Fatalf("compatibility publication dropped the enabled appeal window: %#v", originalCurrent)

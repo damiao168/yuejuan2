@@ -232,8 +232,21 @@ func (s *PostgresStore) scheduleImageRun(ctx context.Context, tenantID, actorID 
 		return "", "", ErrBatchCancelled
 	}
 	var itemID string
-	// 锁当前计划成员，输入变化或 superseded 后不能以旧回调创建收费任务。
-	err = tx.QueryRowContext(ctx, `SELECT item.id::text FROM scoring_run_item item JOIN answer_input_version iv ON iv.tenant_id=item.tenant_id AND iv.id=item.input_version_id JOIN answer_segment seg ON seg.tenant_id=item.tenant_id AND seg.id=item.answer_segment_id AND seg.crop_sha256=iv.crop_sha256 AND seg.crop_file_asset_id=iv.crop_file_asset_id AND seg.deleted_at IS NULL WHERE item.tenant_id=$1::uuid AND item.scoring_run_id=$2::uuid AND item.answer_segment_id=$3::uuid AND item.input_version_id=$4::uuid AND item.assessment_snapshot_id=$5::uuid AND iv.crop_sha256=$6 AND item.processing_status NOT IN ('superseded','cancelled') FOR UPDATE OF item`, tenantID, input.ScoringRunID, input.SegmentID, input.InputVersionID, input.AssessmentSnapshotID, input.CropSHA256).Scan(&itemID)
+	// 父运行锁同时串行化入队、取消和阻塞写入。新任务使用当前观察，已关联的条目只允许重放原请求。
+	err = tx.QueryRowContext(ctx, `SELECT item.id::text
+FROM scoring_run_item item
+JOIN answer_input_version iv ON iv.tenant_id=item.tenant_id AND iv.id=item.input_version_id
+JOIN answer_segment seg ON seg.tenant_id=item.tenant_id AND seg.id=item.answer_segment_id
+ AND seg.crop_sha256=iv.crop_sha256 AND seg.crop_file_asset_id=iv.crop_file_asset_id
+ AND seg.registration_run_id IS NOT DISTINCT FROM iv.registration_run_id AND seg.deleted_at IS NULL
+WHERE item.tenant_id=$1::uuid AND item.scoring_run_id=$2::uuid AND item.answer_segment_id=$3::uuid
+ AND item.input_version_id=$4::uuid AND item.assessment_snapshot_id=$5::uuid AND iv.crop_sha256=$6
+ AND item.route='image_ai' AND item.processing_status NOT IN ('superseded','cancelled')
+ AND ((item.subjective_run_id IS NULL AND item.observation_json=NULLIF($8,'')::jsonb
+       AND item.processing_status IN ('waiting_dependency','queued','running','retry_wait'))
+      OR EXISTS(SELECT 1 FROM subjective_grading_run linked
+                WHERE linked.tenant_id=item.tenant_id AND linked.id=item.subjective_run_id AND linked.request_id=$7))
+FOR UPDATE OF item`, tenantID, input.ScoringRunID, input.SegmentID, input.InputVersionID, input.AssessmentSnapshotID, input.CropSHA256, input.IdempotencyKey, string(input.Observation)).Scan(&itemID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", "", ErrWorkerResultVersionConflict
 	}

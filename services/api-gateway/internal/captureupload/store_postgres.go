@@ -45,6 +45,24 @@ func (s *PostgresStore) Init(ctx context.Context, tenantID, _ string, input Init
 		return session, true, nil
 	}
 
+	// 登记文件先锁批次，再由触发器取得考试锁。初始化须提前取得外键所需的批次锁，
+	// 避免 INSERT 触发器先锁考试，随后外键检查反向等待同一批次。
+	var batchStatus string
+	err = tx.QueryRowContext(ctx, `
+SELECT status FROM capture_batch
+WHERE tenant_id=$1 AND id=$2::uuid AND exam_id=$3::uuid AND deleted_at IS NULL
+FOR KEY SHARE
+`, tenantID, input.BatchID, input.ExamID).Scan(&batchStatus)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Session{}, false, ErrNotFound
+	}
+	if err != nil {
+		return Session{}, false, err
+	}
+	if batchStatus == "completed" || batchStatus == "cancelled" {
+		return Session{}, false, ErrConflict
+	}
+
 	row := tx.QueryRowContext(ctx, `
 INSERT INTO capture_upload_session (
   id, tenant_id, exam_id, capture_batch_id, idempotency_key, original_name,
@@ -193,34 +211,37 @@ RETURNING `+sessionColumns, tenantID, uploadID, uuid.NewString(), completionLeas
 	return updated, true, nil
 }
 
+// 每页最多保留 16 MiB 的分块正文，兼顾数据库往返次数和并发完成请求的内存占用。
+const chunkReadPageSize = 4
+
+type storedChunk struct {
+	offset  int64
+	size    int
+	payload []byte
+}
+
+// ReadChunks 只用于持有完成租约的上传。分块在完成期间不再追加，清理使尚未读完的请求校验失败。
 func (s *PostgresStore) ReadChunks(ctx context.Context, tenantID, uploadID string, consume func([]byte) error) error {
-	rows, err := s.db.QueryContext(ctx, `
-SELECT offset_bytes, size_bytes, payload FROM capture_upload_chunk
-WHERE tenant_id=$1 AND capture_upload_session_id::text=$2
-ORDER BY offset_bytes ASC
-`, tenantID, uploadID)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	expectedOffset := int64(0)
-	for rows.Next() {
-		var offset int64
-		var size int
-		var payload []byte
-		if err := rows.Scan(&offset, &size, &payload); err != nil {
+	lastOffset, expectedOffset := int64(-1), int64(0)
+	for {
+		// 下一页按最后读到的偏移查询，不能按期望偏移跳过重叠分块。
+		chunks, err := s.readChunkPage(ctx, tenantID, uploadID, lastOffset)
+		if err != nil {
 			return err
 		}
-		if offset != expectedOffset || size != len(payload) {
-			return ErrIncomplete
+		for _, chunk := range chunks {
+			if chunk.offset != expectedOffset || chunk.size != len(chunk.payload) {
+				return ErrIncomplete
+			}
+			if err := consume(chunk.payload); err != nil {
+				return err
+			}
+			lastOffset = chunk.offset
+			expectedOffset += int64(chunk.size)
 		}
-		if err := consume(payload); err != nil {
-			return err
+		if len(chunks) < chunkReadPageSize {
+			break
 		}
-		expectedOffset += int64(size)
-	}
-	if err := rows.Err(); err != nil {
-		return err
 	}
 	session, err := s.Get(ctx, tenantID, uploadID)
 	if err != nil {
@@ -230,6 +251,31 @@ ORDER BY offset_bytes ASC
 		return ErrIncomplete
 	}
 	return nil
+}
+
+func (s *PostgresStore) readChunkPage(ctx context.Context, tenantID, uploadID string, lastOffset int64) ([]storedChunk, error) {
+	// 查询只沿现有主键取有限行数。异常超大分块只返回长度，交给连续性校验拒绝。
+	rows, err := s.db.QueryContext(ctx, `
+SELECT offset_bytes, size_bytes, CASE WHEN size_bytes <= $5 THEN payload END
+FROM capture_upload_chunk
+WHERE tenant_id=$1 AND capture_upload_session_id=$2::uuid AND offset_bytes>$3
+ORDER BY offset_bytes ASC
+LIMIT $4
+`, tenantID, uploadID, lastOffset, chunkReadPageSize, DefaultChunkSize)
+	if err != nil {
+		return nil, err
+	}
+	// 返回前释放连接，后续消费可能因 MinIO 读取变慢而阻塞。
+	defer rows.Close()
+	chunks := make([]storedChunk, 0, chunkReadPageSize)
+	for rows.Next() {
+		var chunk storedChunk
+		if err := rows.Scan(&chunk.offset, &chunk.size, &chunk.payload); err != nil {
+			return nil, err
+		}
+		chunks = append(chunks, chunk)
+	}
+	return chunks, rows.Err()
 }
 
 func (s *PostgresStore) Complete(ctx context.Context, tenantID, uploadID, fileAssetID, captureFileID, completionToken string) (Session, error) {

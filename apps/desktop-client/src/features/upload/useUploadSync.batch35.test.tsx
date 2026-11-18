@@ -147,6 +147,63 @@ describe("upload preparation and recovery boundaries", () => {
     expect(fileBufferRef.current.has("scan-1")).toBe(false);
   });
 
+  it("owns the same queue entry from durable recovery through the upload receipt", async () => {
+    api.hasDurableStore.mockReturnValue(true);
+    const restored = deferred<File>();
+    api.restore.mockReturnValueOnce(restored.promise);
+    fileBufferRef.current.clear();
+    queueRef.current = [item()];
+    await mount();
+    let first!: Promise<void>;
+    await act(async () => {
+      first = current.uploadQueueItem("scan-1");
+      await current.uploadQueueItems("pending", { examId: "exam-1", captureBatchId: "batch-1" });
+    });
+    expect(inFlightRef.current.has("scan-1")).toBe(true);
+    expect(api.restore).toHaveBeenCalledExactlyOnceWith("local-1", "scope-A");
+    expect(api.resume).not.toHaveBeenCalled();
+    await act(async () => { restored.resolve(new File(["scan"], "scan.pdf")); await first; });
+    expect(api.resume).toHaveBeenCalledOnce();
+    expect(queueRef.current[0].status).toBe("succeeded");
+    expect(inFlightRef.current.has("scan-1")).toBe(false);
+  });
+
+  it("does not release an entry reoccupied by a new account while the old spool read settles", async () => {
+    api.hasDurableStore.mockReturnValue(true);
+    const oldSpool = deferred<File>();
+    const newSpool = deferred<File>();
+    api.restore.mockReturnValueOnce(oldSpool.promise).mockReturnValueOnce(newSpool.promise);
+    fileBufferRef.current.clear();
+    const render = await mount();
+    let oldUpload!: Promise<void>;
+    let newUpload!: Promise<void>;
+    await act(async () => { oldUpload = current.uploadQueueItem("scan-1"); });
+    queueRef.current = [item({ idempotencyKey: "key-B", localAssetId: "local-B" })];
+    await render("token-B", true, "scope-B");
+    await act(async () => { newUpload = current.uploadQueueItem("scan-1"); });
+    await act(async () => { oldSpool.resolve(new File(["A"], "A.pdf")); await oldUpload; });
+    expect(inFlightRef.current.has("scan-1")).toBe(true);
+    await act(async () => { await current.uploadQueueItem("scan-1"); });
+    expect(api.restore).toHaveBeenCalledTimes(2);
+    expect(api.resume).not.toHaveBeenCalled();
+    await act(async () => { newSpool.resolve(new File(["B"], "B.pdf")); await newUpload; });
+    expect(api.resume).toHaveBeenCalledExactlyOnceWith(expect.anything(), expect.objectContaining({ idempotency_key: "key-B" }), expect.any(Function), expect.any(AbortSignal));
+  });
+
+  it("requires a fresh bulk command after an account switch even if the first account returns", async () => {
+    const remote = deferred<typeof completed>();
+    api.resume.mockReturnValueOnce(remote.promise);
+    fileBufferRef.current.set("other", new File(["other"], "other.pdf"));
+    const render = await mount();
+    let bulk!: Promise<void>;
+    await act(async () => { bulk = current.uploadQueueItems("pending"); });
+    await render("token-B", true, "scope-B");
+    await render("token-A", true, "scope-A");
+    await act(async () => { remote.resolve(completed); await bulk; });
+    expect(api.resume).toHaveBeenCalledOnce();
+    expect(queueRef.current.find((entry) => entry.id === "other")?.status).toBe("pending");
+  });
+
   it("uses the latest token and online state after rerendering", async () => {
     const render = await mount(null, true);
     await act(async () => { await current.uploadQueueItem("scan-1"); });

@@ -4,9 +4,11 @@ package scorerelease
 import (
 	"context"
 	"database/sql"
-	"edugrade-enterprise/services/api-gateway/internal/score/autoprep"
 	"encoding/json"
 	"errors"
+
+	"edugrade-enterprise/services/api-gateway/internal/db"
+	"edugrade-enterprise/services/api-gateway/internal/score/autoprep"
 )
 
 func (s *PostgresStore) Publish(ctx context.Context, tenantID, id, actorID string) (Release, error) {
@@ -85,9 +87,9 @@ SELECT release_id FROM score_release_current WHERE tenant_id=$1 AND exam_id=$2::
 	if release.Status != StatusDraft {
 		return Release{}, ErrInvalidTransition
 	}
-	// 取得考试咨询锁后才刷新跨服务聚合。成绩写入器使用同一锁，
-	// 因此门禁与发布不会和正常成绩最终确认转换发生竞争。
-	dashboardIssues, err := s.dashboardIssues(ctx, tenantID, release.ExamID)
+	// 成绩确认和发布共用考试锁，因此聚合必须在取得锁后刷新。
+	// 看板查询复用发布事务，避免持有连接时再次等待同一个连接池。
+	dashboardIssues, err := s.dashboardIssues(db.WithReadTransaction(ctx, s.db, tx), tenantID, release.ExamID)
 	if err != nil {
 		return Release{}, err
 	}

@@ -3,6 +3,8 @@ package qualitydashboard
 import (
 	"context"
 	"database/sql"
+
+	"edugrade-enterprise/services/api-gateway/internal/db"
 )
 
 // PostgresQuestionReader 只读取题目元数据和冻结的评估分类。
@@ -14,7 +16,7 @@ func NewPostgresQuestionReader(db *sql.DB) *PostgresQuestionReader {
 }
 
 func (r *PostgresQuestionReader) ListQualityQuestions(ctx context.Context, tenantID, examID string) ([]Question, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := db.ReadQueryer(ctx, r.db).QueryContext(ctx, `
 WITH latest_snapshot AS (
   SELECT DISTINCT ON (question_id) question_id, archetype_code, risk_tier
   FROM exam_question_snapshot
@@ -56,14 +58,15 @@ func NewPostgresCalibrationReader(db *sql.DB) *PostgresCalibrationReader {
 
 func (r *PostgresCalibrationReader) GetCalibrationSummary(ctx context.Context, tenantID, examID, questionID string) (CalibrationSummary, error) {
 	result := CalibrationSummary{Graders: []CalibrationGrader{}}
-	if err := r.db.QueryRowContext(ctx, `
+	reader := db.ReadQueryer(ctx, r.db)
+	if err := reader.QueryRowContext(ctx, `
 SELECT EXISTS(
   SELECT 1 FROM grader_calibration_policy
   WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$3::uuid
 )`, tenantID, examID, questionID).Scan(&result.Configured); err != nil {
 		return CalibrationSummary{}, err
 	}
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := reader.QueryContext(ctx, `
 SELECT grader_id::text, status,
        COALESCE((metrics_json->>'sample_count')::int, 0)
 FROM grader_calibration_session

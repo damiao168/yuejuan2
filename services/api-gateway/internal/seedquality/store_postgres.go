@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/commandreceipt"
+	"edugrade-enterprise/services/api-gateway/internal/db"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -61,7 +62,7 @@ RETURNING id::text,exam_id::text,question_id::text,rate::float8,min_interval,max
 }
 
 func (s *PostgresStore) GetPolicy(ctx context.Context, tenantID, examID, questionID string) (Policy, error) {
-	return scanPolicy(s.db.QueryRowContext(ctx, policySelect+`
+	return scanPolicy(db.ReadQueryer(ctx, s.db).QueryRowContext(ctx, policySelect+`
 WHERE tenant_id=$1::uuid AND exam_id=$2::uuid AND question_id=$3::uuid`, tenantID, examID, questionID))
 }
 
@@ -265,7 +266,7 @@ WHERE o.tenant_id=$1::uuid
  AND ($2='' OR o.exam_id::text=$2) AND ($3='' OR o.question_id::text=$3) AND ($4='' OR o.grader_id::text=$4)
  AND ` + auth.ExamCollectionPredicate("o.exam_id", 6) + `
 ORDER BY o.observed_at DESC,o.id DESC LIMIT $5`
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := db.ReadQueryer(ctx, s.db).QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

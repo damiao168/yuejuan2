@@ -3,13 +3,14 @@ package backmark
 import (
 	"context"
 	"database/sql"
-	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"edugrade-enterprise/services/api-gateway/internal/auth"
+	"edugrade-enterprise/services/api-gateway/internal/db"
 	"edugrade-enterprise/services/api-gateway/internal/workflowactors"
 )
 
@@ -168,12 +169,12 @@ RETURNING `+itemColumns, tenantID, batch.ID, source.ReviewTaskID, source.Origina
 }
 
 func (s *PostgresStore) GetBatch(ctx context.Context, tenantID, batchID string) (Batch, error) {
-	return scanBatch(s.db.QueryRowContext(ctx, `SELECT `+batchColumns+` FROM backmark_batch WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, batchID))
+	return scanBatch(db.ReadQueryer(ctx, s.db).QueryRowContext(ctx, `SELECT `+batchColumns+` FROM backmark_batch WHERE tenant_id=$1::uuid AND id=$2::uuid`, tenantID, batchID))
 }
 
 func (s *PostgresStore) ListBatchItems(ctx context.Context, tenantID, batchID string, page PageOptions) ([]Item, error) {
 	cursorTime := nullableCursorTime(page.CursorCreatedAt)
-	rows, err := s.db.QueryContext(ctx, `SELECT `+itemColumns+` FROM backmark_item
+	rows, err := db.ReadQueryer(ctx, s.db).QueryContext(ctx, `SELECT `+itemColumns+` FROM backmark_item
 WHERE tenant_id=$1::uuid AND batch_id=$2::uuid
   AND ($3::timestamptz IS NULL OR (created_at,id) > ($3::timestamptz,$4::uuid))
   AND ($6='' OR status=$6)
@@ -197,7 +198,7 @@ ORDER BY created_at ASC,id ASC LIMIT $5`, tenantID, batchID, cursorTime, nullabl
 }
 
 func (s *PostgresStore) GetHistogram(ctx context.Context, tenantID, batchID string) ([]Histogram, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT diff::float8,count(*)::int FROM backmark_item
+	rows, err := db.ReadQueryer(ctx, s.db).QueryContext(ctx, `SELECT diff::float8,count(*)::int FROM backmark_item
 WHERE tenant_id=$1::uuid AND batch_id=$2::uuid AND diff IS NOT NULL
 GROUP BY diff ORDER BY diff`, tenantID, batchID)
 	if err != nil {
@@ -217,7 +218,7 @@ GROUP BY diff ORDER BY diff`, tenantID, batchID)
 
 func (s *PostgresStore) GetStatusCounts(ctx context.Context, tenantID, batchID string) (StatusCounts, error) {
 	var counts StatusCounts
-	err := s.db.QueryRowContext(ctx, `SELECT
+	err := db.ReadQueryer(ctx, s.db).QueryRowContext(ctx, `SELECT
 count(*) FILTER (WHERE status='regrade_required'),
 count(*) FILTER (WHERE status IN ('pending','in_progress')),
 count(*) FILTER (WHERE status IN ('diff_ready','arbitration_required','regrade_required'))
@@ -232,7 +233,7 @@ func (s *PostgresStore) ListBatches(ctx context.Context, tenantID, examID, quest
 		return nil, err
 	}
 	args := append([]any{tenantID, examID, questionID, nullableCursorTime(page.CursorCreatedAt), nullableCursorID(page.CursorID), page.Limit}, scopeArgs...)
-	rows, err := s.db.QueryContext(ctx, `SELECT `+batchColumns+` FROM backmark_batch
+	rows, err := db.ReadQueryer(ctx, s.db).QueryContext(ctx, `SELECT `+batchColumns+` FROM backmark_batch
 WHERE tenant_id=$1::uuid AND ($2='' OR exam_id::text=$2) AND ($3='' OR question_id::text=$3)
   AND ($4::timestamptz IS NULL OR (created_at,id) < ($4::timestamptz,$5::uuid))
   AND `+auth.ExamCollectionPredicate("backmark_batch.exam_id", 7)+`
