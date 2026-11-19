@@ -7,18 +7,19 @@ import (
 
 // MemoryStore 只模拟采集状态流转；条码打印、配准校正等需要真实台账的能力明确返回不支持。
 type MemoryStore struct {
-	mu              sync.RWMutex
-	batches         map[string]Batch
-	batchKeys       map[string]string
-	files           map[string]File
-	pages           map[string]Page
-	registrations   map[string]RegistrationRun
-	templateMatches map[string]TemplateMatchRun
-	identities      map[string]MatchingSubmission
+	mu                 sync.RWMutex
+	batches            map[string]Batch
+	batchKeys          map[string]string
+	batchCancellations map[string]batchCancellationReceipt
+	files              map[string]File
+	pages              map[string]Page
+	registrations      map[string]RegistrationRun
+	templateMatches    map[string]TemplateMatchRun
+	identities         map[string]MatchingSubmission
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{batches: map[string]Batch{}, batchKeys: map[string]string{}, files: map[string]File{}, pages: map[string]Page{}, registrations: map[string]RegistrationRun{}, templateMatches: map[string]TemplateMatchRun{}, identities: map[string]MatchingSubmission{}}
+	return &MemoryStore{batches: map[string]Batch{}, batchKeys: map[string]string{}, batchCancellations: map[string]batchCancellationReceipt{}, files: map[string]File{}, pages: map[string]Page{}, registrations: map[string]RegistrationRun{}, templateMatches: map[string]TemplateMatchRun{}, identities: map[string]MatchingSubmission{}}
 }
 
 func (s *MemoryStore) IssueTemplateBarcodes(context.Context, string, string) (IssuedTemplateBarcodes, error) {

@@ -153,7 +153,11 @@ ORDER BY requested.id`, tenantID, batchID)
 }
 
 func (s *PostgresStore) RefreshBatch(ctx context.Context, tenantID string, batchID string) (GradingBatch, error) {
-	row := s.db.QueryRowContext(ctx, `
+	return refreshBatchInDB(ctx, s.db, tenantID, batchID)
+}
+
+func refreshBatchInDB(ctx context.Context, query rowQueryer, tenantID string, batchID string) (GradingBatch, error) {
+	row := query.QueryRowContext(ctx, `
 WITH counts AS (
   SELECT
     count(*) FILTER (WHERE status = 'queued')::int AS queued_count,

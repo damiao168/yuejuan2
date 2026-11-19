@@ -10,14 +10,16 @@ import (
 )
 
 var (
-	ErrNotFound                  = errors.New("score release not found")
-	ErrInvalidInput              = errors.New("invalid score release input")
-	ErrInvalidTransition         = errors.New("invalid score release transition")
-	ErrGateBlocked               = errors.New("score release gate is blocked")
-	ErrForbidden                 = errors.New("score release access forbidden")
-	ErrStaleSource               = errors.New("score release source is no longer current")
-	ErrStudentReleaseChanged     = errors.New("student published release changed")
-	ErrAnonymousPaperUnavailable = errors.New("anonymous high-score paper is unavailable")
+	ErrNotFound                     = errors.New("score release not found")
+	ErrInvalidInput                 = errors.New("invalid score release input")
+	ErrInvalidTransition            = errors.New("invalid score release transition")
+	ErrGateBlocked                  = errors.New("score release gate is blocked")
+	ErrForbidden                    = errors.New("score release access forbidden")
+	ErrStaleSource                  = errors.New("score release source is no longer current")
+	ErrStudentReleaseChanged        = errors.New("student published release changed")
+	ErrPublicationSnapshotChanged   = errors.New("score release publication snapshot changed")
+	ErrPublicationDraftNeedsRefresh = errors.New("score release anonymous papers require a new draft")
+	ErrAnonymousPaperUnavailable    = errors.New("anonymous high-score paper is unavailable")
 )
 
 const (
@@ -156,9 +158,10 @@ type ReleaseQuestion struct {
 }
 
 type Detail struct {
-	Release   Release           `json:"release"`
-	Items     []ReleaseItem     `json:"items"`
-	Questions []ReleaseQuestion `json:"questions,omitempty"`
+	Release             Release           `json:"release"`
+	Items               []ReleaseItem     `json:"items"`
+	Questions           []ReleaseQuestion `json:"questions,omitempty"`
+	PublicationSnapshot string            `json:"publication_snapshot,omitempty"`
 }
 
 type DiffQuestion struct {

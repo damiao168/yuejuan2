@@ -38,17 +38,19 @@ func collectionSummaryTx(ctx context.Context, q collectionQueryer, tenantID, exa
 		return out, mapNotFound(err)
 	}
 	out.Closed = out.CompletedAt != nil
+	// 旧取消记录可能仍挂着提交页。纯取消来源不算有卷；未关联采集的提交与其他批次的页面继续有效。
 	// 冻结名册决定人数；没有关联未删除答卷的学生自动显示缺考，历史人工出勤不再影响本轮收卷。
 	// 有卷但身份、页码或质量未完成仍须处理，不能把这些问题当缺考跳过。实际页号来自有效页面。
 	rows, err := q.QueryContext(ctx, `SELECT c.student_id::text,c.student_no_snapshot,c.student_name_snapshot,c.class_name_snapshot,
  COALESCE(s.n,0),COALESCE(s.id::text,''),COALESCE(s.identity_status,''),COALESCE(s.quality_status,''),
  COALESCE(p.batch_id,''),COALESCE(p.pages,0),COALESCE(p.ready,0),COALESCE(p.bad,0),COALESCE(p.numbers,0),COALESCE(p.min_no,0),COALESCE(p.max_no,0),COALESCE(p.group_bad,false)
  FROM exam_candidate_snapshot c
- LEFT JOIN LATERAL(SELECT x.*,count(*) OVER() n FROM submission x WHERE x.tenant_id=c.tenant_id AND x.exam_id=c.exam_id AND x.student_id=c.student_id AND x.deleted_at IS NULL ORDER BY x.created_at DESC,x.id LIMIT 1)s ON true
+ LEFT JOIN LATERAL(SELECT x.*,count(*) OVER() n FROM submission x WHERE x.tenant_id=c.tenant_id AND x.exam_id=c.exam_id AND x.student_id=c.student_id AND x.deleted_at IS NULL AND `+collectionSubmissionIsRelevant+` ORDER BY x.created_at DESC,x.id LIMIT 1)s ON true
  LEFT JOIN LATERAL(SELECT min(cp.capture_batch_id::text) batch_id,count(*) pages,count(*) FILTER(WHERE cp.status='ready') ready,
  count(*) FILTER(WHERE cp.status IN ('needs_review','quality_rejected','failed')) bad,count(DISTINCT cp.assigned_page_no) numbers,min(cp.assigned_page_no) min_no,max(cp.assigned_page_no) max_no,
  bool_or(COALESCE(cp.page_identity->>'grouping_status','complete')<>'complete') group_bad
  FROM capture_page cp JOIN capture_file f ON f.tenant_id=cp.tenant_id AND f.id=cp.capture_file_id AND f.deleted_at IS NULL
+ JOIN capture_batch b ON b.tenant_id=cp.tenant_id AND b.id=cp.capture_batch_id AND b.deleted_at IS NULL AND b.status<>'cancelled'
  JOIN submission_page sp ON sp.tenant_id=cp.tenant_id AND sp.id=cp.submission_page_id AND sp.deleted_at IS NULL AND sp.page_no=cp.assigned_page_no
  WHERE cp.tenant_id=c.tenant_id AND cp.submission_id=s.id AND cp.deleted_at IS NULL AND cp.status<>'deleted')p ON true
  WHERE c.tenant_id=$1 AND c.exam_id=$2::uuid ORDER BY c.class_name_snapshot,c.student_no_snapshot,c.student_id`, tenantID, examID)
@@ -74,9 +76,9 @@ func collectionSummaryTx(ctx context.Context, q collectionQueryer, tenantID, exa
 	// 重复文件不再解码，混合组却不能跳过它重新拼页。直接按现存文件识别，旧的等待组也能整组退出或替代。
 	issueRows, err := q.QueryContext(ctx, `SELECT f.id::text,'file',CASE WHEN f.status='failed' THEN 'file_failed' ELSE 'file_processing' END,f.original_name,b.id::text,'',f.id::text
  FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id AND b.id=f.capture_batch_id WHERE b.tenant_id=$1 AND b.exam_id=$2::uuid AND b.deleted_at IS NULL AND b.status<>'cancelled' AND f.deleted_at IS NULL AND f.status IN ('uploaded','queued','processing','failed')
- UNION ALL SELECT u.id::text,'upload','upload_incomplete',u.original_name,b.id::text,'','' FROM capture_upload_session u JOIN capture_batch b ON b.tenant_id=u.tenant_id AND b.id=u.capture_batch_id WHERE u.tenant_id=$1 AND u.exam_id=$2::uuid AND u.status<>'completed' AND b.status<>'cancelled' AND b.deleted_at IS NULL
- UNION ALL SELECT s.id::text,'submission',CASE WHEN s.student_id IS NULL THEN 'student_unidentified' ELSE 'student_not_in_roster' END,COALESCE(s.candidate_no,'未匹配答卷'),COALESCE((SELECT min(cp.capture_batch_id::text) FROM capture_page cp WHERE cp.tenant_id=s.tenant_id AND cp.submission_id=s.id AND cp.deleted_at IS NULL AND cp.status<>'deleted'),''),s.id::text,''
- FROM submission s WHERE s.tenant_id=$1 AND s.exam_id=$2::uuid AND s.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM exam_candidate_snapshot c WHERE c.tenant_id=s.tenant_id AND c.exam_id=s.exam_id AND c.student_id=s.student_id)
+ UNION ALL SELECT u.id::text,'upload','upload_incomplete',u.original_name,b.id::text,'','' FROM capture_upload_session u JOIN capture_batch b ON b.tenant_id=u.tenant_id AND b.id=u.capture_batch_id WHERE u.tenant_id=$1 AND u.exam_id=$2::uuid AND u.status<>'completed' AND u.error_code IS DISTINCT FROM 'capture_batch_cancelled' AND b.status<>'cancelled' AND b.deleted_at IS NULL
+ UNION ALL SELECT x.id::text,'submission',CASE WHEN x.student_id IS NULL THEN 'student_unidentified' ELSE 'student_not_in_roster' END,COALESCE(x.candidate_no,'未匹配答卷'),COALESCE((SELECT min(cp.capture_batch_id::text) FROM capture_page cp JOIN capture_batch b ON b.tenant_id=cp.tenant_id AND b.id=cp.capture_batch_id AND b.deleted_at IS NULL AND b.status<>'cancelled' WHERE cp.tenant_id=x.tenant_id AND cp.submission_id=x.id AND cp.deleted_at IS NULL AND cp.status<>'deleted'),''),x.id::text,''
+ FROM submission x WHERE x.tenant_id=$1 AND x.exam_id=$2::uuid AND x.deleted_at IS NULL AND `+collectionSubmissionIsRelevant+` AND NOT EXISTS(SELECT 1 FROM exam_candidate_snapshot c WHERE c.tenant_id=x.tenant_id AND c.exam_id=x.exam_id AND c.student_id=x.student_id)
  UNION ALL SELECT min(f.id::text),'batch','upload_group_incomplete','本次选择的文件尚未完整登记',b.id::text,'',min(f.id::text) FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id AND b.id=f.capture_batch_id WHERE b.tenant_id=$1 AND b.exam_id=$2::uuid AND b.status<>'cancelled' AND b.deleted_at IS NULL AND f.deleted_at IS NULL AND f.upload_group_id IS NOT NULL GROUP BY b.id,f.upload_group_id HAVING count(*)<max(f.upload_group_file_count)
  UNION ALL SELECT min(f.id::text),'batch','upload_group_duplicate','本次选择含重复文件，无法完成分组',b.id::text,'',min(f.id::text) FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id AND b.id=f.capture_batch_id WHERE b.tenant_id=$1 AND b.exam_id=$2::uuid AND b.status<>'cancelled' AND b.deleted_at IS NULL AND f.deleted_at IS NULL AND f.upload_group_id IS NOT NULL GROUP BY b.id,f.upload_group_id HAVING count(*)=max(f.upload_group_file_count) AND bool_or(f.status='duplicate') AND bool_or(f.status<>'duplicate')
  UNION ALL SELECT t.id::text,'batch','task_processing','导入任务尚在运行',b.id::text,'','' FROM agent_worker_task t JOIN capture_batch b ON b.tenant_id=t.tenant_id AND b.exam_id=$2::uuid AND b.status<>'cancelled' AND b.deleted_at IS NULL WHERE t.tenant_id=$1 AND t.status IN ('queued','leased','running') AND (
@@ -101,6 +103,17 @@ func collectionSummaryTx(ctx context.Context, q collectionQueryer, tenantID, exa
 	finishCollectionSummary(&out)
 	return out, nil
 }
+
+const collectionSubmissionIsRelevant = `(
+  NOT EXISTS(SELECT 1 FROM capture_page p WHERE p.tenant_id=x.tenant_id AND p.submission_id=x.id AND p.deleted_at IS NULL AND p.status<>'deleted')
+  OR EXISTS(SELECT 1 FROM capture_page p
+    JOIN capture_batch b ON b.tenant_id=p.tenant_id AND b.id=p.capture_batch_id AND b.deleted_at IS NULL AND b.status<>'cancelled'
+    JOIN capture_file f ON f.tenant_id=p.tenant_id AND f.id=p.capture_file_id AND f.deleted_at IS NULL
+    WHERE p.tenant_id=x.tenant_id AND p.submission_id=x.id AND p.deleted_at IS NULL AND p.status<>'deleted')
+  OR EXISTS(SELECT 1 FROM submission_page sp
+    WHERE sp.tenant_id=x.tenant_id AND sp.submission_id=x.id AND sp.deleted_at IS NULL
+      AND NOT EXISTS(SELECT 1 FROM capture_page p WHERE p.tenant_id=sp.tenant_id AND p.submission_page_id=sp.id AND p.deleted_at IS NULL AND p.status<>'deleted'))
+)`
 
 type collectionEntryFacts struct {
 	submissions                       int
@@ -151,7 +164,11 @@ func (s *PostgresStore) CompleteCollection(ctx context.Context, tenantID, examID
 		return CollectionSummary{}, err
 	}
 	defer tx.Rollback()
-	// 批次创建先锁考试；结束也采用相同顺序，避免与导入命令互相等待。
+	// 分块确认经归档触发器先取考试事务锁，再读取考试行。
+	// 收卷按同一顺序，遇到正在写入的上传即返回冲突，不能持有考试行等触发器。
+	if err = tryCollectionExamLock(ctx, tx, tenantID, examID); err != nil {
+		return CollectionSummary{}, err
+	}
 	var lockedExam string
 	if err = tx.QueryRowContext(ctx, `SELECT id::text FROM exam WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE NOWAIT`, tenantID, examID).Scan(&lockedExam); err != nil {
 		return CollectionSummary{}, ErrConflict
@@ -225,4 +242,16 @@ func (s *PostgresStore) CompleteCollection(ctx context.Context, tenantID, examID
 		return out, err
 	}
 	return out, tx.Commit()
+}
+
+func tryCollectionExamLock(ctx context.Context, tx *sql.Tx, tenantID, examID string) error {
+	var locked bool
+	err := tx.QueryRowContext(ctx, `SELECT pg_try_advisory_xact_lock(hashtext($1::uuid::text),hashtext($2::uuid::text))`, tenantID, examID).Scan(&locked)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return ErrConflict
+	}
+	return nil
 }

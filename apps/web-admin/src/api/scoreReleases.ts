@@ -30,12 +30,14 @@ export function listScoreReleases(examId: string, signal?: AbortSignal) {
   return releaseApi.listScoreReleases({ path: { examId }, signal });
 }
 
-export function getScoreReleaseDetail(id: string, signal?: AbortSignal) {
-  return releaseApi.getScoreRelease({ path: { id }, signal });
+export type PublicationPreviewMode = "draft" | "candidate";
+
+export function getScoreReleaseDetail(id: string, signal?: AbortSignal, publicationPreview?: PublicationPreviewMode) {
+  return releaseApi.getScoreRelease({ path: { id }, query: publicationPreview ? { publication_preview: publicationPreview } : undefined, signal });
 }
 
-export function getScoreReleaseStudentPreview(id: string, studentId: string, signal?: AbortSignal) {
-  return releaseApi.getScoreReleaseStudentPreview({ path: { id }, query: { student_id: studentId }, signal });
+export function getScoreReleaseStudentPreview(id: string, studentId: string, signal?: AbortSignal, publicationPreview?: PublicationPreviewMode) {
+  return releaseApi.getScoreReleaseStudentPreview({ path: { id }, query: { student_id: studentId, publication_preview: publicationPreview }, signal });
 }
 
 export function getCurrentPublishedScoreRelease(examId: string, signal?: AbortSignal) {
@@ -50,8 +52,8 @@ export function createScoreRelease(examId: string, body: CreateScoreReleaseReque
   return releaseApi.createScoreRelease({ path: { examId }, body });
 }
 
-export function publishScoreRelease(id: string) {
-  return releaseApi.publishScoreRelease({ path: { id } });
+export function publishScoreRelease(id: string, snapshot: string) {
+  return releaseApi.publishScoreRelease({ path: { id }, body: { publication_snapshot: snapshot } });
 }
 
 export function revokeHighScorePaper(id: string) {

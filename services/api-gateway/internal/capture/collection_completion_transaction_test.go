@@ -210,7 +210,7 @@ func collectionSummaryReadSteps(closed bool) []collectionSQLStep {
 			},
 		}},
 		{kind: "query", printLedgerQuery: printLedgerQuery{
-			fragments: []string{"FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id", "t.tenant_id=$1", "UNION ALL SELECT s.id::text", "ORDER BY 2,1"},
+			fragments: []string{"FROM capture_file f JOIN capture_batch b ON b.tenant_id=f.tenant_id", "t.tenant_id=$1", "UNION ALL SELECT x.id::text", "ORDER BY 2,1"},
 			args:      []driver.Value{"tenant", "exam"}, columns: 7,
 		}},
 	}
@@ -229,11 +229,24 @@ func collectionCompletionPrefix(t *testing.T, input CompleteCollectionInput, pri
 	requestHash := hex.EncodeToString(digest[:])
 	return []collectionSQLStep{
 		{kind: "begin"},
+		collectionExamLockQuery(true),
 		{kind: "query", printLedgerQuery: printLedgerQuery{fragments: []string{"FROM exam WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE NOWAIT"}, args: []driver.Value{"tenant", "exam"}, columns: 1, values: [][]driver.Value{{"exam"}}}},
 		{kind: "exec", printLedgerQuery: printLedgerQuery{fragments: []string{"INSERT INTO capture_collection(tenant_id,exam_id)", "ON CONFLICT DO NOTHING"}, args: []driver.Value{"tenant", "exam"}}},
 		{kind: "query", printLedgerQuery: printLedgerQuery{fragments: []string{"SELECT revision FROM capture_collection WHERE tenant_id=$1 AND exam_id=$2::uuid FOR UPDATE"}, args: []driver.Value{"tenant", "exam"}, columns: 1, values: [][]driver.Value{{priorRevision}}}},
 		{kind: "query", printLedgerQuery: printLedgerQuery{fragments: []string{"FROM capture_collection_completion WHERE tenant_id=$1 AND exam_id=$2::uuid AND command_id=$3"}, args: []driver.Value{"tenant", "exam", input.IdempotencyKey}, columns: 2}},
 	}, requestHash
+}
+
+func collectionExamLockQuery(locked bool) collectionSQLStep {
+	return captureTxQuery(1, [][]driver.Value{{locked}}, []driver.Value{captureTxTenant, captureTxExam}, "pg_try_advisory_xact_lock")
+}
+
+func TestCollectionCompletionConflictsBeforeLockingExamRow(t *testing.T) {
+	store, _ := collectionProbeStore(t, []collectionSQLStep{{kind: "begin"}, collectionExamLockQuery(false), {kind: "rollback"}})
+	_, err := store.CompleteCollection(t.Context(), "tenant", "exam", "manager", CompleteCollectionInput{IdempotencyKey: "busy-upload"})
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("busy exam must return a retryable collection conflict, got %v", err)
+	}
 }
 
 func TestCollectionSummaryReadUsesOneRepeatableSnapshotAndKeepsAbsenceSeparate(t *testing.T) {
@@ -262,7 +275,7 @@ func TestCollectionCompletionReplaysStoredCommandBeforeCheckingNewRevision(t *te
 				requestHash = "another-request-digest"
 			}
 			if scenario != "stale new command" {
-				steps[4].values = [][]driver.Value{{requestHash, result}}
+				steps[5].values = [][]driver.Value{{requestHash, result}}
 			}
 			// 重放已成功的命令只读原回执，并回滚本次锁事务。既有修订变化不应重做封存。
 			steps = append(steps, collectionSQLStep{kind: "rollback"})

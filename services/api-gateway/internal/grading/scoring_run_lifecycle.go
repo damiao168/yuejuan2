@@ -8,7 +8,7 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
-// BeginScoringRunCancellation 先持久化 cancelling，再交由调用方取消外部任务；中途失败可继续同一取消流程。
+// BeginScoringRunCancellation 先持久化 cancelling，再交由请求或后台协调器接续停用任务。
 func (s *PostgresStore) BeginScoringRunCancellation(ctx context.Context, tenantID, runID string) (ScoringRun, []string, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -119,6 +119,19 @@ WHERE batch.tenant_id=$1::uuid AND batch.scoring_run_id=$2::uuid AND batch.delet
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE subjective_grading_batch SET status='cancelled',updated_at=now()
 WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND deleted_at IS NULL AND status <> 'cancelled'`, tenantID, runID); err != nil {
+		return ScoringRun{}, err
+	}
+	// 任务停止后关闭仍活跃的来源，已接受的建议和失败原因继续保留供审计。
+	if _, err = tx.ExecContext(ctx, `
+UPDATE subjective_grading_run ai
+SET status='failed',error_code='scoring_run_cancelled',completed_at=now(),updated_at=now()
+WHERE ai.tenant_id=$1::uuid AND ai.deleted_at IS NULL AND ai.status IN ('queued','processing')
+  AND (
+    EXISTS(SELECT 1 FROM subjective_grading_batch b
+           WHERE b.tenant_id=ai.tenant_id AND b.id=ai.batch_id AND b.scoring_run_id=$2::uuid AND b.deleted_at IS NULL)
+    OR EXISTS(SELECT 1 FROM scoring_run_item item
+              WHERE item.tenant_id=ai.tenant_id AND item.scoring_run_id=$2::uuid AND item.subjective_run_id=ai.id)
+  )`, tenantID, runID); err != nil {
 		return ScoringRun{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE omr_run SET status='invalidated',completed_at=COALESCE(completed_at,now()),updated_at=now() WHERE tenant_id=$1::uuid AND scoring_run_id=$2::uuid AND status IN ('queued','processing','retryable_error','terminal_error') AND deleted_at IS NULL`, tenantID, runID); err != nil {

@@ -1,6 +1,13 @@
 package scorerelease
 
-import "testing"
+import (
+	"fmt"
+	"net/http"
+	"strings"
+	"testing"
+
+	"edugrade-enterprise/services/api-gateway/internal/auth"
+)
 
 // 两个申诉任务在同一来源上并行复核；第二个发布必须保留第一个任务的更正，且不改原来源供申诉结案核验。
 func TestIndependentRegradeDraftsPublishWithoutLosingEarlierCorrection(t *testing.T) {
@@ -35,6 +42,38 @@ func TestIndependentRegradeDraftsPublishWithoutLosingEarlierCorrection(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
+	anonymous, err := service.Create(t.Context(), tenant, exam, actor, CreateInput{Reason: "publish anonymous examples", IdempotencyKey: "anonymous-before-correction", VisibilityPolicy: VisibilityPolicy{ShowQuestionScores: true, ShowHighScorePaper: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := publicationTestMux(NewHandler(service, nil))
+	manager := &auth.User{ID: actor, TenantID: tenant}
+	draftPath := "/api/v1/score-releases/" + secondDraft.ID
+	readPreview := func(path string, mode publicationPreviewMode) Detail {
+		t.Helper()
+		response := readPublicationResponse[Detail](t, requestPublication(handler, manager, http.MethodGet, path+"?publication_preview="+string(mode), ""), http.StatusOK)
+		if len(response.PublicationSnapshot) != 64 {
+			t.Fatalf("missing confirmation digest: %+v", response)
+		}
+		return response
+	}
+	publish := func(path, body string, status int, code string) {
+		t.Helper()
+		requirePublicationStatus(t, requestPublication(handler, manager, http.MethodPost, path+"/publish", body), status, code)
+	}
+	requirePublicationStatus(t, requestPublication(handler, manager, http.MethodGet, draftPath+"?publication_preview=unknown", ""), http.StatusBadRequest, "invalid_score_release_input")
+	requirePublicationStatus(t, requestPublication(handler, &auth.User{ID: actor, TenantID: "other-tenant"}, http.MethodGet, draftPath+"?publication_preview=candidate", ""), http.StatusNotFound, "score_release_not_found")
+	for _, body := range []string{`{"unknown":true}`, `{} {}`} {
+		publish(draftPath, body, http.StatusBadRequest, "invalid_json")
+	}
+	const snapshotBody = `{"publication_snapshot":%q}`
+	for _, invalid := range []string{"too-short", strings.Repeat("A", 64)} {
+		publish(draftPath, fmt.Sprintf(snapshotBody, invalid), http.StatusBadRequest, "invalid_score_release_input")
+	}
+	before := readPreview(draftPath, previewDraft)
+	if len(before.Items) != 1 || before.Items[0].TotalScore != 5 {
+		t.Fatalf("original draft: %+v", before)
+	}
 	if _, err := service.Publish(t.Context(), tenant, first.ID, actor); err != nil {
 		t.Fatal(err)
 	}
@@ -45,9 +84,13 @@ func TestIndependentRegradeDraftsPublishWithoutLosingEarlierCorrection(t *testin
 	if detail, err := service.Get(t.Context(), tenant, inherited.ID); err != nil || detail.Items[0].TotalScore != 6 {
 		t.Fatalf("inherited preview: %+v %v", detail, err)
 	}
-	if _, err := service.Publish(t.Context(), tenant, secondDraft.ID, actor); err != nil {
-		t.Fatal(err)
+	publish(draftPath, fmt.Sprintf(snapshotBody, before.PublicationSnapshot), http.StatusConflict, "score_release_snapshot_changed")
+	publish(draftPath, " ", http.StatusConflict, "score_release_snapshot_changed")
+	merged := readPreview(draftPath, previewCandidate)
+	if len(merged.Items) != 1 || merged.Items[0].TotalScore != 7 || merged.PublicationSnapshot == before.PublicationSnapshot {
+		t.Fatalf("candidate skipped earlier correction: %+v", merged)
 	}
+	publish(draftPath, fmt.Sprintf(snapshotBody, merged.PublicationSnapshot), http.StatusOK, "")
 	current, err := service.CurrentPublished(t.Context(), tenant, exam)
 	if err != nil || current.Release.SourceReleaseID != base.ID || current.Release.SupersedesReleaseID != first.ID || current.Items[0].TotalScore != 7 {
 		t.Fatalf("parallel continuation=%+v err=%v", current, err)
@@ -56,8 +99,17 @@ func TestIndependentRegradeDraftsPublishWithoutLosingEarlierCorrection(t *testin
 	if prior.Items[0].TotalScore != 6 {
 		t.Fatal("immutable earlier correction changed")
 	}
+	anonymousPath := "/api/v1/score-releases/" + anonymous.ID
+	requirePublicationStatus(t, requestPublication(handler, manager, http.MethodGet, anonymousPath+"?publication_preview=candidate", ""), http.StatusConflict, "score_release_draft_refresh_required")
+	if anonymousDraft := readPreview(anonymousPath, previewDraft); len(anonymousDraft.Items) != 1 || anonymousDraft.Items[0].TotalScore != 4 {
+		t.Fatalf("refused candidate altered anonymous paper draft: %+v", anonymousDraft)
+	}
 	// 工作表始终保留原4分，不靠测试改库追平。旧草稿发布必须继承两项已公布的更正。
-	if published, err := service.Publish(t.Context(), tenant, ordinary.ID, actor); err != nil || published.SourceReleaseID != secondDraft.ID || published.SupersedesReleaseID != secondDraft.ID {
+	ordinaryPath := "/api/v1/score-releases/" + ordinary.ID
+	publish(ordinaryPath, "", http.StatusConflict, "score_release_snapshot_changed")
+	ordinaryPreview := readPreview(ordinaryPath, previewCandidate)
+	publish(ordinaryPath, fmt.Sprintf(snapshotBody, ordinaryPreview.PublicationSnapshot), http.StatusOK, "")
+	if published, err := service.Get(t.Context(), tenant, ordinary.ID); err != nil || published.Release.SourceReleaseID != secondDraft.ID || published.Release.SupersedesReleaseID != secondDraft.ID {
 		t.Fatalf("old ordinary draft cannot recover: %+v %v", published, err)
 	}
 	if detail, err := service.CurrentPublished(t.Context(), tenant, exam); err != nil || detail.Items[0].TotalScore != 7 {

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -13,6 +14,64 @@ import (
 	"edugrade-enterprise/services/api-gateway/internal/captureupload"
 	"edugrade-enterprise/services/api-gateway/internal/config"
 )
+
+func TestPostgresCaptureCollectionConflictsWithInFlightChunk(t *testing.T) {
+	db, _, _, exam, _, _ := repairFixture(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 12*time.Second)
+	defer cancel()
+	captures := capture.NewPostgresStore(db)
+	uploads := captureupload.NewPostgresStore(db)
+	batch, err := captures.CreateBatch(ctx, exam.TenantID, exam.ExamID, exam.AdminID, capture.CreateBatchInput{
+		Name: "synthetic chunk and collection", SourceType: "desktop_sync", IdempotencyKey: "collection-lock",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := []byte("answer")
+	hash := fmt.Sprintf("%x", sha256.Sum256(data))
+	input := captureupload.InitInput{ExamID: exam.ExamID, BatchID: batch.ID, SHA256: hash, Size: int64(len(data)), MIME: "image/png", Filename: "synthetic.png", IdempotencyKey: "collection-lock-upload"}
+	upload, _, err := uploads.Init(ctx, exam.TenantID, exam.AdminID, input, int64(len(data)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := captures.GetCollectionSummary(ctx, exam.TenantID, exam.ExamID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	chunk, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer chunk.Rollback()
+	// 用实际偏移更新触发器取得归档考试锁，并保持在提交前。收卷要立即返回可重试冲突。
+	if _, err = chunk.ExecContext(ctx, `
+UPDATE capture_upload_session SET confirmed_offset=$3
+WHERE tenant_id=$1 AND id=$2::uuid`, exam.TenantID, upload.ID, len(data)); err != nil {
+		t.Fatal(err)
+	}
+	pausedCtx, stop := context.WithTimeout(ctx, 2*time.Second)
+	_, closeErr := captures.CompleteCollection(pausedCtx, exam.TenantID, exam.ExamID, exam.AdminID,
+		capture.CompleteCollectionInput{Revision: before.Revision, IdempotencyKey: "seal-during-chunk"})
+	stop()
+	if !errors.Is(closeErr, capture.ErrConflict) {
+		t.Fatalf("collection did not return a retryable conflict: %v", closeErr)
+	}
+	if err := chunk.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	appended, err := uploads.AppendChunk(ctx, exam.TenantID, upload.ID, captureupload.ChunkInput{Offset: 0, SHA256: hash, Data: data})
+	if err != nil || appended.ConfirmedOffset != int64(len(data)) {
+		t.Fatalf("real chunk append did not commit offset after conflict: %+v %v", appended, err)
+	}
+	after, err := captures.GetCollectionSummary(ctx, exam.TenantID, exam.ExamID)
+	if err != nil || after.Closed || after.Revision <= before.Revision {
+		t.Fatalf("append must change the open collection revision: before=%+v after=%+v %v", before, after, err)
+	}
+	_, err = captures.CompleteCollection(ctx, exam.TenantID, exam.ExamID, exam.AdminID, capture.CompleteCollectionInput{Revision: before.Revision, IdempotencyKey: "seal-during-chunk"})
+	if !errors.Is(err, capture.ErrConflict) {
+		t.Fatalf("stale collection revision was accepted after a chunk committed: %v", err)
+	}
+}
 
 func TestPostgresCaptureUploadTakesBatchLockBeforeExamLock(t *testing.T) {
 	db, _, _, exam, _, _ := repairFixture(t)

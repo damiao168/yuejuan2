@@ -145,13 +145,7 @@ func ensureExcludedFileUngradedTx(ctx context.Context, tx *sql.Tx, tenantID, id 
 		return lockErr
 	}
 	var graded bool
-	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM capture_page p JOIN answer_segment a ON a.tenant_id=p.tenant_id AND a.submission_page_id=p.submission_page_id WHERE p.tenant_id=$1 AND p.capture_file_id=$2::uuid AND (
-   EXISTS(SELECT 1 FROM ai_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
-   EXISTS(SELECT 1 FROM human_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
-   EXISTS(SELECT 1 FROM question_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
-   EXISTS(SELECT 1 FROM final_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
-   EXISTS(SELECT 1 FROM subjective_grading_run g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
-   EXISTS(SELECT 1 FROM scoring_run_item g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id)))`, tenantID, id).Scan(&graded)
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM capture_page p JOIN answer_segment a ON a.tenant_id=p.tenant_id AND a.submission_page_id=p.submission_page_id WHERE p.tenant_id=$1 AND p.capture_file_id=$2::uuid AND (`+answerSegmentHasGradingUse+`))`, tenantID, id).Scan(&graded)
 	if err != nil {
 		return err
 	}
@@ -160,6 +154,14 @@ func ensureExcludedFileUngradedTx(ctx context.Context, tx *sql.Tx, tenantID, id 
 	}
 	return nil
 }
+
+const answerSegmentHasGradingUse = `
+   EXISTS(SELECT 1 FROM ai_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
+   EXISTS(SELECT 1 FROM human_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
+   EXISTS(SELECT 1 FROM question_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
+   EXISTS(SELECT 1 FROM final_grade g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
+   EXISTS(SELECT 1 FROM subjective_grading_run g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id AND g.deleted_at IS NULL) OR
+   EXISTS(SELECT 1 FROM scoring_run_item g WHERE g.tenant_id=a.tenant_id AND g.answer_segment_id=a.id)`
 
 func excludeCaptureFileTx(ctx context.Context, tx *sql.Tx, tenantID, id, actorID string, input ExcludeFileInput) error {
 	// 排除页面和任务在同一事务内完成；旧租约回调只能被拒绝，不能把已排除的材料重新激活。

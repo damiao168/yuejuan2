@@ -29,6 +29,11 @@ func (s *PostgresStore) RegisterFile(ctx context.Context, tenantID, batchID, act
 	if asset.ExamID != "" && asset.ExamID != examID {
 		return File{}, ErrInvalidInput
 	}
+	if input.UploadSessionID != "" {
+		if err := lockFileRegistrationSessionTx(ctx, tx, tenantID, batchID, examID, input, asset); err != nil {
+			return File{}, err
+		}
+	}
 	if err = validateUploadGroupTx(ctx, tx, tenantID, batchID, input); err != nil {
 		return File{}, err
 	}
@@ -49,8 +54,13 @@ INSERT INTO capture_file (tenant_id, capture_batch_id, file_asset_id, original_n
 VALUES ($1,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10::uuid,NULLIF($11,'')::uuid,NULLIF($12,0),NULLIF($13,0),NULLIF($14,0))
 ON CONFLICT (tenant_id, capture_batch_id, idempotency_key)
 DO UPDATE SET idempotency_key=EXCLUDED.idempotency_key
+WHERE capture_file.deleted_at IS NULL
 RETURNING `+fileColumns, tenantID, batchID, asset.ID, asset.OriginalName, asset.ContentType, asset.SHA256, asset.SizeBytes, duplicateStatus, input.IdempotencyKey, actorID, input.UploadGroupID, input.UploadGroupFileCount, input.UploadGroupFileIndex, input.PagesPerStudent)
 	item, err := scanFile(row)
+	if errors.Is(err, ErrNotFound) {
+		// 重开后请用新上传命令；旧幂等键仍关联已退出的文件。
+		return File{}, ErrConflict
+	}
 	if err != nil {
 		return File{}, err
 	}
@@ -61,6 +71,22 @@ revision=revision+1, updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid`, tenan
 		return File{}, err
 	}
 	return item, tx.Commit()
+}
+
+// 登记与取消共用批次锁。若对象落盘期间租约失效，即使批次已重开，也不能用旧会话登记。
+func lockFileRegistrationSessionTx(ctx context.Context, tx *sql.Tx, tenantID, batchID, examID string, input RegisterFileInput, asset FileAssetSnapshot) error {
+	var id string
+	err := tx.QueryRowContext(ctx, `
+SELECT id::text FROM capture_upload_session
+WHERE tenant_id=$1 AND capture_batch_id=$2::uuid AND exam_id=$3::uuid AND id=$4::uuid
+  AND status='finalizing' AND completion_token=$5::uuid AND completion_lease_until>clock_timestamp()
+  AND idempotency_key=$6 AND expected_sha256=$7 AND total_size=$8 AND content_type=$9
+FOR UPDATE NOWAIT`, tenantID, batchID, examID, input.UploadSessionID, input.UploadCompletionToken, input.IdempotencyKey,
+		asset.SHA256, asset.SizeBytes, asset.ContentType).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrConflict
+	}
+	return batchCancellationLockError(err)
 }
 
 func (s *PostgresStore) ListFiles(ctx context.Context, tenantID, batchID string) ([]File, error) {

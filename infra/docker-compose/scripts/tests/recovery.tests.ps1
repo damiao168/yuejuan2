@@ -40,7 +40,7 @@ function New-BackupFixture {
   Set-Content -LiteralPath (Join-Path $root 'database.dump') -Value 'synthetic dump'
   @{ scope = 'active-and-orphan-recovered'; objects = @($global:recoveryMock.SourceReference) } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $root 'references.json')
   $files = @(Get-ChildItem -LiteralPath $root -File -Recurse | ForEach-Object { @{ path = $_.FullName.Substring($root.Length + 1); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } })
-  @{ format_version = 3; created_at = '2026-09-26T00:00:00Z'; postgres_file = 'database.dump'; minio_directory = 'objects'; references_file = 'references.json'; source_bucket = 'source-bucket'; maintenance_boundary = 'compose-writers-stopped'; files = $files } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $root 'manifest-fixture.json')
+  @{ format_version = 3; created_at = '2026-09-26T00:00:00Z'; postgres_file = 'database.dump'; minio_directory = 'objects'; references_file = 'references.json'; source_bucket = $global:recoveryMock.SourceReference.storage_bucket; maintenance_boundary = 'compose-writers-stopped'; files = $files } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $root 'manifest-fixture.json')
   return $root
 }
 function Invoke-TestRestore([string]$Root, [hashtable]$Overrides = @{}) {
@@ -66,15 +66,47 @@ function global:docker {
     return
   }
   if ($arguments[0] -eq 'start') { $global:recoveryMock.Running = @('pg-id', 'minio-id') + $global:recoveryMock.InitialWriters; return }
+  if ($command -match 'config --format json$') {
+    $identities = @{ EDUGRADE_FILE_BUCKET = 'source-bucket'; EDUGRADE_MINIO_APP_ACCESS_KEY = 'fixture-app'; EDUGRADE_MINIO_APP_SECRET_KEY = 'synthetic-recovery-only'; EDUGRADE_MINIO_USE_SSL = 'false' }
+    $api = $identities.Clone()
+    $api.EDUGRADE_ENV = if ($global:recoveryMock.Failure -eq 'production-like') { 'staging' } else { 'test' }
+    $api.EDUGRADE_MINIO_ENDPOINT = 'minio:9000'
+    $api.EDUGRADE_POSTGRES_DSN = 'postgresql://app:synthetic@postgres:5432/source?sslmode=disable'
+    if ($global:recoveryMock.Failure -eq 'identity-config') { $api.EDUGRADE_MINIO_APP_ACCESS_KEY = 'different-fixture-app' }
+    if ($global:recoveryMock.Failure -eq 'identity-root') { $identities.EDUGRADE_MINIO_ROOT_USER = $identities.EDUGRADE_MINIO_APP_ACCESS_KEY }
+    return (ConvertTo-Json -InputObject @{ services = @{
+      'postgres' = @{ environment = @{ POSTGRES_DB = 'source'; POSTGRES_USER = 'fixture' } }
+      'api-gateway' = @{ environment = $api }
+      'minio-init' = @{ environment = $identities }
+    } } -Depth 6 -Compress)
+  }
   if ($arguments[0] -eq 'inspect') {
     if ($command -match 'com.docker.compose.service') {
       return @{ 'pg-id' = 'postgres'; 'minio-id' = 'minio'; 'api-id' = 'api-gateway'; 'worker-id' = 'page-processing-worker'; 'future-id' = 'future-writer' }[$arguments[-1]]
     }
     if ($command -match 'json .Config.Labels') { return '{"com.docker.compose.project":"fixture"}' }
+    if ($command -match 'json .Config.Env') {
+      if ($arguments[-1] -eq 'pg-id') {
+        $db = if ($global:recoveryMock.Failure -eq 'database-deployed') { 'old_active_db' } else { 'source' }
+        return (ConvertTo-Json -InputObject @("POSTGRES_DB=$db", 'POSTGRES_USER=fixture') -Compress)
+      }
+      if ($arguments[-1] -eq 'minio-id') {
+        $root = if ($global:recoveryMock.Failure -eq 'identity-live-root') { 'fixture-app' } else { 'fixture-root' }
+        return (ConvertTo-Json -InputObject @("MINIO_ROOT_USER=$root") -Compress)
+      }
+      $key = if ($global:recoveryMock.Failure -eq 'identity-deployed') { 'old-fixture-key' } else { 'fixture-app' }
+      $ssl = if ($global:recoveryMock.Failure -eq 'tls-deployed') { 'true' } else { 'false' }
+      $endpoint = if ($global:recoveryMock.Failure -eq 'endpoint-deployed') { 'old-minio:9000' } else { 'minio:9000' }
+      $database = if ($global:recoveryMock.Failure -eq 'gateway-database-deployed') { 'old_active_db' } else { 'source' }
+      $environment = if ($global:recoveryMock.Failure -eq 'production-like') { 'staging' } else { 'test' }
+      return (ConvertTo-Json -InputObject @("EDUGRADE_ENV=$environment", 'EDUGRADE_FILE_BUCKET=source-bucket', "EDUGRADE_POSTGRES_DSN=postgresql://app:synthetic@postgres:5432/$database", "EDUGRADE_MINIO_ENDPOINT=$endpoint", "EDUGRADE_MINIO_USE_SSL=$ssl", "EDUGRADE_MINIO_APP_ACCESS_KEY=$key", 'EDUGRADE_MINIO_APP_SECRET_KEY=synthetic-recovery-only') -Compress)
+    }
     return '/fixture|fixture-image|sha256:fixture'
   }
   if ($command -match ' ps --status running -q$') { return $global:recoveryMock.Running }
+  if ($command -match ' ps --all -q api-gateway$') { return 'api-id' }
   if ($command -match ' ps -q postgres$') { return 'pg-id' }
+  if ($command -match ' ps -q minio$') { return 'minio-id' }
   if ($command -match ' ps -q$') { return $global:recoveryMock.Running }
   if ($command -match 'printenv POSTGRES_USER$') { return 'fixture' }
   if ($command -match 'printenv POSTGRES_DB$') { return 'source' }
@@ -86,8 +118,9 @@ function global:docker {
   }
   if ($command -match 'pg_restore|dropdb| rm -f ') { return }
   if ($command -match 'psql') {
-    $query = $arguments[-1]
-    if ($query -match "UPDATE file_asset SET storage_bucket='([^']+)'") {
+    $query = if ($command.EndsWith('-f -')) { $input -join "`n" } else { $arguments[-1] }
+    if ($query -match "UPDATE public.file_asset SET storage_bucket='([^']+)'") {
+      if ($global:recoveryMock.Failure -eq 'file-guard') { $global:LASTEXITCODE = 1; return }
       $global:recoveryMock.Remapped = $true
       $global:recoveryMock.TargetBucket = $Matches[1]
       return 'COMMIT'
@@ -98,10 +131,12 @@ function global:docker {
       if ($global:recoveryMock.Failure -eq 'reference') { $reference.storage_key = 'tenant/other.dat' }
       return ConvertTo-Json -InputObject @($reference) -Compress
     }
+    if ($global:recoveryMock.Failure -eq 'schema' -and $query -match 'FROM schema_migration') { return '0' }
     return '1'
   }
   if ($command -match 'mc mirror') {
     if ($global:recoveryMock.Failure -eq 'mirror') { $global:LASTEXITCODE = 1; return }
+    if ($global:recoveryMock.Failure -eq 'application-read' -and $command -match 'EDUGRADE_MINIO_APP_ACCESS_KEY') { $global:LASTEXITCODE = 1; return }
     $volume = $arguments[[Array]::IndexOf($arguments, '-v') + 1]
     $destination = $null
     if ($volume -match '^(.*):/verification$') { $destination = $Matches[1] }
@@ -221,6 +256,9 @@ try {
     Assert $global:recoveryMock.Remapped 'Expected the database bucket remap.'
     $calls = @($global:recoveryMock.Calls | ForEach-Object { $_ -join ' ' })
     Assert (@($calls | Where-Object { $_ -match ':/verification' }).Count -eq 1) 'Actual target object bytes must be downloaded.'
+    $verify = [Array]::FindIndex($calls, [Predicate[object]]{ param($x) $x -match ':/verification' })
+    $remap = [Array]::FindIndex($calls, [Predicate[object]]{ param($x) $x -match 'psql.* -f -$' })
+    Assert ($verify -ge 0 -and $verify -lt $remap) 'Bucket references must remain unchanged until the actual bytes verify.'
     Assert (($calls[-1]) -match '^start ') 'Writers must only resume after reference verification.'
     Assert-WritersRestored
   }
@@ -229,8 +267,15 @@ try {
       $fixture = New-BackupFixture
       $global:recoveryMock.Failure = $failure
       Expect-Failure { Invoke-TestRestore $fixture } 'differ|mismatch'
+      Assert (-not $global:recoveryMock.Remapped) 'A mismatched backup must leave database storage references unchanged.'
       Assert-WritersRestored
     }
+  }
+  Test-Case 'invalid restored schema history prevents touching the target bucket' {
+    $global:recoveryMock.Failure = 'schema'
+    Expect-Failure { Invoke-TestRestore (New-BackupFixture) } 'schema history validation failed'
+    Assert (@($global:recoveryMock.Calls | Where-Object { ($_ -join ' ') -match 'mc mirror' }).Count -eq 0) 'A broken schema must fail before copying objects.'
+    Assert-WritersRestored
   }
   Test-Case 'restore stop failure resumes original writers before data mutation' {
     $fixture = New-BackupFixture
@@ -239,26 +284,72 @@ try {
     Assert-WritersRestored
     Assert (@($global:recoveryMock.Calls | Where-Object { ($_ -join ' ') -match 'pg_restore|dropdb' }).Count -eq 0) 'No data operation may run after a failed maintenance boundary.'
   }
-  foreach ($primary in @('database', 'bucket')) {
-    Test-Case "successful primary $primary restore resumes original writers" {
-      $fixture = New-BackupFixture
-      $overrides = if ($primary -eq 'database') { @{ TargetDatabase = 'source'; AllowPrimaryDatabase = $true } } else { @{ TargetBucket = 'source-bucket'; AllowPrimaryBucket = $true } }
-      Invoke-TestRestore $fixture $overrides
-      Assert-WritersRestored
+  $primaryTargets = @{ TargetDatabase = 'source'; TargetBucket = 'source-bucket'; AllowPrimaryDatabase = $true; AllowPrimaryBucket = $true }
+  Test-Case 'primary database and bucket must be restored together' {
+    $fixture = New-BackupFixture
+    Expect-Failure { Invoke-TestRestore $fixture @{ TargetDatabase = 'source'; AllowPrimaryDatabase = $true } } 'must be restored together'
+    Expect-Failure { Invoke-TestRestore $fixture @{ TargetBucket = 'source-bucket'; AllowPrimaryBucket = $true } } 'must be restored together'
+    Assert (@($global:recoveryMock.Calls | Where-Object { $_[0] -eq 'stop' }).Count -eq 0) 'Mismatched targets must fail before stopping writers.'
+  }
+  Test-Case 'primary restore in a production-like environment requires authorization' {
+    $global:recoveryMock.Failure = 'production-like'
+    Expect-Failure { Invoke-TestRestore (New-BackupFixture) $primaryTargets } 'AllowProductionRestore'
+    Assert (@($global:recoveryMock.Calls | Where-Object { $_[0] -eq 'stop' }).Count -eq 0) 'Production-like restore must fail before stopping writers unless allowed explicitly.'
+  }
+  Test-Case 'primary restore verifies as the application before resuming' {
+    Invoke-TestRestore (New-BackupFixture) $primaryTargets
+    $probe = @($global:recoveryMock.Calls | Where-Object { ($_ -join ' ') -match ':/verification' })
+    Assert ($probe.Count -eq 1 -and ($probe[0] -join ' ') -match 'EDUGRADE_MINIO_APP_ACCESS_KEY' -and ($probe[0] -join ' ') -notmatch 'EDUGRADE_MINIO_ROOT_USER') 'Primary object verification must use the application identity.'
+    Assert (-not $global:recoveryMock.Remapped) 'Restoring to the original bucket must not change database storage references.'
+    Assert-WritersRestored
+  }
+  Test-Case 'primary cross-bucket remap blocked by a file guard keeps writers stopped' {
+    $global:recoveryMock.SourceReference.storage_bucket = 'old-bucket'
+    $global:recoveryMock.Failure = 'file-guard'
+    Expect-Failure { Invoke-TestRestore (New-BackupFixture) $primaryTargets } 'bucket remapping failed'
+    Assert (-not $global:recoveryMock.Remapped) 'Failed remap must leave the original references intact.'
+    Assert (@($global:recoveryMock.Calls | Where-Object { $_[0] -eq 'start' }).Count -eq 0) 'Blocked remap after primary data mutation must not resume writers.'
+    Assert (@($global:recoveryMock.Running | Where-Object { $_ -in $global:recoveryMock.InitialWriters }).Count -eq 0) 'All original writers must remain stopped.'
+  }
+  foreach ($failure in @('identity-config', 'identity-deployed', 'identity-root')) {
+    Test-Case "primary restore rejects $failure mismatch before stopping writers" {
+      $global:recoveryMock.Failure = $failure
+      Expect-Failure { Invoke-TestRestore (New-BackupFixture) $primaryTargets } 'matching MinIO application credentials'
+      Assert (@($global:recoveryMock.Calls | Where-Object { $_[0] -eq 'stop' }).Count -eq 0) 'The application identity mismatch must fail before stopping writers.'
     }
-    Test-Case "primary $primary failure before data mutation resumes original writers" {
-      $fixture = New-BackupFixture
-      $global:recoveryMock.Failure = 'dump-list'
-      $overrides = if ($primary -eq 'database') { @{ TargetDatabase = 'source'; AllowPrimaryDatabase = $true } } else { @{ TargetBucket = 'source-bucket'; AllowPrimaryBucket = $true } }
-      Expect-Failure { Invoke-TestRestore $fixture $overrides } 'dump validation failed'
-      Assert-WritersRestored
-      Assert (@($global:recoveryMock.Calls | Where-Object { ($_ -join ' ') -match 'dropdb|pg_restore -U|mc mirror|UPDATE file_asset' }).Count -eq 0) 'No target data change may occur after dump validation failure.'
+  }
+  Test-Case 'primary verification refuses the deployed MinIO root identity' {
+    $global:recoveryMock.Failure = 'identity-live-root'
+    Expect-Failure { Invoke-TestRestore (New-BackupFixture) $primaryTargets } 'root or unknown'
+    Assert (@($global:recoveryMock.Calls | Where-Object { $_[0] -eq 'stop' }).Count -eq 0) 'The deployed root identity must fail before stopping writers.'
+  }
+  Test-Case 'isolated restore refuses an active primary database hidden by Compose drift' {
+    $global:recoveryMock.Failure = 'database-deployed'
+    Expect-Failure { Invoke-TestRestore (New-BackupFixture) @{ TargetDatabase = 'old_active_db' } } 'deployed PostgreSQL database'
+    Assert (@($global:recoveryMock.Calls | Where-Object { $_[0] -eq 'stop' }).Count -eq 0) 'The deployed database mismatch must fail before stopping writers.'
+  }
+  Test-Case 'isolated restore refuses an active gateway database hidden by DSN drift' {
+    $global:recoveryMock.Failure = 'gateway-database-deployed'
+    Expect-Failure { Invoke-TestRestore (New-BackupFixture) @{ TargetDatabase = 'old_active_db' } } 'deployed gateway PostgreSQL target'
+    Assert (@($global:recoveryMock.Calls | Where-Object { $_[0] -eq 'stop' }).Count -eq 0) 'The active gateway database mismatch must fail before stopping writers.'
+  }
+  foreach ($failure in @('endpoint-deployed', 'tls-deployed')) {
+    Test-Case "primary restore rejects $failure mismatch before stopping writers" {
+      $global:recoveryMock.Failure = $failure
+      Expect-Failure { Invoke-TestRestore (New-BackupFixture) $primaryTargets } 'same MinIO endpoint and TLS mode'
+      Assert (@($global:recoveryMock.Calls | Where-Object { $_[0] -eq 'stop' }).Count -eq 0) 'The MinIO connection mismatch must fail before stopping writers.'
     }
-    Test-Case "failed partial primary $primary restore keeps writers stopped" {
-      $fixture = New-BackupFixture
-      $global:recoveryMock.Failure = 'object'
-      $overrides = if ($primary -eq 'database') { @{ TargetDatabase = 'source'; AllowPrimaryDatabase = $true } } else { @{ TargetBucket = 'source-bucket'; AllowPrimaryBucket = $true } }
-      Expect-Failure { Invoke-TestRestore $fixture $overrides } 'differ|mismatch'
+  }
+  Test-Case 'primary failure before data mutation resumes original writers' {
+    $global:recoveryMock.Failure = 'dump-list'
+    Expect-Failure { Invoke-TestRestore (New-BackupFixture) $primaryTargets } 'dump validation failed'
+    Assert-WritersRestored
+    Assert (@($global:recoveryMock.Calls | Where-Object { ($_ -join ' ') -match 'dropdb|pg_restore -U|mc mirror|UPDATE (public\.)?file_asset' }).Count -eq 0) 'No target data change may occur after dump validation failure.'
+  }
+  foreach ($failure in @('object', 'application-read')) {
+    Test-Case "failed primary restore during $failure verification keeps writers stopped" {
+      $global:recoveryMock.Failure = $failure
+      Expect-Failure { Invoke-TestRestore (New-BackupFixture) $primaryTargets } 'mismatch|identity could not verify'
       Assert (@($global:recoveryMock.Calls | Where-Object { $_[0] -eq 'start' }).Count -eq 0) 'A failed restore after primary data mutation must not resume writers.'
       Assert (@($global:recoveryMock.Running | Where-Object { $_ -in $global:recoveryMock.InitialWriters }).Count -eq 0) 'All original writers must remain stopped after primary restoration failure.'
     }

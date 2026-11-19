@@ -8437,6 +8437,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "publication_preview",
+            "in": "query",
+            "description": "draft returns the original snapshot; candidate applies any compatible corrections to project what would be published. Both provide a confirmation digest without changing scores.",
+            "schema": {
+              "type": "string",
+              "enum": ["draft", "candidate"]
+            }
           }
         ],
         "responses": {
@@ -8465,6 +8474,26 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Release absent from authorized scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The candidate conflicts with the current published scores, or anonymous papers need a new draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -8523,7 +8552,7 @@
     "/api/v1/score-releases/{id}/publish": {
       "post": {
         "operationId": "publishScoreRelease",
-        "description": "Requires authentication within the configured recent-authentication window (10 minutes by default).",
+        "description": "Requires recent authentication. Publish the exact snapshot confirmed using the preview digest. A missing digest remains compatible when the original draft and final candidate match. To accept a changed candidate, preview and confirm it first. Successful retries return the original published version.",
         "parameters": [
           {
             "name": "id",
@@ -8534,6 +8563,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmScorePublicationRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "ScoreReleaseResponse",
@@ -8562,7 +8601,7 @@
             "$ref": "#/components/responses/Forbidden"
           },
           "409": {
-            "description": "Release gate blocked or release state changed",
+            "description": "Release gate blocked, release state changed, confirmation digest stale (score_release_snapshot_changed), or anonymous papers need a new draft (score_release_draft_refresh_required)",
             "content": {
               "application/json": {
                 "schema": {
@@ -19634,7 +19673,7 @@
     "/api/v1/score-releases/{id}/student-preview": {
       "get": {
         "operationId": "getScoreReleaseStudentPreview",
-        "description": "Requires score:manage and the release organization/exam resource boundary. Read-only projection of the selected immutable release (including drafts) using its student visibility policy. The selected student must exist in that snapshot. Does not publish, switch the current pointer, impersonate a student, or retrieve answer images, cross-subject current totals or class-specific rankings.",
+        "description": "Requires score:manage and the release organization/exam resource boundary. Read-only student-facing projection of the selected snapshot using its visibility policy. The selected student must exist in the snapshot. Only projects frozen scores and visibility; does not retrieve answer images, cross-subject current totals or class-specific rankings.",
         "parameters": [
           {
             "name": "id",
@@ -19650,6 +19689,15 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "publication_preview",
+            "in": "query",
+            "description": "draft previews original scores; candidate previews the latest compatible publication candidate. Both include the digest of the same snapshot as the returned student view.",
+            "schema": {
+              "type": "string",
+              "enum": ["draft", "candidate"]
             }
           }
         ],
@@ -19682,6 +19730,16 @@
           },
           "404": {
             "description": "Release or student absent from authorized snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The candidate conflicts with the current published scores, or anonymous papers need a new draft",
             "content": {
               "application/json": {
                 "schema": {
@@ -43028,6 +43086,17 @@
           }
         }
       },
+      "ConfirmScorePublicationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "publication_snapshot": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-f]{64})?$",
+            "description": "Digest returned with the confirmed preview. Omission or an empty string uses the legacy path and only publishes an unchanged draft."
+          }
+        }
+      },
       "ScoreReleaseDetail": {
         "type": "object",
         "additionalProperties": false,
@@ -43051,6 +43120,11 @@
             "items": {
               "$ref": "#/components/schemas/ScoreReleaseQuestion"
             }
+          },
+          "publication_snapshot": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Confirmation digest of the returned snapshot, included when a publication preview mode is requested."
           }
         }
       },
@@ -55971,6 +56045,11 @@
         "properties": {
           "result": {
             "$ref": "#/components/schemas/StudentScorePreviewResult"
+          },
+          "publication_snapshot": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Confirmation digest of the exact snapshot used for this projection, included when a publication preview mode is requested."
           }
         }
       },

@@ -20,7 +20,7 @@ import { ScoreReleaseStatus } from "../features/score-management/components/Scor
 import { StudentScorePreviewDialog } from "../features/score-management/components/StudentScorePreviewDialog";
 import type { ScoreRelease } from "../api/scoreReleases";
 import { useScoreWorkspaceData } from "../features/score-management/hooks/useScoreWorkspaceData";
-import { useScoreReleaseWorkflow } from "../features/score-management/hooks/useScoreReleaseWorkflow";
+import { useScoreReleaseWorkflow, type ScorePublicationPreviewOptions } from "../features/score-management/hooks/useScoreReleaseWorkflow";
 import { useExamEducationStage } from "../features/score-management/hooks/useExamEducationStage";
 import { sessionPublicationText, useSessionPublication } from "../features/score-management/hooks/useSessionPublication";
 import { useScoreAction } from "../features/score-management/hooks/useScoreAction";
@@ -210,7 +210,7 @@ export function ScoreManagementPage({
   } = workspace;
   // 先读取考试目录，再读取自动选中考试的成绩；目录控件的 loading 也属于首屏等待。
   usePageLoading(loadingExams || loadingScores);
-  const [previewRelease, setPreviewRelease] = useState<{ examId: string; release: ScoreRelease } | null>(null);
+  const [previewRelease, setPreviewRelease] = useState<{ examId: string; release: ScoreRelease; options?: ScorePublicationPreviewOptions } | null>(null);
   const portalUrl = import.meta.env.VITE_STUDENT_PORTAL_URL?.trim();
   const { actioning, runAction } = useScoreAction({ selectedExamId, loadExamList, loadScores });
   // 数据重读失败时快照保留用于查看；新读数到来前或已有提交进行中，不能再依据旧门禁提交。
@@ -238,7 +238,7 @@ export function ScoreManagementPage({
   const releaseWorkflow = useScoreReleaseWorkflow({
     selectedExamId, selectedExam, currentPublishedRelease: publishedRelease, educationStage, runAction,
     reload: () => loadScores(selectedExamId),
-    onPreview: release => setPreviewRelease({ examId: selectedExamId, release })
+    onPreview: (release, options) => setPreviewRelease({ examId: selectedExamId, release, options })
   });
   const [historyOpen, setHistoryOpen] = useState(false);
   const readiness = publicationReadiness(quality, releaseGate, roster);
@@ -388,12 +388,13 @@ export function ScoreManagementPage({
         <ScoreReleaseHistory
           open={historyOpen} onClose={() => setHistoryOpen(false)} releases={scoreReleases} currentRelease={publishedRelease}
           canWrite={Boolean(canWrite)} canPublish={readiness.status === "ready"} actioning={actioning}
-          onPreview={(release) => setPreviewRelease({ examId: selectedExamId, release })}
+          onPreview={releaseWorkflow.showDraftPreview}
           onPublish={releaseWorkflow.publishRelease} onRevokePaper={releaseWorkflow.revokeSharedPaper}
           onRepublish={() => { setHistoryOpen(false); releaseWorkflow.openPublish(); }}
         />
       </> : null}
-      {adminView && previewRelease?.examId === selectedExamId ? <StudentScorePreviewDialog key={`${selectedExamId}:${previewRelease.release.id}`} release={previewRelease.release} currentVersion={publishedRelease?.version} portalUrl={portalUrl} studentLabels={previewStudentLabels} onClose={() => setPreviewRelease(null)} /> : null}
+      {adminView && previewRelease?.examId === selectedExamId && (previewRelease.options?.isCurrent?.() ?? true) ? <StudentScorePreviewDialog key={`${selectedExamId}:${previewRelease.release.id}:${previewRelease.options?.retrySnapshot ?? ""}:${Boolean(previewRelease.options?.onConfirm)}`} release={previewRelease.release} currentVersion={publishedRelease?.version} portalUrl={portalUrl} studentLabels={previewStudentLabels} onClose={() => setPreviewRelease(null)}
+        onSnapshot={previewRelease.options?.onSnapshot} onConfirm={previewRelease.options?.onConfirm} canConfirm={Boolean(canWrite)} confirming={actioning === "release-publish"} /> : null}
     </div>
   );
 }

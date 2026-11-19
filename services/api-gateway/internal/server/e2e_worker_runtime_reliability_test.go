@@ -32,6 +32,10 @@ func TestWorkerRuntimeReliabilityWithPostgresTestDatabase(t *testing.T) {
 		e2eAssertExhaustedRuntimeDeadLetter(t, scenario)
 	})
 
+	t.Run("legacy exhausted task with no open attempt leaves queue available", func(t *testing.T) {
+		e2eAssertExhaustedRuntimeWithoutOpenAttempt(t, scenario)
+	})
+
 	t.Run("transaction primitives share caller commit", func(t *testing.T) {
 		e2eAssertRuntimeTransactionOwnership(t, scenario)
 	})
@@ -86,6 +90,30 @@ func e2eAssertExhaustedRuntimeDeadLetter(t *testing.T, scenario workerRuntimeRel
 		t.Fatalf("expired attempt was not closed: %#v", stored.Attempts)
 	}
 
+}
+
+// 模拟尝试已关闭而任务仍持有过期租约的存量记录，确认同队列的健康任务仍能领取。
+func e2eAssertExhaustedRuntimeWithoutOpenAttempt(t *testing.T, scenario workerRuntimeReliabilityScenario) {
+	t.Helper()
+	ctx, db, runtimeStore, tenantID := scenario.Context, scenario.DB, scenario.Runtime, scenario.TenantID
+	legacy := e2eCreateExpiredFinalRuntimeAttempt(t, scenario)
+	if _, err := db.ExecContext(ctx, `UPDATE agent_worker_task_attempt
+SET status='lease_expired', completed_at=now(), error_code='lease_expired'
+WHERE task_id=$1`, legacy.ID); err != nil {
+		t.Fatalf("close legacy attempt: %v", err)
+	}
+	healthy, err := runtimeStore.CreateTask(ctx, tenantID, "", postgresRuntimeTaskInput(uuid.NewString(), "healthy-after-legacy", 3))
+	if err != nil {
+		t.Fatalf("create healthy task: %v", err)
+	}
+	claimed, err := runtimeStore.Claim(ctx, tenantID, postgresClaimInput("worker-after-legacy"))
+	if err != nil || len(claimed) != 1 || claimed[0].ID != healthy.ID {
+		t.Fatalf("claim healthy task: %v %#v", err, claimed)
+	}
+	stored, err := runtimeStore.Get(ctx, tenantID, legacy.ID)
+	if err != nil || stored.Status != workerruntime.StatusDeadLetter || stored.ErrorCode != "lease_expired" {
+		t.Fatalf("settle legacy task: %v %#v", err, stored)
+	}
 }
 
 // 先领取唯一允许的尝试再由数据库令租约过期，后续并发领取共享这一终态前提。

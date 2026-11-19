@@ -66,29 +66,36 @@ export function StudentScorePreviewContent({ result }: Readonly<{ result: Studen
   </div>;
 }
 
-export function StudentScorePreviewDialog({ release, currentVersion, portalUrl, studentLabels = {}, onClose }: Readonly<{
+export function StudentScorePreviewDialog({ release, currentVersion, portalUrl, studentLabels = {}, onClose, onSnapshot, onConfirm, confirming, canConfirm }: Readonly<{
   release: ScoreRelease;
   currentVersion?: number;
   portalUrl?: string;
   studentLabels?: Readonly<Record<string, string>>;
   onClose: () => void;
+  onSnapshot?: (snapshot: string) => void;
+  onConfirm?: (snapshot: string) => void;
+  confirming?: boolean;
+  canConfirm?: boolean;
 }>) {
   const [detail, setDetail] = useState<ScoreReleaseDetail | null>(null);
   const [studentId, setStudentId] = useState("");
   const [result, setResult] = useState<StudentScorePreviewResult | null>(null);
+  const [snapshot, setSnapshot] = useState("");
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [error, setError] = useState("");
   // 名单与成绩分别重试；某位学生的预览失败不能重置为冻结名单的首位学生。
   const [detailRetry, setDetailRetry] = useState(0);
   const [previewRetry, setPreviewRetry] = useState(0);
+  const publicationMode = onConfirm ? "candidate" : onSnapshot && release.status === "draft" ? "draft" : undefined;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: detailRetry 重读所选冻结发布版本的学生名单，不能用当前成绩代替该版本。
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
-    setLoading(true); setError(""); setDetail(null); setStudentId(""); setResult(null);
-    void getScoreReleaseDetail(release.id, controller.signal).then((response) => {
+    setLoading(true); setError(""); setDetail(null); setStudentId(""); setResult(null); setSnapshot(""); setPreviewLoading(false);
+    const request = publicationMode ? getScoreReleaseDetail(release.id, controller.signal, publicationMode) : getScoreReleaseDetail(release.id, controller.signal);
+    void request.then((response) => {
       if (!active) return;
       setDetail(response);
       setStudentId(response.items.find((item) => item.student_id)?.student_id ?? "");
@@ -96,7 +103,7 @@ export function StudentScorePreviewDialog({ release, currentVersion, portalUrl, 
       if (active) setError(getUserErrorMessage(cause, "冻结版本读取失败，请重试"));
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; controller.abort(); };
-  }, [release.id, detailRetry]);
+  }, [release.id, detailRetry, publicationMode]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: previewRetry 重读当前学生的冻结成绩；删除会使预览失败后的重试无效。
   useEffect(() => {
@@ -104,14 +111,18 @@ export function StudentScorePreviewDialog({ release, currentVersion, portalUrl, 
     const controller = new AbortController();
     let active = true;
     // 切换学生或版本时清空旧结果；取消请求仍可能返回，active 防止把旧学生成绩显示给新选择。
-    setResult(null); setError(""); setPreviewLoading(true);
-    void getScoreReleaseStudentPreview(release.id, studentId, controller.signal).then((response) => {
-      if (active) setResult(response.result);
+    setResult(null); setSnapshot(""); setError(""); setPreviewLoading(true);
+    const request = publicationMode ? getScoreReleaseStudentPreview(release.id, studentId, controller.signal, publicationMode) : getScoreReleaseStudentPreview(release.id, studentId, controller.signal);
+    void request.then((response) => {
+      if (!active) return;
+      setResult(response.result);
+      setSnapshot(response.publication_snapshot ?? "");
+      if (response.publication_snapshot) onSnapshot?.(response.publication_snapshot);
     }).catch((cause) => {
       if (active) setError(getUserErrorMessage(cause, "学生预览读取失败，请重试"));
     }).finally(() => { if (active) setPreviewLoading(false); });
     return () => { active = false; controller.abort(); };
-  }, [release.id, studentId, previewRetry]);
+  }, [release.id, studentId, previewRetry, publicationMode, onSnapshot]);
 
   // 候选来自所选版本的不可变快照，不能用当前成绩表推断该旧版本有哪些学生或分数。
   const studentOptions = useMemo(() => [...new Map((detail?.items ?? []).filter((item) => item.student_id).map((item) => [item.student_id!, { value: item.student_id!, label: studentLabels[item.student_id!] ?? `学生 ${item.student_id}` }])).values()], [detail, studentLabels]);
@@ -123,13 +134,27 @@ export function StudentScorePreviewDialog({ release, currentVersion, portalUrl, 
     return null;
   };
 
-  return <Modal open title={`学生视角预览 · V${release.version}`} width={900} onCancel={onClose} footer={<Button onClick={onClose}>关闭预览</Button>}>
+  return <Modal open title={`学生视角预览 · V${release.version}`} width={900} onCancel={confirming ? undefined : onClose}
+    footer={<>
+      <Button disabled={confirming} onClick={onClose}>关闭预览</Button>
+      {onConfirm && detail?.release.status === "draft" ? <Button type="primary" loading={confirming} disabled={!canConfirm || !snapshot || loading || previewLoading || Boolean(error)} onClick={() => onConfirm(snapshot)}>确认并发布这份成绩</Button> : null}
+    </>}>
     <Alert showIcon type="info" message={`正在预览 V${release.version}${currentVersionText}`} description="预览冻结成绩和公开内容；答卷图片、跨科汇总及实际申诉操作请在正式发布后由学生端核验。此处考试统计不代表学生端班级或年级排名。预览不会改变学生当前看到的版本。" />
+    {onConfirm ? detail?.release.status === "published"
+      ? <Alert type="info" showIcon message="这份成绩已发布" />
+      : <Alert type="warning" showIcon message="待发布成绩已更新" description="请核对更新后的成绩。确认后系统只发布你刚核对的版本。" /> : null}
     <p>公开策略：{visibleItems.join("、") || "仅总分"}</p>
     <p>学生端入口{portalUrl ? <> · <a href={portalUrl} target="_blank" rel="noreferrer">{portalUrl}</a></> : " · 尚未配置入口链接，请使用学校发放的学生端地址"}</p>
     {loading ? <Spin tip="正在读取冻结学生名单"><div style={{ minHeight: 70 }} /></Spin> : <div className="student-score-preview-student-selector">
       <label htmlFor="score-preview-student">选择冻结名单中的学生</label>
-      <Select id="score-preview-student" showSearch optionFilterProp="label" placeholder="选择学生" value={studentId || undefined} options={studentOptions} onChange={setStudentId} />
+      <Select id="score-preview-student" showSearch optionFilterProp="label" placeholder="选择学生" value={studentId || undefined} options={studentOptions} onChange={(nextStudentId) => {
+        // 切换后立即禁用确认，避免在下一次异步预览开始前点击旧学生的确认按钮。
+        if (nextStudentId !== studentId) {
+          setResult(null);
+          setSnapshot("");
+          setStudentId(nextStudentId);
+        }
+      }} />
       <small>可识别的姓名和学号仅用于查找；下方成绩与公开内容取自所选冻结版本。</small>
       {!studentOptions.length && !error ? <p>此版本没有已关联学生的成绩，无法投影学生视角。</p> : null}
     </div>}

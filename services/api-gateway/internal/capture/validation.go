@@ -35,6 +35,14 @@ func validateRegisterFile(input *RegisterFileInput, asset FileAssetSnapshot) err
 	if input.FileAssetID == "" || input.IdempotencyKey == "" || asset.ID != input.FileAssetID || asset.SizeBytes <= 0 || asset.SHA256 == "" {
 		return ErrInvalidInput
 	}
+	if input.UploadSessionID != "" || input.UploadCompletionToken != "" {
+		if _, err := uuid.Parse(input.UploadSessionID); err != nil {
+			return ErrInvalidInput
+		}
+		if _, err := uuid.Parse(input.UploadCompletionToken); err != nil {
+			return ErrInvalidInput
+		}
+	}
 	if input.UploadGroupID == "" {
 		if input.UploadGroupFileCount != 0 || input.UploadGroupFileIndex != 0 || input.PagesPerStudent != 0 {
 			return ErrInvalidInput

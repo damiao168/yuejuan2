@@ -154,7 +154,10 @@ func (s *Service) Complete(ctx context.Context, tenantID, actorID, uploadID stri
 		}
 	}
 
-	captureFile, err := s.captures.RegisterFile(ctx, tenantID, session.BatchID, actorID, capture.RegisterFileInput{FileAssetID: asset.ID, IdempotencyKey: session.IdempotencyKey}, capture.FileAssetSnapshot{
+	captureFile, err := s.captures.RegisterFile(ctx, tenantID, session.BatchID, actorID, capture.RegisterFileInput{
+		FileAssetID: asset.ID, IdempotencyKey: session.IdempotencyKey,
+		UploadSessionID: session.ID, UploadCompletionToken: session.CompletionToken,
+	}, capture.FileAssetSnapshot{
 		ID: asset.ID, ExamID: asset.ExamID, OriginalName: asset.OriginalName, ContentType: asset.ContentType, SizeBytes: asset.SizeBytes, SHA256: asset.HashSHA256,
 	})
 	if err != nil {

@@ -3,7 +3,6 @@ package grading
 import (
 	"context"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
-	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 	"net/http"
 )
 
@@ -106,20 +105,15 @@ func (h *Handler) CancelScoringRun(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, err)
 		return
 	}
-	// 先将评分任务置为 cancelling，再取消外部 worker；中途失败保留该状态，供再次取消时接续。
-	for _, taskID := range taskIDs {
-		task, getErr := h.runtime.Get(r.Context(), user.TenantID, taskID)
-		if getErr != nil {
-			httpx.Error(w, r, http.StatusConflict, "scoring_run_cancellation_pending", "scoring run cancellation is waiting for worker task state")
-			return
-		}
-		if task.Status != workerruntime.StatusQueued && task.Status != workerruntime.StatusLeased && task.Status != workerruntime.StatusRunning {
-			continue
-		}
-		if _, cancelErr := h.runtime.Cancel(r.Context(), user.TenantID, taskID); cancelErr != nil {
-			httpx.Error(w, r, http.StatusConflict, "scoring_run_cancellation_pending", "scoring run cancellation is waiting for worker task state")
-			return
-		}
+	if run.Status == "cancelled" {
+		httpx.JSON(w, http.StatusOK, map[string]any{"scoring_run": run})
+		return
+	}
+	// 先记录操作者的取消请求。即使连接断开，后台仍可完成已写入的 cancelling 运行。
+	h.auditAction(r, "grading.scoring_run_cancel_requested", "scoring_run", run.ID, "request scoring run cancellation")
+	if err := cancelScoringWorkerTasks(r.Context(), h.runtime, user.TenantID, taskIDs); err != nil {
+		httpx.Error(w, r, http.StatusConflict, "scoring_run_cancellation_pending", "scoring run cancellation is waiting for worker task state")
+		return
 	}
 	run, err = store.FinalizeScoringRunCancellation(r.Context(), user.TenantID, run.ID)
 	if err != nil {

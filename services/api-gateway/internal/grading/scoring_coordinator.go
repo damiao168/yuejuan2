@@ -32,12 +32,28 @@ func NewScoringCoordinator(store *PostgresStore, runtime workerruntime.Store, im
 	return &ScoringCoordinator{store: store, runtime: runtime, images: images, instanceID: uuid.NewString(), timeout: timeout}
 }
 
-// Run 在进程生命周期内恢复队列和依赖，运行结束不会删除已保存的观察回执。
+// Run 在进程生命周期内恢复队列和依赖，观察任务中等待模型时也能接续取消。
 func (c *ScoringCoordinator) Run(ctx context.Context, onError func(error)) {
+	// 模型调用可能持续数分钟。取消轮询独立于调用，才能及时撤销持久租约。
+	cancellationsDone := make(chan struct{})
+	go func() {
+		defer close(cancellationsDone)
+		var after pendingScoringCancellation
+		pollScoring(ctx, func(ctx context.Context) error {
+			next, err := c.resumeScoringCancellations(ctx, after)
+			after = next
+			return err
+		}, onError)
+	}()
+	defer func() { <-cancellationsDone }()
+	pollScoring(ctx, c.runScoringOnce, onError)
+}
+
+func pollScoring(ctx context.Context, run func(context.Context) error, onError func(error)) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
-	for {
-		if err := c.RunOnce(ctx); err != nil && ctx.Err() == nil && onError != nil {
+	for ctx.Err() == nil {
+		if err := run(ctx); err != nil && ctx.Err() == nil && onError != nil {
 			onError(err)
 		}
 		select {
@@ -48,8 +64,16 @@ func (c *ScoringCoordinator) Run(ctx context.Context, onError func(error)) {
 	}
 }
 
-// RunOnce 每次最多领取一个观察任务，先保存观察回执，再接续独立题目；某题失败不阻止其余题恢复。
+// RunOnce 接续遗留取消，并执行一轮观察与依赖恢复。测试可不启动常驻轮询。
 func (c *ScoringCoordinator) RunOnce(ctx context.Context) error {
+	if c == nil || c.store == nil || c.runtime == nil || c.images == nil {
+		return ErrInvalidInput
+	}
+	_, err := c.resumeScoringCancellations(ctx, pendingScoringCancellation{})
+	return errors.Join(err, c.runScoringOnce(ctx))
+}
+
+func (c *ScoringCoordinator) runScoringOnce(ctx context.Context) error {
 	if c == nil || c.store == nil || c.runtime == nil || c.images == nil {
 		return ErrInvalidInput
 	}

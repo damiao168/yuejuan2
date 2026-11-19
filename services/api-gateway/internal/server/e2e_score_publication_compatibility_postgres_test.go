@@ -177,7 +177,13 @@ VALUES($1::uuid,$2::uuid,$3::uuid,(SELECT id FROM exam_question_snapshot WHERE t
 	if err != nil {
 		t.Fatal(err)
 	}
-	e2eExpectStatus(t, router, http.MethodPost, "/api/v1/score-releases/"+corrected.ID+"/publish", admin, `{}`, http.StatusOK)
+	correctedPath := "/api/v1/score-releases/" + corrected.ID
+	preview := e2eGetJSON(t, router, correctedPath+"/student-preview?student_id="+answer.student+"&publication_preview=draft", admin, http.StatusOK)
+	if score := preview["result"].(map[string]any)["total_score"]; score != float64(1) {
+		t.Fatalf("administrator did not see the corrected result before publishing: %#v", preview)
+	}
+	snapshot := e2eString(t, preview, "publication_snapshot")
+	e2eExpectStatus(t, router, http.MethodPost, correctedPath+"/publish", admin, story056JSON(t, map[string]string{"publication_snapshot": snapshot}), http.StatusOK)
 	replay := e2eExpectStatus(t, router, http.MethodPost, path+"/publish", admin, body, http.StatusOK, key)
 	if !bytes.Equal(first.Body.Bytes(), replay.Body.Bytes()) {
 		t.Fatalf("legacy replay changed the original receipt: first=%s replay=%s", first.Body.String(), replay.Body.String())

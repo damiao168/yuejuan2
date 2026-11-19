@@ -120,62 +120,52 @@ SELECT release_id FROM score_release_current WHERE tenant_id=$1 AND exam_id=$2::
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return Release{}, err
 	}
-	if release.Source == SourceRegrade && release.SourceReleaseID != "" && release.SourceReleaseID != supersedes.String {
-		base, err := s.releaseFactsTx(ctx, tx, tenantID, release.SourceReleaseID)
+	confirmation, confirm := publicationConfirmationFromContext(ctx)
+	var draft []SubmissionFact
+	if confirm && confirmation.Snapshot != "" {
+		draft, err = readReleaseFactsTx(ctx, tx, tenantID, release.ID, true)
 		if err != nil {
 			return Release{}, err
 		}
-		draft, err := s.releaseFactsTx(ctx, tx, tenantID, release.ID)
-		if err != nil {
+	}
+	candidateRelease, refreshed, err := s.publicationCandidateTx(ctx, tx, release, supersedes.String, draft)
+	if err != nil {
+		return Release{}, err
+	}
+	if confirm && (draft != nil || refreshed != nil) {
+		if draft == nil {
+			draft, err = readReleaseFactsTx(ctx, tx, tenantID, release.ID, true)
+			if err != nil {
+				return Release{}, err
+			}
+		}
+		candidate := refreshed
+		if candidate == nil {
+			candidate = draft
+		} else if release.VisibilityPolicy.ShowHighScorePaper {
+			return Release{}, ErrPublicationDraftNeedsRefresh
+		}
+		if err := checkPublicationConfirmation(confirmation, release, candidateRelease, supersedes.String, draft, candidate); err != nil {
 			return Release{}, err
 		}
-		current, err := s.releaseFactsTx(ctx, tx, tenantID, supersedes.String)
-		if err != nil {
-			return Release{}, err
-		}
-		facts, ok := rebaseRegradeFacts(base, draft, current)
-		if !ok {
-			return Release{}, ErrStaleSource
-		}
-		// 仅草稿允许重建快照；保留原重评来源，申诉仍可按原任务结案，期间正式版本保持不可变。
+	}
+	if refreshed != nil {
+		// 已确认候选才可改写草稿；保留原重评来源，整个写入与切换指针一同提交。
 		if _, err := tx.ExecContext(ctx, `DELETE FROM score_release_question WHERE tenant_id=$1 AND release_id=$2::uuid`, tenantID, release.ID); err != nil {
 			return Release{}, err
 		}
 		if _, err := tx.ExecContext(ctx, `DELETE FROM score_release_item WHERE tenant_id=$1 AND release_id=$2::uuid`, tenantID, release.ID); err != nil {
 			return Release{}, err
 		}
-		if err := s.insertFactsTx(ctx, tx, tenantID, release.ID, facts); err != nil {
+		if err := s.insertFactsTx(ctx, tx, tenantID, release.ID, refreshed); err != nil {
 			return Release{}, err
 		}
-	} else if release.Source != SourceRollback && !(release.Source == SourceRegrade && release.SourceReleaseID != "") {
-		draft, err := s.releaseFactsTx(ctx, tx, tenantID, release.ID)
-		if err != nil {
-			return Release{}, err
+		if candidateRelease.SourceReleaseID != release.SourceReleaseID {
+			if _, err := tx.ExecContext(ctx, `UPDATE score_release SET source_release_id=NULLIF($3,'')::uuid WHERE tenant_id=$1 AND id=$2::uuid AND status='draft'`, tenantID, release.ID, candidateRelease.SourceReleaseID); err != nil {
+				return Release{}, err
+			}
 		}
-		preserved, err := s.preservesRegradeScoresTx(ctx, tx, tenantID, release.ExamID, draft)
-		if err != nil {
-			return Release{}, err
-		}
-		if !preserved {
-			facts, sourceReleaseID, err := s.ordinaryFactsTx(ctx, tx, tenantID, release.ExamID)
-			if err != nil {
-				return Release{}, err
-			}
-			// 草稿可随当前正式版本刷新；只改草稿，不回写终评或已发布快照。来源记录供发布审计追溯。
-			if _, err := tx.ExecContext(ctx, `DELETE FROM score_release_question WHERE tenant_id=$1 AND release_id=$2::uuid`, tenantID, release.ID); err != nil {
-				return Release{}, err
-			}
-			if _, err := tx.ExecContext(ctx, `DELETE FROM score_release_item WHERE tenant_id=$1 AND release_id=$2::uuid`, tenantID, release.ID); err != nil {
-				return Release{}, err
-			}
-			if err := s.insertFactsTx(ctx, tx, tenantID, release.ID, facts); err != nil {
-				return Release{}, err
-			}
-			if _, err := tx.ExecContext(ctx, `UPDATE score_release SET source_release_id=NULLIF($3,'')::uuid WHERE tenant_id=$1 AND id=$2::uuid AND status='draft'`, tenantID, release.ID, sourceReleaseID); err != nil {
-				return Release{}, err
-			}
-			release.SourceReleaseID = sourceReleaseID
-		}
+		release = candidateRelease
 	}
 	// 草稿分数刷新可能改变入选范围；以最终将发布的快照校验匿名页，候选不一致则整笔发布回滚。
 	if release.VisibilityPolicy.ShowHighScorePaper {

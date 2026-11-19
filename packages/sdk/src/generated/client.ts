@@ -157,6 +157,7 @@ import type {
   AIHumanDisagreementResponse,
   AIHumanDisagreementListResponse,
   AIHumanDisagreementDatasetResponse,
+  ConfirmScorePublicationRequest,
   ScoreReleaseDetail,
   CreateScoreReleaseRequest,
   CreateScoreReleaseRollbackRequest,
@@ -562,9 +563,9 @@ export interface operations {
   "createScoreRelease": { args: { path: { "examId": string; }; body: CreateScoreReleaseRequest; signal?: AbortSignal; }; response: ScoreReleaseResponse; };
   "getScoreReleaseGate": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ScoreReleaseGateResponse; };
   "getCurrentPublishedScoreRelease": { args: { path: { "examId": string; }; signal?: AbortSignal; }; response: ScoreReleaseDetail; };
-  "getScoreRelease": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ScoreReleaseDetail; };
+  "getScoreRelease": { args: { path: { "id": string; }; query?: { "publication_preview"?: "draft" | "candidate"; }; signal?: AbortSignal; }; response: ScoreReleaseDetail; };
   "getScoreReleaseDiff": { args: { path: { "id": string; }; query?: { "base"?: string; }; signal?: AbortSignal; }; response: ScoreReleaseDiffResponse; };
-  "publishScoreRelease": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: ScoreReleaseResponse; };
+  "publishScoreRelease": { args: { path: { "id": string; }; body?: ConfirmScorePublicationRequest; signal?: AbortSignal; }; response: ScoreReleaseResponse; };
   "revokeHighScorePaper": { args: { path: { "id": string; }; signal?: AbortSignal; }; response: void; };
   "createScoreReleaseRollback": { args: { path: { "examId": string; }; body: CreateScoreReleaseRollbackRequest; signal?: AbortSignal; }; response: ScoreReleaseResponse; };
   "listStudentPublishedExams": { args: { signal?: AbortSignal; }; response: StudentPublishedExamListResponse; };
@@ -704,7 +705,7 @@ export interface operations {
   "listManagedOrganizationUsers": { args: { query?: { "q"?: string; "role"?: string; "limit"?: number; "cursor"?: string; }; signal?: AbortSignal; }; response: ManagedOrganizationUserPage; };
   "createManagedOrganizationUser": { args: { body: CreateManagedOrganizationUserRequest; signal?: AbortSignal; }; response: CreateManagedOrganizationUserResponse; };
   "updateManagedUserAccess": { args: { path: { "id": string; }; body: UpdateManagedUserAccessRequest; signal?: AbortSignal; }; response: ManagedOrganizationUserResponse; };
-  "getScoreReleaseStudentPreview": { args: { path: { "id": string; }; query: { "student_id": string; }; signal?: AbortSignal; }; response: StudentScorePreviewResponse; };
+  "getScoreReleaseStudentPreview": { args: { path: { "id": string; }; query: { "student_id": string; "publication_preview"?: "draft" | "candidate"; }; signal?: AbortSignal; }; response: StudentScorePreviewResponse; };
   "confirmExamReadiness": { args: { path: { "examId": string; }; body?: ConfirmExamReadinessRequest; signal?: AbortSignal; }; response: ExamReadinessConfirmationResponse; };
   "getStudentPublishedPaperPageImage": { args: { path: { "examId": string; "questionId": string; }; query?: { "variant"?: "high_score"; "expected_release_id"?: string; "paper_id"?: string; }; signal?: AbortSignal; }; response: ApiBlobResponse; };
   "submitQuestionAppealReviewOpinion": { args: { path: { "id": string; }; body: QuestionAppealReviewOpinionRequest; signal?: AbortSignal; }; response: PublishedQuestionAppealResponse; };
@@ -1568,7 +1569,7 @@ export class EduGradeApi {
   }
 
   getScoreRelease(args: operations["getScoreRelease"]["args"]): Promise<operations["getScoreRelease"]["response"]> {
-    const requestPath = fillPath("/api/v1/score-releases/{id}", args.path);
+    const requestPath = appendQuery(fillPath("/api/v1/score-releases/{id}", args.path), args.query);
     return this.transport.request(requestPath, { method: "GET", signal: args.signal });
   }
 
@@ -1579,7 +1580,7 @@ export class EduGradeApi {
 
   publishScoreRelease(args: operations["publishScoreRelease"]["args"]): Promise<operations["publishScoreRelease"]["response"]> {
     const requestPath = fillPath("/api/v1/score-releases/{id}/publish", args.path);
-    return this.transport.request(requestPath, { method: "POST", signal: args.signal });
+    return this.transport.request(requestPath, { method: "POST", signal: args.signal, body: args.body === undefined ? undefined : JSON.stringify(args.body) });
   }
 
   revokeHighScorePaper(args: operations["revokeHighScorePaper"]["args"]): Promise<operations["revokeHighScorePaper"]["response"]> {

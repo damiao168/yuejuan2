@@ -2,9 +2,11 @@ package capture
 
 import (
 	"context"
-	"github.com/google/uuid"
 	"sort"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func (s *MemoryStore) CreateBatch(_ context.Context, tenantID, examID, actorID string, input CreateBatchInput) (Batch, error) {
@@ -125,7 +127,11 @@ func (s *MemoryStore) QueueBatch(_ context.Context, tenantID, batchID, actorID s
 	return batch, nil
 }
 
-func (s *MemoryStore) SetBatchStatus(_ context.Context, tenantID, batchID, actorID, status, reason string) (Batch, error) {
+func (s *MemoryStore) SetBatchStatus(ctx context.Context, tenantID, batchID, actorID, status, reason string) (Batch, error) {
+	if status == "cancelled" {
+		out, _, err := s.cancelBatch(ctx, tenantID, batchID, actorID, reason)
+		return out, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	x, ok := s.batches[batchID]
@@ -145,4 +151,52 @@ func (s *MemoryStore) SetBatchStatus(_ context.Context, tenantID, batchID, actor
 	}
 	s.batches[batchID] = x
 	return x, nil
+}
+
+type batchCancellationReceipt struct {
+	actorID, reason string
+	revision        int
+}
+
+const memoryExcludedFile = "excluded"
+
+func (s *MemoryStore) cancelBatch(_ context.Context, tenantID, batchID, actorID, reason string) (Batch, bool, error) {
+	reason = strings.TrimSpace(reason)
+	if actorID == "" || len(reason) > 500 {
+		return Batch{}, false, ErrInvalidInput
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	x, ok := s.batches[batchID]
+	if !ok || x.TenantID != tenantID {
+		return Batch{}, false, ErrNotFound
+	}
+	if x.Status == "cancelled" {
+		if s.batchCancellations[batchID] != (batchCancellationReceipt{actorID, reason, x.Revision}) {
+			return Batch{}, false, ErrConflict
+		}
+		return x, false, nil
+	}
+	if !canSetBatchStatus(x.Status, "cancelled") {
+		return Batch{}, false, ErrInvalidTransition
+	}
+	for id, file := range s.files {
+		if file.TenantID == tenantID && file.CaptureBatchID == batchID {
+			// 保留已使用的文件幂等键，避免重开时旧的上传命令重新创建文件。
+			file.Status = memoryExcludedFile
+			s.files[id] = file
+		}
+	}
+	for id, page := range s.pages {
+		if page.TenantID == tenantID && page.CaptureBatchID == batchID {
+			delete(s.pages, id)
+		}
+	}
+	x.Status, x.CompletedAt = "cancelled", nil
+	x.FileCount, x.PageCount, x.SubmissionCount = 0, 0, 0
+	x.NormalCount, x.ReviewCount, x.FailedCount = 0, 0, 0
+	x.Revision++
+	s.batches[batchID] = x
+	s.batchCancellations[batchID] = batchCancellationReceipt{actorID, reason, x.Revision}
+	return x, true, nil
 }

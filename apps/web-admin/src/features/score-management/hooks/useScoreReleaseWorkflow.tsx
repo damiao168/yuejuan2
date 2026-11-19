@@ -1,13 +1,15 @@
-import { useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { App } from "antd";
 import type { Exam } from "../../../api/exams";
 import {
   createRegradeScoreRelease,
   createScoreRelease,
+  getScoreReleaseDetail,
   publishScoreRelease,
   revokeHighScorePaper,
   type ScoreRelease
 } from "../../../api/scoreReleases";
+import { ApiClientError } from "../../../api/client";
 import { getBusinessCommandSession, isBusinessCommandSessionCurrent } from "../../../api/businessCommand";
 import { isStepUpCancelledError, useStepUp } from "../../../auth/stepUpContext";
 import type { PendingCorrection } from "../releaseStatus";
@@ -77,7 +79,8 @@ export type PublishPreset = "basic" | "question" | "custom";
 export const defaultHighScoreTopN = 10;
 export const maxHighScoreTopN = 100;
 
-type RunAction = (key: string, action: () => Promise<void>, successText: string) => Promise<void>;
+type RunAction = (key: string, action: () => Promise<void>, successText: string, isCurrent?: () => boolean) => Promise<void>;
+export type ScorePublicationPreviewOptions = { onSnapshot?: (snapshot: string) => void; onConfirm?: (snapshot: string) => void; retrySnapshot?: string; isCurrent?: () => boolean };
 
 // 名次范围决定草稿冻结的优秀答卷集合，修改范围也须生成新草稿；固定公开的答案标记不参与区分。
 function draftKey(examId: string, policy: ReleaseVisibility, appealEnabled: boolean, reason: string, highScoreTopN: number | null) {
@@ -105,7 +108,7 @@ export function useScoreReleaseWorkflow({
   educationStage: ExamEducationStage;
   runAction: RunAction;
   reload: () => Promise<void>;
-  onPreview: (release: ScoreRelease) => void;
+  onPreview: (release: ScoreRelease, options?: ScorePublicationPreviewOptions) => void;
 }) {
   const { message, modal } = App.useApp();
   const { runWithStepUp, open: awaitingAuthentication } = useStepUp();
@@ -118,15 +121,30 @@ export function useScoreReleaseWorkflow({
   const [correction, setCorrection] = useState<PendingCorrection | null>(null);
   // 本次弹窗已生成的草稿。键覆盖考试、公开策略和说明；幂等键让请求重试时服务端返回同一份草稿。
   const attemptRef = useRef<{ key: string; idempotencyKey: string; release?: ScoreRelease } | null>(null);
+  const viewedSnapshots = useRef(new Map<string, { snapshot: string; session: ReturnType<typeof getBusinessCommandSession> }>());
   const appealEnabled = Boolean(selectedExam?.appeal_enabled);
   const republish = Boolean(currentPublishedRelease);
   const examRef = useRef(selectedExamId);
   examRef.current = selectedExamId;
-  // 预览回执可能在切换考试或重新登录后才返回；只在发起时的考试和会话仍有效时打开预览。
+  useEffect(() => {
+    const clearSnapshots = () => {
+      viewedSnapshots.current.clear();
+      attemptRef.current = null;
+    };
+    window.addEventListener("business-command-scope-changed", clearSnapshots);
+    return () => window.removeEventListener("business-command-scope-changed", clearSnapshots);
+  }, []);
+  // 预览或草稿回执可能迟到。考试或会话变化后，旧操作不能再打开预览或开始发布。
   const currentGuard = () => {
     const session = getBusinessCommandSession();
     const examId = selectedExamId;
     return () => isBusinessCommandSessionCurrent(session) && examRef.current === examId;
+  };
+
+  const showDraftPreview = (release: ScoreRelease) => {
+    const isCurrent = currentGuard();
+    const session = getBusinessCommandSession();
+    onPreview(release, { isCurrent, onSnapshot: snapshot => { if (isCurrent()) viewedSnapshots.current.set(release.id, { snapshot, session }); } });
   };
 
   const openPublish = () => {
@@ -179,11 +197,46 @@ export function useScoreReleaseWorkflow({
   };
 
   // 身份验证被取消时草稿已经存在：先重读页面，再把取消交给调用方静默结束，不当作发布失败。
-  const publishWithStepUp = async (release: ScoreRelease, reason: string) => {
+  const publishWithStepUp = async (release: ScoreRelease, reason: string, isCurrent: () => boolean, onPublished?: () => void, confirmedSnapshot?: string) => {
+    if (!isCurrent()) return;
+    let attemptedSnapshot = confirmedSnapshot;
     try {
-      await runWithStepUp({ reason, action: () => publishScoreRelease(release.id) });
+      // 用已经展示的快照，或者固定本次确认的草稿；身份验证重试也必须携带原摘要。
+      const viewed = viewedSnapshots.current.get(release.id);
+      const snapshot = confirmedSnapshot ?? (viewed && isBusinessCommandSessionCurrent(viewed.session) ? viewed.snapshot : undefined)
+        ?? (await getScoreReleaseDetail(release.id, undefined, "draft")).publication_snapshot;
+      if (!snapshot) throw new ApiClientError(409, "score_release_confirmation_unavailable", "待确认的成绩快照不可用，请刷新后重试。");
+      attemptedSnapshot = snapshot;
+      if (!isCurrent()) return;
+      await runWithStepUp({ reason, action: () => {
+        if (!isCurrent()) throw new ApiClientError(409, "score_release_context_changed", "已切换考试或账号，请重新确认发布。");
+        return publishScoreRelease(release.id, snapshot);
+      } });
+      if (isCurrent()) {
+        viewedSnapshots.current.delete(release.id);
+        onPublished?.();
+      }
     } catch (error) {
-      if (isStepUpCancelledError(error)) await reload();
+      if (isCurrent() && isStepUpCancelledError(error)) await reload();
+      if (isCurrent() && error instanceof ApiClientError && error.code === "score_release_snapshot_changed") {
+        // 仅重新展示可发布候选。没有新的显式确认，即使已完成近期身份验证也不能重发。
+        onPreview(release, {
+          retrySnapshot: attemptedSnapshot,
+          isCurrent,
+          onConfirm: latest => {
+            if (!isCurrent()) return;
+            void runAction("release-publish", () => publishWithStepUp(release, reason, isCurrent, () => {
+              onPublished?.();
+              onPreview({ ...release, status: "published" });
+            }, latest), "成绩版本已发布", isCurrent);
+          }
+        });
+      }
+      if (isCurrent() && error instanceof ApiClientError && error.code === "score_release_draft_refresh_required" && attemptRef.current?.release?.id === release.id) {
+        // 候选优秀答卷变化时不能复用既有匿名资产；下一次预览或发布从当前正式成绩另建草稿。
+        attemptRef.current = null;
+        viewedSnapshots.current.delete(release.id);
+      }
       throw error;
     }
   };
@@ -192,11 +245,12 @@ export function useScoreReleaseWorkflow({
     const invalid = validate();
     if (invalid) { message.error(invalid); return; }
     const reason = reasonText();
+    // 生成草稿期间也可能切换账号；旧请求的回执不能触发后来会话的预览或发布。
+    const isCurrent = currentGuard();
     void runAction("release-publish", async () => {
       const release = await ensureDraft(reason);
-      await publishWithStepUp(release, `正式发布成绩版本 V${release.version}`);
-      closePublish();
-    }, "成绩已发布，学生现在可以查看");
+      await publishWithStepUp(release, `正式发布成绩版本 V${release.version}`, isCurrent, closePublish);
+    }, "成绩已发布，学生现在可以查看", isCurrent);
   };
 
   const previewPublish = () => {
@@ -204,13 +258,13 @@ export function useScoreReleaseWorkflow({
     if (invalid) { message.error(invalid); return; }
     const reason = reasonText();
     const ready = attemptRef.current?.key === draftKey(selectedExamId, visibility, appealEnabled, reason, highScoreTopN) ? attemptRef.current.release : undefined;
-    if (ready) { onPreview(ready); return; }
+    if (ready) { showDraftPreview(ready); return; }
     // 学生视角只能读取已冻结的草稿；预览会先生成草稿，学生在正式发布前看不到它。
     const isCurrent = currentGuard();
     void runAction("release-preview", async () => {
       const draft = await ensureDraft(reason);
-      if (isCurrent()) onPreview(draft);
-    }, "已按当前设置生成草稿，学生暂时看不到");
+      if (isCurrent()) showDraftPreview(draft);
+    }, "已按当前设置生成草稿，学生暂时看不到", isCurrent);
   };
 
   const openCorrection = (item: PendingCorrection) => setCorrection(item);
@@ -224,26 +278,28 @@ export function useScoreReleaseWorkflow({
   const publishCorrection = () => {
     const item = correction;
     if (!item) return;
+    const isCurrent = currentGuard();
     void runAction("release-publish", async () => {
       const release = await ensureCorrectionDraft(item);
+      if (!isCurrent()) return;
       // 服务端按复评任务复用结果版本；另一位管理员或丢失回执的上一次操作可能已经发布，不能再次发布同一版本。
-      if (release.status !== "published") await publishWithStepUp(release, `发布成绩更正 V${release.version}`);
-      setCorrection(null);
-    }, "更正已发布，学生现在看到新成绩");
+      if (release.status !== "published") await publishWithStepUp(release, `发布成绩更正 V${release.version}`, isCurrent, closeCorrection);
+      else closeCorrection();
+    }, "更正已发布，学生现在看到新成绩", isCurrent);
   };
 
   const previewCorrection = () => {
     const item = correction;
     if (!item) return;
-    if (item.draft) { onPreview(item.draft); return; }
+    if (item.draft) { showDraftPreview(item.draft); return; }
     const isCurrent = currentGuard();
     void runAction("release-preview", async () => {
       const draft = await ensureCorrectionDraft(item);
       if (!isCurrent()) return;
       // 记住已生成的草稿，确认发布时直接使用，不再重复请求生成。
       setCorrection(current => current?.job.id === item.job.id ? { ...current, draft } : current);
-      onPreview(draft);
-    }, "已生成更正草稿，学生暂时看不到");
+      showDraftPreview(draft);
+    }, "已生成更正草稿，学生暂时看不到", isCurrent);
   };
 
   // 发布记录里已有的草稿：校验冻结的策略，不读取仍可编辑的发布表单。
@@ -253,6 +309,7 @@ export function useScoreReleaseWorkflow({
       return;
     }
     const visibleItems = visibleReleaseContent(release.visibility_policy).join("、") || "总分";
+    const isCurrent = currentGuard();
     modal.confirm({
       title: `发布 V${release.version}`,
       content: (
@@ -273,8 +330,8 @@ export function useScoreReleaseWorkflow({
       okText: "发布到学生端",
       cancelText: "取消",
       onOk: () => runAction("release-publish", async () => {
-        await publishWithStepUp(release, `正式发布成绩版本 V${release.version}`);
-      }, "成绩版本已发布")
+        await publishWithStepUp(release, `正式发布成绩版本 V${release.version}`, isCurrent);
+      }, "成绩版本已发布", isCurrent)
     });
   };
 
@@ -296,6 +353,6 @@ export function useScoreReleaseWorkflow({
     preset, choosePreset, visibility, setVisibility, highScoreTopN, setHighScoreTopN, rankReason, setRankReason,
     correctionNote, setCorrectionNote, submitPublish, previewPublish,
     correction, openCorrection, closeCorrection, publishCorrection, previewCorrection,
-    publishRelease, revokeSharedPaper
+    publishRelease, showDraftPreview, revokeSharedPaper
   };
 }

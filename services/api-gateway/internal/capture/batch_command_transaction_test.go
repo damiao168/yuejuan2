@@ -19,9 +19,12 @@ func commandTxPrefix(priorIDs ...[]driver.Value) []collectionSQLStep {
 	}
 }
 
-func commandTxExamStatus(rows ...[]driver.Value) collectionSQLStep {
-	return captureTxQuery(1, rows, []driver.Value{captureTxTenant, captureTxExam},
-		"SELECT status FROM exam WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE")
+func commandTxExamStatus(rows ...[]driver.Value) []collectionSQLStep {
+	return []collectionSQLStep{
+		collectionExamLockQuery(true),
+		captureTxQuery(1, rows, []driver.Value{captureTxTenant, captureTxExam},
+			"SELECT status FROM exam WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE NOWAIT"),
+	}
 }
 
 func TestPostgresBatchCommandAcceptsCollectionOrExplicitSupplement(t *testing.T) {
@@ -41,7 +44,8 @@ func TestPostgresBatchCommandAcceptsCollectionOrExplicitSupplement(t *testing.T)
 			hash := fmt.Sprintf("%x", sha256.Sum256([]byte(hashPayload)))
 			row := captureTxBatchRow("draft", 1, 0, 0)
 			row[18] = tc.purpose
-			steps := append(commandTxPrefix(), commandTxExamStatus([]driver.Value{tc.status}),
+			steps := append(commandTxPrefix(), commandTxExamStatus([]driver.Value{tc.status})...)
+			steps = append(steps,
 				captureTxQuery(19, [][]driver.Value{row},
 					[]driver.Value{captureTxTenant, captureTxExam, "答卷一批", "web_upload", captureTxActor, "",
 						commandTxKey, hash, tc.purpose, tc.reason},
@@ -116,8 +120,9 @@ func TestPostgresBatchCommandRefusesAmbiguousHistoryAndUnavailableExam(t *testin
 	}{
 		{name: "two historical batches claim command", steps: commandTxPrefix([]driver.Value{"one"}, []driver.Value{"two"}), want: ErrConflict},
 		{name: "history interrupted after first match", steps: brokenRead, want: readErr},
-		{name: "exam outside tenant or deleted", steps: append(commandTxPrefix(), commandTxExamStatus()), want: ErrNotFound},
-		{name: "new initial batch during grading", steps: append(commandTxPrefix(), commandTxExamStatus([]driver.Value{"grading"})), want: ErrInvalidTransition},
+		{name: "exam locked by an upload", steps: append(commandTxPrefix(), collectionExamLockQuery(false)), want: ErrConflict},
+		{name: "exam outside tenant or deleted", steps: append(commandTxPrefix(), commandTxExamStatus()...), want: ErrNotFound},
+		{name: "new initial batch during grading", steps: append(commandTxPrefix(), commandTxExamStatus([]driver.Value{"grading"})...), want: ErrInvalidTransition},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			steps := append(tc.steps, collectionSQLStep{kind: "rollback"})

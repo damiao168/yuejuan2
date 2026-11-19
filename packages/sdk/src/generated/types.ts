@@ -722,7 +722,9 @@ export type ScoreReleaseItem = { "release_id": string; "student_id"?: string; "s
 
 export type ScoreReleaseQuestion = { "release_id": string; "submission_id": string; "question_id": string; "question_no": string; "final_grade_id": string; "score": number; "max_score": number; "source_type": string; "source_id"?: string; "explanation": ScoreReleaseStudentExplanation; };
 
-export type ScoreReleaseDetail = { "release": ScoreRelease; "items": Array<ScoreReleaseItem>; "questions": Array<ScoreReleaseQuestion>; };
+export type ConfirmScorePublicationRequest = { "publication_snapshot"?: string; };
+
+export type ScoreReleaseDetail = { "release": ScoreRelease; "items": Array<ScoreReleaseItem>; "questions": Array<ScoreReleaseQuestion>; "publication_snapshot"?: string; };
 
 export type ScoreReleaseDiffItem = { "submission_id": string; "old_total": number; "new_total": number; };
 
@@ -1390,7 +1392,7 @@ export type StudentQuestionScoreComparison = { "class_max_score"?: number; "scho
 
 export type StudentScorePreviewResult = { "exam_id": string; "release_id": string; "release_version": number; "total_score": number; "max_score": number; "overall_total_score": number; "overall_max_score": number; "score_rate": number; "reference"?: StudentScorePreviewReference; "questions"?: Array<StudentPublishedQuestion>; "appeal_window": StudentScoreAppealWindow; };
 
-export type StudentScorePreviewResponse = { "result": StudentScorePreviewResult; };
+export type StudentScorePreviewResponse = { "result": StudentScorePreviewResult; "publication_snapshot"?: string; };
 
 export type CreatedManagedUserActivation = { "token": string; "path": string; "expires_at": string; };
 
@@ -2115,6 +2117,7 @@ export interface components {
     "ScoreRelease": ScoreRelease;
     "ScoreReleaseItem": ScoreReleaseItem;
     "ScoreReleaseQuestion": ScoreReleaseQuestion;
+    "ConfirmScorePublicationRequest": ConfirmScorePublicationRequest;
     "ScoreReleaseDetail": ScoreReleaseDetail;
     "ScoreReleaseDiffItem": ScoreReleaseDiffItem;
     "ScoreReleaseDiffQuestion": ScoreReleaseDiffQuestion;

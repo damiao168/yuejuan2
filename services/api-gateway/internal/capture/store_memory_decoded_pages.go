@@ -19,7 +19,7 @@ func (s *MemoryStore) ApplyFileResult(_ context.Context, tenantID, fileID string
 
 func (s *MemoryStore) applyFileResultLocked(tenantID, fileID string, inputs []DecodedPageInput) (File, error) {
 	file, ok := s.files[fileID]
-	if !ok || file.TenantID != tenantID {
+	if !ok || file.TenantID != tenantID || file.Status == memoryExcludedFile {
 		return File{}, ErrNotFound
 	}
 	if file.Status == "completed" && file.PageCount == len(inputs) {

@@ -216,6 +216,55 @@ func (s *MemoryStore) Gate(_ context.Context, tenantID, examID string) (Gate, er
 	return s.gateLocked(tenantID, examID, ""), nil
 }
 
+func (s *MemoryStore) publicationPreview(_ context.Context, tenantID, id string, mode publicationPreviewMode) (Detail, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	release, ok := s.releases[id]
+	if !ok || release.TenantID != tenantID {
+		return Detail{}, ErrNotFound
+	}
+	facts := s.snapshotFactsLocked(id)
+	var currentID string
+	if release.Status == StatusDraft {
+		currentID = s.current[tenantID+":"+release.ExamID]
+		if mode == previewCandidate {
+			candidateRelease, candidate, err := s.publicationCandidateLocked(release, currentID, facts)
+			if err != nil {
+				return Detail{}, err
+			}
+			if candidate != nil {
+				if candidateRelease.VisibilityPolicy.ShowHighScorePaper {
+					return Detail{}, ErrPublicationDraftNeedsRefresh
+				}
+				facts = candidate
+			}
+			release = candidateRelease
+		}
+	}
+	return publicationPreviewDetail(cloneRelease(release), currentID, cloneFacts(facts))
+}
+
+func (s *MemoryStore) publicationCandidateLocked(release Release, currentID string, draft []SubmissionFact) (Release, []SubmissionFact, error) {
+	if release.Source == SourceRollback {
+		return release, nil, nil
+	}
+	if release.Source == SourceRegrade && release.SourceReleaseID != "" {
+		if release.SourceReleaseID == currentID {
+			return release, nil, nil
+		}
+		candidate, ok := rebaseRegradeFacts(s.snapshotFactsLocked(release.SourceReleaseID), draft, s.snapshotFactsLocked(currentID))
+		if !ok {
+			return release, nil, ErrStaleSource
+		}
+		return release, candidate, nil
+	}
+	if !s.preservesRegradeScoresLocked(release.TenantID, release.ExamID, draft) {
+		release.SourceReleaseID = currentID
+		return release, s.snapshotFactsLocked(currentID), nil
+	}
+	return release, nil, nil
+}
+
 func (s *MemoryStore) Publish(ctx context.Context, tenantID, id, actorID string) (Release, error) {
 	return s.PublishGuarded(ctx, tenantID, id, actorID, nil)
 }
@@ -266,16 +315,10 @@ func (s *MemoryStore) PublishGuarded(ctx context.Context, tenantID, id, actorID 
 	if release.Status != StatusDraft {
 		return Release{}, ErrInvalidTransition
 	}
-	var rebased []SubmissionFact
-	if release.Source == SourceRegrade && release.SourceReleaseID != "" && release.SourceReleaseID != currentID {
-		var ok bool
-		rebased, ok = rebaseRegradeFacts(s.snapshotFactsLocked(release.SourceReleaseID), s.snapshotFactsLocked(id), s.snapshotFactsLocked(currentID))
-		if !ok {
-			return Release{}, ErrStaleSource
-		}
-	} else if release.Source != SourceRollback && !(release.Source == SourceRegrade && release.SourceReleaseID != "") && !s.preservesRegradeScoresLocked(tenantID, release.ExamID, s.snapshotFactsLocked(id)) {
-		rebased = s.snapshotFactsLocked(currentID)
-		release.SourceReleaseID = currentID
+	draft := s.snapshotFactsLocked(id)
+	candidateRelease, rebased, err := s.publicationCandidateLocked(release, currentID, draft)
+	if err != nil {
+		return Release{}, err
 	}
 	// 门禁与实际快照发布在同一锁内；拒绝时不能留下已修改一半的草稿。
 	gate := s.gateLocked(tenantID, release.ExamID, id)
@@ -287,13 +330,25 @@ func (s *MemoryStore) PublishGuarded(ctx context.Context, tenantID, id, actorID 
 	if !gate.Passed {
 		return Release{}, ErrGateBlocked
 	}
+	if confirmation, confirm := publicationConfirmationFromContext(ctx); confirm {
+		candidate := rebased
+		if candidate == nil {
+			candidate = draft
+		} else if release.VisibilityPolicy.ShowHighScorePaper {
+			return Release{}, ErrPublicationDraftNeedsRefresh
+		}
+		if err := checkPublicationConfirmation(confirmation, release, candidateRelease, currentID, draft, candidate); err != nil {
+			return Release{}, err
+		}
+	}
+	release = candidateRelease
 	now := s.now().UTC()
 	release.Status, release.PublishedBy, release.PublishedAt, release.GateSnapshot = StatusPublished, actorID, &now, gate
 	release.SupersedesReleaseID = s.current[tenantID+":"+release.ExamID]
 	if receipt != nil {
 		facts := rebased
 		if facts == nil {
-			facts = s.snapshotFactsLocked(id)
+			facts = draft
 		}
 		// 内存后端在改动草稿、快照和当前指针前保存回执，回调失败仍保留全部原状态。
 		if err := receipt.Save(ctx, nil, cloneRelease(release), cloneFacts(facts), true); err != nil {

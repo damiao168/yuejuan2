@@ -35,47 +35,41 @@ $referenceDocument = Get-Content -LiteralPath $verification.references_path -Raw
 $references = @($referenceDocument.objects)
 
 if (-not $ConfirmRestore) { throw "Restore requires -ConfirmRestore." }
-$envValues = @{}
-Get-Content -LiteralPath $envPath -Encoding utf8 | ForEach-Object {
-  $line = $_.Trim()
-  if ($line -and -not $line.StartsWith("#") -and $line.Contains("=")) {
-    $parts = $line.Split("=", 2)
-    $envValues[$parts[0].Trim()] = $parts[1].Trim().Trim('"').Trim("'")
-  }
-}
-$primaryDatabase = $envValues["EDUGRADE_POSTGRES_DB"]
-$postgresUser = $envValues["EDUGRADE_POSTGRES_USER"]
-$targetEnvironment = $envValues["EDUGRADE_ENV"]
-if ($targetEnvironment -in @("production", "prod") -and -not $AllowProductionRestore) {
+if ($TargetDatabase -notmatch '^[A-Za-z0-9_]+$') { throw "TargetDatabase contains unsupported characters." }
+$context = @{ ComposePath = $composePath; EnvPath = $envPath }
+$deployment = Get-RecoveryDeploymentSettings $context
+$postgresUser = $deployment.User
+if ($deployment.Environment.Trim() -in @("production", "prod") -and -not $AllowProductionRestore) {
   throw "Refusing to restore into a production environment without -AllowProductionRestore."
 }
-if ($TargetDatabase -eq $primaryDatabase -and -not $AllowPrimaryDatabase) {
+if (-not $TargetBucket) { $TargetBucket = $deployment.Bucket }
+if ($TargetBucket -notmatch '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$') { throw "TargetBucket is not a valid S3 bucket name." }
+$primaryDatabaseSelected = $TargetDatabase -ceq $deployment.Database
+$primaryBucketSelected = $TargetBucket -ceq $deployment.Bucket
+if ($primaryDatabaseSelected -and -not $AllowPrimaryDatabase) {
   throw "Refusing to overwrite the primary database without -AllowPrimaryDatabase. Prefer an isolated verification database."
 }
-if ($TargetDatabase -notmatch '^[A-Za-z0-9_]+$') { throw "TargetDatabase contains unsupported characters." }
-$primaryBucket = $envValues["EDUGRADE_FILE_BUCKET"]
-if (-not $TargetBucket) { $TargetBucket = $primaryBucket }
-if ($TargetBucket -notmatch '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$') { throw "TargetBucket is not a valid S3 bucket name." }
-if ($TargetBucket -eq $primaryBucket -and -not $AllowPrimaryBucket) {
+if ($primaryBucketSelected -and -not $AllowPrimaryBucket) {
   throw "Refusing to overwrite the primary MinIO bucket without -AllowPrimaryBucket. Prefer an isolated verification bucket."
 }
-$context = @{ ComposePath = $composePath; EnvPath = $envPath }
+# 主库与主桶成对切换。混用隔离目标会让恢复后的主应用读不到原件或污染仍在使用的对象。
+if ($primaryDatabaseSelected -ne $primaryBucketSelected) { throw 'Primary database and primary MinIO bucket must be restored together. Use two isolated targets for a restore drill.' }
+$restoreTouchesPrimary = $primaryDatabaseSelected
+# 演练使用隔离资源；主环境数据变更与已有生产标志都要遵循网关的生产配置边界。
+if ($restoreTouchesPrimary -and $deployment.Environment.Trim() -notin @('development', 'dev', 'test', 'local') -and -not $AllowProductionRestore) {
+  throw "Refusing to restore into a production-like environment without -AllowProductionRestore."
+}
+if ($restoreTouchesPrimary -and -not $deployment.ApplicationEndpointMatches) { throw 'Primary restore requires the gateway and recovery tools to use the same MinIO endpoint and TLS mode.' }
+if ($restoreTouchesPrimary -and -not $deployment.ApplicationIdentityMatches) { throw 'Primary restore requires matching MinIO application credentials in the gateway and recovery tools.' }
+if ($restoreTouchesPrimary) { Assert-RecoveryMinioApplicationScope $context $deployment.ApplicationAccessKey $deployment.UseMinioTLS }
 $maintenance = @{ Containers = @() }
 $restoreMutated = $false
 $restoreVerified = $false
-$restoreTouchesPrimary = $TargetDatabase -eq $primaryDatabase -or $TargetBucket -eq $primaryBucket
 
 Push-Location $composeDir
 try {
   Enter-RecoveryMaintenance $context $maintenance
-  $postgresContainerIds = @(
-    @(& docker compose --env-file $envPath -f $composePath ps -q postgres) |
-      Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-  )
-  if ($LASTEXITCODE -ne 0 -or $postgresContainerIds.Count -ne 1) {
-    throw "Expected exactly one running PostgreSQL container for this Compose deployment."
-  }
-  $postgresContainerId = $postgresContainerIds[0].Trim()
+  $postgresContainerId = $deployment.PostgresContainer
   $remoteDump = "/tmp/restore-$([guid]::NewGuid().ToString('N')).dump"
   $remoteDumpCopied = $false
   try {
@@ -98,22 +92,33 @@ try {
     }
   }
 
-  if ($minioPath) {
-    $backupMount = Split-Path -Parent $minioPath
-    $backupName = Split-Path -Leaf $minioPath
-    $minioScript = 'scheme=http; if [ "$EDUGRADE_MINIO_USE_SSL" = "true" ]; then scheme=https; fi; mc alias set edugrade "$scheme://minio:9000" "$EDUGRADE_MINIO_ROOT_USER" "$EDUGRADE_MINIO_ROOT_PASSWORD"; mc mb --ignore-existing "edugrade/{1}"; mc mirror --overwrite "/backup/{0}" "edugrade/{1}"' -f $backupName, $TargetBucket
-    & docker compose --env-file $envPath -f $composePath --profile tools run --rm -v "${backupMount}:/backup:ro" --entrypoint /bin/sh minio-init -ec $minioScript | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "MinIO restore failed." }
-  }
-  # 演练桶可与来源桶不同；同步重映射数据库引用后，再从目标桶读取实际字节验证。
-  $remap = Get-RecoveryBucketRemapSQL $manifest.source_bucket $TargetBucket
-  Invoke-RecoverySQL $context $postgresUser $TargetDatabase $remap | Out-Null
-  Assert-RestoredRecoveryObjects $context $postgresUser $TargetDatabase $TargetBucket $references
+  # 先核对 dump 的引用与迁移账本，再覆盖目标桶，避免数据库与备份不匹配时继续修改对象。
+  $actual = @(Get-RecoveryReferences $context $postgresUser $TargetDatabase)
+  Assert-RecoveryReferenceSet $references $actual $manifest.source_bucket
+  $schemaCount = Invoke-RecoverySQL $context $postgresUser $TargetDatabase 'SELECT count(*) FROM schema_migration'
+  if ([int]$schemaCount -le 0) { throw "Restored database schema history validation failed." }
   Assert-RecoveryMaintenance $context
-  $schemaCount = docker compose --env-file $envPath -f $composePath exec -T postgres psql -U $postgresUser -d $TargetDatabase -Atc "SELECT count(*) FROM schema_migration"
-  if ($LASTEXITCODE -ne 0 -or [int]$schemaCount -le 0) { throw "Restored database schema history validation failed." }
+
+  $backupMount = Split-Path -Parent $minioPath
+  $backupName = Split-Path -Leaf $minioPath
+  $minioScript = 'scheme=http; if [ "$EDUGRADE_MINIO_USE_SSL" = "true" ]; then scheme=https; fi; mc alias set edugrade "$scheme://minio:9000" "$EDUGRADE_MINIO_ROOT_USER" "$EDUGRADE_MINIO_ROOT_PASSWORD"; mc mb --ignore-existing "edugrade/{1}"; mc mirror --overwrite "/backup/{0}" "edugrade/{1}"' -f $backupName, $TargetBucket
+  & docker compose --env-file $envPath -f $composePath --profile tools run --rm -v "${backupMount}:/backup:ro" --entrypoint /bin/sh minio-init -ec $minioScript | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "MinIO restore failed." }
+  # 用目标桶的实际字节校验后再切换引用，主恢复还验证原应用账号读取权限。
+  $targetReferences = @($actual | Select-Object -Property id,storage_key,size_bytes,hash_sha256,@{Name='storage_bucket'; Expression={$TargetBucket}})
+  Assert-RestoredRecoveryObjects $context $TargetBucket $targetReferences -UseApplicationIdentity:$restoreTouchesPrimary
+  if ($manifest.source_bucket -cne $TargetBucket) {
+    Assert-RecoveryMaintenance $context
+    $remap = Get-RecoveryBucketRemapSQL $manifest.source_bucket $TargetBucket $actual
+    # 引用 JSON 可能超过主机命令行长度，直接从标准输入交给 PostgreSQL。
+    $remap | & docker compose --env-file $envPath -f $composePath exec -T postgres psql -X -v ON_ERROR_STOP=1 -U $postgresUser -d $TargetDatabase -f - | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Restored database bucket remapping failed.' }
+  }
+  $remappedReferences = @(Get-RecoveryReferences $context $postgresUser $TargetDatabase)
+  Assert-RecoveryReferenceSet $references $remappedReferences $TargetBucket
+  Assert-RecoveryMaintenance $context
   $restoreVerified = $true
-  Write-Host "Restore completed into database '$TargetDatabase' and bucket '$TargetBucket'; database file references and object bytes/hashes verified."
+  Write-Host "Restore completed into database '$TargetDatabase' and bucket '$TargetBucket'. Database file references and object bytes/hashes verified."
 } finally {
   try {
     # 主数据已被修改但验证未完成时继续停服，避免应用使用半恢复状态；由维护者完成恢复。

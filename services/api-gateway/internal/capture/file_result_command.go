@@ -79,7 +79,7 @@ func (s *MemoryStore) SubmitFileResultCommand(ctx context.Context, tenantID, fil
 	}()
 	err = atomic.RunAtomic(func(tx *workerruntime.MemoryTx) error {
 		file, exists := s.files[fileID]
-		if !exists || file.TenantID != tenantID {
+		if !exists || file.TenantID != tenantID || file.Status == memoryExcludedFile {
 			return ErrNotFound
 		}
 		task, e := tx.LockTaskForCompletion(ctx, tenantID, input.TaskID, input.LeaseToken)

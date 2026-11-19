@@ -154,13 +154,22 @@ VALUES ($1, $2::uuid, $3::uuid, $4::uuid, $5, $6::uuid, $7, $8, $9, NULLIF($10, 
 }
 
 func (s *PostgresStore) releaseFactsTx(ctx context.Context, tx *sql.Tx, tenantID, releaseID string) ([]SubmissionFact, error) {
+	return readReleaseFactsTx(ctx, tx, tenantID, releaseID, false)
+}
+
+// 旧发布用于历史读取，可能有只记录总分的条目。预览和确认摘要必须包含这些条目，才等于实际快照。
+func readReleaseFactsTx(ctx context.Context, tx *sql.Tx, tenantID, releaseID string, includeItemOnly bool) ([]SubmissionFact, error) {
+	join := "JOIN"
+	if includeItemOnly {
+		join = "LEFT JOIN"
+	}
 	rows, err := tx.QueryContext(ctx, `
 SELECT item.student_id::text, item.submission_id::text, item.total_score::float8, item.max_score::float8, item.status,
        question.question_id::text, question.question_no, question.final_grade_id::text,
        question.score::float8, question.max_score::float8, question.source_type,
        COALESCE(question.source_id::text, ''), question.student_explanation
 FROM score_release_item item
-JOIN score_release_question question
+`+join+` score_release_question question
   ON question.tenant_id = item.tenant_id AND question.release_id = item.release_id AND question.submission_id = item.submission_id
 WHERE item.tenant_id = $1 AND item.release_id = $2::uuid
 ORDER BY item.submission_id, question.question_no, question.question_id
@@ -175,21 +184,28 @@ ORDER BY item.submission_id, question.question_no, question.question_id
 		var studentID sql.NullString
 		var fact SubmissionFact
 		var question QuestionFact
+		var questionID, questionNo, finalID, sourceType sql.NullString
+		var score, maxScore sql.NullFloat64
 		var explanation []byte
 		if err := rows.Scan(&studentID, &fact.SubmissionID, &fact.TotalScore, &fact.MaxScore, &fact.Status,
-			&question.QuestionID, &question.QuestionNo, &question.FinalGradeID, &question.Score, &question.MaxScore,
-			&question.SourceType, &question.SourceID, &explanation); err != nil {
+			&questionID, &questionNo, &finalID, &score, &maxScore, &sourceType, &question.SourceID, &explanation); err != nil {
 			return nil, err
 		}
-		if err := json.Unmarshal(explanation, &question.Explanation); err != nil {
-			return nil, err
+		if questionID.Valid {
+			question.QuestionID, question.QuestionNo, question.FinalGradeID = questionID.String, questionNo.String, finalID.String
+			question.Score, question.MaxScore, question.SourceType = score.Float64, maxScore.Float64, sourceType.String
+			if err := json.Unmarshal(explanation, &question.Explanation); err != nil {
+				return nil, err
+			}
 		}
 		fact.StudentID = studentID.String
 		if existing, exists := bySubmission[fact.SubmissionID]; exists {
 			existing.Questions = append(existing.Questions, question)
 			bySubmission[fact.SubmissionID] = existing
 		} else {
-			fact.Questions = []QuestionFact{question}
+			if questionID.Valid {
+				fact.Questions = []QuestionFact{question}
+			}
 			bySubmission[fact.SubmissionID] = fact
 			order = append(order, fact.SubmissionID)
 		}

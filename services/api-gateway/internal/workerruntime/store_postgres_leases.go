@@ -60,9 +60,10 @@ WHERE ($5 OR tenant_id = $1)
     OR (status IN ('leased', 'running') AND lease_expires_at < $4)
   )
   AND attempt_count >= max_attempts
-  -- Import exhaustion must finish its business run in job/run -> task order.
-  -- The import reconciler owns this case, including process-death recovery.
+  -- 这些任务由各入口的恢复流程先锁业务来源再锁任务，和正常失败回执保持一致。
   AND paper_import_run_id IS NULL
+  AND NOT ((task_type='capture_file_decode' AND source_type='capture_file')
+    OR (task_type='ai_grade' AND source_type='subjective_grading_run'))
 ORDER BY priority ASC, created_at ASC, id ASC
 LIMIT $3
 FOR UPDATE SKIP LOCKED
@@ -92,26 +93,7 @@ FOR UPDATE SKIP LOCKED
 		return nil, err
 	}
 	for _, item := range exhausted {
-		errorCode := "max_attempts_exhausted"
-		if item.status == StatusLeased || item.status == StatusRunning {
-			errorCode = "lease_expired"
-		}
-		if _, err := tx.ExecContext(ctx, `
-UPDATE agent_worker_task_attempt
-SET status = 'lease_expired', completed_at = $3, error_code = 'lease_expired',
-  error_detail = '{"reason":"max_attempts_exhausted"}'::jsonb
-WHERE tenant_id = $1 AND task_id = $2::uuid AND completed_at IS NULL
-`, item.tenantID, item.id, dbNow); err != nil {
-			return nil, err
-		}
-		if _, err := tx.ExecContext(ctx, `
-UPDATE agent_worker_task
-SET status = 'dead_letter', max_attempts = GREATEST(max_attempts, attempt_count),
-  lease_token = NULL, lease_expires_at = NULL, leased_by = NULL,
-  error_code = $3, error_detail = '{"reason":"max_attempts_exhausted"}'::jsonb,
-  completed_at = $4, updated_at = $4, revision = revision + 1
-WHERE tenant_id = $1 AND id = $2::uuid
-`, item.tenantID, item.id, errorCode, dbNow); err != nil {
+		if _, err := deadLetterExhaustedInTx(ctx, tx, item.tenantID, item.id, item.status, dbNow); err != nil {
 			return nil, err
 		}
 	}

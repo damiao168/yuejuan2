@@ -9,7 +9,7 @@ import (
 // 同批次解码与归组共用批次锁；先锁批次再锁文件，避免两个工作节点各持一个文件后互相等待。
 func lockFileBatchTx(ctx context.Context, tx *sql.Tx, tenantID, fileID string) error {
 	var id string
-	return mapNotFound(tx.QueryRowContext(ctx, `SELECT b.id::text FROM capture_batch b JOIN capture_file f ON f.tenant_id=b.tenant_id AND f.capture_batch_id=b.id WHERE f.tenant_id=$1 AND f.id=$2::uuid AND f.deleted_at IS NULL AND b.deleted_at IS NULL FOR UPDATE OF b`, tenantID, fileID).Scan(&id))
+	return mapNotFound(tx.QueryRowContext(ctx, `SELECT b.id::text FROM capture_batch b JOIN capture_file f ON f.tenant_id=b.tenant_id AND f.capture_batch_id=b.id WHERE f.tenant_id=$1 AND f.id=$2::uuid AND f.deleted_at IS NULL AND b.deleted_at IS NULL AND b.status<>'cancelled' FOR UPDATE OF b`, tenantID, fileID).Scan(&id))
 }
 
 func validateUploadGroupTx(ctx context.Context, tx *sql.Tx, tenantID, batchID string, input RegisterFileInput) error {

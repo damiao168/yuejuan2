@@ -23,12 +23,12 @@ func (s *MemoryStore) RegisterFile(_ context.Context, tenantID, batchID, actorID
 	}
 	for _, x := range s.files {
 		if x.TenantID == tenantID && x.CaptureBatchID == batchID && x.IdempotencyKey == input.IdempotencyKey {
-			if x.FileAssetID != input.FileAssetID || x.UploadGroupID != input.UploadGroupID || x.UploadGroupFileCount != input.UploadGroupFileCount || x.UploadGroupFileIndex != input.UploadGroupFileIndex || x.PagesPerStudent != input.PagesPerStudent {
+			if x.Status == memoryExcludedFile || x.FileAssetID != input.FileAssetID || x.UploadGroupID != input.UploadGroupID || x.UploadGroupFileCount != input.UploadGroupFileCount || x.UploadGroupFileIndex != input.UploadGroupFileIndex || x.PagesPerStudent != input.PagesPerStudent {
 				return File{}, ErrConflict
 			}
 			return x, nil
 		}
-		if input.UploadGroupID != "" && x.TenantID == tenantID && x.CaptureBatchID == batchID && x.UploadGroupID == input.UploadGroupID && (x.UploadGroupFileCount != input.UploadGroupFileCount || x.PagesPerStudent != input.PagesPerStudent || x.UploadGroupFileIndex == input.UploadGroupFileIndex) {
+		if input.UploadGroupID != "" && x.Status != memoryExcludedFile && x.TenantID == tenantID && x.CaptureBatchID == batchID && x.UploadGroupID == input.UploadGroupID && (x.UploadGroupFileCount != input.UploadGroupFileCount || x.PagesPerStudent != input.PagesPerStudent || x.UploadGroupFileIndex == input.UploadGroupFileIndex) {
 			return File{}, ErrConflict
 		}
 	}
@@ -62,7 +62,7 @@ func (s *MemoryStore) ListFiles(_ context.Context, tenantID, batchID string) ([]
 	defer s.mu.RUnlock()
 	out := []File{}
 	for _, x := range s.files {
-		if x.TenantID == tenantID && x.CaptureBatchID == batchID {
+		if x.TenantID == tenantID && x.CaptureBatchID == batchID && x.Status != memoryExcludedFile {
 			out = append(out, x)
 		}
 	}
@@ -74,7 +74,7 @@ func (s *MemoryStore) GetFile(_ context.Context, tenantID, fileID string) (File,
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	x, ok := s.files[fileID]
-	if !ok || x.TenantID != tenantID {
+	if !ok || x.TenantID != tenantID || x.Status == memoryExcludedFile {
 		return File{}, ErrNotFound
 	}
 	return x, nil
@@ -88,7 +88,7 @@ func (s *MemoryStore) ApplyFileFailure(_ context.Context, tenantID, fileID, erro
 
 func (s *MemoryStore) applyFileFailureLocked(tenantID, fileID, errorCode string, retryable bool) (File, error) {
 	x, ok := s.files[fileID]
-	if !ok || x.TenantID != tenantID {
+	if !ok || x.TenantID != tenantID || x.Status == memoryExcludedFile {
 		return File{}, ErrNotFound
 	}
 	x.Status = "failed"

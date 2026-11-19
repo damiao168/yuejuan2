@@ -82,6 +82,7 @@ func New(cfg config.Config, logg *logger.Logger) (*Server, func(), error) {
 	infra.startPaperParseExecutor(parseExecutor)
 	infra.startRubricDraftJobs(modules.Exam.RubricDraftJobs)
 	infra.startScoringCoordinator(modules.Grading.ScoringCoordinator)
+	infra.startWorkerExhaustionRecovery()
 	router := NewRouterComplete(RouterDependencies{
 		Config: cfg, Logger: logg, Checkers: infra.Checkers, Metrics: infra.Metrics,
 		Modules: modules,

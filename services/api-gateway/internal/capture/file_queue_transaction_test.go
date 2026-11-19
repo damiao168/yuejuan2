@@ -63,7 +63,8 @@ func TestPostgresFileRegistrationPreservesAcceptedAssetAndDuplicateState(t *test
 					[]driver.Value{captureTxTenant, captureTxBatch, "asset", "实扫答卷.pdf", "application/pdf", "page-image-sha", int64(512),
 						insertStatus, "second-file", captureTxActor, registerTxGroup, int64(3), int64(2), int64(4)},
 					"INSERT INTO capture_file", "ON CONFLICT (tenant_id, capture_batch_id, idempotency_key)",
-					"DO UPDATE SET idempotency_key=EXCLUDED.idempotency_key\nRETURNING"),
+					"DO UPDATE SET idempotency_key=EXCLUDED.idempotency_key",
+					"WHERE capture_file.deleted_at IS NULL\nRETURNING"),
 				count)
 			if tc.countErr != nil {
 				steps = append(steps, collectionSQLStep{kind: "rollback"})

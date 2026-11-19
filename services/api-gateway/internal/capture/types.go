@@ -107,6 +107,9 @@ type RegisterFileInput struct {
 	PagesPerStudent      int    `json:"pages_per_student,omitempty"`
 	FileAssetID          string `json:"file_asset_id"`
 	IdempotencyKey       string `json:"idempotency_key"`
+	// 断点上传完成器在对象落盘后提供本次租约，普通文件登记不从请求体接收这些字段。
+	UploadSessionID       string `json:"-"`
+	UploadCompletionToken string `json:"-"`
 }
 
 type DecodedPageInput struct {

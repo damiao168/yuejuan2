@@ -2,12 +2,15 @@ package server
 
 import (
 	"context"
-	"edugrade-enterprise/services/api-gateway/internal/grading"
-	"edugrade-enterprise/services/api-gateway/internal/review"
 	"errors"
 	"net/http"
+	"os"
 	"testing"
 	"time"
+
+	"edugrade-enterprise/services/api-gateway/internal/grading"
+	"edugrade-enterprise/services/api-gateway/internal/review"
+	"edugrade-enterprise/services/api-gateway/internal/workerruntime"
 )
 
 func TestCancelledScoringRunCannotReassignOrSubmitReview(t *testing.T) {
@@ -178,6 +181,94 @@ func TestScoringAIBatchCancellationBlocksNewTasks(t *testing.T) {
 	var batchStatus string
 	if err := db.QueryRowContext(ctx, `SELECT status FROM subjective_grading_batch WHERE id=$1::uuid`, batchID).Scan(&batchStatus); err != nil || batchStatus != "cancelled" {
 		t.Fatalf("AI batch status %q: %v", batchStatus, err)
+	}
+}
+
+func TestPostgresScoringCoordinatorResumesInterruptedCancellation(t *testing.T) {
+	if os.Getenv("EDUGRADE_E2E_DATABASE_URL") == "" {
+		t.Skip("EDUGRADE_E2E_DATABASE_URL is not set")
+	}
+	db, _, _, fixture, answers, _ := repairFixture(t)
+	ctx := t.Context()
+	question := fixture.QuestionIDs["single_choice"]
+	var runID, batchID, sourceID, segmentID string
+	if err := db.QueryRowContext(ctx, `SELECT answer_segment_id::text FROM final_grade
+WHERE tenant_id=$1 AND submission_id=$2::uuid AND question_id=$3::uuid AND deleted_at IS NULL`,
+		fixture.TenantID, answers[0].submission, question).Scan(&segmentID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `
+INSERT INTO scoring_run(tenant_id,exam_id,idempotency_key,status,total_count,started_by)
+VALUES($1,$2::uuid,'interrupted-cancellation','processing',1,$3::uuid) RETURNING id::text
+`, fixture.TenantID, fixture.ExamID, fixture.AdminID).Scan(&runID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `
+INSERT INTO subjective_grading_batch(tenant_id,idempotency_key,scoring_run_id,status,segment_ids,total_count,created_by)
+VALUES($1,'interrupted-cancellation',$2::uuid,'processing',jsonb_build_array($3::text),1,$4::uuid) RETURNING id::text
+`, fixture.TenantID, runID, segmentID, fixture.AdminID).Scan(&batchID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `
+INSERT INTO subjective_grading_run(tenant_id,batch_id,answer_segment_id,answer_version,question_id,rubric_version,model_version,prompt_version,request_id)
+VALUES($1,$2::uuid,$3::uuid,'v1',$4::uuid,'v1','v1','v1','interrupt-cancellation') RETURNING id::text
+`, fixture.TenantID, batchID, segmentID, question).Scan(&sourceID); err != nil {
+		t.Fatal(err)
+	}
+	runtime := workerruntime.NewPostgresStore(db)
+	task, err := runtime.CreateTask(ctx, fixture.TenantID, fixture.AdminID, workerruntime.CreateTaskInput{
+		TaskType: "ai_grade", QueueName: "subjective-grading", SourceType: "subjective_grading_run", SourceID: sourceID,
+		PayloadSchemaVersion: "fixture-v1", IdempotencyKey: "interrupt-cancellation",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leased := claimRecoveryTask(t, runtime, fixture.TenantID, "subjective-grading", task.ID)
+	if _, err := db.ExecContext(ctx, `
+UPDATE final_grade SET locked=true
+WHERE tenant_id=$1 AND submission_id=$2::uuid AND deleted_at IS NULL`, fixture.TenantID, answers[0].submission); err != nil {
+		t.Fatal(err)
+	}
+	var lockedFinalCount int
+	if err := db.QueryRowContext(ctx, `
+SELECT count(*) FROM final_grade WHERE tenant_id=$1 AND submission_id=$2::uuid AND locked AND deleted_at IS NULL`,
+		fixture.TenantID, answers[0].submission).Scan(&lockedFinalCount); err != nil || lockedFinalCount == 0 {
+		t.Fatalf("fixture must have locked grades: %d %v", lockedFinalCount, err)
+	}
+	// 模拟请求仅完成第一步便退出。重新组装协调器，仍可从数据库恢复取消。
+	cancelledRequest, stopRequest := context.WithCancel(ctx)
+	run, tasks, err := grading.NewPostgresStore(db).BeginScoringRunCancellation(cancelledRequest, fixture.TenantID, runID)
+	stopRequest()
+	if err != nil || run.Status != "cancelling" || len(tasks) != 1 || tasks[0] != task.ID {
+		t.Fatalf("begin cancellation: %+v %v %v", run, tasks, err)
+	}
+	coordinator := grading.NewScoringCoordinator(grading.NewPostgresStore(db), runtime, scoringImageExecutor{}, 0)
+	if err = coordinator.RunOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err = coordinator.RunOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+	current, err := runtime.Get(ctx, fixture.TenantID, task.ID)
+	if err != nil || current.Status != workerruntime.StatusCancelled || len(current.Attempts) != 1 ||
+		current.Attempts[0].Status != workerruntime.StatusCancelled || current.Attempts[0].CompletedAt == nil {
+		t.Fatalf("task and attempt did not finish: %+v %v", current, err)
+	}
+	_, err = runtime.Complete(ctx, fixture.TenantID, task.ID, workerruntime.CompleteInput{LeaseToken: leased.LeaseToken, ResultSchemaVersion: "fixture-v1"})
+	if !errors.Is(err, workerruntime.ErrInvalidTransition) {
+		t.Fatalf("cancelled task accepted a late result: %v", err)
+	}
+	var runStatus, batchStatus, sourceStatus, sourceCode string
+	var afterLockedFinalCount int
+	err = db.QueryRowContext(ctx, `
+SELECT r.status,b.status,ai.status,ai.error_code,
+ (SELECT count(*) FROM final_grade WHERE tenant_id=$2 AND submission_id=$3::uuid AND locked AND deleted_at IS NULL)
+FROM scoring_run r JOIN subjective_grading_batch b ON b.tenant_id=r.tenant_id AND b.scoring_run_id=r.id
+JOIN subjective_grading_run ai ON ai.tenant_id=b.tenant_id AND ai.batch_id=b.id
+WHERE r.id=$1::uuid AND r.tenant_id=$2`, runID, fixture.TenantID, answers[0].submission).Scan(&runStatus, &batchStatus, &sourceStatus, &sourceCode, &afterLockedFinalCount)
+	if err != nil || runStatus != "cancelled" || batchStatus != "cancelled" || sourceStatus != "failed" ||
+		sourceCode != "scoring_run_cancelled" || afterLockedFinalCount != lockedFinalCount {
+		t.Fatalf("cancellation did not preserve settled facts: %s %s %s %s grades=%d err=%v", runStatus, batchStatus, sourceStatus, sourceCode, afterLockedFinalCount, err)
 	}
 }
 

@@ -5,12 +5,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Exam } from "../../../api/exams";
 import type { RegradeJob, ScoreRelease } from "../../../api/scoreReleases";
+import { ApiClientError } from "../../../api/client";
 import { defaultReleaseVisibility, useScoreReleaseWorkflow } from "./useScoreReleaseWorkflow";
 
-const mocks = vi.hoisted(() => ({ create: vi.fn(), createRegrade: vi.fn(), publish: vi.fn(), error: vi.fn(), confirm: vi.fn(), run: vi.fn(), stepUp: vi.fn(), reload: vi.fn(), preview: vi.fn(),
+const mocks = vi.hoisted(() => ({ create: vi.fn(), createRegrade: vi.fn(), detail: vi.fn(), publish: vi.fn(), error: vi.fn(), confirm: vi.fn(), run: vi.fn(), stepUp: vi.fn(), reload: vi.fn(), preview: vi.fn(),
   Cancelled: class StepUpCancelledError extends Error {}, session: { scope: "t:u", generation: 1 } as { scope: string; generation: number } }));
 vi.mock("antd", () => ({ App: { useApp: () => ({ message: { error: mocks.error }, modal: { confirm: mocks.confirm } }) } }));
-vi.mock("../../../api/scoreReleases", () => ({ createScoreRelease: mocks.create, createRegradeScoreRelease: mocks.createRegrade, publishScoreRelease: mocks.publish, revokeHighScorePaper: vi.fn() }));
+vi.mock("../../../api/scoreReleases", () => ({ createScoreRelease: mocks.create, createRegradeScoreRelease: mocks.createRegrade, getScoreReleaseDetail: mocks.detail, publishScoreRelease: mocks.publish, revokeHighScorePaper: vi.fn() }));
 vi.mock("../../../api/businessCommand", () => ({ getBusinessCommandSession: () => mocks.session, isBusinessCommandSessionCurrent: (value: unknown) => value === mocks.session }));
 vi.mock("../../../auth/stepUpContext", () => ({ useStepUp: () => ({ runWithStepUp: mocks.stepUp }), isStepUpCancelledError: (error: unknown) => error instanceof mocks.Cancelled }));
 
@@ -27,6 +28,7 @@ describe("复核申请与成绩发布依赖", () => {
     mocks.stepUp.mockImplementation(async ({ action }: { action: () => Promise<void> }) => action());
     host = document.createElement("div"); document.body.append(host); root = createRoot(host);
     mocks.create.mockResolvedValue({ score_release: { id: "new-draft", version: 4 } });
+    mocks.detail.mockResolvedValue({ publication_snapshot: "draft-snapshot" });
     await act(async () => root.render(<Harness />));
     await act(async () => workflow.openPublish());
   });
@@ -49,7 +51,7 @@ describe("复核申请与成绩发布依赖", () => {
     expect(mocks.create).toHaveBeenLastCalledWith("exam", expect.objectContaining({ visibility_policy: expect.objectContaining({ show_answers: true }) }));
     await act(async () => workflow.submitPublish());
     expect(mocks.create).toHaveBeenCalledTimes(1);
-    expect(mocks.publish).toHaveBeenCalledWith("new-draft");
+    expect(mocks.publish).toHaveBeenCalledWith("new-draft", "draft-snapshot");
   });
 
   it.each([null, 0, 101, 1.5])("优秀答卷范围%s不是有效整数时，预览与发布都不创建草稿", async topN => {
@@ -87,7 +89,7 @@ describe("复核申请与成绩发布依赖", () => {
     const confirmation = mocks.confirm.mock.calls[0][0];
     expect(renderToStaticMarkup(confirmation.content)).toContain("学生可在开放时段内从逐题详情申请");
     await act(async () => confirmation.onOk());
-    expect(mocks.stepUp).toHaveBeenCalled(); expect(mocks.publish).toHaveBeenCalledWith("draft");
+    expect(mocks.stepUp).toHaveBeenCalled(); expect(mocks.publish).toHaveBeenCalledWith("draft", "draft-snapshot");
   });
 });
 
@@ -102,6 +104,7 @@ describe("一步发布、身份验证取消与更正", () => {
     vi.resetAllMocks(); Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     mocks.run.mockImplementation(async (_key: string, action: () => Promise<void>) => { try { await action(); } catch (error) { if (!(error instanceof mocks.Cancelled)) throw error; } });
     mocks.create.mockResolvedValue({ score_release: { id: "draft-1", version: 2 } });
+    mocks.detail.mockResolvedValue({ publication_snapshot: "draft-snapshot" });
     host = document.createElement("div"); document.body.append(host); root = createRoot(host);
     await act(async () => root.render(<Harness />));
     await act(async () => workflow.openPublish());
@@ -116,7 +119,7 @@ describe("一步发布、身份验证取消与更正", () => {
     expect(mocks.publish).not.toHaveBeenCalled();
     await act(async () => workflow.submitPublish());
     expect(mocks.create).toHaveBeenCalledTimes(1);
-    expect(mocks.publish).toHaveBeenCalledWith("draft-1");
+    expect(mocks.publish).toHaveBeenCalledWith("draft-1", "draft-snapshot");
     expect(mocks.create.mock.calls[0][1].visibility_policy).toMatchObject({ show_exact_rank: false, show_percentile: false });
   });
 
@@ -150,7 +153,27 @@ describe("一步发布、身份验证取消与更正", () => {
     await act(async () => { workflow.setRankReason(""); });
     await act(async () => { workflow.choosePreset("question"); });
     await act(async () => { workflow.previewPublish(); });
-    expect(mocks.preview).toHaveBeenCalledWith(expect.objectContaining({ id: "draft-2" }));
+    expect(mocks.preview).toHaveBeenCalledWith(expect.objectContaining({ id: "draft-2" }), expect.objectContaining({ onSnapshot: expect.any(Function) }));
+  });
+
+  it("创建草稿响应迟到时不借用重新登录的会话提交发布", async () => {
+    let finish!: (value: unknown) => void;
+    mocks.create.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    mocks.stepUp.mockImplementation(async ({ action }: { action: () => Promise<void> }) => action());
+    let pending!: Promise<void>;
+    mocks.run.mockImplementation((_key: string, action: () => Promise<void>) => { pending = action(); return pending; });
+    await act(async () => { workflow.submitPublish(); });
+    const originalSession = mocks.session;
+    mocks.session = { scope: originalSession.scope, generation: originalSession.generation + 1 };
+    window.dispatchEvent(new Event("business-command-scope-changed"));
+    try {
+      await act(async () => { finish({ score_release: { id: "previous-session-draft", version: 2 } }); await pending; });
+      expect(mocks.detail).not.toHaveBeenCalled();
+      expect(mocks.stepUp).not.toHaveBeenCalled();
+      expect(mocks.publish).not.toHaveBeenCalled();
+    } finally {
+      mocks.session = originalSession;
+    }
   });
 
   it("发布更正时没有草稿才生成复评结果版本，已有草稿直接发布", async () => {
@@ -160,12 +183,12 @@ describe("一步发布、身份验证取消与更正", () => {
     await act(async () => workflow.openCorrection({ job }));
     await act(async () => workflow.publishCorrection());
     expect(mocks.createRegrade).toHaveBeenCalledWith("job-1", expect.objectContaining({ reason: "题目复评完成：答案更正" }));
-    expect(mocks.publish).toHaveBeenLastCalledWith("regrade-draft");
+    expect(mocks.publish).toHaveBeenLastCalledWith("regrade-draft", "draft-snapshot");
     mocks.createRegrade.mockClear();
     await act(async () => workflow.openCorrection({ job, draft: { id: "existing", version: 4 } as unknown as ScoreRelease }));
     await act(async () => workflow.publishCorrection());
     expect(mocks.createRegrade).not.toHaveBeenCalled();
-    expect(mocks.publish).toHaveBeenLastCalledWith("existing");
+    expect(mocks.publish).toHaveBeenLastCalledWith("existing", "draft-snapshot");
     // 服务端复用的结果版本已由他人发布时，只结束弹窗并重读，不再发起第二次发布。
     mocks.publish.mockClear();
     mocks.createRegrade.mockResolvedValue({ score_release: { id: "already", version: 5, status: "published" } });
@@ -173,5 +196,31 @@ describe("一步发布、身份验证取消与更正", () => {
     await act(async () => workflow.publishCorrection());
     expect(mocks.publish).not.toHaveBeenCalled();
     expect(workflow.correction).toBeNull();
+  });
+
+  it("发布拒绝旧预览后必须用管理员再次确认的候选摘要发布", async () => {
+    mocks.stepUp.mockImplementation(async ({ action }: { action: () => Promise<void> }) => action());
+    mocks.run.mockImplementation(async (_key: string, action: () => Promise<void>) => {
+      try { await action(); } catch (error) {
+        if (!(error instanceof ApiClientError) || error.code !== "score_release_snapshot_changed") throw error;
+      }
+    });
+    const changed = new ApiClientError(409, "score_release_snapshot_changed", "snapshot changed");
+    mocks.publish.mockRejectedValueOnce(changed).mockRejectedValueOnce(changed).mockResolvedValueOnce({});
+    await act(async () => workflow.previewPublish());
+    const firstPreview = mocks.preview.mock.lastCall?.[1];
+    firstPreview.onSnapshot("shown-original");
+    await act(async () => workflow.submitPublish());
+    expect(mocks.detail).not.toHaveBeenCalled();
+    expect(mocks.publish.mock.calls).toEqual([["draft-1", "shown-original"]]);
+    const firstCandidate = mocks.preview.mock.lastCall?.[1];
+    expect(firstCandidate.retrySnapshot).toBe("shown-original");
+    await act(async () => firstCandidate.onConfirm("shown-merged"));
+    const newestCandidate = mocks.preview.mock.lastCall?.[1];
+    expect(newestCandidate.retrySnapshot).toBe("shown-merged");
+    expect(mocks.publish.mock.calls).toEqual([["draft-1", "shown-original"], ["draft-1", "shown-merged"]]);
+    await act(async () => newestCandidate.onConfirm("shown-newest"));
+    expect(mocks.publish).toHaveBeenLastCalledWith("draft-1", "shown-newest");
+    expect(workflow.publishOpen).toBe(false);
   });
 });

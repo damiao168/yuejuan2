@@ -1,11 +1,13 @@
 package capture
 
 import (
+	"context"
+	"net/http"
+	"strings"
+
 	"edugrade-enterprise/services/api-gateway/internal/auth"
 	"edugrade-enterprise/services/api-gateway/internal/httpx"
 	"edugrade-enterprise/services/api-gateway/internal/pagination"
-	"net/http"
-	"strings"
 )
 
 func (h *Handler) CreateBatch(w http.ResponseWriter, r *http.Request) {
@@ -143,11 +145,26 @@ func (h *Handler) setStatus(w http.ResponseWriter, r *http.Request, status strin
 	if !decodeStrict(w, r, &input) {
 		return
 	}
-	out, err := h.store.SetBatchStatus(r.Context(), user.TenantID, r.PathValue("id"), user.ID, status, input.Reason)
+	var out Batch
+	var err error
+	changed := true
+	if status == "cancelled" {
+		if cancelStore, ok := h.store.(interface {
+			cancelBatch(context.Context, string, string, string, string) (Batch, bool, error)
+		}); ok {
+			out, changed, err = cancelStore.cancelBatch(r.Context(), user.TenantID, r.PathValue("id"), user.ID, input.Reason)
+		} else {
+			out, err = h.store.SetBatchStatus(r.Context(), user.TenantID, r.PathValue("id"), user.ID, status, input.Reason)
+		}
+	} else {
+		out, err = h.store.SetBatchStatus(r.Context(), user.TenantID, r.PathValue("id"), user.ID, status, input.Reason)
+	}
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	h.auditAction(r, "capture_batch."+status, "capture_batch", out.ID, input.Reason)
+	if changed {
+		h.auditAction(r, "capture_batch."+status, "capture_batch", out.ID, input.Reason)
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"batch": out})
 }

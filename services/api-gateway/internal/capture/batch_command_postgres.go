@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func (s *PostgresStore) createBatchCommand(ctx context.Context, tenantID, examID, actorID string, input CreateBatchInput) (Batch, error) {
@@ -31,10 +33,18 @@ func (s *PostgresStore) createBatchCommand(ctx context.Context, tenantID, examID
 		}
 		return batch, tx.Commit()
 	}
+	// 新批次和收卷先取归档触发器使用的考试锁。旧写入可能已锁了考试行，遇忙交给客户端重试。
+	if err := tryCollectionExamLock(ctx, tx, tenantID, examID); err != nil {
+		return Batch{}, err
+	}
 	var status string
-	if err = tx.QueryRowContext(ctx, `SELECT status FROM exam WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`, tenantID, examID).Scan(&status); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT status FROM exam WHERE tenant_id=$1::uuid AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE NOWAIT`, tenantID, examID).Scan(&status); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Batch{}, ErrNotFound
+		}
+		var lockErr *pgconn.PgError
+		if errors.As(err, &lockErr) && lockErr.Code == "55P03" {
+			return Batch{}, ErrConflict
 		}
 		return Batch{}, err
 	}

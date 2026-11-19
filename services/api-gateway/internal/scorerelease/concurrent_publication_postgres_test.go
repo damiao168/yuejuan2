@@ -11,8 +11,8 @@ import (
 )
 
 type concurrentPublicationFixture struct {
-	tenantID, examID, actorID, submissionID string
-	questionIDs                             [2]string
+	tenantID, examID, actorID, submissionID, studentID string
+	questionIDs                                        [2]string
 }
 
 // 使用已迁移的独立库，构造一份有两道冻结题目且已确认的答卷，发布时仍执行正式门禁。
@@ -34,6 +34,7 @@ func seedConcurrentPublication(t *testing.T, db *sql.DB) concurrentPublicationFi
 		}
 	}
 	school, year, cohort, grade, class, student, asset, page := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+	f.studentID = student
 	exec(`INSERT INTO school(id,tenant_id,name,code,status) VALUES($1,$2,'发布并发测试学校','SCORE-PUBLISH','active')`, school, f.tenantID)
 	exec(`INSERT INTO academic_year(id,tenant_id,school_id,name,start_year,end_year,starts_at,ends_at) VALUES($1,$2,$3,'2026学年',2026,2027,'2026-09-01','2027-08-31')`, year, f.tenantID, school)
 	exec(`INSERT INTO grade_cohort(id,tenant_id,school_id,education_stage,entry_year,expected_graduation_year,name) VALUES($1,$2,$3,'senior',2026,2029,'2026级')`, cohort, f.tenantID, school)

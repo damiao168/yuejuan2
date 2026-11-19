@@ -136,13 +136,15 @@ func rebaseRegradeFacts(base, draft, current []SubmissionFact) ([]SubmissionFact
 	}
 	out := cloneFacts(current)
 	for i := range out {
-		out[i].TotalScore = 0
+		var totalHundredths int64
 		for j := range out[i].Questions {
 			if change, ok := changes[questionFactKey(out[i].SubmissionID, out[i].Questions[j].QuestionID)]; ok {
 				out[i].Questions[j] = change
 			}
-			out[i].TotalScore += out[i].Questions[j].Score
+			// 题分来自 NUMERIC(8,2) 的已发布快照。用整数分位求和，使预览及落库总分都与题分一致。
+			totalHundredths += int64(math.Round(out[i].Questions[j].Score * 100))
 		}
+		out[i].TotalScore = float64(totalHundredths) / 100
 		if out[i].TotalScore > out[i].MaxScore+0.000001 {
 			return nil, false
 		}

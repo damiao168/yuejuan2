@@ -150,7 +150,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	detail, err := h.service.Get(r.Context(), user.TenantID, r.PathValue("id"))
+	detail, err := h.service.publicationPreview(r.Context(), user.TenantID, r.PathValue("id"), publicationPreviewMode(r.URL.Query().Get("publication_preview")))
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -164,12 +164,15 @@ func (h *Handler) StudentPreview(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	result, err := h.service.StudentPreview(r.Context(), user.TenantID, r.PathValue("id"), strings.TrimSpace(r.URL.Query().Get("student_id")))
+	result, snapshot, err := h.service.studentPublicationPreview(r.Context(), user.TenantID, r.PathValue("id"), strings.TrimSpace(r.URL.Query().Get("student_id")), publicationPreviewMode(r.URL.Query().Get("publication_preview")))
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"result": result})
+	httpx.JSON(w, http.StatusOK, struct {
+		Result              StudentResult `json:"result"`
+		PublicationSnapshot string        `json:"publication_snapshot,omitempty"`
+	}{result, snapshot})
 }
 
 func (h *Handler) Diff(w http.ResponseWriter, r *http.Request) {
@@ -216,6 +219,16 @@ func (h *Handler) Publish(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	var input publicationConfirmation
+	if r.Body != nil && r.Body != http.NoBody && !decodeJSONBody(w, r, &input, true) {
+		return
+	}
+	if !input.valid() {
+		writeError(w, r, ErrInvalidInput)
+		return
+	}
+	// 旧客户端仍能确认原草稿，但不能隐式确认内容不同的候选；已发布回执由存储先恢复。
+	r = r.WithContext(withPublicationConfirmation(r.Context(), input))
 	releaseID := r.PathValue("id")
 	var release Release
 	var err error
@@ -385,9 +398,16 @@ func studentReleaseUser(w http.ResponseWriter, r *http.Request) (auth.User, stri
 }
 
 func decodeBody(w http.ResponseWriter, r *http.Request, target any) bool {
+	return decodeJSONBody(w, r, target, false)
+}
+
+func decodeJSONBody(w http.ResponseWriter, r *http.Request, target any, allowEmpty bool) bool {
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {
+		if allowEmpty && errors.Is(err, io.EOF) {
+			return true
+		}
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_json", "request body must be valid JSON with known fields")
 		return false
 	}
@@ -416,6 +436,10 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.Error(w, r, http.StatusConflict, "score_release_invalid_transition", "score release is not in a valid state for this action")
 	case errors.Is(err, ErrStaleSource):
 		httpx.Error(w, r, http.StatusConflict, "score_release_stale_source", "published scores have changed; prepare the regrade again from the current release")
+	case errors.Is(err, ErrPublicationSnapshotChanged):
+		httpx.Error(w, r, http.StatusConflict, "score_release_snapshot_changed", "publication snapshot changed; review the current candidate before confirming")
+	case errors.Is(err, ErrPublicationDraftNeedsRefresh):
+		httpx.Error(w, r, http.StatusConflict, "score_release_draft_refresh_required", "create a new draft from the current scores to prepare matching anonymous papers")
 	default:
 		httpx.Error(w, r, http.StatusInternalServerError, "score_release_operation_failed", "score release operation failed")
 	}

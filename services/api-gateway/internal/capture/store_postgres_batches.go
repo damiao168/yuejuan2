@@ -141,6 +141,10 @@ ON CONFLICT (tenant_id,task_type,idempotency_key) DO NOTHING`, tenantID, item.ID
 }
 
 func (s *PostgresStore) SetBatchStatus(ctx context.Context, tenantID, batchID, actorID, status, reason string) (Batch, error) {
+	if status == "cancelled" {
+		batch, _, err := s.cancelBatch(ctx, tenantID, batchID, actorID, reason)
+		return batch, err
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Batch{}, err
@@ -163,18 +167,30 @@ func (s *PostgresStore) SetBatchStatus(ctx context.Context, tenantID, batchID, a
 	if !canSetBatchStatus(current.Status, status) {
 		return Batch{}, ErrInvalidTransition
 	}
-	out, err := scanBatch(tx.QueryRowContext(ctx, `UPDATE capture_batch SET status=$3,revision=revision+1,completed_at=CASE WHEN $3='completed' THEN now() ELSE NULL END,updated_at=now() WHERE tenant_id=$1 AND id=$2::uuid RETURNING `+batchColumns, tenantID, batchID, status))
+	if status == "draft" && current.Status == "cancelled" {
+		// 旧取消记录可能仍带有有效文件；重开前退出这些历史材料，避免它们重新加入收卷。
+		if err = cancelBatchMaterialsTx(ctx, tx, current, actorID, strings.TrimSpace(reason)); err != nil {
+			return Batch{}, err
+		}
+	}
+	// 历史取消批次的计数仍可能包含刚退出的材料。完成后重开的批次则保留原卷和计数。
+	out, err := scanBatch(tx.QueryRowContext(ctx, `UPDATE capture_batch SET status=$3,revision=revision+1,
+ completed_at=CASE WHEN $3='completed' THEN now() ELSE NULL END,updated_at=now(),
+ file_count=CASE WHEN status='cancelled' THEN 0 ELSE file_count END,
+ page_count=CASE WHEN status='cancelled' THEN 0 ELSE page_count END,
+ submission_count=CASE WHEN status='cancelled' THEN 0 ELSE submission_count END,
+ normal_count=CASE WHEN status='cancelled' THEN 0 ELSE normal_count END,
+ review_count=CASE WHEN status='cancelled' THEN 0 ELSE review_count END,
+ failed_count=CASE WHEN status='cancelled' THEN 0 ELSE failed_count END
+ WHERE tenant_id=$1 AND id=$2::uuid RETURNING `+batchColumns, tenantID, batchID, status))
 	if err != nil {
 		return Batch{}, err
 	}
 	before, _ := json.Marshal(current)
 	after, _ := json.Marshal(out)
-	op := status
+	op := "reopen"
 	if status == "completed" {
 		op = "complete"
-	}
-	if status == "draft" {
-		op = "reopen"
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO capture_operation (tenant_id,capture_batch_id,operation,target_type,target_id,actor_id,reason,before_state,after_state) VALUES ($1,$2::uuid,$3,'capture_batch',$2::uuid,$4::uuid,NULLIF($5,''),$6,$7)`, tenantID, batchID, op, actorID, strings.TrimSpace(reason), before, after)
 	if err != nil {

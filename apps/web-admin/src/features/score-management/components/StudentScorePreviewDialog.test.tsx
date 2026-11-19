@@ -12,7 +12,7 @@ vi.mock("../../../components/MathMarkdown", () => ({ MathMarkdown: ({ children }
 vi.mock("../hooks/useScoreReleaseWorkflow", () => ({ visibleReleaseContent: () => ["逐题得分", "题目原文"] }));
 vi.mock("antd", () => ({
   Alert: ({ message, description, action }: { message: ReactNode; description: ReactNode; action?: ReactNode }) => <aside>{message}{description}{action}</aside>,
-  Button: ({ children, onClick }: { children: ReactNode; onClick: () => void }) => <button onClick={onClick}>{children}</button>,
+  Button: ({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled?: boolean }) => <button onClick={onClick} disabled={disabled}>{children}</button>,
   Modal: ({ title, children, footer }: { title: ReactNode; children: ReactNode; footer: ReactNode }) => <div role="dialog">{title}{children}{footer}</div>,
   Select: ({ id, value, options, onChange }: { id: string; value: string; options: Array<{ label: string; value: string }>; onChange: (value: string) => void }) => <select id={id} value={value} onChange={(event) => onChange(event.target.value)}>{options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>,
   Space: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -58,6 +58,23 @@ describe("冻结成绩学生预览", () => {
     expect(host.textContent).toContain("42 / 100 分");
     expect(host.textContent).not.toContain("97 / 100 分");
     expect((mocks.preview.mock.calls[0][2] as AbortSignal).aborted).toBe(true);
+  });
+
+  it("确认发布只使用刚展示的学生成绩摘要，不使用另读的名单摘要", async () => {
+    const confirm = vi.fn();
+    const first = deferred<{ result: StudentScorePreviewResult; publication_snapshot: string }>();
+    mocks.detail.mockResolvedValue({ release, items: [{ student_id: "student-a" }, { student_id: "student-b" }], questions: [], publication_snapshot: "roster" });
+    mocks.preview.mockReturnValueOnce(first.promise).mockResolvedValueOnce({ result: result(42), publication_snapshot: "viewed-student" });
+    await act(async () => root.render(<StudentScorePreviewDialog release={release} canConfirm onConfirm={confirm} onClose={vi.fn()} />));
+    const submit = [...host.querySelectorAll("button")].find(item => item.textContent === "确认并发布这份成绩")!;
+    expect(submit.disabled).toBe(true);
+    expect(mocks.detail).toHaveBeenCalledWith("release-2", expect.any(AbortSignal), "candidate");
+    await act(async () => { const select = host.querySelector("select")!; select.value = "student-b"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+    await act(async () => first.resolve({ result: result(97), publication_snapshot: "old-student" }));
+    expect(host.textContent).toContain("42 / 100 分");
+    expect(mocks.preview).toHaveBeenLastCalledWith("release-2", "student-b", expect.any(AbortSignal), "candidate");
+    submit.click();
+    expect(confirm).toHaveBeenCalledExactlyOnceWith("viewed-student");
   });
 
   it("只显示服务端实际返回的公开题干、答案和评分要点", async () => {

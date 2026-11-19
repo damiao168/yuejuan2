@@ -48,7 +48,7 @@ func (s *MemoryStore) SubmitFileFailureCommand(ctx context.Context, tenantID, fi
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	current, ok := s.files[fileID]
-	if !ok || current.TenantID != tenantID {
+	if !ok || current.TenantID != tenantID || current.Status == memoryExcludedFile {
 		return File{}, "", ErrNotFound
 	}
 	if current.Status == "completed" {

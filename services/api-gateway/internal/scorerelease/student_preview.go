@@ -9,14 +9,20 @@ import (
 // StudentPreview 只读取指定发布的冻结成绩，不发布草稿、不改变学生当前版本。
 // 答卷图像和跨科当前版本数据仍由正式学生接口校验，预览不代用学生身份读取这些资源。
 func (s *Service) StudentPreview(ctx context.Context, tenantID, releaseID, studentID string) (StudentResult, error) {
+	result, _, err := s.studentPublicationPreview(ctx, tenantID, releaseID, studentID, "")
+	return result, err
+}
+
+func (s *Service) studentPublicationPreview(ctx context.Context, tenantID, releaseID, studentID string, mode publicationPreviewMode) (StudentResult, string, error) {
 	if !validIDs(tenantID, releaseID, studentID) {
-		return StudentResult{}, ErrInvalidInput
+		return StudentResult{}, "", ErrInvalidInput
 	}
-	detail, err := s.store.Get(ctx, tenantID, releaseID)
+	detail, err := s.publicationPreview(ctx, tenantID, releaseID, mode)
 	if err != nil {
-		return StudentResult{}, err
+		return StudentResult{}, "", err
 	}
-	return frozenStudentResult(detail, studentID, s.now().UTC())
+	result, err := frozenStudentResult(detail, studentID, s.now().UTC())
+	return result, detail.PublicationSnapshot, err
 }
 
 // 预览与学生内存读取共用投影；PostgreSQL 学生读取也通过 studentQuestionView 应用相同字段策略。
