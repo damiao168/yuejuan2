@@ -55,6 +55,7 @@ function Assert-WritersRestored {
 }
 
 # 所有 Docker 调用均被拦截；本测试不会启动或连接 Docker 守护进程。
+$originalExitCode = Get-Variable -Name LASTEXITCODE -ValueOnly -Scope Global -ErrorAction Ignore
 function global:docker {
   $arguments = @($args)
   $global:recoveryMock.Calls.Add($arguments)
@@ -356,6 +357,12 @@ try {
   }
 } finally {
   Remove-Item Function:\docker -ErrorAction SilentlyContinue
+  # 预期的 Docker 失败只用于断言，不能让同一 PowerShell 进程中的 CI 步骤继承模拟退出码。
+  if ($null -eq $originalExitCode) {
+    Remove-Variable -Name LASTEXITCODE -Scope Global -ErrorAction Ignore
+  } else {
+    $global:LASTEXITCODE = $originalExitCode
+  }
   $resolved = [IO.Path]::GetFullPath($testRoot)
   if (-not (Test-RecoveryPathEqual (Split-Path -Parent $resolved) ([IO.Path]::GetFullPath([IO.Path]::GetTempPath()))) -or (Split-Path -Leaf $resolved) -notmatch '^edugrade-recovery-tests-[a-f0-9]{32}$') { throw 'Unsafe test cleanup path.' }
   Remove-Item -LiteralPath $resolved -Recurse -Force
