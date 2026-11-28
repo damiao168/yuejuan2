@@ -6,14 +6,14 @@ requires-python = ">=3.11,<3.13"
 dependencies = [
   "edugrade-worker-runtime==0.1.0",
   "numpy==2.4.6",
-  "opencv-python-headless==5.0.0.93",
+  "opencv-python-headless==5.1.0.95",
   "pillow==13.0.0",
-  "pypdfium2==5.12.1",
-  "zxing-cpp==3.1.0",
+  "pypdfium2==5.15.2",
+  "zxing-cpp==3.1.1",
 ]
 
 [build-system]
-requires = ["setuptools==84.1.0"]
+requires = ["setuptools==84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
